@@ -79,10 +79,10 @@ To check how an email looks in a real inbox, set `EMAIL_PROVIDER=resend` with a 
 
 `EmailSenderService` owns validation, the email log, rate limiting, retries and the timeout. It
 hands the rendered email to an `EmailTransport` chosen by `EMAIL_PROVIDER`
-(`apps/api/src/modules/notifications/email/transports/`):
+(`apps/api/src/contexts/notifications/infrastructure/adapters/transports`):
 
 - `ResendEmailTransport` sends through the Resend SDK, with the email log id as idempotency key
-  and as the `email_log_id` tag that delivery webhooks echo back.
+  and as the `emailLogId` tag that delivery webhooks echo back.
 - `MailpitEmailTransport` posts to Mailpit's `POST /api/v1/send`. Mailpit has no idempotency
   keys and sends no delivery webhooks: a retry after a timeout can store a second copy (harmless in
   a local inbox), and the email log row's `resendId` stays empty. The row's metadata records

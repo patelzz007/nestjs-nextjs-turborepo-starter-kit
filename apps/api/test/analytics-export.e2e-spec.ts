@@ -9,9 +9,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { LIST_SLOT_INDEX, ANALYTICS_EXPORT_CONTENT_TYPES, ANALYTICS_EXPORT_RATE_LIMIT, API_VERSION_PREFIX, ApiErrorResponseSchema, JsonValueSchema } from "@workspace/shared";
 
-import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
-import { sha256Hex } from "../src/common/crypto/sha256";
-import { REPORT_FONT_FAMILIES } from "../src/modules/rewards/analytics/report/fonts/report-fonts";
+import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
+import { sha256Hex } from "../src/platform/infrastructure/crypto/sha256";
+import { REPORT_FONT_FAMILIES } from "../src/contexts/reporting/infrastructure/report/fonts/report-fonts";
 import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
 import { createE2eApp, login, markSeedUserEmailVerified, type InjectResponse, type LoginResult } from "./e2e-helpers";
 import { pdfTextRuns } from "./support/report-files";
@@ -41,8 +41,8 @@ function glyphOrder(familyKey: string, value: string): string {
 const FROM = klMidnight(2019, 5, 1);
 const TO = klMidnight(2019, 5, 4);
 const RANGE = `from=${String(FROM)}&to=${String(TO)}&interval=day`;
-const KATIL = ORGANIZATION_SEED_IDS.mlkLocationKatil;
-const BERUANG = ORGANIZATION_SEED_IDS.mlkLocationBeruang;
+const KATIL = TENANT_SEED_IDS.mlkLocationKatil;
+const BERUANG = TENANT_SEED_IDS.mlkLocationBeruang;
 /** A reward title a spreadsheet would execute as a formula if the CSV did not neutralise it. */
 const HOSTILE_TITLE = '=HYPERLINK("http://evil.example","win")';
 
@@ -50,12 +50,12 @@ const AuditRowSchema = z.object({
 	method: z.string(),
 	endpoint: z.string(),
 	outcome: z.string(),
-	response_status: z.number(),
-	actor_user_id: z.string().nullable(),
-	ip_address: z.string().nullable(),
-	user_agent: z.string().nullable(),
-	request_params: JsonValueSchema.nullable(),
-	response_body: JsonValueSchema.nullable(),
+	responseStatus: z.number(),
+	actorUserId: z.string().nullable(),
+	ipAddress: z.string().nullable(),
+	userAgent: z.string().nullable(),
+	requestParams: JsonValueSchema.nullable(),
+	responseBody: JsonValueSchema.nullable(),
 });
 
 const ExportSummarySchema = z.object({
@@ -84,10 +84,10 @@ describe("Analytics exports (e2e)", () => {
 	const claimId = randomUUID();
 	const saleIds: string[] = [];
 
-	function merchantExport(session: LoginResult | null, query: string, slug: string = ORGANIZATION_SEED_SLUGS.mlk): Promise<InjectResponse> {
+	function merchantExport(session: LoginResult | null, query: string, slug: string = TENANT_SEED_SLUGS.mlk): Promise<InjectResponse> {
 		return app.inject({
 			method: "GET",
-			url: `${API_VERSION_PREFIX}/orgs/${slug}/analytics/export?${query}`,
+			url: `${API_VERSION_PREFIX}/tenants/${slug}/analytics/export?${query}`,
 			headers:
 				session === null
 					? { "user-agent": "e2e-export" }
@@ -110,8 +110,8 @@ describe("Analytics exports (e2e)", () => {
 	async function auditRowsOf(response: InjectResponse): Promise<z.output<typeof AuditRowSchema>[]> {
 		const correlationId = z.string().parse(response.headers["x-correlation-id"]);
 		const result = await pool.query(
-			`SELECT method, endpoint, outcome::text AS outcome, response_status, actor_user_id, ip_address, user_agent, request_params, response_body
-			 FROM public.audit_logs WHERE correlation_id = $1`,
+			`SELECT method, endpoint, outcome::text AS outcome, "responseStatus", "actorUserId", "ipAddress", "userAgent", "requestParams", "responseBody"
+			 FROM public."AuditLog" WHERE "correlationId" = $1`,
 			[correlationId],
 		);
 		return z.array(AuditRowSchema).parse(result.rows);
@@ -121,20 +121,20 @@ describe("Analytics exports (e2e)", () => {
 		app = await createE2eApp();
 		pool = new Pool({ connectionString: DATABASE_URL });
 		await markSeedUserEmailVerified(pool, "alice.johnson@example.com");
-		const users = await pool.query<{ id: string; email: string }>("SELECT id, email FROM public.users WHERE email = ANY($1::text[])", [
+		const users = await pool.query<{ id: string; email: string }>('SELECT id, email FROM public."User" WHERE email = ANY($1::text[])', [
 			["alice.johnson@example.com", "jonker.owner@melaka-rewards.demo"],
 		]);
 		const aliceId = z.string().parse(users.rows.find((row) => row.email === "alice.johnson@example.com")?.id);
 		ownerId = z.string().parse(users.rows.find((row) => row.email === "jonker.owner@melaka-rewards.demo")?.id);
 
 		await pool.query(
-			`INSERT INTO public.rewards (id, organization_id, title, description, reward_type, reward_value, category, quantity_total, quantity_remaining, expiry_date, status, referrals_enabled, start_date)
+			`INSERT INTO public."Reward" (id, "tenantId", title, description, "rewardType", "rewardValue", category, "quantityTotal", "quantityRemaining", "expiryDate", status, "referralsEnabled", "startDate")
 			 VALUES ($1, $2, $3, 'Created by analytics-export.e2e-spec.ts', 'DISCOUNT', 5, 'restaurant', 10, 9, $4, 'PUBLISHED', false, $5)`,
-			[rewardId, ORGANIZATION_SEED_IDS.mlkOrganization, HOSTILE_TITLE, TO + DAY_MS, FROM - DAY_MS],
+			[rewardId, TENANT_SEED_IDS.mlkTenant, HOSTILE_TITLE, TO + DAY_MS, FROM - DAY_MS],
 		);
-		await pool.query(INSERT_REWARD_COVER_SQL, [...rewardCoverParams(rewardId, ORGANIZATION_SEED_IDS.mlkOrganization, "heritage-set")]);
+		await pool.query(INSERT_REWARD_COVER_SQL, [...rewardCoverParams(rewardId, TENANT_SEED_IDS.mlkTenant, "heritage-set")]);
 		await pool.query(
-			`INSERT INTO public.reward_claims (id, user_id, reward_id, redemption_token_hash, backup_code_hash, status, claimed_at, claim_expires_at)
+			`INSERT INTO public."RewardClaim" (id, "userId", "rewardId", "redemptionTokenHash", "backupCodeHash", status, "claimedAt", "claimExpiresAt")
 			 VALUES ($1, $2, $3, $4, $5, 'EXPIRED', $6, $7)`,
 			[claimId, aliceId, rewardId, sha256Hex(randomBytes(TOKEN_BYTES).toString("base64url")), sha256Hex(randomUUID()), FROM + HOUR_MS, FROM + HOUR_MS + DAY_MS],
 		);
@@ -145,9 +145,9 @@ describe("Analytics exports (e2e)", () => {
 			const saleId = randomUUID();
 			saleIds.push(saleId);
 			await pool.query(
-				`INSERT INTO public.reward_sales (id, organization_id, location_id, user_id, terminal_id, bill_total_minor, currency, idempotency_key, request_hash, paid_at)
+				`INSERT INTO public."RewardSale" (id, "tenantId", "locationId", "userId", "terminalId", "billTotalMinor", currency, "idempotencyKey", "requestHash", "paidAt")
 				 VALUES ($1, $2, $3, $4, 'E2E-EXPORT-TILL', $5, 'MYR', $6, $7, $8)`,
-				[saleId, ORGANIZATION_SEED_IDS.mlkOrganization, locationId, aliceId, billTotalMinor, randomUUID(), saleId, FROM + 10 * HOUR_MS],
+				[saleId, TENANT_SEED_IDS.mlkTenant, locationId, aliceId, billTotalMinor, randomUUID(), saleId, FROM + 10 * HOUR_MS],
 			);
 		}
 
@@ -158,9 +158,9 @@ describe("Analytics exports (e2e)", () => {
 	});
 
 	afterAll(async () => {
-		await pool.query("DELETE FROM public.reward_sales WHERE id = ANY($1::text[])", [saleIds]);
-		await pool.query("DELETE FROM public.reward_claims WHERE id = $1", [claimId]);
-		await pool.query("DELETE FROM public.rewards WHERE id = $1", [rewardId]);
+		await pool.query('DELETE FROM public."RewardSale" WHERE id = ANY($1::text[])', [saleIds]);
+		await pool.query('DELETE FROM public."RewardClaim" WHERE id = $1', [claimId]);
+		await pool.query('DELETE FROM public."Reward" WHERE id = $1', [rewardId]);
 		await pool.end();
 		await app.close();
 	});
@@ -172,7 +172,7 @@ describe("Analytics exports (e2e)", () => {
 			expect(response.statusCode, response.body).toBe(200);
 			expect(response.headers["content-type"]).toBe(ANALYTICS_EXPORT_CONTENT_TYPES.csv);
 			expect(response.headers["content-disposition"]).toBe(
-				`attachment; filename="analytics_${ORGANIZATION_SEED_SLUGS.mlk}_2019-06-01_2019-06-03_day.csv"; filename*=UTF-8''analytics_${ORGANIZATION_SEED_SLUGS.mlk}_2019-06-01_2019-06-03_day.csv`,
+				`attachment; filename="analytics_${TENANT_SEED_SLUGS.mlk}_2019-06-01_2019-06-03_day.csv"; filename*=UTF-8''analytics_${TENANT_SEED_SLUGS.mlk}_2019-06-01_2019-06-03_day.csv`,
 			);
 			expect(response.headers["cache-control"]).toContain("no-store");
 			expect(response.headers["x-content-type-options"]).toBe("nosniff");
@@ -192,17 +192,17 @@ describe("Analytics exports (e2e)", () => {
 			const [row] = rows;
 			expect(row).toMatchObject({
 				method: "GET",
-				endpoint: "/api/v1/orgs/:orgSlug/analytics/export",
+				endpoint: "/api/v1/tenants/:tenantSlug/analytics/export",
 				outcome: "SUCCEEDED",
-				response_status: 200,
-				actor_user_id: ownerId,
-				user_agent: "e2e-export",
+				responseStatus: 200,
+				actorUserId: ownerId,
+				userAgent: "e2e-export",
 			});
-			expect(row?.ip_address).not.toBeNull();
-			const summary = ExportSummarySchema.parse(row?.response_body).export;
+			expect(row?.ipAddress).not.toBeNull();
+			const summary = ExportSummarySchema.parse(row?.responseBody).export;
 			expect(summary).toMatchObject({
 				report: "merchant",
-				subject: ORGANIZATION_SEED_SLUGS.mlk,
+				subject: TENANT_SEED_SLUGS.mlk,
 				format: "csv",
 				from: FROM,
 				to: TO,
@@ -210,7 +210,7 @@ describe("Analytics exports (e2e)", () => {
 				interval: "day",
 			});
 			expect(summary.rowCounts).toMatchObject({ series: 3, redemptionMethods: 2 });
-			expect(JSON.stringify(row?.request_params)).toContain("csv");
+			expect(JSON.stringify(row?.requestParams)).toContain("csv");
 		});
 
 		it("gives a store-limited cashier only their store's rows", async () => {
@@ -231,7 +231,7 @@ describe("Analytics exports (e2e)", () => {
 
 			expect(response.statusCode, response.body).toBe(200);
 			expect(response.headers["content-type"]).toBe(ANALYTICS_EXPORT_CONTENT_TYPES.xlsx);
-			expect(response.headers["content-disposition"]).toContain(`analytics_${ORGANIZATION_SEED_SLUGS.mlk}_2019-06-01_2019-06-03_day.xlsx`);
+			expect(response.headers["content-disposition"]).toContain(`analytics_${TENANT_SEED_SLUGS.mlk}_2019-06-01_2019-06-03_day.xlsx`);
 			const sheets = await readXlsxFile(response.rawPayload);
 			expect(sheets.map((sheet) => sheet.sheet)).toEqual(["Summary", "Activity over time", "Sales by store", "Rewards", "Redemptions by method"]);
 			const summary = sheets.at(0)?.data ?? [];
@@ -277,7 +277,7 @@ describe("Analytics exports (e2e)", () => {
 			const to = Date.now();
 			const range = `from=${String(to - 365 * DAY_MS)}&to=${String(to)}`;
 			const klCashier = await login(app, "brew.cashier@kl-rewards.demo", "BrewCashier@123", "merchant");
-			const csv = await merchantExport(klCashier, `${range}&format=csv`, ORGANIZATION_SEED_SLUGS.kl);
+			const csv = await merchantExport(klCashier, `${range}&format=csv`, TENANT_SEED_SLUGS.kl);
 			expect(csv.statusCode, csv.body).toBe(200);
 			expect(csv.rawPayload.toString("utf8")).toContain("糕点配咖啡 — 八折优惠");
 			const xlsx = await merchantExport(owner, `${range}&format=xlsx`);
@@ -296,9 +296,9 @@ describe("Analytics exports (e2e)", () => {
 			expect(errorCode(tooLong)).toBe("VALIDATION_ERROR");
 		});
 
-		it("refuses an anonymous caller (401), a non-member (404 — another organization is not disclosed) and a customer on the admin export (403)", async () => {
+		it("refuses an anonymous caller (401), a non-member (404 — another tenant is not disclosed) and a customer on the admin export (403)", async () => {
 			expect((await merchantExport(null, `${RANGE}&format=csv`)).statusCode).toBe(401);
-			expect((await merchantExport(owner, `${RANGE}&format=csv`, ORGANIZATION_SEED_SLUGS.kl)).statusCode).toBe(404);
+			expect((await merchantExport(owner, `${RANGE}&format=csv`, TENANT_SEED_SLUGS.kl)).statusCode).toBe(404);
 			expect((await webGet(alice, `/admin/analytics/export?${RANGE}&format=csv`)).statusCode).toBe(403);
 			expect((await webGet(null, `/admin/analytics/export?${RANGE}&format=csv`)).statusCode).toBe(401);
 		});
@@ -320,17 +320,17 @@ describe("Analytics exports (e2e)", () => {
 			const klOwner = await login(app, "brew.owner@kl-rewards.demo", "BrewOwner@123", "merchant");
 			const range = `from=${String(FROM)}&to=${String(FROM + DAY_MS)}&format=csv`;
 			for (let attempt = 0; attempt < ANALYTICS_EXPORT_RATE_LIMIT; attempt += 1) {
-				expect((await merchantExport(klOwner, range, ORGANIZATION_SEED_SLUGS.kl)).statusCode).toBe(200);
+				expect((await merchantExport(klOwner, range, TENANT_SEED_SLUGS.kl)).statusCode).toBe(200);
 			}
 
-			const refused = await merchantExport(klOwner, range, ORGANIZATION_SEED_SLUGS.kl);
+			const refused = await merchantExport(klOwner, range, TENANT_SEED_SLUGS.kl);
 			expect(refused.statusCode).toBe(429);
 			expect(errorCode(refused)).toBe("ANALYTICS_EXPORT_RATE_LIMITED");
 			expect(Number(refused.headers["retry-after"])).toBeGreaterThan(0);
 			// Every request is audited: the refusal is one FAILED 429 row — no export summary, nothing released.
 			const refusalRows = await auditRowsOf(refused);
 			expect(refusalRows).toHaveLength(1);
-			expect(refusalRows[LIST_SLOT_INDEX.first]).toMatchObject({ method: "GET", outcome: "FAILED", response_status: 429 });
+			expect(refusalRows[LIST_SLOT_INDEX.first]).toMatchObject({ method: "GET", outcome: "FAILED", responseStatus: 429 });
 
 			// Another user's budget is untouched.
 			expect((await merchantExport(owner, range)).statusCode).toBe(200);

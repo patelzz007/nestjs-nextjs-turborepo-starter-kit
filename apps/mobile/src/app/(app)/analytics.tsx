@@ -21,21 +21,23 @@ import { Icon } from "@workspace/ui-native/components/icon";
 import { Screen } from "../../components/screen";
 import { SegmentedControl } from "@workspace/ui-native/components/segmented-control";
 import { MutedText } from "@workspace/ui-native/components/text";
-import { ActivityDashboard } from "../../features/analytics/activity-dashboard";
 import {
 	ACTIVITY_RANGE_OPTIONS,
+	ActivityDashboard,
+	type ActivityRangeChoice,
+	type ActivitySelection,
 	choiceOf,
 	CUSTOM_RANGE_ISSUE_MESSAGES,
 	customRangeIssueOf,
 	DEFAULT_ACTIVITY_SELECTION,
 	earliestActivityDate,
+	rangeLabelOf,
 	selectedActivityDays,
 	selectedActivityRange,
-	type ActivityRangeChoice,
-	type ActivitySelection,
-} from "../../features/analytics/activity-range";
-import { rangeLabelOf } from "../../features/analytics/presentation";
-import { useActivityDashboard, useActivityInsights, useActivityToday } from "../../features/analytics/use-activity-dashboard";
+	useActivityDashboard,
+	useActivityInsights,
+	useActivityToday,
+} from "../../contexts/reporting";
 
 export default function AnalyticsScreen(): React.JSX.Element {
 	const [selection, setSelection] = React.useState<ActivitySelection>(DEFAULT_ACTIVITY_SELECTION);

@@ -1,0 +1,5 @@
+{
+	"/(landing)/page": "/",
+	"/dashboard/page": "/dashboard",
+	"/favicon.ico/route": "/favicon.ico"
+}

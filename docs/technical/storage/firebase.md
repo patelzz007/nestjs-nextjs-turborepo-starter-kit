@@ -11,7 +11,7 @@ tags: ["storage", "firebase", "gcs", "setup"]
 # Set up Firebase Storage
 
 Firebase Storage is Google Cloud Storage (GCS) with a friendlier console. The API talks to it with
-`firebase-admin` (`apps/api/src/modules/storage/adapters/firebase/`); the browser never gets Firebase
+`firebase-admin` (`apps/api/src/platform/infrastructure/storage/adapters/firebase`); the browser never gets Firebase
 credentials or the client SDK. Read the [storage overview](./overview.md) first.
 
 ## How it differs from S3

@@ -687,7 +687,10 @@ export const apiRouter = {
 		analytics: defineQuery(apiContract.claims.analytics, { scope: (): ApiQueryKey => ["claims", "analytics"] }),
 		/** The customer's analytics dashboard (custom range + interval); keyed under the `analytics` scope. */
 		analyticsDashboard: defineQuery(apiContract.claims.analyticsDashboard, { scope: (): ApiQueryKey => ["claims", "analytics", "dashboard"] }),
-		qr: defineQuery(apiContract.claims.qr, { scope: ({ claimId }: { readonly claimId: string }): ApiQueryKey => ["claims", "qr", claimId] }),
+		/** One of the caller's own claims — the wallet QR page's server-prefetched read model (never carries codes). */
+		get: defineQuery(apiContract.claims.get, { scope: ({ claimId }: { readonly claimId: string }): ApiQueryKey => ["claims", "detail", claimId] }),
+		/** Issues fresh QR + backup codes for a PENDING claim. A command (it rotates the stored code hashes), so it is never prefetched or cached. */
+		qr: defineMutation(apiContract.claims.qr),
 	},
 	rewardNotifications: {
 		list: defineQuery(apiContract.rewardNotifications.list, { scope: (): ApiQueryKey => ["reward-notifications", "list"] }),
@@ -726,6 +729,9 @@ export const apiRouter = {
 		rewards: {
 			list: defineQuery(apiContract.organizations.rewards.list, { scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "rewards", "list"] }),
 			get: defineQuery(apiContract.organizations.rewards.get, { scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "rewards", "detail"] }),
+			summary: defineQuery(apiContract.organizations.rewards.summary, {
+				scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "rewards", "summary"],
+			}),
 			create: defineMutation(apiContract.organizations.rewards.create),
 			update: defineMutation(apiContract.organizations.rewards.update),
 			publish: defineMutation(apiContract.organizations.rewards.publish),

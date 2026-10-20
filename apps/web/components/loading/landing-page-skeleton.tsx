@@ -3,7 +3,7 @@
 import { LANDING_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { cycledWidth, placeholderKeys } from "@workspace/ui/lib/skeleton/placeholders";
 import { RewardBrowseBones } from "@/components/loading/reward-catalog-skeleton";
-import { FEATURED_MERCHANT_LIMIT, FEATURED_OFFER_LIMIT } from "@/lib/rewards/featured-offers";
+import { FEATURED_MERCHANT_LIMIT, FEATURED_OFFER_LIMIT } from "@/contexts/rewards/lib/featured-offers";
 import { useRewardsViewMode } from "@workspace/client/lib/features/ui-preferences/facade";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";

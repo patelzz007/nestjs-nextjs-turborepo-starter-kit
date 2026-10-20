@@ -27,7 +27,7 @@ describe("Idempotency-Key on product create (e2e)", () => {
 		app = await createE2eApp();
 		pool = new Pool({ connectionString: DATABASE_URL });
 		session = await login(app, "superadmin@example.com", "SuperAdmin@123");
-		const category = await pool.query<{ id: string }>("SELECT id FROM public.sample_category WHERE deleted_at IS NULL LIMIT 1");
+		const category = await pool.query<{ id: string }>('SELECT id FROM public."SampleCategory" WHERE "deletedAt" IS NULL LIMIT 1');
 		const id = category.rows.at(0)?.id;
 		if (id === undefined) {
 			throw new Error("Seed data missing: no sample_category rows — run pnpm db:seed");
@@ -61,7 +61,7 @@ describe("Idempotency-Key on product create (e2e)", () => {
 		expect(retry.headers["idempotent-replayed"]).toBe("true");
 		expect(parseSuccessEnvelope(retry, CreatedProductSchema).data.id).toBe(parseSuccessEnvelope(first, CreatedProductSchema).data.id);
 
-		const rows = await pool.query<{ count: string }>("SELECT count(*)::text AS count FROM public.product WHERE sku = $1", [sku]);
+		const rows = await pool.query<{ count: string }>('SELECT count(*)::text AS count FROM public."Product" WHERE sku = $1', [sku]);
 		expect(rows.rows.at(0)?.count).toBe("1");
 	});
 

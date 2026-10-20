@@ -52,10 +52,10 @@ import {
 	TEAM_INVITE_SKELETON_ROWS,
 	TEAM_MEMBER_SKELETON_ROWS,
 } from "@/components/loading/merchant-page-skeletons";
-import { TEAM_INVITE_LOADING_LABELS } from "@/components/team-invite/team-invite-skeletons";
+import { TEAM_INVITE_LOADING_LABELS } from "@/contexts/organizations/components/team-invite/team-invite-skeletons";
 import { busyRegionAnnouncements } from "@/test/skeleton";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
-import { MERCHANT_ONBOARDING_LOADING_LABELS, MERCHANT_ONBOARDING_STEP_COUNT } from "@workspace/client/lib/merchant/onboarding/view";
+import { MERCHANT_ONBOARDING_LOADING_LABELS, MERCHANT_ONBOARDING_STEP_COUNT } from "@workspace/client/lib/contexts/organizations/onboarding/view";
 
 // The entry loading reads the saved sidebar state on the server; each test chooses it.
 const sidebarCookie = vi.hoisted((): { open: boolean | undefined } => ({ open: undefined }));

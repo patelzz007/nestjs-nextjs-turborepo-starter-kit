@@ -5,26 +5,26 @@ import type { TenantEncryptionKey } from "@prisma/client";
 import { getApiConfig } from "../../src/config/api-config";
 import type { TenantKmsProvider } from "../../src/config/api-env.fields";
 import { TypedConfigService } from "../../src/config/typed-config.service";
-import { NO_PUBLISHED_POLICY_VERSION } from "../../src/modules/authorization-cedar/services/policy-bundle";
-import { AES_256_KEY_BYTES, formatGcmEnvelope, gcmEncrypt } from "../../src/modules/encryption/aes-256-gcm";
-import { LEGACY_PILOT_KEK_ID } from "../../src/modules/encryption/kms/local-development-key-management.service";
-import { createTenantKeyManagement } from "../../src/modules/encryption/kms/tenant-key-management.factory";
-import type { TenantKeyManagementPort, WrappedDataKey } from "../../src/modules/encryption/kms/tenant-key-management.port";
-import { TENANT_KEY_AUDIT_ACTIONS } from "../../src/modules/encryption/tenant-encryption.service";
+import { NO_PUBLISHED_POLICY_VERSION } from "../../src/contexts/authorization/infrastructure/cedar/policy-bundle";
+import { AES_256_KEY_BYTES, formatGcmEnvelope, gcmEncrypt } from "../../src/platform/infrastructure/encryption/aes-256-gcm";
+import { LEGACY_PILOT_KEK_ID } from "../../src/platform/infrastructure/encryption/kms/local-development-key-management.service";
+import { createTenantKeyManagement } from "../../src/platform/infrastructure/encryption/kms/tenant-key-management.factory";
+import type { TenantKeyManagementPort, WrappedDataKey } from "../../src/platform/infrastructure/encryption/kms/tenant-key-management.port";
+import { TENANT_KEY_AUDIT_ACTIONS } from "../../src/platform/infrastructure/encryption/tenant-encryption.service";
 
 import { prisma } from "./client";
 import { seedLog } from "./seed-log";
 
-/** First data-key version of an organization (as `TenantEncryptionService` creates it). */
+/** First data-key version of a tenant (as `TenantEncryptionService` creates it). */
 const INITIAL_DATA_KEY_VERSION = 1;
 
 export interface TenantKeySeedTarget {
-	readonly organizationId: string;
-	/** The user who provisioned the organization — the audited actor. */
+	readonly tenantId: string;
+	/** The user who provisioned the tenant — the audited actor. */
 	readonly actorUserId: string;
 	/**
 	 * Set for a tenant whose key has been through a KEK re-wrap: the active SuperAdmin who ran
-	 * `pnpm db:rewrap-tenant-keys`. The key then carries `rotated_at` and the
+	 * `pnpm db:rewrap-tenant-keys`. The key then carries `rotatedAt` and the
 	 * `encryption.tenant_key.rewrapped` audit row, exactly as the command leaves them.
 	 */
 	readonly rewrappedByUserId?: string;
@@ -48,7 +48,7 @@ const LEGACY_KEK_MATERIAL: Readonly<Record<TenantKmsProvider, (config: TypedConf
 /**
  * Re-wraps the key the way `TenantEncryptionService.rewrapToCurrentKek` does: the data key as a
  * legacy `local:pilot` envelope is unwrapped, wrapped under the CURRENT KEK and swapped in with a
- * compare-and-swap that stamps `rotated_at`, together with the audit row. The data key itself is
+ * compare-and-swap that stamps `rotatedAt`, together with the audit row. The data key itself is
  * unchanged. Returns false when the provider cannot reproduce a legacy row (nothing is written).
  */
 async function rewrapFromLegacyPilot(kms: TenantKeyManagementPort, config: TypedConfigService, key: TenantEncryptionKey, actorUserId: string): Promise<boolean> {
@@ -64,7 +64,7 @@ async function rewrapFromLegacyPilot(kms: TenantKeyManagementPort, config: Typed
 		throw new Error(`Seed re-wrap of tenant key ${key.id} does not round-trip`);
 	}
 	const policy = await prisma.authorizationPolicyVersion.findFirst({
-		where: { organizationId: key.organizationId, scope: "TENANT", supersededAt: null },
+		where: { tenantId: key.tenantId, scope: "TENANT", supersededAt: null },
 		select: { version: true },
 	});
 	await prisma.$transaction(async (tx) => {
@@ -75,9 +75,9 @@ async function rewrapFromLegacyPilot(kms: TenantKeyManagementPort, config: Typed
 		if (swapped.count !== 1) {
 			return;
 		}
-		await tx.organizationAuditLog.create({
+		await tx.tenantAuditLog.create({
 			data: {
-				organizationId: key.organizationId,
+				tenantId: key.tenantId,
 				actorUserId,
 				action: TENANT_KEY_AUDIT_ACTIONS.rewrapped,
 				resourceType: "TenantEncryptionKey",
@@ -91,7 +91,7 @@ async function rewrapFromLegacyPilot(kms: TenantKeyManagementPort, config: Typed
 }
 
 /**
- * Creates each organization's first data key through the configured KMS
+ * Creates each tenant's first data key through the configured KMS
  * provider (`TENANT_KMS_PROVIDER`, KEK from `TENANT_ENCRYPTION_MASTER_KEY`),
  * so seeded rows are real, unwrappable envelopes — never placeholders. Rows,
  * key versions and KMS key ids are deterministic; the data keys themselves are
@@ -103,8 +103,8 @@ export async function seedTenantEncryptionKeys(targets: readonly TenantKeySeedTa
 	const kms = createTenantKeyManagement(config);
 	let created = 0;
 	for (const target of targets) {
-		// Idempotent: an organization that already has its ACTIVE data key keeps it (its re-wrap, when seeded, happens once).
-		const existing = await prisma.tenantEncryptionKey.findFirst({ where: { organizationId: target.organizationId, status: "ACTIVE" } });
+		// Idempotent: a tenant that already has its ACTIVE data key keeps it (its re-wrap, when seeded, happens once).
+		const existing = await prisma.tenantEncryptionKey.findFirst({ where: { tenantId: target.tenantId, status: "ACTIVE" } });
 		if (existing !== null) {
 			if (target.rewrappedByUserId !== undefined && existing.rotatedAt === null) {
 				await rewrapFromLegacyPilot(kms, config, existing, target.rewrappedByUserId);
@@ -115,19 +115,19 @@ export async function seedTenantEncryptionKeys(targets: readonly TenantKeySeedTa
 		const wrapped = await kms.wrapDataKey(dataKey);
 		// Prove the envelope round-trips before it is stored.
 		if (!(await kms.unwrapDataKey(wrapped)).equals(dataKey)) {
-			throw new Error(`Seed tenant key for ${target.organizationId} does not round-trip`);
+			throw new Error(`Seed tenant key for ${target.tenantId} does not round-trip`);
 		}
 		const policy = await prisma.authorizationPolicyVersion.findFirst({
-			where: { organizationId: target.organizationId, scope: "TENANT", supersededAt: null },
+			where: { tenantId: target.tenantId, scope: "TENANT", supersededAt: null },
 			select: { version: true },
 		});
 		await prisma.$transaction(async (tx) => {
 			const key = await tx.tenantEncryptionKey.create({
-				data: { organizationId: target.organizationId, keyVersion: INITIAL_DATA_KEY_VERSION, wrappedKey: wrapped.wrappedKey, kmsKeyId: wrapped.kmsKeyId, status: "ACTIVE" },
+				data: { tenantId: target.tenantId, keyVersion: INITIAL_DATA_KEY_VERSION, wrappedKey: wrapped.wrappedKey, kmsKeyId: wrapped.kmsKeyId, status: "ACTIVE" },
 			});
-			await tx.organizationAuditLog.create({
+			await tx.tenantAuditLog.create({
 				data: {
-					organizationId: target.organizationId,
+					tenantId: target.tenantId,
 					actorUserId: target.actorUserId,
 					action: TENANT_KEY_AUDIT_ACTIONS.created,
 					resourceType: "TenantEncryptionKey",
@@ -139,7 +139,7 @@ export async function seedTenantEncryptionKeys(targets: readonly TenantKeySeedTa
 		});
 		created += 1;
 		if (target.rewrappedByUserId !== undefined) {
-			const key = await prisma.tenantEncryptionKey.findFirstOrThrow({ where: { organizationId: target.organizationId, status: "ACTIVE" } });
+			const key = await prisma.tenantEncryptionKey.findFirstOrThrow({ where: { tenantId: target.tenantId, status: "ACTIVE" } });
 			await rewrapFromLegacyPilot(kms, config, key, target.rewrappedByUserId);
 		}
 	}

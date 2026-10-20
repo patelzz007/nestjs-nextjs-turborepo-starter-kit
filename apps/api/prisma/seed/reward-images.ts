@@ -5,7 +5,7 @@
 // 4K (3840×2160) WebP, one folder per photo set (`<slug>/01.webp` … — `01` is
 // the cover). Each file is stored, checked and rendered exactly as an uploaded
 // `REWARD_IMAGE` is (stored-file-seed-writer.ts → the API's ImageRenditionService),
-// as a file of the organization whose rewards show it, uploaded by its owner.
+// as a file of the tenant whose rewards show it, uploaded by its owner.
 // Rewards are linked to their sets after they are created (`linkRewardImages`).
 
 import { readFile } from "node:fs/promises";
@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 
 import { z } from "zod";
 
-import { mapWithConcurrency } from "../../src/common/utils/map-with-concurrency";
+import { mapWithConcurrency } from "../../src/platform/infrastructure/utils/map-with-concurrency";
 
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
@@ -37,7 +37,7 @@ const IMAGES_UPLOADED_DAYS_AGO = 45;
 /** The seeded merchant a photo set belongs to. */
 export type RewardImageOwner = "kl" | "mlk";
 
-/** Every photo set (a folder under assets/reward-images) and the organization that uploaded it. */
+/** Every photo set (a folder under assets/reward-images) and the tenant that uploaded it. */
 const REWARD_IMAGE_SET_OWNERS = {
 	"free-coffee": "kl",
 	"free-pastry": "kl",
@@ -102,30 +102,30 @@ async function readImageSets(): Promise<ReadonlyMap<RewardImageSetSlug, readonly
 }
 
 export interface RewardImageSeedContext {
-	readonly klOrganizationId: string;
+	readonly klTenantId: string;
 	readonly klOwnerUserId: string;
-	readonly mlkOrganizationId: string;
+	readonly mlkTenantId: string;
 	readonly mlkOwnerUserId: string;
 }
 
-/** Uploads, checks, renders and publishes every photo as a READY `REWARD_IMAGE` of its organization; returns how many. */
+/** Uploads, checks, renders and publishes every photo as a READY `REWARD_IMAGE` of its tenant; returns how many. */
 export async function seedRewardImageFiles(context: RewardImageSeedContext): Promise<number> {
 	const { seedReadyFile } = createSeedFileWriter();
-	const owners: Readonly<Record<RewardImageOwner, { readonly organizationId: string; readonly userId: string }>> = {
-		kl: { organizationId: context.klOrganizationId, userId: context.klOwnerUserId },
-		mlk: { organizationId: context.mlkOrganizationId, userId: context.mlkOwnerUserId },
+	const owners: Readonly<Record<RewardImageOwner, { readonly tenantId: string; readonly userId: string }>> = {
+		kl: { tenantId: context.klTenantId, userId: context.klOwnerUserId },
+		mlk: { tenantId: context.mlkTenantId, userId: context.mlkOwnerUserId },
 	};
 	const uploads = [...(await readImageSets())].flatMap(([slug, files]) => files.map((file) => ({ file, owner: owners[REWARD_IMAGE_SET_OWNERS[slug]] })));
 	await mapWithConcurrency(uploads, SEED_IMAGE_CONCURRENCY, async ({ file, owner }) =>
 		seedReadyFile({
 			id: rewardImageSeedId(file),
 			category: "REWARD_IMAGE",
-			ownerId: owner.organizationId,
+			ownerId: owner.tenantId,
 			fileName: file.replace("/", "-"),
 			mimeType: "image/webp",
 			bytes: await readFile(join(IMAGE_DIRECTORY, file)),
 			uploadedById: owner.userId,
-			organizationId: owner.organizationId,
+			tenantId: owner.tenantId,
 			uploadedDaysAgo: IMAGES_UPLOADED_DAYS_AGO,
 		}),
 	);
@@ -135,7 +135,7 @@ export async function seedRewardImageFiles(context: RewardImageSeedContext): Pro
 /** A seeded reward and the photo set it shows. */
 export interface RewardImageLink {
 	readonly rewardId: string;
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly slug: RewardImageSetSlug;
 }
 
@@ -149,7 +149,7 @@ export async function linkRewardImages(links: readonly RewardImageLink[]): Promi
 		}
 		await prisma.rewardImage.deleteMany({ where: { rewardId: link.rewardId } });
 		await prisma.rewardImage.createMany({
-			data: files.map((file, position) => ({ rewardId: link.rewardId, organizationId: link.organizationId, fileId: rewardImageSeedId(file), position })),
+			data: files.map((file, position) => ({ rewardId: link.rewardId, tenantId: link.tenantId, fileId: rewardImageSeedId(file), position })),
 		});
 	}
 }
@@ -164,7 +164,7 @@ export async function seedReplacedRewardImage(
 	await prisma.rewardImage.create({
 		data: {
 			rewardId: link.rewardId,
-			organizationId: link.organizationId,
+			tenantId: link.tenantId,
 			fileId: rewardCoverImageSeedId(link.previousSlug),
 			position: 0,
 			isDeleted: true,

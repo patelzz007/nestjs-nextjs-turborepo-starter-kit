@@ -1,7 +1,7 @@
-import { ForgotPasswordForm } from "@workspace/client/lib/auth/forms/forgot-password-form";
+import { ForgotPasswordForm } from "@workspace/client/lib/contexts/identity/forms/forgot-password-form";
 import { formatLinkLifetimeHours, PASSWORD_RESET_LINK_TTL_HOURS } from "@workspace/shared";
 
-import { AdminAuthLayout } from "@/components/auth/admin-auth-layout";
+import { AdminAuthLayout } from "@/contexts/identity/components/auth/admin-auth-layout";
 
 /** `/auth/forgot-password` — requests a password-reset email for an admin account. */
 export default function AdminForgotPasswordPage(): React.JSX.Element {

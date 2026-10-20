@@ -44,7 +44,7 @@ are drawn without a charting library, and where the screen lives in the navigati
 - **Same ranges and words as the web.** Presets `last7Days`, `last30Days` (default), `last90Days`;
   whole days ending today in UTC (the zone the API buckets a customer in); the bucket width the API
   derives (day up to 31 days, then week). KPI names, claim-status names and their chart colours
-  are the web's (`apps/web/lib/rewards/customer-analytics.ts`).
+  are the web's (`apps/web/contexts/reporting/lib/customer-analytics.ts`).
 - **Charts are react-native-svg, coloured by tokens.** No chart library: `TrendChart`,
   `Sparkline`, `ShareBar`, `RankedBarList`, `KpiTile` and `SegmentedControl` in
   `src/components`, with pure geometry in `src/lib/chart-geometry.ts` (round ticks, a monotone

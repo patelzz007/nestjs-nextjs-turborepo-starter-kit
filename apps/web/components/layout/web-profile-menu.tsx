@@ -5,7 +5,7 @@ import * as React from "react";
 import { ROUTES } from "@/lib/routes";
 
 /**
- * The reward hub's profile menu (opened from the sidebar's account row): the
+ * The web app's profile menu (opened from the sidebar's account row): the
  * reward pages, and the personal account settings — which need a session, so
  * guests are not offered them.
  */
@@ -16,11 +16,11 @@ export function webProfileMenuItems(isAuthenticated: boolean, navigate: (path: s
 			navigate(path);
 		};
 	const items: AppShellProfileMenuItem[] = [
-		{ label: "Browse rewards", icon: <Gift className="size-4" aria-hidden="true" />, onClick: goTo(ROUTES.rewardHub.browse) },
-		{ label: "My rewards", icon: <Ticket className="size-4" aria-hidden="true" />, onClick: goTo(ROUTES.rewardHub.wallet) },
+		{ label: "Browse rewards", icon: <Gift className="size-4" aria-hidden="true" />, onClick: goTo(ROUTES.dashboard.browse) },
+		{ label: "My rewards", icon: <Ticket className="size-4" aria-hidden="true" />, onClick: goTo(ROUTES.dashboard.wallet) },
 	];
 	if (isAuthenticated) {
-		items.push({ label: "Account settings", icon: <Settings className="size-4" aria-hidden="true" />, onClick: goTo(ROUTES.rewardHub.account) });
+		items.push({ label: "Account settings", icon: <Settings className="size-4" aria-hidden="true" />, onClick: goTo(ROUTES.dashboard.account) });
 	}
 	return items;
 }

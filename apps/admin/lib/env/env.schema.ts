@@ -7,7 +7,7 @@
 // docs/technical/configuration/frontend.md.
 
 import { createPublicEnvSchema, HttpUrlEnvSchema, NextAppServerEnvSchema, OptionalIntervalMsEnvSchema } from "@workspace/shared";
-import type { z } from "zod";
+import { z } from "zod";
 
 /** Public (browser-visible) config. Every key must be `NEXT_PUBLIC_*`. */
 export const AdminClientEnvSchema = createPublicEnvSchema({
@@ -28,7 +28,13 @@ export const AdminClientEnvSchema = createPublicEnvSchema({
 export type AdminClientEnv = z.output<typeof AdminClientEnvSchema>;
 
 /** Server-only config (never bundled for the browser). */
-export const AdminServerEnvSchema = NextAppServerEnvSchema;
+export const AdminServerEnvSchema = NextAppServerEnvSchema.extend({
+	/**
+	 * The developer component gallery (`/components`): `"true"` / `"false"`. Unset follows the build — on
+	 * in development and test, off in production, so a deployed admin panel does not serve it unless asked.
+	 */
+	ADMIN_COMPONENT_GALLERY: z.enum(["true", "false"], { error: 'must be "true" or "false"' }).optional(),
+});
 export type AdminServerEnv = z.output<typeof AdminServerEnvSchema>;
 
 /** Label used in fail-fast error messages. */

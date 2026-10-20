@@ -1,6 +1,6 @@
 import type { User } from "@prisma/client";
 
-import { seedPlatformGuardrails } from "../organizations";
+import { seedPlatformGuardrails } from "../tenants";
 import type { ReferenceData } from "../reference-data";
 import { requireRow } from "../require-row";
 import { seedSignupReferralCodes } from "../signup-referrals";

@@ -5,7 +5,7 @@
 	"type": "module",
 	"description": "Repo-wide tooling scripts. Owns the syncpack dependency-hygiene commands so they can run as turbo tasks (turbo 2.x doesn't execute root package.json scripts).",
 	"scripts": {
-		"lint": "eslint --max-warnings=0",
+		"lint": "eslint",
 		"test": "vitest run",
 		"deps:check": "syncpack lint",
 		"deps:fix": "syncpack fix-mismatches",

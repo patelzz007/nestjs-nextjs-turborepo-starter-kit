@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "@workspace/client/lib/api/config";
-import { decodeJwtPayload } from "@workspace/client/lib/auth/edge/jwt";
-import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/auth/edge/restricted-session";
+import { decodeJwtPayload } from "@workspace/client/lib/contexts/identity/edge/jwt";
+import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/contexts/identity/edge/restricted-session";
 import {
 	applyRotatedSetCookies,
 	clearAuthCookies,
@@ -11,16 +11,16 @@ import {
 	resolveProxySessionRefresh,
 	type AuthCookieClearOptions,
 	type ProxyRefreshResult,
-} from "@workspace/client/lib/auth/edge/proxy-refresh";
+} from "@workspace/client/lib/contexts/identity/edge/proxy-refresh";
 import { NodeEnvSchema } from "@workspace/shared";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { isAllowedMerchantPostLoginRedirect, isMerchantAuthPath, isMerchantProtectedPath, isMerchantTokenAuthPath } from "@/lib/auth/routes";
+import { isAllowedMerchantPostLoginRedirect, isMerchantAuthPath, isMerchantProtectedPath, isMerchantTokenAuthPath } from "@/contexts/identity/lib/routes";
 import { clientEnv } from "@/lib/env/env.client";
 import { serverEnv } from "@/lib/env/env.server";
-import { isCanonicalOrganizationSlug } from "@/lib/org/resolve-slug";
-import { ORGANIZATION_SLUG_COOKIE_NAME } from "@/lib/org/slug";
+import { isCanonicalOrganizationSlug } from "@/contexts/organizations/lib/org/resolve-slug";
+import { ORGANIZATION_SLUG_COOKIE_NAME } from "@/contexts/organizations/lib/org/slug";
 import { ROUTES } from "@/lib/routes";
 
 const ACCESS_TOKEN_COOKIE = "merchantAccessToken";

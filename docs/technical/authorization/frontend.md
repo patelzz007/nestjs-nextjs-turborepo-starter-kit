@@ -20,12 +20,12 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 
 ## 1. The one API every app uses
 
-Everything comes from `@workspace/client/lib/auth/can` (`packages/client/src/lib/auth/can.tsx`).
+Everything comes from `@workspace/client/lib/contexts/authorization` (`packages/client/src/lib/contexts/authorization/index.tsx`).
 
 ### 1.1 The hook: `useAuthorization()`
 
 ```tsx
-import { useAuthorization } from "@workspace/client/lib/auth/can";
+import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
 import { PERMISSION } from "@workspace/shared";
 
 function RoleActions(): React.JSX.Element {
@@ -54,7 +54,7 @@ function RoleActions(): React.JSX.Element {
 ### 1.2 The component: `<Can>`
 
 ```tsx
-import { Can } from "@workspace/client/lib/auth/can";
+import { Can } from "@workspace/client/lib/contexts/authorization";
 
 <Can permission={PERMISSION.USER.DELETE}>
 	<DeleteUserButton />
@@ -68,7 +68,7 @@ import { Can } from "@workspace/client/lib/auth/can";
 | Prop | Meaning |
 |---|---|
 | `permission` | one required capability |
-| `permissions` + `mode` | several; `"any"` (default) or `"all"` |
+| `Permission` + `mode` | several; `"any"` (default) or `"all"` |
 | `resource` | a record carrying server-evaluated capabilities (see §1.3) |
 | `fallback` | what to render when denied (default: nothing) |
 
@@ -170,7 +170,7 @@ What is gated (each maps to the permission of the API route it calls):
 | User access panel | assign / remove roles `ROLE.UPDATE`; direct grants `PERMISSION.UPDATE`; permission checker `PERMISSION.READ` | read-only notice, checker hidden |
 | Users pages, MFA recovery review | SuperAdmin | hidden / denied |
 | Impersonate | SuperAdmin and not already impersonating | hidden |
-| Reward Hub merchants / KYB / locations | `MERCHANT_ORG.LIST`; decisions and reviews `MERCHANT_ORG.MANAGE` | read-only notice |
+| Merchants / KYB / locations | `MERCHANT_ORG.LIST`; decisions and reviews `MERCHANT_ORG.MANAGE` | read-only notice |
 | Pending rewards review, approve / reject | `REWARD.MANAGE` (the page's own rule, so the actions are not re-checked) | page denied |
 | Invites | `MERCHANT_ORG.MANAGE` | page denied |
 | Emails / email log / send test email | `EMAIL.READ` / `EMAIL.LIST` / `EMAIL.CREATE` | page denied / disabled button with reason |
@@ -186,7 +186,7 @@ What is gated (each maps to the permission of the API route it calls):
 Every merchant gate checks a **`merchant:*` capability** (`MERCHANT_CAPABILITY.*`) — never a
 membership role name. Capabilities come from the active membership's role through
 `MERCHANT_ROLE_CAPABILITIES`, the same table the API enforces first (see the
-[backend role table](./backend.md#12-merchant-reward-hub-capabilities)).
+[backend role table](./backend.md#12-merchant-capabilities)).
 
 | Building block | File |
 |---|---|
@@ -258,7 +258,7 @@ const { can } = useAuthorization();
 | Section gate | `components/auth/access-gate.tsx` — `AccessGate`: guest → sign-in prompt; signed in without permission → "not available for your account"; allowed → children; loading → nothing |
 | Fallback UI | `components/auth/access-fallback.tsx` |
 | Route table | `lib/navigation/route-access.ts` — `WEB_ROUTE_ACCESS`: every page's audience (public / guest-only / signed-in), optional capability, breadcrumb label; tested against `proxy.ts` and the pages on disk |
-| Route guard | `components/auth/route-access-guard.tsx` — `WebRouteAccessGuard` in the RewardHub shell: sign-in prompt or "not available" for a page whose capability is missing |
+| Route guard | `components/auth/route-access-guard.tsx` — `WebRouteAccessGuard` in the dashboard shell: sign-in prompt or "not available" for a page whose capability is missing |
 | Visible ⇔ allowed | sidebar (`applyWebRouteAuthorization`), ⌘K palette, quick actions and pinned items all filter through `useCanAccessWebPath` |
 
 | Area | API rule | Gate |
@@ -268,9 +268,9 @@ const { can } = useAuthorization();
 | Claim flow, my claims, QR, activity, account settings | signed in | sign-in prompt for guests |
 | Browse, reward details, landing | public | none |
 
-The web app has no URL / tag / API-key screens today. When you add one, gate it with the
-`OWN`-scoped customer permissions (`PERMISSION.URL.CREATE`, …) and let the API enforce
-ownership.
+A customer screen for a record the customer owns gates on an `OWN`-scoped permission
+(`PERMISSION.PROFILE.UPDATE`, …) and lets the API enforce ownership. A new owned resource
+first needs its owner lookup in `ResourceOwnershipResolver` (see [backend](./backend.md#53-ownership)).
 
 ---
 

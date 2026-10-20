@@ -19,6 +19,7 @@ import type { ComboboxLabels } from "../../components/combobox-context";
 import type { ImageCropperLabels } from "../../components/image-cropper";
 import type { ImageResizerLabels } from "../../components/image-resizer";
 import type { KpiDirectionLabels } from "../../components/kpi-stat-card";
+import type { ListPagerLabels } from "../../components/list-pager";
 import type { LockoutCountdownLabels } from "../../components/lockout-countdown";
 import type { PasswordInputLabels } from "../../components/password-input";
 import type { PasswordStrengthMeterLabels } from "../../components/password-strength-meter";
@@ -107,6 +108,7 @@ export interface UiKitLabels {
 	readonly eventCalendar: EventCalendarLabels;
 	readonly emojiPicker: EmojiPickerLabels;
 	readonly kpiDirection: KpiDirectionLabels;
+	readonly listPager: ListPagerLabels;
 	readonly lockoutCountdown: LockoutCountdownLabels;
 	readonly pagination: PaginationLabels;
 	readonly panelSidebarNav: PanelSidebarNavLabels;

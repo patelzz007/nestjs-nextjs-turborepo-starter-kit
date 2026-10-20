@@ -80,11 +80,11 @@ pnpm kill:all         # free the ports if a previous run is stuck
 
 In development, each app's login page lists the seeded demo accounts as one-click buttons.
 Outside `NODE_ENV=development` they are never shown and there is no flag to turn them on
-(policy: `packages/client/src/lib/auth/forms/demo-accounts-policy.ts`; per-app server-only lists
+(policy: `packages/client/src/lib/contexts/identity/forms/demo-accounts-policy.ts`; per-app server-only lists
 in `apps/*/lib/auth/demo-account-list.ts`). The seed prints every login; the main ones are listed
 in the [user guide](../user-guide/README.md#try-it-with-the-demo-data).
 
-Optional analytics consumer (Kafka → `analytics_events`): copy
+Optional analytics consumer (Kafka → `AnalyticsEvent`): copy
 `apps/analytics-consumer/.env.example`, then
 `pnpm --filter @workspace/analytics-consumer db:provision-login`,
 `pnpm --filter @workspace/analytics-consumer kafka:provision-topics` and
@@ -93,7 +93,7 @@ Optional analytics consumer (Kafka → `analytics_events`): copy
 ## 5. Before you call a task done
 
 ```bash
-pnpm run lint     # zero errors and zero warnings
+pnpm run lint     # zero errors
 pnpm run test     # every test passes
 ```
 

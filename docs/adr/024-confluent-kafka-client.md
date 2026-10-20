@@ -71,5 +71,5 @@ the dependency range was `^2.2.4`, and none of it was documented. Around it:
 
 - `packages/messaging/src/kafka/` (security env, client config, logger adapter, topic provisioning)
 - `packages/messaging/src/nest/kafka/kafka-producer.service.ts`
-- `apps/analytics-consumer/src/kafka.ts`, `src/cli/provision-kafka-topics.ts`
+- `apps/analytics-consumer/src/infrastructure/kafka.ts`, `src/cli/provision-kafka-topics.ts`
 - `pnpm-workspace.yaml` (`allowBuilds`), `docs/infrastructure/messaging.md`

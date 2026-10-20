@@ -1,8 +1,8 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
-import { PENDING_KYB_MERCHANTS_QUERY } from "@/lib/merchants/kyb-review";
+import { PENDING_KYB_MERCHANTS_QUERY } from "@/contexts/organizations/lib/kyb-review";
 import { prefetch, resolvePrefetchedData } from "@/lib/server/prefetch";
 
-import KybReviewPanel from "./kyb-review-panel";
+import KybReviewPanel from "../../../../contexts/organizations/components/kyb-review-panel";
 
 export const dynamic = "force-dynamic";
 

@@ -1,5 +1,5 @@
-import { MerchantCreateRewardPageView } from "@/components/rewards/merchant-create-reward-page-view";
-import { guardOrgPage } from "@/lib/org/org-page-guard";
+import { MerchantCreateRewardPageView } from "@/contexts/rewards/components/merchant-create-reward-page-view";
+import { guardOrgPage } from "@/contexts/organizations/lib/org/org-page-guard";
 import type { RewardCategory } from "@workspace/shared";
 import * as React from "react";
 

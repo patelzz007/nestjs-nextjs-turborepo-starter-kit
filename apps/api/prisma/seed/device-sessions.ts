@@ -1,8 +1,9 @@
 import type { Prisma } from "@prisma/client";
 import { encodeSessionDeviceHeaderValue, type AuthClientType, type SessionLocation, type SessionSignInMethod } from "@workspace/shared";
 
-import { describeSessionDevice, type SessionDeviceDetails } from "../../src/modules/sessions/device/session-device";
-import { sessionRevokerColumn, type SessionRevoker } from "../../src/modules/sessions/device/session-revoker";
+import type { SessionDeviceDetails } from "../../src/contexts/identity/domain/value-objects/session-device.value-object";
+import { describeSessionDevice } from "../../src/platform/presentation/http/security/session-device-context";
+import { sessionRevokerColumn, type SessionRevoker } from "../../src/contexts/identity/domain/value-objects/session-revoker.value-object";
 
 // ---------------------------------------------------------------------------
 // Device sessions (docs/technical/mobile/mobile-app.md §8) — the devices the
@@ -50,7 +51,7 @@ export const SEED_DEVICE_PROFILES = {
 	},
 	mobileIphone: {
 		clientType: "mobile",
-		userAgent: "RewardHub/42 CFNetwork/1568.100.1 Darwin/24.0.0",
+		userAgent: "Starter/42 CFNetwork/1568.100.1 Darwin/24.0.0",
 		deviceModel: "iPhone 15 Pro",
 		deviceName: "Alex’s iPhone",
 		appVersion: "1.4.0",
@@ -126,7 +127,7 @@ export interface SeedSession {
 	readonly revoked?: { readonly at: number; readonly by: SessionRevoker };
 }
 
-/** The `refresh_tokens` row of a seeded session, every column filled as a real sign-in (and its refreshes) would. */
+/** The `RefreshToken` row of a seeded session, every column filled as a real sign-in (and its refreshes) would. */
 export function seedSessionRow(session: SeedSession): Prisma.RefreshTokenUncheckedCreateInput {
 	const device: SessionDeviceDetails = seedDeviceDetails(session.profile);
 	return {

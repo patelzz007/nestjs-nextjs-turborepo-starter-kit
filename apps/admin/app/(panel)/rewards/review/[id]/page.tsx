@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { prefetch, resolvePrefetchedData } from "@/lib/server/prefetch";
 
-import RewardReviewDetailView from "./reward-review-detail";
+import RewardReviewDetailView from "../../../../../contexts/rewards/components/reward-review-detail";
 
 export const dynamic = "force-dynamic";
 

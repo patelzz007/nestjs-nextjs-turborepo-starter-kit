@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { SidebarStoreProvider, useSidebarCommands, useSidebarExpandedItems, useSidebarIsOpen, useSidebarSearchQuery, pathnameOf } from "../facade";
 
 const STORAGE_KEY = "test-sidebar-state";
-const PATHNAME = "/rewardhub/wallet";
+const PATHNAME = "/dashboard/wallet";
 const AUTO_EXPANDED: Readonly<Record<string, boolean>> = { rewards: true };
 
 function wrapper({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
@@ -108,11 +108,11 @@ describe("sidebar facade", () => {
 		});
 		// Following a child link of the opened branch: the branch must not fold away before the page changes.
 		act(() => {
-			result.current.commands.followLink(PATHNAME, "/rewardhub/wallet/history");
+			result.current.commands.followLink(PATHNAME, "/dashboard/wallet/history");
 		});
 		expect(result.current.expandedItems).toEqual({ ...AUTO_EXPANDED, wallet: true });
 
-		rerender({ pathname: "/rewardhub/wallet/history" });
+		rerender({ pathname: "/dashboard/wallet/history" });
 		rerender({ pathname: PATHNAME });
 		expect(result.current.expandedItems).toEqual(AUTO_EXPANDED);
 	});
@@ -131,7 +131,7 @@ describe("sidebar facade", () => {
 		});
 		expect(result.current.expandedItems).toEqual({ rewards: false });
 
-		rerender({ pathname: "/rewardhub/other" });
+		rerender({ pathname: "/dashboard/other" });
 		expect(result.current.expandedItems).toEqual({ rewards: true });
 
 		// Back on the first page, its old choices are gone: they were dropped when the route changed.
@@ -211,8 +211,8 @@ describe("sidebar open state across a reload", () => {
 
 describe("pathnameOf", () => {
 	it("is a sidebar link's path, without its query or fragment", () => {
-		expect(pathnameOf("/rewardhub/wallet")).toBe("/rewardhub/wallet");
-		expect(pathnameOf("/rewardhub/wallet?tab=all")).toBe("/rewardhub/wallet");
-		expect(pathnameOf("/rewardhub/wallet#history")).toBe("/rewardhub/wallet");
+		expect(pathnameOf("/dashboard/wallet")).toBe("/dashboard/wallet");
+		expect(pathnameOf("/dashboard/wallet?tab=all")).toBe("/dashboard/wallet");
+		expect(pathnameOf("/dashboard/wallet#history")).toBe("/dashboard/wallet");
 	});
 });

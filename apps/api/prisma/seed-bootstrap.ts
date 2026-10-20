@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { applyRowLevelSecurity } from "../scripts/apply-rls.js";
+import { applyRowLevelSecurity } from "./rls/apply.js";
 
 const apiDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 

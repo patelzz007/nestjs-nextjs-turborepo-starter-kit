@@ -16,14 +16,14 @@ import {
 } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { CATEGORIES_TABLE_URL_STATE, toCategoriesListQuery } from "../categories";
-import { EMAIL_LOG_PAGE_SIZE, EMAIL_LOG_URL_STATE, toEmailLogListQuery } from "../email-log";
-import { DEFAULT_GEO_TAB, GEO_URL_STATE, toCitiesListQuery, toCountriesListQuery, toStatesListQuery } from "../geography";
-import { MERCHANTS_TABLE_URL_STATE, toMerchantsListQuery } from "../merchants";
-import { MFA_RECOVERY_PENDING_QUEUE_HREF, MFA_RECOVERY_URL_STATE, toMfaRecoveryListQuery } from "../mfa-recovery";
-import { PRODUCTS_TABLE_URL_STATE, toProductsListQuery } from "../products";
+import { CATEGORIES_TABLE_URL_STATE, toCategoriesListQuery } from "../../../contexts/catalog/url-state/categories";
+import { EMAIL_LOG_PAGE_SIZE, EMAIL_LOG_URL_STATE, toEmailLogListQuery } from "../../../contexts/notifications/url-state/email-log";
+import { DEFAULT_GEO_TAB, GEO_URL_STATE, toCitiesListQuery, toCountriesListQuery, toStatesListQuery } from "../../../contexts/reference-data/url-state/geography";
+import { MERCHANTS_TABLE_URL_STATE, toMerchantsListQuery } from "../../../contexts/organizations/url-state/merchants";
+import { MFA_RECOVERY_PENDING_QUEUE_HREF, MFA_RECOVERY_URL_STATE, toMfaRecoveryListQuery } from "../../../contexts/identity/url-state/mfa-recovery";
+import { PRODUCTS_TABLE_URL_STATE, toProductsListQuery } from "../../../contexts/catalog/url-state/products";
 import { EMAIL_TEMPLATES_URL_STATE, KYB_REVIEW_URL_STATE, STORE_REQUESTS_URL_STATE } from "../selection";
-import { toUsersListQuery, USERS_TABLE_URL_STATE } from "../users";
+import { toUsersListQuery, USERS_TABLE_URL_STATE } from "../../../contexts/identity/url-state/users";
 
 const UUID = "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b";
 

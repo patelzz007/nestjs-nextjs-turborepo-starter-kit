@@ -1,6 +1,6 @@
 "use client";
 
-import { API_KEY_ROW_ACTIONS, API_KEY_ROW_GRID, API_KEY_ROW_TEXT_CELLS } from "@/components/api-keys/api-key-row-grid";
+import { API_KEY_ROW_ACTIONS, API_KEY_ROW_GRID, API_KEY_ROW_TEXT_CELLS } from "@/contexts/pos/components/api-keys/api-key-row-grid";
 import {
 	MerchantBorderedRowsSkeleton,
 	MerchantGridRowsSkeleton,
@@ -10,17 +10,17 @@ import {
 	MerchantStatCardsSkeleton,
 } from "@/components/loading/merchant-skeleton-parts";
 import { cycledWidth, placeholderKeys } from "@workspace/ui/lib/skeleton/placeholders";
-import { REWARD_EDITOR_GRID_CLASS } from "@/components/rewards/merchant-reward-editor-layout";
-import { MerchantRewardsCatalogSkeleton } from "@/components/rewards/merchant-rewards-catalog";
-import { MerchantRewardsSummaryStripSkeleton } from "@/components/rewards/merchant-rewards-summary-strip";
-import { TERMINAL_ROW_ACTIONS, TERMINAL_ROW_GRID, TERMINAL_ROW_TEXT_CELLS } from "@/components/terminals/terminal-row-grid";
-import { TerminalSettingsRowSkeleton } from "@/components/terminals/terminal-settings-card";
+import { REWARD_EDITOR_GRID_CLASS } from "@/contexts/rewards/components/merchant-reward-editor-layout";
+import { MerchantRewardsCatalogSkeleton } from "@/contexts/rewards/components/merchant-rewards-catalog";
+import { MerchantRewardsSummaryStripSkeleton } from "@/contexts/rewards/components/merchant-rewards-summary-strip";
+import { TERMINAL_ROW_ACTIONS, TERMINAL_ROW_GRID, TERMINAL_ROW_TEXT_CELLS } from "@/contexts/pos/components/terminals/terminal-row-grid";
+import { TerminalSettingsRowSkeleton } from "@/contexts/pos/components/terminals/terminal-settings-card";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { sidebarMenuSkeletonShape, type SidebarMenuSkeletonShape } from "@workspace/client/lib/sidebar/sidebar-menu-skeleton";
 import { AppPanelShell } from "@workspace/ui/components/app-panel-shell";
 import { AppShellHeaderSkeleton, PanelSidebarSkeleton, PanelSidebarSwitcherSkeleton, type AppShellHeaderSkeletonAction } from "@workspace/ui/components/panel-shell-skeleton";
-import { SecuritySettingsPanelSkeleton } from "@workspace/client/lib/auth/mfa/security-settings-panel-skeleton";
-import { MerchantKybVerificationSkeleton } from "@workspace/client/lib/merchant/kyb/verification-skeleton";
+import { SecuritySettingsPanelSkeleton } from "@workspace/client/lib/contexts/identity/mfa/security-settings-panel-skeleton";
+import { MerchantKybVerificationSkeleton } from "@workspace/client/lib/contexts/organizations/kyb/verification-skeleton";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { ChartSkeleton, FormSkeleton, ListSkeleton, PageHeaderSkeleton, ProseSkeleton, StatCardsSkeleton } from "@workspace/ui/components/skeleton-patterns";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
@@ -52,6 +52,7 @@ export const MERCHANT_API_KEYS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegi
 export const MERCHANT_TERMINALS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading terminals…" };
 export const MERCHANT_REDEMPTIONS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading redemptions…" };
 export const MERCHANT_REWARDS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading rewards…" };
+export const MERCHANT_STORES_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading your stores…" };
 export const MERCHANT_REWARD_EDITOR_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading reward editor…" };
 export const MERCHANT_REWARD_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading reward…" };
 export const MERCHANT_SETTINGS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading settings…" };
@@ -635,6 +636,22 @@ function RosterHeadingSkeleton(): React.JSX.Element {
 }
 
 /** `/orgs/[orgSlug]/settings/team`: header, current members, pending invitations and the invite form. */
+/** Store rows drawn while the stores page loads. */
+export const STORE_ROW_SKELETON_ROWS = 4;
+/** Lines of one store row: its name and the member's role. */
+export const STORE_ROW_LINES = 2;
+
+/** `/orgs/[orgSlug]/stores`: the header, the search box and the store rows. */
+export function MerchantStoresPageSkeleton(): React.JSX.Element {
+	return (
+		<SkeletonRegion labels={MERCHANT_STORES_LOADING_LABELS} className={PAGE_STACK}>
+			<MerchantPageHeaderSkeleton />
+			<Skeleton className="h-9 w-full max-w-sm rounded-md" />
+			<MerchantBorderedRowsSkeleton rows={STORE_ROW_SKELETON_ROWS} lines={STORE_ROW_LINES} trailing="badge" surface="card" />
+		</SkeletonRegion>
+	);
+}
+
 export function MerchantTeamPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={MERCHANT_TEAM_LOADING_LABELS} className={PAGE_STACK}>

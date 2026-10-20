@@ -26,8 +26,8 @@ There are **three layers**, and each one has exactly one job:
 
 | Layer | Question it answers | Where it lives | Is it security? |
 |---|---|---|---|
-| **Frontend `can()`** | "Should I **show** this button / page / menu item?" | `packages/client/src/lib/auth/can.tsx` + each app | ❌ **No** — it is UX only |
-| **Backend Authorization Kernel** | "May this request **execute**?" | `apps/api/src/modules/authorization/**` | ✅ **Yes** — the real gate |
+| **Frontend `can()`** | "Should I **show** this button / page / menu item?" | `packages/client/src/lib/contexts/authorization/index.tsx` + each app | ❌ **No** — it is UX only |
+| **Backend Authorization Kernel** | "May this request **execute**?" | `apps/api/src/contexts/authorization**` | ✅ **Yes** — the real gate |
 | **PostgreSQL Row-Level Security (RLS)** | "Which **rows** can the database return or change?" | `apps/api/prisma/rls*.sql`, `apps/api/src/prisma/**` | ✅ **Yes** — the last line of defence |
 
 ```text
@@ -75,13 +75,13 @@ A permission such as `ORDER:DELETE` is a **capability**, not a blank cheque. It 
 
 | Piece | File | What it does |
 |---|---|---|
-| **Kernel** | `src/modules/authorization/kernel/authorization-kernel.service.ts` | `can()`, `authorize()`, `explain()`, `filter()`, `resourceCapabilities()`, `hasRoles()` |
+| **Kernel** | `src/contexts/authorization/infrastructure/kernel/authorization-kernel.service.ts` | `can()`, `authorize()`, `explain()`, `filter()`, `resourceCapabilities()`, `hasRoles()` |
 | Grants loader | `kernel/subject-grants.loader.ts` | Loads roles (+ parents), role permissions, store-membership roles, user overrides |
 | Tenant verification | `kernel/tenant-membership.service.ts` | Proves a claimed organization / store / location belongs to the user |
-| Ownership | `kernel/resource-ownership.resolver.ts` | Reads the owner of a USER / PROFILE / URL / TAG / API_KEY from the DB |
+| Ownership | `kernel/resource-ownership.resolver.ts` | Reads the owner of a USER / PROFILE from the DB |
 | ACL | `kernel/acl.service.ts` | Explicit ALLOW / DENY entries per user or role |
 | Policies (ABAC) | `kernel/policy-engine.service.ts` | Evaluates the JSON rule language — never `eval` |
-| Decision audit | `kernel/authorization-audit-kernel.service.ts` | Writes `authorization_audits` rows |
+| Decision audit | `kernel/authorization-audit-kernel.service.ts` | Writes `AuthorizationAudit` rows |
 | Decisions API | `kernel/authorization-decisions.controller.ts` | `POST /authorization/decisions`, `GET /authorization/decisions/explain` |
 | **Global guard** | `guards/authorization.guard.ts` | Runs on every request; enforces all authorization decorators |
 | Decorators | `decorators/authorize.decorator.ts`, `modules/auth/decorators/require-permission.decorator.ts`, `decorators/require-*.decorator.ts` | Declare what a route needs |
@@ -152,14 +152,14 @@ A permission such as `ORDER:DELETE` is a **capability**, not a blank cheque. It 
 | **Capability slug** | The string the UI checks, e.g. `platform:user.delete` or `merchant:manage_rewards`. Always obtain it from `PERMISSION.*` / `MERCHANT_CAPABILITY.*`. |
 | **Role** | A named bundle of permissions (`Admin`, `Manager`, `User`, `Store Manager`, …). Roles are **data**; admins create them at runtime. Roles may have a parent and inherit its permissions. |
 | **Grant** | A permission the subject holds, from a role, a store membership role, a user ALLOW override, or an implicit self grant. |
-| **Override** | A `user_permissions` row with `effect` `ALLOW` (extra permission) or `DENY` (takes a permission away, even if a role grants it). |
+| **Override** | A `UserPermission` row with `effect` `ALLOW` (extra permission) or `DENY` (takes a permission away, even if a role grants it). |
 | **Scope** | Where a grant applies: `GLOBAL`, `ORGANIZATION`, `STORE`, `LOCATION`, `OWN`, `RESOURCE`. |
-| **ACL** | `resource_acls` rows: explicit ALLOW / DENY for one user or role on one resource (or every resource of a type). |
+| **ACL** | `ResourceAcl` rows: explicit ALLOW / DENY for one user or role on one resource (or every resource of a type). |
 | **Ownership** | "This record belongs to you", read from the database (never from the request body). |
-| **Policy (ABAC)** | A `policy_definitions` row with JSON conditions such as "status is not COMPLETED". |
+| **Policy (ABAC)** | A `PolicyDefinition` row with JSON conditions such as "status is not COMPLETED". |
 | **ReBAC** | Relationship checks: user → member of organization → store → location. |
 | **Tenant** | An organization. Stores and locations belong to one. |
 | **Store** | A shop of an organization, linked 1:1 to an `OrganizationLocation`. Staff join a store through a **store membership** with a role. |
 | **RLS** | PostgreSQL Row-Level Security — database rules that hide rows from a session. |
 | **System operation** | A named, allowlisted reason to bypass RLS (e.g. `queue.job`, `outbox.enqueue`). |
-| **SuperAdmin** | The platform operator flag on `users.isSuperAdmin`. Bypasses permission checks, audited. |
+| **SuperAdmin** | The platform operator flag on `User.isSuperAdmin`. Bypasses permission checks, audited. |

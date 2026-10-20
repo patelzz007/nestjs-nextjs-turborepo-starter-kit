@@ -3,10 +3,11 @@
 import { AuthStatusLineSkeleton } from "@/components/loading/auth-form-skeleton";
 import { VERIFY_EMAIL_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { ROUTES } from "@/lib/routes";
-import { VerifyEmailView } from "@workspace/client/lib/auth/email/verify-email-view";
+import { VerifyEmailView } from "@workspace/client/lib/contexts/identity/email/verify-email-view";
 import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import { useSearchParams } from "next/navigation";
 import { Suspense, type JSX } from "react";
+import { BRAND_NAME } from "@workspace/tokens";
 
 function VerifyEmailContent(): JSX.Element {
 	const searchParams = useSearchParams();
@@ -20,18 +21,18 @@ function VerifyEmailContent(): JSX.Element {
 		);
 	}
 
-	return <VerifyEmailView token={token} settingsHref={ROUTES.rewardHub.account} />;
+	return <VerifyEmailView token={token} settingsHref={ROUTES.dashboard.account} />;
 }
 
 export default function WebVerifyEmailPage(): JSX.Element {
 	return (
 		<AuthLayout
-			brandName="Reward Hub"
+			brandName={BRAND_NAME}
 			tagline="Confirm your email to unlock your account."
 			features={["One-click verification", "Secure token-based link", "Expires after 24 hours"]}
 			title="Verify email"
 			subtitle="We're confirming your email address"
-			copyright="Reward Hub">
+			copyright={BRAND_NAME}>
 			<Suspense fallback={<AuthStatusLineSkeleton labels={VERIFY_EMAIL_LOADING_LABELS} />}>
 				<VerifyEmailContent />
 			</Suspense>

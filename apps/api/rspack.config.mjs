@@ -1,9 +1,31 @@
 // NestJS 12 + Fastify — Rspack bundle (SWC decorators, Node ESM, external deps).
 // Mode comes from the CLI (`--mode development` / `--mode production`), not NODE_ENV.
+import path from "node:path";
+
 import { defineConfig } from "@rspack/cli";
 import { rspack } from "@rspack/core";
 import { RunScriptWebpackPlugin } from "run-script-webpack-plugin";
 import nodeExternals from "webpack-node-externals";
+
+/**
+ * Workspace packages the API loads from their built `dist/` at runtime (node externals keep them
+ * out of the bundle). In dev their own `tsc --watch` keeps `dist/` current (decision #69), but rspack
+ * never watches externals, so without this the API keeps running stale code after an edit in
+ * `packages/shared`. Registering each `dist/` as a context dependency makes rspack rebuild, and
+ * RunScriptWebpackPlugin restart the API, whenever one of them is re-emitted. (rspack's
+ * `watchOptions` has no way to add watched paths; verified against @rspack/core 2.2.8.)
+ */
+const WATCHED_WORKSPACE_DIST_DIRS = ["shared", "messaging", "api-client"].map((name) => path.resolve(import.meta.dirname, "..", "..", "packages", name, "dist"));
+
+class WatchWorkspaceDistPlugin {
+	apply(compiler) {
+		compiler.hooks.thisCompilation.tap("WatchWorkspaceDistPlugin", (compilation) => {
+			for (const directory of WATCHED_WORKSPACE_DIST_DIRS) {
+				compilation.contextDependencies.add(directory);
+			}
+		});
+	}
+}
 
 export default defineConfig((_env, argv) => {
 	const isDev = argv.mode === "development";
@@ -61,7 +83,7 @@ export default defineConfig((_env, argv) => {
 				},
 			],
 		},
-		devtool: "source-map",
+		devtool: isDev ? "cheap-module-source-map" : "source-map",
 		optimization: {
 			splitChunks: false,
 			minimize: !isDev,
@@ -89,6 +111,7 @@ export default defineConfig((_env, argv) => {
 		plugins: [
 			...(isDev
 				? [
+						new WatchWorkspaceDistPlugin(),
 						new RunScriptWebpackPlugin({
 							name: "main.js",
 							autoRestart: true,

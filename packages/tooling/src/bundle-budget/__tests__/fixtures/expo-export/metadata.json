@@ -1,0 +1,23 @@
+{
+	"version": 0,
+	"bundler": "metro",
+	"fileMetadata": {
+		"ios": {
+			"bundle": "_expo/static/js/ios/index-dcab0ec67727c720b93159b98a1b9163.hbc",
+			"assets": [
+				{
+					"path": "assets/0a328cd9c1afd0afe8e3b1ec5165b1b4",
+					"ext": "png"
+				},
+				{
+					"path": "assets/7d40544b395c5949f4646f5e150fe020",
+					"ext": "png"
+				}
+			]
+		},
+		"android": {
+			"bundle": "_expo/static/js/android/index-3f1c0de2a4b5c6d7e8f90a1b2c3d4e5f.hbc",
+			"assets": []
+		}
+	}
+}

@@ -11,8 +11,7 @@ import * as React from "react";
 import { z } from "zod";
 
 import { Screen } from "../../../components/screen";
-import { useRefreshSession } from "../../../features/auth/use-refresh-session";
-import { TwoFactorEnrollment, TwoFactorEnrollmentModeSchema } from "../../../features/two-factor/two-factor-enrollment";
+import { TwoFactorEnrollment, TwoFactorEnrollmentModeSchema, useRefreshSession } from "../../../contexts/identity";
 import { useRouteParams } from "../../../lib/route-params";
 import { ROUTES } from "../../../runtime/routes";
 

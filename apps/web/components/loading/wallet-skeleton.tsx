@@ -1,6 +1,6 @@
 import { WALLET_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { cycledWidth, placeholderKeys } from "@workspace/ui/lib/skeleton/placeholders";
-import { RewardHubPageHeaderSkeleton } from "@/components/loading/reward-hub-page-header-skeleton";
+import { DashboardPageHeaderSkeleton } from "@/components/loading/dashboard-page-header-skeleton";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { StatCardsSkeleton } from "@workspace/ui/components/skeleton-patterns";
@@ -37,11 +37,11 @@ export function WalletClaimRowsBones(): React.JSX.Element {
 	);
 }
 
-/** `/rewardhub/wallet` while the server prefetches the claims page and the "ready to redeem" count. */
+/** `/dashboard/wallet` while the server prefetches the claims page and the "ready to redeem" count. */
 export function WalletPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={WALLET_LOADING_LABELS} className="flex flex-col gap-8">
-			<RewardHubPageHeaderSkeleton />
+			<DashboardPageHeaderSkeleton />
 			<StatCardsSkeleton count={WALLET_STAT_COUNT} columns={2} />
 			<WalletClaimRowsBones />
 		</SkeletonRegion>

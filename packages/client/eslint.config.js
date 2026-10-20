@@ -1,8 +1,12 @@
+import { clientOnlyWidgetsConfig } from "@workspace/eslint-config/client-only-widgets";
 import { config } from "@workspace/eslint-config/react-internal";
+import { CLIENT_ONLY_WIDGETS } from "@workspace/ui/lib/client-only-widgets";
 
 /** @type {import("eslint").Linter.Config} */
 export default [
 	...config,
+	// `next/dynamic(..., { ssr: false })` only for the allowlisted browser-only widgets (decision #58).
+	clientOnlyWidgetsConfig(CLIENT_ONLY_WIDGETS),
 	{
 		// ── Env boundary (docs/technical/configuration/frontend.md) ──────────────────────
 		// src/lib/api/config.ts is this package's only env module: it validates

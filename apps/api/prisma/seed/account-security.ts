@@ -1,22 +1,24 @@
 import { createHash } from "node:crypto";
 
 import type { MfaRecoveryRequestStatus, Prisma, SupportAccessGrantStatus, User } from "@prisma/client";
-import { BACKUP_CODE_CHARSET, BACKUP_CODE_COUNT, BACKUP_CODE_LENGTH, DAY_MS } from "@workspace/shared";
+import { API_VERSION_PREFIX, BACKUP_CODE_CHARSET, BACKUP_CODE_COUNT, BACKUP_CODE_LENGTH, DAY_MS } from "@workspace/shared";
 
 import { getApiConfig } from "../../src/config/api-config";
 import { TypedConfigService } from "../../src/config/typed-config.service";
-import { IMPERSONATION_TOKEN_TTL_SECONDS } from "../../src/modules/auth/constants/impersonation.constants";
-import { ImpersonationAuditAction } from "../../src/modules/auth/repositories/impersonation-session.repository";
-import { MfaRecoveryAuditAction } from "../../src/modules/auth/repositories/mfa-recovery.repository";
-import { CryptoService } from "../../src/modules/auth/services/crypto.service";
-import { SecretEncryptionService } from "../../src/modules/auth/services/secret-encryption.service";
-import { findActivePolicyVersionInTx } from "../../src/modules/organization/utils/rewardhub-policy-seed.util";
-import { revokedBySystem, revokedByUser, type SessionRevoker } from "../../src/modules/sessions/device/session-revoker";
+import { IMPERSONATION_TOKEN_TTL_SECONDS, ImpersonationAuditAction } from "../../src/contexts/identity/domain/aggregates/impersonation-session.aggregate";
+import { MfaRecoveryAuditAction } from "../../src/contexts/identity/domain/aggregates/mfa-recovery-request.aggregate";
+import { CryptoService } from "../../src/contexts/identity/infrastructure/security/crypto.service";
+import { SecretEncryptionService } from "../../src/contexts/identity/infrastructure/security/secret-encryption.service";
+import { findActivePolicyVersionInTx } from "../../src/contexts/authorization/public-api";
+import { revokedBySystem, revokedByUser, type SessionRevoker } from "../../src/contexts/identity/domain/value-objects/session-revoker.value-object";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
 import { SEED_DEVICE_PROFILES, seedSessionRow, type SeedDeviceProfile, type SeedSession } from "./device-sessions";
 import { daysAgo } from "./helpers";
+import { entry, NO_MACHINE_PRINCIPAL } from "./http-audit";
 import { requireRow } from "./require-row";
+import { toAuditLogCreateInput } from "../../src/platform/infrastructure/audit/audit-log.mapper";
+import { toAuditPayload } from "../../src/platform/infrastructure/audit/http-audit-entry";
 
 // ---------------------------------------------------------------------------
 // Account security — every auth/session table and column, written through the
@@ -33,8 +35,8 @@ import { requireRow } from "./require-row";
 //     login challenge, last TOTP step), a user mid-enrollment (pending setup),
 //     a locked-out user, password history, device sessions in the mobile and
 //     merchant apps (one rotated) and a revoked session per `deletedBy` path.
-//   • Support-access grants in every lifecycle state with their organization
-//     audit rows under the organization's active policy version.
+//   • Support-access grants in every lifecycle state with their tenant
+//     audit rows under the tenant's active policy version.
 //
 // Scenario-independent: each scenario passes its own cast; every row id is
 // derived from the cast's namespace + a stable key, and rows are UPSERTED, so
@@ -64,6 +66,8 @@ const IMPERSONATION_DURATION_MS = 6 * MINUTE_MS;
 /** How many of the enrolled user's backup codes were already used at login. */
 const USED_BACKUP_CODE_COUNT = 2;
 const SUPPORT_GRANT_DURATION_MS = 2 * HOUR_MS;
+/** Demo request number (`entry()`, http-audit.ts) of the SuperAdmin's tenant read under the active support grant. */
+const SUPPORT_GRANT_TENANT_READ_REQUEST = 12;
 
 const SUPPORT_IP = "203.0.113.24";
 const SUPPORT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15";
@@ -72,10 +76,10 @@ const USER_IP = "198.51.100.73";
 const SECOND_USER_IP = "203.0.113.41";
 // const USER_AGENT = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 
-/** The organization a scenario seeds support-access grants for. */
+/** The tenant a scenario seeds support-access grants for. */
 export interface SupportAccessSeedTarget {
-	readonly organizationId: string;
-	/** An active OWNER of the organization — the tenant-side approver. */
+	readonly tenantId: string;
+	/** An active OWNER of the tenant — the tenant-side approver. */
 	readonly owner: User;
 }
 
@@ -135,6 +139,14 @@ function toBase32(bytes: Buffer): string {
  * constructed from the validated API config, so every secret is produced the
  * way production produces it.
  */
+/** Seeded revocations that bump the account's `tokenVersion` (every session of the account ends with them). */
+const TOKEN_VERSION_BUMPING_REVOCATIONS: ReadonlySet<string> = new Set<string>([
+	"refresh-revoked-admin",
+	"refresh-revoked-reuse",
+	"refresh-revoked-logout-all",
+	"refresh-revoked-rbac",
+]);
+
 export class AccountSecuritySeeder {
 	private readonly crypto: CryptoService;
 	private readonly secrets: SecretEncryptionService;
@@ -239,6 +251,8 @@ export class AccountSecuritySeeder {
 			endReason: "STOPPED",
 			ipAddress: SUPPORT_IP,
 			userAgent: SUPPORT_USER_AGENT,
+			// A customer with no tenant membership: no support grant is needed (D21).
+			supportAccessGrantIds: [],
 			createdAt: startedAt,
 			updatedAt: endedAt,
 		};
@@ -258,7 +272,8 @@ export class AccountSecuritySeeder {
 			impersonationAudit("impersonation-audit-start", ImpersonationAuditAction.START, startedAt),
 			impersonationAudit("impersonation-audit-stop", ImpersonationAuditAction.STOP, endedAt),
 		]) {
-			await prisma.impersonationAuditLog.upsert({ where: { id: row.id }, create: row, update: row });
+			// Append-only (UPDATE is withheld from app_runtime): a re-run keeps the row as first written.
+			await prisma.impersonationAuditLog.upsert({ where: { id: row.id }, create: row, update: {} });
 		}
 
 		// The recovered account's codes: issued at enrollment, soft-deleted by the completed recovery.
@@ -320,7 +335,8 @@ export class AccountSecuritySeeder {
 			recoveryAudit("mfa-audit-completed", MfaRecoveryAuditAction.COMPLETED, superAdmin.id, { from: "APPROVED", to: "COMPLETED" }, completedAt, null),
 		];
 		for (const row of auditRows) {
-			await prisma.mfaRecoveryAuditLog.upsert({ where: { id: row.id }, create: row, update: row });
+			// Append-only (UPDATE is withheld from app_runtime): a re-run keeps the row as first written.
+			await prisma.mfaRecoveryAuditLog.upsert({ where: { id: row.id }, create: row, update: {} });
 		}
 		return 1;
 	}
@@ -469,6 +485,12 @@ export class AccountSecuritySeeder {
 			const row: Prisma.RefreshTokenUncheckedCreateInput = seedSessionRow(session);
 			await prisma.refreshToken.upsert({ where: { id: requireRow(session.id, "seeded session id") }, create: row, update: row });
 		}
+		// Each revocation that ends every session in the app (an admin's RBAC change, refresh-token reuse,
+		// "sign out everywhere", an RBAC job) bumps `tokenVersion`, and the `users_authorization_change_stamp`
+		// trigger stamps `authorizationChangedAt` from the database clock — the cache-invalidation backstop's
+		// input, never written by application code. An absolute value keeps a re-seed from bumping it again.
+		const tokenVersion: number = revocations.filter((revocation): boolean => TOKEN_VERSION_BUMPING_REVOCATIONS.has(revocation.key)).length;
+		await prisma.user.update({ where: { id: mfaUser.id }, data: { tokenVersion } });
 	}
 
 	/** A user who scanned the QR code but has not confirmed the first TOTP yet. */
@@ -525,10 +547,10 @@ export class AccountSecuritySeeder {
 		return rows;
 	}
 
-	/** One grant per lifecycle state, each transition with its organization audit row (real actor + active policy version). */
+	/** One grant per lifecycle state, each transition with its tenant audit row (real actor + active policy version). */
 	private async seedSupportAccess(now: number): Promise<number> {
 		const { superAdmin, supportAccess } = this.cast;
-		const policyVersion: number = await findActivePolicyVersionInTx(prisma, supportAccess.organizationId);
+		const policyVersion: number = await findActivePolicyVersionInTx(prisma, supportAccess.tenantId);
 		const grants: {
 			readonly key: string;
 			readonly status: SupportAccessGrantStatus;
@@ -545,7 +567,7 @@ export class AccountSecuritySeeder {
 		for (const grant of grants) {
 			const id = this.id(`support-grant:${grant.key}`);
 			const data: Omit<Prisma.SupportAccessGrantUncheckedCreateInput, "id"> = {
-				organizationId: supportAccess.organizationId,
+				tenantId: supportAccess.tenantId,
 				supportUserId: superAdmin.id,
 				mode: grant.mode,
 				status: grant.status,
@@ -558,7 +580,7 @@ export class AccountSecuritySeeder {
 			};
 			await prisma.supportAccessGrant.upsert({ where: { id }, create: { id, ...data }, update: data });
 
-			const audits: WithId<Prisma.OrganizationAuditLogUncheckedCreateInput>[] = [
+			const audits: WithId<Prisma.TenantAuditLogUncheckedCreateInput>[] = [
 				this.supportAudit(id, "requested", superAdmin.id, policyVersion, grant.requestedAt, { mode: grant.mode }),
 			];
 			if (grant.approved) {
@@ -568,10 +590,82 @@ export class AccountSecuritySeeder {
 				audits.push(this.supportAudit(id, "revoked", superAdmin.id, policyVersion, grant.revokedAt, null));
 			}
 			for (const audit of audits) {
-				await prisma.organizationAuditLog.upsert({ where: { id: audit.id }, create: audit, update: audit });
+				await prisma.tenantAuditLog.upsert({ where: { id: audit.id }, create: audit, update: audit });
 			}
 		}
+		await this.seedSupportGrantRequest(this.id("support-grant:active"));
+		await this.seedImpersonationUnderGrant(this.id("support-grant:revoked"), now - 3 * DAY_MS);
 		return grants.length;
+	}
+
+	/**
+	 * While the (later revoked) grant was approved, the SuperAdmin impersonated the tenant's owner:
+	 * a tenant member, so the session records the grant that authorized it (D21).
+	 */
+	private async seedImpersonationUnderGrant(grantId: string, grantRequestedAt: number): Promise<void> {
+		const { superAdmin, supportAccess } = this.cast;
+		const sessionId = this.id("impersonation-session-support-grant");
+		const startedAt = grantRequestedAt + 5 * MINUTE_MS;
+		const endedAt = startedAt + IMPERSONATION_DURATION_MS;
+		const session: Omit<Prisma.ImpersonationSessionUncheckedCreateInput, "id"> = {
+			impersonatorId: superAdmin.id,
+			targetUserId: supportAccess.owner.id,
+			startedAt,
+			expiresAt: startedAt + IMPERSONATION_TTL_MS,
+			endedAt,
+			endedBy: superAdmin.id,
+			endReason: "STOPPED",
+			ipAddress: SUPPORT_IP,
+			userAgent: SUPPORT_USER_AGENT,
+			supportAccessGrantIds: [grantId],
+			createdAt: startedAt,
+			updatedAt: endedAt,
+		};
+		await prisma.impersonationSession.upsert({ where: { id: sessionId }, create: { id: sessionId, ...session }, update: session });
+		for (const [key, action, at] of [
+			["impersonation-audit-support-start", ImpersonationAuditAction.START, startedAt],
+			["impersonation-audit-support-stop", ImpersonationAuditAction.STOP, endedAt],
+		] satisfies [string, string, number][]) {
+			const row: WithId<Prisma.ImpersonationAuditLogUncheckedCreateInput> = {
+				id: this.id(key),
+				impersonatorId: superAdmin.id,
+				targetUserId: supportAccess.owner.id,
+				sessionId,
+				action,
+				ipAddress: SUPPORT_IP,
+				userAgent: SUPPORT_USER_AGENT,
+				createdAt: at,
+			};
+			// Append-only (UPDATE is withheld from app_runtime): a re-run keeps the row as first written.
+			await prisma.impersonationAuditLog.upsert({ where: { id: row.id }, create: row, update: {} });
+		}
+	}
+
+	/** The request audit row of the SuperAdmin reading the tenant under the active grant: the grant id is on the row. */
+	private async seedSupportGrantRequest(grantId: string): Promise<void> {
+		const { superAdmin, supportAccess } = this.cast;
+		const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: supportAccess.tenantId }, select: { slug: true } });
+		const endpoint = `${API_VERSION_PREFIX}/tenants/:tenantSlug/context`;
+		const { id, row } = entry(SUPPORT_GRANT_TENANT_READ_REQUEST, {
+			method: "GET",
+			endpoint,
+			path: endpoint.replace(":tenantSlug", tenant.slug),
+			outcome: "SUCCEEDED",
+			responseStatus: 200,
+			errorCode: null,
+			actorUserId: superAdmin.id,
+			impersonatorUserId: null,
+			...NO_MACHINE_PRINCIPAL,
+			tenantId: supportAccess.tenantId,
+			storeId: null,
+			locationId: null,
+			requestParams: toAuditPayload({ params: { tenantSlug: tenant.slug }, query: {} }),
+			requestBody: null,
+			responseBody: toAuditPayload({ success: true, data: { tenantId: supportAccess.tenantId } }),
+			systemOperations: ["auth.membership.lookup"],
+			supportAccessGrantId: grantId,
+		});
+		await prisma.auditLog.upsert({ where: { id }, create: { id, ...toAuditLogCreateInput(row) }, update: {} });
 	}
 
 	private supportAudit(
@@ -581,11 +675,11 @@ export class AccountSecuritySeeder {
 		policyVersion: number,
 		at: number,
 		metadata: Prisma.InputJsonObject | null,
-	): WithId<Prisma.OrganizationAuditLogUncheckedCreateInput> {
+	): WithId<Prisma.TenantAuditLogUncheckedCreateInput> {
 		const id = this.id(`support-audit:${grantId}:${transition}`);
 		return {
 			id,
-			organizationId: this.cast.supportAccess.organizationId,
+			tenantId: this.cast.supportAccess.tenantId,
 			actorUserId,
 			action: `support.grant_${transition}`,
 			resourceType: "SupportAccessGrant",
@@ -607,7 +701,7 @@ export interface AccountSecurityCastEmails {
 	readonly mfaUser: string;
 	readonly enrollingUser: string;
 	readonly lockedUser: string;
-	readonly supportAccess: { readonly organizationId: string; readonly ownerEmail: string };
+	readonly supportAccess: { readonly tenantId: string; readonly ownerEmail: string };
 }
 
 /** Resolves the cast's users, seeds everything and logs the developer credentials. */
@@ -620,7 +714,7 @@ export async function seedAccountSecurity(emails: AccountSecurityCastEmails, log
 		mfaUser: await user(emails.mfaUser),
 		enrollingUser: await user(emails.enrollingUser),
 		lockedUser: await user(emails.lockedUser),
-		supportAccess: { organizationId: emails.supportAccess.organizationId, owner: await user(emails.supportAccess.ownerEmail) },
+		supportAccess: { tenantId: emails.supportAccess.tenantId, owner: await user(emails.supportAccess.ownerEmail) },
 	}).seed();
 	log(
 		`✅ Account security: ${String(summary.impersonationSessions)} impersonation session, ${String(summary.mfaRecoveryRequests)} completed MFA recovery, ${String(summary.backupCodes)} backup codes, ${String(summary.loginChallenges)} login challenges, ${String(summary.pendingSetups)} pending 2FA setup, ${String(summary.passwordHistoryRows)} password-history rows, ${String(summary.supportAccessGrants)} support-access grants`,

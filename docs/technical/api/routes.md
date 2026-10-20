@@ -85,7 +85,7 @@ detail: defineContract({
 }),
 ```
 
-**Controller** (`apps/api/src/modules/rewards/controllers/consumer-rewards.controller.ts`):
+**Controller** (`apps/api/src/contexts/rewards/presentation/http/consumer-rewards.controller.ts`):
 
 ```ts
 @Controller(apiPath("/rewards"))
@@ -163,7 +163,7 @@ pnpm --filter @workspace/shared test
 ## 8. Health probes
 
 Unversioned, public (`@Public()`), served by `HealthController`
-(`apps/api/src/modules/health`). All answer in the standard envelope; failures use the
+(`apps/api/src/platform/presentation/http/health`). All answer in the standard envelope; failures use the
 [error envelope](./errors.md).
 
 | Route | Probe | Touches the DB | 200 when | Fails with |
@@ -382,7 +382,7 @@ typically a UUID generated once per user action and reused for every retry of th
 | First request with a key | Runs; the successful response is stored for **24 h**. |
 | Identical retry (same principal, tenant, route, URL, canonical body) | **Replayed without running the handler**, same status, `Idempotent-Replayed: true`, fresh `meta.correlationId`/`timestamp`. |
 | Same key, different method/URL/body | 409 `IDEMPOTENCY_KEY_REUSED` |
-| Same key while the first request is still running | 409 `IDEMPOTENCY_REQUEST_IN_PROGRESS` + `Retry-After: 1`. |
+| Same key while the first request is still running | **Waits** (up to 5 s) on the key's Postgres advisory lock — no polling — then replays the first request's stored response, or runs itself if the first one failed. Still running after 5 s → 409 `IDEMPOTENCY_REQUEST_IN_PROGRESS` + `Retry-After: 1` (ADR 061). |
 | The handler failed (any error) | The key is released — errors are **not** cached; a retry re-executes. |
 | The handler succeeded but storing the response failed | The key is **kept** (never re-executes while the lease lasts), the client gets the real response, the failure is logged at `error` (`idempotency.store_failed`). |
 
@@ -391,13 +391,20 @@ the principal is `user:<id>` (plus `:as:<impersonator>` while impersonating) or 
 and the tenant is the server-verified one from the request context (never a raw header) — the same
 user can never replay one organization's response in another.
 
-**Ledger.** `platform_resource_idempotency_records` (RLS bypass-only, `http.idempotency` system
+**Ledger.** `PlatformResourceIdempotencyRecord` (RLS bypass-only, `http.idempotency` system
 operation). A row is `IN_PROGRESS` with a 60-second lease and a fresh **fencing token**
-(`lease_token`) while the handler runs, then `COMPLETED` with the response and a 24-hour replay
+(`leaseToken`) while the handler runs, then `COMPLETED` with the response and a 24-hour replay
 window. `complete`/`release` succeed only for the current token while its lease is live, so a
 request that outlived its lease can never overwrite or free its successor's record (logged as
 `idempotency.lease_lost`). The unique `(scope, idempotency_key)` index lets exactly one concurrent
 request acquire a key; expired rows are taken over by a conditional update.
+
+**Key lock (ADR 061).** Every request with a key first takes a session-level advisory lock on
+`(scope, key)` (`pg_advisory_lock` under `lock_timeout = 5 s`, on a dedicated pool,
+`api-idempotency-locks`). The executing request holds it until it stores or releases; a duplicate
+blocks inside Postgres and wakes the moment the lock is freed, so N waiting duplicates cost N lock
+statements and nothing more. A holder whose process dies loses its lock with its session; its
+row stays `IN_PROGRESS` until the lease expires, and a duplicate gets 409 until then.
 
 **Retention.** Rows expired for more than 1 hour are deleted in batches of 500 (60-second budget per
 run) under `idempotency.retention`: by an hourly BullMQ job scheduler when Redis is configured

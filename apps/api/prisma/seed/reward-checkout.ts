@@ -1,6 +1,6 @@
 import { DEFAULT_SALE_CURRENCY } from "@workspace/shared";
 
-import { sha256Hex } from "../../src/common/crypto/sha256";
+import { sha256Hex } from "../../src/platform/infrastructure/crypto/sha256";
 
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
@@ -8,7 +8,7 @@ import { deterministicUuid } from "./deterministic-uuid";
 export interface SeedCheckoutInput {
 	/** Stable key → deterministic sale / redemption / audit ids and idempotency key. */
 	readonly key: string;
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly locationId: string;
 	readonly terminalId: string;
 	readonly apiKeyId: string;
@@ -19,7 +19,7 @@ export interface SeedCheckoutInput {
 }
 
 /**
- * One paid POS bill redeeming one claim — the rows `POST /redemptions/checkout`
+ * One paid POS bill redeeming one claim — the rows `POST /integration/redemptions/checkout`
  * writes: the sale (idempotency key + request hash), its redemption (every
  * redemption belongs to a sale) and the `merchant.checkout` audit row. The
  * audit row has a deterministic id and is upserted, so re-seeding never
@@ -30,7 +30,7 @@ export async function seedCheckout(input: SeedCheckoutInput): Promise<string> {
 	const sale = await prisma.rewardSale.create({
 		data: {
 			id: saleId,
-			organizationId: input.organizationId,
+			tenantId: input.tenantId,
 			locationId: input.locationId,
 			userId: input.userId,
 			terminalId: input.terminalId,
@@ -46,7 +46,7 @@ export async function seedCheckout(input: SeedCheckoutInput): Promise<string> {
 		data: {
 			id: deterministicUuid("reward-seed-redemption", input.key),
 			claimId: input.claimId,
-			organizationId: input.organizationId,
+			tenantId: input.tenantId,
 			locationId: input.locationId,
 			userId: input.userId,
 			terminalId: input.terminalId,
@@ -65,10 +65,11 @@ export async function seedCheckout(input: SeedCheckoutInput): Promise<string> {
 		currency: DEFAULT_SALE_CURRENCY,
 	};
 	const auditId = deterministicUuid("reward-seed-audit-checkout", input.key);
+	// Append-only (no UPDATE policy on RewardAuditLog): a reseed keeps the row as first written.
 	await prisma.rewardAuditLog.upsert({
 		where: { id: auditId },
-		create: { id: auditId, organizationId: input.organizationId, action: "merchant.checkout", metadata, createdAt: input.paidAt },
-		update: { metadata },
+		create: { id: auditId, tenantId: input.tenantId, action: "merchant.checkout", metadata, createdAt: input.paidAt },
+		update: {},
 	});
 	return saleId;
 }

@@ -38,7 +38,7 @@ flowchart TD
 tabs cannot overwrite each other silently.
 
 Your profile picture is set on **Account → Profile** (admin panel) and **Account settings**
-(web app, `/rewardhub/account`):
+(web app, `/dashboard/account`):
 
 1. **Upload photo** (or **Replace photo**) and pick an image: JPEG, PNG, WebP or AVIF, up to 10 MB.
 2. A profile picture is square, at least 256 × 256 pixels. A square photo is used as it is; any

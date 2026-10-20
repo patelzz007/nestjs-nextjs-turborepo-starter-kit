@@ -1,8 +1,8 @@
-import { ResetPasswordForm } from "@workspace/client/lib/auth/forms/reset-password-form";
+import { ResetPasswordForm } from "@workspace/client/lib/contexts/identity/forms/reset-password-form";
 import { ResetPasswordSchema } from "@workspace/shared";
 
-import { AdminAuthLayout } from "@/components/auth/admin-auth-layout";
-import { InvalidAuthLinkNotice } from "@/components/auth/invalid-auth-link-notice";
+import { AdminAuthLayout } from "@/contexts/identity/components/auth/admin-auth-layout";
+import { InvalidAuthLinkNotice } from "@/contexts/identity/components/auth/invalid-auth-link-notice";
 import { AUTH_LINK_TOKEN_PARAM, ROUTES } from "@/lib/routes";
 
 export interface AdminResetPasswordPageProps {

@@ -1,6 +1,6 @@
 "use client";
 
-import { passwordStrength } from "@workspace/client/lib/auth/password";
+import { passwordStrength } from "@workspace/client/lib/contexts/identity/password";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSeparator, FieldSet } from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";

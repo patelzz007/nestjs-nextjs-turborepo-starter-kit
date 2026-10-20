@@ -1,12 +1,12 @@
 "use client";
 
-import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/lib/auth/enrollment";
+import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/contexts/identity/lib/enrollment";
 import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
-import { useOrganizationSlug } from "@/lib/org/use-organization-slug";
-import { useOrganizationPath } from "@/lib/org/use-organization-path";
+import { useOrganizationSlug } from "@/contexts/organizations/lib/org/use-organization-slug";
+import { useOrganizationPath } from "@/contexts/organizations/lib/org/use-organization-path";
 import { ORG_ROUTES } from "@/lib/routes";
 import { buildMerchantPaletteItems, renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
-import { useAuthorization } from "@workspace/client/lib/auth/can";
+import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPaletteRecentSearches } from "@workspace/client/lib/features/command-palette/facade";

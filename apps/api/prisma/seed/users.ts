@@ -1,4 +1,4 @@
-import type { Permission, PermissionAction, PermissionResource, Plan, Role, User } from "@prisma/client";
+import type { Permission, PermissionAction, PermissionResource, Role, User } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 
 import { prisma } from "./client";
@@ -18,9 +18,6 @@ export async function createUsers(): Promise<User[]> {
 		fullName: string;
 		isActive: boolean;
 		isSuperAdmin: boolean;
-		plan: Plan;
-		monthlyUrlLimit: number;
-		monthlyClickLimit: number;
 		failedLoginAttempts?: number;
 		lockedUntil?: number | null;
 		emailVerifiedAt?: number | null;
@@ -33,9 +30,6 @@ export async function createUsers(): Promise<User[]> {
 			fullName: "Super Admin",
 			isActive: true,
 			isSuperAdmin: true,
-			plan: "ENTERPRISE",
-			monthlyUrlLimit: -1,
-			monthlyClickLimit: -1,
 			emailVerifiedAt: Date.now(),
 		},
 		{
@@ -44,9 +38,6 @@ export async function createUsers(): Promise<User[]> {
 			fullName: "Admin User",
 			isActive: true,
 			isSuperAdmin: false,
-			plan: "ENTERPRISE",
-			monthlyUrlLimit: -1,
-			monthlyClickLimit: -1,
 			emailVerifiedAt: Date.now(),
 		},
 		{
@@ -55,9 +46,6 @@ export async function createUsers(): Promise<User[]> {
 			fullName: "Manager User",
 			isActive: true,
 			isSuperAdmin: false,
-			plan: "PRO",
-			monthlyUrlLimit: 500,
-			monthlyClickLimit: 100_000,
 		},
 		{
 			email: "user@example.com",
@@ -65,9 +53,6 @@ export async function createUsers(): Promise<User[]> {
 			fullName: "Regular User",
 			isActive: true,
 			isSuperAdmin: false,
-			plan: "FREE",
-			monthlyUrlLimit: 50,
-			monthlyClickLimit: 10_000,
 		},
 
 		// Dummy users
@@ -77,9 +62,6 @@ export async function createUsers(): Promise<User[]> {
 			fullName: "Bishen Patel",
 			isActive: true,
 			isSuperAdmin: false,
-			plan: "FREE",
-			monthlyUrlLimit: 50,
-			monthlyClickLimit: 10_000,
 			emailVerifiedAt: Date.now(),
 		},
 		{
@@ -88,9 +70,6 @@ export async function createUsers(): Promise<User[]> {
 			fullName: "Alice Johnson",
 			isActive: true,
 			isSuperAdmin: false,
-			plan: "PRO",
-			monthlyUrlLimit: 500,
-			monthlyClickLimit: 100_000,
 		},
 		{
 			email: "bob.smith@example.com",
@@ -98,9 +77,6 @@ export async function createUsers(): Promise<User[]> {
 			fullName: "Bob Smith",
 			isActive: true,
 			isSuperAdmin: false,
-			plan: "PRO",
-			monthlyUrlLimit: 500,
-			monthlyClickLimit: 100_000,
 		},
 		{
 			email: "carol.white@example.com",
@@ -108,9 +84,6 @@ export async function createUsers(): Promise<User[]> {
 			fullName: "Carol White",
 			isActive: true,
 			isSuperAdmin: false,
-			plan: "FREE",
-			monthlyUrlLimit: 50,
-			monthlyClickLimit: 10_000,
 		},
 		{
 			email: "david.lee@example.com",
@@ -118,9 +91,6 @@ export async function createUsers(): Promise<User[]> {
 			fullName: "David Lee",
 			isActive: true,
 			isSuperAdmin: false,
-			plan: "PRO",
-			monthlyUrlLimit: 500,
-			monthlyClickLimit: 100_000,
 		},
 		{
 			email: "eve.davis@example.com",
@@ -128,9 +98,6 @@ export async function createUsers(): Promise<User[]> {
 			fullName: "Eve Davis",
 			isActive: false,
 			isSuperAdmin: false, // deactivated
-			plan: "FREE",
-			monthlyUrlLimit: 50,
-			monthlyClickLimit: 10_000,
 		},
 		{
 			email: "frank.miller@example.com",
@@ -138,9 +105,6 @@ export async function createUsers(): Promise<User[]> {
 			fullName: "Frank Miller",
 			isActive: true,
 			isSuperAdmin: false,
-			plan: "ENTERPRISE",
-			monthlyUrlLimit: -1,
-			monthlyClickLimit: -1,
 			emailVerifiedAt: Date.now(),
 		},
 		{
@@ -149,9 +113,6 @@ export async function createUsers(): Promise<User[]> {
 			fullName: "Grace Wilson",
 			isActive: true,
 			isSuperAdmin: false,
-			plan: "FREE",
-			monthlyUrlLimit: 50,
-			monthlyClickLimit: 10_000,
 		},
 		{
 			email: "henry.moore@example.com",
@@ -159,9 +120,6 @@ export async function createUsers(): Promise<User[]> {
 			fullName: "Henry Moore",
 			isActive: true,
 			isSuperAdmin: false,
-			plan: "PRO",
-			monthlyUrlLimit: 500,
-			monthlyClickLimit: 100_000,
 		},
 		{
 			email: "isla.taylor@example.com",
@@ -169,9 +127,6 @@ export async function createUsers(): Promise<User[]> {
 			fullName: "Isla Taylor",
 			isActive: true,
 			isSuperAdmin: false,
-			plan: "FREE",
-			monthlyUrlLimit: 50,
-			monthlyClickLimit: 10_000,
 		},
 		{
 			email: "jack.anderson@example.com",
@@ -179,9 +134,6 @@ export async function createUsers(): Promise<User[]> {
 			fullName: "Jack Anderson",
 			isActive: true,
 			isSuperAdmin: false,
-			plan: "PRO",
-			monthlyUrlLimit: 500,
-			monthlyClickLimit: 100_000,
 		},
 	];
 
@@ -192,7 +144,6 @@ export async function createUsers(): Promise<User[]> {
 			update: {
 				fullName: u.fullName,
 				isActive: u.isActive,
-				plan: u.plan,
 				isSuperAdmin: u.isSuperAdmin,
 				emailVerifiedAt: u.emailVerifiedAt ?? null,
 				mfaEnrollmentDeadline: u.mfaEnrollmentDeadline ?? mfaEnrollmentDeadline,

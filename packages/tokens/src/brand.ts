@@ -21,6 +21,13 @@ export interface BrandMarkFacet {
 	readonly opacity: number;
 }
 
+/**
+ * The product's display name: page titles, auth screens, copyright lines, the brand row — every place an app
+ * names itself. One value, so renaming the product is one change (the mobile app's store name is
+ * `MOBILE_APP_NAME`, set per build in apps/mobile/app.config.ts).
+ */
+export const BRAND_NAME = "Starter";
+
 /** Side of the square the mark is drawn in. */
 export const BRAND_MARK_SIZE = 24;
 

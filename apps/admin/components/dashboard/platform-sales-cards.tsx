@@ -1,6 +1,6 @@
 "use client";
 
-import { AnalyticsKpiGrid } from "@workspace/client/lib/analytics/analytics-kpi-grid";
+import { AnalyticsKpiGrid } from "@workspace/client/lib/contexts/reporting/analytics-kpi-grid";
 import {
 	analyticsDisplayRegion,
 	analyticsFormatters,
@@ -11,9 +11,9 @@ import {
 	toChartSeriesData,
 	toKpiViews,
 	type AnalyticsDataStatus,
-} from "@workspace/client/lib/analytics/analytics-presentation";
-import { useAuth } from "@workspace/client/lib/auth";
-import { Can } from "@workspace/client/lib/auth/can";
+} from "@workspace/client/lib/contexts/reporting/analytics-presentation";
+import { useAuth } from "@workspace/client/lib/contexts/identity";
+import { Can } from "@workspace/client/lib/contexts/authorization";
 import { DEFAULT_SALE_CURRENCY, PERMISSION, PLATFORM_DISPLAY_REGION, UTC_TIME_ZONE, type AdminAnalyticsDashboardQuery } from "@workspace/shared";
 import { AnalyticsPanel } from "@workspace/ui/components/analytics-panel";
 import { TimeSeriesChart } from "@workspace/ui/components/time-series-chart";
@@ -21,7 +21,7 @@ import { buttonVariants } from "@workspace/ui/components/button";
 import Link from "next/link";
 import * as React from "react";
 
-import { ADMIN_SALES_KPIS, ADMIN_SALES_SERIES } from "@/lib/analytics/admin-analytics";
+import { ADMIN_SALES_KPIS, ADMIN_SALES_SERIES } from "@/contexts/reporting/lib/admin-analytics";
 import { ROUTES } from "@/lib/routes";
 
 /** No range — the API's default (the last 30 days), the analytics page's default preset too. */

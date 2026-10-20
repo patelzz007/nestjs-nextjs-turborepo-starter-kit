@@ -3,7 +3,7 @@
  *
  * Conventions (docs: `rules/03-web-nextjs.md`, "URL state"):
  * - plural, kebab-case nouns; a detail page is `/<collection>/[id]`;
- * - the signed-in app lives under `/rewardhub`; `/rewardhub/account` is the
+ * - the signed-in app lives under `/dashboard`; `/dashboard/account` is the
  *   member's personal settings (profile, password, 2FA/MFA, sessions);
  * - nothing outside this module spells out a route string — pages,
  *   components, `router.push`/`redirect`, the proxy route lists, the command
@@ -31,7 +31,7 @@ export interface WebAuthRoutes {
 	readonly verifyEmail: string;
 }
 
-export interface WebRewardHubRoutes {
+export interface WebDashboardRoutes {
 	/** Signed-in browse (the app's index). */
 	readonly browse: string;
 	/** The member's claimed rewards. */
@@ -50,22 +50,22 @@ export interface WebRoutes {
 	/** Sample signed-in `/auth/me` page. */
 	readonly hello: string;
 	readonly auth: WebAuthRoutes;
-	readonly rewardHub: WebRewardHubRoutes;
+	readonly dashboard: WebDashboardRoutes;
 }
 
 export interface WebRoutePrefixes {
 	/** Every auth page lives under this prefix (no page of its own). */
 	readonly auth: string;
 	/** The signed-in app shell; also the browse page. */
-	readonly rewardHub: string;
+	readonly dashboard: string;
 	/** Parent of the public (guest) reward detail pages. */
 	readonly publicRewards: string;
 	/** Parent of the signed-in reward detail pages. */
-	readonly rewardHubRewards: string;
+	readonly dashboardRewards: string;
 }
 
 const AUTH_PREFIX = "/auth";
-const REWARD_HUB_PREFIX: string = APP_LINKS.web.rewardHub;
+const DASHBOARD_PREFIX: string = APP_LINKS.web.dashboard;
 
 export const ROUTES: WebRoutes = {
 	home: APP_LINKS.web.home,
@@ -77,30 +77,30 @@ export const ROUTES: WebRoutes = {
 		resetPassword: APP_LINKS.auth.resetPassword,
 		verifyEmail: APP_LINKS.auth.verifyEmail,
 	},
-	rewardHub: {
-		browse: REWARD_HUB_PREFIX,
+	dashboard: {
+		browse: DASHBOARD_PREFIX,
 		wallet: APP_LINKS.web.wallet,
-		activity: `${REWARD_HUB_PREFIX}/activity`,
+		activity: `${DASHBOARD_PREFIX}/activity`,
 		account: APP_LINKS.web.account,
-		referrals: `${REWARD_HUB_PREFIX}/referrals`,
+		referrals: `${DASHBOARD_PREFIX}/referrals`,
 	},
 };
 
 export const ROUTE_PREFIXES: WebRoutePrefixes = {
 	auth: AUTH_PREFIX,
-	rewardHub: REWARD_HUB_PREFIX,
+	dashboard: DASHBOARD_PREFIX,
 	publicRewards: "/rewards",
-	rewardHubRewards: `${REWARD_HUB_PREFIX}/rewards`,
+	dashboardRewards: `${DASHBOARD_PREFIX}/rewards`,
 };
 
 /**
  * Page patterns for the dynamic pages, in App Router notation
- * (`/rewardhub/wallet/[claimId]`). They identify a page in the route-access
+ * (`/dashboard/wallet/[claimId]`). They identify a page in the route-access
  * table and the breadcrumbs — links always come from the builders below.
  */
 export interface WebRoutePatterns {
 	readonly publicRewardDetail: string;
-	readonly rewardHubRewardDetail: string;
+	readonly dashboardRewardDetail: string;
 	readonly walletClaim: string;
 	/** Legacy path-style verify-email link; redirects to the query-string form. */
 	readonly verifyEmailToken: string;
@@ -113,8 +113,8 @@ function childPattern(parent: string, param: string): string {
 
 export const ROUTE_PATTERNS: WebRoutePatterns = {
 	publicRewardDetail: childPattern(ROUTE_PREFIXES.publicRewards, "rewardId"),
-	rewardHubRewardDetail: childPattern(ROUTE_PREFIXES.rewardHubRewards, "rewardId"),
-	walletClaim: childPattern(ROUTES.rewardHub.wallet, "claimId"),
+	dashboardRewardDetail: childPattern(ROUTE_PREFIXES.dashboardRewards, "rewardId"),
+	walletClaim: childPattern(ROUTES.dashboard.wallet, "claimId"),
 	verifyEmailToken: childPattern(ROUTES.auth.verifyEmail, "token"),
 };
 
@@ -140,9 +140,9 @@ export function childPath(parent: string, segment: string): string {
 	return `${parent}/${encodeURIComponent(segment)}`;
 }
 
-/** Signed-in reward detail: `/rewardhub/rewards/[rewardId]`. */
+/** Signed-in reward detail: `/dashboard/rewards/[rewardId]`. */
 export function rewardDetailPath(rewardId: string): string {
-	return childPath(ROUTE_PREFIXES.rewardHubRewards, rewardId);
+	return childPath(ROUTE_PREFIXES.dashboardRewards, rewardId);
 }
 
 /** Public (guest) reward detail: `/rewards/[rewardId]`. */
@@ -150,9 +150,9 @@ export function publicRewardDetailPath(rewardId: string): string {
 	return childPath(ROUTE_PREFIXES.publicRewards, rewardId);
 }
 
-/** A claimed reward's redemption QR in the wallet: `/rewardhub/wallet/[claimId]`. */
+/** A claimed reward's redemption QR in the wallet: `/dashboard/wallet/[claimId]`. */
 export function walletClaimPath(claimId: string): string {
-	return childPath(ROUTES.rewardHub.wallet, claimId);
+	return childPath(ROUTES.dashboard.wallet, claimId);
 }
 
 /** Login page, optionally returning to `redirectTo` after sign-in. */

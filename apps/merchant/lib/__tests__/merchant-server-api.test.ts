@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadMerchantServerContext, loadMerchantServerSession, loadOrganizationContext } from "@/lib/merchant-server-api";
 import { UnexpectedServerQueryError } from "@workspace/client/lib/api/server-query-outcome";
 import { membershipFixture, TEST_ORG_SLUG } from "@/test/authorization";
+import { TWO_STORE_CONTEXT } from "@/test/tenant-context";
 
 // The real SSR caller runs against a stubbed `fetch`, so these tests cover how
 // an actual HTTP answer (or outage) becomes the merchant's server context.
@@ -38,6 +39,35 @@ function answer(status: number, data: object | null): Response {
 	return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
 
+/** A page of the memberships list as the API answers it (`meta` carries the pagination). */
+function membershipsPage(items: readonly object[], total = items.length): Response {
+	const meta = {
+		correlationId: "c-1",
+		timestamp: NOW,
+		limit: 20,
+		total,
+		page: 1,
+		totalPages: Math.max(1, Math.ceil(total / 20)),
+		nextCursor: null,
+		hasNext: total > items.length,
+		hasPrevious: false,
+	};
+	return new Response(JSON.stringify({ success: true, data: items, meta }), { status: 200, headers: { "content-type": "application/json" } });
+}
+
+/** Answers each request by its path: the memberships list, or an organization's context by its slug. */
+function apiRoutes(memberships: () => Response, contexts: ReadonlyMap<string, () => Response> = new Map()): void {
+	vi.stubGlobal(
+		"fetch",
+		vi.fn((input: RequestInfo | URL): Promise<Response> => {
+			const { pathname } = new URL(input instanceof Request ? input.url : input.toString());
+			const contextSlug = /\/orgs\/(?<slug>[^/]+)\/context$/u.exec(pathname)?.groups?.slug;
+			const route = contextSlug === undefined ? memberships : contexts.get(contextSlug);
+			return Promise.resolve(route === undefined ? answer(404, null) : route());
+		}),
+	);
+}
+
 function apiAnswers(response: () => Response): void {
 	vi.stubGlobal(
 		"fetch",
@@ -60,23 +90,23 @@ afterEach((): void => {
 });
 
 describe("loadMerchantServerContext", () => {
-	it("returns the confirmed memberships with the API's own envelope", async () => {
+	it("returns the first page of confirmed memberships with the API's own envelope, opening the first one", async () => {
 		const membership = membershipFixture("OWNER");
-		apiAnswers(() => answer(200, [membership]));
+		apiRoutes(() => membershipsPage([membership], 3));
 
 		const context = await loadMerchantServerContext();
 
-		expect(context.memberships).toEqual([membership]);
-		expect(context.membershipsEnvelope.meta.correlationId).toBe("c-1");
+		expect(context.membershipsEnvelope.data).toEqual([membership]);
+		expect(context.membershipsEnvelope.meta).toMatchObject({ correlationId: "c-1", total: 3 });
 		expect(context.organizationSlug).toBe(TEST_ORG_SLUG);
 	});
 
 	it("reports a confirmed empty list as no organization (the only case that may lead to onboarding)", async () => {
-		apiAnswers(() => answer(200, []));
+		apiRoutes(() => membershipsPage([]));
 
 		const context = await loadMerchantServerContext();
 
-		expect(context.memberships).toEqual([]);
+		expect(context.membershipsEnvelope.data).toEqual([]);
 		expect(context.organizationSlug).toBeUndefined();
 	});
 
@@ -98,9 +128,17 @@ describe("loadMerchantServerContext", () => {
 		await expect(loadMerchantServerContext()).rejects.toThrow("NEXT_REDIRECT /auth/login");
 	});
 
-	it("follows the organization cookie only when it names one of the user's memberships", async () => {
+	it("opens the organization the cookie prefers once the API confirms the membership — even one past the first page", async () => {
+		cookieJar.set("organizationSlug", "later-store");
+		const laterStore = { ...TWO_STORE_CONTEXT, organization: { ...TWO_STORE_CONTEXT.organization, slug: "later-store" } };
+		apiRoutes(() => membershipsPage([membershipFixture("OWNER")], 30), new Map([["later-store", (): Response => answer(200, laterStore)]]));
+
+		expect((await loadMerchantServerContext()).organizationSlug).toBe("later-store");
+	});
+
+	it("ignores a cookie naming an organization the user does not belong to (the context answers 404)", async () => {
 		cookieJar.set("organizationSlug", "someone-elses-org");
-		apiAnswers(() => answer(200, [membershipFixture("OWNER")]));
+		apiRoutes(() => membershipsPage([membershipFixture("OWNER")]));
 
 		expect((await loadMerchantServerContext()).organizationSlug).toBe(TEST_ORG_SLUG);
 	});
@@ -136,6 +174,14 @@ describe("loadOrganizationContext", () => {
 		apiAnswers(() => answer(403, null));
 
 		await expect(loadOrganizationContext(TEST_ORG_SLUG)).resolves.toBeUndefined();
+	});
+
+	it("names no organization for a segment that is neither a slug nor an id — without asking the API", async () => {
+		const fetchSpy = vi.fn();
+		vi.stubGlobal("fetch", fetchSpy);
+
+		await expect(loadOrganizationContext("Not A Slug!")).resolves.toBeUndefined();
+		expect(fetchSpy).not.toHaveBeenCalled();
 	});
 
 	it("rethrows an outage instead of degrading silently", async () => {

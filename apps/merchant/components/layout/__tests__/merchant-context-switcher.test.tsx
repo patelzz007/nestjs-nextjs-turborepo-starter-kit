@@ -11,8 +11,10 @@ import {
 	locationSwitcherOptions,
 	locationSwitcherSubtitle,
 	MerchantContextSwitcher,
+	storeSwitcherStores,
+	type SwitcherStore,
 } from "@/components/layout/merchant-context-switcher";
-import { clearOrganizationLocationCookie, organizationLocationCookieName } from "@/lib/org/location";
+import { clearOrganizationLocationCookie, organizationLocationCookieName } from "@/contexts/organizations/lib/org/location";
 import { membershipFixture, renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
 import { testEnvelope } from "@/test/envelope";
 import { contextQueryState, organizationContextFixture, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
@@ -24,7 +26,7 @@ const { contextQuery, push } = vi.hoisted(() => ({
 	push: vi.fn<(href: string) => void>(),
 }));
 
-vi.mock("@workspace/client/lib/auth", () => ({
+vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({ api: { organizations: { context: { useQuery: contextQuery } } } }),
 }));
 
@@ -72,11 +74,15 @@ function renderSwitcher(
 	memberships: readonly OrganizationRewardMembershipResponse[],
 	initialLocationId: string | null,
 	onStoreChange = vi.fn<(slug: string) => void>(),
+	hasMoreStores = false,
 ): void {
-	renderWithAuthorization(inSidebar(<MerchantContextSwitcher memberships={memberships} organizationSlug={TEST_ORG_SLUG} onStoreChange={onStoreChange} />), {
-		role: "OWNER",
-		tenantContext: { initialLocationId, initialOrganizationContext: testEnvelope(TWO_STORE_CONTEXT) },
-	});
+	renderWithAuthorization(
+		inSidebar(<MerchantContextSwitcher memberships={memberships} hasMoreStores={hasMoreStores} organizationSlug={TEST_ORG_SLUG} onStoreChange={onStoreChange} />),
+		{
+			role: "OWNER",
+			tenantContext: { initialLocationId, initialOrganizationContext: testEnvelope(TWO_STORE_CONTEXT) },
+		},
+	);
 }
 
 function openMenu(): HTMLElement {
@@ -140,6 +146,17 @@ describe("MerchantContextSwitcher", () => {
 		expect(within(openMenu()).queryByText("Stores")).toBeNull();
 	});
 
+	it("offers All stores — the stores page — when the member has more stores than the first page", () => {
+		renderSwitcher([OWNER], null, vi.fn<(slug: string) => void>(), true);
+		const menu = openMenu();
+		expect(within(menu).getByText("Stores")).toBeTruthy();
+		fireEvent.click(within(menu).getByRole("menuitem", { name: "All stores" }));
+		expect(push).toHaveBeenCalledWith(`/orgs/${TEST_ORG_SLUG}/stores`);
+		cleanup();
+		renderSwitcher([OWNER, OTHER_STORE], null);
+		expect(within(openMenu()).queryByRole("menuitem", { name: "All stores" })).toBeNull();
+	});
+
 	it("opens the locations settings from Manage locations", () => {
 		renderSwitcher([OWNER], null);
 		fireEvent.click(within(openMenu()).getByRole("menuitem", { name: "Manage locations" }));
@@ -148,15 +165,43 @@ describe("MerchantContextSwitcher", () => {
 
 	it("shows a single-location member's only location, checked", () => {
 		contextQuery.mockReturnValue(contextQueryState(SINGLE_LOCATION_CONTEXT));
-		renderWithAuthorization(inSidebar(<MerchantContextSwitcher memberships={[OWNER]} organizationSlug={TEST_ORG_SLUG} onStoreChange={vi.fn<(slug: string) => void>()} />), {
-			role: "CASHIER",
-			tenantContext: {
-				initialLocationId: null,
-				initialOrganizationContext: testEnvelope(SINGLE_LOCATION_CONTEXT),
+		renderWithAuthorization(
+			inSidebar(<MerchantContextSwitcher memberships={[OWNER]} hasMoreStores={false} organizationSlug={TEST_ORG_SLUG} onStoreChange={vi.fn<(slug: string) => void>()} />),
+			{
+				role: "CASHIER",
+				tenantContext: {
+					initialLocationId: null,
+					initialOrganizationContext: testEnvelope(SINGLE_LOCATION_CONTEXT),
+				},
 			},
-		});
+		);
 		const options = within(openMenu()).getAllByRole("menuitemradio");
 		expect(options).toHaveLength(1);
 		expect(options.at(0)?.getAttribute("aria-checked")).toBe("true");
+	});
+});
+
+describe("storeSwitcherStores", () => {
+	const first: OrganizationRewardMembershipResponse = { ...membershipFixture("OWNER"), organizationSlug: "store-one", displayName: "Store One" };
+	const second: OrganizationRewardMembershipResponse = { ...membershipFixture("CASHIER"), organizationSlug: "store-two", displayName: "Store Two" };
+
+	it("lists the first page as it is when it holds the active store", () => {
+		expect(storeSwitcherStores([first, second], { slug: "store-two", displayName: "Store Two", role: "CASHIER" }).map((store) => store.slug)).toEqual([
+			"store-one",
+			"store-two",
+		]);
+	});
+
+	it("puts an active store from a later page first, so the selected value has its option", () => {
+		const later: SwitcherStore = { slug: "store-thirty", displayName: "Store Thirty", role: "ADMIN" };
+		expect(storeSwitcherStores([first, second], later)).toEqual([
+			later,
+			{ slug: "store-one", displayName: "Store One", role: "OWNER" },
+			{ slug: "store-two", displayName: "Store Two", role: "CASHIER" },
+		]);
+	});
+
+	it("lists only the page while the active store is not known yet", () => {
+		expect(storeSwitcherStores([first], undefined).map((store) => store.slug)).toEqual(["store-one"]);
 	});
 });

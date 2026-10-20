@@ -1,6 +1,6 @@
 import { REFERRALS_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { cycledWidth, placeholderKeys } from "@workspace/ui/lib/skeleton/placeholders";
-import { RewardHubPageHeaderSkeleton } from "@/components/loading/reward-hub-page-header-skeleton";
+import { DashboardPageHeaderSkeleton } from "@/components/loading/dashboard-page-header-skeleton";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { cn } from "@workspace/ui/lib/core/utils";
@@ -48,11 +48,11 @@ export function RefereeRowsBones(): React.JSX.Element {
 	);
 }
 
-/** `/rewardhub/referrals` while the server prefetches the code dashboard and the first page of referees. */
+/** `/dashboard/referrals` while the server prefetches the code dashboard and the first page of referees. */
 export function ReferralsPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={REFERRALS_LOADING_LABELS} className="flex flex-col gap-10">
-			<RewardHubPageHeaderSkeleton />
+			<DashboardPageHeaderSkeleton />
 			<div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
 				<Card className="gap-0 border border-dashed border-primary/30 p-6 ring-0 sm:p-8">
 					<ReferralCodeBones />

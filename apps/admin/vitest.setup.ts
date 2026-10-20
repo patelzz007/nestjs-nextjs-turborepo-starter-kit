@@ -9,6 +9,8 @@
 // of warnings. Setting it once here silences that noise app-wide.
 // ============================================
 
+import { installDesktopMatchMedia } from "@workspace/ui/testing/desktop-match-media";
+
 // React 19 reads this global to decide whether `act()` may run. jsdom tests
 // in this repo use @testing-library/react, which requires it. Declared on
 // `globalThis` (with a `declare global`) because the global type isn't in the
@@ -19,23 +21,8 @@ declare global {
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-// jsdom has no layout engine: its `matchMedia` reports `matches: false` for
-// every query, which flips viewport-gated components (e.g. the DataTable's
-// desktop-vs-mobile render branch on `(min-width: 1024px)`) into their mobile
-// variant and hides the desktop DOM the tests assert on. Install a
-// query-aware stub unconditionally: the desktop breakpoint matches (jsdom's
-// default viewport is 1024px wide), everything else (mobile widths,
-// `prefers-reduced-motion`) stays `false` as before. Tests that need different
-// behavior still override `window.matchMedia` themselves.
-globalThis.matchMedia = (query: string): MediaQueryList => ({
-	matches: query.includes("min-width: 1024px") && !query.includes("max-width"),
-	media: query,
-	onchange: null,
-	addListener: (): void => undefined,
-	removeListener: (): void => undefined,
-	addEventListener: (): void => undefined,
-	removeEventListener: (): void => undefined,
-	dispatchEvent: (): boolean => false,
-});
+// jsdom has no `matchMedia` that knows the desktop breakpoint: install the kit's shared stub (desktop
+// matches, everything else does not). Tests that need other behavior override `window.matchMedia`.
+installDesktopMatchMedia();
 
 export {};

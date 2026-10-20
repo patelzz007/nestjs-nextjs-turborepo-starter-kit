@@ -12,7 +12,7 @@ interface AuthStub {
 
 const { authMock } = vi.hoisted(() => ({ authMock: vi.fn<() => AuthStub>() }));
 
-vi.mock("@workspace/client/lib/auth", () => ({
+vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): AuthStub => authMock(),
 }));
 

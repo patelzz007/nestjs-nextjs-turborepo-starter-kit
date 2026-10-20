@@ -81,7 +81,7 @@ describe("WebBreadcrumbTailLabel", () => {
 		pathnameMock.mockReturnValue(rewardDetailPath("reward-1"));
 		const { rerender } = render(<Page label="Free coffee" showLabel />, { wrapper: UiKitTestProviders });
 
-		pathnameMock.mockReturnValue(ROUTES.rewardHub.wallet);
+		pathnameMock.mockReturnValue(ROUTES.dashboard.wallet);
 		act(() => {
 			rerender(<Page label="Free coffee" showLabel={false} />);
 		});

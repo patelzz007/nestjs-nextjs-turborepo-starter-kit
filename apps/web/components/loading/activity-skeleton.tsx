@@ -1,5 +1,5 @@
 import { ACTIVITY_LOADING_LABELS } from "@/components/loading/loading-labels";
-import { CUSTOMER_REFERRAL_KPIS, CUSTOMER_REWARD_KPIS, CUSTOMER_SPENDING_KPIS } from "@/lib/rewards/customer-analytics";
+import { CUSTOMER_REFERRAL_KPIS, CUSTOMER_REWARD_KPIS, CUSTOMER_SPENDING_KPIS } from "@/contexts/reporting/lib/customer-analytics";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { ChartSkeleton, PageHeaderSkeleton, StatCardsSkeleton } from "@workspace/ui/components/skeleton-patterns";
@@ -27,7 +27,7 @@ function RangeControlsSkeleton(): React.JSX.Element {
 }
 
 /**
- * `/rewardhub/activity` while the server prefetches the dashboard: header,
+ * `/dashboard/activity` while the server prefetches the dashboard: header,
  * range controls, the spending / rewards / referrals KPI rows (as many cards
  * as each row defines), then the chart panels in their two grids.
  */

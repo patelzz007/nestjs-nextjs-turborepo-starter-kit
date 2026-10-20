@@ -1,0 +1,207 @@
+// @vitest-environment jsdom
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
+import { ApiError } from "@workspace/client/lib/api/api-request";
+import { LIST_SLOT_INDEX, PERMISSION, type CapabilitySlug, type CheckPermissionInput } from "@workspace/shared";
+import { toastMessage } from "@workspace/ui/components/toast";
+import * as React from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import AccessControlPanel from "../access-control-panel";
+import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+
+interface ListQueryStub {
+	readonly useQuery: () => {
+		readonly data: { readonly data: readonly []; readonly meta: object } | undefined;
+		readonly isError: boolean;
+		readonly isLoading: boolean;
+		readonly isPlaceholderData: boolean;
+	};
+}
+
+/** Which catalog queries are still on their first load. */
+interface CatalogLoadState {
+	roles: boolean;
+	permissions: boolean;
+}
+
+const catalogLoad = vi.hoisted((): CatalogLoadState => ({ roles: false, permissions: false }));
+
+interface MutationOptionsStub {
+	readonly onError?: (error: Error) => void;
+}
+
+interface AuthStub {
+	readonly api: {
+		readonly admin: {
+			readonly roles: { readonly list: ListQueryStub };
+			readonly permissions: {
+				readonly list: ListQueryStub;
+				readonly check: { readonly useMutation: (options: MutationOptionsStub) => { readonly mutate: (input: CheckPermissionInput) => void; readonly isPending: boolean } };
+			};
+		};
+	};
+}
+
+vi.mock("next/navigation", () => ({
+	useRouter: (): { readonly push: () => void; readonly replace: () => void } => ({ push: () => undefined, replace: () => undefined }),
+	usePathname: (): string => "/settings/access",
+	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
+}));
+
+const { checkMutate, checkOptions } = vi.hoisted(() => {
+	const options: MutationOptionsStub[] = [];
+	return { checkMutate: vi.fn<(input: CheckPermissionInput) => void>(), checkOptions: options };
+});
+
+vi.mock("@workspace/client/lib/contexts/identity", () => {
+	/** An empty first page of a list. */
+	const EMPTY_PAGE_META = {
+		correlationId: "corr-1",
+		timestamp: 1_792_368_000_000,
+		page: 1,
+		limit: 20,
+		total: 0,
+		totalPages: 1,
+		hasNext: false,
+		hasPrevious: false,
+		nextCursor: null,
+	};
+	const roleList: ListQueryStub = {
+		useQuery: () =>
+			catalogLoad.roles
+				? { data: undefined, isError: false, isLoading: true, isPlaceholderData: false }
+				: { data: { data: [], meta: EMPTY_PAGE_META }, isError: false, isLoading: false, isPlaceholderData: false },
+	};
+	const permissionList: ListQueryStub = {
+		useQuery: () =>
+			catalogLoad.permissions
+				? { data: undefined, isError: false, isLoading: true, isPlaceholderData: false }
+				: { data: { data: [], meta: EMPTY_PAGE_META }, isError: false, isLoading: false, isPlaceholderData: false },
+	};
+	const auth: AuthStub = {
+		api: {
+			admin: {
+				roles: { list: roleList },
+				permissions: {
+					list: permissionList,
+					check: {
+						useMutation: (options: MutationOptionsStub) => {
+							checkOptions.push(options);
+							return { mutate: checkMutate, isPending: false };
+						},
+					},
+				},
+			},
+		},
+	};
+	return { useAuth: (): AuthStub => auth };
+});
+
+function renderPanel(capabilities: readonly CapabilitySlug[]): void {
+	render(
+		<CapabilitiesProvider capabilities={capabilities}>
+			<AccessControlPanel />
+		</CapabilitiesProvider>,
+		{ wrapper: UiKitTestProviders },
+	);
+}
+
+afterEach(() => {
+	cleanup();
+	vi.clearAllMocks();
+	vi.restoreAllMocks();
+	checkOptions.length = 0;
+	catalogLoad.roles = false;
+	catalogLoad.permissions = false;
+});
+
+/** Clicks `element`, then lets the form's async submit (validation + onSubmit) settle. */
+async function clickAndSettle(element: HTMLElement): Promise<void> {
+	fireEvent.click(element);
+	await act(() => Promise.resolve());
+}
+
+describe("AccessControlPanel authorization", () => {
+	it("shows every tab when all three permissions are granted", () => {
+		renderPanel([PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ]);
+		expect(screen.getByRole("tab", { name: /Roles/ })).toBeDefined();
+		expect(screen.getByRole("tab", { name: /Permissions/ })).toBeDefined();
+		expect(screen.getByRole("tab", { name: "Permission checker" })).toBeDefined();
+	});
+
+	it("shows only the checker tab (selected) for permission.read alone", () => {
+		renderPanel([PERMISSION.PERMISSION.READ]);
+		expect(screen.queryByRole("tab", { name: /Roles/ })).toBeNull();
+		expect(screen.queryByRole("tab", { name: /Permissions/ })).toBeNull();
+		expect(screen.getByRole("tab", { name: "Permission checker" }).getAttribute("aria-selected")).toBe("true");
+	});
+
+	it("selects the first permitted tab — permissions when roles cannot be listed", () => {
+		renderPanel([PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ]);
+		expect(screen.queryByRole("tab", { name: /Roles/ })).toBeNull();
+		expect(screen.getByRole("tab", { name: /Permissions/ }).getAttribute("aria-selected")).toBe("true");
+		expect(screen.getByRole("tab", { name: "Permission checker" }).getAttribute("aria-selected")).toBe("false");
+	});
+
+	it("selects the roles tab first when every view is permitted", () => {
+		renderPanel([PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ]);
+		expect(screen.getByRole("tab", { name: /Roles/ }).getAttribute("aria-selected")).toBe("true");
+	});
+});
+
+describe("AccessControlPanel loading", () => {
+	it("shows role-row skeletons in the roles card while the role catalog loads", () => {
+		catalogLoad.roles = true;
+		renderPanel([PERMISSION.ROLE.LIST]);
+
+		const status = screen.getByRole("status");
+		expect(status.getAttribute("aria-busy")).toBe("true");
+		expect(status.textContent).toBe("Loading roles…");
+		expect(status.querySelector('[data-skeleton="role-row"]')).not.toBeNull();
+	});
+
+	it("shows category skeletons instead of the explorer while the permission catalog loads", () => {
+		catalogLoad.permissions = true;
+		renderPanel([PERMISSION.PERMISSION.LIST]);
+
+		const status = screen.getByRole("status");
+		expect(status.textContent).toBe("Loading permissions…");
+		expect(status.querySelector('[data-skeleton="permission-group"]')).not.toBeNull();
+		expect(screen.queryByText("No permissions in catalog.")).toBeNull();
+	});
+
+	it("shows no skeleton once the catalogs are there", () => {
+		renderPanel([PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST]);
+		expect(screen.queryByRole("status")).toBeNull();
+	});
+});
+
+describe("AccessControlPanel permission checker", () => {
+	const USER_ID = "3f2a8c3e-7a53-4f5c-9d0a-0d6a6b8f2c11";
+
+	it("validates the user id with the shared schema before calling the API", async () => {
+		renderPanel([PERMISSION.PERMISSION.READ]);
+		fireEvent.change(screen.getByLabelText("User ID"), { target: { value: "not-a-uuid" } });
+		await clickAndSettle(screen.getByRole("button", { name: "Check permission" }));
+
+		expect(checkMutate).not.toHaveBeenCalled();
+		expect(screen.getByRole("alert")).toBeDefined();
+	});
+
+	it("checks the parsed input", async () => {
+		renderPanel([PERMISSION.PERMISSION.READ]);
+		fireEvent.change(screen.getByLabelText("User ID"), { target: { value: USER_ID } });
+		await clickAndSettle(screen.getByRole("button", { name: "Check permission" }));
+
+		expect(checkMutate).toHaveBeenCalledWith({ userId: USER_ID, action: "READ", resource: "USER" });
+	});
+
+	it("surfaces a failed check as an error toast", () => {
+		const errorToast = vi.spyOn(toastMessage, "error").mockImplementation(() => "toast-id");
+		renderPanel([PERMISSION.PERMISSION.READ]);
+		checkOptions[LIST_SLOT_INDEX.first]?.onError?.(new ApiError({ error: "NOT_FOUND", message: "User not found", statusCode: 404 }));
+
+		expect(errorToast).toHaveBeenCalledWith({ title: "Could not check the permission", description: "User not found" });
+	});
+});

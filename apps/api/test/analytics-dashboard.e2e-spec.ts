@@ -11,11 +11,11 @@ import {
 	CustomerAnalyticsDashboardSchema,
 	MAX_ANALYTICS_RANGE_DAYS,
 	MerchantAnalyticsDashboardSchema,
-	OrganizationContextResponseSchema,
+	TenantContextResponseSchema,
 	type AnalyticsBucket,
 } from "@workspace/shared";
 
-import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { createE2eApp, login, markSeedUserEmailVerified, parseSuccessEnvelope, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
@@ -27,8 +27,8 @@ const KL_OFFSET_MS = 8 * HOUR_MS;
 /** Local midnight in KL of a calendar day, as epoch ms. */
 const klMidnight = (year: number, monthIndex: number, day: number): number => Date.UTC(year, monthIndex, day) - KL_OFFSET_MS;
 
-const KATIL = ORGANIZATION_SEED_IDS.mlkLocationKatil;
-const BERUANG = ORGANIZATION_SEED_IDS.mlkLocationBeruang;
+const KATIL = TENANT_SEED_IDS.mlkLocationKatil;
+const BERUANG = TENANT_SEED_IDS.mlkLocationBeruang;
 
 /**
  * A quiet stretch of 2020 (before any seeded history) holds this file's own
@@ -59,6 +59,9 @@ const FIXTURE_CLAIMS: readonly { readonly claimedAt: number; readonly status: "P
 	{ claimedAt: Date.UTC(2020, 1, 29, 23), status: "PENDING", isReferrerCredit: false },
 ];
 
+/** How long the fixture's PENDING claims stay redeemable (well past the run, so the expiry job leaves them alone). */
+const PENDING_FIXTURE_TTL_MS = 30 * DAY_MS;
+
 /** Alice's referrals: two started in March (one credited in March), one started in the previous range. */
 const FIXTURE_REFERRALS: readonly { readonly createdAt: number; readonly status: "PENDING" | "CREDITED"; readonly creditedAt: number | null }[] = [
 	{ createdAt: Date.UTC(2020, 2, 2, 8), status: "CREDITED", creditedAt: Date.UTC(2020, 2, 3, 8) },
@@ -80,7 +83,7 @@ describe("Analytics dashboards (e2e)", () => {
 	function merchantGet(session: LoginResult, path: string): Promise<InjectResponse> {
 		return app.inject({
 			method: "GET",
-			url: `${API_VERSION_PREFIX}/orgs/${ORGANIZATION_SEED_SLUGS.mlk}/analytics${path}`,
+			url: `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.mlk}/analytics${path}`,
 			headers: { cookie: `merchantAccessToken=${session.accessToken}; merchantRefreshToken=${session.refreshToken}`, "x-client-type": "merchant" },
 		});
 	}
@@ -107,26 +110,24 @@ describe("Analytics dashboards (e2e)", () => {
 		pool = new Pool({ connectionString: DATABASE_URL });
 		await markSeedUserEmailVerified(pool, "alice.johnson@example.com");
 		await markSeedUserEmailVerified(pool, "bob.smith@example.com");
-		const [aliceRow] = (await pool.query<{ id: string }>("SELECT id FROM public.users WHERE email = $1", ["alice.johnson@example.com"])).rows;
+		const [aliceRow] = (await pool.query<{ id: string }>('SELECT id FROM public."User" WHERE email = $1', ["alice.johnson@example.com"])).rows;
 		for (const bill of FIXTURE_BILLS) {
 			const saleId = randomUUID();
 			saleIds.push(saleId);
 			await pool.query(
-				`INSERT INTO public.reward_sales (id, organization_id, location_id, user_id, terminal_id, bill_total_minor, currency, idempotency_key, request_hash, paid_at)
+				`INSERT INTO public."RewardSale" (id, "tenantId", "locationId", "userId", "terminalId", "billTotalMinor", currency, "idempotencyKey", "requestHash", "paidAt")
 				 VALUES ($1, $2, $3, $4, $5, $6, 'MYR', $7, $8, $9)`,
-				[saleId, ORGANIZATION_SEED_IDS.mlkOrganization, bill.locationId, aliceRow?.id, FIXTURE_TERMINAL, bill.billTotalMinor, randomUUID(), saleId, bill.paidAt],
+				[saleId, TENANT_SEED_IDS.mlkTenant, bill.locationId, aliceRow?.id, FIXTURE_TERMINAL, bill.billTotalMinor, randomUUID(), saleId, bill.paidAt],
 			);
 		}
 		const [rewardRow] = (
-			await pool.query<{ id: string }>("SELECT id FROM public.rewards WHERE organization_id = $1 AND is_deleted = false ORDER BY id LIMIT 1", [
-				ORGANIZATION_SEED_IDS.mlkOrganization,
-			])
+			await pool.query<{ id: string }>('SELECT id FROM public."Reward" WHERE "tenantId" = $1 AND "isDeleted" = false ORDER BY id LIMIT 1', [TENANT_SEED_IDS.mlkTenant])
 		).rows;
 		for (const claim of FIXTURE_CLAIMS) {
 			const claimId = randomUUID();
 			claimIds.push(claimId);
 			await pool.query(
-				`INSERT INTO public.reward_claims (id, user_id, reward_id, redemption_token_hash, backup_code_hash, status, is_referrer_credit, claimed_at, claim_expires_at)
+				`INSERT INTO public."RewardClaim" (id, "userId", "rewardId", "redemptionTokenHash", "backupCodeHash", status, "isReferrerCredit", "claimedAt", "claimExpiresAt")
 				 VALUES ($1, $2, $3, $4, $5, $6::"RewardClaimStatus", $7, $8, $9)`,
 				[
 					claimId,
@@ -137,7 +138,8 @@ describe("Analytics dashboards (e2e)", () => {
 					claim.status,
 					claim.isReferrerCredit,
 					claim.claimedAt,
-					claim.claimedAt + DAY_MS,
+					// A PENDING claim must not be overdue: the claim-expiry job would turn it EXPIRED mid-run.
+					claim.status === "PENDING" ? Date.now() + PENDING_FIXTURE_TTL_MS : claim.claimedAt + DAY_MS,
 				],
 			);
 		}
@@ -145,7 +147,7 @@ describe("Analytics dashboards (e2e)", () => {
 			const referralId = randomUUID();
 			referralIds.push(referralId);
 			await pool.query(
-				`INSERT INTO public.reward_referrals (id, referrer_user_id, reward_id, attribution_token, status, credited_at, created_at)
+				`INSERT INTO public."RewardReferral" (id, "referrerUserId", "rewardId", "attributionToken", status, "creditedAt", "createdAt")
 				 VALUES ($1, $2, $3, $4, $5::"RewardReferralStatus", $6, $7)`,
 				[referralId, aliceRow?.id, rewardRow?.id, `e2e-${referralId.slice(0, 32)}`, referral.status, referral.creditedAt, referral.createdAt],
 			);
@@ -157,24 +159,24 @@ describe("Analytics dashboards (e2e)", () => {
 	});
 
 	afterAll(async () => {
-		await pool.query("DELETE FROM public.reward_sales WHERE id = ANY($1::text[])", [saleIds]);
-		await pool.query("DELETE FROM public.reward_claims WHERE id = ANY($1::text[])", [claimIds]);
-		await pool.query("DELETE FROM public.reward_referrals WHERE id = ANY($1::text[])", [referralIds]);
+		await pool.query('DELETE FROM public."RewardSale" WHERE id = ANY($1::text[])', [saleIds]);
+		await pool.query('DELETE FROM public."RewardClaim" WHERE id = ANY($1::text[])', [claimIds]);
+		await pool.query('DELETE FROM public."RewardReferral" WHERE id = ANY($1::text[])', [referralIds]);
 		await pool.end();
 		await app.close();
 	});
 
 	describe("merchant", () => {
-		it("names the organization's zone in its context — the zone the dashboard is cut in", async () => {
+		it("names the tenant's zone in its context — the zone the dashboard is cut in", async () => {
 			const context = await app.inject({
 				method: "GET",
-				url: `${API_VERSION_PREFIX}/orgs/${ORGANIZATION_SEED_SLUGS.mlk}/context`,
+				url: `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.mlk}/context`,
 				headers: { cookie: `merchantAccessToken=${owner.accessToken}; merchantRefreshToken=${owner.refreshToken}`, "x-client-type": "merchant" },
 			});
 			const dashboard = parseSuccessEnvelope(await merchantGet(owner, "/dashboard"), MerchantAnalyticsDashboardSchema).data;
 
 			expect(context.statusCode, context.body).toBe(200);
-			expect(parseSuccessEnvelope(context, OrganizationContextResponseSchema).data.organization.timeZone).toBe("Asia/Kuala_Lumpur");
+			expect(parseSuccessEnvelope(context, TenantContextResponseSchema).data.tenant.timeZone).toBe("Asia/Kuala_Lumpur");
 			expect(dashboard.range.timeZone).toBe("Asia/Kuala_Lumpur");
 		});
 
@@ -210,7 +212,7 @@ describe("Analytics dashboards (e2e)", () => {
 			]);
 		});
 
-		it("lists every store of the owner's organization; a store-limited cashier sees only Bukit Beruang", async () => {
+		it("lists every store of the owner's tenant; a store-limited cashier sees only Bukit Beruang", async () => {
 			const range = `from=${String(klMidnight(2020, 2, 1))}&to=${String(klMidnight(2020, 2, 4))}`;
 			const everything = parseSuccessEnvelope(await merchantGet(owner, `/dashboard?${range}`), MerchantAnalyticsDashboardSchema).data;
 			const scoped = parseSuccessEnvelope(await merchantGet(cashier, `/dashboard?${range}`), MerchantAnalyticsDashboardSchema).data;
@@ -270,7 +272,7 @@ describe("Analytics dashboards (e2e)", () => {
 			expect(dashboard.range.timeZone).toBe("UTC");
 			expect(dashboard.series.map((point) => point.salesMinor)).toEqual([3_000, 4_000]);
 			expect(dashboard.byCity).toEqual([{ city: "MELAKA", salesMinor: 7_000, bills: 3, merchants: 1 }]);
-			expect(dashboard.topMerchants.map((merchant) => merchant.organizationId)).toEqual([ORGANIZATION_SEED_IDS.mlkOrganization]);
+			expect(dashboard.topMerchants.map((merchant) => merchant.tenantId)).toEqual([TENANT_SEED_IDS.mlkTenant]);
 			expect(dashboard.byCategory).toEqual([{ category: "restaurant", salesMinor: 7_000, bills: 3, merchants: 1 }]);
 			// Alice's first bill ever is this fixture's (2020): she is NEW on Mar 1, RETURNING on Mar 2.
 			expect(dashboard.series.map((point) => [point.newCustomers, point.returningCustomers])).toEqual([
@@ -283,9 +285,7 @@ describe("Analytics dashboards (e2e)", () => {
 		it("shows top merchants, categories and cities of the seeded year", async () => {
 			const dashboard = parseSuccessEnvelope(await webGet(superAdmin, "/admin/analytics/dashboard?interval=week"), AdminAnalyticsDashboardSchema).data;
 
-			expect(dashboard.topMerchants.map((merchant) => merchant.organizationId)).toEqual(
-				expect.arrayContaining([ORGANIZATION_SEED_IDS.klOrganization, ORGANIZATION_SEED_IDS.mlkOrganization]),
-			);
+			expect(dashboard.topMerchants.map((merchant) => merchant.tenantId)).toEqual(expect.arrayContaining([TENANT_SEED_IDS.klTenant, TENANT_SEED_IDS.mlkTenant]));
 			expect(dashboard.byCity.map((row) => row.city)).toEqual(expect.arrayContaining(["KUALA_LUMPUR", "MELAKA"]));
 			expect(dashboard.byCategory.length).toBeGreaterThanOrEqual(2);
 			expect(dashboard.totals.activeMerchants.value).toBeGreaterThanOrEqual(2);
@@ -307,9 +307,7 @@ describe("Analytics dashboards (e2e)", () => {
 			const dashboard = parseSuccessEnvelope(response, CustomerAnalyticsDashboardSchema).data;
 			expect(dashboard.totals.spentMinor.value).toBe(7_000);
 			expect(dashboard.totals.merchants.value).toBe(1);
-			expect(dashboard.spendingByMerchant).toEqual([
-				expect.objectContaining({ organizationId: ORGANIZATION_SEED_IDS.mlkOrganization, totalMinor: 7_000, visits: 3, category: "restaurant" }),
-			]);
+			expect(dashboard.spendingByMerchant).toEqual([expect.objectContaining({ tenantId: TENANT_SEED_IDS.mlkTenant, totalMinor: 7_000, visits: 3, category: "restaurant" })]);
 			expect(dashboard.spendingByMerchant[LIST_SLOT_INDEX.first]?.series.map((point) => point.totalMinor)).toEqual([3_000, 4_000, 0]);
 			expect(dashboard.spendingByCategory.map((category) => category.series.length)).toEqual([dashboard.series.length]);
 		});

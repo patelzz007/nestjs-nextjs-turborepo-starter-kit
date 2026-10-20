@@ -1,8 +1,8 @@
 "use client";
 
-import { clearAllOrganizationLocationCookies } from "@/lib/org/location";
-import { clearOrganizationSlugCookie } from "@/lib/org/slug";
-import { useAuth } from "@workspace/client/lib/auth";
+import { clearAllOrganizationLocationCookies } from "@/contexts/organizations/lib/org/location";
+import { clearOrganizationSlugCookie } from "@/contexts/organizations/lib/org/slug";
+import { useAuth } from "@workspace/client/lib/contexts/identity";
 import * as React from "react";
 
 /** Drops the portal's per-browser preferences (last organization, store per organization) — nothing of one member carries over to the next sign-in. */

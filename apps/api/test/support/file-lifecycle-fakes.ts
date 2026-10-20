@@ -2,10 +2,9 @@
 // or implement the real classes/ports, so specs stay fully type-checked.
 import { Readable } from "node:stream";
 
-import type { FileVariant, Prisma, StoredFile } from "@prisma/client";
-import type { FileCategory, FileStatus, StorageObjectLocator } from "@workspace/shared";
+import type { StoredFile } from "@prisma/client";
+import type { StorageObjectLocator } from "@workspace/shared";
 
-import { createTestPrisma } from "./test-service-graph";
 import type {
 	ObjectStorage,
 	StorageBrowserUploadTicketInput,
@@ -14,30 +13,17 @@ import type {
 	StorageSignedUrlInput,
 	StorageUploadInput,
 	StorageUploadResult,
-} from "../../src/modules/storage/domain/object-storage.port";
+} from "../../src/platform/infrastructure/storage/domain/object-storage.port";
 import type {
 	PublicAssetPublicationInput,
 	PublicAssetPublicationResult,
 	PublicAssetWithdrawalInput,
 	PublicAssetWithdrawalResult,
 	PublicDelivery,
-} from "../../src/modules/storage/domain/public-delivery.port";
-import {
-	StoredFileRepository,
-	type StoredFileBinding,
-	type StoredFileDeletion,
-	type StoredFileVariantInput,
-	type StoredFileDbClient,
-	type StoredFileStatusFields,
-} from "../../src/modules/files/repositories/stored-file.repository";
-import { ImageRenditionService } from "../../src/modules/files/services/image-rendition.service";
-import { ImageProcessor, UnreadableImageError, type ImageDimensions, type RenderedImage } from "../../src/modules/storage/domain/image-processor.port";
-import type { TypedConfigService } from "../../src/config/typed-config.service";
-import { RequestContextService } from "../../src/common/context/request-context";
-import { FileLifecycleListener, type FileVerdictEvent } from "../../src/modules/files/lifecycle/file-lifecycle-listener";
-import { FileLifecycleListenerRegistry } from "../../src/modules/files/lifecycle/file-lifecycle-listener.registry";
-import { TenantTransactionService } from "../../src/prisma/tenant-transaction.service";
-import type { SystemDatabaseContext } from "../../src/prisma/tenant-context";
+} from "../../src/platform/infrastructure/storage/domain/public-delivery.port";
+import { ImageRenditionService } from "../../src/contexts/files/infrastructure/adapters/image-rendition.service";
+import { ImageProcessor, UnreadableImageError, type ImageDimensions, type RenderedImage } from "../../src/platform/infrastructure/storage/domain/image-processor.port";
+import { LIVE_ROW_FIELDS } from "../../src/platform/infrastructure/persistence/__tests__/base-row-fields";
 
 export const FILE_ID = "0b7c2a5e-6f1d-4c2e-9d3a-1f2e3d4c5b6a";
 export const UPLOADER_ID = "11111111-1111-4111-8111-111111111111";
@@ -46,6 +32,7 @@ export const PDF_BYTES: Buffer = Buffer.from("%PDF-1.7 test document");
 
 export function storedFile(overrides: Partial<StoredFile> = {}): StoredFile {
 	return {
+		...LIVE_ROW_FIELDS,
 		id: FILE_ID,
 		category: "MERCHANT_KYB",
 		visibility: "PRIVATE",
@@ -68,7 +55,7 @@ export function storedFile(overrides: Partial<StoredFile> = {}): StoredFile {
 		scannedAt: null,
 		scanResult: null,
 		uploadedById: UPLOADER_ID,
-		organizationId: ORG_ID,
+		tenantId: ORG_ID,
 		productId: null,
 		isDeleted: false,
 		deletedAt: null,
@@ -77,110 +64,6 @@ export function storedFile(overrides: Partial<StoredFile> = {}): StoredFile {
 		updatedAt: BigInt(1_700_000_000_000),
 		...overrides,
 	};
-}
-
-/** One row store with the repository's conditional-transition semantics. */
-export class InMemoryStoredFileRepository extends StoredFileRepository {
-	public readonly rows: Map<string, StoredFile> = new Map<string, StoredFile>();
-	public readonly bindings: StoredFileBinding[] = [];
-	public readonly softDeletedBy: string[] = [];
-	public kybSubmitted = false;
-	/** Recorded renditions (file_variants rows). */
-	public readonly variants: FileVariant[] = [];
-	/** Files a live reward shows among its images — deleting them is refused. */
-	public readonly rewardImageFileIds = new Set<string>();
-
-	public constructor(...files: StoredFile[]) {
-		super(createTestPrisma());
-		for (const file of files) {
-			this.rows.set(file.id, file);
-		}
-	}
-
-	public override findById(id: string): Promise<StoredFile | null> {
-		const row = this.rows.get(id);
-		return Promise.resolve(row === undefined || row.isDeleted ? null : row);
-	}
-
-	public override claimPendingForScan(id: string, uploadedById: string, fields: StoredFileStatusFields): Promise<boolean> {
-		const row = this.rows.get(id);
-		if (row?.status !== "PENDING" || row.uploadedById !== uploadedById || row.isDeleted) {
-			return Promise.resolve(false);
-		}
-		this.apply(row, "SCANNING", { ...fields, scanStatus: "SCANNING" });
-		return Promise.resolve(true);
-	}
-
-	public override transitionStatus(id: string, from: readonly FileStatus[], to: FileStatus, fields: StoredFileStatusFields = {}): Promise<boolean> {
-		const row = this.rows.get(id);
-		if (row === undefined || row.isDeleted || !from.includes(row.status)) {
-			return Promise.resolve(false);
-		}
-		this.apply(row, to, fields);
-		return Promise.resolve(true);
-	}
-
-	public override bindInTx(_tx: StoredFileDbClient, _fileId: string, binding: StoredFileBinding): Promise<void> {
-		if (binding.kind !== "NONE") {
-			this.bindings.push(binding);
-		}
-		return Promise.resolve();
-	}
-
-	public override softDeleteWithReferences(id: string, deletedBy: string): Promise<StoredFileDeletion> {
-		if (this.rewardImageFileIds.has(id)) {
-			return Promise.resolve("IN_USE_AS_REWARD_IMAGE");
-		}
-		const row = this.rows.get(id);
-		if (row === undefined || row.isDeleted) {
-			return Promise.resolve("ALREADY_DELETED");
-		}
-		this.rows.set(id, { ...row, status: "DELETED", isDeleted: true, deletedBy });
-		this.softDeletedBy.push(deletedBy);
-		return Promise.resolve("DELETED");
-	}
-
-	public override listLiveVariants(fileId: string): Promise<FileVariant[]> {
-		return Promise.resolve(this.variants.filter((variant) => variant.fileId === fileId && !variant.isDeleted));
-	}
-
-	public override upsertVariantsInTx(_tx: StoredFileDbClient, fileId: string, variants: readonly StoredFileVariantInput[]): Promise<void> {
-		const recordedAt = BigInt(Date.now());
-		for (const variant of variants) {
-			this.variants.push({
-				...variant,
-				id: `${fileId}-${variant.kind}`,
-				fileId,
-				isDeleted: false,
-				deletedAt: null,
-				deletedBy: null,
-				createdAt: recordedAt,
-				updatedAt: recordedAt,
-			});
-		}
-		return Promise.resolve();
-	}
-
-	public override hasKybSubmissionReference(): Promise<boolean> {
-		return Promise.resolve(this.kybSubmitted);
-	}
-
-	private apply(row: StoredFile, status: FileStatus, fields: StoredFileStatusFields): void {
-		this.rows.set(row.id, {
-			...row,
-			status,
-			actualChecksum: fields.actualChecksum ?? row.actualChecksum,
-			objectGeneration: fields.objectGeneration === undefined ? row.objectGeneration : fields.objectGeneration,
-			objectRevision: fields.objectRevision === undefined ? row.objectRevision : fields.objectRevision,
-			storagePath: fields.storagePath ?? row.storagePath,
-			publicPath: fields.publicPath === undefined ? row.publicPath : fields.publicPath,
-			scanStatus: fields.scanStatus ?? row.scanStatus,
-			scannedAt: fields.scannedAt ?? row.scannedAt,
-			scanResult: fields.scanResult ?? row.scanResult,
-			imageWidth: fields.imageWidth ?? row.imageWidth,
-			imageHeight: fields.imageHeight ?? row.imageHeight,
-		});
-	}
 }
 
 /** Object store keyed by `container/path`. */
@@ -263,43 +146,6 @@ export class InMemoryObjectStorage implements ObjectStorage, PublicDelivery {
 }
 
 /**
- * Runs system-operation work directly on a connection-less client and records
- * which operations were opened. The in-memory repository ignores the client;
- * a handler that throws propagates (as a real rollback would).
- */
-export class ImmediateTransactions extends TenantTransactionService {
-	public readonly operations: string[] = [];
-	private readonly client: Prisma.TransactionClient = createTestPrisma();
-
-	public constructor() {
-		super(createTestPrisma(), new RequestContextService());
-	}
-
-	public override withSystemOperation<T>(context: SystemDatabaseContext, handler: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
-		this.operations.push(context.operation);
-		return handler(this.client);
-	}
-}
-
-/** Records every verdict delivered for its categories. */
-export class RecordingFileListener extends FileLifecycleListener {
-	public readonly received: FileVerdictEvent[] = [];
-
-	public constructor(public readonly categories: readonly FileCategory[]) {
-		super();
-	}
-
-	public onVerdict(_tx: Prisma.TransactionClient, event: FileVerdictEvent): Promise<void> {
-		this.received.push(event);
-		return Promise.resolve();
-	}
-}
-
-export function listenerRegistry(...listeners: FileLifecycleListener[]): FileLifecycleListenerRegistry {
-	return new FileLifecycleListenerRegistry({ getProviders: () => listeners.map((instance: FileLifecycleListener) => ({ instance })) });
-}
-
-/**
  * Stands in for sharp: reports the size a test sets and "renders" a tiny
  * buffer per rendition, recording every request — so the image pipeline runs
  * for real against in-memory storage without decoding pixels.
@@ -320,6 +166,6 @@ export class FakeImageProcessor extends ImageProcessor {
 }
 
 /** The real rendition service over in-memory storage and a fake processor. */
-export function imageRenditionsFor(config: TypedConfigService, storage: InMemoryObjectStorage, processor: ImageProcessor = new FakeImageProcessor()): ImageRenditionService {
-	return new ImageRenditionService(config, storage, storage, processor);
+export function imageRenditionsFor(storage: InMemoryObjectStorage, processor: ImageProcessor = new FakeImageProcessor()): ImageRenditionService {
+	return new ImageRenditionService(storage, storage, processor);
 }

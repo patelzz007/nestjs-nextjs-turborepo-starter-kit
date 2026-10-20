@@ -4,8 +4,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { ImpersonationService } from "../src/modules/impersonation/impersonation.service";
-import { runWithSystemRlsContext } from "../src/prisma/rls-context";
+import { startImpersonation as startImpersonationAs } from "./support/impersonation";
 import { createE2eApp, login, markSeedUserEmailVerified, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
 /**
@@ -52,7 +51,7 @@ describe("Own profile (e2e, real Postgres + RLS + audit trail)", () => {
 	let originalFullName: string;
 
 	async function userId(email: string): Promise<string> {
-		const result = await pool.query<{ id: string }>("SELECT id FROM public.users WHERE email = $1", [email]);
+		const result = await pool.query<{ id: string }>('SELECT id FROM public."User" WHERE email = $1', [email]);
 		const id = result.rows.at(0)?.id;
 		if (id === undefined) {
 			throw new Error(`Seed user missing: ${email} — run pnpm db:seed`);
@@ -61,15 +60,15 @@ describe("Own profile (e2e, real Postgres + RLS + audit trail)", () => {
 	}
 
 	async function storedProfile(): Promise<z.output<typeof ProfileRowSchema>> {
-		const result = await pool.query('SELECT "fullName", profile_version AS "profileVersion" FROM public.users WHERE id = $1', [targetId]);
+		const result = await pool.query('SELECT "fullName", "profileVersion" AS "profileVersion" FROM public."User" WHERE id = $1', [targetId]);
 		return ProfileRowSchema.parse(result.rows.at(0));
 	}
 
 	async function auditRows(response: InjectResponse): Promise<readonly AuditRow[]> {
 		const result = await pool.query(
-			`SELECT outcome::text AS outcome, response_status AS "responseStatus", error_code AS "errorCode", actor_user_id AS "actorUserId",
-			        impersonator_user_id AS "impersonatorUserId", ip_address AS "ipAddress", user_agent AS "userAgent", system_operations AS "systemOperations"
-			 FROM public.audit_logs WHERE correlation_id = $1`,
+			`SELECT outcome::text AS outcome, "responseStatus" AS "responseStatus", "errorCode" AS "errorCode", "actorUserId" AS "actorUserId",
+			        "impersonatorUserId" AS "impersonatorUserId", "ipAddress" AS "ipAddress", "userAgent" AS "userAgent", "systemOperations" AS "systemOperations"
+			 FROM public."AuditLog" WHERE "correlationId" = $1`,
 			[response.headers["x-correlation-id"]],
 		);
 		return z.array(AuditRowSchema).parse(result.rows);
@@ -94,7 +93,7 @@ describe("Own profile (e2e, real Postgres + RLS + audit trail)", () => {
 	}
 
 	async function impersonationToken(): Promise<string> {
-		const started = await runWithSystemRlsContext("platform.superadmin", () => app.get(ImpersonationService).impersonateUser(superAdminId, targetId));
+		const started = await startImpersonationAs(app, pool, superAdminId, targetId);
 		return started.accessToken;
 	}
 

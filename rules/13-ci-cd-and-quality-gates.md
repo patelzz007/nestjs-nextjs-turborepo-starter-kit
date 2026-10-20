@@ -2,7 +2,7 @@
 
 ## Pull request gates
 
-A production PR should pass: formatting, lint, typecheck, unit tests, integration/contract tests where applicable, build, migration validation where applicable, and dependency/security checks. Every one of these runs in CI, so nothing depends on anyone remembering it. Separately, the **completion gate** (`pnpm run lint` and `pnpm run test`, zero errors and zero warnings) must also pass locally before any task, human or AI, is called done — see `AGENTS.md`.
+A production PR should pass: formatting, lint, typecheck, unit tests, integration/contract tests where applicable, build, migration validation where applicable, and dependency/security checks. Every one of these runs in CI, so nothing depends on anyone remembering it. Separately, the **completion gate** (`pnpm run lint` with zero errors, and `pnpm run test`) must also pass locally before any task, human or AI, is called done — see `AGENTS.md`.
 
 ```text
 ❌ DON'T merge a PR because "I ran the tests locally and they passed" if
@@ -237,13 +237,13 @@ The gate is only as strong as what `pnpm run lint` actually checks, so the scrip
 // every apps/* and packages/* package.json — same script names everywhere (01-repository-architecture.md)
 {
   "scripts": {
-    "lint": "eslint . --max-warnings=0",
+    "lint": "eslint .",
     "test": "vitest run"
   }
 }
 ```
 
-`--max-warnings=0` makes a warning fail the command. A gate that lets warnings through trains everyone to ignore it.
+Lint fails on errors. Every rule is configured as `error` (`rule-severity.js` raises plugin presets' warnings), so anything the configuration enforces fails the command; there is no `--max-warnings` flag. A warning that still appears is output to read, not a gate.
 
 ## Reference ESLint configuration
 
@@ -320,7 +320,7 @@ A gate that silently stopped checking is worse than none. Keep a fixture of deli
 
 ```ts
 // packages/eslint-config/canary/violations.ts
-// Skipped by the package's normal lint script via the CLI flag ("lint": "eslint . --max-warnings=0 --ignore-pattern canary/"),
+// Skipped by the package's normal lint script via the CLI flag ("lint": "eslint . --ignore-pattern canary/"),
 // NOT via `ignores` in the config, so the test below can still lint it. Include it in that package's tsconfig for type-aware rules.
 export const anyValue: any = 1;
 export const unknownValue: unknown = 1;

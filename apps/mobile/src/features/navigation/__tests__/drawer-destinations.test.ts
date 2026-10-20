@@ -1,4 +1,14 @@
-import { DRAWER_GROUPS, DRAWER_TABS, isTabRoot, type DrawerDestination, type DrawerDestinationGroup } from "../drawer-destinations";
+import {
+	DEVELOPER_DRAWER_GROUP,
+	DRAWER_GROUPS,
+	DRAWER_TABS,
+	drawerGroups,
+	GITHUB_DRAWER_GROUP,
+	isTabRoot,
+	type DrawerDestination,
+	type DrawerDestinationGroup,
+} from "../drawer-destinations";
+import { setDevelopmentBuild } from "../../../../test/development-build";
 
 function labelsOf(destinations: readonly DrawerDestination[]): readonly string[] {
 	return destinations.map((destination: DrawerDestination): string => destination.label);
@@ -17,10 +27,10 @@ describe("DRAWER_TABS", () => {
 });
 
 describe("DRAWER_GROUPS", () => {
-	it("groups the screens under Settings into Account, Preferences, Rewards, Documents and Developer, pushed onto the stack", () => {
-		const [account, preferences, rewards, documents, developer] = DRAWER_GROUPS;
+	it("groups the screens under Settings into Account, Preferences, Rewards and Documents, pushed onto the stack", () => {
+		const [account, preferences, rewards, documents] = DRAWER_GROUPS;
 
-		expect(DRAWER_GROUPS).toHaveLength(5);
+		expect(DRAWER_GROUPS).toHaveLength(4);
 		expect(account?.title).toBe("Account");
 		expect(account?.tone).toBe("blue");
 		expect(routesOf(account?.destinations ?? [])).toStrictEqual(["/settings/security", "/settings/devices"]);
@@ -33,9 +43,6 @@ describe("DRAWER_GROUPS", () => {
 		expect(documents?.title).toBe("Documents");
 		expect(documents?.tone).toBe("blue");
 		expect(routesOf(documents?.destinations ?? [])).toStrictEqual(["/settings/pdf-viewer"]);
-		expect(developer?.title).toBe("Developer");
-		expect(developer?.tone).toBe("amber");
-		expect(routesOf(developer?.destinations ?? [])).toStrictEqual(["/settings/components"]);
 		expect(
 			DRAWER_GROUPS.flatMap((group: DrawerDestinationGroup): readonly DrawerDestination[] => group.destinations).some(
 				(destination: DrawerDestination): boolean => destination.isTab,
@@ -47,6 +54,31 @@ describe("DRAWER_GROUPS", () => {
 		const routes = DRAWER_GROUPS.flatMap((group: DrawerDestinationGroup): readonly string[] => routesOf(group.destinations));
 
 		expect(routes).not.toContain("/settings/two-factor");
+	});
+});
+
+describe("drawerGroups", () => {
+	const developmentBuild: boolean = __DEV__;
+
+	afterEach(() => {
+		setDevelopmentBuild(developmentBuild);
+	});
+
+	it("adds the UI kit gallery (Developer) in a development build, then GitHub for people allowed to use it", () => {
+		setDevelopmentBuild(true);
+
+		expect(drawerGroups(true)).toStrictEqual([...DRAWER_GROUPS, DEVELOPER_DRAWER_GROUP, GITHUB_DRAWER_GROUP]);
+		expect(drawerGroups(false)).toStrictEqual([...DRAWER_GROUPS, DEVELOPER_DRAWER_GROUP]);
+		expect(DEVELOPER_DRAWER_GROUP.title).toBe("Developer");
+		expect(DEVELOPER_DRAWER_GROUP.tone).toBe("amber");
+		expect(routesOf(DEVELOPER_DRAWER_GROUP.destinations)).toStrictEqual(["/settings/components"]);
+	});
+
+	it("never lists the gallery in a store build", () => {
+		setDevelopmentBuild(false);
+
+		expect(drawerGroups(true)).toStrictEqual([...DRAWER_GROUPS, GITHUB_DRAWER_GROUP]);
+		expect(drawerGroups(false)).toStrictEqual(DRAWER_GROUPS);
 	});
 });
 

@@ -33,7 +33,7 @@ flowchart TD
 
 ## Steps for the customer
 
-1. **Browse** at `/rewardhub` (or open a shared link `/rewards/{id}`). Anyone can browse.
+1. **Browse** at `/dashboard` (or open a shared link `/rewards/{id}`). Anyone can browse.
 2. **Sign in** with a verified email address. New accounts sign up at `/auth/signup` and click
    the link in the verification email.
 3. **Accept the terms** the first time you claim (terms and privacy versions are recorded).

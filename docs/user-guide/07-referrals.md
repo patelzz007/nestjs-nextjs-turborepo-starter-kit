@@ -47,9 +47,9 @@ friend redeems several times or at several tills at the same moment.
 
 ## Signup referrals (platform)
 
-Separate from merchant **reward** referrals above: every Reward Hub member gets a rotating
+Separate from merchant **reward** referrals above: every customer gets a rotating
 **signup referral code** to share when someone creates a **consumer web** account. Open
-**Earn More → Referrals** in the sidebar (or go to `/rewardhub/referrals`) to copy your code and
+**Earn More → Referrals** in the sidebar (or go to `/dashboard/referrals`) to copy your code and
 see who registered with it. There is no payout to the referrer; status updates when they redeem
 their first reward at checkout, and you get one in-app notification naming them. Optional code
 field on web signup only (the mobile app and merchant staff creation do not ask for one). A code

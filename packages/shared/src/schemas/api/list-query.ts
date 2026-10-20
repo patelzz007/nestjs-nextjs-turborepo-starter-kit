@@ -33,6 +33,8 @@ import type { DataValue } from "./common";
 
 // ── Limits (server-enforced — the schema IS the enforcement) ───────────────
 
+/** Offset pages are 1-indexed: the first page of every list. */
+export const LIST_FIRST_PAGE = 1;
 /** Page size used when a resource does not choose its own default. */
 export const LIST_DEFAULT_LIMIT = 20;
 /** Hard upper bound for `limit` on every list endpoint (matches `ApiPaginatedMetaSchema`). */
@@ -384,7 +386,7 @@ export const ListSearchSchema = z.string().trim().min(1).max(LIST_MAX_SEARCH_LEN
 	example: "john",
 });
 
-const ListPageSchema = z.coerce.number().int().min(1).max(LIST_MAX_PAGE).optional().default(1).meta({
+const ListPageSchema = z.coerce.number().int().min(LIST_FIRST_PAGE).max(LIST_MAX_PAGE).optional().default(LIST_FIRST_PAGE).meta({
 	description: "Page number (1-indexed) for offset pagination",
 	example: 1,
 });

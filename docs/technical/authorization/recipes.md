@@ -39,7 +39,7 @@ a new resource… but first check whether an existing `(action, resource)` alrea
    One row per scope you need. No `scope` means `GLOBAL`.
 3. `pnpm build:shared`, then run `pnpm --filter @workspace/api db:sync-reference-data` (or re-seed) so
    the permission row exists; deployments run it on every deploy.
-4. **Give it to roles** — in `apps/api/src/modules/authorization/reference-data/system-role-catalog.ts` for defaults, or at runtime in
+4. **Give it to roles** — in `apps/api/src/contexts/authorization/infrastructure/reference-data/system-role-catalog.ts` for defaults, or at runtime in
    the admin panel (*Access control*). Remember the [escalation rules](./backend.md#11-protecting-authorization-administration-privilege-escalation):
    you can only grant what you hold.
 5. The frontend can now use `PERMISSION.REPORT.READ` immediately.
@@ -161,7 +161,7 @@ Web: use `AccessGate`.
    { action: "UPDATE", resource: "INVENTORY", scope: "STORE", description: "Update inventory at own store", group: "Store Operations" },
    ```
 
-2. Add them to the `Store Manager` / `Store Staff` matrices in `apps/api/src/modules/authorization/reference-data/system-role-catalog.ts`
+2. Add them to the `Store Manager` / `Store Staff` matrices in `apps/api/src/contexts/authorization/infrastructure/reference-data/system-role-catalog.ts`
    (`matchesAny(p, "INVENTORY", ["UPDATE"], "STORE")`), then re-run `db:sync-reference-data`, or to a new role in the admin panel.
 3. Your table needs `organizationId` and `storeId` columns (plus RLS — recipe 7).
 4. The client sends the active store: header **`x-store-id: <storeId>`**. The guard verifies
@@ -185,7 +185,7 @@ location automatically.
 ## 6. Give a new resource an owner
 
 `OWN`-scoped permissions only work for resource types the ownership resolver knows.
-Add a case to `apps/api/src/modules/authorization/kernel/resource-ownership.resolver.ts`:
+Add a case to `apps/api/src/contexts/authorization/infrastructure/kernel/resource-ownership.resolver.ts`:
 
 ```ts
 case "INVOICE": {
@@ -223,7 +223,7 @@ Add a unit test for owner / non-owner / missing. Never read the owner from the r
 
 ## 8. Add a conditional policy (ABAC)
 
-Insert a `policy_definitions` row (seed: `prisma/seed/authorization-kernel.ts`):
+Insert a `PolicyDefinition` row (seed: `prisma/seed/authorization-kernel.ts`):
 
 ```ts
 const completedOrderLock: PolicyConditions = {
@@ -299,5 +299,5 @@ with a description. Never inject `SystemPrismaService` for this.
    ```
 
 2. In code / tests: `await kernel.explain(request)` and read `evaluation`.
-3. Check `authorization_audits` for the denied request (every DENY is logged with its reason).
+3. Check `AuthorizationAudit` for the denied request (every DENY is logged with its reason).
 4. Common causes are listed in [troubleshooting](./troubleshooting.md).

@@ -3,7 +3,7 @@
 import type { DataValue } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { resolveAuthErrorMessage } from "../../auth/errors";
+import { resolveAuthErrorMessage } from "../error-messages";
 import { jsonResponse } from "../../test-utils";
 import { ApiError, readErrorPayload } from "../api-request";
 

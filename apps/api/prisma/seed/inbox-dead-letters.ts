@@ -5,7 +5,7 @@ import { deterministicUuid } from "./deterministic-uuid";
 import { sha256BytesHex } from "./helpers";
 
 /**
- * Development-scenario sample of parked Kafka records (`inbox_dead_letters`),
+ * Development-scenario sample of parked Kafka records (`InboxDeadLetter`),
  * so the operator runbook queries (docs/technical/messaging.md) have
  * something to show. Shaped exactly as apps/analytics-consumer parks them:
  * raw bytes + ORIGINAL size + SHA-256 + truncation flag, the attempts made,
@@ -70,7 +70,7 @@ const SPECS: readonly DeadLetterSeedSpec[] = [
 			type: "reward.platform",
 			correlationId: "seed-dead-letter",
 			occurredAt: 1_790_812_800_000,
-			payload: { event: "reward.auto_published", actorUserId: null, organizationId: null, metadata: {} },
+			payload: { event: "reward.auto_published", actorUserId: null, tenantId: null, metadata: {} },
 		}),
 		daysAgo: 1,
 	},

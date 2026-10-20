@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { MemberLocationAccess } from "@/lib/org/location-access";
+import type { MemberLocationAccess } from "@/contexts/organizations/lib/org/location-access";
 import { locationFixture, STORE_A_LOCATION, STORE_B_LOCATION } from "@/test/tenant-context";
 import { STORE_A, STORE_B } from "@/test/terminals";
 import type { OrganizationLocationResponse } from "@workspace/shared";

@@ -1,5 +1,6 @@
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
+import { BRAND_NAME } from "@workspace/tokens";
 
 export interface WebPageHeaderProps {
 	readonly title: string;
@@ -12,7 +13,7 @@ export function WebPageHeader({ title, description, actions, className }: WebPag
 	return (
 		<div className={cn("flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5", className)}>
 			<div className="space-y-1">
-				<p className="text-xs font-semibold tracking-[0.14em] text-primary uppercase">Reward Hub</p>
+				<p className="text-xs font-semibold tracking-[0.14em] text-primary uppercase">{BRAND_NAME}</p>
 				<h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{title}</h1>
 				<p className="max-w-2xl text-sm text-muted-foreground">{description}</p>
 			</div>

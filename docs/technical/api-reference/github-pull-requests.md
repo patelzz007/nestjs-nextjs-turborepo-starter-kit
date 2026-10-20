@@ -3,7 +3,7 @@ title: "API reference — GitHub pull requests"
 description: "Admins link their own fine-grained GitHub token, then list and read pull requests — conversation, commits, files with diffs, line-comment threads and edit histories — as themselves."
 order: 12
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791158400000
+lastUpdated: 1792368000000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -28,7 +28,7 @@ Your GitHub link
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:GITHUB_PULL_REQUEST`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubAccountController_status` · [source](../../../apps/api/src/modules/github/pull-requests/github-account.controller.ts)
+- Operation id `GithubAccountController_status` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-account.controller.ts)
 
 **Response 200 OK** (`application/json`) — Your GitHub link
 
@@ -63,9 +63,10 @@ GitHub is asked who the token belongs to and when it expires before it is stored
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `UPDATE:GITHUB_PULL_REQUEST`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubAccountController_link` · [source](../../../apps/api/src/modules/github/pull-requests/github-account.controller.ts)
+- Operation id `GithubAccountController_link` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-account.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -109,9 +110,10 @@ The token is wiped; nothing about your pull requests is stored to begin with.
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `UPDATE:GITHUB_PULL_REQUEST`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubAccountController_unlink` · [source](../../../apps/api/src/modules/github/pull-requests/github-account.controller.ts)
+- Operation id `GithubAccountController_unlink` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-account.controller.ts)
 
 **Response 200 OK** (`application/json`) — `unlinked`
 
@@ -147,7 +149,7 @@ Newest first; the last entry is the original. A version GitHub removed from the 
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:GITHUB_PULL_REQUEST`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubContentEditsController_contentEdits` · [source](../../../apps/api/src/modules/github/pull-requests/github-content-edits.controller.ts)
+- Operation id `GithubContentEditsController_contentEdits` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-content-edits.controller.ts)
 
 **Parameters**
 
@@ -195,7 +197,7 @@ Whether a repository's pull requests update live
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:GITHUB_PULL_REQUEST`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubLiveUpdatesController_status` · [source](../../../apps/api/src/modules/github/live-updates/github-live-updates.controller.ts)
+- Operation id `GithubLiveUpdatesController_status` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-live-updates.controller.ts)
 
 **Parameters**
 
@@ -234,9 +236,10 @@ Registers a webhook on the repository with your token (it needs "Webhooks: Read 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `UPDATE:GITHUB_PULL_REQUEST`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubLiveUpdatesController_enable` · [source](../../../apps/api/src/modules/github/live-updates/github-live-updates.controller.ts)
+- Operation id `GithubLiveUpdatesController_enable` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-live-updates.controller.ts)
 
 **Parameters**
 
@@ -283,9 +286,10 @@ Deletes its webhook on GitHub with your token. Already off changes nothing. Post
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `UPDATE:GITHUB_PULL_REQUEST`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubLiveUpdatesController_disable` · [source](../../../apps/api/src/modules/github/live-updates/github-live-updates.controller.ts)
+- Operation id `GithubLiveUpdatesController_disable` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-live-updates.controller.ts)
 
 **Parameters**
 
@@ -331,7 +335,7 @@ One repository's pull-request changes, live (SSE)
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:GITHUB_PULL_REQUEST`.
 - Content type: no request body; returns `text/event-stream` (errors are always `application/json`)
-- Operation id `GithubLiveUpdatesController_stream` · [source](../../../apps/api/src/modules/github/live-updates/github-live-updates.controller.ts)
+- Operation id `GithubLiveUpdatesController_stream` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-live-updates.controller.ts)
 
 **Parameters**
 
@@ -364,7 +368,7 @@ A picture kept in a repository, read with your GitHub token
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:GITHUB_PULL_REQUEST`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubPicturesController_file` · [source](../../../apps/api/src/modules/github/pull-requests/github-pictures.controller.ts)
+- Operation id `GithubPicturesController_file` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-pictures.controller.ts)
 
 **Parameters**
 
@@ -405,7 +409,7 @@ An upload to a private repository, shown in a comment
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:GITHUB_PULL_REQUEST`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubPicturesController_upload` · [source](../../../apps/api/src/modules/github/pull-requests/github-pictures.controller.ts)
+- Operation id `GithubPicturesController_upload` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-pictures.controller.ts)
 
 **Parameters**
 
@@ -444,7 +448,7 @@ One page of your pull requests
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:GITHUB_PULL_REQUEST`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubPullRequestsController_list` · [source](../../../apps/api/src/modules/github/pull-requests/github-pull-requests.controller.ts)
+- Operation id `GithubPullRequestsController_list` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-pull-requests.controller.ts)
 
 **Parameters**
 
@@ -507,7 +511,7 @@ One pull request with the first page of its conversation
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:GITHUB_PULL_REQUEST`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubPullRequestsController_detail` · [source](../../../apps/api/src/modules/github/pull-requests/github-pull-requests.controller.ts)
+- Operation id `GithubPullRequestsController_detail` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-pull-requests.controller.ts)
 
 **Parameters**
 
@@ -637,10 +641,11 @@ Posted to GitHub as your linked account. Send an Idempotency-Key header: a retry
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `UPDATE:GITHUB_PULL_REQUEST`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Idempotent: send an `Idempotency-Key` header; a retry with the same key replays the first response.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubPullRequestsController_addComment` · [source](../../../apps/api/src/modules/github/pull-requests/github-pull-requests.controller.ts)
+- Operation id `GithubPullRequestsController_addComment` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-pull-requests.controller.ts)
 
 **Parameters**
 
@@ -649,7 +654,7 @@ Posted to GitHub as your linked account. Send an Idempotency-Key header: a retry
 | `owner` | path | string | yes | GitHub user or organization |
 | `repository` | path | string | yes | GitHub repository name |
 | `number` | path | integer | yes | Pull request number in its repository |
-| `Idempotency-Key` | header | string | yes | Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate → 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE. |
+| `Idempotency-Key` | header | string | yes | Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE. |
 
 **Request body** (`application/json`, required)
 
@@ -715,7 +720,7 @@ A pull request's commits, oldest first
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:GITHUB_PULL_REQUEST`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubPullRequestsController_commits` · [source](../../../apps/api/src/modules/github/pull-requests/github-pull-requests.controller.ts)
+- Operation id `GithubPullRequestsController_commits` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-pull-requests.controller.ts)
 
 **Parameters**
 
@@ -774,7 +779,7 @@ Read with your own token, so any repository it can see. The first 100 files, wit
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:GITHUB_PULL_REQUEST`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubPullRequestsController_commit` · [source](../../../apps/api/src/modules/github/pull-requests/github-pull-requests.controller.ts)
+- Operation id `GithubPullRequestsController_commit` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-pull-requests.controller.ts)
 
 **Parameters**
 
@@ -846,7 +851,7 @@ One page of a pull request's changed files with their diffs
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:GITHUB_PULL_REQUEST`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubPullRequestsController_files` · [source](../../../apps/api/src/modules/github/pull-requests/github-pull-requests.controller.ts)
+- Operation id `GithubPullRequestsController_files` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-pull-requests.controller.ts)
 
 **Parameters**
 
@@ -902,10 +907,11 @@ Merges as you (your token needs "Contents: Read and write") with `merge`, `squas
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `UPDATE:GITHUB_PULL_REQUEST`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Idempotent: send an `Idempotency-Key` header; a retry with the same key replays the first response.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubPullRequestsController_merge` · [source](../../../apps/api/src/modules/github/pull-requests/github-pull-requests.controller.ts)
+- Operation id `GithubPullRequestsController_merge` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-pull-requests.controller.ts)
 
 **Parameters**
 
@@ -914,7 +920,7 @@ Merges as you (your token needs "Contents: Read and write") with `merge`, `squas
 | `owner` | path | string | yes | GitHub user or organization |
 | `repository` | path | string | yes | GitHub repository name |
 | `number` | path | integer | yes | Pull request number in its repository |
-| `Idempotency-Key` | header | string | yes | Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate → 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE. |
+| `Idempotency-Key` | header | string | yes | Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE. |
 
 **Request body** (`application/json`, required)
 
@@ -966,10 +972,11 @@ Commit an uploaded picture to the repository, to link from a comment
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `UPDATE:GITHUB_PULL_REQUEST`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Idempotent: send an `Idempotency-Key` header; a retry with the same key replays the first response.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubPullRequestsController_attachPicture` · [source](../../../apps/api/src/modules/github/pull-requests/github-pull-requests.controller.ts)
+- Operation id `GithubPullRequestsController_attachPicture` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-pull-requests.controller.ts)
 
 **Parameters**
 
@@ -978,7 +985,7 @@ Commit an uploaded picture to the repository, to link from a comment
 | `owner` | path | string | yes | GitHub user or organization |
 | `repository` | path | string | yes | GitHub repository name |
 | `number` | path | integer | yes | Pull request number in its repository |
-| `Idempotency-Key` | header | string | yes | Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate → 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE. |
+| `Idempotency-Key` | header | string | yes | Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE. |
 
 **Request body** (`application/json`, required)
 
@@ -1022,9 +1029,10 @@ The subject is the pull request, a conversation comment or a line comment (a rev
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `UPDATE:GITHUB_PULL_REQUEST`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubPullRequestsController_setReaction` · [source](../../../apps/api/src/modules/github/pull-requests/github-pull-requests.controller.ts)
+- Operation id `GithubPullRequestsController_setReaction` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-pull-requests.controller.ts)
 
 **Parameters**
 
@@ -1090,7 +1098,7 @@ At most 100 threads of 50 comments each. 409 GITHUB_ACCOUNT_NOT_LINKED before yo
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:GITHUB_PULL_REQUEST`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubPullRequestsController_reviewThreads` · [source](../../../apps/api/src/modules/github/pull-requests/github-pull-requests.controller.ts)
+- Operation id `GithubPullRequestsController_reviewThreads` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-pull-requests.controller.ts)
 
 **Parameters**
 
@@ -1169,10 +1177,11 @@ A summary is required to comment or request changes. Posted to GitHub as your li
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `UPDATE:GITHUB_PULL_REQUEST`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Idempotent: send an `Idempotency-Key` header; a retry with the same key replays the first response.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubPullRequestsController_submitReview` · [source](../../../apps/api/src/modules/github/pull-requests/github-pull-requests.controller.ts)
+- Operation id `GithubPullRequestsController_submitReview` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-pull-requests.controller.ts)
 
 **Parameters**
 
@@ -1181,7 +1190,7 @@ A summary is required to comment or request changes. Posted to GitHub as your li
 | `owner` | path | string | yes | GitHub user or organization |
 | `repository` | path | string | yes | GitHub repository name |
 | `number` | path | integer | yes | Pull request number in its repository |
-| `Idempotency-Key` | header | string | yes | Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate → 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE. |
+| `Idempotency-Key` | header | string | yes | Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE. |
 
 **Request body** (`application/json`, required)
 
@@ -1279,7 +1288,7 @@ The head commit's checks as GitHub rolls them up (`none` without checks, `unavai
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:GITHUB_PULL_REQUEST`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubPullRequestsController_status` · [source](../../../apps/api/src/modules/github/pull-requests/github-pull-requests.controller.ts)
+- Operation id `GithubPullRequestsController_status` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-pull-requests.controller.ts)
 
 **Parameters**
 
@@ -1340,7 +1349,7 @@ Pass the previous page's `nextCursor` as `cursor`. 409 GITHUB_ACCOUNT_NOT_LINKED
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:GITHUB_PULL_REQUEST`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubPullRequestsController_timeline` · [source](../../../apps/api/src/modules/github/pull-requests/github-pull-requests.controller.ts)
+- Operation id `GithubPullRequestsController_timeline` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-pull-requests.controller.ts)
 
 **Parameters**
 
@@ -1468,7 +1477,7 @@ What this address is (GitHub posts webhook deliveries here)
 
 - **Public** — no session required.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubWebhookController_info` · [source](../../../apps/api/src/modules/github/live-updates/github-webhook.controller.ts)
+- Operation id `GithubWebhookController_info` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-webhook.controller.ts)
 
 **Response 200 OK** (`application/json`) — A short explanation
 
@@ -1490,8 +1499,9 @@ What this address is (GitHub posts webhook deliveries here)
 Receive a GitHub webhook delivery
 
 - **Public** — no session required.
+- Rate limit: `WEBHOOK_RATE_LIMIT_PER_MINUTE` requests per 60 s per client IP (webhook limiter).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GithubWebhookController_receive` · [source](../../../apps/api/src/modules/github/live-updates/github-webhook.controller.ts)
+- Operation id `GithubWebhookController_receive` · [source](../../../apps/api/src/contexts/integrations-github/presentation/http/github-webhook.controller.ts)
 
 **Parameters**
 

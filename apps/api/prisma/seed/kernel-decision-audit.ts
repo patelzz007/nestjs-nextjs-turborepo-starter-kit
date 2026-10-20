@@ -1,16 +1,16 @@
 import type { AuthorizationDecision } from "@prisma/client";
 import type { AuthorizationEvaluationStep } from "@workspace/shared";
 
-import { parsePrismaNullableJson } from "../../src/common/utils/prisma-json";
+import { parsePrismaNullableJson } from "../../src/platform/infrastructure/utils/prisma-json";
 
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
 import { KERNEL_SEED_IDS } from "./authorization-kernel-rows";
-import { ORGANIZATION_SEED_IDS } from "./organization-seed-ids";
+import { TENANT_SEED_IDS } from "./tenant-seed-ids";
 import { REWARD_SEED_IDS } from "./rewards";
 
 // ---------------------------------------------------------------------------
-// Authorization-kernel DECISION audit rows (`authorization_audits`).
+// Authorization-kernel DECISION audit rows (`AuthorizationAudit`).
 //
 // `AuthorizationAuditKernelService.auditResult` records every DENY, every write and every sensitive
 // read with the full request context: the tenant and store the caller was verified for, the ACL /
@@ -30,7 +30,7 @@ const BASE_EPOCH_MS = 1_789_875_000_000;
 const ONE_MINUTE_MS = 60_000;
 /** RFC 5737 documentation address of the Bukit Beruang till. */
 const CLIENT_IP = "192.0.2.58";
-const CLIENT_USER_AGENT = "RewardHub-POS/2.4.1 (Android 14; Sunmi V2 Pro)";
+const CLIENT_USER_AGENT = "Starter-POS/2.4.1 (Android 14; Sunmi V2 Pro)";
 /** Evaluation time of each decision, as the kernel measures it. */
 const DENY_DURATION_MS = 3;
 const ALLOW_DURATION_MS = 5;
@@ -53,7 +53,7 @@ interface KernelDecisionRow {
 
 export async function seedKernelDecisionAudits(): Promise<number> {
 	const denyTrace: readonly AuthorizationEvaluationStep[] = [
-		{ source: "tenant", effect: "NO_MATCH", reason: "Caller verified for the organization and store" },
+		{ source: "tenant", effect: "NO_MATCH", reason: "Caller verified for the tenant and store" },
 		{
 			source: "acl",
 			effect: "DENY",
@@ -62,7 +62,7 @@ export async function seedKernelDecisionAudits(): Promise<number> {
 		},
 	];
 	const allowTrace: readonly AuthorizationEvaluationStep[] = [
-		{ source: "tenant", effect: "NO_MATCH", reason: "Caller verified for the organization and store" },
+		{ source: "tenant", effect: "NO_MATCH", reason: "Caller verified for the tenant and store" },
 		{ source: "acl", effect: "NO_MATCH", reason: "No explicit ACL entry" },
 		{ source: "policy", effect: "ALLOW", reason: "Payment is within the Bukit Beruang cap", details: { policyId: KERNEL_SEED_IDS.policyV2Published } },
 	];
@@ -99,8 +99,8 @@ export async function seedKernelDecisionAudits(): Promise<number> {
 			create: {
 				id: rowId,
 				actorId: REWARD_SEED_IDS.mlkCashierUser,
-				organizationId: ORGANIZATION_SEED_IDS.mlkOrganization,
-				locationId: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+				tenantId: TENANT_SEED_IDS.mlkTenant,
+				locationId: TENANT_SEED_IDS.mlkLocationBeruang,
 				action: row.action,
 				resource: row.resource,
 				resourceId: row.resourceId ?? null,

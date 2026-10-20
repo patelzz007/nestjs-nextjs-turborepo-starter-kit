@@ -11,7 +11,7 @@ import { createE2eApp, login, mutationHeaders, type InjectResponse, type LoginRe
 /**
  * The global HTTP audit trail against the real AppModule and database: every
  * POST/PUT/PATCH/DELETE — successful, rejected by a guard, failed validation,
- * failed login — gets exactly one complete, redacted `audit_logs` row; reads
+ * failed login — gets exactly one complete, redacted `AuditLog` row; reads
  * get none; the table is append-only for the application role. The admin
  * viewer (`GET /admin/audit-logs`) shows those rows only to admin-panel
  * sessions holding AUDIT_LOG, and records every viewing as a sensitive read.
@@ -65,18 +65,18 @@ describe("Global HTTP audit trail (e2e)", () => {
 	async function auditRowsFor(response: InjectResponse): Promise<AuditRow[]> {
 		const correlationId = z.string().parse(response.headers["x-correlation-id"]);
 		const result = await pool.query(
-			`SELECT method, endpoint, outcome::text AS outcome, response_status AS "responseStatus", error_code AS "errorCode",
-			        actor_user_id AS "actorUserId", ip_address AS "ipAddress", user_agent AS "userAgent",
-			        occurred_at::text AS "occurredAt", completed_at::text AS "completedAt",
-			        request_body AS "requestBody", response_body AS "responseBody", system_operations AS "systemOperations"
-			 FROM public.audit_logs WHERE correlation_id = $1`,
+			`SELECT method, endpoint, outcome::text AS outcome, "responseStatus" AS "responseStatus", "errorCode" AS "errorCode",
+			        "actorUserId" AS "actorUserId", "ipAddress" AS "ipAddress", "userAgent" AS "userAgent",
+			        "occurredAt"::text AS "occurredAt", "completedAt"::text AS "completedAt",
+			        "requestBody" AS "requestBody", "responseBody" AS "responseBody", "systemOperations" AS "systemOperations"
+			 FROM public."AuditLog" WHERE "correlationId" = $1`,
 			[correlationId],
 		);
 		return z.array(AuditRowSchema).parse(result.rows);
 	}
 
 	async function userId(email: string): Promise<string> {
-		const result = await pool.query<{ id: string }>("SELECT id FROM public.users WHERE email = $1", [email]);
+		const result = await pool.query<{ id: string }>('SELECT id FROM public."User" WHERE email = $1', [email]);
 		return z.string().parse(result.rows.at(0)?.id);
 	}
 
@@ -92,7 +92,7 @@ describe("Global HTTP audit trail (e2e)", () => {
 	});
 
 	afterAll(async () => {
-		await pool.query("DELETE FROM public.regions WHERE name LIKE 'audit-e2e-%'");
+		await pool.query("DELETE FROM public.\"Region\" WHERE name LIKE 'audit-e2e-%'");
 		await pool.end();
 		await app.close();
 	});
@@ -120,7 +120,9 @@ describe("Global HTTP audit trail (e2e)", () => {
 		});
 		expect(row?.ipAddress).not.toBeNull();
 		expect(Number(row?.completedAt)).toBeGreaterThanOrEqual(Number(row?.occurredAt));
-		expect(row?.systemOperations).toEqual(expect.arrayContaining(["platform.superadmin", "geo.reference_data.write"]));
+		// The write's own named operation is recorded; a SuperAdmin has no request-wide bypass any more (D5).
+		expect(row?.systemOperations).toEqual(expect.arrayContaining(["geo.reference_data.write"]));
+		expect(row?.systemOperations).not.toContain("platform.superadmin");
 	});
 
 	it("records a failed login with the password redacted and the email masked", async () => {
@@ -188,9 +190,9 @@ describe("Global HTTP audit trail (e2e)", () => {
 		const correlationId = z.string().parse(response.headers["x-correlation-id"]);
 
 		const result = await pool.query(
-			`SELECT browser_name AS "browserName", os_name AS "osName", os_version AS "osVersion", device_type::text AS "deviceType", device_model AS "deviceModel",
-			        ip_version AS "ipVersion", ip_scope::text AS "ipScope"
-			 FROM public.audit_logs WHERE correlation_id = $1`,
+			`SELECT "browserName" AS "browserName", "osName" AS "osName", "osVersion" AS "osVersion", "deviceType"::text AS "deviceType", "deviceModel" AS "deviceModel",
+			        "ipVersion" AS "ipVersion", "ipScope"::text AS "ipScope"
+			 FROM public."AuditLog" WHERE "correlationId" = $1`,
 			[correlationId],
 		);
 		expect(result.rows).toEqual([{ browserName: "Safari", osName: "iOS", osVersion: "18.0", deviceType: "MOBILE", deviceModel: "iPhone", ipVersion: 4, ipScope: "LOOPBACK" }]);
@@ -212,9 +214,9 @@ describe("Global HTTP audit trail (e2e)", () => {
 
 		const correlationId = z.string().parse(response.headers["x-correlation-id"]);
 		const result = await pool.query(
-			`SELECT trace_id AS "traceId", auth_method::text AS "authMethod", client_type AS "clientType", http_version AS "httpVersion", host, origin, referer,
-			        accept_language AS "acceptLanguage", request_content_type AS "requestContentType", request_bytes AS "requestBytes", idempotency_key AS "idempotencyKey"
-			 FROM public.audit_logs WHERE correlation_id = $1`,
+			`SELECT "traceId" AS "traceId", "authMethod"::text AS "authMethod", "clientType" AS "clientType", "httpVersion" AS "httpVersion", host, origin, referer,
+			        "acceptLanguage" AS "acceptLanguage", "requestContentType" AS "requestContentType", "requestBytes" AS "requestBytes", "idempotencyKey" AS "idempotencyKey"
+			 FROM public."AuditLog" WHERE "correlationId" = $1`,
 			[correlationId],
 		);
 		const [row] = z.array(RequestMetadataRowSchema).parse(result.rows);
@@ -297,7 +299,7 @@ describe("Global HTTP audit trail (e2e)", () => {
 			await client.query("BEGIN");
 			await client.query("SET LOCAL ROLE app_runtime");
 			await client.query("SELECT set_config('app.rls_bypass', 'true', true), set_config('app.system_operation', 'audit.http_request.record', true)");
-			await expect(client.query("UPDATE public.audit_logs SET response_status = 200")).rejects.toThrow(/permission denied/);
+			await expect(client.query('UPDATE public."AuditLog" SET "responseStatus" = 200')).rejects.toThrow(/permission denied/);
 		} finally {
 			await client.query("ROLLBACK");
 			client.release();

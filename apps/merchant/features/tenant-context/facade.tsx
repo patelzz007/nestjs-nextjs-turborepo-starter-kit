@@ -1,11 +1,11 @@
 "use client";
 
-import { canSelectAllLocations, resolveMemberLocationAccess, type MemberLocationAccess } from "@/lib/org/location-access";
-import { clearOrganizationLocationCookie, writeOrganizationLocationCookie } from "@/lib/org/location";
+import { canSelectAllLocations, resolveMemberLocationAccess, type MemberLocationAccess } from "@/contexts/organizations/lib/org/location-access";
+import { clearOrganizationLocationCookie, writeOrganizationLocationCookie } from "@/contexts/organizations/lib/org/location";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
-import { useAuth } from "@workspace/client/lib/auth";
+import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { createFeatureStoreContext } from "@workspace/client/lib/state/feature-store-context";
 import type { Envelope, OrganizationContextResponse, OrganizationLocationResponse } from "@workspace/shared";
 import * as React from "react";
@@ -245,6 +245,21 @@ export function useActiveOrganizationName(): string | undefined {
  */
 export function useActiveOrganizationLogo(): OrganizationContextResponse["organization"]["logo"] | undefined {
 	return useActiveOrganizationSummary()?.logo;
+}
+
+/** The signed-in member's own membership in the active organization, as the organization context answers it. */
+export interface ActiveMembershipState {
+	/** `undefined` until loaded — and for a non-member (the context answers 404): every capability fails closed. */
+	readonly membership: OrganizationContextResponse["membership"] | undefined;
+	readonly isLoading: boolean;
+}
+
+/** The member's role (and store scope) in the URL's organization — the source of the merchant capabilities. */
+export function useActiveMembership(): ActiveMembershipState {
+	const { api } = useAuth();
+	const { orgSlug, initialOrganizationContext } = useTenantScope();
+	const contextQuery = api.organizations.context.useQuery({ orgSlug }, initialDataOption(initialOrganizationContext));
+	return { membership: contextQuery.data?.data.membership, isLoading: contextQuery.isPending && contextQuery.fetchStatus !== "idle" };
 }
 
 /** The active organization as the shared organization-context query has it (`undefined` until loaded). */

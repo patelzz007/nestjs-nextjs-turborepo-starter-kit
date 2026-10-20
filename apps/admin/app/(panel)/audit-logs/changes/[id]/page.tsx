@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { prefetch, resolvePrefetchedData } from "@/lib/server/prefetch";
 
-import DataChangeDetailView from "./data-change-detail";
+import DataChangeDetailView from "../../../../../contexts/audit/components/data-change-detail";
 
 export const dynamic = "force-dynamic";
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { PermissionActionSchema, PermissionResourceSchema } from "../schemas/domain/platform/enums";
+import { PermissionActionSchema, PermissionResourceSchema } from "../contexts/authorization/schemas/permission-enums";
 
 const ResourceIdSchema = z.string().min(1).max(64);
 

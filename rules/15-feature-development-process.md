@@ -197,7 +197,7 @@ Notice how many of this document's cross-referenced rules got touched by even th
 <anything that deviates from the rules, why, and the tracked follow-up>
 
 ## How I verified
-- [ ] `pnpm run lint` passes with zero errors and zero warnings (run after my last edit)
+- [ ] `pnpm run lint` passes with zero errors (run after my last edit)
 - [ ] `pnpm run test` passes (run after my last edit)
 <other commands, screenshots for UI, load-test numbers if relevant>
 

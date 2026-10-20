@@ -16,7 +16,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/admin-server-api", () => ({
 	createAdminServerCaller: (): object => ({
 		auth: { adminUserDetail: { query: userDetailQuery } },
-		admin: { roles: { list: { query: vi.fn() } }, permissions: { list: { query: vi.fn() } } },
+		admin: { permissions: { list: { query: vi.fn() } } },
 	}),
 }));
 
@@ -26,7 +26,7 @@ afterEach(() => {
 
 describe("UserDetailPage", () => {
 	it("renders the 404 page for a malformed id without calling the API", async () => {
-		await expect(UserDetailPage({ params: Promise.resolve({ id: "not-a-uuid" }) })).rejects.toThrow("NEXT_NOT_FOUND");
+		await expect(UserDetailPage({ params: Promise.resolve({ id: "not-a-uuid" }), searchParams: Promise.resolve({}) })).rejects.toThrow("NEXT_NOT_FOUND");
 		expect(userDetailQuery).not.toHaveBeenCalled();
 	});
 });

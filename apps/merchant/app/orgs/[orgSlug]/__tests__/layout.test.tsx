@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
-import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
+import type { Envelope, OrganizationContextResponse, OrganizationRewardMembershipResponse } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,12 +8,14 @@ import type { MerchantServerContext } from "@/lib/merchant-server-api";
 import { orgRoutes, ROUTES } from "@/lib/routes";
 import { membershipFixture, TEST_ORG_SLUG } from "@/test/authorization";
 import { testEnvelope } from "@/test/envelope";
+import { TWO_STORE_CONTEXT } from "@/test/tenant-context";
 
 import OrgLayout from "../layout";
 
-const { serverContext, storedSlug, sidebarOpen, shellProps, redirect } = vi.hoisted(() => ({
-	serverContext: vi.fn<() => Promise<Pick<MerchantServerContext, "memberships" | "membershipsEnvelope" | "organizationSlug">>>(),
-	storedSlug: vi.fn<() => Promise<string | undefined>>(),
+const { serverContext, preferredSlug, organizationContext, sidebarOpen, shellProps, redirect } = vi.hoisted(() => ({
+	serverContext: vi.fn<() => Promise<Pick<MerchantServerContext, "membershipsEnvelope" | "organizationSlug">>>(),
+	preferredSlug: vi.fn<() => Promise<string | undefined>>(),
+	organizationContext: vi.fn<(routeKey: string) => Promise<Envelope<OrganizationContextResponse> | undefined>>(),
 	sidebarOpen: vi.fn<() => Promise<boolean | undefined>>(),
 	shellProps: vi.fn<(props: { readonly initialSidebarOpen?: boolean | undefined }) => void>(),
 	// Like Next's `redirect()`, the mock throws: nothing after the call runs.
@@ -23,9 +25,14 @@ const { serverContext, storedSlug, sidebarOpen, shellProps, redirect } = vi.hois
 }));
 
 vi.mock("next/navigation", () => ({ redirect }));
-vi.mock("@/lib/merchant-server-api", () => ({ loadMerchantServerContext: serverContext, readOrganizationSlugCookie: storedSlug, readSidebarOpen: sidebarOpen }));
-vi.mock("@/lib/auth/server", () => ({ getMerchantServerSession: (): Promise<object> => Promise.resolve({ user: null, isImpersonating: false }) }));
-vi.mock("@/lib/org/server-location-scope", () => ({
+vi.mock("@/lib/merchant-server-api", () => ({
+	loadMerchantServerContext: serverContext,
+	loadPreferredOrganizationSlug: preferredSlug,
+	loadOrganizationContext: organizationContext,
+	readSidebarOpen: sidebarOpen,
+}));
+vi.mock("@/contexts/identity/lib/server", () => ({ getMerchantServerSession: (): Promise<object> => Promise.resolve({ user: null, isImpersonating: false }) }));
+vi.mock("@/contexts/organizations/lib/org/server-location-scope", () => ({
 	loadServerLocationScope: (): Promise<object> => Promise.resolve({ selectedLocationId: null, effectiveLocationId: null, organizationContext: undefined }),
 }));
 vi.mock("@/components/merchant-shell", () => ({
@@ -34,13 +41,22 @@ vi.mock("@/components/merchant-shell", () => ({
 		return <>{children}</>;
 	},
 }));
-vi.mock("@/components/org/org-tenant-bootstrap", () => ({ OrgTenantBootstrap: (): React.JSX.Element => <p>bootstrap</p> }));
+vi.mock("@/contexts/organizations/components/org/org-tenant-bootstrap", () => ({ OrgTenantBootstrap: (): React.JSX.Element => <p>bootstrap</p> }));
 
 const OWNER = membershipFixture("OWNER");
 const OTHER_ORG: OrganizationRewardMembershipResponse = { ...OWNER, organizationId: "0d5c7a3e-2b8f-4e61-9c4d-7a1b2c3d4e5f", organizationSlug: "other-cafe" };
 
+/** The member's organizations: the memberships page, and each one's context by its slug or its id (others answer as a non-member). */
 function memberOf(memberships: readonly OrganizationRewardMembershipResponse[]): void {
-	serverContext.mockResolvedValue({ memberships, membershipsEnvelope: testEnvelope([...memberships]), organizationSlug: memberships.at(0)?.organizationSlug });
+	serverContext.mockResolvedValue({ membershipsEnvelope: testEnvelope([...memberships]), organizationSlug: memberships.at(0)?.organizationSlug });
+	organizationContext.mockImplementation((routeKey: string): Promise<Envelope<OrganizationContextResponse> | undefined> => {
+		const membership = memberships.find((row) => row.organizationSlug === routeKey || row.organizationId === routeKey);
+		return Promise.resolve(
+			membership === undefined
+				? undefined
+				: testEnvelope({ ...TWO_STORE_CONTEXT, organization: { ...TWO_STORE_CONTEXT.organization, id: membership.organizationId, slug: membership.organizationSlug } }),
+		);
+	});
 }
 
 async function renderLayout(orgSlug: string): Promise<void> {
@@ -49,7 +65,7 @@ async function renderLayout(orgSlug: string): Promise<void> {
 
 beforeEach((): void => {
 	memberOf([OWNER, OTHER_ORG]);
-	storedSlug.mockResolvedValue(undefined);
+	preferredSlug.mockResolvedValue(undefined);
 	sidebarOpen.mockResolvedValue(undefined);
 });
 
@@ -65,18 +81,23 @@ describe("OrgLayout tenant resolution", () => {
 		expect(redirect).not.toHaveBeenCalled();
 	});
 
+	it("does not look up the preferred organization when the URL's organization resolves", async () => {
+		await renderLayout(TEST_ORG_SLUG);
+		expect(preferredSlug).not.toHaveBeenCalled();
+	});
+
 	it("redirects an organization-id segment to its canonical slug", async () => {
 		await expect(renderLayout(OTHER_ORG.organizationId)).rejects.toThrow(`NEXT_REDIRECT ${orgRoutes(OTHER_ORG.organizationSlug).dashboard}`);
 	});
 
-	it("follows the slug cookie for a foreign organization only when it names one of the member's organizations", async () => {
-		storedSlug.mockResolvedValue(OTHER_ORG.organizationSlug);
+	it("follows the confirmed preference (the slug cookie the API confirmed) away from a foreign organization", async () => {
+		preferredSlug.mockResolvedValue(OTHER_ORG.organizationSlug);
 
 		await expect(renderLayout("not-my-org")).rejects.toThrow(`NEXT_REDIRECT ${orgRoutes(OTHER_ORG.organizationSlug).dashboard}`);
 	});
 
-	it("never redirects to an organization the cookie names but the member does not belong to", async () => {
-		storedSlug.mockResolvedValue("someone-elses-org");
+	it("stays put (the page guard denies) when there is no confirmed preference — a cookie naming someone else's organization is none", async () => {
+		preferredSlug.mockResolvedValue(undefined);
 
 		await renderLayout("not-my-org");
 

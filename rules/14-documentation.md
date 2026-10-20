@@ -194,7 +194,7 @@ Only apps/api imports this package directly (08-database-prisma.md,
 apps/web or apps/mobile).
 
 ## Structure
-- prisma/schema.prisma — the schema, single source of truth
+- prisma/schema.prisma — the schema, single source of truth (the base model's fields are written into each model by `pnpm db:schema`)
 - prisma/migrations/ — versioned, never hand-edited once applied
 - prisma/seed.ts — MUST be updated alongside any schema change that
   adds/changes a table or column (see 08-database-prisma.md)

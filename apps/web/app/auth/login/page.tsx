@@ -1,12 +1,12 @@
-import { LoginForm } from "@workspace/client/lib/auth/forms/login-form";
+import { LoginForm } from "@workspace/client/lib/contexts/identity/forms/login-form";
 import { isStringPrimitive } from "@workspace/shared";
 import * as React from "react";
 
-import { loadWebDemoAccounts } from "@/lib/auth/demo-accounts";
-import { isAllowedWebPostLoginRedirect } from "@/lib/auth/routes";
+import { loadWebDemoAccounts } from "@/contexts/identity/lib/demo-accounts";
+import { isAllowedWebPostLoginRedirect } from "@/contexts/identity/lib/routes";
 import { LOGIN_REDIRECT_PARAM, ROUTES } from "@/lib/routes";
 
-import { WebLoginAuthLayout } from "./login-auth-layout";
+import { WebLoginAuthLayout } from "../../../contexts/identity/components/login-auth-layout";
 
 export interface WebLoginPageProps {
 	readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -18,7 +18,7 @@ export interface WebLoginPageProps {
  * the browse page.
  */
 function resolveRedirectPath(redirect: string | string[] | undefined): string {
-	return isStringPrimitive(redirect) && isAllowedWebPostLoginRedirect(redirect) ? redirect : ROUTES.rewardHub.browse;
+	return isStringPrimitive(redirect) && isAllowedWebPostLoginRedirect(redirect) ? redirect : ROUTES.dashboard.browse;
 }
 
 /**

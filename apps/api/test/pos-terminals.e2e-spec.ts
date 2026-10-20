@@ -12,7 +12,7 @@ import {
 } from "@workspace/shared";
 import { z } from "zod";
 
-import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { DEMO_MERCHANT_API_KEYS } from "../prisma/seed/rewards";
 import { createE2eApp, login, type InjectResponse, type LoginResult, mutationHeaders, parseSuccessEnvelope, uniqueClientIp } from "./e2e-helpers";
 
@@ -40,7 +40,7 @@ describe("POS terminal pairing (e2e)", () => {
 	let owner: LoginResult;
 	let cashier: LoginResult;
 
-	const terminalsPath = `${API_VERSION_PREFIX}/orgs/${ORGANIZATION_SEED_SLUGS.kl}/terminals`;
+	const terminalsPath = `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.kl}/terminals`;
 
 	function merchantCookies(session: LoginResult): Record<string, string> {
 		return { cookie: `merchantAccessToken=${session.accessToken}; merchantRefreshToken=${session.refreshToken}`, "x-client-type": "merchant" };
@@ -55,7 +55,7 @@ describe("POS terminal pairing (e2e)", () => {
 			method: "POST",
 			url: terminalsPath,
 			headers: mutationHeaders(merchantCookies(owner)),
-			payload: { name: `${NAME_PREFIX} ${name}`, locationId: ORGANIZATION_SEED_IDS.klLocation },
+			payload: { name: `${NAME_PREFIX} ${name}`, locationId: TENANT_SEED_IDS.klLocation },
 		});
 		expect(response.statusCode, response.body).toBe(201);
 		return parseSuccessEnvelope(response, MerchantTerminalPairingSchema).data;
@@ -64,7 +64,7 @@ describe("POS terminal pairing (e2e)", () => {
 	function pair(pairingCode: string): Promise<InjectResponse> {
 		return app.inject({
 			method: "POST",
-			url: `${API_VERSION_PREFIX}/pos/terminals/pair`,
+			url: `${API_VERSION_PREFIX}/integration/terminals/pair`,
 			headers: { "content-type": "application/json", "x-forwarded-for": uniqueClientIp() },
 			payload: JSON.stringify({ pairingCode }),
 		});
@@ -73,7 +73,7 @@ describe("POS terminal pairing (e2e)", () => {
 	function validate(apiKey: string, terminalId?: string): Promise<InjectResponse> {
 		return app.inject({
 			method: "POST",
-			url: `${API_VERSION_PREFIX}/redemptions/validate`,
+			url: `${API_VERSION_PREFIX}/integration/redemptions/validate`,
 			headers: { "x-api-key": apiKey, "content-type": "application/json", ...(terminalId !== undefined ? { "x-terminal-id": terminalId } : {}) },
 			payload: JSON.stringify({ token: UNKNOWN_QR_TOKEN }),
 		});
@@ -108,11 +108,9 @@ describe("POS terminal pairing (e2e)", () => {
 		const client = await pool.connect();
 		try {
 			await client.query("SELECT set_config('app.rls_bypass', 'true', false)");
-			const keyIds = await client.query<{ apiKeyId: string | null }>(`SELECT api_key_id AS "apiKeyId" FROM public.organization_terminals WHERE label LIKE $1`, [
-				`${NAME_PREFIX}%`,
-			]);
-			await client.query(`DELETE FROM public.organization_terminals WHERE label LIKE $1`, [`${NAME_PREFIX}%`]);
-			await client.query(`DELETE FROM public.organization_api_keys WHERE name LIKE $1 OR id = ANY($2::text[])`, [
+			const keyIds = await client.query<{ apiKeyId: string | null }>(`SELECT "apiKeyId" AS "apiKeyId" FROM public."TenantTerminal" WHERE label LIKE $1`, [`${NAME_PREFIX}%`]);
+			await client.query(`DELETE FROM public."TenantTerminal" WHERE label LIKE $1`, [`${NAME_PREFIX}%`]);
+			await client.query(`DELETE FROM public."TenantApiKey" WHERE name LIKE $1 OR id = ANY($2::text[])`, [
 				`${NAME_PREFIX}%`,
 				keyIds.rows.flatMap((row) => (row.apiKeyId === null ? [] : [row.apiKeyId])),
 			]);
@@ -125,13 +123,13 @@ describe("POS terminal pairing (e2e)", () => {
 
 	it("registers a till, pairs it once, and lets it call the POS API with only its own key", async () => {
 		const registered = await register("front counter");
-		expect(registered.terminal).toMatchObject({ status: "AWAITING_PAIRING", locationId: ORGANIZATION_SEED_IDS.klLocation });
+		expect(registered.terminal).toMatchObject({ status: "AWAITING_PAIRING", locationId: TENANT_SEED_IDS.klLocation });
 		expect(registered.terminal.terminalId).toMatch(/^TERM-/u);
 
 		const paired = await pair(registered.pairingCode);
 		expect(paired.statusCode, paired.body).toBe(201);
 		const till = parseSuccessEnvelope(paired, PosPairedTerminalSchema).data;
-		expect(till).toMatchObject({ terminalId: registered.terminal.terminalId, organization: { slug: ORGANIZATION_SEED_SLUGS.kl } });
+		expect(till).toMatchObject({ terminalId: registered.terminal.terminalId, tenant: { slug: TENANT_SEED_SLUGS.kl } });
 
 		// Authenticated (the unknown code is the only problem) — no X-Terminal-Id needed.
 		const call = await validate(till.apiKey);
@@ -173,11 +171,11 @@ describe("POS terminal pairing (e2e)", () => {
 			method: "POST",
 			url: terminalsPath,
 			headers: mutationHeaders(merchantCookies(cashier)),
-			payload: { name: `${NAME_PREFIX} cashier attempt`, locationId: ORGANIZATION_SEED_IDS.klLocation },
+			payload: { name: `${NAME_PREFIX} cashier attempt`, locationId: TENANT_SEED_IDS.klLocation },
 		});
 
 		expect(response.statusCode).toBe(403);
-		expect(errorCodeOf(response)).toBe("ORGANIZATION_ROLE_CAPABILITY_REQUIRED");
+		expect(errorCodeOf(response)).toBe("TENANT_ROLE_CAPABILITY_REQUIRED");
 	});
 
 	it("refuses unregistered tills for manually created keys once the merchant turns the switch on", async () => {
@@ -193,11 +191,11 @@ describe("POS terminal pairing (e2e)", () => {
 		await setRequireRegistered(false);
 	});
 
-	it("gives a paired till a POS-only key that the organization API refuses", async () => {
+	it("gives a paired till a POS-only key that the tenant API refuses", async () => {
 		const registered = await register("POS-only key");
 		const till = parseSuccessEnvelope(await pair(registered.pairingCode), PosPairedTerminalSchema).data;
 
-		const orgApi = await app.inject({ method: "GET", url: `${API_VERSION_PREFIX}/orgs/${ORGANIZATION_SEED_SLUGS.kl}/rewards`, headers: { "x-api-key": till.apiKey } });
+		const orgApi = await app.inject({ method: "GET", url: `${API_VERSION_PREFIX}/integration/rewards`, headers: { "x-api-key": till.apiKey } });
 		expect(orgApi.statusCode).toBe(403);
 		expect(errorCodeOf(orgApi)).toBe("API_KEY_SCOPE_FORBIDDEN");
 		// …while the POS routes still accept it (the unknown code is the only problem).
@@ -211,7 +209,7 @@ describe("POS terminal pairing (e2e)", () => {
 				method: "POST",
 				url: terminalsPath,
 				headers: mutationHeaders(merchantCookies(owner)),
-				payload: { name: `${NAME_PREFIX} ${name}`, locationId: ORGANIZATION_SEED_IDS.klLocation, terminalId: label },
+				payload: { name: `${NAME_PREFIX} ${name}`, locationId: TENANT_SEED_IDS.klLocation, terminalId: label },
 			});
 
 		const first = await registerWithLabel("labelled");

@@ -1,7 +1,7 @@
 import "server-only";
 
-import { decodeJwtPayload } from "@workspace/client/lib/auth/edge/jwt";
-import { loadServerSessionOutcome, type ServerSessionOutcome } from "@workspace/client/lib/auth/session/load-server-session";
+import { decodeJwtPayload } from "@workspace/client/lib/contexts/identity/edge/jwt";
+import { loadServerSessionOutcome, type ServerSessionOutcome } from "@workspace/client/lib/contexts/identity/session/load-server-session";
 import { AUTH_COOKIE_NAMES } from "@workspace/shared";
 import { cookies } from "next/headers";
 import { cache } from "react";

@@ -2,7 +2,7 @@ import type { Prisma, Role, User } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 import { PILOT_CITY_TIME_ZONES } from "@workspace/shared";
 
-import { seedRewardHubTenantPolicies } from "../../../src/modules/organization/utils/rewardhub-policy-seed.util";
+import { seedDefaultTenantPolicies } from "../../../src/contexts/authorization/public-api";
 import { seedAccountSecurity } from "../account-security";
 import { prisma } from "../client";
 import { upsertLiveSeedMembership } from "../memberships";
@@ -16,7 +16,7 @@ import {
 	type EnterpriseDataset,
 	type EnterpriseLocationRow,
 	type EnterpriseMemberRow,
-	type EnterpriseOrganizationRow,
+	type EnterpriseTenantRow,
 } from "../enterprise-dataset";
 import type { ProductSeedRow } from "../products";
 import { seedReferenceData } from "../reference-data";
@@ -53,63 +53,51 @@ interface EnterprisePasswordHashes {
 	readonly member: string;
 }
 
-async function upsertOrganization(organization: EnterpriseOrganizationRow): Promise<void> {
-	await prisma.organization.upsert({
-		where: { id: organization.id },
+async function upsertTenant(tenant: EnterpriseTenantRow): Promise<void> {
+	await prisma.tenant.upsert({
+		where: { id: tenant.id },
 		create: {
-			id: organization.id,
-			slug: organization.slug,
-			displayName: organization.displayName,
+			id: tenant.id,
+			slug: tenant.slug,
+			displayName: tenant.displayName,
 			lifecycleState: "ACTIVE",
 			// Analytics weeks are cut in the tenant's own zone (its head-office city's).
-			timeZone: PILOT_CITY_TIME_ZONES[organization.city],
-			createdAt: organization.createdAt,
+			timeZone: PILOT_CITY_TIME_ZONES[tenant.city],
+			createdAt: tenant.createdAt,
 		},
 		update: {
-			slug: organization.slug,
-			displayName: organization.displayName,
+			slug: tenant.slug,
+			displayName: tenant.displayName,
 			lifecycleState: "ACTIVE",
-			timeZone: PILOT_CITY_TIME_ZONES[organization.city],
+			timeZone: PILOT_CITY_TIME_ZONES[tenant.city],
 			isDeleted: false,
 			deletedAt: null,
 		},
 	});
 
-	const merchantProfile: Omit<Prisma.OrganizationMerchantProfileUncheckedCreateInput, "organizationId"> = {
-		legalName: organization.legalName,
-		category: organization.category,
-		addressText: organization.addressText,
-		city: organization.city,
+	const merchantProfile: Omit<Prisma.TenantMerchantProfileUncheckedCreateInput, "tenantId"> = {
+		legalName: tenant.legalName,
+		category: tenant.category,
+		addressText: tenant.addressText,
+		city: tenant.city,
 		kybStatus: "APPROVED",
-		contactEmail: organization.contactEmail,
-		contactPhone: organization.contactPhone,
+		contactEmail: tenant.contactEmail,
+		contactPhone: tenant.contactPhone,
 	};
-	await prisma.organizationMerchantProfile.upsert({
-		where: { organizationId: organization.id },
-		create: { organizationId: organization.id, ...merchantProfile },
+	await prisma.tenantMerchantProfile.upsert({
+		where: { tenantId: tenant.id },
+		create: { tenantId: tenant.id, ...merchantProfile },
 		update: merchantProfile,
 	});
 
 	await prisma.tenantPlacement.upsert({
-		where: { organizationId: organization.id },
-		create: { organizationId: organization.id, kind: "SHARED", regionCode: "default" },
+		where: { tenantId: tenant.id },
+		create: { tenantId: tenant.id, kind: "SHARED", regionCode: "default" },
 		update: { kind: "SHARED", regionCode: "default" },
-	});
-
-	const entitlement: Omit<Prisma.OrganizationEntitlementUncheckedCreateInput, "id" | "organizationId"> = {
-		planCode: "enterprise",
-		features: { rewards: true, apiKeys: true, analytics: true },
-		version: 1,
-		effectiveFrom: BigInt(ENTERPRISE_SEED_EPOCH_MS),
-	};
-	await prisma.organizationEntitlement.upsert({
-		where: { id: organization.entitlementId },
-		create: { id: organization.entitlementId, organizationId: organization.id, ...entitlement },
-		update: entitlement,
 	});
 }
 
-async function upsertLocations(organizationId: string, locations: readonly EnterpriseLocationRow[], reviewerUserId: string): Promise<void> {
+async function upsertLocations(tenantId: string, locations: readonly EnterpriseLocationRow[], reviewerUserId: string): Promise<void> {
 	for (const location of locations) {
 		const isReviewed = location.status === "ACTIVE";
 		const data = {
@@ -125,9 +113,9 @@ async function upsertLocations(organizationId: string, locations: readonly Enter
 			reviewedAt: isReviewed ? location.createdAt : null,
 			updatedAt: BigInt(ENTERPRISE_SEED_EPOCH_MS),
 		};
-		await prisma.organizationLocation.upsert({
+		await prisma.location.upsert({
 			where: { id: location.id },
-			create: { id: location.id, organizationId, createdAt: location.createdAt, ...data },
+			create: { id: location.id, tenantId, createdAt: location.createdAt, ...data },
 			update: { ...data, isDeleted: false, deletedAt: null },
 		});
 	}
@@ -162,10 +150,10 @@ async function upsertMemberUser(member: EnterpriseMemberRow, passwordHash: strin
 	return user;
 }
 
-async function upsertMembership(organizationId: string, member: EnterpriseMemberRow, userId: string): Promise<void> {
+async function upsertMembership(tenantId: string, member: EnterpriseMemberRow, userId: string): Promise<void> {
 	const membership = await upsertLiveSeedMembership({
 		id: member.membershipId,
-		organizationId,
+		tenantId,
 		userId,
 		role: member.role,
 		displayName: member.fullName,
@@ -173,10 +161,10 @@ async function upsertMembership(organizationId: string, member: EnterpriseMember
 	});
 
 	const locationId = member.scope.scopeType === "SELECTED" ? member.scope.locationId : null;
-	await prisma.organizationMembershipLocationScope.upsert({
+	await prisma.membershipLocationScope.upsert({
 		where: { id: member.scope.id },
-		create: { id: member.scope.id, organizationId, membershipId: membership.id, scopeType: member.scope.scopeType, locationId },
-		update: { organizationId, membershipId: membership.id, scopeType: member.scope.scopeType, locationId },
+		create: { id: member.scope.id, tenantId, membershipId: membership.id, scopeType: member.scope.scopeType, locationId },
+		update: { tenantId, membershipId: membership.id, scopeType: member.scope.scopeType, locationId },
 	});
 }
 
@@ -226,20 +214,20 @@ async function persistEnterpriseDataset(dataset: EnterpriseDataset, roles: reado
 	);
 	const ownerUser = await upsertMemberUser(owner, passwords.owner, consumerRole);
 
-	seedLog("Upserting enterprise organization...");
-	await upsertOrganization(dataset.organization);
+	seedLog("Upserting enterprise tenant...");
+	await upsertTenant(dataset.tenant);
 
 	seedLog(`Upserting ${String(dataset.locations.length)} locations...`);
-	await upsertLocations(dataset.organization.id, dataset.locations, ownerUser.id);
+	await upsertLocations(dataset.tenant.id, dataset.locations, ownerUser.id);
 
 	seedLog(`Upserting ${String(dataset.members.length)} members (users, memberships, location scopes)...`);
 	for (const member of dataset.members) {
 		const user = member.email === ENTERPRISE_OWNER_EMAIL ? ownerUser : await upsertMemberUser(member, passwords.member, consumerRole);
-		await upsertMembership(dataset.organization.id, member, user.id);
+		await upsertMembership(dataset.tenant.id, member, user.id);
 	}
 
 	seedLog("Publishing default tenant Cedar policies...");
-	await seedRewardHubTenantPolicies(prisma, dataset.organization.id, ownerUser.id, defaultTenantPolicySeedIds(dataset.organization.id));
+	await seedDefaultTenantPolicies(prisma, dataset.tenant.id, ownerUser.id, defaultTenantPolicySeedIds(dataset.tenant.id));
 
 	seedLog(`Upserting ${String(dataset.products.length)} products...`);
 	await upsertProducts(dataset.products);
@@ -281,7 +269,7 @@ export async function runEnterpriseScenario(options: EnterpriseScenarioOptions):
 			mfaUser: memberEmail(ENTERPRISE_MFA_MEMBER_INDEX),
 			enrollingUser: memberEmail(ENTERPRISE_ENROLLING_MEMBER_INDEX),
 			lockedUser: memberEmail(ENTERPRISE_LOCKED_MEMBER_INDEX),
-			supportAccess: { organizationId: dataset.organization.id, ownerEmail: ENTERPRISE_OWNER_EMAIL },
+			supportAccess: { tenantId: dataset.tenant.id, ownerEmail: ENTERPRISE_OWNER_EMAIL },
 		},
 		seedLog,
 	);
@@ -290,7 +278,7 @@ export async function runEnterpriseScenario(options: EnterpriseScenarioOptions):
 	seedLog(`
 🎉 Seed complete! (scenario: enterprise, seed: ${String(options.seed)})
 
-📋 Enterprise tenant — ${dataset.organization.displayName} (/orgs/${dataset.organization.slug}/dashboard)
+📋 Enterprise tenant — ${dataset.tenant.displayName} (/tenants/${dataset.tenant.slug}/dashboard)
 ──────────────────────────────────────────────
 Locations/stores : ${String(summary.locations)}
 Members          : ${String(summary.members)}

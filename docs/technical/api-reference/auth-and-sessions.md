@@ -3,7 +3,7 @@ title: "API reference — Auth, sessions and account security"
 description: "Login, signup, email verification, password reset, two-factor authentication, MFA recovery, sessions, impersonation and support access."
 order: 2
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791158400000
+lastUpdated: 1792368000000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -24,7 +24,7 @@ Count unused backup codes for the authenticated user
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `TwoFactorController_getBackupCodesRemaining` · [source](../../../apps/api/src/modules/auth/two-factor.controller.ts)
+- Operation id `TwoFactorController_getBackupCodesRemaining` · [source](../../../apps/api/src/contexts/identity/presentation/http/two-factor.controller.ts)
 
 **Response 200 OK** (`application/json`) — Unused backup code count
 
@@ -56,8 +56,8 @@ Response `200 OK` (application/json):
     "remaining": 8
   },
   "meta": {
-    "correlationId": "47QinlzyRJlV_qKbT4lvl",
-    "timestamp": 1791193305928
+    "correlationId": "3ynw4rYcYgoB1Q6vgu94k",
+    "timestamp": 1792435579159
   }
 }
 ```
@@ -68,10 +68,10 @@ Confirm 2FA enrollment with a TOTP code
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Policy** `UPDATE:USER (own record only)` — User can enable their own 2FA.
-- Rate limit: 5 requests per 60 s per client IP (strict limiter).
+- Rate limit: 5 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `TwoFactorController_enableTwoFactor` · [source](../../../apps/api/src/modules/auth/two-factor.controller.ts)
+- Operation id `TwoFactorController_enableTwoFactor` · [source](../../../apps/api/src/contexts/identity/presentation/http/two-factor.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -117,8 +117,8 @@ Response `200 OK` (application/json):
     "message": "Two-factor authentication enabled successfully"
   },
   "meta": {
-    "correlationId": "KBvuSo4hBIWtya6MgmEU5",
-    "timestamp": 1791193308669
+    "correlationId": "WdZptygMO5DQSBOVm3Osc",
+    "timestamp": 1792435583701
   }
 }
 ```
@@ -129,10 +129,10 @@ Rotate 2FA after confirming password and current TOTP or backup code
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Policy** `UPDATE:USER (own record only)` — User can rotate their own 2FA.
-- Rate limit: 5 requests per 60 s per client IP (strict limiter).
+- Rate limit: 5 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `TwoFactorController_rotateTwoFactor` · [source](../../../apps/api/src/modules/auth/two-factor.controller.ts)
+- Operation id `TwoFactorController_rotateTwoFactor` · [source](../../../apps/api/src/contexts/identity/presentation/http/two-factor.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -171,7 +171,7 @@ Content-Type: application/json
 
 {
   "password": "Henry@123",
-  "backupCode": "ZYCGVR3V5K9RSHN4"
+  "backupCode": "6TGASTQHN3FS9MPJ"
 }
 ```
 
@@ -183,14 +183,15 @@ Response `200 OK` (application/json):
   "data": {
     "secret": "<redacted: one-time secret>",
     "qrCodeDataUrl": "<redacted: one-time secret>",
+    "otpAuthUrl": "otpauth://totp/<redacted: authenticator secret>",
     "backupCodes": [
       "<redacted: one-time secret>",
       "<redacted: one-time secret>"
     ]
   },
   "meta": {
-    "correlationId": "kX6FbqOkl5Qbi2uUYKJUR",
-    "timestamp": 1791193322290
+    "correlationId": "jHhfeZZZSsEX_abhQxbUx",
+    "timestamp": 1792435592168
   }
 }
 ```
@@ -201,10 +202,10 @@ Start 2FA enrollment: generate a pending TOTP secret, QR code and backup codes
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Policy** `UPDATE:USER (own record only)` — User can start their own 2FA enrollment.
-- Rate limit: 5 requests per 60 s per client IP (strict limiter).
+- Rate limit: 5 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `TwoFactorController_startSetup` · [source](../../../apps/api/src/modules/auth/two-factor.controller.ts)
+- Operation id `TwoFactorController_startSetup` · [source](../../../apps/api/src/contexts/identity/presentation/http/two-factor.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -248,14 +249,15 @@ Response `201 Created` (application/json):
   "data": {
     "secret": "<redacted: one-time secret>",
     "qrCodeDataUrl": "<redacted: one-time secret>",
+    "otpAuthUrl": "otpauth://totp/<redacted: authenticator secret>",
     "backupCodes": [
       "<redacted: one-time secret>",
       "<redacted: one-time secret>"
     ]
   },
   "meta": {
-    "correlationId": "bHs5DhaOQoyi7sSoDCcc5",
-    "timestamp": 1791193308579
+    "correlationId": "N9NJk7t2Zyib2K63sDD7c",
+    "timestamp": 1792435583043
   }
 }
 ```
@@ -265,9 +267,10 @@ Response `201 Created` (application/json):
 Verify a backup code while authenticated
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `TwoFactorController_verifyBackupCode` · [source](../../../apps/api/src/modules/auth/two-factor.controller.ts)
+- Operation id `TwoFactorController_verifyBackupCode` · [source](../../../apps/api/src/contexts/identity/presentation/http/two-factor.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -299,7 +302,7 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "backupCode": "PFXPWESS8DF7RNN9"
+  "backupCode": "YKTZXATRB9J3YP6M"
 }
 ```
 
@@ -312,8 +315,8 @@ Response `200 OK` (application/json):
     "valid": true
   },
   "meta": {
-    "correlationId": "neICtDVFtRANyQBEnSztC",
-    "timestamp": 1791193320746
+    "correlationId": "k0MPCTbGE7FpNdkPaXv5e",
+    "timestamp": 1792435590444
   }
 }
 ```
@@ -324,9 +327,9 @@ SuperAdmin: list MFA recovery requests
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
-- Rate limit: 10 requests per 60 s per client IP (strict limiter).
+- Rate limit: 10 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `MfaRecoveryController_listRecoveryRequests` · [source](../../../apps/api/src/modules/auth/mfa-recovery.controller.ts)
+- Operation id `MfaRecoveryController_listRecoveryRequests` · [source](../../../apps/api/src/contexts/identity/presentation/http/mfa-recovery.controller.ts)
 
 **Parameters**
 
@@ -386,12 +389,12 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "cc3ee822-7bdd-4bbb-a7a7-9033ca8e8d21",
-      "userId": "97da204d-674e-4aec-bb78-729c4f07b9e4",
+      "id": "01a1557c-9c4d-70bd-87db-e4ead8f35993",
+      "userId": "01a1557a-c0ca-71b9-b251-b661b9e78b9d",
       "userEmail": "david.lee@example.com",
       "userFullName": "David Lee",
       "status": "PENDING",
-      "requestedAt": 1791193322356,
+      "requestedAt": 1792435592269,
       "reviewedBy": null,
       "reviewedAt": null,
       "scheduledUnlockAt": null,
@@ -399,16 +402,16 @@ Response `200 OK` (application/json):
       "notes": "Lost my phone"
     },
     {
-      "id": "db7f4a2d-246a-40f7-8c91-c6e16596fa40",
-      "userId": "c9600578-399b-4d47-81b0-6d84531ea8ea",
+      "id": "019b76da-a800-7b7f-8a2d-246a20f7cc91",
+      "userId": "01a1557a-c0c7-753f-974a-a5d794c564ed",
       "userEmail": "bob.smith@example.com",
       "userFullName": "Bob Smith",
       "status": "COMPLETED",
-      "requestedAt": 1790329273624,
-      "reviewedBy": "9194a7c0-e721-4833-95cc-eca2f319f542",
-      "reviewedAt": 1790415553624,
-      "scheduledUnlockAt": 1790501953624,
-      "completedAt": 1790501953624,
+      "requestedAt": 1791571675577,
+      "reviewedBy": "01a1557a-c0b2-72f9-ab17-46cd05f66ace",
+      "reviewedAt": 1791657955577,
+      "scheduledUnlockAt": 1791744355577,
+      "completedAt": 1791744355577,
       "notes": "Lost authenticator device; identity verified by video call against government ID."
     }
   ],
@@ -420,8 +423,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "jYuo4IYkFSbBzknbcSIw4",
-    "timestamp": 1791193322425
+    "correlationId": "mhm_QOEdbdXTXH442uw_4",
+    "timestamp": 1792435592399
   }
 }
 ```
@@ -433,10 +436,10 @@ SuperAdmin: approve or deny an MFA recovery request
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Policy** `UPDATE:USER` — SuperAdmin can review MFA recovery requests.
-- Rate limit: 10 requests per 60 s per client IP (strict limiter).
+- Rate limit: 10 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `MfaRecoveryController_reviewRecovery` · [source](../../../apps/api/src/modules/auth/mfa-recovery.controller.ts)
+- Operation id `MfaRecoveryController_reviewRecovery` · [source](../../../apps/api/src/contexts/identity/presentation/http/mfa-recovery.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -473,7 +476,7 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "requestId": "cc3ee822-7bdd-4bbb-a7a7-9033ca8e8d21",
+  "requestId": "01a1557c-9c4d-70bd-87db-e4ead8f35993",
   "action": "deny",
   "notes": "Identity not confirmed"
 }
@@ -489,8 +492,8 @@ Response `200 OK` (application/json):
     "message": "Your MFA recovery request was denied."
   },
   "meta": {
-    "correlationId": "vfeIxPXvWzOlwiE1HeYLr",
-    "timestamp": 1791193322461
+    "correlationId": "4PEOo7C6BHAaDiDRFr8SN",
+    "timestamp": 1792435592458
   }
 }
 ```
@@ -503,7 +506,7 @@ SuperAdmin: list all users with roles and lockout status
 - **SuperAdmin only.**
 - **Permission** `LIST:USER`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `AuthController_getAdminUsersList` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
+- Operation id `AuthController_getAdminUsersList` · [source](../../../apps/api/src/contexts/identity/presentation/http/auth.controller.ts)
 
 **Parameters**
 
@@ -584,37 +587,11 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1790707211336,
-      "updatedAt": 1791193088857,
+      "createdAt": 1792007630926,
+      "updatedAt": 1792435554307,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "048bb0a7-bec4-4453-a311-d54f51a211e5",
-      "email": "manager@example.com",
-      "fullName": "Manager User",
-      "isActive": true,
-      "isSuperAdmin": false,
-      "isEmailVerified": false,
-      "twoFactorEnabled": false,
-      "hasAdminAccess": true,
-      "tokenVersion": 0,
-      "roles": [
-        {
-          "id": "ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca",
-          "name": "Manager",
-          "description": "Admin panel — read/update users and reports (no RBAC or system settings)"
-        }
-      ],
-      "permissions": [],
-      "failedLoginAttempts": 0,
-      "lockedUntil": null,
-      "directPermissionIds": []
-    },
-    {
-      "createdAt": 1790312891336,
-      "updatedAt": 1791193088854,
-      "isDeleted": false,
-      "deletedAt": null,
-      "id": "9af46920-bdda-4924-9aba-113055a21a2f",
+      "id": "01a1557a-c0be-756d-9a6c-b7c56d560496",
       "email": "admin@example.com",
       "fullName": "Admin User",
       "isActive": true,
@@ -625,7 +602,7 @@ Response `200 OK` (application/json):
       "tokenVersion": 0,
       "roles": [
         {
-          "id": "6b129548-41be-4834-b36a-a15cf3b7e855",
+          "id": "01a1557a-bbc0-71af-8439-eb45562b8985",
           "name": "Admin",
           "description": "Admin panel — manage users, settings, and platform data"
         }
@@ -633,7 +610,43 @@ Response `200 OK` (application/json):
       "permissions": [],
       "failedLoginAttempts": 0,
       "lockedUntil": null,
-      "directPermissionIds": []
+      "directPermissionIds": [],
+      "signupReferrer": {
+        "id": "01a1557a-c0c6-7151-8961-a3804239fdaf",
+        "fullName": "Alice Johnson"
+      },
+      "signupReferralStatus": "redeemed"
+    },
+    {
+      "createdAt": 1791431690926,
+      "updatedAt": 1792435554310,
+      "isDeleted": false,
+      "deletedAt": null,
+      "id": "01a1557a-c0c1-774a-9b27-c03bb47349a0",
+      "email": "manager@example.com",
+      "fullName": "Manager User",
+      "isActive": true,
+      "isSuperAdmin": false,
+      "isEmailVerified": false,
+      "twoFactorEnabled": false,
+      "hasAdminAccess": true,
+      "tokenVersion": 0,
+      "roles": [
+        {
+          "id": "01a1557a-bbc1-768c-a89b-d51094ce2c1f",
+          "name": "Manager",
+          "description": "Admin panel — read/update users and reports (no RBAC or system settings)"
+        }
+      ],
+      "permissions": [],
+      "failedLoginAttempts": 0,
+      "lockedUntil": null,
+      "directPermissionIds": [],
+      "signupReferrer": {
+        "id": "01a1557a-c0c6-7151-8961-a3804239fdaf",
+        "fullName": "Alice Johnson"
+      },
+      "signupReferralStatus": "redeemed"
     }
   ],
   "meta": {
@@ -641,11 +654,11 @@ Response `200 OK` (application/json):
     "total": 35,
     "page": 1,
     "totalPages": 7,
-    "nextCursor": "eyJhdCI6MTc4NzcyMzM0MDAwMCwiaWQiOiI4MDQ3NTk1Yi1iYTg5LTRlMjctYmUyNy0xYmEzYjkxNTlhZTQifQ",
+    "nextCursor": "eyJhdCI6MTc4ODk4NDEyMDAwMCwiaWQiOiIwMWExNTU3YS1jMWMyLTc0ZGItODdhNy05NTcyNmU4NDMyNDkifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "-IasGzEF9QYYLe8FYgdt_",
-    "timestamp": 1791193302229
+    "correlationId": "jnYC8CZUnlx_9NaaiQqSJ",
+    "timestamp": 1792435575433
   }
 }
 ```
@@ -658,7 +671,7 @@ SuperAdmin: get detailed user info including security state
 - **SuperAdmin only.**
 - **Permission** `READ:USER`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `AuthController_getAdminUserDetail` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
+- Operation id `AuthController_getAdminUserDetail` · [source](../../../apps/api/src/contexts/identity/presentation/http/auth.controller.ts)
 
 **Parameters**
 
@@ -714,7 +727,7 @@ SuperAdmin: get detailed user info including security state
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/auth/admin/users/363565ab-118f-4983-aeff-0b7eb1634f47
+GET /api/v1/auth/admin/users/01a1557a-c0d1-70f9-b441-89838f20f27e
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -725,11 +738,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1766561160000,
-    "updatedAt": 1791193088873,
+    "createdAt": 1767078840000,
+    "updatedAt": 1792435566120,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "363565ab-118f-4983-aeff-0b7eb1634f47",
+    "id": "01a1557a-c0d1-70f9-b441-89838f20f27e",
     "email": "grace.wilson@example.com",
     "fullName": "Grace Wilson",
     "isActive": true,
@@ -740,34 +753,36 @@ Response `200 OK` (application/json):
     "tokenVersion": 0,
     "roles": [
       {
-        "id": "4c3114ed-b0a8-48af-b3eb-900d1e7ce1ec",
+        "id": "01a1557a-bbc2-7672-b075-9f725142745f",
         "name": "User",
-        "description": "Customer app — own profile, links, tags, and API keys (no admin panel)"
+        "description": "Customer app — own profile and own analytics (no admin panel)"
       }
     ],
     "permissions": [
       {
-        "id": "b61ea7ad-24e9-4233-8715-a8778243215f",
+        "id": "01a1557a-bb84-7668-aceb-a8d2b0103434",
+        "action": "READ",
+        "resource": "GITHUB",
+        "description": "View contributions of the configured GitHub repositories",
+        "group": "GitHub"
+      },
+      {
+        "id": "01a1557a-bb84-7668-acec-11c39421ed02",
         "action": "READ",
         "resource": "PROFILE",
         "description": "View own profile",
         "group": "Own Records"
-      },
-      {
-        "id": "8f159dec-62e8-4b7e-a8cb-27078dc4ac39",
-        "action": "UPDATE",
-        "resource": "PROFILE",
-        "description": "Update own profile",
-        "group": "Own Records"
       }
     ],
     "failedLoginAttempts": 5,
-    "lockedUntil": 1791194053624,
-    "directPermissionIds": []
+    "lockedUntil": 1792436455577,
+    "directPermissionIds": [],
+    "signupReferrer": null,
+    "signupReferralStatus": null
   },
   "meta": {
-    "correlationId": "FbXskSGFXfRfjodqJkJsS",
-    "timestamp": 1791193302317
+    "correlationId": "jlOUXUB_xm8JOBarzyLuX",
+    "timestamp": 1792435575560
   }
 }
 ```
@@ -781,9 +796,10 @@ SuperAdmin: unlock a locked user account
 - **Permission** `UPDATE:USER`.
 - **Policy** `UPDATE:USER` — SuperAdmin can unlock any user account.
 - Requires a **verified email address**.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `AuthController_unlockUser` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
+- Operation id `AuthController_unlockUser` · [source](../../../apps/api/src/contexts/identity/presentation/http/auth.controller.ts)
 
 **Parameters**
 
@@ -810,7 +826,7 @@ SuperAdmin: unlock a locked user account
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/auth/admin/users/363565ab-118f-4983-aeff-0b7eb1634f47/unlock
+PATCH /api/v1/auth/admin/users/01a1557a-c0d1-70f9-b441-89838f20f27e/unlock
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -825,8 +841,8 @@ Response `200 OK` (application/json):
     "message": "User account has been unlocked successfully."
   },
   "meta": {
-    "correlationId": "J4oZICXcO6G8idMClfSlG",
-    "timestamp": 1791193302338
+    "correlationId": "qkwIfQNn4QqO4dgWYdynJ",
+    "timestamp": 1792435575591
   }
 }
 ```
@@ -837,9 +853,10 @@ Change password for the authenticated user
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Policy** `UPDATE:USER (own record only)` — User can only change their own password.
+- Rate limit: 3 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `AuthController_changePassword` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
+- Operation id `AuthController_changePassword` · [source](../../../apps/api/src/contexts/identity/presentation/http/auth.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -889,8 +906,8 @@ Response `200 OK` (application/json):
     "message": "Password changed successfully"
   },
   "meta": {
-    "correlationId": "JMWhNEtIvuiq9z6eNMjJW",
-    "timestamp": 1791193304792
+    "correlationId": "a2X0Wlttl5EecTcOXgu4m",
+    "timestamp": 1792435578012
   }
 }
 ```
@@ -900,10 +917,10 @@ Response `200 OK` (application/json):
 Request a password reset email
 
 - **Public** — no session required.
-- Rate limit: 3 requests per 60 s per client IP (strict limiter).
+- Rate limit: 3 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `AuthController_forgotPassword` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
+- Operation id `AuthController_forgotPassword` · [source](../../../apps/api/src/contexts/identity/presentation/http/auth.controller.ts)
 
 **Parameters**
 
@@ -953,8 +970,8 @@ Response `200 OK` (application/json):
     "message": "If an account with that email exists, a password reset link has been sent."
   },
   "meta": {
-    "correlationId": "_9fCnk0GNWvfTyI2IlVCK",
-    "timestamp": 1791193302723
+    "correlationId": "PG5GkrcqFpBtIrC5TGC2a",
+    "timestamp": 1792435575977
   }
 }
 ```
@@ -964,10 +981,10 @@ Response `200 OK` (application/json):
 Authenticate with email and password
 
 - **Public** — no session required.
-- Rate limit: 5 requests per 60 s per client IP (strict limiter).
+- Rate limit: 5 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `AuthController_login` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
+- Operation id `AuthController_login` · [source](../../../apps/api/src/contexts/identity/presentation/http/auth.controller.ts)
 
 **Parameters**
 
@@ -1111,11 +1128,11 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "user": {
-      "createdAt": 1790015951336,
-      "updatedAt": 1791193088846,
+      "createdAt": 1790471210926,
+      "updatedAt": 1792435554301,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "9194a7c0-e721-4833-95cc-eca2f319f542",
+      "id": "01a1557a-c0b2-72f9-ab17-46cd05f66ace",
       "email": "superadmin@example.com",
       "fullName": "Super Admin",
       "isActive": true,
@@ -1126,7 +1143,7 @@ Response `201 Created` (application/json):
       "tokenVersion": 0,
       "roles": [
         {
-          "id": "7c9e04fb-139e-418c-8d71-8e0f57f636e4",
+          "id": "01a1557a-bbbe-766e-bbf8-83ea440cea5f",
           "name": "SuperAdmin",
           "description": "Full system access (platform operator)"
         }
@@ -1134,8 +1151,8 @@ Response `201 Created` (application/json):
     }
   },
   "meta": {
-    "correlationId": "LrLNFS_tWavVt4HfAnBhN",
-    "timestamp": 1791193300809
+    "correlationId": "-fSz_Bs2M8yrJncj8quSa",
+    "timestamp": 1792435574608
   }
 }
 ```
@@ -1145,10 +1162,10 @@ Response `201 Created` (application/json):
 Complete login with a TOTP code
 
 - **Public** — no session required.
-- Rate limit: 10 requests per 60 s per client IP (strict limiter).
+- Rate limit: 10 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `TwoFactorController_loginWithTwoFactor` · [source](../../../apps/api/src/modules/auth/two-factor.controller.ts)
+- Operation id `TwoFactorController_loginWithTwoFactor` · [source](../../../apps/api/src/contexts/identity/presentation/http/two-factor.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1286,11 +1303,11 @@ Response `200 OK` (application/json):
     "enrollmentReason": "email_verification",
     "message": "Verify your email address to continue.",
     "user": {
-      "createdAt": 1762667100000,
-      "updatedAt": 1791193305536,
+      "createdAt": 1763936040000,
+      "updatedAt": 1792435579016,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "97da204d-674e-4aec-bb78-729c4f07b9e4",
+      "id": "01a1557a-c0ca-71b9-b251-b661b9e78b9d",
       "email": "david.lee@example.com",
       "fullName": "David Lee",
       "isActive": true,
@@ -1298,15 +1315,15 @@ Response `200 OK` (application/json):
       "isEmailVerified": false,
       "twoFactorEnabled": true,
       "hasAdminAccess": true,
-      "tokenVersion": 0,
+      "tokenVersion": 4,
       "roles": [
         {
-          "id": "ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca",
+          "id": "01a1557a-bbc1-768c-a89b-d51094ce2c1f",
           "name": "Manager",
           "description": "Admin panel — read/update users and reports (no RBAC or system settings)"
         },
         {
-          "id": "2856e233-c666-402b-8dc9-a3cb9d306d15",
+          "id": "019b76da-a800-7856-a233-c666b02b0dc9",
           "name": "Support Agent",
           "description": "Support desk — Support Viewer plus correcting customer account details"
         }
@@ -1314,8 +1331,8 @@ Response `200 OK` (application/json):
     }
   },
   "meta": {
-    "correlationId": "ym0tl3v0d_Tuc-__mH5W5",
-    "timestamp": 1791193305881
+    "correlationId": "7KtQfI1vomoAtTdpFecVf",
+    "timestamp": 1792435579090
   }
 }
 ```
@@ -1325,10 +1342,10 @@ Response `200 OK` (application/json):
 Complete login with a one-time backup code
 
 - **Public** — no session required.
-- Rate limit: 10 requests per 60 s per client IP (strict limiter).
+- Rate limit: 10 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `TwoFactorController_loginWithBackupCode` · [source](../../../apps/api/src/modules/auth/two-factor.controller.ts)
+- Operation id `TwoFactorController_loginWithBackupCode` · [source](../../../apps/api/src/contexts/identity/presentation/http/two-factor.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1452,7 +1469,7 @@ Content-Type: application/json
 
 {
   "tempToken": "<redacted: one-time secret>",
-  "backupCode": "5SW7U77684HH2XU6"
+  "backupCode": "DAVTUQ4YBS2DDJTA"
 }
 ```
 
@@ -1466,11 +1483,11 @@ Response `200 OK` (application/json):
     "enrollmentReason": "email_verification",
     "message": "Verify your email address to continue.",
     "user": {
-      "createdAt": 1762667100000,
-      "updatedAt": 1791193306593,
+      "createdAt": 1763936040000,
+      "updatedAt": 1792435579623,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "97da204d-674e-4aec-bb78-729c4f07b9e4",
+      "id": "01a1557a-c0ca-71b9-b251-b661b9e78b9d",
       "email": "david.lee@example.com",
       "fullName": "David Lee",
       "isActive": true,
@@ -1478,15 +1495,15 @@ Response `200 OK` (application/json):
       "isEmailVerified": false,
       "twoFactorEnabled": true,
       "hasAdminAccess": true,
-      "tokenVersion": 0,
+      "tokenVersion": 4,
       "roles": [
         {
-          "id": "ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca",
+          "id": "01a1557a-bbc1-768c-a89b-d51094ce2c1f",
           "name": "Manager",
           "description": "Admin panel — read/update users and reports (no RBAC or system settings)"
         },
         {
-          "id": "2856e233-c666-402b-8dc9-a3cb9d306d15",
+          "id": "019b76da-a800-7856-a233-c666b02b0dc9",
           "name": "Support Agent",
           "description": "Support desk — Support Viewer plus correcting customer account details"
         }
@@ -1494,8 +1511,8 @@ Response `200 OK` (application/json):
     }
   },
   "meta": {
-    "correlationId": "h8qUmaA1WcotVEeOxYJq2",
-    "timestamp": 1791193306926
+    "correlationId": "qoYYMKI4jYV-IxPC8fy8n",
+    "timestamp": 1792435580243
   }
 }
 ```
@@ -1506,7 +1523,7 @@ Get the currently authenticated user's profile
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `AuthController_getMe` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
+- Operation id `AuthController_getMe` · [source](../../../apps/api/src/contexts/identity/presentation/http/auth.controller.ts)
 
 **Response 200 OK** (`application/json`) — Current user profile
 
@@ -1552,11 +1569,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1790015951336,
-    "updatedAt": 1791193088846,
+    "createdAt": 1790471210926,
+    "updatedAt": 1792435554301,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "9194a7c0-e721-4833-95cc-eca2f319f542",
+    "id": "01a1557a-c0b2-72f9-ab17-46cd05f66ace",
     "email": "superadmin@example.com",
     "fullName": "Super Admin",
     "isActive": true,
@@ -1567,15 +1584,15 @@ Response `200 OK` (application/json):
     "tokenVersion": 0,
     "roles": [
       {
-        "id": "7c9e04fb-139e-418c-8d71-8e0f57f636e4",
+        "id": "01a1557a-bbbe-766e-bbf8-83ea440cea5f",
         "name": "SuperAdmin",
         "description": "Full system access (platform operator)"
       }
     ]
   },
   "meta": {
-    "correlationId": "ZHd7Zs8XeqCbTYib1LLl3",
-    "timestamp": 1791193301531
+    "correlationId": "WXfpFpEz7ggt4dCyN8l-q",
+    "timestamp": 1792435575115
   }
 }
 ```
@@ -1586,10 +1603,10 @@ Initiate an admin-reviewed MFA recovery request
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Policy** `UPDATE:USER (own record only)` — User can initiate MFA recovery for their own account.
-- Rate limit: 3 requests per 60 s per client IP (strict limiter).
+- Rate limit: 3 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `MfaRecoveryController_initiateRecovery` · [source](../../../apps/api/src/modules/auth/mfa-recovery.controller.ts)
+- Operation id `MfaRecoveryController_initiateRecovery` · [source](../../../apps/api/src/contexts/identity/presentation/http/mfa-recovery.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1638,8 +1655,8 @@ Response `200 OK` (application/json):
     "message": "MFA recovery request submitted. An administrator will review it shortly."
   },
   "meta": {
-    "correlationId": "dcxZjl389nCxGQ8Ox4NdE",
-    "timestamp": 1791193322381
+    "correlationId": "Tp1RJffnfYf_VdwFixpzb",
+    "timestamp": 1792435592292
   }
 }
 ```
@@ -1650,7 +1667,7 @@ Get the current MFA recovery request status
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `MfaRecoveryController_getRecoveryStatus` · [source](../../../apps/api/src/modules/auth/mfa-recovery.controller.ts)
+- Operation id `MfaRecoveryController_getRecoveryStatus` · [source](../../../apps/api/src/contexts/identity/presentation/http/mfa-recovery.controller.ts)
 
 **Response 200 OK** (`application/json`) — Recovery request status
 
@@ -1685,8 +1702,8 @@ Response `200 OK` (application/json):
     "message": "Your MFA recovery request is pending administrator review."
   },
   "meta": {
-    "correlationId": "3ptUFiGCxcKfa7-CHBxTN",
-    "timestamp": 1791193322415
+    "correlationId": "pIX5p7S6vfVoBNoAO0iq8",
+    "timestamp": 1792435592356
   }
 }
 ```
@@ -1697,7 +1714,7 @@ Get the current session's roles and permissions
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `AuthController_getSessionPermissions` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
+- Operation id `AuthController_getSessionPermissions` · [source](../../../apps/api/src/contexts/identity/presentation/http/auth.controller.ts)
 
 **Response 200 OK** (`application/json`) — Session RBAC payload
 
@@ -1745,21 +1762,21 @@ Response `200 OK` (application/json):
   "data": {
     "roles": [
       {
-        "id": "7c9e04fb-139e-418c-8d71-8e0f57f636e4",
+        "id": "01a1557a-bbbe-766e-bbf8-83ea440cea5f",
         "name": "SuperAdmin",
         "description": "Full system access (platform operator)"
       }
     ],
     "permissions": [
       {
-        "id": "8645327b-3853-40e8-a895-897b948f3b7d",
+        "id": "01a1557a-bb83-7469-9284-7e12e0d5a4d5",
         "action": "CREATE",
         "resource": "USER",
         "description": "Create new users",
         "group": "User Management"
       },
       {
-        "id": "7c220360-19dc-4546-950c-d0a48cad6177",
+        "id": "01a1557a-bb84-7668-acea-d6d256be9d12",
         "action": "READ",
         "resource": "USER",
         "description": "View user details",
@@ -1775,8 +1792,8 @@ Response `200 OK` (application/json):
     "sessionScope": "full"
   },
   "meta": {
-    "correlationId": "DJYOStMELjZUvJfgSqu9I",
-    "timestamp": 1791193301534
+    "correlationId": "3zmAUWxI0l6TBlfHVKoCF",
+    "timestamp": 1792435575130
   }
 }
 ```
@@ -1788,7 +1805,7 @@ Get the signed-in user's own profile (name, avatar, optimistic-lock version)
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Policy** `READ:PROFILE (own record only)` — A user reads their own profile.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `ProfileController_getOwnProfile` · [source](../../../apps/api/src/modules/auth/profile/profile.controller.ts)
+- Operation id `ProfileController_getOwnProfile` · [source](../../../apps/api/src/contexts/identity/presentation/http/profile.controller.ts)
 
 **Response 200 OK** (`application/json`) — The signed-in user's own profile
 
@@ -1830,17 +1847,17 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": "9194a7c0-e721-4833-95cc-eca2f319f542",
+    "id": "01a1557a-c0b2-72f9-ab17-46cd05f66ace",
     "email": "superadmin@example.com",
     "fullName": "Super Admin",
     "avatar": null,
     "version": 0,
-    "createdAt": 1790015951336,
-    "updatedAt": 1791193088846
+    "createdAt": 1790471210926,
+    "updatedAt": 1792435554301
   },
   "meta": {
-    "correlationId": "uISsjp3LfeM6Rf9pTP6RB",
-    "timestamp": 1791193302177
+    "correlationId": "C0hraI1mmGscVP1poY_g8",
+    "timestamp": 1792435575321
   }
 }
 ```
@@ -1855,7 +1872,7 @@ Send the `version` read from GET /auth/profile: the change applies only while th
 - **Policy** `UPDATE:PROFILE (own record only)` — A user edits their own profile (never during impersonation).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `ProfileController_updateOwnProfile` · [source](../../../apps/api/src/modules/auth/profile/profile.controller.ts)
+- Operation id `ProfileController_updateOwnProfile` · [source](../../../apps/api/src/contexts/identity/presentation/http/profile.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1914,17 +1931,17 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": "9194a7c0-e721-4833-95cc-eca2f319f542",
+    "id": "01a1557a-c0b2-72f9-ab17-46cd05f66ace",
     "email": "superadmin@example.com",
     "fullName": "Super Admin",
     "avatar": null,
     "version": 1,
-    "createdAt": 1790015951336,
-    "updatedAt": 1791193302197
+    "createdAt": 1790471210926,
+    "updatedAt": 1792435575349
   },
   "meta": {
-    "correlationId": "n_zIt2nSmKDo0EA5NqydA",
-    "timestamp": 1791193302206
+    "correlationId": "I_VBPUwM1aV5rwyVuYjzN",
+    "timestamp": 1792435575404
   }
 }
 ```
@@ -1934,10 +1951,10 @@ Response `200 OK` (application/json):
 Resend email verification link
 
 - **Public** — no session required.
-- Rate limit: 3 requests per 60 s per client IP (strict limiter).
+- Rate limit: 3 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `AuthController_resendVerification` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
+- Operation id `AuthController_resendVerification` · [source](../../../apps/api/src/contexts/identity/presentation/http/auth.controller.ts)
 
 **Parameters**
 
@@ -1987,8 +2004,8 @@ Response `200 OK` (application/json):
     "message": "If an account with that email exists, a verification email has been sent."
   },
   "meta": {
-    "correlationId": "PQV5xmLGDkWXI-PX6bjee",
-    "timestamp": 1791193302383
+    "correlationId": "MHrVBJ68FGycY2QCXBc5B",
+    "timestamp": 1792435575625
   }
 }
 ```
@@ -1998,10 +2015,10 @@ Response `200 OK` (application/json):
 Reset password using a valid reset token
 
 - **Public** — no session required.
-- Rate limit: 5 requests per 60 s per client IP (strict limiter).
+- Rate limit: 5 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `AuthController_resetPassword` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
+- Operation id `AuthController_resetPassword` · [source](../../../apps/api/src/contexts/identity/presentation/http/auth.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -2047,8 +2064,8 @@ Response `200 OK` (application/json):
     "message": "Password has been reset successfully. Please log in with your new password."
   },
   "meta": {
-    "correlationId": "Zc23LE9oWldow7YRWIBzY",
-    "timestamp": 1791193303616
+    "correlationId": "44cDe8cLvMwmwzXqysgaO",
+    "timestamp": 1792435576939
   }
 }
 ```
@@ -2058,10 +2075,10 @@ Response `200 OK` (application/json):
 Register a new user account
 
 - **Public** — no session required.
-- Rate limit: 3 requests per 60 s per client IP (strict limiter).
+- Rate limit: 3 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `AuthController_signup` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
+- Operation id `AuthController_signup` · [source](../../../apps/api/src/contexts/identity/presentation/http/auth.controller.ts)
 
 **Parameters**
 
@@ -2118,8 +2135,8 @@ Response `201 Created` (application/json):
     "message": "If this email is available, check your inbox for verification instructions."
   },
   "meta": {
-    "correlationId": "C5un2kHsU0onQUp7B2sxO",
-    "timestamp": 1791193305135
+    "correlationId": "RFAf5jCs1Rx3jlzKw6OVz",
+    "timestamp": 1792435578476
   }
 }
 ```
@@ -2130,7 +2147,7 @@ Referrer dashboard: current code and shareability
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `SignupReferralController_dashboard` · [source](../../../apps/api/src/modules/auth/signup-referrals/signup-referral.controller.ts)
+- Operation id `SignupReferralController_dashboard` · [source](../../../apps/api/src/contexts/referrals/presentation/http/signup-referral.controller.ts)
 
 **Response 200 OK** (`application/json`) — Signup referral code state
 
@@ -2157,7 +2174,7 @@ People who registered with the caller's referral code
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `SignupReferralController_referees` · [source](../../../apps/api/src/modules/auth/signup-referrals/signup-referral.controller.ts)
+- Operation id `SignupReferralController_referees` · [source](../../../apps/api/src/contexts/referrals/presentation/http/signup-referral.controller.ts)
 
 **Parameters**
 
@@ -2201,10 +2218,10 @@ People who registered with the caller's referral code
 Validate a password reset token without consuming it
 
 - **Public** — no session required.
-- Rate limit: 10 requests per 60 s per client IP (strict limiter).
+- Rate limit: 10 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `AuthController_validateResetToken` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
+- Operation id `AuthController_validateResetToken` · [source](../../../apps/api/src/contexts/identity/presentation/http/auth.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -2247,8 +2264,8 @@ Response `200 OK` (application/json):
     "valid": true
   },
   "meta": {
-    "correlationId": "26WNRMQdlR27cLwzklRyi",
-    "timestamp": 1791193303014
+    "correlationId": "_6rlrv9Z20wySg_o4qcol",
+    "timestamp": 1792435576278
   }
 }
 ```
@@ -2258,9 +2275,10 @@ Response `200 OK` (application/json):
 Verify email address using a verification token
 
 - **Public** — no session required.
+- Rate limit: 3 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `AuthController_verifyEmail` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
+- Operation id `AuthController_verifyEmail` · [source](../../../apps/api/src/contexts/identity/presentation/http/auth.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -2305,8 +2323,8 @@ Response `201 Created` (application/json):
     "alreadyVerified": false
   },
   "meta": {
-    "correlationId": "R0YSzpdKajxXpcLvYljfn",
-    "timestamp": 1791193302408
+    "correlationId": "G3eY9dsCTklxZ1t2cawIk",
+    "timestamp": 1792435575653
   }
 }
 ```
@@ -2316,10 +2334,10 @@ Response `201 Created` (application/json):
 Complete login with an email verification code
 
 - **Public** — no session required.
-- Rate limit: 10 requests per 60 s per client IP (strict limiter).
+- Rate limit: 10 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `AuthController_verifyLogin` · [source](../../../apps/api/src/modules/auth/auth.controller.ts)
+- Operation id `AuthController_verifyLogin` · [source](../../../apps/api/src/contexts/identity/presentation/http/auth.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -2442,8 +2460,9 @@ Complete login with an email verification code
 Logout from the current device (idempotent — always clears a browser client's auth cookies; client type mobile presents its refresh token as { refreshToken })
 
 - **Refresh-token cookie** — sent automatically by the browser after login.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `SessionsController_logout` · [source](../../../apps/api/src/modules/sessions/sessions.controller.ts)
+- Operation id `SessionsController_logout` · [source](../../../apps/api/src/contexts/identity/presentation/http/sessions.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -2482,8 +2501,8 @@ Response `201 Created` (application/json):
     "message": "Logged out successfully"
   },
   "meta": {
-    "correlationId": "LUDBsAGh8ZsiXyJKpJK9-",
-    "timestamp": 1791193323179
+    "correlationId": "g1U8ij03ZiKXZ7aqe-Qv-",
+    "timestamp": 1792435592970
   }
 }
 ```
@@ -2493,8 +2512,9 @@ Response `201 Created` (application/json):
 Logout from all devices, on every client type (refresh token: the httpOnly cookie for browser client types, { refreshToken } for client type mobile)
 
 - **Refresh-token cookie** — sent automatically by the browser after login.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `SessionsController_logoutAll` · [source](../../../apps/api/src/modules/sessions/sessions.controller.ts)
+- Operation id `SessionsController_logoutAll` · [source](../../../apps/api/src/contexts/identity/presentation/http/sessions.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -2533,8 +2553,8 @@ Response `201 Created` (application/json):
     "message": "Logged out from all devices"
   },
   "meta": {
-    "correlationId": "J5-gqnS9QVqa4W7cvNlAm",
-    "timestamp": 1791193323915
+    "correlationId": "jGxgmQ-W_W2uS6XicY4iT",
+    "timestamp": 1792435593509
   }
 }
 ```
@@ -2544,9 +2564,9 @@ Response `201 Created` (application/json):
 Rotate the session tokens (refresh token: the httpOnly cookie for browser client types, the { refreshToken } body for client type mobile)
 
 - **Refresh-token cookie** — sent automatically by the browser after login.
-- Rate limit: 10 requests per 60 s per client IP (default limiter).
+- Rate limit: 10 requests per 60 s per client IP (strict limiter).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `SessionsController_refreshToken` · [source](../../../apps/api/src/modules/sessions/sessions.controller.ts)
+- Operation id `SessionsController_refreshToken` · [source](../../../apps/api/src/contexts/identity/presentation/http/sessions.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -2590,22 +2610,32 @@ Response `200 OK` (application/json):
     "message": "Tokens refreshed successfully"
   },
   "meta": {
-    "correlationId": "6-xhauabu_Q9nykHDHPJZ",
-    "timestamp": 1791193302145
+    "correlationId": "9b2RBR4n6UNynkGHf2oXB",
+    "timestamp": 1792435575254
   }
 }
 ```
 
 ### GET /api/v1/auth/sessions
 
-List the caller's signed-in devices (every client type): the current one first, then by last activity
+List the caller's signed-in devices (every client type), most recently active first; `isCurrent` marks this one
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Policy** `READ:USER (own record only)` — A user lists their own device sessions.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `SessionsController_getSessions` · [source](../../../apps/api/src/modules/sessions/sessions.controller.ts)
+- Operation id `SessionsController_getSessions` · [source](../../../apps/api/src/contexts/identity/presentation/http/sessions.controller.ts)
 
-**Response 200 OK** (`application/json`) — The caller's active device sessions
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `page` | query | integer | no | Page number (1-indexed) for offset pagination |
+| `limit` | query | integer | no | Page size (default 20, max 100) |
+| `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
+| `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: lastActiveAt, createdAt. Default: -lastActiveAt |
+| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: none |
+
+**Response 200 OK** (`application/json`) — One page of the caller's active device sessions; pagination is in `meta`
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2632,11 +2662,19 @@ List the caller's signed-in devices (every client type): the current one first, 
 | `data[].osName` | string \| null | yes |  |
 | `data[].osVersion` | string \| null | yes |  |
 | `data[].signInMethod` | "PASSWORD" \| "PASSWORD_NEW_DEVICE_CODE" \| "PASSWORD_TOTP" \| "PASSWORD_TOTP_NEW_DEVICE_CODE" \| "PASSWORD_BACKUP_CODE" \| "PASSWORD_BACKUP_CODE_NEW_DEVICE_CODE" \| "TEAM_INVITE_REGISTRATION" \| "TEAM_INVITE_REGISTRATION_NEW_DEVICE_CODE" \| null | yes |  |
+| `meta.hasNext` | boolean | yes | Whether a next page exists |
+| `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
+| `meta.limit` | integer | yes | Items per page; range 1–100 |
+| `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
+| `meta.page` | integer | yes | Current page (1-indexed); min 1 |
+| `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
 
 | Status | Code | When |
 | --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
 | 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
 | 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
 | 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
@@ -2656,23 +2694,58 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "dd03c4ab-25b6-4c2c-9039-6768e254f6de",
-      "deviceInfo": "node",
+      "id": "01a1557c-5916-7805-89a6-a690f1f692a0",
+      "label": "Node.js",
+      "isCurrent": true,
+      "clientType": "admin",
+      "browserName": "Node.js",
+      "browserVersion": null,
+      "osName": null,
+      "osVersion": null,
+      "deviceType": "UNKNOWN",
+      "deviceModel": null,
+      "deviceName": null,
+      "appVersion": null,
+      "signInMethod": "PASSWORD",
       "ipAddress": "203.0.113.10",
-      "expiresAt": 1793785301195,
-      "createdAt": 1791193301197
+      "lastIpAddress": "203.0.113.10",
+      "location": null,
+      "createdAt": 1792435575036,
+      "lastActiveAt": 1792435575036,
+      "expiresAt": 1795027575036
     },
     {
-      "id": "30f63e1f-2087-40ee-a1da-7fe8ec2a71c1",
-      "deviceInfo": "node",
+      "id": "01a1557c-5728-7366-9e24-f595719fbd3c",
+      "label": "Node.js",
+      "isCurrent": false,
+      "clientType": "admin",
+      "browserName": "Node.js",
+      "browserVersion": null,
+      "osName": null,
+      "osVersion": null,
+      "deviceType": "UNKNOWN",
+      "deviceModel": null,
+      "deviceName": null,
+      "appVersion": null,
+      "signInMethod": "PASSWORD",
       "ipAddress": "203.0.113.10",
-      "expiresAt": 1793785300475,
-      "createdAt": 1791193300479
+      "lastIpAddress": "203.0.113.10",
+      "location": null,
+      "createdAt": 1792435574526,
+      "lastActiveAt": 1792435574526,
+      "expiresAt": 1795027574526
     }
   ],
   "meta": {
-    "correlationId": "M9UFQnlbWteKvj9k87L7-",
-    "timestamp": 1791193301558
+    "limit": 20,
+    "total": 4,
+    "page": 1,
+    "totalPages": 1,
+    "nextCursor": null,
+    "hasNext": false,
+    "hasPrevious": false,
+    "correlationId": "tzaUh9VPOU52VwH3sx8A6",
+    "timestamp": 1792435575193
   }
 }
 ```
@@ -2685,9 +2758,10 @@ Revokes one of the caller's device sessions: its refresh token stops working at 
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Policy** `UPDATE:USER (own record only)` — A user signs out one of their own devices (never during impersonation).
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `SessionsController_revokeSession` · [source](../../../apps/api/src/modules/sessions/sessions.controller.ts)
+- Operation id `SessionsController_revokeSession` · [source](../../../apps/api/src/contexts/identity/presentation/http/sessions.controller.ts)
 
 **Parameters**
 
@@ -2724,7 +2798,7 @@ Current session status (requires a valid access token)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `SessionStatusController_getSession` · [source](../../../apps/api/src/modules/sessions/session-status.controller.ts)
+- Operation id `SessionStatusController_getSession` · [source](../../../apps/api/src/contexts/identity/presentation/http/session-status.controller.ts)
 
 **Response 200 OK** (`application/json`) — Authenticated session identity + token expiry
 
@@ -2758,15 +2832,15 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "userId": "9194a7c0-e721-4833-95cc-eca2f319f542",
+    "userId": "01a1557a-c0b2-72f9-ab17-46cd05f66ace",
     "email": "superadmin@example.com",
     "fullName": "Super Admin",
-    "expiresAt": 1791202301000,
-    "checkedAt": 1791193301552
+    "expiresAt": 1792444575000,
+    "checkedAt": 1792435575162
   },
   "meta": {
-    "correlationId": "L_h3CNonnxxi8nl6YkumK",
-    "timestamp": 1791193301552
+    "correlationId": "MYYzk70V5RLNZQluldDKF",
+    "timestamp": 1792435575162
   }
 }
 ```
@@ -2783,10 +2857,10 @@ SuperAdmin: impersonate another user
 - **Policy** `CREATE:USER` — SuperAdmin can impersonate any user.
 - Requires a **verified email address**.
 - Requires a **full session** (email verified and, where required, 2FA enrolled).
-- Rate limit: 10 requests per 60 s per client IP (strict limiter).
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `ImpersonationController_impersonate` · [source](../../../apps/api/src/modules/impersonation/impersonation.controller.ts)
+- Operation id `ImpersonationController_impersonate` · [source](../../../apps/api/src/contexts/identity/presentation/http/impersonation.controller.ts)
 
 **Parameters**
 
@@ -2833,7 +2907,7 @@ SuperAdmin: impersonate another user
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/auth/impersonate/98cd0ea1-f072-4e9d-9b56-e92f4fcf8605
+POST /api/v1/auth/impersonate/01a1557a-c0c3-723a-b109-63070035e190
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -2847,13 +2921,13 @@ Response `201 Created` (application/json):
   "data": {
     "message": "Now impersonating user@example.com",
     "impersonating": true,
-    "originalUserId": "9194a7c0-e721-4833-95cc-eca2f319f542",
+    "originalUserId": "01a1557a-c0b2-72f9-ab17-46cd05f66ace",
     "user": {
-      "createdAt": 1758886680000,
-      "updatedAt": 1791193088860,
+      "createdAt": 1759508580000,
+      "updatedAt": 1792435555450,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "98cd0ea1-f072-4e9d-9b56-e92f4fcf8605",
+      "id": "01a1557a-c0c3-723a-b109-63070035e190",
       "email": "user@example.com",
       "fullName": "Regular User",
       "isActive": true,
@@ -2864,16 +2938,16 @@ Response `201 Created` (application/json):
       "tokenVersion": 0,
       "roles": [
         {
-          "id": "4c3114ed-b0a8-48af-b3eb-900d1e7ce1ec",
+          "id": "01a1557a-bbc2-7672-b075-9f725142745f",
           "name": "User",
-          "description": "Customer app — own profile, links, tags, and API keys (no admin panel)"
+          "description": "Customer app — own profile and own analytics (no admin panel)"
         }
       ]
     }
   },
   "meta": {
-    "correlationId": "YQ5XoRw3zlLp20bnmBOE1",
-    "timestamp": 1791193350533
+    "correlationId": "dArM7tF6nhksRU6PuDJ0W",
+    "timestamp": 1792435620151
   }
 }
 ```
@@ -2882,12 +2956,14 @@ Response `201 Created` (application/json):
 
 Stop impersonating and restore the original admin session
 
+Needs the administrator's own refresh token (the app's refresh cookie; client type mobile: `{ refreshToken }` in the body). The restored access token is bound to that device session (`sid`).
+
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- Rate limit: 10 requests per 60 s per client IP (strict limiter).
+- Rate limit: 10 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `ImpersonationController_stopImpersonation` · [source](../../../apps/api/src/modules/impersonation/impersonation.controller.ts)
+- Operation id `ImpersonationController_stopImpersonation` · [source](../../../apps/api/src/contexts/identity/presentation/http/impersonation.controller.ts)
 
 **Response 201 Created** (`application/json`) — Impersonation ended — the admin token is restored as an httpOnly cookie
 
@@ -2920,8 +2996,8 @@ Response `201 Created` (application/json):
     "message": "Impersonation ended. Original session restored."
   },
   "meta": {
-    "correlationId": "n78Zkm-VCSjP8M97WhdE9",
-    "timestamp": 1791193350583
+    "correlationId": "3CPDBNL3T8GU9_QGwkR6d",
+    "timestamp": 1792435620224
   }
 }
 ```
@@ -2931,9 +3007,10 @@ Response `201 Created` (application/json):
 ### POST /api/v1/support-access/{grantId}/approve
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `SupportAccessController_approve` · [source](../../../apps/api/src/modules/support-access/support-access.controller.ts)
+- Operation id `SupportAccessController_approve` · [source](../../../apps/api/src/contexts/authorization/presentation/http/support-access.controller.ts)
 
 **Parameters**
 
@@ -2960,7 +3037,7 @@ Response `201 Created` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/support-access/0a67729a-f5e2-44a6-a36b-46e581696eaf/approve
+POST /api/v1/support-access/01a1557c-fc88-7b8e-a29c-86ce2154fbb4/approve
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -2975,8 +3052,8 @@ Response `201 Created` (application/json):
     "message": "Support access approved"
   },
   "meta": {
-    "correlationId": "MPYYR7SxO2q02113VZ_37",
-    "timestamp": 1791193340624
+    "correlationId": "PBxWjoJDpXY4SR0AfCf1c",
+    "timestamp": 1792435616970
   }
 }
 ```
@@ -2986,9 +3063,10 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Policy** `DELETE:USER` — SuperAdmin can revoke support access.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `SupportAccessController_revoke` · [source](../../../apps/api/src/modules/support-access/support-access.controller.ts)
+- Operation id `SupportAccessController_revoke` · [source](../../../apps/api/src/contexts/authorization/presentation/http/support-access.controller.ts)
 
 **Parameters**
 
@@ -3015,7 +3093,7 @@ Response `201 Created` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/support-access/0a67729a-f5e2-44a6-a36b-46e581696eaf/revoke
+POST /api/v1/support-access/01a1557c-fc88-7b8e-a29c-86ce2154fbb4/revoke
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -3030,8 +3108,8 @@ Response `201 Created` (application/json):
     "message": "Support access revoked"
   },
   "meta": {
-    "correlationId": "NiLb3EL1sDhs8uL_CRzvm",
-    "timestamp": 1791193340652
+    "correlationId": "B19PVvDSDmIOUfuEWThlI",
+    "timestamp": 1792435617014
   }
 }
 ```
@@ -3042,9 +3120,10 @@ Response `201 Created` (application/json):
 - **SuperAdmin only.**
 - **Permission** `CREATE:USER`.
 - **Policy** `CREATE:USER` — SuperAdmin can request support access.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `SupportAccessController_requestGrant` · [source](../../../apps/api/src/modules/support-access/support-access.controller.ts)
+- Operation id `SupportAccessController_requestGrant` · [source](../../../apps/api/src/contexts/authorization/presentation/http/support-access.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -3086,7 +3165,7 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+  "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
   "reason": "Investigate a missing POS checkout",
   "ticketRef": "SUP-1042",
   "mode": "READ_ONLY",
@@ -3100,16 +3179,16 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "0a67729a-f5e2-44a6-a36b-46e581696eaf",
-    "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+    "id": "01a1557c-fc88-7b8e-a29c-86ce2154fbb4",
+    "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "mode": "READ_ONLY",
     "status": "PENDING_TENANT_APPROVAL",
-    "expiresAt": 1791196940582,
-    "createdAt": 1791193340584
+    "expiresAt": 1792439216904,
+    "createdAt": 1792435616901
   },
   "meta": {
-    "correlationId": "ViTlMHCNP_oT0vWP6wqjj",
-    "timestamp": 1791193340588
+    "correlationId": "vi8uWrF0-VNqP3E04Rm4Z",
+    "timestamp": 1792435616911
   }
 }
 ```

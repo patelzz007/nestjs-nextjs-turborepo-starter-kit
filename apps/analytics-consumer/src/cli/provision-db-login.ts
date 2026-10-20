@@ -4,9 +4,9 @@
 import { EnvValidationError } from "@workspace/shared";
 import pg from "pg";
 
-import { parseConsumerLogin, provisionConsumerLogin } from "../db-login";
-import { loadDbLoginProvisioningEnv } from "../env";
-import { createConsoleJsonLogger } from "../logger";
+import { parseConsumerLogin, provisionConsumerLogin } from "../infrastructure/db-login";
+import { loadDbLoginProvisioningEnv } from "../infrastructure/env";
+import { createConsoleJsonLogger } from "../infrastructure/logger";
 
 const SERVICE_NAME = "analytics-consumer.db-provision-login";
 const FAILURE_EXIT_CODE = 1;

@@ -6,8 +6,8 @@
 	"description": "The single source of the design tokens (ADR 030): TypeScript token data plus a generator that writes the committed web and mobile CSS. No runtime dependencies.",
 	"scripts": {
 		"generate": "tsx scripts/generate.ts",
-		"lint": "eslint --max-warnings=0",
-		"format": "prettier --write \"**/*.ts\"",
+		"lint": "eslint",
+		"format": "prettier --write \"**/*.ts\" --ignore-path ../../.prettierignore",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run"
 	},

@@ -31,9 +31,9 @@ encoder (see [In the docs](#in-the-docs)).
 
 | Where | What it encodes | How it is drawn |
 | --- | --- | --- |
-| Web, customer claims (`apps/web/components/rewardhub/claims/qr-view.tsx`) | The claim's redemption payload | `QrCode` from `@workspace/ui` |
-| Merchant, terminal pairing (`apps/merchant/components/terminals/pairing-code-dialog.tsx`) | `buildPosPairingQrPayload(code)` (`pos-pair:v1:<code>`) while the code is live | `QrCode` from `@workspace/ui` |
-| Web and admin, Security settings 2FA setup (`packages/client/src/lib/auth/mfa/security-settings-panel.tsx`) | The `otpauth://` key URI | `QrCode` from `@workspace/ui` |
+| Web, customer claims (`apps/web/contexts/claims/components/qr-view.tsx`) | The claim's redemption payload | `QrCode` from `@workspace/ui` |
+| Merchant, terminal pairing (`apps/merchant/contexts/pos/components/terminals/pairing-code-dialog.tsx`) | `buildPosPairingQrPayload(code)` (`pos-pair:v1:<code>`) while the code is live | `QrCode` from `@workspace/ui` |
+| Web and admin, Security settings 2FA setup (`packages/client/src/lib/contexts/identity/mfa/security-settings-panel.tsx`) | The `otpauth://` key URI | `QrCode` from `@workspace/ui` |
 | Mobile, 2FA enrollment (`apps/mobile/src/features/two-factor/two-factor-enrollment.tsx`) | The `otpauth://` key URI, for a second device | `QrCode` from `@workspace/ui-native` |
 | API, `POST /auth/2fa/setup` and `/rotate` (`two-factor.service.ts`) | The `otpauth://` key URI | `renderQrSvg` → `qrCodeDataUrl`, a `data:image/svg+xml;base64,…` URL |
 | Admin and mobile component galleries | A demo value | `QrCode` (web / native) |

@@ -1,8 +1,8 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { prefetch, resolvePrefetchedQuery } from "@/lib/server/prefetch";
-import { MERCHANTS_TABLE_URL_STATE, toMerchantsListQuery } from "@/lib/url-state/merchants";
+import { MERCHANTS_TABLE_URL_STATE, toMerchantsListQuery } from "@/contexts/organizations/url-state/merchants";
 
-import MerchantsAllTable from "./merchants-all-table";
+import MerchantsAllTable from "../../../contexts/organizations/components/merchants-all-table";
 
 export const dynamic = "force-dynamic";
 

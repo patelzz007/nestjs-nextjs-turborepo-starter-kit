@@ -6,7 +6,7 @@ import { requireRow } from "./require-row";
 
 /**
  * Development-scenario sample of the outbound-email lifecycle, so the admin
- * email log and the delivery-event history (`email_delivery_events`) show
+ * email log and the delivery-event history (`EmailDeliveryEvent`) show
  * every state the API produces. Shaped exactly as the API writes them
  * (EmailSenderService + EmailLogRepository):
  *
@@ -15,10 +15,10 @@ import { requireRow } from "./require-row";
  * - `metadata.mode` records the delivery mode; an admin test-send also records
  *   who triggered it (actor, correlation id, IP, user agent) — the row IS the
  *   domain audit record of that send;
- * - `last_event_at` is the provider time of the newest APPLIED webhook event;
- * - every event has a unique `webhook_id`, the status it maps to (null for
+ * - `lastEventAt` is the provider time of the newest APPLIED webhook event;
+ * - every event has a unique `webhookId`, the status it maps to (null for
  *   tracking events) and its outcome — including an `unmatched` event for an
- *   email this system never sent (no `email_log_id`).
+ *   email this system never sent (no `emailLogId`).
  */
 
 const MS_PER_MINUTE = 60_000;
@@ -149,7 +149,7 @@ export interface EmailDeliveryEventSeedRow {
 	readonly outcome: DeliveryEventOutcome;
 }
 
-/** `email_logs.metadata` exactly as the sender writes it. */
+/** `EmailLog.metadata` exactly as the sender writes it. */
 export type EmailLogSeedMetadata = Readonly<Record<string, string>>;
 
 export interface EmailLogSeedRow {
@@ -168,7 +168,7 @@ export interface EmailLogSeedRow {
 
 export interface EmailDeliverySeed {
 	readonly logs: readonly EmailLogSeedRow[];
-	/** Events with no email log row (`outcome = unmatched`, `email_log_id` NULL). */
+	/** Events with no email log row (`outcome = unmatched`, `emailLogId` NULL). */
 	readonly unmatchedEvents: readonly EmailDeliveryEventSeedRow[];
 }
 
@@ -238,7 +238,7 @@ async function upsertEvent(event: EmailDeliveryEventSeedRow, emailLogId: string 
 		occurredAt: event.occurredAt,
 		outcome: event.outcome,
 	};
-	// Upsert by the natural key (`webhook_id` is UNIQUE), exactly like the webhook dedupes.
+	// Upsert by the natural key (`webhookId` is UNIQUE), exactly like the webhook dedupes.
 	await prisma.emailDeliveryEvent.upsert({ where: { webhookId: event.webhookId }, create: { id: event.id, ...data }, update: data });
 }
 

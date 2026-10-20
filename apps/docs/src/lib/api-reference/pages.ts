@@ -43,7 +43,7 @@ export const REFERENCE_PAGES: readonly ReferencePage[] = [
 		guide: { label: "Stores and team guide", href: "../../user-guide/03-stores-and-team.md" },
 		tags: [
 			"Organizations",
-			"Organization RewardHub",
+			"Organization memberships",
 			"Organization Onboarding",
 			"Organization KYB",
 			"Organization Rewards",

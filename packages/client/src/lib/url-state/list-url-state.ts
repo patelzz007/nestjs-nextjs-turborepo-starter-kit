@@ -25,6 +25,7 @@
 
 import {
 	formatSortParam,
+	LIST_FIRST_PAGE,
 	LIST_MAX_CURSOR_LENGTH,
 	LIST_MAX_FILTER_TEXT_LENGTH,
 	LIST_MAX_LIMIT,
@@ -39,8 +40,8 @@ import { z } from "zod";
 import { sortParamToTableSorting, tableSortingToListSort, type ListSortSpec, type SortColumnAliases, type TableSortingEntry } from "../api/list-query";
 import { InvalidUrlStateDefinitionError, type UrlParamSchema } from "./url-state";
 
-/** The first page of every list (offset pages are 1-indexed). */
-export const LIST_FIRST_PAGE = 1;
+/** The first page of every list (offset pages are 1-indexed) — defined once in `@workspace/shared`. */
+export { LIST_FIRST_PAGE };
 
 /** The paging/sorting half of a list table's URL state. */
 export interface ListUrlPagingState {

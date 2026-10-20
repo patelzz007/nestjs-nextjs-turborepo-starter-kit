@@ -6,6 +6,7 @@ import "./web-theme.css";
 import * as React from "react";
 
 import { RouteErrorState } from "@/components/web-ui/route-error-state";
+import { BRAND_NAME } from "@workspace/tokens";
 
 export interface WebGlobalErrorProps {
 	readonly error: Error & { readonly digest?: string };
@@ -21,7 +22,7 @@ export default function WebGlobalError({ error, retry }: WebGlobalErrorProps): R
 	return (
 		<html lang="en">
 			<body className="web-app font-sans antialiased">
-				<title>Something went wrong · Reward Hub</title>
+				<title>{`Something went wrong · ${BRAND_NAME}`}</title>
 				<main className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
 					<RouteErrorState digest={error.digest} onRetry={retry} />
 				</main>

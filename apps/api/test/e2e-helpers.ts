@@ -4,14 +4,26 @@ import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fa
 import fastifyCookie from "@fastify/cookie";
 import fastifyMultipart from "@fastify/multipart";
 import { Test, type TestingModule, type TestingModuleBuilder } from "@nestjs/testing";
+import type { Prisma } from "@prisma/client";
 import { Pool } from "pg";
-import { API_VERSION_PREFIX, isArrayValue, MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE, ApiSuccessResponseSchema, type ApiResponseMeta } from "@workspace/shared";
-import { type z } from "zod";
+import {
+	API_VERSION_PREFIX,
+	isArrayValue,
+	MUTATION_INTENT_HEADER,
+	MUTATION_INTENT_VALUE,
+	ApiPaginatedMetaSchema,
+	ApiSuccessResponseSchema,
+	type ApiPaginatedMeta,
+	type ApiResponseMeta,
+} from "@workspace/shared";
+import { z } from "zod";
 
 import { AppModule } from "../src/app.module";
-import { TrustedProxies } from "../src/common/http/client-ip";
+import { userRlsContext } from "../src/prisma/rls-context";
+import { TenantTransactionService } from "../src/prisma/tenant-transaction.service";
+import { TrustedProxies } from "../src/platform/infrastructure/http/client-ip";
 import { getApiConfig } from "../src/config/api-config";
-import { HealthService } from "../src/modules/health/health.service";
+import { HealthService } from "../src/platform/presentation/http/health/health.service";
 
 export interface LoginResult {
 	readonly accessToken: string;
@@ -37,6 +49,22 @@ export interface ParsedSuccessEnvelope<Data> {
 export function parseSuccessEnvelope<DataSchema extends z.ZodType>(response: InjectResponse, dataSchema: DataSchema): ParsedSuccessEnvelope<z.output<DataSchema>> {
 	const envelope = ApiSuccessResponseSchema.parse(response.json());
 	return { success: envelope.success, data: dataSchema.parse(envelope.data), meta: envelope.meta };
+}
+
+/** A parsed paginated success envelope: the page's items and its pagination meta. */
+export interface ParsedPaginatedEnvelope<Item> {
+	readonly data: readonly Item[];
+	readonly meta: ApiPaginatedMeta;
+}
+
+/**
+ * Parses an injected response body as the paginated success envelope (`{ success: true, data: [...],
+ * meta: { limit, total, page, … } }`). {@link parseSuccessEnvelope} keeps only the base meta (the
+ * envelope schema strips unknown keys), so a paginated response is parsed against its own contract.
+ */
+export function parsePaginatedEnvelope<ItemSchema extends z.ZodType>(response: InjectResponse, itemSchema: ItemSchema): ParsedPaginatedEnvelope<z.output<ItemSchema>> {
+	const envelope = ApiSuccessResponseSchema.extend({ meta: ApiPaginatedMetaSchema }).parse(response.json());
+	return { data: z.array(itemSchema).parse(envelope.data), meta: envelope.meta };
 }
 
 const CLIENT_ORIGIN = "http://localhost:3000";
@@ -73,22 +101,22 @@ export function uniqueClientIp(): string {
 }
 
 /** Removes stale TEAM_MEMBER invites so invite e2e tests are repeatable (uses RLS bypass). */
-export async function clearPendingTeamInviteForEmail(pool: Pool, organizationId: string, email: string): Promise<void> {
+export async function clearPendingTeamInviteForEmail(pool: Pool, tenantId: string, email: string): Promise<void> {
 	const client = await pool.connect();
 	try {
 		await client.query(`SELECT set_config('app.rls_bypass', 'true', true)`);
 		await client.query(
-			`DELETE FROM public.organization_invitation_location_scopes
-       WHERE invitation_id IN (
-         SELECT id FROM public.organization_invitations
-         WHERE organization_id = $1 AND email = $2 AND kind = 'TEAM_MEMBER' AND status = 'PENDING'
+			`DELETE FROM public."TenantInvitationLocationScope"
+       WHERE "invitationId" IN (
+         SELECT id FROM public."TenantInvitation"
+         WHERE "tenantId" = $1 AND email = $2 AND kind = 'TEAM_MEMBER' AND status = 'PENDING'
        )`,
-			[organizationId, email],
+			[tenantId, email],
 		);
 		await client.query(
-			`DELETE FROM public.organization_invitations
-       WHERE organization_id = $1 AND email = $2 AND kind = 'TEAM_MEMBER' AND status = 'PENDING'`,
-			[organizationId, email],
+			`DELETE FROM public."TenantInvitation"
+       WHERE "tenantId" = $1 AND email = $2 AND kind = 'TEAM_MEMBER' AND status = 'PENDING'`,
+			[tenantId, email],
 		);
 	} finally {
 		client.release();
@@ -105,7 +133,7 @@ export async function clearPendingTeamInviteForEmail(pool: Pool, organizationId:
  */
 export async function markSeedUserEmailVerified(pool: Pool, email: string): Promise<void> {
 	// COALESCE keeps an existing verification timestamp (idempotent across runs).
-	const result = await pool.query(`UPDATE public.users SET email_verified_at = COALESCE(email_verified_at, $1) WHERE email = $2`, [Date.now(), email]);
+	const result = await pool.query(`UPDATE public."User" SET "emailVerifiedAt" = COALESCE("emailVerifiedAt", $1) WHERE email = $2`, [Date.now(), email]);
 	if (result.rowCount !== 1) {
 		throw new Error(`Seed user ${email} is missing — run pnpm db:seed`);
 	}
@@ -159,6 +187,11 @@ export async function createE2eApp(
 	await app.init();
 	app.get(HealthService).markReady();
 	return app;
+}
+
+/** One transaction as a tenant member. Reward fixtures use this instead of a request-wide bypass. */
+export function withTenantMember<T>(app: NestFastifyApplication, userId: string, tenantId: string, work: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+	return app.get(TenantTransactionService).withRlsContext({ context: userRlsContext(userId, tenantId, false), reason: null }, work);
 }
 
 export async function login(app: NestFastifyApplication, email: string, password: string, clientType?: "admin" | "merchant" | "web"): Promise<LoginResult> {

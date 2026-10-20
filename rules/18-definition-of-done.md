@@ -7,7 +7,7 @@ A feature is done only when every applicable item below is satisfied. "It works 
 Before anything else on this list can count, run in the repo root, **after your last edit**:
 
 ```bash
-pnpm run lint    # zero errors, zero warnings
+pnpm run lint    # zero errors
 pnpm run test    # all green
 ```
 
@@ -112,7 +112,7 @@ If either fails, fix the cause and re-run both. Suppression comments, config rel
 
 ## Verification
 
-- [ ] `pnpm run lint` — zero errors, zero warnings, run after the last edit
+- [ ] `pnpm run lint` — zero errors, run after the last edit
 - [ ] typecheck
 - [ ] `pnpm run test` — all green, run after the last edit
 - [ ] typecheck

@@ -1,4 +1,4 @@
-import { canSelectAllLocations, type MemberLocationAccess } from "@/lib/org/location-access";
+import { canSelectAllLocations, type MemberLocationAccess } from "@/contexts/organizations/lib/org/location-access";
 import type { OrganizationLocationResponse } from "@workspace/shared";
 
 import type { TenantContextState } from "./state";

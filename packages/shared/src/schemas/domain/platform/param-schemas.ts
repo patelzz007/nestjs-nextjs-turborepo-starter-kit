@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { EmailTemplateKeySchema } from "../../email/email";
+import { EmailTemplateKeySchema } from "../../../contexts/notifications/schemas/email";
 
 /**
  * Shared Zod param validation schemas for route parameters.

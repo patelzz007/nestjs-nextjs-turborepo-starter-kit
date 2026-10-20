@@ -12,7 +12,7 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/auth/permission-check";
+import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/contexts/authorization/permission-check";
 import { PERMISSION, type CapabilitySlug } from "@workspace/shared";
 import { samplePathForPattern } from "@workspace/ui/lib/sidebar/navigation/route-patterns";
 import { describe, expect, it } from "vitest";

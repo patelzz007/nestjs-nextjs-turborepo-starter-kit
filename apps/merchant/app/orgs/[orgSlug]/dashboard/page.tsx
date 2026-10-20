@@ -1,6 +1,6 @@
-import { OrgDashboardPageView } from "@/components/org/org-dashboard-page-view";
+import { OrgDashboardPageView } from "@/contexts/organizations/components/org/org-dashboard-page-view";
 import { loadOrganizationContext } from "@/lib/merchant-server-api";
-import { guardOrgPage } from "@/lib/org/org-page-guard";
+import { guardOrgPage } from "@/contexts/organizations/lib/org/org-page-guard";
 import type { OrganizationContextResponse } from "@workspace/shared";
 
 interface OrgDashboardPageProps {

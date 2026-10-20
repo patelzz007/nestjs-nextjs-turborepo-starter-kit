@@ -1,39 +1,47 @@
 // ============================================
 // Signed-in devices (§10.11) — GET /auth/sessions, revoke one, sign out everywhere
 // ============================================
-// The list comes from the API (current device first, then by last activity —
-// the server sorts it). Revoking another device takes effect on its next
-// request (ADR 034); the list refetches after it.
+// The list comes from the API one page at a time, most recently active first
+// (`isCurrent` marks this phone); "Load more" appends the next page. Revoking
+// another device takes effect on its next request (ADR 034); every page
+// refetches after it.
 
-import type { Session } from "@workspace/shared";
+import { ApiPaginatedMetaSchema, LIST_FIRST_PAGE, SESSION_LIST_PAGE_SIZE, type Session } from "@workspace/shared";
 import { apiRouter } from "@workspace/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import { View } from "react-native";
 
 import { AlertDialog } from "@workspace/ui-native/components/alert-dialog";
+import { Button } from "@workspace/ui-native/components/button";
 import { DeviceSessionRow } from "../../../components/device-session-row";
 import { Screen } from "../../../components/screen";
 import { EmptyState, ErrorState, LoadingState } from "@workspace/ui-native/components/empty";
-import { DEVICES_COPY } from "../../../features/devices/labels";
-import { clientTypeLabelOf, platformLineOf, sessionDetailItems } from "../../../features/devices/session-details";
-import { SignOutEverywhere } from "../../../features/devices/sign-out-everywhere";
+import { clientTypeLabelOf, DEVICES_COPY, platformLineOf, sessionDetailItems, SignOutEverywhere } from "../../../contexts/identity";
 import { useToast } from "../../../features/toast/facade";
 import { useApi } from "../../../lib/api-context";
 import { errorMessageOf } from "../../../lib/error-messages";
+import { useCursorPages } from "../../../lib/use-cursor-pages";
 
 export default function DevicesScreen(): React.JSX.Element {
 	const api = useApi();
 	const queryClient = useQueryClient();
-	const sessions = api.auth.sessions.useQuery(undefined);
+	const pages = useCursorPages();
 	const revoke = api.auth.revokeSession.useMutation();
 	const [deviceToRevoke, setDeviceToRevoke] = React.useState<Session | null>(null);
+	const [refreshing, setRefreshing] = React.useState(false);
 	const toast = useToast();
-	const nowMs = sessions.dataUpdatedAt;
 
-	const refetch = React.useCallback((): void => {
-		void sessions.refetch();
-	}, [sessions]);
+	const refreshList = React.useCallback(async (): Promise<void> => {
+		await queryClient.invalidateQueries({ queryKey: apiRouter.auth.sessions.scopeKey(undefined) });
+	}, [queryClient]);
+	const refresh = React.useCallback((): void => {
+		setRefreshing(true);
+		pages.reset();
+		void refreshList().finally((): void => {
+			setRefreshing(false);
+		});
+	}, [pages, refreshList]);
 	const requestRevoke = React.useCallback(
 		(session: Session): void => {
 			revoke.reset();
@@ -56,32 +64,31 @@ export default function DevicesScreen(): React.JSX.Element {
 			.then(async (): Promise<void> => {
 				setDeviceToRevoke(null);
 				toast.success(DEVICES_COPY.revoked(target.label));
-				await queryClient.invalidateQueries({ queryKey: apiRouter.auth.sessions.scopeKey(undefined) });
+				// Back to the first page: the revoke shifted every later row, so cursors taken before it
+				// would start the next pages in the wrong place (a row twice, or one skipped).
+				pages.reset();
+				await refreshList();
 			})
 			.catch((): void => {
 				// The dialog stays open with the error so the user can retry.
 			});
-	}, [deviceToRevoke, queryClient, revoke, toast]);
+	}, [deviceToRevoke, pages, refreshList, revoke, toast]);
 
-	const list = sessions.data?.data;
+	const revokingId = revoke.isPending ? (deviceToRevoke?.id ?? null) : null;
 	return (
-		<Screen description={DEVICES_COPY.description} refreshing={sessions.isRefetching} onRefresh={refetch}>
-			{sessions.isPending ? <LoadingState label={DEVICES_COPY.loading} /> : null}
-			{sessions.isError ? <ErrorState message={DEVICES_COPY.loadError} retryLabel={DEVICES_COPY.retry} onRetry={refetch} /> : null}
-			{list?.length === 0 ? <EmptyState message={DEVICES_COPY.empty} /> : null}
-			{list === undefined || list.length === 0 ? null : (
-				<View accessibilityLabel={DEVICES_COPY.title}>
-					{list.map((session: Session): React.JSX.Element => (
-						<DeviceRow
-							key={session.id}
-							session={session}
-							nowMs={nowMs}
-							onRevokeRequest={requestRevoke}
-							isRevoking={revoke.isPending ? deviceToRevoke?.id === session.id : false}
-						/>
-					))}
-				</View>
-			)}
+		<Screen description={DEVICES_COPY.description} refreshing={refreshing} onRefresh={refresh}>
+			<View accessibilityLabel={DEVICES_COPY.title}>
+				{pages.cursors.map((cursor: string | undefined, index: number): React.JSX.Element => (
+					<DevicesPage
+						key={cursor ?? "first"}
+						cursor={cursor}
+						isLast={index === pages.cursors.length - 1}
+						onLoadMore={pages.loadMore}
+						onRevokeRequest={requestRevoke}
+						revokingId={revokingId}
+					/>
+				))}
+			</View>
 			<SignOutEverywhere />
 			<AlertDialog
 				visible={deviceToRevoke !== null}
@@ -96,6 +103,55 @@ export default function DevicesScreen(): React.JSX.Element {
 				destructive
 			/>
 		</Screen>
+	);
+}
+
+interface DevicesPageProps {
+	/** The keyset cursor this page starts at (`undefined`: the first page). */
+	readonly cursor: string | undefined;
+	/** Only the last page shown offers "Load more". */
+	readonly isLast: boolean;
+	readonly onLoadMore: (cursor: string) => void;
+	readonly onRevokeRequest: (session: Session) => void;
+	/** The device whose sign-out is in flight, if any. */
+	readonly revokingId: string | null;
+}
+
+function DevicesPage({ cursor, isLast, onLoadMore, onRevokeRequest, revokingId }: DevicesPageProps): React.JSX.Element | null {
+	const api = useApi();
+	// A cursor positions the page by itself; `page` only matters for the first one.
+	const page = api.auth.sessions.useQuery({ page: LIST_FIRST_PAGE, limit: SESSION_LIST_PAGE_SIZE, ...(cursor === undefined ? {} : { cursor }) });
+	const retry = React.useCallback((): void => {
+		void page.refetch();
+	}, [page]);
+	const nextCursor = ApiPaginatedMetaSchema.safeParse(page.data?.meta).data?.nextCursor ?? null;
+	const loadMore = React.useCallback((): void => {
+		if (nextCursor !== null) {
+			onLoadMore(nextCursor);
+		}
+	}, [nextCursor, onLoadMore]);
+
+	if (page.isPending) {
+		return <LoadingState label={DEVICES_COPY.loading} />;
+	}
+	if (page.isError) {
+		return <ErrorState message={DEVICES_COPY.loadError} retryLabel={DEVICES_COPY.retry} onRetry={retry} />;
+	}
+	const sessions = page.data.data;
+	if (cursor === undefined && sessions.length === 0) {
+		return <EmptyState message={DEVICES_COPY.empty} />;
+	}
+	return (
+		<View>
+			{sessions.map((session: Session): React.JSX.Element => (
+				<DeviceRow key={session.id} session={session} nowMs={page.dataUpdatedAt} onRevokeRequest={onRevokeRequest} isRevoking={revokingId === session.id} />
+			))}
+			{isLast && nextCursor !== null ? (
+				<View className="pt-4">
+					<Button label={DEVICES_COPY.loadMore} variant="secondary" onPress={loadMore} testID="devices-load-more" />
+				</View>
+			) : null}
+		</View>
 	);
 }
 

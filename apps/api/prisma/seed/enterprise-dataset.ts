@@ -1,4 +1,4 @@
-import type { OrganizationLocationScopeType, OrganizationLocationStatus, OrganizationMembershipRole, PilotCity } from "@prisma/client";
+import type { LocationScopeType, LocationStatus, MembershipRole, PilotCity } from "@prisma/client";
 import { DAY_MS } from "@workspace/shared";
 
 import { deterministicUuid } from "./deterministic-uuid";
@@ -25,14 +25,14 @@ export const ENTERPRISE_SEED_EPOCH_MS = 1_767_225_600_000;
 /** Namespace for {@link deterministicUuid} — keeps enterprise ids disjoint from other seeders. */
 const ID_NAMESPACE = "enterprise-seed";
 
-export const ENTERPRISE_ORGANIZATION_SLUG = "northwind-enterprise";
+export const ENTERPRISE_TENANT_SLUG = "northwind-enterprise";
 export const ENTERPRISE_EMAIL_DOMAIN = "enterprise.example.com";
 export const ENTERPRISE_OWNER_EMAIL = `owner@${ENTERPRISE_EMAIL_DOMAIN}`;
 
 export interface EnterpriseDatasetSizes {
-	/** Organization locations (each gets a 1:1 store via seedStores). */
+	/** Tenant locations (each gets a 1:1 store via seedStores). */
 	readonly locations: number;
-	/** Organization members, INCLUDING the owner. */
+	/** Tenant members, INCLUDING the owner. */
 	readonly members: number;
 	readonly products: number;
 }
@@ -137,7 +137,7 @@ const PRODUCT_BRANDS: readonly string[] = ["Northwind", "Harbour & Co", "Kampung
 const PRODUCT_ADJECTIVES: readonly string[] = ["Classic", "Organic", "Premium", "Everyday", "Artisan", "Compact", "Deluxe", "Fresh"];
 const PRODUCT_NOUNS: readonly string[] = ["Coffee Beans", "Tea Blend", "Kaya Jar", "Tote Bag", "Water Bottle", "Snack Box", "Gift Card", "Travel Mug", "Spice Kit", "Candle"];
 
-export interface EnterpriseOrganizationRow {
+export interface EnterpriseTenantRow {
 	readonly id: string;
 	readonly slug: string;
 	readonly displayName: string;
@@ -147,7 +147,6 @@ export interface EnterpriseOrganizationRow {
 	readonly addressText: string;
 	readonly contactEmail: string;
 	readonly contactPhone: string;
-	readonly entitlementId: string;
 	readonly createdAt: bigint;
 }
 
@@ -158,14 +157,14 @@ export interface EnterpriseLocationRow {
 	readonly addressText: string;
 	readonly city: PilotCity;
 	readonly contactPhone: string;
-	readonly status: OrganizationLocationStatus;
+	readonly status: LocationStatus;
 	readonly isPrimary: boolean;
 	readonly createdAt: bigint;
 }
 
 export type EnterpriseMemberScope =
-	| { readonly id: string; readonly scopeType: Extract<OrganizationLocationScopeType, "ALL_LOCATIONS"> }
-	| { readonly id: string; readonly scopeType: Extract<OrganizationLocationScopeType, "SELECTED">; readonly locationId: string };
+	| { readonly id: string; readonly scopeType: Extract<LocationScopeType, "ALL_LOCATIONS"> }
+	| { readonly id: string; readonly scopeType: Extract<LocationScopeType, "SELECTED">; readonly locationId: string };
 
 export interface EnterpriseMemberRow {
 	readonly userId: string;
@@ -173,13 +172,13 @@ export interface EnterpriseMemberRow {
 	readonly email: string;
 	readonly fullName: string;
 	readonly phone: string;
-	readonly role: OrganizationMembershipRole;
+	readonly role: MembershipRole;
 	readonly scope: EnterpriseMemberScope;
 	readonly joinedAt: bigint;
 }
 
 export interface EnterpriseDataset {
-	readonly organization: EnterpriseOrganizationRow;
+	readonly tenant: EnterpriseTenantRow;
 	readonly locations: readonly EnterpriseLocationRow[];
 	readonly members: readonly EnterpriseMemberRow[];
 	readonly products: readonly ProductSeedRow[];
@@ -245,10 +244,10 @@ function assertSizes(sizes: EnterpriseDatasetSizes, categoryIds: readonly string
 	}
 }
 
-function buildOrganization(): EnterpriseOrganizationRow {
+function buildTenant(): EnterpriseTenantRow {
 	return {
-		id: enterpriseId("organization"),
-		slug: ENTERPRISE_ORGANIZATION_SLUG,
+		id: enterpriseId("tenant"),
+		slug: ENTERPRISE_TENANT_SLUG,
 		displayName: "Northwind Retail Group",
 		legalName: "Northwind Retail Group Sdn Bhd",
 		category: "retail",
@@ -256,12 +255,11 @@ function buildOrganization(): EnterpriseOrganizationRow {
 		addressText: "1 Jalan Ampang, 50450 Kuala Lumpur",
 		contactEmail: ENTERPRISE_OWNER_EMAIL,
 		contactPhone: "+60320001000",
-		entitlementId: enterpriseId("entitlement"),
 		createdAt: BigInt(ENTERPRISE_SEED_EPOCH_MS - MAX_LOCATION_AGE_DAYS * DAY_MS),
 	};
 }
 
-function locationStatusAt(index: number): OrganizationLocationStatus {
+function locationStatusAt(index: number): LocationStatus {
 	return (index + 1) % PENDING_LOCATION_EVERY_NTH === 0 ? "PENDING_APPROVAL" : "ACTIVE";
 }
 
@@ -291,7 +289,7 @@ function buildLocations(seed: number, count: number): EnterpriseLocationRow[] {
 }
 
 /** Role by member index — structural (see determinism contract above). */
-export function enterpriseMemberRoleAt(memberIndex: number): OrganizationMembershipRole {
+export function enterpriseMemberRoleAt(memberIndex: number): MembershipRole {
 	if (memberIndex === 0) return "OWNER";
 	if (memberIndex === POLICY_ADMIN_MEMBER_INDEX) return "POLICY_ADMIN";
 	if (memberIndex % ADMIN_EVERY_NTH_MEMBER === 0) return "ADMIN";
@@ -299,9 +297,9 @@ export function enterpriseMemberRoleAt(memberIndex: number): OrganizationMembers
 	return "CASHIER";
 }
 
-const ALL_LOCATION_ROLES: ReadonlySet<OrganizationMembershipRole> = new Set<OrganizationMembershipRole>(["OWNER", "ADMIN", "POLICY_ADMIN"]);
+const ALL_LOCATION_ROLES: ReadonlySet<MembershipRole> = new Set<MembershipRole>(["OWNER", "ADMIN", "POLICY_ADMIN"]);
 
-function memberScope(memberIndex: number, role: OrganizationMembershipRole, locations: readonly EnterpriseLocationRow[]): EnterpriseMemberScope {
+function memberScope(memberIndex: number, role: MembershipRole, locations: readonly EnterpriseLocationRow[]): EnterpriseMemberScope {
 	const id = enterpriseId(`membership-scope:${String(memberIndex)}`);
 	if (ALL_LOCATION_ROLES.has(role)) {
 		return { id, scopeType: "ALL_LOCATIONS" };
@@ -367,9 +365,9 @@ function buildProducts(seed: number, count: number, categoryIds: readonly string
 /** Builds the complete enterprise dataset for `seed`. Pure — safe to call in unit tests. */
 export function buildEnterpriseDataset(input: BuildEnterpriseDatasetInput): EnterpriseDataset {
 	assertSizes(input.sizes, input.categoryIds);
-	const organization = buildOrganization();
+	const tenant = buildTenant();
 	const locations = buildLocations(input.seed, input.sizes.locations);
 	const members = buildMembers(input.seed, input.sizes.members, locations);
 	const products = buildProducts(input.seed, input.sizes.products, input.categoryIds);
-	return { organization, locations, members, products };
+	return { tenant, locations, members, products };
 }

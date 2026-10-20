@@ -14,314 +14,71 @@
 //   apiRoutes.geo.countries      // "/geo/countries"
 //   apiRoutes.geo.countryDetail  // "/geo/countries/:id"
 
-/** Nested route tree — leaves are path strings, branches are named groups. */
-export type RouteTree = string | { readonly [key: string]: RouteTree };
+import { authRoutes } from "./contexts/identity/routes";
+import { signupReferralsAuthRoutes } from "./contexts/referrals/routes";
+import { adminRbacRoutes, capabilitiesRoutes, supportAccessRoutes } from "./contexts/authorization/routes";
+import { emailRoutes, merchantInviteEmailPreviewRoutes } from "./contexts/notifications/routes";
+import { auditLogsRoutes, auditTrailRoutes, dataChangesRoutes } from "./contexts/audit/routes";
+import { githubPicturesRoutes, githubPullRequestsRoutes, githubRoutes } from "./contexts/integrations-github/routes";
+import { geoRoutes } from "./contexts/reference-data/routes";
+import { legalRoutes, organizationRewardsRoutes, rewardsAdminRewardRoutes, rewardsRoutes } from "./contexts/rewards/routes";
+import { claimsRoutes, rewardNotificationsRoutes } from "./contexts/claims/routes";
+import { claimsAnalyticsRoutes, organizationAnalyticsRoutes, rewardsAdminAnalyticsRoutes } from "./contexts/reporting/routes";
+import { organizationApiKeysRoutes, organizationRedemptionsRoutes, organizationTerminalsRoutes, posRoutes, redemptionsRoutes } from "./contexts/pos/routes";
+import { filesRoutes } from "./contexts/files/routes";
+import { adminOrganizationsRoutes, organizationsRoutes, rewardsAdminOrganizationRoutes } from "./contexts/organizations/routes";
+import { productRoutes, sampleCategoryRoutes } from "./contexts/catalog/routes";
+import type { RouteTree } from "./route-tree";
+
+export type { RouteTree } from "./route-tree";
 
 // ── The route tree ─────────────────────────────────────────────────────────
-// Groups mirror the contract tree (auth / email / geo).
+// Composed from each bounded context's `contexts/<context>/routes.ts`. Groups
+// mirror the contract tree (auth / email / geo).
 
 export const apiRoutes = {
-	// ── Auth ────────────────────────────────────────────────────────────
 	auth: {
-		me: "/auth/me",
-		/** The signed-in user's own profile — GET reads it, PATCH edits it. */
-		profile: "/auth/profile",
-		permissions: "/auth/permissions",
-		sessionStatus: "/session",
-		login: "/auth/login",
-		adminLogin: "/auth/login",
-		signup: "/auth/signup",
-		signupReferralsDashboard: "/auth/signup-referrals/dashboard",
-		signupReferralsReferees: "/auth/signup-referrals/referees",
-		refresh: "/auth/refresh",
-		logout: "/auth/logout",
-		logoutAll: "/auth/logout-all",
-		/** The caller's device sessions. */
-		sessions: "/auth/sessions",
-		/** Revoke one of the caller's device sessions (ADR 034). */
-		revokeSession: "/auth/sessions/:sessionId/revoke",
-		forgotPassword: "/auth/forgot-password",
-		resetPassword: "/auth/reset-password",
-		resendVerification: "/auth/resend-verification",
-		verifyEmail: "/auth/verify-email",
-		adminUsers: "/auth/admin/users",
-		adminUserDetail: "/auth/admin/users/:userId",
-		impersonate: "/auth/impersonate/:userId",
-		stopImpersonation: "/auth/stop-impersonation",
-		changePassword: "/auth/change-password",
-		loginTwoFactor: "/auth/login/2fa",
-		loginBackupCode: "/auth/login/backup-code",
-		verifyLogin: "/auth/verify-login",
-		validateResetToken: "/auth/validate-reset-token",
-		twoFactorSetup: "/auth/2fa/setup",
-		twoFactorEnable: "/auth/2fa/enable",
-		twoFactorRotate: "/auth/2fa/rotate",
-		twoFactorBackupCodesRemaining: "/auth/2fa/backup-codes/remaining",
-		twoFactorVerifyBackupCode: "/auth/2fa/verify-backup-code",
-		mfaRecoveryInitiate: "/auth/mfa/recovery",
-		mfaRecoveryStatus: "/auth/mfa/recovery/status",
-		adminMfaRecoveryReview: "/auth/admin/mfa/recovery/review",
-		adminMfaRecoveryRequests: "/auth/admin/mfa/recovery/requests",
+		...authRoutes,
+		...signupReferralsAuthRoutes,
 	},
-
-	// ── Generic capability catalog ──────────────────────────────────────
-	capabilities: {
-		catalog: "/capabilities/catalog",
-	},
-
-	// ── Email ───────────────────────────────────────────────────────────
-	email: {
-		previewList: "/notifications/email-preview",
-		previewDetail: "/notifications/email-preview/:key",
-		previewSend: "/notifications/email-preview/:key/send",
-		logList: "/notifications/email-log",
-		/** Server-Sent Events stream of email-log changes (`@Sse("events")` on the email-log controller). */
-		logEvents: "/notifications/email-log/events",
-	},
-
-	// ── Admin RBAC ─────────────────────────────────────────────────────
-	admin: {
-		roles: {
-			list: "/admin/roles",
-			userAssign: "/admin/roles/user/assign",
-			userRemove: "/admin/roles/user/remove",
-			userSync: "/admin/roles/user/sync",
-		},
-		permissions: {
-			list: "/admin/permissions",
-			check: "/admin/permissions/check",
-			userGrant: "/admin/permissions/user/grant",
-			userRevoke: "/admin/permissions/user/revoke",
-			userSync: "/admin/permissions/user/sync",
-		},
-	},
-
-	// ── Global HTTP audit trail (admin viewer) ───────────────────────────
-	auditLogs: {
-		list: "/admin/audit-logs",
-		detail: "/admin/audit-logs/:id",
-	},
-
-	// ── The audit log's timeline: requests + background writes (admin) ───
-	auditTrail: {
-		list: "/admin/audit-trail",
-		/** Server-Sent Events: a signal per burst of new entries (no JSON contract — a stream). */
-		events: "/admin/audit-trail/events",
-	},
-
-	// ── Row-level data-change trail (admin viewer) ───────────────────────
-	dataChanges: {
-		list: "/admin/data-changes",
-		detail: "/admin/data-changes/:id",
-	},
-
-	// ── GitHub contributions (read-only, server-configured repositories) ──
-	github: {
-		repositories: "/github/repositories",
-		repositorySummary: "/github/repositories/:owner/:repository",
-		repositoryCommits: "/github/repositories/:owner/:repository/commits",
-		repositoryCommit: "/github/repositories/:owner/:repository/commits/:sha",
-		repositoryContributors: "/github/repositories/:owner/:repository/contributors",
-	},
-
-	// ── GitHub pull requests (each admin's own linked token — ADR 052) ──
-	githubPullRequests: {
-		account: "/github/account",
-		list: "/github/pull-requests",
-		detail: "/github/pull-requests/:owner/:repository/:number",
-		timeline: "/github/pull-requests/:owner/:repository/:number/timeline",
-		commits: "/github/pull-requests/:owner/:repository/:number/commits",
-		commit: "/github/pull-requests/:owner/:repository/:number/commits/:sha",
-		comments: "/github/pull-requests/:owner/:repository/:number/comments",
-		reviews: "/github/pull-requests/:owner/:repository/:number/reviews",
-		reactions: "/github/pull-requests/:owner/:repository/:number/reactions",
-		pictures: "/github/pull-requests/:owner/:repository/:number/pictures",
-		merge: "/github/pull-requests/:owner/:repository/:number/merge",
-		events: "/github/pull-requests/events",
-		liveUpdates: "/github/live-updates/:owner/:repository",
-		status: "/github/pull-requests/:owner/:repository/:number/status",
-		files: "/github/pull-requests/:owner/:repository/:number/files",
-		reviewThreads: "/github/pull-requests/:owner/:repository/:number/review-threads",
-		contentEdits: "/github/content-edits/:nodeId",
-	},
-
-	// ── Pictures GitHub shows only to signed-in readers, for the app (ADR 052) ──
-	githubPictures: {
-		file: "/github/pictures/file",
-		upload: "/github/pictures/uploads/:attachmentId",
-	},
-
-	// ── Geo ────────────────────────────────────────────────────────────
-	geo: {
-		stats: "/geo/stats",
-		autocomplete: "/geo/autocomplete",
-		import: "/geo/import",
-		importValidate: "/geo/import/validate",
-		export: "/geo/export",
-		cascadePreview: "/geo/cascade-preview",
-		regions: "/geo/regions",
-		regionDetail: "/geo/regions/:id",
-		subregions: "/geo/subregions",
-		subregionDetail: "/geo/subregions/:id",
-		countries: "/geo/countries",
-		countryDetail: "/geo/countries/:id",
-		states: "/geo/states",
-		stateDetail: "/geo/states/:id",
-		cities: "/geo/cities",
-		cityDetail: "/geo/cities/:id",
-	},
-
-	// ── Rewards platform (Phase 1) ─────────────────────────────────────
-	rewards: {
-		list: "/rewards",
-		detail: "/rewards/:rewardId",
-	},
-	legal: {
-		accept: "/legal/accept",
-		status: "/legal/status",
-	},
+	capabilities: capabilitiesRoutes,
+	email: emailRoutes,
+	admin: adminRbacRoutes,
+	auditLogs: auditLogsRoutes,
+	auditTrail: auditTrailRoutes,
+	dataChanges: dataChangesRoutes,
+	github: githubRoutes,
+	githubPullRequests: githubPullRequestsRoutes,
+	githubPictures: githubPicturesRoutes,
+	geo: geoRoutes,
+	rewards: rewardsRoutes,
+	legal: legalRoutes,
 	claims: {
-		otp: "/claims/otp",
-		create: "/claims",
-		list: "/claims",
-		analytics: "/claims/analytics",
-		/** The customer's analytics dashboard (custom range + interval). */
-		analyticsDashboard: "/claims/analytics/dashboard",
-		qr: "/claims/:claimId/qr",
+		...claimsRoutes,
+		...claimsAnalyticsRoutes,
 	},
-	rewardNotifications: {
-		list: "/reward-notifications",
-		read: "/reward-notifications/read",
-	},
-	pos: {
-		pairTerminal: "/pos/terminals/pair",
-	},
-	redemptions: {
-		validate: "/redemptions/validate",
-		checkout: "/redemptions/checkout",
-	},
-	files: {
-		uploadUrl: "/files/upload-url",
-		complete: "/files/:fileId/complete",
-		detail: "/files/:fileId",
-		downloadUrl: "/files/:fileId/download-url",
-		delete: "/files/:fileId",
-		processingCallback: "/files/processing-callback",
-	},
+	rewardNotifications: rewardNotificationsRoutes,
+	pos: posRoutes,
+	redemptions: redemptionsRoutes,
+	files: filesRoutes,
 	organizations: {
-		membershipsBootstrap: "/orgs/memberships",
-		context: "/orgs/:orgSlug/context",
-		accessRequests: "/orgs/:orgSlug/access-requests",
-		reviewAccessRequest: "/orgs/:orgSlug/access-requests/:requestId/review",
-		inviteMember: "/orgs/:orgSlug/members/invite",
-		listMembers: "/orgs/:orgSlug/members",
-		ownMembership: "/orgs/:orgSlug/members/me",
-		listMemberInvites: "/orgs/:orgSlug/members/invites",
-		revokeMemberInvite: "/orgs/:orgSlug/members/invites/:inviteId/revoke",
-		removeMemberFromStore: "/orgs/:orgSlug/members/:membershipId/stores/:locationId/remove",
-		teamInvites: {
-			validate: "/orgs/invites/validate",
-			accept: "/orgs/invites/accept",
-			registerAndAccept: "/orgs/invites/register-and-accept",
-		},
-		memberships: "/orgs/:orgSlug/memberships",
-		kyb: "/orgs/:orgSlug/kyb",
-		kybDocumentDownload: "/orgs/:orgSlug/kyb/documents/:documentId/download",
-		rewards: {
-			list: "/orgs/:orgSlug/rewards",
-			create: "/orgs/:orgSlug/rewards",
-			get: "/orgs/:orgSlug/rewards/:rewardId",
-			update: "/orgs/:orgSlug/rewards/:rewardId",
-			publish: "/orgs/:orgSlug/rewards/:rewardId/publish",
-		},
-		terminals: {
-			list: "/orgs/:orgSlug/terminals",
-			create: "/orgs/:orgSlug/terminals",
-			summary: "/orgs/:orgSlug/terminals/summary",
-			get: "/orgs/:orgSlug/terminals/:id",
-			pairingCode: "/orgs/:orgSlug/terminals/:id/pairing-code",
-			remove: "/orgs/:orgSlug/terminals/:id",
-			settings: "/orgs/:orgSlug/terminals/settings",
-		},
-		apiKeys: {
-			list: "/orgs/:orgSlug/api-keys",
-			create: "/orgs/:orgSlug/api-keys",
-			revoke: "/orgs/:orgSlug/api-keys/:keyId/revoke",
-		},
-		redemptions: "/orgs/:orgSlug/redemptions",
-		analytics: "/orgs/:orgSlug/analytics",
-		/** The merchant analytics dashboard (custom range + interval, breakdowns). */
-		analyticsDashboard: "/orgs/:orgSlug/analytics/dashboard",
-		/** The merchant analytics report as a CSV / XLSX / PDF file. */
-		analyticsExport: "/orgs/:orgSlug/analytics/export",
-		locations: {
-			create: "/orgs/:orgSlug/locations",
-			update: "/orgs/:orgSlug/locations/:locationId",
-			close: "/orgs/:orgSlug/locations/:locationId/close",
-		},
-		onboarding: {
-			validate: "/orgs/onboarding/validate",
-			complete: "/orgs/onboarding/complete",
-			documentUploadUrl: "/orgs/onboarding/documents/upload-url",
-			documentBatchUploadUrl: "/orgs/onboarding/documents/upload-urls",
-			documentUploadComplete: "/orgs/onboarding/documents/upload-complete",
-			documentBatchUploadComplete: "/orgs/onboarding/documents/upload-complete-batch",
-			documentsSubmit: "/orgs/onboarding/documents/submit",
-			documentStatus: "/orgs/onboarding/documents/status",
-		},
+		...organizationsRoutes,
+		...organizationAnalyticsRoutes,
+		...organizationRedemptionsRoutes,
+		rewards: organizationRewardsRoutes,
+		terminals: organizationTerminalsRoutes,
+		apiKeys: organizationApiKeysRoutes,
 	},
-	adminOrganizations: {
-		invites: "/admin/organizations/invites",
-	},
-	supportAccess: {
-		request: "/support-access/request",
-		approve: "/support-access/:grantId/approve",
-		revoke: "/support-access/:grantId/revoke",
-	},
+	adminOrganizations: adminOrganizationsRoutes,
+	supportAccess: supportAccessRoutes,
 	rewardsAdmin: {
-		invites: "/admin/invites",
-		invitesPreviewEmail: "/admin/invites/preview-email",
-		rewardsPending: "/admin/rewards/pending",
-		/** One reward in full, any status — the moderation detail page. */
-		rewardDetail: "/admin/rewards/:rewardId",
-		merchants: "/admin/merchants",
-		organizationDetail: "/admin/merchants/:organizationId",
-		rewardApprove: "/admin/rewards/:rewardId/approve",
-		rewardReject: "/admin/rewards/:rewardId/reject",
-		/** A short-lived signed URL that downloads one of a reward's images (the original upload). */
-		rewardImageDownload: "/admin/rewards/:rewardId/images/:fileId/download",
-		rewardImagesArchive: "/admin/rewards/:rewardId/images/archive",
-		organizationKyb: "/admin/merchants/:organizationId/kyb",
-		locationRequests: "/admin/location-requests",
-		organizationLocationCreate: "/admin/merchants/:organizationId/locations",
-		organizationLocationReview: "/admin/merchants/:organizationId/locations/:locationId/review",
-		organizationKybDocumentDownload: "/admin/merchants/:organizationId/documents/:documentId/download",
-		salesAnalytics: "/admin/analytics/sales",
-		/** The platform analytics dashboard (custom range + interval, breakdowns). */
-		analyticsDashboard: "/admin/analytics/dashboard",
-		/** The platform analytics report as a CSV / XLSX / PDF file. */
-		analyticsExport: "/admin/analytics/export",
+		...rewardsAdminOrganizationRoutes,
+		...merchantInviteEmailPreviewRoutes,
+		...rewardsAdminRewardRoutes,
+		...rewardsAdminAnalyticsRoutes,
 	},
-	sampleCategory: {
-		list: "/sample-category",
-		detail: "/sample-category/:id",
-		create: "/sample-category",
-		bulkCreate: "/sample-category/bulk",
-		bulkDelete: "/sample-category/bulk-delete",
-		update: "/sample-category/:id",
-		delete: "/sample-category/:id",
-		restore: "/sample-category/:id/restore",
-	},
-	product: {
-		list: "/product",
-		detail: "/product/:id",
-		create: "/product",
-		bulkCreate: "/product/bulk",
-		bulkDelete: "/product/bulk-delete",
-		update: "/product/:id",
-		delete: "/product/:id",
-		restore: "/product/:id/restore",
-	},
+	sampleCategory: sampleCategoryRoutes,
+	product: productRoutes,
 } satisfies Record<string, RouteTree>;
 
 /** The full route tree — exported for type-level access. */

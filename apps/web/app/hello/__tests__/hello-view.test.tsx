@@ -28,7 +28,7 @@ const { meUseQuery, permissionsUseQuery, session } = vi.hoisted(() => ({
 	session: { serverRendered: true },
 }));
 
-vi.mock("@workspace/client/lib/auth", () => ({
+vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): {
 		readonly api: { readonly auth: { readonly me: { readonly useQuery: typeof meUseQuery }; readonly permissions: { readonly useQuery: typeof permissionsUseQuery } } };
 	} => ({

@@ -1,5 +1,5 @@
 import { RewardCodeHashKeysEnvSchema } from "../../src/config/api-env.fields";
-import { RewardCodeHasher } from "../../src/modules/rewards/crypto/reward-code-hasher";
+import { RewardCodeHasher } from "../../src/platform/infrastructure/crypto/reward-code-hasher";
 
 let hasher: RewardCodeHasher | null = null;
 

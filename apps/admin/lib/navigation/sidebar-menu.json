@@ -137,7 +137,8 @@
 				{
 					"title": "Components",
 					"url": "/components",
-					"icon": "Blocks"
+					"icon": "Blocks",
+					"featureFlag": "component-gallery"
 				}
 			]
 		}

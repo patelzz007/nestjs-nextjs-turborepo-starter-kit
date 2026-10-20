@@ -1,8 +1,8 @@
 /**
  * Rule-severity helpers for plugin presets.
  *
- * The repository rule is "every rule is `error`, never `warn`, and lint runs
- * with `--max-warnings=0`" (rules/00-non-negotiables.md). Plugin presets such
+ * The repository rule is "every rule is `error`, never `warn`"
+ * (rules/00-non-negotiables.md): lint fails on errors only. Plugin presets such
  * as `react-hooks` recommended and `@next/next` core-web-vitals ship some rules
  * as warnings; spreading them through this helper keeps every rule the preset
  * enables while making each one a hard error. Rules a preset turns off stay off.

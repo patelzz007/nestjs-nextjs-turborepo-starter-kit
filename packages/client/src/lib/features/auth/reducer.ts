@@ -1,6 +1,6 @@
 import { assertNever } from "@workspace/shared";
 
-import { SESSION_CHECK_MAX_RETRIES, type SessionCheckFailureReason } from "../../auth/session/session-check";
+import { SESSION_CHECK_MAX_RETRIES, type SessionCheckFailureReason } from "../../contexts/identity/session/session-check";
 import type { AuthAction } from "./actions";
 import { SESSION_CHECK_OK, type AuthSessionState, type SessionCheckState } from "./state";
 

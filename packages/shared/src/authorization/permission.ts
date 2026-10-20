@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-import { PermissionActionSchema, PermissionResourceSchema, type PermissionAction, type PermissionResource } from "../schemas/domain/platform/enums";
-import { toPlatformCapabilitySlug, type CapabilitySlug } from "../schemas/domain/rbac/capabilities";
-import type { OrganizationMembershipRole } from "../schemas/domain/organization/organization";
+import { PermissionActionSchema, PermissionResourceSchema, type PermissionAction, type PermissionResource } from "../contexts/authorization/schemas/permission-enums";
+import { toPlatformCapabilitySlug, type CapabilitySlug } from "../contexts/authorization/schemas/capabilities";
+import type { OrganizationMembershipRole } from "../contexts/organizations/schemas/organization";
 
 /**
  * Shared permission vocabulary for the frontend and backend.
@@ -44,9 +44,6 @@ export const PERMISSION: PermissionRegistry = {
 	PERMISSION: actionSlugs("PERMISSION"),
 	ADMIN_DASHBOARD: actionSlugs("ADMIN_DASHBOARD"),
 	SYSTEM_SETTINGS: actionSlugs("SYSTEM_SETTINGS"),
-	URL: actionSlugs("URL"),
-	TAG: actionSlugs("TAG"),
-	API_KEY: actionSlugs("API_KEY"),
 	ANALYTICS: actionSlugs("ANALYTICS"),
 	AUDIT_LOG: actionSlugs("AUDIT_LOG"),
 	REPORT: actionSlugs("REPORT"),
@@ -119,6 +116,28 @@ export const MERCHANT_CAPABILITY: MerchantCapabilityRegistry = {
 	viewLocations: "merchant:view_locations",
 	manageLocations: "merchant:manage_locations",
 	manageVerification: "merchant:manage_verification",
+};
+
+/**
+ * Tenant Cedar action the API evaluates after the membership-role table for
+ * each merchant capability (Cedar may only narrow the role table). `null`
+ * marks a capability satisfied by organization membership itself (the
+ * dashboard, the store list, store branding reads); asking the API to enforce
+ * one of those fails closed. A `Record`, so a new capability fails to compile
+ * until it is mapped here. Shared by the organizations (capability gate) and
+ * authorization (Cedar schema) contexts.
+ */
+export const MERCHANT_CAPABILITY_CEDAR_ACTIONS: Readonly<Record<MerchantCapability, string | null>> = {
+	"merchant:view_dashboard": null,
+	"merchant:view_rewards": "tenant:view_rewards",
+	"merchant:manage_rewards": "tenant:manage_rewards",
+	"merchant:view_redemptions": "tenant:view_redemptions",
+	"merchant:manage_api_keys": "tenant:manage_api_keys",
+	"merchant:view_analytics": "tenant:view_analytics",
+	"merchant:manage_team": "tenant:manage_team",
+	"merchant:view_locations": null,
+	"merchant:manage_locations": "tenant:manage_locations",
+	"merchant:manage_verification": "tenant:manage_verification",
 };
 
 /**

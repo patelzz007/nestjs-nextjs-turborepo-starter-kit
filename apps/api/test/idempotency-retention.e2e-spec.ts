@@ -5,19 +5,20 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { getApiConfig } from "../src/config/api-config";
 import { TypedConfigService } from "../src/config/typed-config.service";
-import { IdempotencyRecordRepository } from "../src/platform/idempotency/idempotency-record.repository";
-import { IdempotencyRetentionProcessor } from "../src/platform/idempotency/idempotency-retention.processor";
-import { IdempotencyRetentionService } from "../src/platform/idempotency/idempotency-retention.service";
-import { IDEMPOTENCY_IN_PROGRESS_LEASE_MS, IDEMPOTENCY_PURGE_GRACE_MS } from "../src/platform/idempotency/idempotency.constants";
-import { IdempotencyLedgerService } from "../src/platform/idempotency/idempotency-ledger.service";
+import { IdempotencyRecordRepository } from "../src/platform/infrastructure/idempotency/idempotency-record.repository";
+import { IdempotencyRetentionProcessor } from "../src/platform/infrastructure/idempotency/idempotency-retention.processor";
+import { IdempotencyRetentionService } from "../src/platform/infrastructure/idempotency/idempotency-retention.service";
+import { IDEMPOTENCY_IN_PROGRESS_LEASE_MS, IDEMPOTENCY_PURGE_GRACE_MS } from "../src/platform/infrastructure/idempotency/idempotency.constants";
+import { IdempotencyLedgerService } from "../src/platform/infrastructure/idempotency/idempotency-ledger.service";
+import { PostgresIdempotencyKeyLocks } from "../src/platform/infrastructure/idempotency/postgres-idempotency-key-locks";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { TenantTransactionService } from "../src/prisma/tenant-transaction.service";
-import { RequestContextService } from "../src/common/context/request-context";
+import { RequestContextService } from "../src/platform/infrastructure/context/request-context";
 
 /**
  * Real-Postgres proof of the idempotency retention job: it deletes only rows
  * expired longer than the grace period (both states), under the RLS
- * bypass-only policy of `platform_resource_idempotency_records`, and a purged
+ * bypass-only policy of `PlatformResourceIdempotencyRecord`, and a purged
  * key is simply acquired afresh.
  */
 
@@ -36,7 +37,7 @@ describe("Idempotency record retention (integration)", () => {
 
 	async function insertRecord(key: string, status: "IN_PROGRESS" | "COMPLETED", expiresAtMs: number): Promise<void> {
 		await verifier.query(
-			`INSERT INTO public.platform_resource_idempotency_records (id, scope, idempotency_key, request_hash, lease_token, status, response_body, expires_at, created_at, updated_at)
+			`INSERT INTO public."PlatformResourceIdempotencyRecord" (id, scope, "idempotencyKey", "requestHash", "leaseToken", status, "responseBody", "expiresAt", "createdAt", "updatedAt")
 			 VALUES ($1, $2, $3, 'hash-1', $7, $4::"IdempotencyRecordStatus", $5::jsonb, $6, $6, $6)`,
 			[randomUUID(), scope, key, status, status === "COMPLETED" ? JSON.stringify({ body: { ok: true } }) : null, expiresAtMs, randomUUID()],
 		);
@@ -44,7 +45,7 @@ describe("Idempotency record retention (integration)", () => {
 
 	async function remainingKeys(): Promise<string[]> {
 		const result = await verifier.query<{ key: string }>(
-			"SELECT idempotency_key AS key FROM public.platform_resource_idempotency_records WHERE scope = $1 ORDER BY idempotency_key",
+			'SELECT "idempotencyKey" AS key FROM public."PlatformResourceIdempotencyRecord" WHERE scope = $1 ORDER BY "idempotencyKey"',
 			[scope],
 		);
 		return result.rows.map((row): string => row.key);
@@ -62,7 +63,7 @@ describe("Idempotency record retention (integration)", () => {
 	});
 
 	afterAll(async () => {
-		await verifier.query("DELETE FROM public.platform_resource_idempotency_records WHERE scope = $1", [scope]);
+		await verifier.query('DELETE FROM public."PlatformResourceIdempotencyRecord" WHERE scope = $1', [scope]);
 		await verifier.end();
 		await prisma.onModuleDestroy();
 	});
@@ -102,9 +103,17 @@ describe("Idempotency record retention (integration)", () => {
 		await processor.process({ data: {} });
 		expect(await remainingKeys()).not.toContain(key);
 
-		const idempotency = new IdempotencyLedgerService(new IdempotencyRecordRepository(new TenantTransactionService(prisma, new RequestContextService())));
-
-		await expect(idempotency.begin(scope, key, "hash-2")).resolves.toMatchObject({ kind: "acquired" });
+		const locks = new PostgresIdempotencyKeyLocks(new TypedConfigService(getApiConfig()));
+		const idempotency = new IdempotencyLedgerService(new IdempotencyRecordRepository(new TenantTransactionService(prisma, new RequestContextService())), locks);
+		try {
+			const outcome = await idempotency.begin(scope, key, "hash-2");
+			expect(outcome).toMatchObject({ kind: "acquired" });
+			if (outcome.kind === "acquired") {
+				await outcome.lease.lock.release();
+			}
+		} finally {
+			await locks.onModuleDestroy();
+		}
 		expect(await remainingKeys()).toContain(key);
 	});
 });

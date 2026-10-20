@@ -25,7 +25,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({ useRouter: (): { readonly refresh: () => void } => ({ refresh: mocks.routerRefresh }) }));
 
-vi.mock("@workspace/client/lib/auth", () => {
+vi.mock("@workspace/client/lib/contexts/identity", () => {
 	const mutation =
 		(mutateAsync: (input: { readonly userId: string }) => Promise<ImpersonateEnvelope>) => (): { readonly mutateAsync: typeof mutateAsync; readonly isPending: boolean } => ({
 			mutateAsync,

@@ -1,7 +1,7 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { prefetch, resolvePrefetchedData } from "@/lib/server/prefetch";
 
-import { ProfileView } from "./profile-view";
+import { ProfileView } from "../../../../contexts/identity/components/profile-view";
 
 export const dynamic = "force-dynamic";
 

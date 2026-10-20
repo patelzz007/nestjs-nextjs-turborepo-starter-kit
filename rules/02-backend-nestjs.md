@@ -2,7 +2,9 @@
 
 ## The mental model
 
-Every request flows through the same set of layers, in the same order, every time: `HTTP → Auth → Validation → Authorization → Controller → Application service → Domain/policy → Repository → Prisma/PostgreSQL → Mapper → Zod/API response`. Once you understand this flow, "where does this code go?" almost always has one obviously correct answer. The single most common mistake juniors make in a NestJS codebase is putting logic in the wrong layer — usually putting business logic in the controller because it's the first file they opened, or putting a database query directly in the controller because it "worked." This document exists to make the correct layer obvious every time.
+Every request flows through the same set of layers, in the same order, every time: `HTTP → Auth → Validation → Authorization → Controller → Application service or command/query handler → Domain/policy → Repository → Prisma/PostgreSQL → Mapper → Zod/API response`. Once you understand this flow, "where does this code go?" almost always has one obviously correct answer. The single most common mistake juniors make in a NestJS codebase is putting logic in the wrong layer — usually putting business logic in the controller because it's the first file they opened, or putting a database query directly in the controller because it "worked." This document exists to make the correct layer obvious every time.
+
+Bounded contexts live in `apps/api/src/contexts/<name>/`. Platform code lives in `apps/api/src/platform/`. A controller dispatches a command or query when the use case changes state or reads a model that is not the aggregate. A straightforward CRUD use case stays an application service (ADR 059, `rules/23`). Handlers receive `ActorContext` and a unit of work. Jobs enter through `SystemCommandDispatcher`, not `CommandBus`. Domain events stay in the transaction. In-process integration events run after commit. The outbox is the cross-process path (ADR 015, ADR 060).
 
 ## Module design
 

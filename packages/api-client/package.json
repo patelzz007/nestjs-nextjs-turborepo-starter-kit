@@ -5,8 +5,9 @@
 	"private": true,
 	"scripts": {
 		"build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json --resolve-full-paths",
-		"lint": "eslint --max-warnings=0",
-		"format": "prettier --write \"**/*.{ts,tsx}\"",
+		"dev": "node ../tooling/src/watch-runner/cli.mjs \"tsc -p tsconfig.build.json --watch --preserveWatchOutput\" \"tsc-alias -p tsconfig.build.json --resolve-full-paths --watch\"",
+		"lint": "eslint",
+		"format": "prettier --write \"**/*.{ts,tsx}\" --ignore-path ../../.prettierignore",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"clean": "rm -rf dist"

@@ -21,11 +21,11 @@ belongs in detail is [`rules/01-repository-architecture.md`](../../rules/01-repo
 | Path | Package | What it is | Port |
 | --- | --- | --- | --- |
 | `apps/api` | `@workspace/api` | NestJS 12 on Fastify: every endpoint, auth, authorization, Prisma, queues, outbox | 8080 |
-| `apps/web` | `@workspace/web` | Customer app (RewardHub) | 3000 |
+| `apps/web` | `@workspace/web` | Customer app (dashboard) | 3000 |
 | `apps/admin` | `@workspace/admin` | Platform admin panel | 3001 |
 | `apps/merchant` | `@workspace/merchant` | Merchant portal (`/orgs/[orgSlug]/…`) | 3003 |
 | `apps/docs` | `@workspace/docs` | This documentation site (Astro, static) | 3002 |
-| `apps/analytics-consumer` | `@workspace/analytics-consumer` | Kafka consumer → inbox (dedupe) → `analytics_events` | — |
+| `apps/analytics-consumer` | `@workspace/analytics-consumer` | Kafka consumer → inbox (dedupe) → `AnalyticsEvent` | — |
 | `apps/aws-infrastructure` | `@workspace/aws-infrastructure` | CDK stack: S3 buckets, CloudFront, API upload user ([AWS S3](./storage/aws-s3.md)) | — |
 | `packages/shared` | `@workspace/shared` | Zod schemas, `apiContract`, `apiRoutes`, permissions — **the contract** | — |
 | `packages/client` | `@workspace/client` | Typed API client (TanStack Query), auth/session, `can()`, shared auth forms | — |
@@ -115,7 +115,7 @@ sequenceDiagram
 - **Authorization:** permissions, ACL / store scope, Cedar policies, then PostgreSQL RLS as the
   last line of defence ([Authorization](./authorization/overview.md),
   [Database security](./security/database-security.md)).
-- **Audit:** every state-changing request writes one append-only `audit_logs` row
+- **Audit:** every state-changing request writes one append-only `AuditLog` row
   ([ADR 025](../adr/025-global-http-audit-log.md)).
 
 ## 4. Who owns what

@@ -31,20 +31,20 @@ import PullRequestCommitRoute from "../../../app/(app)/profile/pull-request-comm
 import PullRequestCommitsRoute from "../../../app/(app)/profile/pull-request-commits";
 import PullRequestFilesRoute from "../../../app/(app)/profile/pull-request-files";
 import PullRequestsRoute from "../../../app/(app)/profile/pull-requests";
-import { EDIT_HISTORY_TITLE } from "../../../features/github-pull-requests/edit-history-sheet";
-import { GITHUB_NEW_TOKEN_URL } from "../../../features/github-pull-requests/github-account-screen";
 import {
 	COMMENT_POSTED_MESSAGE,
+	EDIT_HISTORY_TITLE,
+	GITHUB_NEW_TOKEN_URL,
 	INVALID_PULL_REQUEST_LINK_MESSAGE,
+	LIVE_UPDATES_ON_DETAIL,
+	MORE_THREADS_ON_GITHUB,
 	NO_PULL_REQUESTS_MESSAGE,
 	OWN_PULL_REQUEST_REVIEW_NOTE,
 	REVIEW_SUBMITTED_MESSAGE,
 	TOKEN_LINKED_MESSAGE,
 	TOKEN_UNLINKED_MESSAGE,
-} from "../../../features/github-pull-requests/labels";
-import { LIVE_UPDATES_ON_DETAIL } from "../../../features/github-pull-requests/live-updates-row";
+} from "../../../contexts/integrations-github";
 import type { StreamingFetch } from "../../../lib/server-events";
-import { MORE_THREADS_ON_GITHUB } from "../../../features/github-pull-requests/pull-request-files-screen";
 
 /** `expo/fetch` streams the live-updates SSE; each test drives the stream it opens (`openLiveStream`). */
 const mockExpoFetch = jest.fn<ReturnType<StreamingFetch>, Parameters<StreamingFetch>>();

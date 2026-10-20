@@ -1,9 +1,9 @@
-import { TerminalsPageView } from "@/components/terminals/terminals-page-view";
+import { TerminalsPageView } from "@/contexts/pos/components/terminals/terminals-page-view";
 import { toLocationQueryInput } from "@/features/tenant-context/selectors";
 import { loadMerchantServerContext } from "@/lib/merchant-server-api";
-import type { LocationScopedPrefetch } from "@/lib/org/location-prefetch";
-import { guardOrgPage } from "@/lib/org/org-page-guard";
-import { loadServerLocationScope } from "@/lib/org/server-location-scope";
+import type { LocationScopedPrefetch } from "@/contexts/organizations/lib/org/location-prefetch";
+import { guardOrgPage } from "@/contexts/organizations/lib/org/org-page-guard";
+import { loadServerLocationScope } from "@/contexts/organizations/lib/org/server-location-scope";
 import { prefetchedDataOrUndefined } from "@/lib/server/server-query-outcome";
 import { MERCHANT_TERMINALS_PAGE_SIZE, type Envelope, type MerchantTerminalSummary } from "@workspace/shared";
 import * as React from "react";

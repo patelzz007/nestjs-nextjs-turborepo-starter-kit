@@ -1,8 +1,8 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { prefetch, resolvePrefetchedQuery } from "@/lib/server/prefetch";
-import { PRODUCTS_TABLE_URL_STATE, toProductsListQuery } from "@/lib/url-state/products";
+import { PRODUCTS_TABLE_URL_STATE, toProductsListQuery } from "@/contexts/catalog/url-state/products";
 
-import ProductView from "./product-view";
+import ProductView from "../../../../contexts/catalog/components/product-view";
 
 export const dynamic = "force-dynamic";
 

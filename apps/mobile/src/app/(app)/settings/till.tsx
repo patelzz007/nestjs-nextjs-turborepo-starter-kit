@@ -16,11 +16,7 @@ import * as React from "react";
 
 import { Screen } from "../../../components/screen";
 import { useToast } from "../../../features/toast/facade";
-import { TILL_COPY } from "../../../features/till/labels";
-import type { PairedTerminal } from "../../../features/till/paired-terminal";
-import { TillCounter } from "../../../features/till/till-counter";
-import { TillPairing } from "../../../features/till/till-pairing";
-import { usePairedTerminal } from "../../../features/till/use-paired-terminal";
+import { type PairedTerminal, TILL_COPY, TillCounter, TillPairing, usePairedTerminal } from "../../../contexts/pos";
 
 export default function TillScreen(): React.JSX.Element {
 	const { state, reload, pair, unpair } = usePairedTerminal();

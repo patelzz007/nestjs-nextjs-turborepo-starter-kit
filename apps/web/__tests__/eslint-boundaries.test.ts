@@ -45,7 +45,7 @@ describe("import boundaries (apps/web effective lint config)", () => {
 	it("allows imports through public package entry points", async () => {
 		const code = [
 			'import { PERMISSION } from "@workspace/shared";',
-			'import { useAuth } from "@workspace/client/lib/auth";',
+			'import { useAuth } from "@workspace/client/lib/contexts/identity";',
 			"export const probe = [PERMISSION, useAuth];",
 			"",
 		].join("\n");

@@ -1,0 +1,141 @@
+import { CanActivate, type ExecutionContext, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+import { AUTH_COOKIE_NAMES, isBrowserClientType, type AccessTokenPayload, type AuthClientType } from "@workspace/shared";
+import type { FastifyRequest } from "fastify";
+
+import { RequestContextService } from "../../../../infrastructure/context/request-context";
+import { DependencyUnavailableError } from "../../../../application/errors/app-error";
+import { hasApiKeyAuthOnRequest } from "../api-keys/api-key-request";
+
+import {
+	ACCESS_TOKEN_STATE,
+	ACCESS_TOKEN_VERIFIER,
+	IMPERSONATION_TOKEN_CHECK,
+	type AccessTokenStatePort,
+	type AccessTokenVerifierPort,
+	type ImpersonationTokenCheckPort,
+} from "../../../../application/ports/access-token.port";
+import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
+import { resolveRequestClientType } from "../client-type";
+
+const BEARER_PREFIX = "Bearer ";
+
+/**
+ * The token of an `Authorization: Bearer <token>` header, or `undefined` when
+ * there is none. A blank bearer (`"Bearer "`, sent by API tools whose token
+ * field is empty) counts as NO bearer, so it never hides a valid session cookie.
+ */
+export function readBearerToken(authorization: string | undefined): string | undefined {
+	if (authorization?.startsWith(BEARER_PREFIX) !== true) {
+		return undefined;
+	}
+	const token: string = authorization.slice(BEARER_PREFIX.length).trim();
+	return token.length > 0 ? token : undefined;
+}
+
+/**
+ * The access-token cookie of the request's client type, or `undefined`.
+ *
+ * Browser apps use isolated cookie pairs (`AUTH_COOKIE_NAMES`) so a logout in
+ * one app does not clear the session in another. Client type `mobile` has no
+ * cookie: it authenticates by `Authorization: Bearer` only (ADR 029), so a
+ * `mobile` request never rides on an ambient cookie — which is what lets the
+ * mutation-intent guard skip it.
+ */
+export function readAccessTokenCookie(request: Pick<FastifyRequest, "headers" | "query" | "cookies">): string | undefined {
+	const clientType: AuthClientType = resolveRequestClientType(request);
+	if (!isBrowserClientType(clientType)) {
+		return undefined;
+	}
+	return request.cookies[AUTH_COOKIE_NAMES[clientType].accessToken];
+}
+
+/**
+ * Guard that validates the JWT access token.
+ *
+ * Supports two authentication methods:
+ * 1. **Cookie-based** (browser client types): the access-token cookie of the
+ *    request's client type ({@link readAccessTokenCookie})
+ * 2. **Bearer header** (client type `mobile`, Swagger UI, API clients):
+ *    `Authorization: Bearer <token>` — the ONLY method for `mobile`
+ *
+ * The Bearer header takes priority over the cookie. If both are absent,
+ * the guard throws an `UnauthorizedException`.
+ *
+ * Failure mapping:
+ * - a missing, malformed, expired, or revoked token (stale `tokenVersion`,
+ *   inactive/deleted account, revoked device session `sid` — ADR 034, ended
+ *   impersonation session) → 401
+ * - the revocation state could not be READ (database / cache outage) → 503
+ *   `SERVICE_UNAVAILABLE`, never a 401 that would log a valid user out
+ *
+ * - Skips authentication for routes decorated with `@Public()`
+ * - Attaches the decoded payload to `request.user` on the JWT path and binds
+ *   the principal (user + impersonator) into the request context (ADR 017)
+ */
+@Injectable()
+export class AuthGuard implements CanActivate {
+	public constructor(
+		@Inject(ACCESS_TOKEN_VERIFIER) private readonly tokenService: AccessTokenVerifierPort,
+		@Inject(ACCESS_TOKEN_STATE) private readonly accessTokenState: AccessTokenStatePort,
+		@Inject(IMPERSONATION_TOKEN_CHECK) private readonly impersonationSessions: ImpersonationTokenCheckPort,
+		private readonly reflector: Reflector,
+		private readonly requestContext: RequestContextService,
+	) {}
+
+	public async canActivate(context: ExecutionContext): Promise<boolean> {
+		const isPublic: boolean = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [context.getHandler(), context.getClass()]);
+
+		if (isPublic) return true;
+
+		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
+
+		if (hasApiKeyAuthOnRequest(request)) {
+			return true;
+		}
+
+		const bearer: string | undefined = readBearerToken(request.headers.authorization);
+		const token: string | undefined = bearer ?? readAccessTokenCookie(request);
+
+		if (token === undefined || token.length === 0) {
+			throw new UnauthorizedException({
+				message: "Authentication required. Send a Bearer token or ensure the access token cookie is set.",
+				error: "ACCESS_TOKEN_MISSING",
+			});
+		}
+
+		// Signature / expiry / claim-shape failures are all 401s from TokenService.
+		const payload: AccessTokenPayload = await this.tokenService.verifyAccessToken(token);
+		await this.assertTokenNotRevoked(payload);
+
+		request.user = payload;
+		this.requestContext.bindPrincipal({
+			userId: payload.sub,
+			impersonatorId: payload.isImpersonating === true ? payload.originalUserId : undefined,
+			impersonationSessionId: payload.isImpersonating === true ? payload.impersonationSessionId : undefined,
+			authMethod: bearer === undefined ? "SESSION_COOKIE" : "BEARER_TOKEN",
+		});
+		return true;
+	}
+
+	/**
+	 * Server-side revocation state: account `tokenVersion` / active / deleted,
+	 * and the impersonation session for impersonation tokens. A genuine
+	 * revocation is a 401; failing to READ the state is an infrastructure fault
+	 * (503) — the token may well be valid, so the caller must not be logged out.
+	 */
+	private async assertTokenNotRevoked(payload: AccessTokenPayload): Promise<void> {
+		try {
+			await this.accessTokenState.assertTokenValid(payload.sub, payload.tokenVersion, payload.sid);
+			await this.impersonationSessions.assertLiveIfImpersonating(payload);
+		} catch (error) {
+			if (error instanceof UnauthorizedException) {
+				throw error;
+			}
+			throw new DependencyUnavailableError({
+				message: "Session validation is temporarily unavailable. Please retry.",
+				...(error instanceof Error ? { cause: error } : {}),
+			});
+		}
+	}
+}

@@ -1,12 +1,12 @@
-import { MerchantApiKeysPageView, type ApiKeysPagePrefetch } from "@/components/api-keys/merchant-api-keys-page-view";
+import { MerchantApiKeysPageView, type ApiKeysPagePrefetch } from "@/contexts/pos/components/api-keys/merchant-api-keys-page-view";
 import { toLocationQueryInput } from "@/features/tenant-context/selectors";
-import { API_KEY_COUNT_PAGE_SIZE, toApiKeyListQuery } from "@/lib/api-keys/api-key-summary";
+import { API_KEY_COUNT_PAGE_SIZE, toApiKeyListQuery } from "@/contexts/pos/lib/api-keys/api-key-summary";
 import { loadMerchantServerContext } from "@/lib/merchant-server-api";
-import type { LocationScopedPrefetch } from "@/lib/org/location-prefetch";
-import { guardOrgPage } from "@/lib/org/org-page-guard";
-import { loadServerLocationScope } from "@/lib/org/server-location-scope";
+import type { LocationScopedPrefetch } from "@/contexts/organizations/lib/org/location-prefetch";
+import { guardOrgPage } from "@/contexts/organizations/lib/org/org-page-guard";
+import { loadServerLocationScope } from "@/contexts/organizations/lib/org/server-location-scope";
 import { prefetchedDataOrUndefined, rethrowUnexpectedFailure } from "@/lib/server/server-query-outcome";
-import { API_KEYS_URL_STATE } from "@/lib/url-state/api-keys";
+import { API_KEYS_URL_STATE } from "@/contexts/pos/url-state/api-keys";
 import { toPrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import * as React from "react";
 

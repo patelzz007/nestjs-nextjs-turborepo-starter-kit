@@ -2,7 +2,7 @@ import type { Envelope, SessionPermissionsResponse, UserResponse } from "@worksp
 import { describe, expect, it } from "vitest";
 
 import { envelopeFixture, sessionPermissionsFixture, userFixture } from "../../../../test/auth-fixtures";
-import type { AuthSyncEvent } from "../../../auth/session/sync";
+import type { AuthSyncEvent } from "../../../contexts/identity/session/sync";
 import { authActions } from "../actions";
 import type { AuthBroadcaster, AuthQueryCache } from "../effects";
 import { SESSION_CHECK_OK } from "../state";

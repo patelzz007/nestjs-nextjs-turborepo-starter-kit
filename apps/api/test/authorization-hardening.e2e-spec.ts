@@ -1,9 +1,16 @@
 import { Pool } from "pg";
 import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { API_VERSION_PREFIX, ApiErrorResponseSchema, AuthorizationDecisionsResponseSchema, AuthorizationResultSchema } from "@workspace/shared";
+import {
+	API_VERSION_PREFIX,
+	ApiErrorResponseSchema,
+	AuthorizationDecisionsResponseSchema,
+	AuthorizationResultSchema,
+	TenantContextResponseSchema,
+	UserResponseSchema,
+} from "@workspace/shared";
 
-import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { createE2eApp, extractCookie, login, mutationHeaders, parseSuccessEnvelope, type LoginResult } from "./e2e-helpers";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
@@ -39,15 +46,15 @@ describe("Authorization hardening (e2e)", () => {
 	beforeAll(async () => {
 		app = await createE2eApp();
 		pool = new Pool({ connectionString: DATABASE_URL });
-		userId = await idFor(pool, `SELECT id FROM public.users WHERE email = $1`, "user@example.com");
-		managerId = await idFor(pool, `SELECT id FROM public.users WHERE email = $1`, "manager@example.com");
-		targetUserId = await idFor(pool, `SELECT id FROM public.users WHERE email = $1`, "user-01@example.com");
-		superAdminRoleId = await idFor(pool, `SELECT id FROM public.roles WHERE name = $1`, "SuperAdmin");
-		managerRoleId = await idFor(pool, `SELECT id FROM public.roles WHERE name = $1`, "Manager");
-		updateRolePermissionId = await idFor(pool, `SELECT id FROM public.permissions WHERE action = 'UPDATE' AND resource = 'ROLE' AND scope = $1`, "GLOBAL");
+		userId = await idFor(pool, `SELECT id FROM public."User" WHERE email = $1`, "user@example.com");
+		managerId = await idFor(pool, `SELECT id FROM public."User" WHERE email = $1`, "manager@example.com");
+		targetUserId = await idFor(pool, `SELECT id FROM public."User" WHERE email = $1`, "user-01@example.com");
+		superAdminRoleId = await idFor(pool, `SELECT id FROM public."Role" WHERE name = $1`, "SuperAdmin");
+		managerRoleId = await idFor(pool, `SELECT id FROM public."Role" WHERE name = $1`, "Manager");
+		updateRolePermissionId = await idFor(pool, `SELECT id FROM public."Permission" WHERE action = 'UPDATE' AND resource = 'ROLE' AND scope = $1`, "GLOBAL");
 
 		// Full (non-restricted) sessions: verified email and an MFA enrollment deadline in the future.
-		await pool.query(`UPDATE public.users SET email_verified_at = $1, mfa_enrollment_deadline = $2 WHERE email = ANY($3)`, [
+		await pool.query(`UPDATE public."User" SET "emailVerifiedAt" = $1, "mfaEnrollmentDeadline" = $2 WHERE email = ANY($3)`, [
 			Date.now(),
 			Date.now() + 86_400_000,
 			["user@example.com", "manager@example.com", "bob.smith@example.com", "admin@example.com"],
@@ -55,32 +62,31 @@ describe("Authorization hardening (e2e)", () => {
 
 		// The manager may manage role assignments (UPDATE:ROLE) but holds far fewer permissions than SuperAdmin.
 		await pool.query(
-			`INSERT INTO public.user_permissions (id, "userId", "permissionId", effect)
-       VALUES (gen_random_uuid(), $1, $2, 'ALLOW')
-       ON CONFLICT ("userId", "permissionId") DO UPDATE SET is_deleted = false, deleted_at = NULL, effect = 'ALLOW'`,
+			`INSERT INTO public."UserPermission" (id, "userId", "permissionId", effect)
+       VALUES (uuidv7(), $1, $2, 'ALLOW')
+       ON CONFLICT ("userId", "permissionId") DO UPDATE SET "isDeleted" = false, "deletedAt" = NULL, effect = 'ALLOW'`,
 			[managerId, updateRolePermissionId],
 		);
 	});
 
 	afterAll(async () => {
-		await pool.query(`DELETE FROM public.user_permissions WHERE "userId" = $1 AND "permissionId" = $2`, [managerId, updateRolePermissionId]);
-		await pool.query(`DELETE FROM public.user_roles WHERE "userId" = $1 AND "roleId" = $2`, [targetUserId, managerRoleId]);
+		await pool.query(`DELETE FROM public."UserPermission" WHERE "userId" = $1 AND "permissionId" = $2`, [managerId, updateRolePermissionId]);
+		await pool.query(`DELETE FROM public."UserRole" WHERE "userId" = $1 AND "roleId" = $2`, [targetUserId, managerRoleId]);
 		await pool.end();
 		await app.close();
 	});
 
 	describe("tenant context", () => {
-		it("rejects a forged x-organization-id for a non-member", async () => {
+		it("ignores a forged x-tenant-id: a header never selects a tenant (D6), so the response is unchanged", async () => {
 			const session = await login(app, "user@example.com", "User@123");
+			const me = (headers: Readonly<Record<string, string>>): ReturnType<NestFastifyApplication["inject"]> =>
+				app.inject({ method: "GET", url: `${API_VERSION_PREFIX}/auth/me`, headers: { cookie: cookieHeader(session), ...headers } });
 
-			const response = await app.inject({
-				method: "GET",
-				url: `${API_VERSION_PREFIX}/auth/me`,
-				headers: { cookie: cookieHeader(session), "x-organization-id": ORGANIZATION_SEED_IDS.mlkOrganization },
-			});
+			const plain = await me({});
+			const forged = await me({ "x-tenant-id": TENANT_SEED_IDS.mlkTenant });
 
-			expect(response.statusCode, response.body).toBe(403);
-			expect(ApiErrorResponseSchema.parse(response.json()).error.code).toBe("PERMISSION_DENIED");
+			expect(forged.statusCode, forged.body).toBe(plain.statusCode);
+			expect(parseSuccessEnvelope(forged, UserResponseSchema).data).toEqual(parseSuccessEnvelope(plain, UserResponseSchema).data);
 		});
 
 		it("accepts the header for an active member", async () => {
@@ -89,10 +95,24 @@ describe("Authorization hardening (e2e)", () => {
 			const response = await app.inject({
 				method: "GET",
 				url: `${API_VERSION_PREFIX}/auth/me`,
-				headers: { cookie: cookieHeader(session), "x-organization-id": ORGANIZATION_SEED_IDS.mlkOrganization },
+				headers: { cookie: cookieHeader(session), "x-tenant-id": TENANT_SEED_IDS.mlkTenant },
 			});
 
 			expect(response.statusCode).toBe(200);
+		});
+	});
+
+	describe("informational headers", () => {
+		it("x-location-id narrows nothing: the owner's tenant context lists every store, header or not", async () => {
+			const session = await login(app, "jonker.owner@melaka-rewards.demo", "JonkerOwner@123");
+			const context = (headers: Readonly<Record<string, string>>): ReturnType<NestFastifyApplication["inject"]> =>
+				app.inject({ method: "GET", url: `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.mlk}/context`, headers: { cookie: cookieHeader(session), ...headers } });
+
+			const plain = await context({});
+			const informed = await context({ "x-tenant-id": TENANT_SEED_IDS.mlkTenant, "x-location-id": TENANT_SEED_IDS.mlkLocationKatil });
+
+			expect(informed.statusCode, informed.body).toBe(200);
+			expect(parseSuccessEnvelope(informed, TenantContextResponseSchema).data).toEqual(parseSuccessEnvelope(plain, TenantContextResponseSchema).data);
 		});
 	});
 
@@ -100,9 +120,9 @@ describe("Authorization hardening (e2e)", () => {
 		async function storeIdForOwner(ownerEmail: string): Promise<string> {
 			return idFor(
 				pool,
-				`SELECT s.id FROM public.stores s
-         JOIN public.store_memberships m ON m.store_id = s.id
-         JOIN public.users u ON u.id = m.user_id
+				`SELECT s.id FROM public."Store" s
+         JOIN public."StoreMembership" m ON m."storeId" = s.id
+         JOIN public."User" u ON u.id = m."userId"
          WHERE u.email = $1 AND s.status = 'ACTIVE' ORDER BY s.code LIMIT 1`,
 				ownerEmail,
 			);
@@ -110,7 +130,7 @@ describe("Authorization hardening (e2e)", () => {
 
 		it("grants store-membership permissions only inside the member's own store", async () => {
 			const klStoreId = await storeIdForOwner("brew.cashier@kl-rewards.demo");
-			await pool.query(`UPDATE public.users SET email_verified_at = $1, mfa_enrollment_deadline = $2 WHERE email = $3`, [
+			await pool.query(`UPDATE public."User" SET "emailVerifiedAt" = $1, "mfaEnrollmentDeadline" = $2 WHERE email = $3`, [
 				Date.now(),
 				Date.now() + 86_400_000,
 				"brew.cashier@kl-rewards.demo",
@@ -133,7 +153,7 @@ describe("Authorization hardening (e2e)", () => {
 			expect(parseSuccessEnvelope(response, AuthorizationDecisionsResponseSchema).data.results.map((result) => result.allowed)).toEqual([true, false]);
 		});
 
-		it("rejects a forged x-store-id for another organization's store", async () => {
+		it("rejects a forged x-store-id for another tenant's store", async () => {
 			const mlkStoreId = await storeIdForOwner("jonker.cashier@melaka-rewards.demo");
 			const cashier = await login(app, "brew.cashier@kl-rewards.demo", "BrewCashier@123");
 
@@ -250,7 +270,7 @@ describe("Authorization hardening (e2e)", () => {
 
 		it("records the assignment in permission_audit_logs with the real actor, readable through the audit viewer", async () => {
 			const audited = await pool.query<{ actorId: string }>(
-				`SELECT actor_id AS "actorId" FROM public.permission_audit_logs WHERE action = 'ROLE_ASSIGNED' AND target_user_id = $1 AND target_role_id = $2 ORDER BY created_at DESC LIMIT 1`,
+				`SELECT "actorId" AS "actorId" FROM public."PermissionAuditLog" WHERE action = 'ROLE_ASSIGNED' AND "targetUserId" = $1 AND "targetRoleId" = $2 ORDER BY "createdAt" DESC LIMIT 1`,
 				[targetUserId, managerRoleId],
 			);
 			expect(audited.rows.at(0)?.actorId).toBe(managerId);
@@ -267,7 +287,7 @@ describe("Authorization hardening (e2e)", () => {
 
 		it("blocks a lesser admin from removing a role beyond its own reach (and from touching a SuperAdmin account)", async () => {
 			const manager = await login(app, "manager@example.com", "Manager@123");
-			const superAdminUserId = await idFor(pool, `SELECT id FROM public.users WHERE email = $1`, "superadmin@example.com");
+			const superAdminUserId = await idFor(pool, `SELECT id FROM public."User" WHERE email = $1`, "superadmin@example.com");
 
 			const response = await app.inject({
 				method: "POST",

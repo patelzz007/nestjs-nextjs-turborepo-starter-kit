@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { NextResponse } from "next/server";
 
-import { isAccessTokenExpired, resolveProxySessionRefresh, shouldAttemptProxyRefresh } from "@workspace/client/lib/auth/edge/proxy-refresh";
+import { isAccessTokenExpired, resolveProxySessionRefresh, shouldAttemptProxyRefresh } from "@workspace/client/lib/contexts/identity/edge/proxy-refresh";
 
 import { proxy, resetWebProxyRefreshCooldownForTests } from "../proxy";
 
@@ -143,7 +143,7 @@ describe("web proxy route protection", () => {
 		const response = await runProxy({ pathname: "/auth/login", accessToken: validToken(), refreshToken: "rt", ...DOC_NAV });
 
 		expect(response.status).toBe(307);
-		expect(redirectLocation(response)).toBe("http://localhost:3000/rewardhub");
+		expect(redirectLocation(response)).toBe("http://localhost:3000/dashboard");
 	});
 
 	it("allows authenticated users to open verify-email links", async () => {
@@ -198,7 +198,7 @@ describe("web proxy route protection", () => {
 		stubRefreshResponse(200, ["accessToken=live-at; Path=/; HttpOnly", "refreshToken=live-rt; Path=/; HttpOnly"]);
 		const response = await runProxy({ pathname: "/auth/login", accessToken: validToken(), refreshToken: "rt", ...DOC_NAV, query: { redirect: "//evil.com" } });
 
-		expect(redirectLocation(response)).toBe("http://localhost:3000/rewardhub");
+		expect(redirectLocation(response)).toBe("http://localhost:3000/dashboard");
 	});
 
 	it("serves the guest-browsable public reward detail to everyone", async () => {
@@ -208,7 +208,7 @@ describe("web proxy route protection", () => {
 		expect(redirectLocation(response)).toBeUndefined();
 	});
 
-	it.each(["/rewardhub", "/rewardhub/rewards/reward-1", "/rewardhub/wallet", "/rewardhub/wallet/claim-1", "/rewardhub/activity", "/rewardhub/account"])(
+	it.each(["/dashboard", "/dashboard/rewards/reward-1", "/dashboard/wallet", "/dashboard/wallet/claim-1", "/dashboard/activity", "/dashboard/account"])(
 		"sends guests on the signed-in page %s to login, returning there afterwards",
 		async (pathname: string) => {
 			const response = await runProxy({ pathname });
@@ -218,22 +218,22 @@ describe("web proxy route protection", () => {
 		},
 	);
 
-	it("matches protected prefixes by whole path segment (/rewardhubs is not /rewardhub)", async () => {
-		const response = await runProxy({ pathname: "/rewardhubs" });
+	it("matches protected prefixes by whole path segment (/dashboards is not /dashboard)", async () => {
+		const response = await runProxy({ pathname: "/dashboards" });
 
 		expect(response.status).toBe(200);
 		expect(redirectLocation(response)).toBeUndefined();
 	});
 
 	it("sends a restricted (enrollment) session to the account page", async () => {
-		const response = await runProxy({ pathname: "/rewardhub/wallet", accessToken: restrictedToken(), refreshToken: "rt" });
+		const response = await runProxy({ pathname: "/dashboard/wallet", accessToken: restrictedToken(), refreshToken: "rt" });
 
 		expect(response.status).toBe(307);
-		expect(redirectLocation(response)).toBe("http://localhost:3000/rewardhub/account");
+		expect(redirectLocation(response)).toBe("http://localhost:3000/dashboard/account");
 	});
 
 	it("lets a restricted (enrollment) session open the account page", async () => {
-		const response = await runProxy({ pathname: "/rewardhub/account", accessToken: restrictedToken(), refreshToken: "rt" });
+		const response = await runProxy({ pathname: "/dashboard/account", accessToken: restrictedToken(), refreshToken: "rt" });
 
 		expect(response.status).toBe(200);
 		expect(redirectLocation(response)).toBeUndefined();

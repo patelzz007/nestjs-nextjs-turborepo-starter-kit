@@ -3,13 +3,13 @@ import { linkRewardImages } from "./reward-images";
 
 import { DAY_MS } from "@workspace/shared";
 
-import { sha256Hex } from "../../src/common/crypto/sha256";
+import { sha256Hex } from "../../src/platform/infrastructure/crypto/sha256";
 
 import { prisma } from "./client";
 import { seedCodeHash } from "./reward-code-hashing";
 import { deterministicUuid } from "./deterministic-uuid";
-import { ORGANIZATION_SEED_IDS } from "./organizations";
-import { POS_CODE_LOCKOUT_MS } from "../../src/modules/rewards/services/pos-code-lockout.service";
+import { TENANT_SEED_IDS } from "./tenants";
+import { POS_CODE_LOCKOUT_MS } from "../../src/contexts/pos/public-api";
 import { seedCheckout } from "./reward-checkout";
 
 // ---------------------------------------------------------------------------
@@ -26,8 +26,8 @@ import { seedCheckout } from "./reward-checkout";
 // ---------------------------------------------------------------------------
 
 export interface RewardLifecycleSeedContext {
-	readonly klOrganizationId: string;
-	readonly mlkOrganizationId: string;
+	readonly klTenantId: string;
+	readonly mlkTenantId: string;
 	readonly adminUserId: string;
 	readonly klOwnerId: string;
 	readonly mlkOwnerId: string;
@@ -72,12 +72,12 @@ async function seedTerminalAndKeyStates(context: RewardLifecycleSeedContext): Pr
 	const pairedKeyId = id("kl-register-03-key");
 	const retiredKeyId = id("kl-register-old-key");
 
-	await prisma.organizationApiKey.createMany({
+	await prisma.tenantApiKey.createMany({
 		data: [
 			{
 				id: pairedKeyId,
-				organizationId: context.klOrganizationId,
-				locationId: ORGANIZATION_SEED_IDS.klLocation,
+				tenantId: context.klTenantId,
+				locationId: TENANT_SEED_IDS.klLocation,
 				name: "Counter tablet",
 				keyHash: sha256Hex(`seed-unissued:${pairedKeyId}`),
 				keyPrefix: "mk_live_seedpair",
@@ -87,8 +87,8 @@ async function seedTerminalAndKeyStates(context: RewardLifecycleSeedContext): Pr
 			},
 			{
 				id: retiredKeyId,
-				organizationId: context.klOrganizationId,
-				locationId: ORGANIZATION_SEED_IDS.klLocation,
+				tenantId: context.klTenantId,
+				locationId: TENANT_SEED_IDS.klLocation,
 				name: "Old register",
 				keyHash: sha256Hex(`seed-unissued:${retiredKeyId}`),
 				keyPrefix: "mk_live_seedretd",
@@ -99,7 +99,7 @@ async function seedTerminalAndKeyStates(context: RewardLifecycleSeedContext): Pr
 			},
 			{
 				id: id("mlk-revoked-integration-key"),
-				organizationId: context.mlkOrganizationId,
+				tenantId: context.mlkTenantId,
 				locationId: null,
 				name: "Former loyalty-app sync",
 				keyHash: sha256Hex(`seed-unissued:${id("mlk-revoked-integration-key")}`),
@@ -111,8 +111,8 @@ async function seedTerminalAndKeyStates(context: RewardLifecycleSeedContext): Pr
 			},
 			{
 				id: id("mlk-deleted-key"),
-				organizationId: context.mlkOrganizationId,
-				locationId: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+				tenantId: context.mlkTenantId,
+				locationId: TENANT_SEED_IDS.mlkLocationBeruang,
 				name: "Trial key (deleted)",
 				keyHash: sha256Hex(`seed-unissued:${id("mlk-deleted-key")}`),
 				keyPrefix: "mk_live_seeddelt",
@@ -124,8 +124,8 @@ async function seedTerminalAndKeyStates(context: RewardLifecycleSeedContext): Pr
 			},
 			{
 				id: id("mlk-locked-key"),
-				organizationId: context.mlkOrganizationId,
-				locationId: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+				tenantId: context.mlkTenantId,
+				locationId: TENANT_SEED_IDS.mlkLocationBeruang,
 				name: "Bukit Beruang kiosk",
 				keyHash: sha256Hex(`seed-unissued:${id("mlk-locked-key")}`),
 				keyPrefix: "mk_live_seedlock",
@@ -138,12 +138,12 @@ async function seedTerminalAndKeyStates(context: RewardLifecycleSeedContext): Pr
 		],
 	});
 
-	await prisma.organizationTerminal.createMany({
+	await prisma.tenantTerminal.createMany({
 		data: [
 			{
 				id: id("kl-register-03"),
-				organizationId: context.klOrganizationId,
-				locationId: ORGANIZATION_SEED_IDS.klLocation,
+				tenantId: context.klTenantId,
+				locationId: TENANT_SEED_IDS.klLocation,
 				terminalId: "KL-REGISTER-03",
 				label: "Counter tablet",
 				createdByUserId: context.klOwnerId,
@@ -155,8 +155,8 @@ async function seedTerminalAndKeyStates(context: RewardLifecycleSeedContext): Pr
 			},
 			{
 				id: id("kl-register-old"),
-				organizationId: context.klOrganizationId,
-				locationId: ORGANIZATION_SEED_IDS.klLocation,
+				tenantId: context.klTenantId,
+				locationId: TENANT_SEED_IDS.klLocation,
 				terminalId: "KL-REGISTER-OLD",
 				label: "Old register (replaced)",
 				createdByUserId: context.klOwnerId,
@@ -181,14 +181,14 @@ async function seedTerminalAndKeyStates(context: RewardLifecycleSeedContext): Pr
  */
 async function seedRewardStates(context: RewardLifecycleSeedContext): Promise<void> {
 	const { now } = context;
-	const organizationId = { in: [context.klOrganizationId, context.mlkOrganizationId] };
+	const tenantId = { in: [context.klTenantId, context.mlkTenantId] };
 	await prisma.reward.updateMany({
-		where: { organizationId, rewardKind: "CONSUMER", status: { in: ["PUBLISHED", "EXPIRED", "DISABLED"] } },
+		where: { tenantId, rewardKind: "CONSUMER", status: { in: ["PUBLISHED", "EXPIRED", "DISABLED"] } },
 		data: { reviewedAt: daysAgo(now, 15), reviewedByUserId: context.adminUserId },
 	});
 
 	await prisma.reward.updateMany({
-		where: { organizationId: context.klOrganizationId, title: "Free coffee — Grand Opening" },
+		where: { tenantId: context.klTenantId, title: "Free coffee — Grand Opening" },
 		data: { rules: { maxUsePerUser: 1 }, metadata: { campaign: "grand-opening", channel: "in-store-poster" } },
 	});
 
@@ -196,7 +196,7 @@ async function seedRewardStates(context: RewardLifecycleSeedContext): Promise<vo
 		data: [
 			{
 				id: id("kl-reward-rejected"),
-				organizationId: context.klOrganizationId,
+				tenantId: context.klTenantId,
 				title: "Free cake for every visit",
 				description: "Unlimited free cake with any purchase.",
 				rewardType: "FREE_ITEM",
@@ -216,7 +216,7 @@ async function seedRewardStates(context: RewardLifecycleSeedContext): Promise<vo
 			},
 			{
 				id: id("mlk-reward-deleted"),
-				organizationId: context.mlkOrganizationId,
+				tenantId: context.mlkTenantId,
 				title: "Deleted: Durian week special",
 				description: "Withdrawn before launch.",
 				rewardType: "DISCOUNT",
@@ -234,8 +234,8 @@ async function seedRewardStates(context: RewardLifecycleSeedContext): Promise<vo
 		],
 	});
 	await linkRewardImages([
-		{ rewardId: id("kl-reward-rejected"), organizationId: context.klOrganizationId, slug: "cake" },
-		{ rewardId: id("mlk-reward-deleted"), organizationId: context.mlkOrganizationId, slug: "durian" },
+		{ rewardId: id("kl-reward-rejected"), tenantId: context.klTenantId, slug: "cake" },
+		{ rewardId: id("mlk-reward-deleted"), tenantId: context.mlkTenantId, slug: "durian" },
 	]);
 }
 
@@ -250,7 +250,7 @@ async function seedClaimAndSaleStates(context: RewardLifecycleSeedContext): Prom
 		data: {
 			id: id("carol-removed-claim"),
 			userId: context.carol.id,
-			rewardId: await requireGrandOpeningRewardId(context.klOrganizationId),
+			rewardId: await requireGrandOpeningRewardId(context.klTenantId),
 			redemptionTokenHash: seedCodeHash(`seed-unissued-token:${id("carol-removed-claim")}`),
 			backupCodeHash: seedCodeHash(`seed-unissued-backup:${id("carol-removed-claim")}`),
 			status: "EXPIRED",
@@ -266,7 +266,7 @@ async function seedClaimAndSaleStates(context: RewardLifecycleSeedContext): Prom
 		data: {
 			id: voidedClaimId,
 			userId: context.bob.id,
-			rewardId: await requireGrandOpeningRewardId(context.klOrganizationId),
+			rewardId: await requireGrandOpeningRewardId(context.klTenantId),
 			redemptionTokenHash: seedCodeHash(`seed-unissued-token:${voidedClaimId}`),
 			backupCodeHash: seedCodeHash(`seed-unissued-backup:${voidedClaimId}`),
 			status: "REDEEMED",
@@ -277,8 +277,8 @@ async function seedClaimAndSaleStates(context: RewardLifecycleSeedContext): Prom
 	});
 	const saleId = await seedCheckout({
 		key: "kl-bob-voided",
-		organizationId: context.klOrganizationId,
-		locationId: ORGANIZATION_SEED_IDS.klLocation,
+		tenantId: context.klTenantId,
+		locationId: TENANT_SEED_IDS.klLocation,
 		terminalId: "KL-REGISTER-01",
 		apiKeyId: context.klKeyId,
 		userId: context.bob.id,
@@ -294,15 +294,15 @@ async function seedClaimAndSaleStates(context: RewardLifecycleSeedContext): Prom
 /** RM 12.40 — the bill support voided (keyed twice by the cashier). */
 const VOIDED_BILL_MINOR = 1_240;
 
-async function requireGrandOpeningRewardId(organizationId: string): Promise<string> {
-	const reward = await prisma.reward.findFirstOrThrow({ where: { organizationId, title: "Free coffee — Grand Opening" }, select: { id: true } });
+async function requireGrandOpeningRewardId(tenantId: string): Promise<string> {
+	const reward = await prisma.reward.findFirstOrThrow({ where: { tenantId, title: "Free coffee — Grand Opening" }, select: { id: true } });
 	return reward.id;
 }
 
 /** A referral blocked as self-referral (same device as the referrer), and a withdrawn (soft-deleted) one. */
 async function seedReferralStates(context: RewardLifecycleSeedContext): Promise<void> {
 	const { now } = context;
-	const rewardId = await requireGrandOpeningRewardId(context.klOrganizationId);
+	const rewardId = await requireGrandOpeningRewardId(context.klTenantId);
 	await prisma.rewardReferral.createMany({
 		data: [
 			{

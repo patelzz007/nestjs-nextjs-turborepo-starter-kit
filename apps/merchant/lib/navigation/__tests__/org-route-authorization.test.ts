@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/auth/permission-check";
+import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/contexts/authorization/permission-check";
 import type { CompiledSidebarMenuData, CompiledSidebarMenuItem } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
 import { MERCHANT_CAPABILITY, MerchantCapabilitySchema, OrganizationMembershipRoleSchema, type CapabilitySlug, type OrganizationMembershipRole } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
@@ -126,7 +126,7 @@ describe("org route map ↔ app/orgs/[orgSlug] pages", () => {
 	it("documents why each open route carries no capability", () => {
 		const openRoutes = OrgPageRouteSchema.options.filter((route) => ORG_PAGE_RULES[route].kind === "open");
 
-		expect(openRoutes).toEqual(["/", "/account"]);
+		expect(openRoutes).toEqual(["/", "/account", "/stores"]);
 		for (const route of openRoutes) {
 			const rule = ORG_PAGE_RULES[route];
 			expect(rule.kind === "open" ? rule.reason.length : 0).toBeGreaterThan(0);

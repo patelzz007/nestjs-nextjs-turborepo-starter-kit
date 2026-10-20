@@ -16,7 +16,7 @@ copy-the-shape example of every layer is
 [`rules/24-golden-reference-implementations.md`](../../rules/24-golden-reference-implementations.md).
 The live template in this repo is the **sample category** module: contract
 `packages/shared/src/schemas/domain/catalog/sample-category.ts`, API
-`apps/api/src/modules/sample-category/`, admin pages `apps/admin/app/(panel)/catalog/categories/`.
+`apps/api/src/contexts/catalog/`, admin pages `apps/admin/app/(panel)/catalog/categories/`.
 
 ```mermaid
 flowchart LR
@@ -43,7 +43,7 @@ flowchart LR
    - New permission(s) in `packages/shared/src/authorization/permission.ts` and the seed's permission
      catalog; merchant features use `MERCHANT_CAPABILITY`.
    - Record-dependent rules via `@Authorize` / the kernel ([recipes](./authorization/recipes.md)).
-4. **API** (`apps/api/src/modules/<feature>/`)
+4. **API** (`apps/api/src/contexts/<context>/` — `domain`, `application`, `infrastructure`, `presentation`)
    - Repository (extends the base repository: soft delete, list paging), service (business rules,
      transactions, race-condition protection), controller (`@Controller(apiPath(...))`,
      `@ZodBody`/`@ZodQuery`/`@ZodParams`, `@ZodResponse`, permission decorators).

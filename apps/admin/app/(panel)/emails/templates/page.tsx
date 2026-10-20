@@ -3,7 +3,7 @@ import { LIST_SLOT_INDEX, EmailTemplateKeySchema } from "@workspace/shared";
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { EMAIL_TEMPLATES_URL_STATE } from "@/lib/url-state/selection";
 
-import EmailPreviewView from "./email-templates";
+import EmailPreviewView from "../../../../contexts/notifications/components/email-templates";
 
 export const dynamic = "force-dynamic";
 

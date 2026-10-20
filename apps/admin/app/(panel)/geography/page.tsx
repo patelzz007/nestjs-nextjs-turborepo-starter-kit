@@ -1,8 +1,8 @@
 import { createAdminServerCaller, type AdminServerCaller } from "@/lib/admin-server-api";
 import { prefetch, resolvePrefetchedData, resolvePrefetchedQuery } from "@/lib/server/prefetch";
-import { GEO_URL_STATE, toCitiesListQuery, toCountriesListQuery, toStatesListQuery, type GeoTabPage, type GeoUrlState } from "@/lib/url-state/geography";
+import { GEO_URL_STATE, toCitiesListQuery, toCountriesListQuery, toStatesListQuery, type GeoTabPage, type GeoUrlState } from "@/contexts/reference-data/url-state/geography";
 
-import GeoView from "./geo-table";
+import GeoView from "../../../contexts/reference-data/components/geo-table";
 
 export const dynamic = "force-dynamic";
 

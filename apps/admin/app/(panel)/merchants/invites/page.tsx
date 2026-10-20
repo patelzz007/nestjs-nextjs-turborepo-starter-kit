@@ -1,4 +1,4 @@
-import MerchantInvitesPanel from "./merchant-invites-panel";
+import MerchantInvitesPanel from "../../../../contexts/organizations/components/merchant-invites-panel";
 
 /**
  * `/merchants/invites` — compose and send merchant onboarding invites (MANAGE

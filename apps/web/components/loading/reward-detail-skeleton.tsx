@@ -4,7 +4,7 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { Card } from "@workspace/ui/components/card";
 import * as React from "react";
-import { REWARD_CARD_COVER_RATIO } from "@/lib/rewards/reward-cover";
+import { REWARD_CARD_COVER_RATIO } from "@/contexts/rewards/lib/reward-cover";
 
 /** `RewardClaimFlow`'s phone step: "Mobile number" label over its input, then the primary action. Bones only. */
 export function ClaimFlowBones(): React.JSX.Element {

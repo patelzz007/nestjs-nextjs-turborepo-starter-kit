@@ -1,7 +1,7 @@
 import pg from "pg";
 
-import { parseConsumerLogin, provisionConsumerLogin } from "../db-login";
-import { DEFAULT_DB_CONNECTION_TIMEOUT_MS, DEFAULT_DB_IDLE_TIMEOUT_MS, DEFAULT_DB_STATEMENT_TIMEOUT_MS, loadDbLoginProvisioningEnv } from "../env";
+import { parseConsumerLogin, provisionConsumerLogin } from "../infrastructure/db-login";
+import { DEFAULT_DB_CONNECTION_TIMEOUT_MS, DEFAULT_DB_IDLE_TIMEOUT_MS, DEFAULT_DB_STATEMENT_TIMEOUT_MS, loadDbLoginProvisioningEnv } from "../infrastructure/env";
 import type { ConsumerLogger } from "@workspace/messaging/inbox";
 import { createConsumerPool } from "@workspace/messaging/inbox";
 

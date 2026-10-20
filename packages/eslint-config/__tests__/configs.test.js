@@ -334,7 +334,7 @@ describe("api-client: the core is portable (no React, Next, DOM-only or Node cod
 		["a type-only TanStack import", 'import type { QueryKey } from "@tanstack/react-query";'],
 		["a node: built-in", 'import { readFile } from "node:fs/promises";'],
 		["a bare Node built-in", 'import { EventEmitter } from "events";'],
-		["the web client package", 'import { useAuth } from "@workspace/client/lib/auth";'],
+		["the web client package", 'import { useAuth } from "@workspace/client/lib/contexts/identity";'],
 		["the web UI package", 'import { Button } from "@workspace/ui/components/button";'],
 	])("flags %s", (_what, code) => {
 		expect(apiClientBoundaryMessages(code, CORE_FILE)).toEqual([expect.stringMatching(/^no-restricted-imports: /)]);
@@ -498,7 +498,7 @@ describe("mobile boundary: apps/mobile stays React Native-only (docs/technical/m
 		["react-dom", 'import { createPortal } from "react-dom";'],
 		["server-only", 'import "server-only";'],
 		["the web UI package", 'import { Button } from "@workspace/ui/components/button";'],
-		["the web client package", 'import { useAuth } from "@workspace/client/lib/auth";'],
+		["the web client package", 'import { useAuth } from "@workspace/client/lib/contexts/identity";'],
 		["a node: built-in", 'import { readFile } from "node:fs/promises";'],
 		["a bare Node built-in", 'import path from "path";'],
 		["AsyncStorage", 'import AsyncStorage from "@react-native-async-storage/async-storage";'],

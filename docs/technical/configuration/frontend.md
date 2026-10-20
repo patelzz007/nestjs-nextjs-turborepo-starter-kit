@@ -133,6 +133,7 @@ Every app's `.env.example` lists these with comments. Copy it to `.env`.
 | `NEXT_PUBLIC_SESSION_POLL_MS` | | optional | | client | whole ms. Unset or `0` → `null` (disabled) |
 | `NODE_ENV` | set by Next | set by Next | set by Next | server | `development` / `test` / `production` |
 | `COOKIE_DOMAIN` | optional | optional | optional | server | bare host (`localhost`, `.example.com`) |
+| `ADMIN_COMPONENT_GALLERY` | | optional | | server | `true` / `false`. Unset → the developer component gallery (`/components`) is served in development and test, **not** in production; off, the route answers 404 and the sidebar hides it |
 
 Empty values (`FOO=`) are treated as unset. There are **no hardcoded URL
 fallbacks**. A missing origin fails fast instead of silently pointing
@@ -224,7 +225,7 @@ const secure: boolean = serverEnv.NODE_ENV === NodeEnvSchema.enum.production;
 **Demo accounts are not configuration.** Each login page (a server component) offers the seeded
 one-click demo logins only when `NODE_ENV` is `development`, and never anywhere else — there is
 deliberately no flag, so a production deploy cannot expose them by configuration. The policy is
-`resolveDemoAccounts()` in `packages/client/src/lib/auth/forms/demo-accounts-policy.ts`; each app's
+`resolveDemoAccounts()` in `packages/client/src/lib/contexts/identity/forms/demo-accounts-policy.ts`; each app's
 list lives in a `server-only` module (`apps/*/lib/auth/demo-account-list.ts`) and is never even
 loaded outside development, so the credentials never reach a production bundle.
 

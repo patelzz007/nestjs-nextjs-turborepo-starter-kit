@@ -12,7 +12,7 @@ import { z } from "zod";
 
 import { Alert } from "@workspace/ui-native/components/alert";
 import { Screen } from "../../../components/screen";
-import { GithubCommitDetailScreen } from "../../../features/github/github-commit-detail";
+import { GithubCommitDetailScreen } from "../../../contexts/integrations-github";
 
 /** The route's params: the contract's commit params, other search params ignored. */
 const CommitRouteParamsSchema = z.object(GithubCommitParamsSchema.shape);

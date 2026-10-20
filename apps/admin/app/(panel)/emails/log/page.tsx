@@ -1,8 +1,8 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { prefetch, resolvePrefetchedQuery } from "@/lib/server/prefetch";
-import { EMAIL_LOG_URL_STATE, toEmailLogListQuery } from "@/lib/url-state/email-log";
+import { EMAIL_LOG_URL_STATE, toEmailLogListQuery } from "@/contexts/notifications/url-state/email-log";
 
-import EmailLogView from "./email-log-table";
+import EmailLogView from "../../../../contexts/notifications/components/email-log-table";
 
 export const dynamic = "force-dynamic";
 

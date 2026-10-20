@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 
-import type { ExtendedCookieOptions } from "../../src/modules/auth/constants/cookie.config";
+import type { ExtendedCookieOptions } from "../../src/platform/presentation/http/security/cookies/cookie.config";
 
 /** One cookie the code under test set (`value`) or cleared (`value: null`). */
 export interface RecordedCookie {

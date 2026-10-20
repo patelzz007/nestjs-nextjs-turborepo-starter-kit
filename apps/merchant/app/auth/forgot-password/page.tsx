@@ -1,10 +1,11 @@
 "use client";
 
-import { ForgotPasswordForm } from "@workspace/client/lib/auth/forms/forgot-password-form";
+import { ForgotPasswordForm } from "@workspace/client/lib/contexts/identity/forms/forgot-password-form";
 import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import type { JSX } from "react";
 
 import { ROUTES } from "@/lib/routes";
+import { BRAND_NAME } from "@workspace/tokens";
 
 /**
  * Request a password-reset email. The form sends `X-Client-Type: merchant`
@@ -19,7 +20,7 @@ export default function MerchantForgotPasswordPage(): JSX.Element {
 			features={["Secure password reset links", "Links expire after 1 hour", "All sessions are signed out after reset"]}
 			title="Reset password"
 			subtitle="Enter your store account email and we'll send you a reset link"
-			copyright="Reward Hub"
+			copyright={BRAND_NAME}
 			showBackButton
 			backHref={ROUTES.auth.login}
 			backLabel="Back to sign in">

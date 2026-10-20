@@ -14,6 +14,7 @@
 import { z } from "zod";
 
 import { ApiVersionSchema } from "../../contracts/versioning";
+import { EpochMsSchema } from "./common";
 
 export const ApiVersionManifestSchema = z
 	.object({
@@ -22,7 +23,7 @@ export const ApiVersionManifestSchema = z
 		/** Alias for `current` (some clients read "default" — both agree). */
 		default: ApiVersionSchema,
 		/** Every version the server answers on, with sunset dates for deprecated ones. */
-		supported: z.array(z.object({ version: ApiVersionSchema, sunsetAt: z.string().optional() })),
+		supported: z.array(z.object({ version: ApiVersionSchema, sunsetAt: EpochMsSchema.optional().meta({ description: "Epoch ms after which this version is removed" }) })),
 		/** Swagger UI location for the current version (`/v1/docs`). */
 		docs: z.string(),
 		/** Physical path prefix for the current version (`/api/v1`). */

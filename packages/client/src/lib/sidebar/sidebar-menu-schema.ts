@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { CapabilitySlugSchema } from "@workspace/shared";
 
-import { isKnownPermissionSlug } from "../auth/permission-check";
+import { isKnownPermissionSlug } from "../contexts/authorization/permission-check";
 
 /** Requirement evaluation mode: every permission (all) or at least one (any). */
 export const SidebarPermissionModeSchema = z.enum(["all", "any"]);

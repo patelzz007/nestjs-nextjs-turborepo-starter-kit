@@ -6,10 +6,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { PlatformEventInput } from "@workspace/shared";
 
-import { RequestContextService } from "../src/common/context/request-context";
-import { OutboxDispatchRepository } from "../src/infrastructure/outbox/outbox-dispatch.repository";
-import { OUTBOX_PUBLISH_OPERATION } from "../src/infrastructure/outbox/outbox-queue.processors";
-import { OUTBOX_ENQUEUE_OPERATION, PlatformOutboxService } from "../src/infrastructure/outbox/platform-outbox.service";
+import { RequestContextService } from "../src/platform/infrastructure/context/request-context";
+import { OutboxDispatchRepository } from "../src/platform/infrastructure/outbox/outbox-dispatch.repository";
+import { OUTBOX_PUBLISH_OPERATION } from "../src/platform/infrastructure/outbox/outbox-queue.processors";
+import { EMAIL_LOG_WRITE_OPERATION } from "../src/contexts/notifications/application/notifications-scope";
+import { PlatformOutboxService } from "../src/platform/infrastructure/outbox/platform-outbox.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { rlsStorage, runWithSystemRlsContext, userRlsContext, type RlsContext } from "../src/prisma/rls-context";
 import { TenantTransactionService } from "../src/prisma/tenant-transaction.service";
@@ -47,12 +48,12 @@ describe("Transactional outbox (integration)", () => {
 	const createdTemplateKeys: string[] = [];
 
 	async function countOutboxRows(eventId: string): Promise<number> {
-		const result = await verifier.query<{ count: number }>("SELECT COUNT(*)::int AS count FROM public.outbox_events WHERE id = $1", [eventId]);
+		const result = await verifier.query<{ count: number }>('SELECT COUNT(*)::int AS count FROM public."OutboxEvent" WHERE id = $1', [eventId]);
 		return result.rows[LIST_SLOT_INDEX.first]?.count ?? 0;
 	}
 
 	async function countEmailLogs(templateKey: string): Promise<number> {
-		const result = await verifier.query<{ count: number }>("SELECT COUNT(*)::int AS count FROM public.email_logs WHERE template_key = $1", [templateKey]);
+		const result = await verifier.query<{ count: number }>('SELECT COUNT(*)::int AS count FROM public."EmailLog" WHERE "templateKey" = $1', [templateKey]);
 		return result.rows[LIST_SLOT_INDEX.first]?.count ?? 0;
 	}
 
@@ -69,10 +70,10 @@ describe("Transactional outbox (integration)", () => {
 
 	afterAll(async () => {
 		if (createdEventIds.length > 0) {
-			await verifier.query("DELETE FROM public.outbox_events WHERE id = ANY($1::text[])", [createdEventIds]);
+			await verifier.query('DELETE FROM public."OutboxEvent" WHERE id = ANY($1::text[])', [createdEventIds]);
 		}
 		if (createdTemplateKeys.length > 0) {
-			await verifier.query("DELETE FROM public.email_logs WHERE template_key = ANY($1::text[])", [createdTemplateKeys]);
+			await verifier.query('DELETE FROM public."EmailLog" WHERE "templateKey" = ANY($1::text[])', [createdTemplateKeys]);
 		}
 		await verifier.end();
 		await prisma.onModuleDestroy();
@@ -82,7 +83,7 @@ describe("Transactional outbox (integration)", () => {
 		const templateKey = `outbox-e2e-${randomUUID()}`;
 		createdTemplateKeys.push(templateKey);
 
-		const eventId = await transactions.withSystemOperation({ operation: OUTBOX_ENQUEUE_OPERATION, reason: "e2e", actorUserId: null }, async (tx): Promise<string> => {
+		const eventId = await transactions.withSystemOperation({ operation: EMAIL_LOG_WRITE_OPERATION, reason: "e2e", actorUserId: null }, async (tx): Promise<string> => {
 			await tx.emailLog.create({ data: { templateKey, to: "outbox-e2e@example.com", subject: "Outbox e2e", status: "sent" } });
 			return outbox.enqueueInTransaction(tx, emailEvent(templateKey));
 		});
@@ -91,7 +92,7 @@ describe("Transactional outbox (integration)", () => {
 		expect(await countEmailLogs(templateKey)).toBe(1);
 		expect(await countOutboxRows(eventId)).toBe(1);
 		const stored = await verifier.query<{ status: string; attempts: number; topic: string }>(
-			"SELECT status::text AS status, attempts, topic FROM public.outbox_events WHERE id = $1",
+			'SELECT status::text AS status, attempts, topic FROM public."OutboxEvent" WHERE id = $1',
 			[eventId],
 		);
 		expect(stored.rows[LIST_SLOT_INDEX.first]).toEqual({ status: "PENDING", attempts: 0, topic: "platform.email" });
@@ -103,7 +104,7 @@ describe("Transactional outbox (integration)", () => {
 		const staged: string[] = [];
 
 		await expect(
-			transactions.withSystemOperation({ operation: OUTBOX_ENQUEUE_OPERATION, reason: "e2e", actorUserId: null }, async (tx): Promise<void> => {
+			transactions.withSystemOperation({ operation: EMAIL_LOG_WRITE_OPERATION, reason: "e2e", actorUserId: null }, async (tx): Promise<void> => {
 				await tx.emailLog.create({ data: { templateKey, to: "outbox-e2e@example.com", subject: "Outbox e2e", status: "sent" } });
 				staged.push(await outbox.enqueueInTransaction(tx, emailEvent(templateKey)));
 				throw new DomainRuleViolation("business rule failed after the event was staged");
@@ -155,13 +156,14 @@ describe("Transactional outbox (integration)", () => {
 			prisma.$transaction(async (tx): Promise<string> => outbox.enqueueInTransaction(tx, emailEvent(`outbox-e2e-${randomUUID()}`))),
 		);
 		createdEventIds.push(first, second);
-		await verifier.query("UPDATE public.outbox_events SET created_at = $2::bigint + (CASE WHEN id = $1 THEN 0 ELSE 1 END) WHERE id = ANY($3::text[])", [
+		await verifier.query('UPDATE public."OutboxEvent" SET "createdAt" = $2::bigint + (CASE WHEN id = $1 THEN 0 ELSE 1 END) WHERE id = ANY($3::text[])', [
 			first,
 			ANCIENT_CREATED_AT_MS,
 			[first, second],
 		]);
 
-		const store = new OutboxDispatchRepository(prisma);
+		// The real transaction service: it stamps the dispatcher's operation on each transaction (D22).
+		const store = new OutboxDispatchRepository(transactions);
 		const nowMs = Date.now();
 
 		const claimed = await runWithSystemRlsContext(OUTBOX_PUBLISH_OPERATION, async () => store.claimDue(2, nowMs, CLAIM_LEASE_MS));
@@ -173,12 +175,12 @@ describe("Transactional outbox (integration)", () => {
 		expect(reclaimed.map((row) => row.id)).not.toContain(second);
 
 		await runWithSystemRlsContext(OUTBOX_PUBLISH_OPERATION, async () => {
-			await store.markPublished(first, nowMs);
+			await store.markPublished([first], nowMs);
 			await store.scheduleRetry(second, 1, "broker unavailable", nowMs + CLAIM_LEASE_MS, nowMs);
 		});
 
 		const rows = await verifier.query<{ id: string; status: string; attempts: number; lastError: string | null }>(
-			'SELECT id, status::text AS status, attempts, last_error AS "lastError" FROM public.outbox_events WHERE id = ANY($1::text[]) ORDER BY created_at',
+			'SELECT id, status::text AS status, attempts, "lastError" AS "lastError" FROM public."OutboxEvent" WHERE id = ANY($1::text[]) ORDER BY "createdAt"',
 			[[first, second]],
 		);
 		expect(rows.rows).toEqual([

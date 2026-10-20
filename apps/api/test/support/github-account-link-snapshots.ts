@@ -1,4 +1,4 @@
-// Snapshots of `github_account_links` rows for e2e suites that link tokens:
+// Snapshots of `GithubAccountLink` rows for e2e suites that link tokens:
 // taken before the suite, written back after it, so running the suites never
 // replaces a developer's own linked GitHub token.
 
@@ -11,7 +11,7 @@ const LinkSnapshotSchema = z.object({ userId: z.string(), row: JsonValueSchema }
 export type GithubAccountLinkSnapshot = z.output<typeof LinkSnapshotSchema>;
 
 export async function snapshotGithubAccountLinks(pool: Pool, userIds: readonly string[]): Promise<readonly GithubAccountLinkSnapshot[]> {
-	const result = await pool.query('SELECT user_id AS "userId", row_to_json(l) AS "row" FROM public.github_account_links l WHERE user_id = ANY($1::text[])', [userIds]);
+	const result = await pool.query('SELECT "userId" AS "userId", row_to_json(l) AS "row" FROM public."GithubAccountLink" l WHERE "userId" = ANY($1::text[])', [userIds]);
 	return z.array(LinkSnapshotSchema).parse(result.rows);
 }
 
@@ -19,9 +19,9 @@ export async function snapshotGithubAccountLinks(pool: Pool, userIds: readonly s
 export async function restoreGithubAccountLinks(pool: Pool, snapshots: readonly GithubAccountLinkSnapshot[]): Promise<void> {
 	for (const { userId, row } of snapshots) {
 		await pool.query(
-			"UPDATE public.github_account_links AS l SET (github_user_id, github_login, token_ciphertext, token_key_version, token_expires_at, status, linked_at, is_deleted, deleted_at, deleted_by, created_at, updated_at) = " +
-				"(SELECT github_user_id, github_login, token_ciphertext, token_key_version, token_expires_at, status, linked_at, is_deleted, deleted_at, deleted_by, created_at, updated_at " +
-				"FROM json_populate_record(NULL::public.github_account_links, $1::json)) WHERE l.user_id = $2",
+			'UPDATE public."GithubAccountLink" AS l SET ("githubUserId", "githubLogin", "tokenCiphertext", "tokenKeyVersion", "tokenExpiresAt", status, "linkedAt", "isDeleted", "deletedAt", "deletedBy", "createdAt", "updatedAt") = ' +
+				'(SELECT "githubUserId", "githubLogin", "tokenCiphertext", "tokenKeyVersion", "tokenExpiresAt", status, "linkedAt", "isDeleted", "deletedAt", "deletedBy", "createdAt", "updatedAt" ' +
+				'FROM json_populate_record(NULL::public."GithubAccountLink", $1::json)) WHERE l."userId" = $2',
 			[JSON.stringify(row), userId],
 		);
 	}

@@ -1,23 +1,24 @@
 import { randomUUID } from "node:crypto";
+import { MaintenanceSchedulerRegistry } from "../src/platform/infrastructure/jobs/maintenance-scheduler.registry";
+import { fakeMaintenanceQueue } from "../src/platform/infrastructure/jobs/__tests__/fake-maintenance-queue";
 
-import type { Queue } from "bullmq";
 import { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { getApiConfig } from "../src/config/api-config";
 import { TypedConfigService } from "../src/config/typed-config.service";
-import { OUTBOX_DEAD_LETTER_RETENTION_MS, OUTBOX_PUBLISHED_RETENTION_MS } from "../src/infrastructure/outbox/outbox-retention.constants";
-import { OutboxRetentionProcessor, OutboxRetentionScheduler } from "../src/infrastructure/outbox/outbox-retention.processor";
-import { OutboxRetentionRepository } from "../src/infrastructure/outbox/outbox-retention.repository";
-import { OutboxRetentionService } from "../src/infrastructure/outbox/outbox-retention.service";
+import { OUTBOX_DEAD_LETTER_RETENTION_MS, OUTBOX_PUBLISHED_RETENTION_MS } from "../src/platform/infrastructure/outbox/outbox-retention.constants";
+import { OutboxRetentionProcessor, OutboxRetentionScheduler } from "../src/platform/infrastructure/outbox/outbox-retention.processor";
+import { OutboxRetentionRepository } from "../src/platform/infrastructure/outbox/outbox-retention.repository";
+import { OutboxRetentionService } from "../src/platform/infrastructure/outbox/outbox-retention.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { TenantTransactionService } from "../src/prisma/tenant-transaction.service";
-import { RequestContextService } from "../src/common/context/request-context";
+import { RequestContextService } from "../src/platform/infrastructure/context/request-context";
 
 /**
  * Real-Postgres proof of the outbox retention job: it deletes PUBLISHED rows
  * past their window and dead letters past theirs, never a PENDING row and
- * never a recent one — under the RLS bypass-only policy of `outbox_events`.
+ * never a recent one — under the RLS bypass-only policy of `OutboxEvent`.
  */
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
@@ -38,14 +39,14 @@ describe("Outbox retention (integration)", () => {
 		const id = randomUUID();
 		ids.set(fixture, id);
 		await verifier.query(
-			`INSERT INTO public.outbox_events (id, topic, event_type, payload, status, attempts, published_at, available_at, created_at, updated_at)
+			`INSERT INTO public."OutboxEvent" (id, topic, "eventType", payload, status, attempts, "publishedAt", "availableAt", "createdAt", "updatedAt")
 			 VALUES ($1, $2, $3, '{}'::jsonb, $4::"OutboxEventStatus", 0, $5, $6, $6, $6)`,
 			[id, topic, FIXTURE_EVENT_TYPE, status, status === "PUBLISHED" ? settledAtMs : null, settledAtMs],
 		);
 	}
 
 	async function remainingFixtures(): Promise<Fixture[]> {
-		const result = await verifier.query<{ id: string }>("SELECT id FROM public.outbox_events WHERE topic = $1", [topic]);
+		const result = await verifier.query<{ id: string }>('SELECT id FROM public."OutboxEvent" WHERE topic = $1', [topic]);
 		const remaining = new Set(result.rows.map((row): string => row.id));
 		return [...ids.entries()].filter(([, id]): boolean => remaining.has(id)).map(([fixture]): Fixture => fixture);
 	}
@@ -58,13 +59,13 @@ describe("Outbox retention (integration)", () => {
 		await prisma.ensureConnected();
 		const retention = new OutboxRetentionService(new OutboxRetentionRepository(new TenantTransactionService(prisma, new RequestContextService())));
 		// The scheduler is only a constructor dependency here; its Redis registration is not exercised.
-		processor = new OutboxRetentionProcessor(new OutboxRetentionScheduler(config, { upsertJobScheduler: vi.fn<Queue["upsertJobScheduler"]>() }), retention);
+		processor = new OutboxRetentionProcessor(new OutboxRetentionScheduler(config, fakeMaintenanceQueue(), new MaintenanceSchedulerRegistry()), retention);
 		// Superuser pool — fixtures, verification and cleanup only (bypasses RLS).
 		verifier = new Pool({ connectionString: DATABASE_URL });
 	});
 
 	afterAll(async () => {
-		await verifier.query("DELETE FROM public.outbox_events WHERE topic = $1", [topic]);
+		await verifier.query('DELETE FROM public."OutboxEvent" WHERE topic = $1', [topic]);
 		await verifier.end();
 		await prisma.onModuleDestroy();
 	});

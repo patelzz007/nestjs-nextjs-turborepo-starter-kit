@@ -6,7 +6,7 @@ import { PASSWORD_RESET_LINK_TTL_HOURS } from "@workspace/shared";
 
 import { getApiConfig } from "../../src/config/api-config";
 import { TypedConfigService } from "../../src/config/typed-config.service";
-import { CryptoService } from "../../src/modules/auth/services/crypto.service";
+import { CryptoService } from "../../src/contexts/identity/infrastructure/security/crypto.service";
 import { prisma } from "./client";
 import { SEED_BROWSER_PROFILES, SEED_MOBILE_PROFILES, SEED_SESSION_LOCATIONS, SEED_SIGN_IN_METHODS, seedSessionRow } from "./device-sessions";
 import { daysAgo, daysFromNow, rand, randInt, randomIpv4 } from "./helpers";

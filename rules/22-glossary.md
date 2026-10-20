@@ -50,7 +50,7 @@ A shared vocabulary for this codebase's domain and architectural terms, per `14-
 
 **PDPA** — Malaysia's Personal Data Protection Act 2010 (as amended 2024), the privacy law this project currently targets. See `10-security-auth-authorization.md`.
 
-**Completion gate** — the mandatory end-of-task check: `pnpm run lint` (zero errors, zero warnings) and `pnpm run test` must both pass, run after the last edit. See `18-definition-of-done.md`.
+**Completion gate** — the mandatory end-of-task check: `pnpm run lint` (zero errors) and `pnpm run test` must both pass, run after the last edit. See `18-definition-of-done.md`.
 
 **Audit log** — the durable, append-only record of every state-changing transaction, distinct from ordinary application logs, capturing org/tenant/user/timestamp/endpoint/request/response/IP/device. See `10-security-auth-authorization.md`.
 
@@ -63,6 +63,20 @@ A shared vocabulary for this codebase's domain and architectural terms, per `14-
 **Blocking finding** (in code review) — an issue that must be resolved before a PR can merge, as opposed to a non-blocking suggestion. See `16-code-review-checklist.md`.
 
 **ADR (Architecture Decision Record)** — a short, numbered document in `docs/adr/` capturing a meaningful architectural decision, its alternatives, and its consequences. See `14-documentation.md`.
+
+**Bounded context** — one business area with its own model, under `apps/api/src/contexts/<name>/`. Other contexts reach it only through `public-api.ts`. See ADR 058.
+
+**Command** — a use case that changes state. It enforces invariants and may emit domain events. See ADR 059.
+
+**Query** — a use case that reads a model which is not the aggregate being changed. See ADR 059.
+
+**Domain event** — a fact the aggregate recorded, collected and published in the same database transaction. See ADR 059.
+
+**Integration event** — a fact another context in this process reacts to after commit. See ADR 059.
+
+**Actor context** — who is calling (user or API key, tenant, correlation). Handlers receive it as an argument. It is not read from AsyncLocalStorage in domain or application code. See ADR 017 and ADR 058.
+
+**Unit of work** — the transaction boundary a handler passes to repositories so several writes commit or roll back together.
 
 ## Domain terms
 

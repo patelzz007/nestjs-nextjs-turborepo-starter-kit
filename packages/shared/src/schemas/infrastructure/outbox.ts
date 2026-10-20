@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { JsonObjectSchema } from "../runtime/json";
 import { KafkaTopicSchema } from "./kafka";
+import { EmailSendJobSchema } from "./queue";
 
 export const OutboxEventStatusSchema = z.enum(["PENDING", "PUBLISHED", "FAILED"]);
 
@@ -41,3 +42,31 @@ export const OutboxEnqueueInputSchema = z
 	.strict();
 
 export type OutboxEnqueueInput = z.output<typeof OutboxEnqueueInputSchema>;
+
+/**
+ * Outbox row type for a durable email request (ADR 060). The row is written in
+ * the caller's transaction next to the `pending` email log row, and the API's
+ * outbox relay hands it to the BullMQ `emailSend` queue. It is an INTERNAL
+ * route: it is never published to Kafka, so it is not a platform event.
+ */
+export const NOTIFICATION_EMAIL_REQUESTED_EVENT_TYPE = "notification.email.requested";
+
+/** `outbox_events.topic` of an email request row. Not a Kafka topic, so the Kafka relay never claims it. */
+export const NOTIFICATION_EMAIL_OUTBOX_TOPIC = "internal.notifications.email";
+
+/** The email request itself: exactly the `emailSend` job the relay enqueues (jobId = `emailLogId`). */
+export const NotificationEmailRequestedPayloadSchema = EmailSendJobSchema;
+
+export type NotificationEmailRequestedPayload = z.output<typeof NotificationEmailRequestedPayloadSchema>;
+
+/** Stored `outbox_events.payload` of an email request row. */
+export const NotificationEmailRequestedEnvelopeSchema = z
+	.object({
+		type: z.literal(NOTIFICATION_EMAIL_REQUESTED_EVENT_TYPE),
+		correlationId: z.string().nullable(),
+		occurredAt: z.number().int().nonnegative(),
+		payload: NotificationEmailRequestedPayloadSchema,
+	})
+	.strict();
+
+export type NotificationEmailRequestedEnvelope = z.output<typeof NotificationEmailRequestedEnvelopeSchema>;

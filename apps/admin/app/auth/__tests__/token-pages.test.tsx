@@ -14,9 +14,9 @@ const { resetPasswordForm, verifyEmailView } = vi.hoisted(() => ({
 }));
 
 // The token forms are probes: this suite checks what the server pages hand them.
-vi.mock("@workspace/client/lib/auth/forms/reset-password-form", () => ({ ResetPasswordForm: resetPasswordForm }));
-vi.mock("@workspace/client/lib/auth/email/verify-email-view", () => ({ VerifyEmailView: verifyEmailView }));
-vi.mock("@workspace/client/lib/auth/forms/forgot-password-form", () => ({ ForgotPasswordForm: (): null => null }));
+vi.mock("@workspace/client/lib/contexts/identity/forms/reset-password-form", () => ({ ResetPasswordForm: resetPasswordForm }));
+vi.mock("@workspace/client/lib/contexts/identity/email/verify-email-view", () => ({ VerifyEmailView: verifyEmailView }));
+vi.mock("@workspace/client/lib/contexts/identity/forms/forgot-password-form", () => ({ ForgotPasswordForm: (): null => null }));
 vi.mock("next-themes", () => ({ useTheme: (): { readonly resolvedTheme: string; readonly setTheme: () => void } => ({ resolvedTheme: "light", setTheme: vi.fn() }) }));
 
 afterEach(() => {

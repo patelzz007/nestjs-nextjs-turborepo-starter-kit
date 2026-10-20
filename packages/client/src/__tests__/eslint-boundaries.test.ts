@@ -53,14 +53,14 @@ describe("import boundaries (packages/client effective lint config)", () => {
 	);
 
 	it('rejects server-only modules in "use client" files', async () => {
-		const code = '"use client";\nimport { createServerCaller } from "../api/server-api";\nexport const probe = createServerCaller;\n';
-		expect(await boundaryViolations(code, "src/lib/auth/probe.tsx")).toContain("workspace-boundaries/no-server-import-in-client-component");
+		const code = '"use client";\nimport { createServerCaller } from "../../api/server-api";\nexport const probe = createServerCaller;\n';
+		expect(await boundaryViolations(code, "src/lib/contexts/identity/probe.tsx")).toContain("workspace-boundaries/no-server-import-in-client-component");
 	});
 });
 
 describe("env boundary (packages/client effective lint config)", () => {
 	it("rejects process.env outside src/lib/api/config.ts", async () => {
-		expect(await boundaryViolations("export const probe = process.env.NODE_ENV;\n", "src/lib/auth/probe.ts")).toContain("no-restricted-properties");
+		expect(await boundaryViolations("export const probe = process.env.NODE_ENV;\n", "src/lib/contexts/identity/probe.ts")).toContain("no-restricted-properties");
 	});
 
 	it("allows process.env inside the package env module", async () => {

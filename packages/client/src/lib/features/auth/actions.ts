@@ -1,6 +1,6 @@
 import type { Envelope, SessionPermissionsResponse, UserResponse } from "@workspace/shared";
 
-import type { SessionCheckFailureReason } from "../../auth/session/session-check";
+import type { SessionCheckFailureReason } from "../../contexts/identity/session/session-check";
 import type { SessionRecheckTrigger } from "./state";
 
 /**

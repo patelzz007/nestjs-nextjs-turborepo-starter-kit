@@ -63,6 +63,7 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 			"pnpm turbo run typecheck",
 			"pnpm turbo run test --concurrency=1",
 			"pnpm turbo run build",
+			"pnpm bundle:check",
 			"pnpm --filter @workspace/api db:check-rls-manifest",
 			"pnpm turbo run deps:check",
 			"pnpm audit --audit-level=high",

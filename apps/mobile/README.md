@@ -94,7 +94,7 @@ dev machine's address: set `EXPO_PUBLIC_API_URL` to an address the phone can rea
 | Command                                     | What it does                                                                                                          |
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `pnpm --filter @workspace/mobile dev`       | `expo start` (same as `pnpm dev:mobile` from the root)                                                                |
-| `pnpm --filter @workspace/mobile lint`      | ESLint, zero warnings                                                                                                 |
+| `pnpm --filter @workspace/mobile lint`      | ESLint, zero errors                                                                                                 |
 | `pnpm --filter @workspace/mobile typecheck` | `tsc --noEmit` with the repo's strict flags                                                                           |
 | `pnpm --filter @workspace/mobile test`      | jest-expo suites, then `expo install --check` (SDK version drift fails)                                               |
 | `pnpm --filter @workspace/mobile build`     | `expo export --platform ios --platform android` into `dist/` — the CI bundle check (no Xcode / Android Studio needed) |

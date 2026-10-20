@@ -10,7 +10,7 @@ order: 7
 
 # ADR 007: Tenancy Mode and RLS Bypass
 
-**Status:** Accepted  
+**Status:** Superseded by [ADR 062](./062-tenancy-modes-and-isolation.md) (2026-10-20)
 **Date:** 2026-08-27  
 **Deciders:** Backend Team
 

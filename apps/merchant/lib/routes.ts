@@ -58,6 +58,8 @@ export interface OrgRouteTable {
 	readonly terminals: AppPath;
 	readonly apiKeys: AppPath;
 	readonly account: AppPath;
+	/** Every store the member belongs to (the switcher lists the first page). */
+	readonly stores: AppPath;
 	readonly settings: OrgSettingsRoutes;
 }
 
@@ -109,6 +111,7 @@ export const ORG_ROUTES: OrgRouteTable = {
 	terminals: "/terminals",
 	apiKeys: "/api-keys",
 	account: "/account",
+	stores: "/stores",
 	settings: {
 		index: "/settings",
 		team: "/settings/team",
@@ -128,6 +131,7 @@ export const ORG_STATIC_ROUTES: readonly AppPath[] = [
 	ORG_ROUTES.terminals,
 	ORG_ROUTES.apiKeys,
 	ORG_ROUTES.account,
+	ORG_ROUTES.stores,
 	ORG_ROUTES.settings.index,
 	ORG_ROUTES.settings.team,
 	ORG_ROUTES.settings.locations,
@@ -223,6 +227,7 @@ export interface OrgHrefs {
 	readonly terminals: AppPath;
 	readonly apiKeys: AppPath;
 	readonly account: AppPath;
+	readonly stores: AppPath;
 	readonly settings: OrgSettingsHrefs;
 }
 
@@ -243,6 +248,7 @@ export function orgRoutes(slug: string): OrgHrefs {
 		terminals: toAppPath(APP_LINKS.merchant.terminals(slug)),
 		apiKeys: toAppPath(APP_LINKS.merchant.apiKeys(slug)),
 		account: orgPath(slug, ORG_ROUTES.account),
+		stores: orgPath(slug, ORG_ROUTES.stores),
 		settings: {
 			index: orgPath(slug, ORG_ROUTES.settings.index),
 			team: orgPath(slug, ORG_ROUTES.settings.team),

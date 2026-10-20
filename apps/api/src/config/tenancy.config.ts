@@ -1,39 +1,35 @@
 import { Injectable } from "@nestjs/common";
+import type { TenancyMode, TenantId } from "@workspace/shared";
 
 import { TypedConfigService } from "./typed-config.service";
 
+/** `defaultTenantId()` was called while this process is in multi-tenant mode. */
+export class DefaultTenantIdUnavailableError extends Error {
+	public constructor() {
+		super("DEFAULT_TENANT_ID is only available in single-tenant mode");
+		this.name = "DefaultTenantIdUnavailableError";
+	}
+}
+
 /**
- * Tenancy mode for RLS bypass and organization scoping.
+ * Tenancy mode for this process.
  *
- * - **Single-tenant** (`TENANCY_ENABLED=false`): staff with admin-panel access
- *   bypass RLS (template default). The organization is fixed via env
- *   (`DEFAULT_ORGANIZATION_ID`, a real organization verified at boot).
- * - **Multi-tenant** (`TENANCY_ENABLED=true`): only platform super-admins bypass
- *   RLS globally; requests are scoped to the guard-verified organization only.
+ * - **Single** (`TENANCY_ENABLED=false`): one tenant, `DEFAULT_TENANT_ID`, verified at boot.
+ * - **Multi** (`TENANCY_ENABLED=true`): each request is scoped to its guard-verified tenant. No fallback id.
  */
 @Injectable()
 export class TenancyConfigService {
 	public constructor(private readonly config: TypedConfigService) {}
 
-	public get enabled(): boolean {
-		return this.config.tenancy.enabled;
+	public get mode(): TenancyMode {
+		return this.config.tenancy.mode;
 	}
 
-	/**
-	 * The configured organization of a single-tenant deployment; `null` in
-	 * multi-tenant mode (requests are scoped to their guard-verified tenant
-	 * only — there is no fallback organization). Verified to exist at boot by
-	 * `DefaultOrganizationService`, which is what request code reads.
-	 */
-	public get singleTenantOrganizationId(): string | null {
-		return this.config.singleTenantOrganizationId;
-	}
-
-	/**
-	 * Whether staff (`hasAdminAccess`) may bypass RLS.
-	 * Enabled only in single-tenant mode; multi-tenant relies on super-admin bypass.
-	 */
-	public get staffBypassesRls(): boolean {
-		return !this.enabled;
+	/** The configured tenant of a single-mode deployment. Throws in multi mode. */
+	public defaultTenantId(): TenantId {
+		if (this.config.tenancy.mode === "multi") {
+			throw new DefaultTenantIdUnavailableError();
+		}
+		return this.config.tenancy.defaultTenantId;
 	}
 }

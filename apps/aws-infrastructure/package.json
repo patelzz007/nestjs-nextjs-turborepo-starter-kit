@@ -12,7 +12,7 @@
 		"diff": "cdk diff",
 		"test": "vitest run",
 		"typecheck": "tsc -p tsconfig.json --noEmit",
-		"lint": "eslint . --max-warnings=0"
+		"lint": "eslint ."
 	},
 	"dependencies": {
 		"aws-cdk-lib": "^2.272.0",

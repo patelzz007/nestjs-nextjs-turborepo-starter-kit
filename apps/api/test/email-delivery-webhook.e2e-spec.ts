@@ -4,13 +4,13 @@ import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { EMAIL_LOG_ID_TAG } from "../src/modules/notifications/email/transports/resend-email.transport";
+import { EMAIL_LOG_ID_TAG } from "../src/contexts/notifications/public-api";
 import { createE2eApp, uniqueClientIp, type InjectResponse } from "./e2e-helpers";
 import { signResendWebhook } from "./support/resend-webhook-signature";
 
 /**
  * Real HTTP → real signature verification → real Postgres proof of the Resend
- * delivery webhook: events are matched by the `email_log_id` tag, recorded
+ * delivery webhook: events are matched by the `emailLogId` tag, recorded
  * once per webhook id (history), applied in provider-time order, and a late
  * older event never overrides a newer outcome.
  */
@@ -40,7 +40,7 @@ describe("Resend delivery webhook (e2e)", () => {
 
 	async function emailLog(): Promise<{ status: string; resendId: string | null; lastEventAt: string | null; error: string | null }> {
 		const result = await verifier.query<{ status: string; resendId: string | null; lastEventAt: string | null; error: string | null }>(
-			'SELECT status, resend_id AS "resendId", last_event_at::text AS "lastEventAt", error FROM public.email_logs WHERE id = $1',
+			'SELECT status, "resendId" AS "resendId", "lastEventAt"::text AS "lastEventAt", error FROM public."EmailLog" WHERE id = $1',
 			[emailLogId],
 		);
 		const row = result.rows.at(0);
@@ -52,7 +52,7 @@ describe("Resend delivery webhook (e2e)", () => {
 
 	async function outcomes(): Promise<{ webhookId: string; outcome: string }[]> {
 		const result = await verifier.query<{ webhookId: string; outcome: string }>(
-			'SELECT webhook_id AS "webhookId", outcome FROM public.email_delivery_events WHERE resend_id = ANY($1::text[]) ORDER BY created_at, webhook_id',
+			'SELECT "webhookId" AS "webhookId", outcome FROM public."EmailDeliveryEvent" WHERE "resendId" = ANY($1::text[]) ORDER BY "createdAt", "webhookId"',
 			[[resendId, unknownResendId]],
 		);
 		return result.rows;
@@ -64,14 +64,14 @@ describe("Resend delivery webhook (e2e)", () => {
 		verifier = new Pool({ connectionString: DATABASE_URL });
 		// The row exactly as the sender writes it before calling the provider: pending, no provider id yet.
 		await verifier.query(
-			`INSERT INTO public.email_logs (id, template_key, "to", subject, status, metadata) VALUES ($1, 'welcome', 'webhook-e2e@example.com', 'Webhook e2e', 'pending', '{"mode":"send"}'::jsonb)`,
+			`INSERT INTO public."EmailLog" (id, "templateKey", "to", subject, status, metadata) VALUES ($1, 'welcome', 'webhook-e2e@example.com', 'Webhook e2e', 'pending', '{"mode":"send"}'::jsonb)`,
 			[emailLogId],
 		);
 	});
 
 	afterAll(async () => {
-		await verifier.query("DELETE FROM public.email_delivery_events WHERE resend_id = ANY($1::text[])", [[resendId, unknownResendId]]);
-		await verifier.query("DELETE FROM public.email_logs WHERE id = $1", [emailLogId]);
+		await verifier.query('DELETE FROM public."EmailDeliveryEvent" WHERE "resendId" = ANY($1::text[])', [[resendId, unknownResendId]]);
+		await verifier.query('DELETE FROM public."EmailLog" WHERE id = $1', [emailLogId]);
 		await verifier.end();
 		await app.close();
 	});
@@ -123,7 +123,7 @@ describe("Resend delivery webhook (e2e)", () => {
 
 		expect(response.statusCode, response.body).toBe(200);
 		const result = await verifier.query<{ outcome: string; emailLogId: string | null }>(
-			'SELECT outcome, email_log_id AS "emailLogId" FROM public.email_delivery_events WHERE resend_id = $1',
+			'SELECT outcome, "emailLogId" AS "emailLogId" FROM public."EmailDeliveryEvent" WHERE "resendId" = $1',
 			[unknownResendId],
 		);
 		expect(result.rows).toEqual([{ outcome: "unmatched", emailLogId: null }]);

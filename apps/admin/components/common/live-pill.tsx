@@ -1,4 +1,4 @@
-import type { LiveState } from "@/lib/notifications/reconnecting-event-stream";
+import type { LiveState } from "@/contexts/notifications/lib/reconnecting-event-stream";
 
 /** What the pill says while connected — the page's own words for what updates live. */
 export interface LivePillProps {

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { EmailPreviewPropValueSchema, EmailTemplateKeySchema } from "../email/email";
-import { StorageProviderSchema } from "../domain/platform/storage";
+import { EmailPreviewPropValueSchema, EmailTemplateKeySchema } from "../../contexts/notifications/schemas/email";
+import { StorageProviderSchema } from "../../contexts/files/schemas/storage";
 
 /** Every BullMQ queue the API uses (must match compose Bull Board's QUEUE_NAMES list). */
 export const QueueNameSchema = z.enum([

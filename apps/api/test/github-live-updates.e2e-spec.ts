@@ -10,10 +10,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { getApiConfig } from "../src/config/api-config";
 import { TypedConfigService } from "../src/config/typed-config.service";
-import { GITHUB_FETCH, type GithubFetch } from "../src/modules/github/github-http.transport";
-import { GithubPullRequestChangesHub, type GithubChangeSignal } from "../src/modules/github/live-updates/github-pull-request-changes.hub";
-import { githubWebhookSignature } from "../src/modules/github/live-updates/github-webhook-signature";
-import { GITHUB_TOKEN_EXPIRATION_HEADER } from "../src/modules/github/pull-requests/github-pull-request.client";
+import { GITHUB_FETCH, type GithubFetch } from "../src/contexts/integrations-github/infrastructure/github-api/github-http.transport";
+import type { GithubChangeSignal } from "../src/contexts/integrations-github/application/ports/github-live-updates.port";
+import { GithubPullRequestChangesHub } from "../src/contexts/integrations-github/infrastructure/adapters/github-pull-request-changes.hub";
+import { githubWebhookSignature } from "../src/contexts/integrations-github/domain/policies/github-webhook-signature.policy";
+import { GITHUB_TOKEN_EXPIRATION_HEADER } from "../src/contexts/integrations-github/infrastructure/github-api/github-pull-request.client";
 import { createE2eApp, login, markSeedUserEmailVerified, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
 import { restoreGithubAccountLinks, snapshotGithubAccountLinks, type GithubAccountLinkSnapshot } from "./support/github-account-link-snapshots";
 
@@ -95,7 +96,7 @@ describe("GitHub live updates (e2e, real Postgres + LISTEN/NOTIFY)", () => {
 
 	async function subscription(): Promise<z.output<typeof SubscriptionRowSchema> | null> {
 		const result = await pool.query(
-			'SELECT github_hook_id::text AS "githubHookId", is_deleted AS "isDeleted" FROM public.github_webhook_subscriptions WHERE owner = $1 AND repository = $2',
+			'SELECT "githubHookId"::text AS "githubHookId", "isDeleted" AS "isDeleted" FROM public."GithubWebhookSubscription" WHERE owner = $1 AND repository = $2',
 			[OWNER, REPOSITORY],
 		);
 		return SubscriptionRowSchema.nullable().parse(result.rows.at(0) ?? null);
@@ -108,7 +109,7 @@ describe("GitHub live updates (e2e, real Postgres + LISTEN/NOTIFY)", () => {
 			builder.overrideProvider(GITHUB_FETCH).useValue(FAKE_GITHUB).overrideProvider(TypedConfigService).useValue(config),
 		);
 		pool = new Pool({ connectionString: DATABASE_URL });
-		const result = await pool.query<{ id: string }>("SELECT id FROM public.users WHERE email = $1", ["admin@example.com"]);
+		const result = await pool.query<{ id: string }>('SELECT id FROM public."User" WHERE email = $1', ["admin@example.com"]);
 		adminId = z.string().parse(result.rows.at(0)?.id);
 		linksBefore = await snapshotGithubAccountLinks(pool, [adminId]);
 		await markSeedUserEmailVerified(pool, "admin@example.com");
@@ -124,7 +125,7 @@ describe("GitHub live updates (e2e, real Postgres + LISTEN/NOTIFY)", () => {
 
 	afterAll(async () => {
 		await restoreGithubAccountLinks(pool, linksBefore);
-		await pool.query("DELETE FROM public.github_webhook_deliveries WHERE delivery_id = ANY($1::text[])", [deliveryIds]);
+		await pool.query('DELETE FROM public."GithubWebhookDelivery" WHERE "deliveryId" = ANY($1::text[])', [deliveryIds]);
 		await pool.end();
 		await app.close();
 	});
@@ -173,7 +174,7 @@ describe("GitHub live updates (e2e, real Postgres + LISTEN/NOTIFY)", () => {
 		);
 
 		expect(forged.statusCode).toBe(403);
-		const recorded = await pool.query("SELECT 1 FROM public.github_webhook_deliveries WHERE delivery_id = $1", [deliveryId]);
+		const recorded = await pool.query('SELECT 1 FROM public."GithubWebhookDelivery" WHERE "deliveryId" = $1', [deliveryId]);
 		expect(recorded.rowCount).toBe(0);
 	});
 

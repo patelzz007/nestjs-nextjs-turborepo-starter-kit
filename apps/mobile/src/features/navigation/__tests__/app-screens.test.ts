@@ -1,5 +1,5 @@
 import { ROUTES } from "../../../runtime/routes";
-import { DEVICES_COPY } from "../../devices/labels";
+import { DEVICES_COPY } from "../../../contexts/identity";
 import { screenTitleOf } from "../app-screens";
 
 describe("screenTitleOf", () => {

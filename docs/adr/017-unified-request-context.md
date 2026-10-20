@@ -12,7 +12,7 @@ order: 17
 
 ## Status
 
-Accepted
+Accepted. Superseded in part by ADR 058 — application and domain receive `ActorContext`; AsyncLocalStorage stays in infrastructure.
 
 ## Context
 

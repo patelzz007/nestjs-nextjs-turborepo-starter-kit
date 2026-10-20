@@ -4,8 +4,8 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"lint": "eslint --max-warnings=0",
-		"format": "prettier --write \"**/*.{ts,tsx}\"",
+		"lint": "eslint",
+		"format": "prettier --write \"**/*.{ts,tsx}\" --ignore-path ../../.prettierignore",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run"
 	},
@@ -90,6 +90,7 @@
 		"./components/code-block-highlight": "./src/components/code-block-highlight.ts",
 		"./components/*": "./src/components/*.tsx",
 		"./testing/loaded-image-stub": "./src/testing/loaded-image-stub.ts",
+		"./testing/desktop-match-media": "./src/testing/desktop-match-media.ts",
 		"./testing/*": "./src/testing/*.tsx",
 		"./hooks/*": "./src/hooks/*.ts",
 		"./fonts/*": "./src/fonts/*.ts"

@@ -4,6 +4,7 @@
 export const PDF_VIEWER_TITLE = "PDF viewer";
 
 export const PDF_VIEWER_COPY = {
+	loading: "Loading the PDF viewer…",
 	description: "Open a PDF from your phone and read it here. Pages are drawn by your phone's own PDF engine.",
 	chooseTitle: "Open a PDF",
 	chooseDescription: "Pick a PDF from Files, Downloads or a cloud drive.",

@@ -8,13 +8,10 @@ import { GithubCommitShaSchema, GithubPullRequestNumberSchema, GithubRepositoryN
 import { z } from "zod";
 
 import { ROUTES, type AppRoute } from "../../runtime/routes";
-import { DEVICES_COPY } from "../devices/labels";
+import { DEVICES_COPY, TwoFactorEnrollmentModeSchema, twoFactorEnrollmentTitleOf } from "../../contexts/identity";
 import { PDF_VIEWER_TITLE } from "../pdf-viewer/labels";
-import { TILL_TITLE } from "../till/labels";
-import { commitScreenTitle } from "../github/labels";
-import { COMMITS_TITLE, FILES_CHANGED_TITLE, GITHUB_ACCOUNT_TITLE, pullRequestScreenTitle, PULL_REQUESTS_TITLE } from "../github-pull-requests/labels";
-import { twoFactorEnrollmentTitleOf } from "../two-factor/labels";
-import { TwoFactorEnrollmentModeSchema } from "../two-factor/two-factor-enrollment";
+import { TILL_TITLE } from "../../contexts/pos";
+import { COMMITS_TITLE, commitScreenTitle, FILES_CHANGED_TITLE, GITHUB_ACCOUNT_TITLE, PULL_REQUESTS_TITLE, pullRequestScreenTitle } from "../../contexts/integrations-github";
 import { APP_TABS, type AppTab } from "./app-tabs";
 
 /** The current route's search params, as Expo Router reports them (untrusted: parsed per screen). */

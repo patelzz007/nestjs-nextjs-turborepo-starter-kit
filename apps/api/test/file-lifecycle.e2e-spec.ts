@@ -6,8 +6,8 @@ import { Pool } from "pg";
 import { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { LocalTransferTokenService } from "../src/modules/storage/adapters/local/local-transfer-token.service";
-import { MALWARE_SCANNER } from "../src/modules/storage/domain/storage.tokens";
+import { LocalTransferTokenService } from "../src/platform/infrastructure/storage/adapters/local/local-transfer-token.service";
+import { MALWARE_SCANNER } from "../src/platform/infrastructure/storage/domain/storage.tokens";
 import { EICAR_TEST_SIGNATURE, EicarSignatureTestScanner } from "./support/eicar-signature-test-scanner";
 import { createE2eApp, login, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
 import { AVATAR_PNG_BYTES } from "./support/avatar-png-fixture";
@@ -115,7 +115,7 @@ describe("File lifecycle on the local driver (e2e)", () => {
 		app = await createE2eApp((builder) => builder.overrideProvider(MALWARE_SCANNER).useValue(new EicarSignatureTestScanner()));
 		pool = new Pool({ connectionString: DATABASE_URL });
 		session = await login(app, ADMIN_EMAIL, ADMIN_PASSWORD);
-		const result = await pool.query<{ id: string }>("SELECT id FROM public.users WHERE email = $1", [ADMIN_EMAIL]);
+		const result = await pool.query<{ id: string }>('SELECT id FROM public."User" WHERE email = $1', [ADMIN_EMAIL]);
 		adminId = z.string().parse(result.rows.at(0)?.id);
 	});
 
@@ -233,11 +233,11 @@ describe("File lifecycle on the local driver (e2e)", () => {
 		expect(deleted.statusCode, deleted.body).toBe(200);
 
 		const file = await pool.query<{ status: string; deletedBy: string | null }>(
-			'SELECT status::text AS status, deleted_by AS "deletedBy" FROM public.stored_files WHERE id = $1',
+			'SELECT status::text AS status, "deletedBy" AS "deletedBy" FROM public."StoredFile" WHERE id = $1',
 			[ticket.fileId],
 		);
 		const avatar = await pool.query<{ isDeleted: boolean; deletedBy: string | null }>(
-			'SELECT is_deleted AS "isDeleted", deleted_by AS "deletedBy" FROM public.user_avatars WHERE file_id = $1',
+			'SELECT "isDeleted" AS "isDeleted", "deletedBy" AS "deletedBy" FROM public."UserAvatar" WHERE "fileId" = $1',
 			[ticket.fileId],
 		);
 		expect(file.rows).toEqual([{ status: "DELETED", deletedBy: adminId }]);

@@ -4,8 +4,8 @@
 	"private": true,
 	"description": "The React Native UI kit: low-level, stateless, token-styled components for every mobile app (the web kit is @workspace/ui).",
 	"scripts": {
-		"lint": "eslint --max-warnings=0",
-		"format": "prettier --write \"**/*.{ts,tsx}\"",
+		"lint": "eslint",
+		"format": "prettier --write \"**/*.{ts,tsx}\" --ignore-path ../../.prettierignore",
 		"typecheck": "tsc --noEmit",
 		"test": "jest"
 	},

@@ -136,6 +136,6 @@ the server log, not a queryable table, at a volume no viewer could use.
 - `apps/api/prisma/rls.sql` (`data_change_logs_*` policies), `prisma/rls/withheld-privileges.ts`
 - `apps/api/src/modules/audit-logs/` — the read side; `packages/shared/src/schemas/domain/platform/data-change-log.ts` — its contract
 - `apps/api/src/modules/audit-logs/repositories/audit-trail.repository.ts` — the timeline query (and its actor search)
-- `apps/api/prisma/rls/95-audit-trail-notify.sql`, `apps/api/src/modules/audit-logs/events/` — the live signal; `apps/admin/lib/notifications/audit-trail-live.ts` — the page's subscription
-- `apps/admin/app/(panel)/audit-logs/` (the one audit page, `changes/[id]`), `apps/admin/components/audit-logs/`
+- `apps/api/prisma/rls/95-audit-trail-notify.sql`, `apps/api/src/modules/audit-logs/events/` — the live signal; `apps/admin/contexts/notifications/lib/audit-trail-live.ts` — the page's subscription
+- `apps/admin/app/(panel)/audit-logs/` (the one audit page, `changes/[id]`), `apps/admin/contexts/audit/components/audit-logs/`
 - ADR 012 (system operations), ADR 017 (request context), ADR 025 (HTTP audit log)

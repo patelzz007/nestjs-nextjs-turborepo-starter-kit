@@ -1,11 +1,11 @@
-import type { DefaultTenantPolicyRecordIds } from "../../src/modules/organization/utils/rewardhub-policy-seed.util";
+import type { DefaultTenantPolicyRecordIds } from "../../src/contexts/authorization/public-api";
 
 import { deterministicUuid } from "./deterministic-uuid";
 
 /** Namespace of every deterministic policy-seed id (drafts, versions, simulations, audit rows). */
 const POLICY_SEED_NAMESPACE = "seed.authorization_policy";
 
-/** Ids of the seeded platform guardrail and its three `authorization_audits` rows. */
+/** Ids of the seeded platform guardrail and its three `AuthorizationAudit` rows. */
 export interface PlatformGuardrailSeedIds {
 	readonly draftId: string;
 	readonly versionId: string;
@@ -33,8 +33,8 @@ export function platformGuardrailSeedIds(): PlatformGuardrailSeedIds {
 	};
 }
 
-/** Stable ids for an organization's seeded default tenant policy (draft, version, audit row). */
-export function defaultTenantPolicySeedIds(organizationId: string): DefaultTenantPolicyRecordIds {
-	const id = (part: string): string => deterministicUuid(POLICY_SEED_NAMESPACE, `tenant-default:${organizationId}:${part}`);
+/** Stable ids for a tenant's seeded default tenant policy (draft, version, audit row). */
+export function defaultTenantPolicySeedIds(tenantId: string): DefaultTenantPolicyRecordIds {
+	const id = (part: string): string => deterministicUuid(POLICY_SEED_NAMESPACE, `tenant-default:${tenantId}:${part}`);
 	return { draftId: id("draft"), versionId: id("version"), auditId: id("audit:published") };
 }

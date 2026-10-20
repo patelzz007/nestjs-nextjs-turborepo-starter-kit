@@ -16,8 +16,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { seedGithubAccountLinks } from "../prisma/seed/github-account-links";
-import { GITHUB_FETCH, type GithubFetch } from "../src/modules/github/github-http.transport";
-import { GITHUB_TOKEN_EXPIRATION_HEADER } from "../src/modules/github/pull-requests/github-pull-request.client";
+import { GITHUB_FETCH, type GithubFetch } from "../src/contexts/integrations-github/infrastructure/github-api/github-http.transport";
+import { GITHUB_TOKEN_EXPIRATION_HEADER } from "../src/contexts/integrations-github/infrastructure/github-api/github-pull-request.client";
 import { restoreGithubAccountLinks, snapshotGithubAccountLinks, type GithubAccountLinkSnapshot } from "./support/github-account-link-snapshots";
 import { createE2eApp, login, markSeedUserEmailVerified, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
@@ -163,7 +163,7 @@ describe("GitHub pull requests (e2e, real Postgres + RLS + audit trail)", () => 
 	let linksBefore: readonly GithubAccountLinkSnapshot[] = [];
 
 	async function userId(email: string): Promise<string> {
-		const result = await pool.query<{ id: string }>("SELECT id FROM public.users WHERE email = $1", [email]);
+		const result = await pool.query<{ id: string }>('SELECT id FROM public."User" WHERE email = $1', [email]);
 		const id = result.rows.at(0)?.id;
 		if (id === undefined) {
 			throw new Error(`Seed user missing: ${email} — run pnpm db:seed`);
@@ -177,14 +177,14 @@ describe("GitHub pull requests (e2e, real Postgres + RLS + audit trail)", () => 
 
 	async function storedLink(id: string): Promise<z.output<typeof StoredLinkSchema> | null> {
 		const result = await pool.query(
-			'SELECT token_ciphertext AS "tokenCiphertext", is_deleted AS "isDeleted", github_login AS "githubLogin" FROM public.github_account_links WHERE user_id = $1',
+			'SELECT "tokenCiphertext" AS "tokenCiphertext", "isDeleted" AS "isDeleted", "githubLogin" AS "githubLogin" FROM public."GithubAccountLink" WHERE "userId" = $1',
 			[id],
 		);
 		return StoredLinkSchema.nullable().parse(result.rows.at(0) ?? null);
 	}
 
 	async function auditedRequestBody(response: InjectResponse): Promise<z.output<typeof AuditBodySchema>["requestBody"]> {
-		const result = await pool.query('SELECT request_body AS "requestBody" FROM public.audit_logs WHERE correlation_id = $1', [response.headers["x-correlation-id"]]);
+		const result = await pool.query('SELECT "requestBody" AS "requestBody" FROM public."AuditLog" WHERE "correlationId" = $1', [response.headers["x-correlation-id"]]);
 		return AuditBodySchema.parse(result.rows.at(0)).requestBody;
 	}
 

@@ -19,9 +19,9 @@ import SmartphoneIcon from "lucide-react-native/icons/smartphone";
 import type { DrawerSectionTone } from "../../components/drawer-menu";
 import type { LucideIcon } from "@workspace/ui-native/components/icon";
 import { ROUTES, type AppRoute } from "../../runtime/routes";
-import { GITHUB_ACCOUNT_TITLE, PULL_REQUESTS_TITLE } from "../github-pull-requests/labels";
+import { GITHUB_ACCOUNT_TITLE, PULL_REQUESTS_TITLE } from "../../contexts/integrations-github";
 import { PDF_VIEWER_TITLE } from "../pdf-viewer/labels";
-import { TILL_TITLE } from "../till/labels";
+import { TILL_TITLE } from "../../contexts/pos";
 import { APP_TABS, type AppTab } from "./app-tabs";
 
 export interface DrawerDestination {
@@ -76,12 +76,14 @@ export const DRAWER_GROUPS: readonly DrawerDestinationGroup[] = [
 		tone: "blue",
 		destinations: [{ label: PDF_VIEWER_TITLE, icon: FileTextIcon, route: ROUTES.pdfViewer, isTab: false }],
 	},
-	{
-		title: "Developer",
-		tone: "amber",
-		destinations: [{ label: "Components", icon: BlocksIcon, route: ROUTES.components, isTab: false }],
-	},
 ];
+
+/** The UI kit gallery: a developer tool, so the drawer lists it in development builds only (`app-drawer.tsx`). */
+export const DEVELOPER_DRAWER_GROUP: DrawerDestinationGroup = {
+	title: "Developer",
+	tone: "amber",
+	destinations: [{ label: "Components", icon: BlocksIcon, route: ROUTES.components, isTab: false }],
+};
 
 /** GitHub pull requests (ADR 052): shown only to people the API lets use them. */
 export const GITHUB_DRAWER_GROUP: DrawerDestinationGroup = {
@@ -92,6 +94,14 @@ export const GITHUB_DRAWER_GROUP: DrawerDestinationGroup = {
 		{ label: GITHUB_ACCOUNT_TITLE, icon: KeyRoundIcon, route: ROUTES.githubAccount, isTab: false },
 	],
 };
+
+/**
+ * The drawer's sections: the fixed ones, the Developer section in a development build only (`__DEV__` is
+ * `false` in a store build, where the gallery's route redirects too), and GitHub for people the API lets use it.
+ */
+export function drawerGroups(githubAvailable: boolean): readonly DrawerDestinationGroup[] {
+	return [...DRAWER_GROUPS, ...(__DEV__ ? [DEVELOPER_DRAWER_GROUP] : []), ...(githubAvailable ? [GITHUB_DRAWER_GROUP] : [])];
+}
 
 const TAB_ROUTES: ReadonlySet<string> = new Set(APP_TABS.map((tab: AppTab): string => tab.route));
 

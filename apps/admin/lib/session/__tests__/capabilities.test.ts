@@ -32,7 +32,7 @@ const { useQueryMock } = vi.hoisted(() => ({
 	useQueryMock: vi.fn<(input: undefined, options: PermissionsQueryOptions) => PermissionsQueryResult>(),
 }));
 
-vi.mock("@workspace/client/lib/auth", () => ({
+vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): { api: { auth: { permissions: { useQuery: typeof useQueryMock } } } } => ({ api: { auth: { permissions: { useQuery: useQueryMock } } } }),
 }));
 

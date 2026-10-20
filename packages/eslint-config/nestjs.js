@@ -1,7 +1,7 @@
 import nestjsPlugin from "@darraghor/eslint-plugin-nestjs-typed";
 
 import { config as baseConfig } from "./base.js";
-import { backendImportBoundaryConfig } from "./import-boundaries.js";
+import { apiArchitectureBoundaryConfigs, backendImportBoundaryConfig } from "./import-boundaries.js";
 
 /**
  * A custom ESLint configuration for NestJS applications (apps/api).
@@ -114,4 +114,7 @@ export const nestjsConfig = [
 	// universal list because `no-restricted-imports` options replace, not
 	// merge (see import-boundaries.js and docs/technical/tooling/eslint.md).
 	backendImportBoundaryConfig,
+	// Context and platform layer rules (§12.1). Later blocks replace no-restricted-imports
+	// for the files they match, and each block already repeats the universal and backend patterns.
+	...apiArchitectureBoundaryConfigs,
 ];

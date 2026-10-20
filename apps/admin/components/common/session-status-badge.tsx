@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@workspace/client/lib/auth";
+import { useAuth } from "@workspace/client/lib/contexts/identity";
 
 import { Badge } from "@workspace/ui/components/badge";
 import { useObservable } from "@workspace/ui/hooks/use-observable";

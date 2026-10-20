@@ -1,8 +1,12 @@
+import { clientOnlyWidgetsConfig } from "@workspace/eslint-config/client-only-widgets";
 import { nextJsConfig } from "@workspace/eslint-config/next-js";
+import { CLIENT_ONLY_WIDGETS } from "@workspace/ui/lib/client-only-widgets";
 
 /** @type {import("eslint").Linter.Config} */
 export default [
 	...nextJsConfig,
+	// `next/dynamic(..., { ssr: false })` only for the allowlisted browser-only widgets (decision #58).
+	clientOnlyWidgetsConfig(CLIENT_ONLY_WIDGETS),
 	{
 		// ── Env boundary (docs/technical/configuration/frontend.md) ──────────────────────
 		// `process.env` is read ONLY by the env modules, which validate it with

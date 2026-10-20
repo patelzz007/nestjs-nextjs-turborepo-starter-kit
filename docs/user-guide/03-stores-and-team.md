@@ -59,7 +59,7 @@ Only a **rejected** request can be edited; saving it sends it back to the admin 
 ## Store logo
 
 **Settings → Branding** (`/orgs/<slug>/settings/branding`) sets the logo shown with your rewards in
-Reward Hub. Without one, the initials of your store are shown.
+the customer web app. Without one, the initials of your store are shown.
 
 1. **Upload logo** (or **Replace logo**) and pick an image: JPEG, PNG, WebP or AVIF, up to 10 MB.
 2. A logo is square, at least 256 × 256 pixels. A square image is used as it is; any other image
@@ -136,8 +136,8 @@ with the old and the new value.
 
 | Action | Who | Guarantees | Errors |
 | --- | --- | --- | --- |
-| Remove a member from a store | `merchant:manage_team` and a location scope covering the store (else `403 ORGANIZATION_STORE_OUT_OF_SCOPE`) | One transaction with its audit row (real actor). Deletes the member's SELECTED scope row and soft-deletes their store membership (`deleted_at`, `deleted_by`). The member row is locked (`FOR UPDATE`) first, so two removals cannot both pass the last-store check. | `404` unknown member or not scoped to that store · `409 ORGANIZATION_OWNER_PROTECTED` · `409 ORGANIZATION_MEMBER_COVERS_ALL_STORES` (narrow them first) · `409 ORGANIZATION_MEMBER_LAST_STORE` (send `allowNoStores: true`) |
-| Close a store | `merchant:manage_locations` and a covering location scope; body `{ "reason": "<1–500 chars>" }` | One transaction: the location (`status = INACTIVE`, `closure_reason`, `deleted_at`, `deleted_by`) and its store are soft-deleted, the store's memberships soft-deleted, SELECTED scope rows to it deleted, terminals removed and their keys revoked, one audit row. A reward offered only at closed stores cannot be claimed (out of stock); held claims stay redeemable at the reward's other open stores. | `409` primary store · `400` missing reason · `404` already closed |
+| Remove a member from a store | `merchant:manage_team` and a location scope covering the store (else `403 ORGANIZATION_STORE_OUT_OF_SCOPE`) | One transaction with its audit row (real actor). Deletes the member's SELECTED scope row and soft-deletes their store membership (`deletedAt`, `deletedBy`). The member row is locked (`FOR UPDATE`) first, so two removals cannot both pass the last-store check. | `404` unknown member or not scoped to that store · `409 ORGANIZATION_OWNER_PROTECTED` · `409 ORGANIZATION_MEMBER_COVERS_ALL_STORES` (narrow them first) · `409 ORGANIZATION_MEMBER_LAST_STORE` (send `allowNoStores: true`) |
+| Close a store | `merchant:manage_locations` and a covering location scope; body `{ "reason": "<1–500 chars>" }` | One transaction: the location (`status = INACTIVE`, `closureReason`, `deletedAt`, `deletedBy`) and its store are soft-deleted, the store's memberships soft-deleted, SELECTED scope rows to it deleted, terminals removed and their keys revoked, one audit row. A reward offered only at closed stores cannot be claimed (out of stock); held claims stay redeemable at the reward's other open stores. | `409` primary store · `400` missing reason · `404` already closed |
 | Set or clear your display name | Any live ACTIVE member, for their **own** membership only | One tenant transaction: the caller's membership row is locked (`FOR UPDATE`) and updated, then `membership.display_name_updated` is audited (actor = the member, `previousDisplayName` → `displayName`). | `400` blank, longer than 100 characters, or unknown fields · `404` not a member of that organization · `403 ORGANIZATION_MEMBERSHIP_UPDATE_DURING_IMPERSONATION` |
 
 Seed data: `prisma/seed/store-closure.ts` creates one closed store ("Taman Melaka Raya (Closed)")
@@ -147,7 +147,7 @@ members of both organizations have display names except the Jonker Street Kitche
 ### Invite links — how they are protected
 
 - The invite token is 32 random bytes; only its SHA-256 hash is stored
-  (`organization_invitations.token_hash`, `kind = TEAM_MEMBER`), and the raw token exists only in the
+  (`OrganizationInvitation.tokenHash`, `kind = TEAM_MEMBER`), and the raw token exists only in the
   email link. With `EMAIL_MODE=log-only` the link is in the API log.
 - `validate` and `register-and-accept` are public routes that also declare `@RlsBypass()` — a public
   route alone does **not** bypass row-level security. Every invite write runs under its own

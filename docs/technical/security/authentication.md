@@ -3,7 +3,7 @@ title: "Authentication, MFA and privileged access"
 description: "Sessions and cookies, restricted vs full sessions, login verification, TOTP and backup codes, MFA recovery, token versions, impersonation and support access — how they work and what to keep in mind when changing them."
 order: 30
 author: "Platform Team"
-lastUpdated: 1792108800000
+lastUpdated: 1792368000000
 coverImage: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&h=630&fit=crop"
 tags: ["security", "auth", "mfa", "sessions", "impersonation", "mobile"]
 ---
@@ -13,7 +13,7 @@ tags: ["security", "auth", "mfa", "sessions", "impersonation", "mobile"]
 User-facing behaviour is described in [Account and security](../../user-guide/10-account-and-security.md);
 every endpoint with a real request/response is in the
 [Auth API reference](../api-reference/auth-and-sessions.md). Code lives in
-`apps/api/src/modules/{auth,sessions,impersonation,support-access}`.
+`apps/api/src/contexts/identity/` (sign-in, sessions, impersonation) and `apps/api/src/contexts/authorization/` (support access).
 
 ## Sessions
 
@@ -155,15 +155,19 @@ more declare `@RequiresFullSession()` / `@EmailVerified()`.
 
 `PENDING → APPROVED → COMPLETED` or `DENIED`. A SuperAdmin approves; 2FA is removed only after
 `MFA_RECOVERY_DELAY_MS` (default 24 hours) so the real owner can react. There is deliberately no
-instant "reset MFA" button. Every transition writes `mfa_recovery_audit_logs` (append-only).
+instant "reset MFA" button. Every transition writes `MfaRecoveryAuditLog` (append-only).
 
 ## Impersonation
 
 - Only an active **SuperAdmin** with a fresh MFA step-up may impersonate; never another SuperAdmin,
   never nested (`ALREADY_IMPERSONATING`).
-- The impersonation session lasts 900 seconds; `stop-impersonation` restores the admin's session.
+- The impersonation session lasts 900 seconds; `stop-impersonation` restores the admin's session. The
+  stop request must carry the admin's own refresh token (the app's refresh cookie, which impersonation
+  never replaces): the restored access token is bound to the device session it names (`sid` = its `jti`),
+  so it is refused, like any other token of that session, once the session is revoked. Without it the stop
+  answers `401 REFRESH_TOKEN_MISSING` and the impersonation stays live.
 - Every audited request records both the acting admin (`impersonatorId`) and the user, and
-  `impersonation_audit_logs` / `impersonation_sessions` keep the history. Self-service writes such as
+  `ImpersonationAuditLog` / `ImpersonationSession` keep the history. Self-service writes such as
   editing the user's profile are refused while impersonating.
 
 ## Support access
@@ -189,7 +193,7 @@ under its own allow-listed system operation (`support_access.*`).
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | `401 TOKEN_VERSION_MISMATCH` right after a password, 2FA, role or permission change | Expected: older tokens are revoked | The client refreshes or signs in again; never disable the check |
-| Redirect loop between a page and `/auth/…` | A restricted session (email or MFA pending) on a route the proxy does not allow for restricted sessions | Finish verification / enrolment; when adding a setup route, add it to the allow-list in `packages/client/src/lib/auth/edge/restricted-session.ts` |
+| Redirect loop between a page and `/auth/…` | A restricted session (email or MFA pending) on a route the proxy does not allow for restricted sessions | Finish verification / enrolment; when adding a setup route, add it to the allow-list in `packages/client/src/lib/contexts/identity/edge/restricted-session.ts` |
 | A shared schema "is not defined" in a client after an auth change | Stale `@workspace/shared` build | `pnpm build:shared`, restart dev |
 | Login 2FA code always rejected | Server clock skew, or a reused code (a code is valid once per 30-second step) | Sync the clock; wait for the next code |
 | MFA recovery approved but 2FA still required | `MFA_RECOVERY_DELAY_MS` has not elapsed | Wait for the delay; a job (`TaskScheduleService`, every 10 minutes) then completes the request and removes 2FA |

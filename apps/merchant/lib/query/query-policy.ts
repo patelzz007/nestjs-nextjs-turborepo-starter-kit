@@ -1,5 +1,5 @@
 import { ApiError } from "@workspace/client/lib/api/use-api";
-import { resolveAuthErrorMessage } from "@workspace/client/lib/auth/errors";
+import { resolveAuthErrorMessage } from "@workspace/client/lib/api/error-messages";
 
 // ============================================
 // lib/query/query-policy.ts - named freshness and retry rules for merchant queries

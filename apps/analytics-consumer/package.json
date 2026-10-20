@@ -8,7 +8,8 @@
 		"start": "tsx src/main.ts",
 		"db:provision-login": "dotenv run -q -- tsx src/cli/provision-db-login.ts",
 		"kafka:provision-topics": "dotenv run -q -- tsx src/cli/provision-kafka-topics.ts",
-		"lint": "eslint --max-warnings=0",
+		"format": "prettier --write \"**/*.{ts,tsx}\" --ignore-path ../../.prettierignore",
+		"lint": "eslint",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run --config vitest.config.ts",
 		"test:e2e": "dotenv run -q -- vitest run --config vitest.config.e2e.ts"

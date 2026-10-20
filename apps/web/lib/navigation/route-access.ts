@@ -17,7 +17,7 @@ export type WebRouteAudience = "public" | "guest" | "signed-in";
 
 /** The access rule of one page of the web app. */
 export interface WebRouteAccessRule {
-	/** The page, in App Router notation (`/rewardhub/wallet/[claimId]`). */
+	/** The page, in App Router notation (`/dashboard/wallet/[claimId]`). */
 	readonly pattern: string;
 	readonly audience: WebRouteAudience;
 	/**
@@ -52,20 +52,21 @@ export const WEB_ROUTE_ACCESS: readonly WebRouteAccessRule[] = [
 	{ pattern: ROUTES.auth.verifyEmail, audience: "public" },
 	{ pattern: ROUTE_PATTERNS.verifyEmailToken, audience: "public" },
 	// GET /rewards — @Public, shown inside the signed-in shell
-	{ pattern: ROUTES.rewardHub.browse, audience: "signed-in" },
+	{ pattern: ROUTES.dashboard.browse, audience: "signed-in" },
 	// GET /rewards/:rewardId (@Public) · POST /claims/otp, POST /claims — any session
-	{ pattern: ROUTE_PATTERNS.rewardHubRewardDetail, audience: "signed-in", breadcrumbLabel: "Reward" },
+	{ pattern: ROUTE_PATTERNS.dashboardRewardDetail, audience: "signed-in", breadcrumbLabel: "Reward" },
 	// GET /claims — any session (own claims only)
-	{ pattern: ROUTES.rewardHub.wallet, audience: "signed-in" },
-	// GET /claims/:claimId/qr — any session (own claims only). The label matches the
-	// page heading; the QR response carries no reward title to name the crumb with.
+	{ pattern: ROUTES.dashboard.wallet, audience: "signed-in" },
+	// GET /claims/:claimId (server render) · POST /claims/:claimId/qr (browser, after mount) —
+	// any session (own claims only). The label matches the page heading, so the crumb
+	// reads the same before and after the claim loads.
 	{ pattern: ROUTE_PATTERNS.walletClaim, audience: "signed-in", breadcrumbLabel: "Show at checkout" },
 	// GET /claims/analytics/dashboard — any session (own activity only)
-	{ pattern: ROUTES.rewardHub.activity, audience: "signed-in" },
+	{ pattern: ROUTES.dashboard.activity, audience: "signed-in" },
 	// GET /auth/signup-referrals/* — any session (own code and referees only)
-	{ pattern: ROUTES.rewardHub.referrals, audience: "signed-in", breadcrumbLabel: "Referrals" },
+	{ pattern: ROUTES.dashboard.referrals, audience: "signed-in", breadcrumbLabel: "Referrals" },
 	// GET /auth/me, password and MFA endpoints — any session (restricted sessions included)
-	{ pattern: ROUTES.rewardHub.account, audience: "signed-in" },
+	{ pattern: ROUTES.dashboard.account, audience: "signed-in" },
 ];
 
 /** The session facts a route rule is evaluated against. */

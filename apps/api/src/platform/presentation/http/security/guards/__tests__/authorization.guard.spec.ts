@@ -1,0 +1,333 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { UnauthorizedException, type ExecutionContext } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
+import { NotFoundError } from "../../../../../application/errors/app-error";
+import { Reflector } from "@nestjs/core";
+import type { AccessTokenPayload, AuthorizationRequest, AuthorizationResult } from "@workspace/shared";
+
+import { accessToken, createHttpContext, testRequest, type TestHttpRequest, type TestRouteMetadata } from "../../../../../../../test/support/http-execution-context";
+
+import {
+	AuthorizationException,
+	type AuthorizationDecisionAuditPort,
+	type AuthorizationKernelPort,
+	type RequestTenantContext,
+	type RequestTenantResolverPort,
+	type SuperAdminBypassAuditPort,
+} from "../../../../../../contexts/authorization/public-api";
+import { REQUIRED_PERMISSION_KEY, REQUIRED_PERMISSIONS_KEY, REQUIRED_ROLES_KEY } from "../../decorators/route-requirements.metadata";
+import { AUTHORIZE_KEY, self, type AuthorizationRequirement } from "../../decorators/authorize.decorator";
+import { AuthorizationGuard } from "../authorization.guard";
+import { RequestContextService, type RequestTenant } from "../../../../../infrastructure/context/request-context";
+import { MembershipInactiveError, TENANT_LIFECYCLE_ROUTE_KEY, TenantSuspendedError } from "../../../../../../contexts/tenancy/public-api";
+import { createTestPrisma } from "../../../../../../../test/support/test-service-graph";
+import type { SystemDatabaseContext } from "../../../../../../prisma/tenant-context";
+
+const mocks = vi.hoisted(() => ({
+	authorize: vi.fn(),
+	explain: vi.fn(),
+	can: vi.fn(),
+	hasRoles: vi.fn(),
+	filter: vi.fn(),
+	auditResult: vi.fn(),
+	recordBypass: vi.fn(),
+	resolve: vi.fn(),
+	userFindUnique: vi.fn(),
+}));
+
+vi.mock("../../../../../../prisma/prisma.service", () => ({
+	PrismaService: class {
+		public readonly user = { findUnique: mocks.userFindUnique };
+	},
+}));
+
+const requestContext = new RequestContextService();
+
+/** Recording implementations of the authorization ports the guard depends on (the guard itself is real). */
+const kernel: AuthorizationKernelPort = { authorize: mocks.authorize, explain: mocks.explain, can: mocks.can, hasRoles: mocks.hasRoles, filter: mocks.filter };
+const decisionAudit: AuthorizationDecisionAuditPort = { auditResult: mocks.auditResult };
+const bypassAudit: SuperAdminBypassAuditPort = { recordBypass: mocks.recordBypass };
+const tenantResolver: RequestTenantResolverPort = { resolve: mocks.resolve };
+
+function createGuard(): AuthorizationGuard {
+	const prisma = createTestPrisma();
+	return new AuthorizationGuard(new Reflector(), kernel, decisionAudit, bypassAudit, tenantResolver, requestContext, {
+		withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
+	});
+}
+
+function contextFor(
+	user: AccessTokenPayload | undefined,
+	metadata: TestRouteMetadata = {},
+	params: Record<string, string> = {},
+): { request: TestHttpRequest; context: ExecutionContext } {
+	const request = testRequest({ user, params });
+	return { request, context: createHttpContext(request, metadata) };
+}
+
+const noTenant: RequestTenantContext = { verified: {}, requested: {}, target: null };
+
+function result(decision: "ALLOW" | "DENY", request: AuthorizationRequest): AuthorizationResult {
+	return { decision, request, evaluation: [] };
+}
+
+describe("AuthorizationGuard", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mocks.resolve.mockResolvedValue(noTenant);
+		mocks.userFindUnique.mockResolvedValue({ tokenVersion: 1 });
+		mocks.authorize.mockResolvedValue(undefined);
+		mocks.can.mockResolvedValue("DENY");
+		mocks.auditResult.mockResolvedValue(undefined);
+		mocks.recordBypass.mockResolvedValue(undefined);
+	});
+
+	it("lets anonymous requests through routes without requirements", async () => {
+		await expect(createGuard().canActivate(contextFor(undefined).context)).resolves.toBe(true);
+		expect(mocks.resolve).not.toHaveBeenCalled();
+	});
+
+	it("rejects anonymous requests to protected routes with 401", async () => {
+		const { context } = contextFor(undefined, { [REQUIRED_PERMISSION_KEY]: { action: "READ", resource: "USER" } });
+
+		await expect(createGuard().canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
+	});
+
+	it("binds the verified tenant into the request context (for RLS) on every authenticated request", async () => {
+		mocks.resolve.mockResolvedValue({
+			verified: { tenantId: "org-a" },
+			requested: { tenantId: "org-a", locationId: "loc-forged" },
+			target: { tenantId: "org-a", lifecycleState: "ACTIVE", membershipStatus: "ACTIVE" },
+		});
+		const { context } = contextFor(accessToken());
+
+		const tenant: RequestTenant | undefined = await requestContext.run(
+			{ correlationId: "corr-ctx", ip: undefined, userAgent: undefined, edgeLocation: undefined },
+			async () => {
+				await createGuard().canActivate(context);
+				return requestContext.current()?.tenant;
+			},
+		);
+
+		// Only the VERIFIED ids — a requested-but-unproven location never reaches the context.
+		expect(tenant).toEqual({ tenantId: "org-a", storeId: undefined, locationId: undefined });
+	});
+
+	it("rejects an active member of a suspended tenant on an ordinary route", async () => {
+		mocks.resolve.mockResolvedValue({
+			verified: { tenantId: "org-a" },
+			requested: { tenantId: "org-a" },
+			target: { tenantId: "org-a", lifecycleState: "SUSPENDED", membershipStatus: "ACTIVE" },
+		});
+
+		await expect(createGuard().canActivate(contextFor(accessToken()).context)).rejects.toBeInstanceOf(TenantSuspendedError);
+	});
+
+	it("allows an active member of a suspended tenant on a lifecycle route", async () => {
+		mocks.resolve.mockResolvedValue({
+			verified: { tenantId: "org-a" },
+			requested: { tenantId: "org-a" },
+			target: { tenantId: "org-a", lifecycleState: "SUSPENDED", membershipStatus: "ACTIVE" },
+		});
+
+		await expect(createGuard().canActivate(contextFor(accessToken(), { [TENANT_LIFECYCLE_ROUTE_KEY]: true }).context)).resolves.toBe(true);
+	});
+
+	it("LIFE-003: a deleted tenant is not found", async () => {
+		mocks.resolve.mockResolvedValue({
+			verified: { tenantId: "org-a" },
+			requested: { tenantId: "org-a" },
+			target: { tenantId: "org-a", lifecycleState: "DELETED", membershipStatus: "ACTIVE" },
+		});
+
+		await expect(createGuard().canActivate(contextFor(accessToken()).context)).rejects.toBeInstanceOf(NotFoundError);
+	});
+
+	it("rejects a member of a suspended tenant reached through a store, with no :tenantSlug on the route", async () => {
+		mocks.resolve.mockResolvedValue({
+			verified: { tenantId: "org-a", storeId: "store-1" },
+			requested: { storeId: "store-1" },
+			target: { tenantId: "org-a", lifecycleState: "SUSPENDED", membershipStatus: "ACTIVE" },
+		});
+
+		await expect(createGuard().canActivate(contextFor(accessToken()).context)).rejects.toBeInstanceOf(TenantSuspendedError);
+	});
+
+	it("rejects support access to a suspended tenant on an ordinary route (an approved grant is active access, not an exemption)", async () => {
+		mocks.resolve.mockResolvedValue({
+			verified: { tenantId: "org-a" },
+			requested: { tenantId: "org-a" },
+			target: { tenantId: "org-a", lifecycleState: "SUSPENDED", membershipStatus: "ACTIVE" },
+		});
+
+		await expect(createGuard().canActivate(contextFor(accessToken()).context)).rejects.toBeInstanceOf(TenantSuspendedError);
+	});
+
+	it("leaves a caller with no access to the ordinary authorization answer, revealing nothing about the tenant's state", async () => {
+		mocks.resolve.mockResolvedValue({ verified: {}, requested: { tenantId: "org-a" }, target: { tenantId: "org-a", lifecycleState: "SUSPENDED", membershipStatus: "none" } });
+
+		await expect(createGuard().canActivate(contextFor(accessToken()).context)).resolves.toBe(true);
+	});
+
+	it("rejects a suspended membership with MEMBERSHIP_INACTIVE", async () => {
+		mocks.resolve.mockResolvedValue({
+			verified: {},
+			requested: { tenantId: "org-a" },
+			target: { tenantId: "org-a", lifecycleState: "ACTIVE", membershipStatus: "SUSPENDED" },
+		});
+
+		await expect(createGuard().canActivate(contextFor(accessToken()).context)).rejects.toBeInstanceOf(MembershipInactiveError);
+	});
+
+	it("audits decisions with the request context's correlation id, not a raw header", async () => {
+		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: { action: "READ", resource: "ORDER" } });
+
+		await requestContext.run({ correlationId: "corr-from-context", ip: undefined, userAgent: undefined, edgeLocation: undefined }, () => createGuard().canActivate(context));
+
+		expect(mocks.authorize).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ requestId: "corr-from-context" }));
+	});
+
+	it("propagates a forged tenant header rejection", async () => {
+		mocks.resolve.mockRejectedValue(new AuthorizationException());
+
+		await expect(createGuard().canActivate(contextFor(accessToken()).context)).rejects.toBeInstanceOf(AuthorizationException);
+	});
+
+	it("enforces @RequirePermission through kernel.authorize with the verified subject and requested tenant attributes", async () => {
+		mocks.resolve.mockResolvedValue({
+			verified: { tenantId: "org-a" },
+			requested: { tenantId: "org-a" },
+			target: { tenantId: "org-a", lifecycleState: "ACTIVE", membershipStatus: "ACTIVE" },
+		});
+		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: { action: "READ", resource: "ORDER" } });
+
+		await createGuard().canActivate(context);
+
+		expect(mocks.authorize).toHaveBeenCalledWith(
+			{ subject: { userId: "user-1", isSuperAdmin: false, tenantId: "org-a" }, action: "READ", resource: "ORDER", resourceAttributes: { tenantId: "org-a" } },
+			expect.objectContaining({ ipAddress: "127.0.0.1", userAgent: "vitest", requestId: "corr-1" }),
+		);
+	});
+
+	it("denies when the kernel denies", async () => {
+		mocks.authorize.mockRejectedValue(new AuthorizationException());
+		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: { action: "DELETE", resource: "USER" } });
+
+		await expect(createGuard().canActivate(context)).rejects.toBeInstanceOf(AuthorizationException);
+	});
+
+	it("rejects stale tokens on protected routes", async () => {
+		mocks.userFindUnique.mockResolvedValue({ tokenVersion: 2 });
+		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: { action: "READ", resource: "USER" } });
+
+		await expect(createGuard().canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
+	});
+
+	describe("@Authorize", () => {
+		it("is enforced with the resource id read from the named route param", async () => {
+			const requirement: AuthorizationRequirement = { action: "UPDATE", resource: "PERMISSION", resourceId: "id" };
+			const { context } = contextFor(accessToken(), { [AUTHORIZE_KEY]: requirement }, { id: "perm-9" });
+
+			await createGuard().canActivate(context);
+
+			expect(mocks.authorize).toHaveBeenCalledWith(expect.objectContaining({ action: "UPDATE", resource: "PERMISSION", resourceId: "perm-9" }), expect.anything());
+		});
+
+		it("resolves self() to the caller for self-service routes", async () => {
+			const requirement: AuthorizationRequirement = { action: "UPDATE", resource: "USER", resourceId: self() };
+
+			await createGuard().canActivate(contextFor(accessToken(), { [AUTHORIZE_KEY]: requirement }).context);
+
+			expect(mocks.authorize).toHaveBeenCalledWith(expect.objectContaining({ resource: "USER", resourceId: "user-1" }), expect.anything());
+		});
+
+		it("fails closed when the declared resource id cannot be resolved", async () => {
+			const requirement: AuthorizationRequirement = { action: "DELETE", resource: "ORDER", resourceId: "id" };
+
+			await expect(createGuard().canActivate(contextFor(accessToken(), { [AUTHORIZE_KEY]: requirement }).context)).rejects.toBeInstanceOf(AuthorizationException);
+			expect(mocks.authorize).not.toHaveBeenCalled();
+		});
+
+		it("never lets declared attributes override the routed tenant", async () => {
+			mocks.resolve.mockResolvedValue({ verified: {}, requested: { tenantId: "org-a" }, target: { tenantId: "org-a", lifecycleState: "ACTIVE", membershipStatus: "none" } });
+			const requirement: AuthorizationRequirement = { action: "UPDATE", resource: "ORDER", attributes: { tenantId: "org-evil", status: "PENDING" } };
+
+			await createGuard().canActivate(contextFor(accessToken(), { [AUTHORIZE_KEY]: requirement }).context);
+
+			expect(mocks.authorize).toHaveBeenCalledWith(expect.objectContaining({ resourceAttributes: { tenantId: "org-a", status: "PENDING" } }), expect.anything());
+		});
+	});
+
+	describe("multi-permission and role requirements", () => {
+		const anyOf = {
+			[REQUIRED_PERMISSIONS_KEY]: {
+				mode: "any",
+				permissions: [
+					["UPDATE", "ROLE"],
+					["UPDATE", "PERMISSION"],
+				],
+			},
+		};
+
+		it("ANY mode allows when one permission is allowed and audits it", async () => {
+			mocks.explain.mockImplementation((request: AuthorizationRequest) => Promise.resolve(result(request.resource === "PERMISSION" ? "ALLOW" : "DENY", request)));
+
+			await expect(createGuard().canActivate(contextFor(accessToken(), anyOf).context)).resolves.toBe(true);
+			expect(mocks.auditResult).toHaveBeenCalledWith(expect.objectContaining({ decision: "ALLOW" }), expect.anything());
+		});
+
+		it("ANY mode denies and audits every denial when nothing is allowed", async () => {
+			mocks.explain.mockImplementation((request: AuthorizationRequest) => Promise.resolve(result("DENY", request)));
+
+			await expect(createGuard().canActivate(contextFor(accessToken(), anyOf).context)).rejects.toBeInstanceOf(AuthorizationException);
+			expect(mocks.auditResult).toHaveBeenCalledTimes(2);
+		});
+
+		it("ALL mode authorizes each permission", async () => {
+			const { context } = contextFor(accessToken(), {
+				[REQUIRED_PERMISSIONS_KEY]: {
+					mode: "all",
+					permissions: [
+						["READ", "ROLE"],
+						["READ", "PERMISSION"],
+					],
+				},
+			});
+
+			await createGuard().canActivate(context);
+
+			expect(mocks.authorize).toHaveBeenCalledTimes(2);
+		});
+
+		it("evaluates role requirements natively (no pseudo ASSUME action)", async () => {
+			const roles = { [REQUIRED_ROLES_KEY]: { mode: "any", roles: ["Admin"] } };
+			mocks.hasRoles.mockResolvedValue(false);
+
+			await expect(createGuard().canActivate(contextFor(accessToken(), roles).context)).rejects.toBeInstanceOf(AuthorizationException);
+			expect(mocks.hasRoles).toHaveBeenCalledWith("user-1", ["Admin"], "any");
+
+			mocks.hasRoles.mockResolvedValue(true);
+			await expect(createGuard().canActivate(contextFor(accessToken(), roles).context)).resolves.toBe(true);
+		});
+	});
+
+	it("audits the SuperAdmin bypass on protected routes", async () => {
+		const superAdmin = accessToken({ isSuperAdmin: true });
+		const { context } = contextFor(superAdmin, { [REQUIRED_PERMISSION_KEY]: { action: "DELETE", resource: "USER" } });
+
+		await expect(createGuard().canActivate(context)).resolves.toBe(true);
+		expect(mocks.authorize).not.toHaveBeenCalled();
+		expect(mocks.recordBypass).toHaveBeenCalledWith("user-1", expect.stringContaining("Bypassed authorization for"));
+		expect(superAdmin.hasAdminAccess).toBe(true);
+	});
+
+	it("computes hasAdminAccess from the kernel", async () => {
+		const plain = accessToken();
+		mocks.can.mockResolvedValue("ALLOW");
+
+		await createGuard().canActivate(contextFor(plain).context);
+
+		expect(plain.hasAdminAccess).toBe(true);
+		expect(mocks.can).toHaveBeenCalledWith(expect.objectContaining({ action: "READ", resource: "ADMIN_DASHBOARD" }));
+	});
+});

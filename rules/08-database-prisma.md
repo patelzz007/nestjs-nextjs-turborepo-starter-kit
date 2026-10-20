@@ -26,7 +26,55 @@ model PromoRedemption {
 
 ## Naming
 
-Consistent naming for tables, columns, indexes, constraints, enum values. Model names: `PascalCase` singular (`Order`, not `Orders`). Field names: `camelCase`. Document exceptions where the convention is deliberately broken.
+Consistent naming for tables, columns, indexes, constraints, enum values. Model names: `PascalCase` singular (`Order`, not `Orders`). Field names: `camelCase`. **The database uses exactly the same names**: a table is named like its model (`"Order"`) and a column like its field (`"createdAt"`) — no `@map` / `@@map`, no snake_case anywhere. Raw SQL therefore always double-quotes them: `SELECT "createdAt" FROM "Order"`. A spec fails if the generated schema declares any `@map`.
+
+## The schema and the base model
+
+The schema is one file, **`apps/api/prisma/schema.prisma`**, always plain valid Prisma. Prisma has no inheritance, so the base model is declared once at the top of that file as a comment block (`// @base-model BaseModel` … `// @end-base-model`), and every model opts in with `/// @extends BaseModel`. The in-repo schema engine (`apps/api/prisma/engine/schema-engine.ts`, run as `pnpm db:schema`) writes the base fields into each model as a fenced, **managed block** and rewrites it on every run. You write a new model with only its own fields:
+
+```prisma
+/// An order placed by a customer.
+/// @extends BaseModel
+model Order {
+  organizationId String
+  status         OrderStatus @default(PENDING)
+
+  @@index([organizationId, isDeleted, status, createdAt])
+}
+```
+
+and after `pnpm db:schema` (every `db:*` script runs it first) it reads:
+
+```prisma
+/// @extends BaseModel
+model Order {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("…"))
+  …
+  // ── end BaseModel ──
+
+  organizationId String
+  …
+}
+```
+
+Never edit inside a managed block — change the base definition at the top of the file and re-run. Until you run it, the editor flags a brand-new model as having no `id`; that is expected.
+
+`BaseModel` gives **every** model, without you typing them:
+
+| Field | Type | Filled by |
+| --- | --- | --- |
+| `id` | `String @id @default(uuid(7))` — UUID v7, time-ordered | Prisma; app code that needs the id first uses `newRowId()` (`@workspace/shared`), the seed `deterministicUuid()` (a stable v7), raw SQL `uuidv7()` |
+| `createdAt` / `updatedAt` | `BigInt` epoch ms | DB default; the row-audit trigger stamps `updatedAt` on every UPDATE |
+| `createdBy` / `updatedBy` | `String?` actor | the row-audit trigger, from the session actor |
+| `isDeleted` / `deletedAt` / `deletedBy` | soft delete | your code sets `isDeleted`/`deletedAt`; the trigger keeps the three coherent and fills `deletedBy` |
+
+Rules the engine enforces on every run: the base block exists and declares only fields; every model declares `/// @extends BaseModel` directly above it; a model name is declared once; a managed block is closed. A model **overrides** a base field by declaring it again below the managed block, and a model with its own primary key (an `@id` of another name, or `@@id`) does not inherit `id`. The documented overrides: the vendored geo tables keep the dataset's integer ids, and `InboxProcessedEvent` / `GithubWebhookDelivery` keep their natural keys.
+
+The **actor** (`app_current_actor()`, `prisma/rls/row-audit.ts`) is the session's user id, else `api_key:<id>`, else `system:<operation>` for an allowlisted system operation, else the connection's `app.actor` setting — the seed connects as `system:seed`, the analytics consumer as `system:analytics-consumer`. A value the statement supplies itself is never overwritten. `db:apply-security` installs the trigger on every table and fails on a table missing a base column.
+
+Workflow: edit `schema.prisma` → `pnpm db:migrate:create --name <change>` (every `db:*` script runs `pnpm db:schema` first, which fills the managed blocks) → review the generated SQL. `pnpm --filter @workspace/api db:schema --check` (and a spec) fail when a model's managed block is missing or out of date.
 
 ## Indexes
 
@@ -208,11 +256,11 @@ Every schema change needs: a migration, a test/verification step, a deployment c
 
 - **Migration history is append-only after the first deploy — never squash.** Once a migration folder has reached a shared branch, never edit, rename, delete or re-squash it: every database that applied it records its name and checksum in `_prisma_migrations`. A change that must be undone is undone by another forward migration. Squashing is only for a fork that has never been deployed anywhere (`docs/technical/database.md`, "Migration history is append-only").
 - **The only way to drop history is the explicit baseline** (`apps/api/prisma/migrations-baseline.json`: `{ baseline, reason, since }`). CI's migration-history guard ignores migrations older than the baseline. In the same change that moves the baseline FORWARD, to a migration that exists, the migrations it passes may be deleted (never edited); the guard prints a "MIGRATION BASELINE MOVED" notice so reviewers see it. Moving the baseline is acceptable only when **no shared or deployed database ever ran the dropped migrations**. Otherwise `migrate deploy` there fails: it finds applied migrations missing locally, and the new baseline would recreate existing tables. Procedure: `docs/technical/operations/ci.md`, "Migration baseline".
-- **Migrations are generated, not hand-written.** Edit `schema.prisma`, then `pnpm db:migrate:create --name <change>` (or `db:migrate`). The generated SQL must contain only your change; if it contains anything else, the schema has drifted — fix the drift, don't strip the SQL by hand.
+- **Migrations are generated, not hand-written.** Edit `prisma/schema.prisma`, then `pnpm db:migrate:create --name <change>` (or `db:migrate`). The generated SQL must contain only your change; if it contains anything else, the schema has drifted — fix the drift, don't strip the SQL by hand.
 - **`dbgenerated(...)` defaults are written in Postgres's canonical form** — the text `pg_get_expr` returns, which Prisma compares literally. The epoch-ms default is exactly `dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")`. Any other spelling (`EXTRACT(EPOCH …) * 1000`) means the same thing but makes every future migration re-emit `ALTER COLUMN … SET DEFAULT` for every such column. For a new expression: apply it once, read `information_schema.columns.column_default`, and copy that text back into the schema.
-- **`pnpm db:check-drift` must pass** (`apps/api/scripts/check-migration-drift.ts`): it replays `prisma/migrations` into the throwaway `SHADOW_DATABASE_URL` database and fails if the result differs from `schema.prisma`.
+- **`pnpm db:check-drift` must pass** (`apps/api/scripts/db.ts check-drift`): it replays `prisma/migrations` into the throwaway `SHADOW_DATABASE_URL` database and fails if the result differs from `schema.prisma`.
 - **RLS, roles and grants are not migrations.** They live in `apps/api/prisma/rls.sql` and `apps/api/prisma/rls/NN-*.sql` and are applied by `pnpm db:apply-security` (run by `db:migrate`, `db:deploy`, `db:push` and `db:reset`). Never append them to a `migration.sql`.
-- **Documented exception — the vendored geography dataset.** `Region`, `Subregion`, `Country`, `State` and `City` (seeded from dr5hn/countries-states-cities-database by `prisma/seed/geo-seed.ts`) keep the source dataset's column shape: `createdAt`/`updatedAt` are `DateTime @db.Timestamp(0)`, and `createdAt` defaults to the dataset's fixed `dbgenerated("'2014-01-01 12:01:01'::timestamp without time zone")` (canonical form, like every `dbgenerated`). This keeps the tables a faithful mirror of the published dataset. The exception covers these five tables only; every other table uses epoch-ms `BigInt` timestamps, and a new table never copies this shape.
+- **Documented exception — the vendored geography dataset.** `Region`, `Subregion`, `Country`, `State` and `City` (seeded from dr5hn/countries-states-cities-database by `prisma/seed/geo-seed.ts`) override the base model's `id` with the dataset's own `Int` ids, so the rows stay a faithful mirror of the published dataset and its foreign keys. Everything else — epoch-ms `createdAt`/`updatedAt`, the actor columns and soft delete — comes from the base model like on every other table. A new table never overrides `id` without an equally structural reason.
 
 ## Seed data — mandatory on every schema change
 

@@ -8,7 +8,7 @@
 // app and its `lib/routes.ts` + this file change together (docs/technical/frontend/routing.md).
 
 import { listFilterKey } from "./schemas/api/list-query";
-import { MfaRecoveryRecordStatusSchema } from "./schemas/auth/mfa-recovery";
+import { MfaRecoveryRecordStatusSchema } from "./contexts/identity/schemas/mfa-recovery";
 
 /** The admin MFA-recovery queue page (all statuses). */
 const ADMIN_MFA_RECOVERY_QUEUE_PATH = "/users/mfa-recovery";
@@ -32,8 +32,8 @@ export interface AuthAppLinks {
 /** Consumer web app pages the API links to. */
 export interface WebAppLinks {
 	readonly home: string;
-	/** Signed-in browse (the `/rewardhub` shell). */
-	readonly rewardHub: string;
+	/** Signed-in browse (the `/dashboard` shell). */
+	readonly dashboard: string;
 	/** The signed-in user's claimed rewards. */
 	readonly wallet: string;
 	/** Personal account — profile, password, 2FA, sessions. */
@@ -77,9 +77,9 @@ export const APP_LINKS: AppLinks = {
 	},
 	web: {
 		home: "/",
-		rewardHub: "/rewardhub",
-		wallet: "/rewardhub/wallet",
-		account: "/rewardhub/account",
+		dashboard: "/dashboard",
+		wallet: "/dashboard/wallet",
+		account: "/dashboard/account",
 	},
 	merchant: {
 		onboarding: "/onboarding",

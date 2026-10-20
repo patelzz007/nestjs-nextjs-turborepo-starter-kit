@@ -1,13 +1,13 @@
 "use client";
 
-import { useMerchantAuthorizationStatus } from "@/components/access/merchant-authorization-provider";
+import { useMerchantAuthorizationStatus } from "@/contexts/organizations/components/access/merchant-authorization-provider";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { useMerchantBreadcrumb } from "@/components/common/merchant-breadcrumb";
-import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/lib/auth/enrollment";
+import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/contexts/identity/lib/enrollment";
 import { applyEnrollmentNavLock } from "@/lib/navigation/apply-enrollment-nav-lock";
 import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
 import { useMerchantSessionProfile } from "@/lib/session/profile";
-import type { ServerUser } from "@/lib/auth/server";
+import type { ServerUser } from "@/contexts/identity/lib/server";
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveMerchantPinnedMenuItems } from "@/lib/navigation/pinned-items";
@@ -15,9 +15,8 @@ import { MERCHANT_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
 import { renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { useCommandPalettePinnedUrls } from "@workspace/client/lib/features/command-palette/facade";
 import { useSidebarCommands, useSidebarExpandedItems, useSidebarSearchQuery, useSidebarSectionOrder } from "@workspace/client/lib/features/sidebar/facade";
-import { resolveActiveOrganizationMembership } from "@/lib/session/server-capabilities";
-import { useAuthorization } from "@workspace/client/lib/auth/can";
-import { useOwnAvatar } from "@workspace/client/lib/auth/profile/use-own-avatar";
+import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
+import { useOwnAvatar } from "@workspace/client/lib/contexts/identity/profile/use-own-avatar";
 import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { breadcrumbPageLabel } from "@workspace/ui/components/breadcrumb-context";
 import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer, type PanelSidebarPinnedItem } from "@workspace/ui/components/panel-sidebar-nav";
@@ -27,18 +26,22 @@ import { buildSidebarView } from "@workspace/ui/lib/sidebar/menu-view";
 import { withResolvedSidebarMenuUrls } from "@workspace/ui/lib/sidebar/resolve-menu-hrefs";
 import { AppShellSidebarAccount } from "@workspace/ui/components/app-shell-sidebar-account";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
-import { useOrganizationPath } from "@/lib/org/use-organization-path";
+import { useOrganizationPath } from "@/contexts/organizations/lib/org/use-organization-path";
 import { ORG_ROUTES } from "@/lib/routes";
 import { useMerchantLogout } from "@/lib/session/use-merchant-logout";
 import { AlertCircle } from "lucide-react";
 import { MerchantContextSwitcher } from "@/components/layout/merchant-context-switcher";
 import { merchantProfileMenuItems } from "@/components/layout/merchant-profile-menu";
+import { useActiveMembership } from "@/features/tenant-context/facade";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
 export interface MerchantSidebarPanelProps {
+	/** The first page of the member's stores (the switcher's list). */
 	readonly memberships: readonly OrganizationRewardMembershipResponse[];
+	/** Whether the member has more stores than that page — the switcher then links to the stores page. */
+	readonly hasMoreStores: boolean;
 	readonly organizationSlug: string | undefined;
 	readonly onStoreChange: (slug: string) => void;
 	/** The identity the server decoded — shown on first paint, until the session profile has loaded. */
@@ -54,7 +57,7 @@ function renderMerchantMenuIcon(iconName: string | undefined, className: string)
 	return <Icon className={className} aria-hidden="true" />;
 }
 
-export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreChange, initialUser = null }: MerchantSidebarPanelProps): React.JSX.Element {
+export function MerchantSidebarPanel({ memberships, hasMoreStores, organizationSlug, onStoreChange, initialUser = null }: MerchantSidebarPanelProps): React.JSX.Element {
 	const pathname = usePathname();
 	const sessionProfile = useMerchantSessionProfile();
 	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip, enrollmentReason } = useMerchantEnrollmentLock();
@@ -63,7 +66,7 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 	const avatar = useOwnAvatar();
 	const { capabilities: menuFilterCapabilities } = useMerchantAuthorizationStatus();
 	const { status: breadcrumbStatus } = useMerchantBreadcrumb();
-	const activeMembership = resolveActiveOrganizationMembership(memberships, organizationSlug);
+	const { membership: activeMembership } = useActiveMembership();
 
 	const sectionOrder = useSidebarSectionOrder();
 	const searchQuery = useSidebarSearchQuery();
@@ -135,7 +138,7 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 	const showNoCapabilities = menuFilterCapabilities.length === 0 && activeMembership !== undefined && !view.isSearching && view.sections.length === 0;
 	return (
 		<div className="flex h-full min-h-0 flex-col overflow-hidden text-sidebar-foreground">
-			<MerchantContextSwitcher memberships={memberships} organizationSlug={organizationSlug} onStoreChange={onStoreChange} />
+			<MerchantContextSwitcher memberships={memberships} hasMoreStores={hasMoreStores} organizationSlug={organizationSlug} onStoreChange={onStoreChange} />
 
 			<PanelSidebarNav
 				view={view}
@@ -164,7 +167,7 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 						{showNoCapabilities ? (
 							<div className="flex flex-col items-center justify-center px-3 py-10 text-center">
 								<p className="text-sm text-muted-foreground">No portal access configured for {activeMembership.role}.</p>
-								<p className="mt-1 text-xs text-muted-foreground">Ask an admin to grant capabilities under Reward Hub → Merchant roles.</p>
+								<p className="mt-1 text-xs text-muted-foreground">Ask a platform admin to grant capabilities under Merchant roles.</p>
 							</div>
 						) : null}
 					</>

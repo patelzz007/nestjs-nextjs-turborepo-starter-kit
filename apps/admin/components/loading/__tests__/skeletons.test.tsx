@@ -48,7 +48,7 @@ import {
 	type TablePageShape,
 } from "@/components/loading/table-page-skeleton";
 import { MfaRecoveryRequestSkeleton, UserDetailPageSkeleton } from "@/components/loading/user-skeletons";
-import { ADMIN_CUSTOMER_KPIS, ADMIN_REWARD_KPIS, ADMIN_SALES_KPIS } from "@/lib/analytics/admin-analytics";
+import { ADMIN_CUSTOMER_KPIS, ADMIN_REWARD_KPIS, ADMIN_SALES_KPIS } from "@/contexts/reporting/lib/admin-analytics";
 
 afterEach(() => {
 	cleanup();

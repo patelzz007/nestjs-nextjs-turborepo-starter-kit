@@ -13,7 +13,7 @@
 //     checked and rendered by the API's own ImageRenditionService: a seed image
 //     that breaks its rules fails the seed, and every rendition is real and published;
 //   - a deleted file was deleted by a user: the file AND every row that pointed
-//     at it are soft-deleted with the same `deleted_by`, and the bytes (with its
+//     at it are soft-deleted with the same `deletedBy`, and the bytes (with its
 //     renditions') removed.
 // Every row is upserted on its id, so a re-run converges.
 
@@ -22,14 +22,15 @@ import { DAY_MS, getFileCategoryPolicy, type FileCategory, type StorageProvider 
 
 import { getApiConfig } from "../../src/config/api-config";
 import { TypedConfigService } from "../../src/config/typed-config.service";
-import { LocalTransferTokenService } from "../../src/modules/storage/adapters/local/local-transfer-token.service";
-import { createMalwareScanner } from "../../src/modules/storage/adapters/scanners/malware-scanner.factory";
-import type { MalwareScanner } from "../../src/modules/storage/domain/malware-scanner.port";
-import { ImageRenditionService } from "../../src/modules/files/services/image-rendition.service";
-import { SharpImageProcessor } from "../../src/modules/storage/adapters/images/sharp-image-processor";
-import { createStorageAdapter, type StorageAdapter } from "../../src/modules/storage/factory/storage-adapter.factory";
-import { buildFinalStoragePath } from "../../src/modules/storage/utils/file-path.util";
-import { toStorageObjectLocator } from "../../src/modules/storage/utils/storage-locator.util";
+import { LocalTransferTokenService } from "../../src/platform/infrastructure/storage/adapters/local/local-transfer-token.service";
+import { createMalwareScanner } from "../../src/platform/infrastructure/storage/adapters/scanners/malware-scanner.factory";
+import type { MalwareScanner } from "../../src/platform/infrastructure/storage/domain/malware-scanner.port";
+import { ImageRenditionService } from "../../src/contexts/files/infrastructure/adapters/image-rendition.service";
+import { fileVariantRowOf } from "../../src/contexts/files/infrastructure/persistence/prisma-stored-file.repository";
+import { SharpImageProcessor } from "../../src/platform/infrastructure/storage/adapters/images/sharp-image-processor";
+import { createStorageAdapter, type StorageAdapter } from "../../src/platform/infrastructure/storage/factory/storage-adapter.factory";
+import { buildFinalStoragePath } from "../../src/platform/infrastructure/storage/utils/file-path.util";
+import { toStorageObjectLocator } from "../../src/platform/infrastructure/storage/utils/storage-locator.util";
 import { prisma } from "./client";
 import { sha256BytesHex } from "./helpers";
 
@@ -47,7 +48,7 @@ export interface SeedObject {
 	readonly mimeType: SeedFileMimeType;
 	readonly bytes: Buffer;
 	readonly uploadedById: string;
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 	readonly uploadedDaysAgo: number;
 }
 
@@ -119,7 +120,7 @@ export function createSeedFileWriter(): SeedFileWriter {
 	const scanner = createMalwareScanner(config.storage.malwareScanner);
 	const locatorFor = (path: string): ReturnType<typeof toStorageObjectLocator> => toStorageObjectLocator(provider, container, path);
 	// Images with pixel rules go through the API's own checks and renditions (sharp), exactly as uploads do.
-	const renditions = new ImageRenditionService(config, storage, storage, new SharpImageProcessor());
+	const renditions = new ImageRenditionService(storage, storage, new SharpImageProcessor());
 
 	const uploadSeedObject = async (input: Parameters<StorageAdapter["upload"]>[0]): ReturnType<StorageAdapter["upload"]> => {
 		try {
@@ -167,7 +168,7 @@ export function createSeedFileWriter(): SeedFileWriter {
 			scannedAt: daysAgo(object.uploadedDaysAgo),
 			scanResult: scan.scanResult,
 			uploadedById: object.uploadedById,
-			organizationId: object.organizationId,
+			tenantId: object.tenantId,
 			productId: object.category === "PRODUCT_IMAGE" ? object.ownerId : null,
 			createdAt: daysAgo(object.uploadedDaysAgo),
 			updatedAt: daysAgo(object.uploadedDaysAgo),
@@ -178,7 +179,7 @@ export function createSeedFileWriter(): SeedFileWriter {
 		} satisfies Prisma.StoredFileUncheckedCreateInput;
 		const file = await prisma.storedFile.upsert({ where: { id: object.id }, create: row, update: row });
 		for (const variant of await renditions.renderAndPublish(file, uploaded.locator)) {
-			const variantRow = { ...variant, fileId: file.id, isDeleted: false, deletedAt: null, deletedBy: null } satisfies Prisma.FileVariantUncheckedCreateInput;
+			const variantRow = fileVariantRowOf(file.id, variant);
 			await prisma.fileVariant.upsert({ where: { fileId_kind: { fileId: file.id, kind: variant.kind } }, create: variantRow, update: variantRow });
 		}
 		return stored;
@@ -195,7 +196,7 @@ export function createSeedFileWriter(): SeedFileWriter {
 		const softDelete = { isDeleted: true, deletedAt, deletedBy, updatedAt: deletedAt };
 		await prisma.storedFile.update({ where: { id: fileId }, data: { status: "DELETED", ...softDelete } });
 		await prisma.productImage.updateMany({ where: { fileId }, data: { ...softDelete, isPrimary: false } });
-		await prisma.organizationAsset.updateMany({ where: { fileId }, data: softDelete });
+		await prisma.tenantAsset.updateMany({ where: { fileId }, data: softDelete });
 		await prisma.userAvatar.updateMany({ where: { fileId }, data: softDelete });
 		await prisma.fileVariant.updateMany({ where: { fileId }, data: softDelete });
 		await storage.deleteObject(locatorFor(stored.storagePath));

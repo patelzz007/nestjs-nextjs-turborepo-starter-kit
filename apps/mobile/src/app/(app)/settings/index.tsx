@@ -11,13 +11,11 @@ import { Card } from "@workspace/ui-native/components/card";
 import { DetailList, type DetailItem } from "@workspace/ui-native/components/detail-list";
 import { ListRow } from "@workspace/ui-native/components/list-row";
 import { Screen } from "../../../components/screen";
-import { SignOutDialog } from "../../../features/auth/sign-out-dialog";
-import { useSignOut } from "../../../features/auth/use-sign-out";
-import { useSignOutConfirmation } from "../../../features/auth/use-sign-out-confirmation";
+import { SignOutDialog, useSignOut, useSignOutConfirmation } from "../../../contexts/identity";
 import { useAppLockEnabled, usePreferencesCommands, useThemePreference } from "../../../features/preferences/facade";
 import { THEME_LABELS } from "../../../features/preferences/labels";
 import { PDF_VIEWER_TITLE } from "../../../features/pdf-viewer/labels";
-import { TILL_TITLE } from "../../../features/till/labels";
+import { TILL_TITLE } from "../../../contexts/pos";
 import { ROUTES } from "../../../runtime/routes";
 import { useReadyRuntime } from "../../../runtime/runtime-context";
 

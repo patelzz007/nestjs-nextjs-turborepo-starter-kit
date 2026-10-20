@@ -1,4 +1,4 @@
-import type { ServerRenderedSession } from "../../auth/session/server-rendered-session";
+import type { ServerRenderedSession } from "../../contexts/identity/session/server-rendered-session";
 import { createFeatureStore, type FeatureStore } from "../../state/feature-store";
 import { authActions, type AuthAction } from "./actions";
 import { createAuthQueryCacheEffect, createAuthTabSyncEffect, type AuthBroadcaster, type AuthQueryCache } from "./effects";

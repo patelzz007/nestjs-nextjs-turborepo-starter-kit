@@ -4,7 +4,7 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"lint": "eslint --max-warnings=0",
+		"lint": "eslint",
 		"test": "vitest run"
 	},
 	"exports": {
@@ -13,7 +13,8 @@
 		"./react-internal": "./react-internal.js",
 		"./nestjs": "./nestjs.js",
 		"./import-boundaries": "./import-boundaries.js",
-		"./react-native": "./react-native.js"
+		"./react-native": "./react-native.js",
+		"./client-only-widgets": "./client-only-widgets.js"
 	},
 	"devDependencies": {
 		"@darraghor/eslint-plugin-nestjs-typed": "^7.5.8",

@@ -6,8 +6,8 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { CryptoService } from "../src/modules/auth/services/crypto.service";
-import { TokenService } from "../src/modules/auth/services/token.service";
+import { CryptoService } from "../src/contexts/identity/infrastructure/security/crypto.service";
+import { TokenService } from "../src/contexts/identity/infrastructure/security/token.service";
 import { createE2eApp, login, mutationHeaders, uniqueClientIp, type InjectResponse } from "./e2e-helpers";
 
 /**
@@ -47,9 +47,9 @@ describe("Auth flow tracking (e2e)", () => {
 	async function latestFlow(flow: string): Promise<RecordedFlow> {
 		const result = await verifier.query<RecordedFlow>(
 			`SELECT payload->'payload'->>'userId' AS "userId", payload->'payload'->>'status' AS status, payload->'payload'->>'error' AS error
-			 FROM public.outbox_events
-			 WHERE event_type = 'auth.flow' AND payload->'payload'->>'flow' = $1 AND created_at >= $2
-			 ORDER BY created_at DESC LIMIT 1`,
+			 FROM public."OutboxEvent"
+			 WHERE "eventType" = 'auth.flow' AND payload->'payload'->>'flow' = $1 AND "createdAt" >= $2
+			 ORDER BY "createdAt" DESC LIMIT 1`,
 			[flow, startedAt],
 		);
 		const row = result.rows.at(0);
@@ -60,7 +60,7 @@ describe("Auth flow tracking (e2e)", () => {
 	}
 
 	async function userIdOf(address: string): Promise<string> {
-		const result = await verifier.query<{ id: string }>("SELECT id FROM public.users WHERE email = $1", [address]);
+		const result = await verifier.query<{ id: string }>('SELECT id FROM public."User" WHERE email = $1', [address]);
 		const row = result.rows.at(0);
 		if (row === undefined) {
 			throw new Error(`no user ${address}`);
@@ -75,7 +75,7 @@ describe("Auth flow tracking (e2e)", () => {
 	});
 
 	afterAll(async () => {
-		await verifier.query("UPDATE public.users SET is_deleted = true, deleted_at = $2 WHERE email = $1", [email, Date.now()]);
+		await verifier.query('UPDATE public."User" SET "isDeleted" = true, "deletedAt" = $2 WHERE email = $1', [email, Date.now()]);
 		await verifier.end();
 		await app.close();
 	});

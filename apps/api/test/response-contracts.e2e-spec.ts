@@ -13,7 +13,7 @@ import { API_VERSION_PREFIX, ApiErrorResponseSchema, ProductSchema, type Product
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { ProductService } from "../src/modules/product/product.service";
+import { ProductApplicationService } from "../src/contexts/catalog/application/services/product.application-service";
 import { createE2eApp, extractCookie, login, mutationHeaders, uniqueClientIp, type LoginResult } from "./e2e-helpers";
 
 const SUPER_ADMIN_EMAIL = "superadmin@example.com";
@@ -72,7 +72,7 @@ describe("Response contracts (e2e)", () => {
 
 	it("strips internal fields a service returns: they never leave the API", async () => {
 		const internalRow = { ...PRODUCT, supplierSecret: INTERNAL_SUPPLIER_SECRET, costPrice: INTERNAL_COST_PRICE };
-		vi.spyOn(app.get(ProductService), "getById").mockResolvedValue(internalRow);
+		vi.spyOn(app.get(ProductApplicationService), "getById").mockResolvedValue(internalRow);
 
 		const response = await productDetail();
 
@@ -87,7 +87,7 @@ describe("Response contracts (e2e)", () => {
 	it("answers a handler result that violates its contract with a generic 500 that echoes nothing", async () => {
 		// `id` must be a UUID — a string that is not one type-checks but violates the contract.
 		const brokenRow: Product = { ...PRODUCT, id: INTERNAL_SUPPLIER_SECRET };
-		vi.spyOn(app.get(ProductService), "getById").mockResolvedValue(brokenRow);
+		vi.spyOn(app.get(ProductApplicationService), "getById").mockResolvedValue(brokenRow);
 
 		const response = await productDetail();
 

@@ -2,11 +2,12 @@ import { setTimeout as delay } from "node:timers/promises";
 
 import { EnvValidationError, KAFKA_TOPICS } from "@workspace/shared";
 
-import { loadConsumerEnv, type ConsumerEnv } from "./env";
+import { loadConsumerEnv, type ConsumerEnv } from "./infrastructure/env";
 import { RetentionScheduler, createConsumerPool, PgInboxStore } from "@workspace/messaging/inbox";
-import { assertTopicsExist, buildConsumerConfig, createKafkaClient } from "./kafka";
-import { createConsoleJsonLogger } from "./logger";
-import { ANALYTICS_CONSUMER_ID, handlePlatformMessage, type AbortableSleep, type MessageHandlerDeps } from "@workspace/messaging/inbox";
+import { assertTopicsExist, buildConsumerConfig, createKafkaClient } from "./infrastructure/kafka";
+import { createConsoleJsonLogger } from "./infrastructure/logger";
+import { ANALYTICS_CONSUMER_ID, type AbortableSleep, type MessageHandlerDeps } from "@workspace/messaging/inbox";
+import { projectPlatformEvent } from "./projections/platform-events/platform-events.projection";
 
 const SERVICE_NAME = "analytics-consumer";
 /** Exit code for "the worker cannot start with this configuration". */
@@ -132,7 +133,7 @@ async function main(): Promise<void> {
 		// transient failures itself (bounded), so it only rejects when parking
 		// is impossible or shutdown interrupts it; the record is then redelivered.
 		eachMessage: async ({ topic, partition, message }): Promise<void> => {
-			await handlePlatformMessage({ topic, partition, offset: message.offset, value: message.value }, handlerDeps);
+			await projectPlatformEvent({ topic, partition, message }, handlerDeps);
 		},
 	});
 

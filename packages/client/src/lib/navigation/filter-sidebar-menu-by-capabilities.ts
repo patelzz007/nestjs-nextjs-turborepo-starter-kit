@@ -1,6 +1,6 @@
 import type { CapabilitySlug } from "@workspace/shared";
 
-import { createGrantedCapabilities, isCapabilityGranted, type GrantedCapabilities } from "../auth/permission-check";
+import { createGrantedCapabilities, isCapabilityGranted, type GrantedCapabilities } from "../contexts/authorization/permission-check";
 import type {
 	CompiledSidebarMenuData,
 	CompiledSidebarMenuItem,

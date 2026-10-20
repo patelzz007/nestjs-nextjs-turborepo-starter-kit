@@ -7,9 +7,9 @@
 // ============================================
 
 import { API_BASE_URL } from "@workspace/client/lib/api/config";
-import { decodeJwtPayload } from "@workspace/client/lib/auth/edge/jwt";
-import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/auth/edge/restricted-session";
-import { isAllowedWebPostLoginRedirect, isWebAuthPath, isWebProtectedPath, isWebTokenAuthPath } from "@/lib/auth/routes";
+import { decodeJwtPayload } from "@workspace/client/lib/contexts/identity/edge/jwt";
+import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/contexts/identity/edge/restricted-session";
+import { isAllowedWebPostLoginRedirect, isWebAuthPath, isWebProtectedPath, isWebTokenAuthPath } from "@/contexts/identity/lib/routes";
 import { LOGIN_REDIRECT_PARAM, ROUTES } from "@/lib/routes";
 import { clientEnv } from "@/lib/env/env.client";
 import { serverEnv } from "@/lib/env/env.server";
@@ -23,7 +23,7 @@ import {
 	resolveProxySessionRefresh,
 	type AuthCookieClearOptions,
 	type ProxyRefreshResult,
-} from "@workspace/client/lib/auth/edge/proxy-refresh";
+} from "@workspace/client/lib/contexts/identity/edge/proxy-refresh";
 import { NodeEnvSchema } from "@workspace/shared";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -39,7 +39,7 @@ const COOKIE_CLEAR_OPTIONS: AuthCookieClearOptions = {
 };
 
 /** Where a signed-in visitor lands when the login page has no usable `redirect`. */
-const DEFAULT_AUTHENTICATED_PATH: string = ROUTES.rewardHub.browse;
+const DEFAULT_AUTHENTICATED_PATH: string = ROUTES.dashboard.browse;
 
 /**
  * The web app has no always-public exact routes: the guest-browsable pages

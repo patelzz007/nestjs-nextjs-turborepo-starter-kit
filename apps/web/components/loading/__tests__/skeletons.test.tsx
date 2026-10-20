@@ -8,13 +8,11 @@ import { ActivityPageSkeleton } from "@/components/loading/activity-skeleton";
 import { AuthFormSkeleton, AuthStatusLineSkeleton } from "@/components/loading/auth-form-skeleton";
 import { ClaimQrSkeleton } from "@/components/loading/claim-qr-skeleton";
 import { HelloProfileSkeleton } from "@/components/loading/hello-profile-skeleton";
-import { ImpersonationUsersSkeleton } from "@/components/loading/impersonation-users-skeleton";
 import { LandingPageSkeleton } from "@/components/loading/landing-page-skeleton";
 import {
 	ACCOUNT_SETTINGS_LOADING_LABELS,
 	ACTIVITY_LOADING_LABELS,
 	CLAIM_QR_LOADING_LABELS,
-	IMPERSONATION_USERS_LOADING_LABELS,
 	LANDING_LOADING_LABELS,
 	PROFILE_LOADING_LABELS,
 	REFERRALS_LOADING_LABELS,
@@ -26,11 +24,11 @@ import {
 } from "@/components/loading/loading-labels";
 import { ReferralsPageSkeleton } from "@/components/loading/referrals-skeleton";
 import { RewardDetailSkeleton } from "@/components/loading/reward-detail-skeleton";
-import { RewardHubBrowseSkeleton } from "@/components/loading/reward-hub-browse-skeleton";
+import { DashboardBrowseSkeleton } from "@/components/loading/dashboard-browse-skeleton";
 import { WalletPageSkeleton } from "@/components/loading/wallet-skeleton";
-import { CLAIM_QR_SIZE_PX } from "@/components/rewardhub/claims/claim-qr-layout";
-import { CUSTOMER_REFERRAL_KPIS, CUSTOMER_REWARD_KPIS, CUSTOMER_SPENDING_KPIS } from "@/lib/rewards/customer-analytics";
-import { FEATURED_OFFER_LIMIT } from "@/lib/rewards/featured-offers";
+import { CLAIM_QR_SIZE_PX } from "@/contexts/claims/components/claim-qr-layout";
+import { CUSTOMER_REFERRAL_KPIS, CUSTOMER_REWARD_KPIS, CUSTOMER_SPENDING_KPIS } from "@/contexts/reporting/lib/customer-analytics";
+import { FEATURED_OFFER_LIMIT } from "@/contexts/rewards/lib/featured-offers";
 import { WEB_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
 import { countSlots, expectSingleLoadingStatus, SkeletonTestProviders } from "@/test-support/skeleton";
 
@@ -55,9 +53,9 @@ afterEach((): void => {
 	window.localStorage.clear();
 });
 
-describe("RewardHubBrowseSkeleton", () => {
+describe("DashboardBrowseSkeleton", () => {
 	it("announces the catalog once and draws reward cards for the default grid layout", () => {
-		const container = renderSkeleton(<RewardHubBrowseSkeleton />);
+		const container = renderSkeleton(<DashboardBrowseSkeleton />);
 
 		expectSingleLoadingStatus(REWARDS_CATALOG_LOADING_LABELS.loading);
 		expect(countSlots(container, "reward-card-skeleton")).toBeGreaterThan(0);
@@ -67,7 +65,7 @@ describe("RewardHubBrowseSkeleton", () => {
 	it("draws list rows instead when the visitor saved the list layout", () => {
 		window.localStorage.setItem(WEB_UI_PREFERENCES_STORAGE_KEY, LIST_LAYOUT_SNAPSHOT);
 
-		const container = renderSkeleton(<RewardHubBrowseSkeleton />);
+		const container = renderSkeleton(<DashboardBrowseSkeleton />);
 
 		expect(countSlots(container, "reward-list-row-skeleton")).toBeGreaterThan(0);
 		expect(countSlots(container, "reward-card-skeleton")).toBe(0);
@@ -165,14 +163,5 @@ describe("AuthStatusLineSkeleton", () => {
 		renderSkeleton(<AuthStatusLineSkeleton labels={VERIFY_EMAIL_LOADING_LABELS} />);
 
 		expectSingleLoadingStatus(VERIFY_EMAIL_LOADING_LABELS.loading);
-	});
-});
-
-describe("ImpersonationUsersSkeleton", () => {
-	it("announces the user list once and draws user rows", () => {
-		const container = renderSkeleton(<ImpersonationUsersSkeleton />);
-
-		expectSingleLoadingStatus(IMPERSONATION_USERS_LOADING_LABELS.loading);
-		expect(countSlots(container, "impersonation-user-row-skeleton")).toBeGreaterThan(0);
 	});
 });

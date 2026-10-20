@@ -32,9 +32,8 @@ order: 2
 | RefreshToken, PasswordResetToken, PasswordHistory | USER | user_id | Auth artifacts |
 | BackupCode, TwoFactorPendingSetup, TwoFactorLoginChallenge | USER | user_id | MFA |
 | MfaRecoveryRequest | USER | user_id | MFA recovery |
-| Url, Tag, UrlTag, Click, ApiKey, ApiKeyUsageLog | USER | user_id | Consumer URL shortener |
 | ImpersonationAuditLog | OPERATIONAL | — | Legacy; superseded by SupportAccessGrant audit |
-| Log, EmailLog | OPERATIONAL | — | Redacted operational logs |
+| EmailLog | OPERATIONAL | — | Redacted operational logs |
 | Region, Subregion, Country, State, City | GLOBAL | — | Geo reference |
 | Product, SampleCategory, ProductImage | GLOBAL | — | Platform catalog |
 | Organization | TENANT | id | Canonical tenant root |
@@ -46,7 +45,6 @@ order: 2
 | OrganizationInvitation, OrganizationAccessRequest | TENANT | organization_id | Join flows |
 | OrganizationLifecycleEvent | OPERATIONAL | organization_id | State transitions audit |
 | TenantPlacement | TENANT | organization_id | Future shard/dedicated routing |
-| OrganizationEntitlement, OrganizationQuota | TENANT | organization_id | Plans and limits |
 | AuthorizationPolicyDraft/Version/Simulation | TENANT + GLOBAL | organization_id nullable | Platform guardrails have null org |
 | SupportAccessGrant | OPERATIONAL | organization_id | JIT support |
 | TenantEncryptionKey | TENANT | organization_id | Envelope key metadata |
@@ -74,8 +72,8 @@ order: 2
 | Merchant React Query cache | TENANT | Key must include `organizationId` |
 | BullMQ job payloads | TENANT | Signed `TenantJobContext` |
 | S3 object paths | TENANT | `orgs/{organizationId}/...` prefix |
-| Kafka platform events | OPERATIONAL | Tenant id in envelope only. No email addresses: `email.log.updated` carries no recipient and is not keyed by it (the address stays in `email_logs`) |
-| Analytics warehouse rows | OPERATIONAL | `organization_id` tag + row policies |
+| Kafka platform events | OPERATIONAL | Tenant id in envelope only. No email addresses: `email.log.updated` carries no recipient and is not keyed by it (the address stays in `EmailLog`) |
+| Analytics warehouse rows | OPERATIONAL | `organizationId` tag + row policies |
 | Webhook secrets | TENANT | Envelope-encrypted per organization |
 | Cedar policy bundle cache | OPERATIONAL | Versioned; org-scoped tenant policies |
 

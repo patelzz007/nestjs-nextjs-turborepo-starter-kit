@@ -10,7 +10,7 @@ order: 15
 
 # ADR 015: Transactional Outbox and Consumer Inbox
 
-**Status:** Accepted
+**Status:** Accepted. Superseded in part by ADR 060 — an email is an outbox row in the business transaction, then the existing BullMQ email queue.
 **Date:** 2026-10-01
 **Deciders:** Backend Team
 
@@ -86,5 +86,5 @@ The wire message now requires `eventId`, and both sides use strict schemas. Depl
 - `apps/analytics-consumer/src/` (`message-handler.ts`, `pg-inbox-store.ts`, `inbox-retention.ts`)
 - `packages/shared/src/schemas/infrastructure/kafka.ts` (`PlatformEventMessageSchema`, `PLATFORM_EVENT_TOPICS`)
 - `apps/api/prisma/rls.sql` (`outbox_events_append`, inbox policies)
-- `apps/api/test/transactional-outbox.e2e-spec.ts`, `apps/analytics-consumer/src/pg-inbox-store.e2e-spec.ts`
+- `apps/api/test/transactional-outbox.e2e-spec.ts`, `apps/analytics-consumer/src/projections/platform-events/__tests__/pg-inbox-store.e2e-spec.ts`
 - [Messaging operations](../technical/messaging.md), ADR 010, ADR 012

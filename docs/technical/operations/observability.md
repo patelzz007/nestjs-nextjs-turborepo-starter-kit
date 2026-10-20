@@ -24,7 +24,7 @@ context, [ADR 017](../../adr/017-unified-request-context.md)). Quote it in bug r
 
 ## Logs
 
-- `LogService` (`apps/api/src/modules/logs/`) is the application logger: structured info / warn /
+- `LogService` (`apps/api/src/platform/infrastructure/logging/`) is the application logger: structured info / warn /
   error lines with metadata, routed through NestJS's logger. Fastify's request logger is pino.
 - **One level for everything:** `LOG_LEVEL` (`fatal | error | warn | info | debug | trace | silent`)
   drives both pino and every Nest logger; `debug` / `trace` also enable Prisma query logging. See
@@ -34,7 +34,7 @@ context, [ADR 017](../../adr/017-unified-request-context.md)). Quote it in bug r
   actor and correlation id ([Database security](../security/database-security.md)). Outside a
   request (jobs, workers) `TenantTransactionService` generates one correlation id per transaction;
   it is written to the transaction (`app.correlation_id`) and to that log line, and rows that record
-  a correlation id (for example `organization_lifecycle_events`, via
+  a correlation id (for example `OrganizationLifecycleEvent`, via
   `OrganizationLifecycleEventRecorder`) read it back from the transaction, so the row and the log
   line always agree.
 
@@ -60,6 +60,16 @@ field whose normalized name **ends with** `password`, `secret`, `token`, `apikey
 - Free-text log **messages** are not scanned — never interpolate a secret into the message string.
 - To protect a new field, add it to `SENSITIVE_FIELD_NAMES` and extend `redaction.spec.ts`; pino,
   `LogService` and URL redaction all pick it up.
+
+## Alerts
+
+Work that completed but needs an operator is logged at `error` with `alert: true` and a stable
+`event` name (`OperationalAlertPort`, `platform/infrastructure/logging/logger-operational-alerts.ts`).
+Route `alert: true` lines to on-call. Current events:
+
+| Event | Meaning |
+|---|---|
+| `system_command.audit_write_failed` | A system command (job, cron, CLI) ran but its `AuditLog` row could not be written. The command is NOT retried (its work committed); the line carries the command, origin and correlation id. |
 
 ## Health probes (unversioned)
 
@@ -90,7 +100,7 @@ service.
 ## Audit log
 
 Every HTTP request — reads included, successful or refused — writes exactly one append-only row
-to `audit_logs` (only the automated health probes `/health/live`, `/health/ready`, `/health` and SSE
+to `AuditLog` (only the automated health probes `/health/live`, `/health/ready`, `/health` and SSE
 streams are exempt): user, impersonator and impersonation session, credential (session cookie /
 bearer token / refresh cookie / API key), organization, epoch-ms time and duration, method and
 route, sanitized request and response, outcome, IP with its version and address class (public,
@@ -104,7 +114,7 @@ released instead of the data. `app_runtime` cannot
 Read it in the admin panel under **Platform → Audit log** (`/audit-logs`), or through
 `GET /api/v1/admin/audit-logs` (`LIST:AUDIT_LOG`) and `GET /api/v1/admin/audit-logs/:id`
 (`READ:AUDIT_LOG`, payloads included). `GET /api/v1/admin/audit` is a different, narrower trail:
-the RBAC change log (`permission_audit_logs`). To follow one request across both trails, the
+the RBAC change log (`PermissionAuditLog`). To follow one request across both trails, the
 logs and the domain audit tables, filter by its correlation id.
 
 ## Queues

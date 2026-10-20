@@ -1,8 +1,8 @@
-import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
+import { MerchantCapabilityGate } from "@/contexts/organizations/components/access/merchant-capability-gate";
 import { MerchantKybVerificationSectionSkeleton } from "@/components/loading/merchant-page-skeletons";
-import { guardOrgPage } from "@/lib/org/org-page-guard";
+import { guardOrgPage } from "@/contexts/organizations/lib/org/org-page-guard";
 import { orgRoutes } from "@/lib/routes";
-import { MerchantKybVerificationView } from "@workspace/client/lib/merchant/kyb/verification-view";
+import { MerchantKybVerificationView } from "@workspace/client/lib/contexts/organizations/kyb/verification-view";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
 import { AnalyticsPageHeader } from "@workspace/ui/components/analytics-page-header";
 import Link from "next/link";

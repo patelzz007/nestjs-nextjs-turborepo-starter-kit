@@ -1,7 +1,7 @@
 "use client";
 
-import { useWebSession } from "@/components/auth/web-authorization-provider";
-import { useImpersonation } from "@workspace/client/lib/auth/session/use-impersonation";
+import { useWebSession } from "@/contexts/identity/components/web-authorization-provider";
+import { useImpersonation } from "@workspace/client/lib/contexts/identity/session/use-impersonation";
 import { Button } from "@workspace/ui/components/button";
 import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";

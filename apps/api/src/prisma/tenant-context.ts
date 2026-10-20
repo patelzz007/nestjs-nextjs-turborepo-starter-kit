@@ -3,7 +3,7 @@ import type { SystemOperation } from "./system-operation.registry";
 /** Tenant database session context — set transaction-locally in PostgreSQL. */
 export interface TenantDatabaseContext {
 	readonly userId: string;
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly purpose: string;
 	readonly policyVersion: number;
 }

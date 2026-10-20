@@ -3,7 +3,7 @@ title: "API reference — Roles, permissions, policies and audit"
 description: "Platform RBAC administration, authorization decisions, Cedar policy drafts, the capability catalog and the HTTP audit log."
 order: 3
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791158400000
+lastUpdated: 1792368000000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -23,24 +23,42 @@ How these endpoints fit together: [Authorization overview](../authorization/over
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `LIST:ROLE`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `RolesController_list` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
+- Operation id `RolesController_list` · [source](../../../apps/api/src/contexts/authorization/presentation/http/roles.controller.ts)
 
-**Response 200 OK** (`application/json`) — List of roles
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `page` | query | integer | no | Page number (1-indexed) for offset pagination |
+| `limit` | query | integer | no | Page size (default 20, max 100) |
+| `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
+| `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: name, createdAt. Default: name |
+| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: isActive |
+| `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
+
+**Response 200 OK** (`application/json`) — One page of the roles; pagination is in `meta`
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `data.items` | object[] | yes |  |
-| `data.items[].description` | string \| null | yes |  |
-| `data.items[].id` | string | yes |  |
-| `data.items[].isActive` | boolean | yes |  |
-| `data.items[].name` | string | yes |  |
-| `data.items[].parentId` | string \| null | yes |  |
-| `data.total` | integer | yes |  |
+| `data` | object[] | yes |  |
+| `data[].description` | string \| null | yes |  |
+| `data[].id` | string | yes |  |
+| `data[].isActive` | boolean | yes |  |
+| `data[].name` | string | yes |  |
+| `data[].parentId` | string \| null | yes |  |
+| `meta.hasNext` | boolean | yes | Whether a next page exists |
+| `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
+| `meta.limit` | integer | yes | Items per page; range 1–100 |
+| `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
+| `meta.page` | integer | yes | Current page (1-indexed); min 1 |
+| `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
 
 | Status | Code | When |
 | --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
 | 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
 | 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
 | 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
@@ -58,28 +76,32 @@ Response `200 OK` (application/json):
 ```json
 {
   "success": true,
-  "data": {
-    "items": [
-      {
-        "id": "6b129548-41be-4834-b36a-a15cf3b7e855",
-        "name": "Admin",
-        "description": "Admin panel — manage users, settings, and platform data",
-        "isActive": true,
-        "parentId": null
-      },
-      {
-        "id": "ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca",
-        "name": "Manager",
-        "description": "Admin panel — read/update users and reports (no RBAC or system settings)",
-        "isActive": true,
-        "parentId": null
-      }
-    ],
-    "total": 8
-  },
+  "data": [
+    {
+      "id": "01a1557a-bbc0-71af-8439-eb45562b8985",
+      "name": "Admin",
+      "description": "Admin panel — manage users, settings, and platform data",
+      "isActive": true,
+      "parentId": null
+    },
+    {
+      "id": "01a1557a-bbc1-768c-a89b-d51094ce2c1f",
+      "name": "Manager",
+      "description": "Admin panel — read/update users and reports (no RBAC or system settings)",
+      "isActive": true,
+      "parentId": null
+    }
+  ],
   "meta": {
-    "correlationId": "id2-7M4N2wJXVGrslt3XW",
-    "timestamp": 1791193324303
+    "limit": 20,
+    "total": 8,
+    "page": 1,
+    "totalPages": 1,
+    "nextCursor": null,
+    "hasNext": false,
+    "hasPrevious": false,
+    "correlationId": "_4BARaeEx2DRcD6UY2pyb",
+    "timestamp": 1792435594343
   }
 }
 ```
@@ -89,10 +111,10 @@ Response `200 OK` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `CREATE:ROLE`.
 - **Policy** `CREATE:ROLE` — Create new role.
-- Rate limit: 10 requests per 60 s per client IP (default limiter).
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RolesController_create` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
+- Operation id `RolesController_create` · [source](../../../apps/api/src/contexts/authorization/presentation/http/roles.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -160,7 +182,7 @@ Content-Type: application/json
 {
   "name": "Store Auditor",
   "description": "Reads geography and audit data for store reviews",
-  "parentId": "4c3114ed-b0a8-48af-b3eb-900d1e7ce1ec"
+  "parentId": "01a1557a-bbc2-7672-b075-9f725142745f"
 }
 ```
 
@@ -170,20 +192,20 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791193324349,
-    "updatedAt": 1791193324349,
+    "createdAt": 1792435594452,
+    "updatedAt": 1792435594452,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "4c089d88-90b8-4b32-970a-fc37eee785ec",
+    "id": "01a1557c-a4d6-7521-8cba-b101b3fcc8e7",
     "name": "Store Auditor",
     "description": "Reads geography and audit data for store reviews",
     "isActive": true,
     "isSystem": false,
-    "parentId": "4c3114ed-b0a8-48af-b3eb-900d1e7ce1ec"
+    "parentId": "01a1557a-bbc2-7672-b075-9f725142745f"
   },
   "meta": {
-    "correlationId": "MILfVfWwlOqyNoZgZB41w",
-    "timestamp": 1791193324362
+    "correlationId": "WPiKcIj6GKqkY9nsJq_fx",
+    "timestamp": 1792435594477
   }
 }
 ```
@@ -193,7 +215,7 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:ROLE`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `RolesController_detail` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
+- Operation id `RolesController_detail` · [source](../../../apps/api/src/contexts/authorization/presentation/http/roles.controller.ts)
 
 **Parameters**
 
@@ -250,7 +272,7 @@ Response `201 Created` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/admin/roles/ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca
+GET /api/v1/admin/roles/01a1557a-bbc1-768c-a89b-d51094ce2c1f
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -261,11 +283,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791193087695,
-    "updatedAt": 1791193087695,
+    "createdAt": 1792435469238,
+    "updatedAt": 1792435469238,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca",
+    "id": "01a1557a-bbc1-768c-a89b-d51094ce2c1f",
     "name": "Manager",
     "description": "Admin panel — read/update users and reports (no RBAC or system settings)",
     "isActive": true,
@@ -273,8 +295,8 @@ Response `200 OK` (application/json):
     "parentId": null
   },
   "meta": {
-    "correlationId": "tCFI7LMubyhOg22WSyIIr",
-    "timestamp": 1791193324333
+    "correlationId": "Ss3e1rrQtUt-rpcfafD_0",
+    "timestamp": 1792435594423
   }
 }
 ```
@@ -283,10 +305,10 @@ Response `200 OK` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:ROLE`.
-- Rate limit: 10 requests per 60 s per client IP (default limiter).
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RolesController_update` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
+- Operation id `RolesController_update` · [source](../../../apps/api/src/contexts/authorization/presentation/http/roles.controller.ts)
 
 **Parameters**
 
@@ -351,7 +373,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/admin/roles/4c089d88-90b8-4b32-970a-fc37eee785ec
+PATCH /api/v1/admin/roles/01a1557c-a4d6-7521-8cba-b101b3fcc8e7
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -368,20 +390,20 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791193324349,
-    "updatedAt": 1791193324389,
+    "createdAt": 1792435594452,
+    "updatedAt": 1792435594524,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "4c089d88-90b8-4b32-970a-fc37eee785ec",
+    "id": "01a1557c-a4d6-7521-8cba-b101b3fcc8e7",
     "name": "Store Auditor",
     "description": "Reads geography, audit and analytics data for store reviews",
     "isActive": true,
     "isSystem": false,
-    "parentId": "4c3114ed-b0a8-48af-b3eb-900d1e7ce1ec"
+    "parentId": "01a1557a-bbc2-7672-b075-9f725142745f"
   },
   "meta": {
-    "correlationId": "-T66j1FN7u9cy_GHqcLQQ",
-    "timestamp": 1791193324392
+    "correlationId": "r3Klun4qNmDlc4Wq3oakZ",
+    "timestamp": 1792435594532
   }
 }
 ```
@@ -390,10 +412,10 @@ Response `200 OK` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `DELETE:ROLE`.
-- Rate limit: 10 requests per 60 s per client IP (default limiter).
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `RolesController_remove` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
+- Operation id `RolesController_remove` · [source](../../../apps/api/src/contexts/authorization/presentation/http/roles.controller.ts)
 
 **Parameters**
 
@@ -419,7 +441,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-DELETE /api/v1/admin/roles/4c089d88-90b8-4b32-970a-fc37eee785ec
+DELETE /api/v1/admin/roles/01a1557c-a4d6-7521-8cba-b101b3fcc8e7
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -434,8 +456,8 @@ Response `200 OK` (application/json):
     "message": "Role deleted successfully"
   },
   "meta": {
-    "correlationId": "SvIrd9BgQ2S7klSKjVVyK",
-    "timestamp": 1791193324648
+    "correlationId": "2xnRF_IgcnjEIXkVEhaw3",
+    "timestamp": 1792435595038
   }
 }
 ```
@@ -444,9 +466,10 @@ Response `200 OK` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:ROLE`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RolesController_setParent` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
+- Operation id `RolesController_setParent` · [source](../../../apps/api/src/contexts/authorization/presentation/http/roles.controller.ts)
 
 **Parameters**
 
@@ -509,14 +532,14 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/admin/roles/4c089d88-90b8-4b32-970a-fc37eee785ec/parent
+PATCH /api/v1/admin/roles/01a1557c-a4d6-7521-8cba-b101b3fcc8e7/parent
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "parentId": "ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca"
+  "parentId": "01a1557a-bbc1-768c-a89b-d51094ce2c1f"
 }
 ```
 
@@ -526,20 +549,20 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791193324349,
-    "updatedAt": 1791193324424,
+    "createdAt": 1792435594452,
+    "updatedAt": 1792435594581,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "4c089d88-90b8-4b32-970a-fc37eee785ec",
+    "id": "01a1557c-a4d6-7521-8cba-b101b3fcc8e7",
     "name": "Store Auditor",
     "description": "Reads geography, audit and analytics data for store reviews",
     "isActive": true,
     "isSystem": false,
-    "parentId": "ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca"
+    "parentId": "01a1557a-bbc1-768c-a89b-d51094ce2c1f"
   },
   "meta": {
-    "correlationId": "bWKsbEdUz9Hf1CY4nmQQO",
-    "timestamp": 1791193324427
+    "correlationId": "PRmRNfmu7103aaXEbfh6_",
+    "timestamp": 1792435594589
   }
 }
 ```
@@ -548,9 +571,10 @@ Response `200 OK` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:ROLE`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RolesController_syncPermissions` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
+- Operation id `RolesController_syncPermissions` · [source](../../../apps/api/src/contexts/authorization/presentation/http/roles.controller.ts)
 
 **Parameters**
 
@@ -582,7 +606,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/roles/4c089d88-90b8-4b32-970a-fc37eee785ec/permissions
+POST /api/v1/admin/roles/01a1557c-a4d6-7521-8cba-b101b3fcc8e7/permissions
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -590,7 +614,7 @@ Content-Type: application/json
 
 {
   "permissionIds": [
-    "365034f1-9de4-4a8d-bd96-0eb1ea9c2cb8"
+    "01a1557a-bb84-7668-aceb-78e7bba0bae4"
   ]
 }
 ```
@@ -604,8 +628,8 @@ Response `201 Created` (application/json):
     "message": "Role permissions synced successfully"
   },
   "meta": {
-    "correlationId": "gOyyWOElMLy98DpOdmQCs",
-    "timestamp": 1791193324461
+    "correlationId": "yB7ho9BHzIEqGYukHB2oO",
+    "timestamp": 1792435594650
   }
 }
 ```
@@ -614,9 +638,10 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:ROLE`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `RolesController_restore` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
+- Operation id `RolesController_restore` · [source](../../../apps/api/src/contexts/authorization/presentation/http/roles.controller.ts)
 
 **Parameters**
 
@@ -673,7 +698,7 @@ Response `201 Created` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/roles/4c089d88-90b8-4b32-970a-fc37eee785ec/restore
+POST /api/v1/admin/roles/01a1557c-a4d6-7521-8cba-b101b3fcc8e7/restore
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -685,20 +710,20 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791193324349,
-    "updatedAt": 1791193324669,
+    "createdAt": 1792435594452,
+    "updatedAt": 1792435595063,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "4c089d88-90b8-4b32-970a-fc37eee785ec",
+    "id": "01a1557c-a4d6-7521-8cba-b101b3fcc8e7",
     "name": "Store Auditor",
     "description": "Reads geography, audit and analytics data for store reviews",
     "isActive": true,
     "isSystem": false,
-    "parentId": "ef3530bc-8d3d-463c-bc1c-ecc62fd0dcca"
+    "parentId": "01a1557a-bbc1-768c-a89b-d51094ce2c1f"
   },
   "meta": {
-    "correlationId": "y9ohp1XVe5u96A0jQFSKE",
-    "timestamp": 1791193324673
+    "correlationId": "ZOABV0ARPN2PTNy7uqluy",
+    "timestamp": 1792435595073
   }
 }
 ```
@@ -707,9 +732,10 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:ROLE`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RolesController_validateAssignment` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
+- Operation id `RolesController_validateAssignment` · [source](../../../apps/api/src/contexts/authorization/presentation/http/roles.controller.ts)
 
 **Parameters**
 
@@ -743,16 +769,16 @@ Response `201 Created` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/roles/4c089d88-90b8-4b32-970a-fc37eee785ec/validate-assignment
+POST /api/v1/admin/roles/01a1557c-a4d6-7521-8cba-b101b3fcc8e7/validate-assignment
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "e8ae4ca8-7cca-4400-955d-bdfb154f0f96",
+  "userId": "01a1557a-c0d3-74b5-863f-5c482fd90d58",
   "roleIds": [
-    "4c089d88-90b8-4b32-970a-fc37eee785ec"
+    "01a1557c-a4d6-7521-8cba-b101b3fcc8e7"
   ]
 }
 ```
@@ -767,8 +793,8 @@ Response `201 Created` (application/json):
     "message": "No conflicts detected"
   },
   "meta": {
-    "correlationId": "_u06krdI3-dl4bSnlJWqJ",
-    "timestamp": 1791193324490
+    "correlationId": "h01MXhDom-KkWahANqIA8",
+    "timestamp": 1792435594692
   }
 }
 ```
@@ -777,9 +803,10 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:ROLE`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RolesController_preview` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
+- Operation id `RolesController_preview` · [source](../../../apps/api/src/contexts/authorization/presentation/http/roles.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -818,10 +845,10 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "e8ae4ca8-7cca-4400-955d-bdfb154f0f96",
+  "userId": "01a1557a-c0d3-74b5-863f-5c482fd90d58",
   "roleIds": [
-    "4c3114ed-b0a8-48af-b3eb-900d1e7ce1ec",
-    "4c089d88-90b8-4b32-970a-fc37eee785ec"
+    "01a1557a-bbc2-7672-b075-9f725142745f",
+    "01a1557c-a4d6-7521-8cba-b101b3fcc8e7"
   ]
 }
 ```
@@ -850,8 +877,8 @@ Response `201 Created` (application/json):
     "permissionsLost": []
   },
   "meta": {
-    "correlationId": "Xloz3yYDCLoO5GCLN8xht",
-    "timestamp": 1791193324527
+    "correlationId": "B_MjeU8wvTbMmS2ldUTGz",
+    "timestamp": 1792435594755
   }
 }
 ```
@@ -861,10 +888,10 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:ROLE`.
 - **Policy** `UPDATE:USER` — Assign role to user.
-- Rate limit: 10 requests per 60 s per client IP (default limiter).
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RolesController_assignRoleToUser` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
+- Operation id `RolesController_assignRoleToUser` · [source](../../../apps/api/src/contexts/authorization/presentation/http/roles.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -898,8 +925,8 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "e8ae4ca8-7cca-4400-955d-bdfb154f0f96",
-  "roleId": "4c089d88-90b8-4b32-970a-fc37eee785ec"
+  "userId": "01a1557a-c0d3-74b5-863f-5c482fd90d58",
+  "roleId": "01a1557c-a4d6-7521-8cba-b101b3fcc8e7"
 }
 ```
 
@@ -912,8 +939,8 @@ Response `201 Created` (application/json):
     "message": "Role assigned to user successfully"
   },
   "meta": {
-    "correlationId": "Y3pqxIFNk7Ug4XUWn-nem",
-    "timestamp": 1791193324560
+    "correlationId": "SSZcve9ur_yUCKy9ATLGa",
+    "timestamp": 1792435594808
   }
 }
 ```
@@ -922,10 +949,10 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:ROLE`.
-- Rate limit: 10 requests per 60 s per client IP (default limiter).
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RolesController_removeRoleFromUser` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
+- Operation id `RolesController_removeRoleFromUser` · [source](../../../apps/api/src/contexts/authorization/presentation/http/roles.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -959,8 +986,8 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "e8ae4ca8-7cca-4400-955d-bdfb154f0f96",
-  "roleId": "4c089d88-90b8-4b32-970a-fc37eee785ec"
+  "userId": "01a1557a-c0d3-74b5-863f-5c482fd90d58",
+  "roleId": "01a1557c-a4d6-7521-8cba-b101b3fcc8e7"
 }
 ```
 
@@ -973,8 +1000,8 @@ Response `201 Created` (application/json):
     "message": "Role removed from user successfully"
   },
   "meta": {
-    "correlationId": "84auXSzPaaEoZdbl-xpC6",
-    "timestamp": 1791193324586
+    "correlationId": "XUGvSTMNkeJlpAx8bg2ou",
+    "timestamp": 1792435594883
   }
 }
 ```
@@ -983,10 +1010,10 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:ROLE`.
-- Rate limit: 10 requests per 60 s per client IP (default limiter).
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RolesController_syncUserRoles` · [source](../../../apps/api/src/modules/authorization/admin/roles.controller.ts)
+- Operation id `RolesController_syncUserRoles` · [source](../../../apps/api/src/contexts/authorization/presentation/http/roles.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1020,9 +1047,9 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "e8ae4ca8-7cca-4400-955d-bdfb154f0f96",
+  "userId": "01a1557a-c0d3-74b5-863f-5c482fd90d58",
   "roleIds": [
-    "4c3114ed-b0a8-48af-b3eb-900d1e7ce1ec"
+    "01a1557a-bbc2-7672-b075-9f725142745f"
   ]
 }
 ```
@@ -1036,8 +1063,8 @@ Response `201 Created` (application/json):
     "message": "User roles synced successfully"
   },
   "meta": {
-    "correlationId": "XlF3BLyp8EOyfFO06LXPn",
-    "timestamp": 1791193324618
+    "correlationId": "32APKKNAFmNl63YX7DFgf",
+    "timestamp": 1792435594979
   }
 }
 ```
@@ -1049,25 +1076,43 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `LIST:PERMISSION`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `PermissionsController_list` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
+- Operation id `PermissionsController_list` · [source](../../../apps/api/src/contexts/authorization/presentation/http/permissions.controller.ts)
 
-**Response 200 OK** (`application/json`) — List of permissions
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `page` | query | integer | no | Page number (1-indexed) for offset pagination |
+| `limit` | query | integer | no | Page size (default 100, max 100) |
+| `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
+| `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: group, resource, action, createdAt. Default: group,resource,action |
+| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: group, resource |
+| `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
+
+**Response 200 OK** (`application/json`) — One page of the permissions; pagination is in `meta`
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `data.items` | object[] | yes |  |
-| `data.items[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
-| `data.items[].description` | string \| null | yes |  |
-| `data.items[].group` | string \| null | yes |  |
-| `data.items[].id` | string | yes |  |
-| `data.items[].isSystem` | boolean | yes |  |
-| `data.items[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes |  |
-| `data.total` | integer | yes |  |
+| `data` | object[] | yes |  |
+| `data[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
+| `data[].description` | string \| null | yes |  |
+| `data[].group` | string \| null | yes |  |
+| `data[].id` | string | yes |  |
+| `data[].isSystem` | boolean | yes |  |
+| `data[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
+| `meta.hasNext` | boolean | yes | Whether a next page exists |
+| `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
+| `meta.limit` | integer | yes | Items per page; range 1–100 |
+| `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
+| `meta.page` | integer | yes | Current page (1-indexed); min 1 |
+| `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
 
 **Errors** (standard envelope, branch on `error.code`)
 
 | Status | Code | When |
 | --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
 | 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
 | 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
 | 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
@@ -1085,30 +1130,34 @@ Response `200 OK` (application/json):
 ```json
 {
   "success": true,
-  "data": {
-    "items": [
-      {
-        "id": "8645327b-3853-40e8-a895-897b948f3b7d",
-        "action": "CREATE",
-        "resource": "USER",
-        "description": "Create new users",
-        "group": "User Management",
-        "isSystem": false
-      },
-      {
-        "id": "7c220360-19dc-4546-950c-d0a48cad6177",
-        "action": "READ",
-        "resource": "USER",
-        "description": "View user details",
-        "group": "User Management",
-        "isSystem": false
-      }
-    ],
-    "total": 126
-  },
+  "data": [
+    {
+      "id": "01a1557a-bb84-7668-aceb-326aac99d1b4",
+      "action": "READ",
+      "resource": "ADMIN_DASHBOARD",
+      "description": "Access admin dashboard",
+      "group": "Admin Dashboard",
+      "isSystem": false
+    },
+    {
+      "id": "01a1557a-bb84-7668-aceb-3552468cec85",
+      "action": "MANAGE",
+      "resource": "ADMIN_DASHBOARD",
+      "description": "Full admin dashboard access",
+      "group": "Admin Dashboard",
+      "isSystem": false
+    }
+  ],
   "meta": {
-    "correlationId": "n82Rse82ereJh2n4a-HN0",
-    "timestamp": 1791193323935
+    "limit": 3,
+    "total": 96,
+    "page": 1,
+    "totalPages": 32,
+    "nextCursor": null,
+    "hasNext": true,
+    "hasPrevious": false,
+    "correlationId": "xUls3P3uN2LQe3dWekA1A",
+    "timestamp": 1792435593545
   }
 }
 ```
@@ -1118,10 +1167,10 @@ Response `200 OK` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `CREATE:PERMISSION`.
 - **Policy** `CREATE:PERMISSION` — Create new permission.
-- Rate limit: 10 requests per 60 s per client IP (default limiter).
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `PermissionsController_create` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
+- Operation id `PermissionsController_create` · [source](../../../apps/api/src/contexts/authorization/presentation/http/permissions.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1130,7 +1179,7 @@ Response `200 OK` (application/json):
 | `action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes | The action this permission grants |
 | `description` | string | no | Permission description |
 | `group` | string | no | Permission group/category |
-| `resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes | The resource this permission applies to |
+| `resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes | The resource this permission applies to |
 
 **Response 201 Created** (`application/json`) — Created permission
 
@@ -1145,7 +1194,7 @@ Response `200 OK` (application/json):
 | `data.id` | string | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
-| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes |  |
+| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
 | `data.scope` | "GLOBAL" \| "ORGANIZATION" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
@@ -1181,11 +1230,11 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791193324078,
-    "updatedAt": 1791193324078,
+    "createdAt": 1792435593854,
+    "updatedAt": 1792435593854,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "bbde0c64-3f12-436b-affb-0c607834e398",
+    "id": "01a1557c-a280-7e3f-9884-6ff9491e541d",
     "action": "MANAGE",
     "resource": "INVENTORY",
     "description": "Manage inventory records",
@@ -1195,8 +1244,8 @@ Response `201 Created` (application/json):
     "conditions": null
   },
   "meta": {
-    "correlationId": "_6OCalHSER3qFH4r5NF5X",
-    "timestamp": 1791193324086
+    "correlationId": "2f_CGMR2vq1TKeWbNk4X9",
+    "timestamp": 1792435593884
   }
 }
 ```
@@ -1206,7 +1255,7 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:PERMISSION`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `PermissionsController_detail` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
+- Operation id `PermissionsController_detail` · [source](../../../apps/api/src/contexts/authorization/presentation/http/permissions.controller.ts)
 
 **Parameters**
 
@@ -1227,7 +1276,7 @@ Response `201 Created` (application/json):
 | `data.id` | string | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
-| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes |  |
+| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
 | `data.scope` | "GLOBAL" \| "ORGANIZATION" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
@@ -1243,7 +1292,7 @@ Response `201 Created` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/admin/permissions/365034f1-9de4-4a8d-bd96-0eb1ea9c2cb8
+GET /api/v1/admin/permissions/01a1557a-bb84-7668-aceb-78e7bba0bae4
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -1254,11 +1303,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791193087621,
-    "updatedAt": 1791193087621,
+    "createdAt": 1792435469139,
+    "updatedAt": 1792435469139,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "365034f1-9de4-4a8d-bd96-0eb1ea9c2cb8",
+    "id": "01a1557a-bb84-7668-aceb-78e7bba0bae4",
     "action": "READ",
     "resource": "GEO",
     "description": "View geographic data (regions, countries, states, cities)",
@@ -1268,8 +1317,8 @@ Response `200 OK` (application/json):
     "conditions": null
   },
   "meta": {
-    "correlationId": "TjgWgMuhhw2c8cIePIFX4",
-    "timestamp": 1791193324003
+    "correlationId": "3ZF2SHsCShLiFWpzeY4ab",
+    "timestamp": 1792435593688
   }
 }
 ```
@@ -1279,10 +1328,10 @@ Response `200 OK` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:PERMISSION`.
 - **Policy** `UPDATE:PERMISSION` — Update permission.
-- Rate limit: 10 requests per 60 s per client IP (default limiter).
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `PermissionsController_update` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
+- Operation id `PermissionsController_update` · [source](../../../apps/api/src/contexts/authorization/presentation/http/permissions.controller.ts)
 
 **Parameters**
 
@@ -1310,7 +1359,7 @@ Response `200 OK` (application/json):
 | `data.id` | string | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
-| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes |  |
+| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
 | `data.scope` | "GLOBAL" \| "ORGANIZATION" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
@@ -1326,7 +1375,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/admin/permissions/bbde0c64-3f12-436b-affb-0c607834e398
+PATCH /api/v1/admin/permissions/01a1557c-a280-7e3f-9884-6ff9491e541d
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1343,11 +1392,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791193324078,
-    "updatedAt": 1791193324115,
+    "createdAt": 1792435593854,
+    "updatedAt": 1792435593933,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "bbde0c64-3f12-436b-affb-0c607834e398",
+    "id": "01a1557c-a280-7e3f-9884-6ff9491e541d",
     "action": "MANAGE",
     "resource": "INVENTORY",
     "description": "Manage every inventory record",
@@ -1357,8 +1406,8 @@ Response `200 OK` (application/json):
     "conditions": null
   },
   "meta": {
-    "correlationId": "gyKro0TG_ehKGLk6-HBq5",
-    "timestamp": 1791193324118
+    "correlationId": "xejNCJbGOEDFE8neZzyBJ",
+    "timestamp": 1792435593940
   }
 }
 ```
@@ -1367,10 +1416,10 @@ Response `200 OK` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `DELETE:PERMISSION`.
-- Rate limit: 10 requests per 60 s per client IP (default limiter).
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `PermissionsController_remove` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
+- Operation id `PermissionsController_remove` · [source](../../../apps/api/src/contexts/authorization/presentation/http/permissions.controller.ts)
 
 **Parameters**
 
@@ -1396,7 +1445,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-DELETE /api/v1/admin/permissions/bbde0c64-3f12-436b-affb-0c607834e398
+DELETE /api/v1/admin/permissions/01a1557c-a280-7e3f-9884-6ff9491e541d
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1411,8 +1460,8 @@ Response `200 OK` (application/json):
     "message": "Permission deleted successfully"
   },
   "meta": {
-    "correlationId": "Rz_2M6xCu21F4HhMgZWUf",
-    "timestamp": 1791193324147
+    "correlationId": "4epKqTpYiBKd1yMWx66Ov",
+    "timestamp": 1792435593978
   }
 }
 ```
@@ -1421,10 +1470,10 @@ Response `200 OK` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:PERMISSION`.
-- Rate limit: 10 requests per 60 s per client IP (default limiter).
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `PermissionsController_restore` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
+- Operation id `PermissionsController_restore` · [source](../../../apps/api/src/contexts/authorization/presentation/http/permissions.controller.ts)
 
 **Parameters**
 
@@ -1445,7 +1494,7 @@ Response `200 OK` (application/json):
 | `data.id` | string | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
-| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes |  |
+| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
 | `data.scope` | "GLOBAL" \| "ORGANIZATION" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
@@ -1461,7 +1510,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/permissions/bbde0c64-3f12-436b-affb-0c607834e398/restore
+POST /api/v1/admin/permissions/01a1557c-a280-7e3f-9884-6ff9491e541d/restore
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1473,11 +1522,11 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1791193324078,
-    "updatedAt": 1791193324177,
+    "createdAt": 1792435593854,
+    "updatedAt": 1792435594021,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "bbde0c64-3f12-436b-affb-0c607834e398",
+    "id": "01a1557c-a280-7e3f-9884-6ff9491e541d",
     "action": "MANAGE",
     "resource": "INVENTORY",
     "description": "Manage every inventory record",
@@ -1487,8 +1536,8 @@ Response `201 Created` (application/json):
     "conditions": null
   },
   "meta": {
-    "correlationId": "Ha7Tms9WDs3IBK4iUSf-D",
-    "timestamp": 1791193324181
+    "correlationId": "B6woK6clSPcHARgtweUyO",
+    "timestamp": 1792435594030
   }
 }
 ```
@@ -1497,16 +1546,17 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:PERMISSION`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `PermissionsController_checkPermission` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
+- Operation id `PermissionsController_checkPermission` · [source](../../../apps/api/src/contexts/authorization/presentation/http/permissions.controller.ts)
 
 **Request body** (`application/json`, required)
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes | The action to check |
-| `resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes | The resource to check against |
+| `resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes | The resource to check against |
 | `userId` | string (uuid) | yes | User ID to check permissions for |
 
 **Response 201 Created** (`application/json`) — Permission check result with grant provenance
@@ -1537,7 +1587,7 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "048bb0a7-bec4-4453-a311-d54f51a211e5",
+  "userId": "01a1557a-c0c1-774a-9b27-c03bb47349a0",
   "action": "READ",
   "resource": "GEO"
 }
@@ -1553,8 +1603,8 @@ Response `201 Created` (application/json):
     "grants": []
   },
   "meta": {
-    "correlationId": "aTD5044dD48_V9l1aP6-d",
-    "timestamp": 1791193324052
+    "correlationId": "K2-Vf9XvKMlUBNWG7ggaZ",
+    "timestamp": 1792435593795
   }
 }
 ```
@@ -1564,7 +1614,7 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `LIST:PERMISSION`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `PermissionsController_listGroups` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
+- Operation id `PermissionsController_listGroups` · [source](../../../apps/api/src/contexts/authorization/presentation/http/permissions.controller.ts)
 
 **Response 200 OK** (`application/json`) — List of permission groups
 
@@ -1600,8 +1650,8 @@ Response `200 OK` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "bxrqF5X0RxsYjoeI03lyi",
-    "timestamp": 1791193324018
+    "correlationId": "5UGom2urM5U8agg4LJGy0",
+    "timestamp": 1792435593716
   }
 }
 ```
@@ -1610,10 +1660,10 @@ Response `200 OK` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:PERMISSION`.
-- Rate limit: 10 requests per 60 s per client IP (default limiter).
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `PermissionsController_grantToUser` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
+- Operation id `PermissionsController_grantToUser` · [source](../../../apps/api/src/contexts/authorization/presentation/http/permissions.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1649,8 +1699,8 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "048bb0a7-bec4-4453-a311-d54f51a211e5",
-  "permissionId": "365034f1-9de4-4a8d-bd96-0eb1ea9c2cb8",
+  "userId": "01a1557a-c0c1-774a-9b27-c03bb47349a0",
+  "permissionId": "01a1557a-bb84-7668-aceb-78e7bba0bae4",
   "effect": "ALLOW"
 }
 ```
@@ -1664,8 +1714,8 @@ Response `201 Created` (application/json):
     "message": "Permission granted to user successfully"
   },
   "meta": {
-    "correlationId": "c97eL_XAbln3cewePWRz3",
-    "timestamp": 1791193324215
+    "correlationId": "8yOlS7JcUuHZZIRhVbB3U",
+    "timestamp": 1792435594083
   }
 }
 ```
@@ -1674,10 +1724,10 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:PERMISSION`.
-- Rate limit: 10 requests per 60 s per client IP (default limiter).
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `PermissionsController_revokeFromUser` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
+- Operation id `PermissionsController_revokeFromUser` · [source](../../../apps/api/src/contexts/authorization/presentation/http/permissions.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1713,8 +1763,8 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "048bb0a7-bec4-4453-a311-d54f51a211e5",
-  "permissionId": "365034f1-9de4-4a8d-bd96-0eb1ea9c2cb8"
+  "userId": "01a1557a-c0c1-774a-9b27-c03bb47349a0",
+  "permissionId": "01a1557a-bb84-7668-aceb-78e7bba0bae4"
 }
 ```
 
@@ -1727,8 +1777,8 @@ Response `201 Created` (application/json):
     "message": "Permission revoked from user"
   },
   "meta": {
-    "correlationId": "l1scB6ETGjYZ5gdYQ9XnE",
-    "timestamp": 1791193324246
+    "correlationId": "wkrrAeD-fWUPDwOuttPTx",
+    "timestamp": 1792435594176
   }
 }
 ```
@@ -1737,10 +1787,10 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:PERMISSION`.
-- Rate limit: 10 requests per 60 s per client IP (default limiter).
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `PermissionsController_syncUserPermissions` · [source](../../../apps/api/src/modules/authorization/admin/permissions.controller.ts)
+- Operation id `PermissionsController_syncUserPermissions` · [source](../../../apps/api/src/contexts/authorization/presentation/http/permissions.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1774,9 +1824,9 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "048bb0a7-bec4-4453-a311-d54f51a211e5",
+  "userId": "01a1557a-c0c1-774a-9b27-c03bb47349a0",
   "permissionIds": [
-    "365034f1-9de4-4a8d-bd96-0eb1ea9c2cb8"
+    "01a1557a-bb84-7668-aceb-78e7bba0bae4"
   ]
 }
 ```
@@ -1790,8 +1840,8 @@ Response `201 Created` (application/json):
     "message": "User permissions synced successfully"
   },
   "meta": {
-    "correlationId": "5TuVevGnch1oIMvEs6Ot3",
-    "timestamp": 1791193324283
+    "correlationId": "-rNbGrl1FjeeN3qocQTOp",
+    "timestamp": 1792435594295
   }
 }
 ```
@@ -1803,9 +1853,10 @@ Response `201 Created` (application/json):
 Evaluate capability checks for the current user (UI hints — the API re-authorizes every operation)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `AuthorizationDecisionsController_decide` · [source](../../../apps/api/src/modules/authorization/kernel/authorization-decisions.controller.ts)
+- Operation id `AuthorizationDecisionsController_decide` · [source](../../../apps/api/src/contexts/authorization/presentation/http/authorization-decisions.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1813,7 +1864,7 @@ Evaluate capability checks for the current user (UI hints — the API re-authori
 | --- | --- | --- | --- |
 | `checks` | object[] | yes | 1–50 items |
 | `checks[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
-| `checks[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes |  |
+| `checks[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
 | `checks[].resourceId` | string | no | length 1–64 |
 
 **Response 200 OK** (`application/json`) — One decision per requested check, in request order
@@ -1823,7 +1874,7 @@ Evaluate capability checks for the current user (UI hints — the API re-authori
 | `data.results` | object[] | yes |  |
 | `data.results[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
 | `data.results[].allowed` | boolean | yes |  |
-| `data.results[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes |  |
+| `data.results[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
 | `data.results[].resourceId` | string | no | length 1–64 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1877,8 +1928,8 @@ Response `200 OK` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "OPC3NHuIKvl1W3C_kZnYZ",
-    "timestamp": 1791193324688
+    "correlationId": "0Q285w9uVoUITdo1LV4KG",
+    "timestamp": 1792435595096
   }
 }
 ```
@@ -1890,14 +1941,14 @@ Admin: step-by-step explanation of an authorization decision
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:PERMISSION`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `AuthorizationDecisionsController_explain` · [source](../../../apps/api/src/modules/authorization/kernel/authorization-decisions.controller.ts)
+- Operation id `AuthorizationDecisionsController_explain` · [source](../../../apps/api/src/contexts/authorization/presentation/http/authorization-decisions.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
 | `action` | query | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
-| `resource` | query | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "URL" \| "TAG" \| "API_KEY" \| "ANALYTICS" \| … (+18 more) | yes |  |
+| `resource` | query | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
 | `resourceId` | query | string | no |  |
 | `userId` | query | string | no |  |
 | `organizationId` | query | string | no |  |
@@ -1941,7 +1992,7 @@ Admin: step-by-step explanation of an authorization decision
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/authorization/decisions/explain?action=READ&resource=GEO&userId=048bb0a7-bec4-4453-a311-d54f51a211e5
+GET /api/v1/authorization/decisions/explain?action=READ&resource=GEO&userId=01a1557a-c0c1-774a-9b27-c03bb47349a0
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -1955,7 +2006,7 @@ Response `200 OK` (application/json):
     "decision": "ALLOW",
     "request": {
       "subject": {
-        "userId": "048bb0a7-bec4-4453-a311-d54f51a211e5",
+        "userId": "01a1557a-c0c1-774a-9b27-c03bb47349a0",
         "isSuperAdmin": false
       },
       "action": "READ",
@@ -1977,11 +2028,11 @@ Response `200 OK` (application/json):
         }
       }
     ],
-    "durationMs": 18
+    "durationMs": 31
   },
   "meta": {
-    "correlationId": "0j6mMqWqICIqOsq9esJWd",
-    "timestamp": 1791193324727
+    "correlationId": "X-W7ASBXNSA6n7ajMgATR",
+    "timestamp": 1792435595152
   }
 }
 ```
@@ -1993,9 +2044,10 @@ Response `200 OK` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `MANAGE:SYSTEM_SETTINGS`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `PolicyControlPlaneController_createDraft` · [source](../../../apps/api/src/modules/authorization-cedar/controllers/policy-control-plane.controller.ts)
+- Operation id `PolicyControlPlaneController_createDraft` · [source](../../../apps/api/src/contexts/authorization/presentation/http/policy-control-plane.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -2037,7 +2089,7 @@ Content-Type: application/json
   "name": "Brew & Bean KL — owners and admins manage rewards",
   "description": "Tenant role-capability policy for Brew & Bean KL",
   "scope": "TENANT",
-  "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+  "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
   "builderPayload": {
     "templateId": "tenant.role_capability",
     "parameters": {
@@ -2056,11 +2108,11 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "draftId": "8e527d9e-8481-4fbf-ad5a-aaf654b61bb1"
+    "draftId": "01a1557c-a80e-754c-8896-79f2974d0ace"
   },
   "meta": {
-    "correlationId": "7hR-WmQZvukl0mSvvlcGd",
-    "timestamp": 1791193324815
+    "correlationId": "H9bX0gW_8r6FAYw09P1bl",
+    "timestamp": 1792435595291
   }
 }
 ```
@@ -2070,9 +2122,10 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `MANAGE:SYSTEM_SETTINGS`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `PolicyControlPlaneController_simulate` · [source](../../../apps/api/src/modules/authorization-cedar/controllers/policy-control-plane.controller.ts)
+- Operation id `PolicyControlPlaneController_simulate` · [source](../../../apps/api/src/contexts/authorization/presentation/http/policy-control-plane.controller.ts)
 
 **Parameters**
 
@@ -2112,7 +2165,7 @@ Response `201 Created` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/policies/drafts/8e527d9e-8481-4fbf-ad5a-aaf654b61bb1/simulate
+POST /api/v1/policies/drafts/01a1557c-a80e-754c-8896-79f2974d0ace/simulate
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -2124,7 +2177,7 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "simulationId": "0d9feff4-cb54-4d52-a7d5-cab22ea32709",
+    "simulationId": "01a1557c-a85a-7165-9b15-4b698cd35a3a",
     "passed": true,
     "warnings": [
       "2 principal(s) would get at least one different decision"
@@ -2135,18 +2188,18 @@ Response `201 Created` (application/json):
     "wouldLockOutOwners": false,
     "decisionChanges": [
       {
-        "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
-        "userId": "937f5e43-9b11-47d0-866c-91fec89bc250",
+        "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+        "userId": "019b76da-a800-7965-b8a4-624b6c755c16",
         "membershipRole": "CASHIER",
-        "action": "rewardhub:view_rewards",
+        "action": "tenant:view_rewards",
         "before": "Allow",
         "after": "Deny"
       },
       {
-        "organizationId": "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
-        "userId": "937f5e43-9b11-47d0-866c-91fec89bc250",
+        "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+        "userId": "019b76da-a800-7965-b8a4-624b6c755c16",
         "membershipRole": "CASHIER",
-        "action": "rewardhub:manage_rewards",
+        "action": "tenant:manage_rewards",
         "before": "Allow",
         "after": "Deny"
       }
@@ -2154,8 +2207,8 @@ Response `201 Created` (application/json):
     "decisionChangesTruncated": false
   },
   "meta": {
-    "correlationId": "RVI_owThglKLDX6siZNnT",
-    "timestamp": 1791193324890
+    "correlationId": "n95BzEYmJkQTyn7I4vG80",
+    "timestamp": 1792435595393
   }
 }
 ```
@@ -2165,9 +2218,10 @@ Response `201 Created` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `MANAGE:SYSTEM_SETTINGS`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `PolicyControlPlaneController_publish` · [source](../../../apps/api/src/modules/authorization-cedar/controllers/policy-control-plane.controller.ts)
+- Operation id `PolicyControlPlaneController_publish` · [source](../../../apps/api/src/contexts/authorization/presentation/http/policy-control-plane.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -2201,7 +2255,7 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "draftId": "8e527d9e-8481-4fbf-ad5a-aaf654b61bb1",
+  "draftId": "01a1557c-a80e-754c-8896-79f2974d0ace",
   "approvalNote": "Reviewed against the tenant guardrails"
 }
 ```
@@ -2216,8 +2270,8 @@ Response `403 Forbidden` (application/json):
     "message": "A policy draft must be approved by a SuperAdmin other than its author"
   },
   "meta": {
-    "correlationId": "Kqnoi7YZXlc7-oX1GEbM8",
-    "timestamp": 1791193324923
+    "correlationId": "hFT692gINbCJeYoc1KJ81",
+    "timestamp": 1792435595433
   }
 }
 ```
@@ -2231,7 +2285,7 @@ List capability catalog entries (optionally filtered by scope)
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `CapabilitiesCatalogController_listCatalog` · [source](../../../apps/api/src/modules/authorization/controllers/capabilities-catalog.controller.ts)
+- Operation id `CapabilitiesCatalogController_listCatalog` · [source](../../../apps/api/src/contexts/authorization/presentation/http/capabilities-catalog.controller.ts)
 
 **Parameters**
 
@@ -2276,7 +2330,7 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "f62c2e12-af2a-4838-b271-d61b1130d6be",
+      "id": "01a1557a-bc73-7571-9b6a-ad028ba5f9e0",
       "slug": "merchant:view_dashboard",
       "scope": "MERCHANT",
       "label": "View dashboard",
@@ -2286,7 +2340,7 @@ Response `200 OK` (application/json):
       "isSystem": true
     },
     {
-      "id": "4a25b76a-1b01-4f10-aa2e-d3310468eb41",
+      "id": "01a1557a-bc48-716e-b845-c6fcf514d034",
       "slug": "platform:admin_dashboard.manage",
       "scope": "PLATFORM",
       "label": "Full admin dashboard access",
@@ -2297,8 +2351,8 @@ Response `200 OK` (application/json):
     }
   ],
   "meta": {
-    "correlationId": "y-0i8oHsIprRqsfAAmP3q",
-    "timestamp": 1791193324748
+    "correlationId": "3zO9Ik2mg-m-v5er9UwpL",
+    "timestamp": 1792435595177
   }
 }
 ```
@@ -2310,7 +2364,7 @@ Response `200 OK` (application/json):
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:AUDIT_LOG`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `AuditController_list` · [source](../../../apps/api/src/modules/authorization/admin/audit.controller.ts)
+- Operation id `AuditController_list` · [source](../../../apps/api/src/contexts/authorization/presentation/http/audit.controller.ts)
 
 **Parameters**
 
@@ -2373,12 +2427,12 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1791193324764,
-      "updatedAt": 1791193324764,
-      "id": "03538d88-06e0-4dff-9a17-e47562c96482",
+      "createdAt": 1792435595218,
+      "updatedAt": 1792435595218,
+      "id": "01a1557c-a7d0-73cb-a4e4-eb1c60a94ff6",
       "actor": {
         "kind": "USER",
-        "userId": "9194a7c0-e721-4833-95cc-eca2f319f542",
+        "userId": "01a1557a-c0b2-72f9-ab17-46cd05f66ace",
         "impersonatorId": null
       },
       "targetUserId": null,
@@ -2388,31 +2442,31 @@ Response `200 OK` (application/json):
       "detail": "Bypassed authorization for list at GET /api/v1/admin/audit?limit=2"
     },
     {
-      "createdAt": 1791193324701,
-      "updatedAt": 1791193324701,
-      "id": "6c442714-97d4-40f6-84fd-ae3f8fbcbb9b",
+      "createdAt": 1792435595115,
+      "updatedAt": 1792435595115,
+      "id": "01a1557c-a769-77ff-aea6-9584fb4a7176",
       "actor": {
         "kind": "USER",
-        "userId": "9194a7c0-e721-4833-95cc-eca2f319f542",
+        "userId": "01a1557a-c0b2-72f9-ab17-46cd05f66ace",
         "impersonatorId": null
       },
       "targetUserId": null,
       "targetRoleId": null,
       "permissionId": null,
       "action": "SUPER_ADMIN_BYPASS",
-      "detail": "Bypassed authorization for explain at GET /api/v1/authorization/decisions/explain?action=READ&resource=GEO&userId=048bb0a7-bec4-4453-a311-d54f51a211e5"
+      "detail": "Bypassed authorization for explain at GET /api/v1/authorization/decisions/explain?action=READ&resource=GEO&userId=01a1557a-c0c1-774a-9b27-c03bb47349a0"
     }
   ],
   "meta": {
     "limit": 2,
-    "total": 109,
+    "total": 110,
     "page": 1,
     "totalPages": 55,
-    "nextCursor": "eyJhdCI6MTc5MTE5MzMyNDcwMSwiaWQiOiI2YzQ0MjcxNC05N2Q0LTQwZjYtODRmZC1hZTNmOGZiY2JiOWIifQ",
+    "nextCursor": "eyJhdCI6MTc5MjQzNTU5NTExNSwiaWQiOiIwMWExNTU3Yy1hNzY5LTc3ZmYtYWVhNi05NTg0ZmI0YTcxNzYifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "F5WRU9zo1FaadnwjxaU3p",
-    "timestamp": 1791193324777
+    "correlationId": "EWcA4n1OFxMuuQwBVu6tO",
+    "timestamp": 1792435595236
   }
 }
 ```
@@ -2427,7 +2481,7 @@ Request metadata only — open one record for its redacted payloads.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `LIST:AUDIT_LOG`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `AuditLogsController_list` · [source](../../../apps/api/src/modules/audit-logs/audit-logs.controller.ts)
+- Operation id `AuditLogsController_list` · [source](../../../apps/api/src/contexts/audit/presentation/http/audit-logs.controller.ts)
 
 **Parameters**
 
@@ -2517,7 +2571,7 @@ Includes the redacted request params, request body and response body.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:AUDIT_LOG`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `AuditLogsController_get` · [source](../../../apps/api/src/modules/audit-logs/audit-logs.controller.ts)
+- Operation id `AuditLogsController_get` · [source](../../../apps/api/src/contexts/audit/presentation/http/audit-logs.controller.ts)
 
 **Parameters**
 
@@ -2609,7 +2663,7 @@ HTTP requests (with how many rows each changed) and background database writes a
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `LIST:AUDIT_LOG`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `AuditTrailController_list` · [source](../../../apps/api/src/modules/audit-logs/audit-trail.controller.ts)
+- Operation id `AuditTrailController_list` · [source](../../../apps/api/src/contexts/audit/presentation/http/audit-trail.controller.ts)
 
 **Parameters**
 
@@ -2719,7 +2773,7 @@ Live audit trail update stream (SSE)
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `LIST:AUDIT_LOG`.
 - Content type: no request body; returns `text/event-stream` (errors are always `application/json`)
-- Operation id `AuditTrailController_stream` · [source](../../../apps/api/src/modules/audit-logs/audit-trail.controller.ts)
+- Operation id `AuditTrailController_stream` · [source](../../../apps/api/src/contexts/audit/presentation/http/audit-trail.controller.ts)
 
 **Response 200 OK** — One `{ updatedAt }` frame per burst of new entries, a `ping` every 25 s (no envelope, no response contract) (`text/event-stream`)
 
@@ -2744,7 +2798,7 @@ Change metadata only — open one record for the redacted row before and after.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `LIST:AUDIT_LOG`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `DataChangesController_list` · [source](../../../apps/api/src/modules/audit-logs/data-changes.controller.ts)
+- Operation id `DataChangesController_list` · [source](../../../apps/api/src/contexts/audit/presentation/http/data-changes.controller.ts)
 
 **Parameters**
 
@@ -2812,7 +2866,7 @@ Includes the redacted row images before and after the change.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
 - **Permission** `READ:AUDIT_LOG`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `DataChangesController_get` · [source](../../../apps/api/src/modules/audit-logs/data-changes.controller.ts)
+- Operation id `DataChangesController_get` · [source](../../../apps/api/src/contexts/audit/presentation/http/data-changes.controller.ts)
 
 **Parameters**
 

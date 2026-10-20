@@ -5,7 +5,7 @@ import { AspectRatio } from "@workspace/ui/components/aspect-ratio";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
-import { REWARD_CARD_COVER_RATIO, REWARD_LIST_ROW_COVER_RATIO } from "@/lib/rewards/reward-cover";
+import { REWARD_CARD_COVER_RATIO, REWARD_LIST_ROW_COVER_RATIO } from "@/contexts/rewards/lib/reward-cover";
 
 /*
  * Bones for the rewards catalog — `RewardCard` / `RewardListRow` silhouettes
@@ -98,7 +98,7 @@ export interface RewardCatalogBonesProps {
 	readonly viewMode: RewardsViewMode;
 }
 
-/** The catalog body — a card grid or a stack of list rows, matching `RewardHubCatalog`'s two layouts. */
+/** The catalog body — a card grid or a stack of list rows, matching `DashboardCatalog`'s two layouts. */
 export function RewardCatalogBones({ viewMode }: RewardCatalogBonesProps): React.JSX.Element {
 	const keys = placeholderKeys("reward", CATALOG_SKELETON_ITEMS);
 	if (viewMode === "list") {
@@ -144,7 +144,7 @@ function FilterChipRowSkeleton({ chips, labelWidth }: { readonly chips: number; 
 	);
 }
 
-/** The `RewardHubFilters` card: search field, then the city and category chip rows. */
+/** The `DashboardFilters` card: search field, then the city and category chip rows. */
 function FiltersSkeleton(): React.JSX.Element {
 	return (
 		<div className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-xs sm:p-5">
@@ -193,11 +193,11 @@ function LandingCatalogHeadingSkeleton(): React.JSX.Element {
 }
 
 export interface RewardBrowseBonesProps extends RewardCatalogBonesProps {
-	/** Same switch as `RewardHubBrowseView`: the dashboard's summary header, or the landing section's heading. */
+	/** Same switch as `DashboardBrowseView`: the dashboard's summary header, or the landing section's heading. */
 	readonly variant: "landing" | "dashboard";
 }
 
-/** The whole `RewardHubBrowseView` — header, filters, catalog toolbar and body, in its `space-y-8` rhythm. */
+/** The whole `DashboardBrowseView` — header, filters, catalog toolbar and body, in its `space-y-8` rhythm. */
 export function RewardBrowseBones({ variant, viewMode }: RewardBrowseBonesProps): React.JSX.Element {
 	return (
 		<div className="space-y-8">

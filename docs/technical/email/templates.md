@@ -10,7 +10,7 @@ tags: ["email", "templates", "notifications"]
 
 # Email templates and pipeline
 
-Code: `apps/api/src/modules/notifications/email/`. Provider setup: [Set up email with Resend](./resend-setup.md) (deployed environments) and
+Code: `apps/api/src/contexts/notifications/`. Provider setup: [Set up email with Resend](./resend-setup.md) (deployed environments) and
 [Local email with Mailpit](./mailpit-local-inbox.md) (local development).
 
 ## Pipeline
@@ -38,7 +38,7 @@ flowchart TD
 - The provider call is an `EmailTransport` (`transports/`): `ResendEmailTransport` or
   `MailpitEmailTransport`, chosen by `EMAIL_PROVIDER`. Each translates its provider's failures
   into `transient` (retried), `rejected` or `rate-limited` (not retried).
-- Every attempt is an `email_logs` row (recipient masked in logs). The admin log page receives
+- Every attempt is an `EmailLog` row (recipient masked in logs). The admin log page receives
   changes over Server-Sent Events (`GET /api/v1/notifications/email-log/events`).
 - With BullMQ the job id is the email log id, so the same attempt is never enqueued twice.
 
@@ -64,7 +64,7 @@ and `renderBodyHtml()` / `renderBodyText()` — every email has a plain-text twi
 | `reward-claim-otp` | One-time code for claiming a reward |
 | `referrer-reward-credited` | A referral earned the referrer a reward (retried by the `rewards.referral-credit-notify` job) |
 
-`pnpm --filter @workspace/api exec tsx scripts/render-email-previews.ts` re-renders the screenshots
+`pnpm --filter @workspace/api email:previews` re-renders the screenshots
 below (headless Chrome, light mode):
 
 | | | |

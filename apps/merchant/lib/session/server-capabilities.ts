@@ -1,24 +1,15 @@
-import type { CapabilitySlug, OrganizationRewardMembershipResponse } from "@workspace/shared";
-import { MERCHANT_ROLE_CAPABILITIES } from "@workspace/shared";
+import { MERCHANT_ROLE_CAPABILITIES, type CapabilitySlug, type OrganizationMembershipRole } from "@workspace/shared";
 
-import { resolveUrlOrganizationMembership } from "@/lib/org/resolve-slug";
-
-/**
- * The membership of the organization the URL names (`organizationSlug` from
- * `/orgs/[orgSlug]`), or `undefined` outside org routes and for an
- * organization the user does not belong to. Fails closed: it never falls back
- * to another organization's membership, so no role is ever borrowed.
- */
-export function resolveActiveOrganizationMembership(
-	memberships: readonly OrganizationRewardMembershipResponse[],
-	organizationSlug: string | undefined,
-): OrganizationRewardMembershipResponse | undefined {
-	return resolveUrlOrganizationMembership(memberships, organizationSlug);
+/** Anything that carries a member's role in one organization (a membership, the organization context's membership). */
+export interface MerchantRoleHolder {
+	readonly role: OrganizationMembershipRole;
 }
 
-export function resolveMerchantCapabilities(membership: OrganizationRewardMembershipResponse | undefined): readonly CapabilitySlug[] {
+/**
+ * The `merchant:*` capabilities of a membership's role — the same table the API enforces before tenant Cedar
+ * policies (advisory UX state only). No membership, no capability.
+ */
+export function resolveMerchantCapabilities(membership: MerchantRoleHolder | undefined): readonly CapabilitySlug[] {
 	if (membership === undefined) return [];
-
-	// Same table the API enforces before tenant Cedar policies (advisory UX state only).
 	return MERCHANT_ROLE_CAPABILITIES[membership.role];
 }

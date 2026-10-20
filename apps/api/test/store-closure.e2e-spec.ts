@@ -3,16 +3,16 @@ import { randomUUID } from "node:crypto";
 import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { API_VERSION_PREFIX, OrganizationLocationCloseResponseSchema, OrganizationMemberStoreRemoveResponseSchema } from "@workspace/shared";
+import { API_VERSION_PREFIX, LocationCloseResponseSchema, TenantMemberStoreRemoveResponseSchema } from "@workspace/shared";
 
-import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { createE2eApp, login, type InjectResponse, type LoginResult, mutationHeaders, parseSuccessEnvelope } from "./e2e-helpers";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
-const ORG_PATH = `${API_VERSION_PREFIX}/orgs/${ORGANIZATION_SEED_SLUGS.mlk}`;
-const ORG_ID = ORGANIZATION_SEED_IDS.mlkOrganization;
-const BERUANG = ORGANIZATION_SEED_IDS.mlkLocationBeruang;
-const KATIL = ORGANIZATION_SEED_IDS.mlkLocationKatil;
+const ORG_PATH = `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.mlk}`;
+const ORG_ID = TENANT_SEED_IDS.mlkTenant;
+const BERUANG = TENANT_SEED_IDS.mlkLocationBeruang;
+const KATIL = TENANT_SEED_IDS.mlkLocationKatil;
 const CLOSURE_REASON = "E2E: franchise partner went bankrupt";
 
 /**
@@ -53,30 +53,29 @@ describe("Store member removal and store closure (e2e)", () => {
 	beforeAll(async () => {
 		app = await createE2eApp();
 		pool = new Pool({ connectionString: DATABASE_URL });
-		const [cashierRow] = await query(
-			`SELECT m.id, m.user_id FROM public.organization_memberships m WHERE m.organization_id = $1 AND m.role = 'CASHIER' AND m.is_deleted = false`,
-			[ORG_ID],
-		);
+		const [cashierRow] = await query(`SELECT m.id, m."userId" FROM public."Membership" m WHERE m."tenantId" = $1 AND m.role = 'CASHIER' AND m."isDeleted" = false`, [ORG_ID]);
 		cashierMembershipId = String(cashierRow?.id);
-		cashierUserId = String(cashierRow?.user_id);
-		const [ownerRow] = await query(`SELECT user_id FROM public.organization_memberships WHERE organization_id = $1 AND role = 'OWNER' AND is_deleted = false`, [ORG_ID]);
-		const [staffRole] = await query(`SELECT id FROM public.roles WHERE name = 'Store Staff'`);
+		cashierUserId = String(cashierRow?.userId);
+		const [ownerRow] = await query(`SELECT "userId" FROM public."Membership" WHERE "tenantId" = $1 AND role = 'OWNER' AND "isDeleted" = false`, [ORG_ID]);
+		const [staffRole] = await query(`SELECT id FROM public."Role" WHERE name = 'Store Staff'`);
 
 		await query(
-			`INSERT INTO public.organization_locations (id, organization_id, name, code, address_text, status, is_primary) VALUES ($1, $2, 'E2E closure store', $3, '1 Jalan E2E', 'ACTIVE', false)`,
+			`INSERT INTO public."Location" (id, "tenantId", name, code, "addressText", status, "isPrimary") VALUES ($1, $2, 'E2E closure store', $3, '1 Jalan E2E', 'ACTIVE', false)`,
 			[locationId, ORG_ID, `e2e-${locationId.slice(0, 8)}`],
 		);
-		await query(`INSERT INTO public.stores (id, organization_id, location_id, name, code, status) VALUES ($1, $2, $3, 'E2E closure store', $4, 'ACTIVE')`, [
+		await query(`INSERT INTO public."Store" (id, "tenantId", "locationId", name, code, status) VALUES ($1, $2, $3, 'E2E closure store', $4, 'ACTIVE')`, [
 			storeId,
 			ORG_ID,
 			locationId,
 			`e2e-${locationId.slice(0, 8)}`,
 		]);
-		await query(
-			`INSERT INTO public.organization_membership_location_scopes (id, organization_id, membership_id, scope_type, location_id) VALUES ($1, $2, $3, 'SELECTED', $4)`,
-			[randomUUID(), ORG_ID, cashierMembershipId, locationId],
-		);
-		await query(`INSERT INTO public.store_memberships (id, organization_id, store_id, user_id, role_id, status) VALUES ($1, $2, $3, $4, $5, 'ACTIVE')`, [
+		await query(`INSERT INTO public."MembershipLocationScope" (id, "tenantId", "membershipId", "scopeType", "locationId") VALUES ($1, $2, $3, 'SELECTED', $4)`, [
+			randomUUID(),
+			ORG_ID,
+			cashierMembershipId,
+			locationId,
+		]);
+		await query(`INSERT INTO public."StoreMembership" (id, "tenantId", "storeId", "userId", "roleId", status) VALUES ($1, $2, $3, $4, $5, 'ACTIVE')`, [
 			randomUUID(),
 			ORG_ID,
 			storeId,
@@ -84,15 +83,15 @@ describe("Store member removal and store closure (e2e)", () => {
 			String(staffRole?.id),
 		]);
 		await query(
-			`INSERT INTO public.organization_api_keys (id, organization_id, location_id, name, key_hash, key_prefix, scope, created_by_user_id) VALUES ($1, $2, $3, 'E2E closure key', $4, 'e2eclose', 'POS', $5)`,
-			[apiKeyId, ORG_ID, locationId, `hash-${apiKeyId}`, String(ownerRow?.user_id)],
+			`INSERT INTO public."TenantApiKey" (id, "tenantId", "locationId", name, "keyHash", "keyPrefix", scope, "createdByUserId") VALUES ($1, $2, $3, 'E2E closure key', $4, 'e2eclose', 'POS', $5)`,
+			[apiKeyId, ORG_ID, locationId, `hash-${apiKeyId}`, String(ownerRow?.userId)],
 		);
-		await query(`INSERT INTO public.organization_terminals (id, organization_id, location_id, terminal_id, created_by_user_id, api_key_id) VALUES ($1, $2, $3, $4, $5, $6)`, [
+		await query(`INSERT INTO public."TenantTerminal" (id, "tenantId", "locationId", "terminalId", "createdByUserId", "apiKeyId") VALUES ($1, $2, $3, $4, $5, $6)`, [
 			terminalRowId,
 			ORG_ID,
 			locationId,
 			`E2E-CLOSE-${terminalRowId.slice(0, 6)}`,
-			String(ownerRow?.user_id),
+			String(ownerRow?.userId),
 			apiKeyId,
 		]);
 
@@ -101,12 +100,12 @@ describe("Store member removal and store closure (e2e)", () => {
 	});
 
 	afterAll(async () => {
-		await query(`DELETE FROM public.organization_terminals WHERE id = $1`, [terminalRowId]);
-		await query(`DELETE FROM public.organization_api_keys WHERE id = $1`, [apiKeyId]);
-		await query(`DELETE FROM public.organization_membership_location_scopes WHERE location_id = $1`, [locationId]);
-		await query(`DELETE FROM public.store_memberships WHERE store_id = $1`, [storeId]);
-		await query(`DELETE FROM public.stores WHERE id = $1`, [storeId]);
-		await query(`DELETE FROM public.organization_locations WHERE id = $1`, [locationId]);
+		await query(`DELETE FROM public."TenantTerminal" WHERE id = $1`, [terminalRowId]);
+		await query(`DELETE FROM public."TenantApiKey" WHERE id = $1`, [apiKeyId]);
+		await query(`DELETE FROM public."MembershipLocationScope" WHERE "locationId" = $1`, [locationId]);
+		await query(`DELETE FROM public."StoreMembership" WHERE "storeId" = $1`, [storeId]);
+		await query(`DELETE FROM public."Store" WHERE id = $1`, [storeId]);
+		await query(`DELETE FROM public."Location" WHERE id = $1`, [locationId]);
 		await pool.end();
 		await app.close();
 	});
@@ -122,31 +121,38 @@ describe("Store member removal and store closure (e2e)", () => {
 		expect((await post(owner, `/locations/${locationId}/close`, {})).statusCode).toBe(400);
 	});
 
-	it("removes the cashier from one store: scope row gone, store membership soft-deleted by the owner, audited", async () => {
+	it("removes the cashier from one store: scope row and store membership soft-deleted by the owner, audited", async () => {
 		const response = await post(owner, `/members/${cashierMembershipId}/stores/${locationId}/remove`, {});
 
 		expect(response.statusCode, response.body).toBe(201);
-		const data = parseSuccessEnvelope(response, OrganizationMemberStoreRemoveResponseSchema).data;
+		const data = parseSuccessEnvelope(response, TenantMemberStoreRemoveResponseSchema).data;
 		expect(data.remainingLocationIds).toEqual([BERUANG]);
-		const scopes = await query(`SELECT 1 FROM public.organization_membership_location_scopes WHERE membership_id = $1 AND location_id = $2`, [
+		const scopes = await query(`SELECT "isDeleted", "deletedAt", "deletedBy" FROM public."MembershipLocationScope" WHERE "membershipId" = $1 AND "locationId" = $2`, [
 			cashierMembershipId,
 			locationId,
 		]);
-		expect(scopes).toHaveLength(0);
-		const [storeMembership] = await query(`SELECT is_deleted, deleted_at, deleted_by FROM public.store_memberships WHERE store_id = $1 AND user_id = $2`, [
+		const [scope] = scopes;
+		expect(scopes).toHaveLength(1);
+		expect(scope).toMatchObject({ isDeleted: true });
+		expect(scope?.deletedAt).not.toBeNull();
+		expect(scope?.deletedBy).not.toBeNull();
+		const [storeMembership] = await query(`SELECT "isDeleted", "deletedAt", "deletedBy" FROM public."StoreMembership" WHERE "storeId" = $1 AND "userId" = $2`, [
 			storeId,
 			cashierUserId,
 		]);
-		expect(storeMembership).toMatchObject({ is_deleted: true });
-		expect(storeMembership?.deleted_by).not.toBeNull();
-		const audit = await query(`SELECT 1 FROM public.organization_audit_logs WHERE action = 'membership.removed_from_store' AND resource_id = $1`, [cashierMembershipId]);
+		expect(storeMembership).toMatchObject({ isDeleted: true });
+		expect(storeMembership?.deletedBy).not.toBeNull();
+		const audit = await query(`SELECT 1 FROM public."TenantAuditLog" WHERE action = 'membership.removed_from_store' AND "resourceId" = $1`, [cashierMembershipId]);
 		expect(audit.length).toBeGreaterThan(0);
 	});
 
 	it("refuses to leave the cashier without any store unless allowNoStores is set", async () => {
 		const refused = await post(owner, `/members/${cashierMembershipId}/stores/${BERUANG}/remove`, {});
 		expect(refused.statusCode, refused.body).toBe(409);
-		const scopes = await query(`SELECT 1 FROM public.organization_membership_location_scopes WHERE membership_id = $1 AND location_id = $2`, [cashierMembershipId, BERUANG]);
+		const scopes = await query(`SELECT 1 FROM public."MembershipLocationScope" WHERE "membershipId" = $1 AND "locationId" = $2 AND "isDeleted" = false`, [
+			cashierMembershipId,
+			BERUANG,
+		]);
 		expect(scopes).toHaveLength(1);
 	});
 
@@ -154,19 +160,21 @@ describe("Store member removal and store closure (e2e)", () => {
 		const response = await post(owner, `/locations/${locationId}/close`, { reason: CLOSURE_REASON });
 
 		expect(response.statusCode, response.body).toBe(201);
-		const data = parseSuccessEnvelope(response, OrganizationLocationCloseResponseSchema).data;
+		const data = parseSuccessEnvelope(response, LocationCloseResponseSchema).data;
 		expect(data).toMatchObject({ locationId, storeId, terminalsRemoved: 1, apiKeysRevoked: 1 });
-		const [location] = await query(`SELECT status, is_deleted, closure_reason, deleted_by FROM public.organization_locations WHERE id = $1`, [locationId]);
-		expect(location).toMatchObject({ status: "INACTIVE", is_deleted: true, closure_reason: CLOSURE_REASON });
-		expect(location?.deleted_by).not.toBeNull();
-		const [store] = await query(`SELECT status, is_deleted FROM public.stores WHERE id = $1`, [storeId]);
-		expect(store).toMatchObject({ status: "INACTIVE", is_deleted: true });
-		const [terminal] = await query(`SELECT is_deleted FROM public.organization_terminals WHERE id = $1`, [terminalRowId]);
-		expect(terminal).toMatchObject({ is_deleted: true });
-		const [key] = await query(`SELECT revoked_at FROM public.organization_api_keys WHERE id = $1`, [apiKeyId]);
-		expect(key?.revoked_at).not.toBeNull();
-		const audit = await query(`SELECT 1 FROM public.organization_audit_logs WHERE action = 'organization.location.closed' AND resource_id = $1`, [locationId]);
+		const [location] = await query(`SELECT status, "isDeleted", "closureReason", "deletedBy" FROM public."Location" WHERE id = $1`, [locationId]);
+		expect(location).toMatchObject({ status: "INACTIVE", isDeleted: true, closureReason: CLOSURE_REASON });
+		expect(location?.deletedBy).not.toBeNull();
+		const [store] = await query(`SELECT status, "isDeleted" FROM public."Store" WHERE id = $1`, [storeId]);
+		expect(store).toMatchObject({ status: "INACTIVE", isDeleted: true });
+		const [terminal] = await query(`SELECT "isDeleted" FROM public."TenantTerminal" WHERE id = $1`, [terminalRowId]);
+		expect(terminal).toMatchObject({ isDeleted: true });
+		const [key] = await query(`SELECT "revokedAt" FROM public."TenantApiKey" WHERE id = $1`, [apiKeyId]);
+		expect(key?.revokedAt).not.toBeNull();
+		const audit = await query(`SELECT 1 FROM public."TenantAuditLog" WHERE action = 'tenant.location.closed' AND "resourceId" = $1`, [locationId]);
 		expect(audit).toHaveLength(1);
+		const liveScopes = await query(`SELECT 1 FROM public."MembershipLocationScope" WHERE "locationId" = $1 AND "isDeleted" = false`, [locationId]);
+		expect(liveScopes).toHaveLength(0);
 	});
 
 	it("answers 404 when the store is already closed, and 404 when removing a member from it", async () => {

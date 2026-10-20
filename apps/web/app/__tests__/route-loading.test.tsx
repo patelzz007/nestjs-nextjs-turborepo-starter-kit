@@ -6,13 +6,13 @@ import { afterEach, describe, it, vi } from "vitest";
 import LandingLoading from "@/app/(landing)/loading";
 import WebLoginLoading from "@/app/auth/login/loading";
 import HelloLoading from "@/app/hello/loading";
-import RewardHubAccountLoading from "@/app/rewardhub/account/loading";
-import RewardHubActivityLoading from "@/app/rewardhub/activity/loading";
-import RewardHubBrowseLoading from "@/app/rewardhub/loading";
-import RewardHubReferralsLoading from "@/app/rewardhub/referrals/loading";
-import RewardHubRewardDetailLoading from "@/app/rewardhub/rewards/[rewardId]/loading";
-import WalletClaimLoading from "@/app/rewardhub/wallet/[claimId]/loading";
-import RewardHubWalletLoading from "@/app/rewardhub/wallet/loading";
+import DashboardAccountLoading from "@/app/dashboard/account/loading";
+import DashboardActivityLoading from "@/app/dashboard/activity/loading";
+import DashboardBrowseLoading from "@/app/dashboard/loading";
+import DashboardReferralsLoading from "@/app/dashboard/referrals/loading";
+import DashboardRewardDetailLoading from "@/app/dashboard/rewards/[rewardId]/loading";
+import WalletClaimLoading from "@/app/dashboard/wallet/[claimId]/loading";
+import DashboardWalletLoading from "@/app/dashboard/wallet/loading";
 import PublicRewardDetailLoading from "@/app/rewards/[rewardId]/loading";
 import {
 	ACCOUNT_SETTINGS_LOADING_LABELS,
@@ -44,13 +44,13 @@ const ROUTE_LOADING_CASES: readonly RouteLoadingCase[] = [
 	{ route: "/", loadingView: LandingLoading, announcement: LANDING_LOADING_LABELS.loading },
 	{ route: "/auth/login", loadingView: WebLoginLoading, announcement: SIGN_IN_LOADING_LABELS.loading },
 	{ route: "/hello", loadingView: HelloLoading, announcement: PROFILE_LOADING_LABELS.loading },
-	{ route: "/rewardhub", loadingView: RewardHubBrowseLoading, announcement: REWARDS_CATALOG_LOADING_LABELS.loading },
-	{ route: "/rewardhub/account", loadingView: RewardHubAccountLoading, announcement: ACCOUNT_SETTINGS_LOADING_LABELS.loading },
-	{ route: "/rewardhub/activity", loadingView: RewardHubActivityLoading, announcement: ACTIVITY_LOADING_LABELS.loading },
-	{ route: "/rewardhub/referrals", loadingView: RewardHubReferralsLoading, announcement: REFERRALS_LOADING_LABELS.loading },
-	{ route: "/rewardhub/rewards/[rewardId]", loadingView: RewardHubRewardDetailLoading, announcement: REWARD_DETAIL_LOADING_LABELS.loading },
-	{ route: "/rewardhub/wallet", loadingView: RewardHubWalletLoading, announcement: WALLET_LOADING_LABELS.loading },
-	{ route: "/rewardhub/wallet/[claimId]", loadingView: WalletClaimLoading, announcement: CLAIM_QR_LOADING_LABELS.loading },
+	{ route: "/dashboard", loadingView: DashboardBrowseLoading, announcement: REWARDS_CATALOG_LOADING_LABELS.loading },
+	{ route: "/dashboard/account", loadingView: DashboardAccountLoading, announcement: ACCOUNT_SETTINGS_LOADING_LABELS.loading },
+	{ route: "/dashboard/activity", loadingView: DashboardActivityLoading, announcement: ACTIVITY_LOADING_LABELS.loading },
+	{ route: "/dashboard/referrals", loadingView: DashboardReferralsLoading, announcement: REFERRALS_LOADING_LABELS.loading },
+	{ route: "/dashboard/rewards/[rewardId]", loadingView: DashboardRewardDetailLoading, announcement: REWARD_DETAIL_LOADING_LABELS.loading },
+	{ route: "/dashboard/wallet", loadingView: DashboardWalletLoading, announcement: WALLET_LOADING_LABELS.loading },
+	{ route: "/dashboard/wallet/[claimId]", loadingView: WalletClaimLoading, announcement: CLAIM_QR_LOADING_LABELS.loading },
 	{ route: "/rewards/[rewardId]", loadingView: PublicRewardDetailLoading, announcement: REWARD_DETAIL_LOADING_LABELS.loading },
 ];
 

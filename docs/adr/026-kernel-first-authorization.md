@@ -12,7 +12,7 @@ order: 26
 
 ## Status
 
-Accepted (2026-10-01). Current design: [Backend: the Authorization Kernel](../technical/authorization/backend.md).
+Accepted (2026-10-01). Superseded in part by ADR 058 — resource checks move to handlers through `AuthorizationPort`; the guard stays the coarse filter. Current design: [Backend: the Authorization Kernel](../technical/authorization/backend.md).
 Refines [ADR 001](./001-permission-first-rbac.md); tenant policies stay with Cedar ([ADR 011](./011-cedar-precedence.md)).
 
 ## Context

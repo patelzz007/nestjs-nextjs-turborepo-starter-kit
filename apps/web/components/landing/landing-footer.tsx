@@ -19,9 +19,9 @@ const FOOTER_COLUMNS: readonly { readonly heading: string; readonly links: reado
 	{
 		heading: "Your account",
 		links: [
-			{ label: "Sign in", href: loginPath(ROUTES.rewardHub.browse) },
-			{ label: "Dashboard", href: ROUTES.rewardHub.browse },
-			{ label: "My rewards", href: ROUTES.rewardHub.wallet },
+			{ label: "Sign in", href: loginPath(ROUTES.dashboard.browse) },
+			{ label: "Dashboard", href: ROUTES.dashboard.browse },
+			{ label: "My rewards", href: ROUTES.dashboard.wallet },
 		],
 	},
 ];

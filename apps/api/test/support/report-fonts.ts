@@ -1,4 +1,4 @@
-import { ReportFontRegistry } from "../../src/modules/rewards/analytics/report/fonts/report-font-registry";
+import { ReportFontLoader, ReportFontRegistry } from "../../src/contexts/reporting/infrastructure/report/fonts/report-font-registry";
 
 let registry: ReportFontRegistry | undefined;
 
@@ -6,4 +6,15 @@ let registry: ReportFontRegistry | undefined;
 export function testReportFontRegistry(): ReportFontRegistry {
 	registry ??= new ReportFontRegistry();
 	return registry;
+}
+
+/** A loader over the real fonts that hands every render the same registry, so a test file parses them once. */
+class SharedRegistryLoader extends ReportFontLoader {
+	public override load(): ReportFontRegistry {
+		return testReportFontRegistry();
+	}
+}
+
+export function testReportFontLoader(): ReportFontLoader {
+	return new SharedRegistryLoader();
 }

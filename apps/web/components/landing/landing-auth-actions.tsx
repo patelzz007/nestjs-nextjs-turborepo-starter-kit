@@ -1,8 +1,8 @@
 "use client";
 
-import { useWebSession } from "@/components/auth/web-authorization-provider";
-import { useAuthCommands, useAuthUser } from "@workspace/client/lib/auth";
-import { useOwnAvatar } from "@workspace/client/lib/auth/profile/use-own-avatar";
+import { useWebSession } from "@/contexts/identity/components/web-authorization-provider";
+import { useAuthCommands, useAuthUser } from "@workspace/client/lib/contexts/identity";
+import { useOwnAvatar } from "@workspace/client/lib/contexts/identity/profile/use-own-avatar";
 import { AppShellProfileDropdown } from "@workspace/ui/components/app-shell-profile-dropdown";
 import { ShellThemeToggle } from "@workspace/ui/components/shell-theme-toggle";
 import { buttonVariants } from "@workspace/ui/components/button";
@@ -40,14 +40,14 @@ export function LandingAuthActions(): React.JSX.Element {
 				label: "Dashboard",
 				icon: <LayoutDashboard className="size-4" aria-hidden="true" />,
 				onClick: (): void => {
-					router.push(ROUTES.rewardHub.browse);
+					router.push(ROUTES.dashboard.browse);
 				},
 			},
 			{
 				label: "My rewards",
 				icon: <Ticket className="size-4" aria-hidden="true" />,
 				onClick: (): void => {
-					router.push(ROUTES.rewardHub.wallet);
+					router.push(ROUTES.dashboard.wallet);
 				},
 			},
 			{
@@ -69,7 +69,7 @@ export function LandingAuthActions(): React.JSX.Element {
 			) : mayBeSignedIn ? (
 				<Skeleton variant="circular" className="size-8" aria-hidden="true" />
 			) : (
-				<Link href={loginPath(ROUTES.rewardHub.browse)} className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}>
+				<Link href={loginPath(ROUTES.dashboard.browse)} className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}>
 					<LogIn className="size-4" aria-hidden="true" />
 					Sign in
 				</Link>

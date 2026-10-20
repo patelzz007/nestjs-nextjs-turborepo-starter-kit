@@ -11,7 +11,7 @@ tags: ["api", "analytics", "exports", "csv", "xlsx", "pdf"]
 # Analytics API — dashboards and exports
 
 Five routes serve every analytics screen. The JSON shapes live in
-`packages/shared/src/schemas/domain/rewards/analytics-dashboard.ts`, the range grammar in
+`packages/shared/src/contexts/reporting/schemas/analytics-dashboard.ts`, the range grammar in
 `analytics-range.ts`, the export rules in `analytics-export.ts`; the generated
 [API reference](../api-reference/README.md) lists every field.
 
@@ -95,7 +95,7 @@ Cookie: <session cookies from POST /api/v1/auth/login>
       { "start": 1788596410877, "end": 1788710400000, "isPartial": true, "salesMinor": 14143, "bills": 5, "averageBillMinor": 2829, "claims": 5, "redemptions": 5 },
       { "start": 1788710400000, "end": 1789315200000, "isPartial": false, "salesMinor": 69394, "bills": 23, "averageBillMinor": 3017, "claims": 31, "redemptions": 23 }
     ],
-    "byStore": [{ "locationId": "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d", "name": "Brew & Bean KL — Bukit Bintang", "city": "KUALA_LUMPUR", "salesMinor": 292705, "bills": 101, "averageBillMinor": 2898, "redemptions": 101 }],
+    "byStore": [{ "locationId": "019b76da-a800-701a-abbd-a9a411b6958b", "name": "Brew & Bean KL — Bukit Bintang", "city": "KUALA_LUMPUR", "salesMinor": 292705, "bills": 101, "averageBillMinor": 2898, "redemptions": 101 }],
     "byReward": [{ "rewardId": "ca5e4873-45fa-4124-b24b-14ef2df21d7c", "title": "Morning brew club — free refill", "claims": 52, "redemptions": 50, "conversionRate": 96.2 }],
     "byRedemptionMethod": [{ "method": "SCAN", "redemptions": 66 }, { "method": "MANUAL", "redemptions": 35 }]
   },
@@ -133,8 +133,8 @@ X-Content-Type-Options: nosniff
 - **Rate limit:** 10 exports per caller (user, or API key) per 10 minutes
   (`ANALYTICS_EXPORT_RATE_LIMIT` / `…_WINDOW_MS` in `@workspace/shared`), counted in the shared
   Redis throttler store so every API instance enforces one budget.
-- **Audit:** every export writes one `audit_logs` row before a byte is sent — actor, impersonator,
-  organization, IP, device, endpoint, query, and as `response_body`
+- **Audit:** every export writes one `AuditLog` row before a byte is sent — actor, impersonator,
+  organization, IP, device, endpoint, query, and as `responseBody`
   `{ export: { report, subject, format, fileName, from, to, timeZone, interval, rowCounts } }`
   (never the data). If the row cannot be written the export fails with `500`.
 - **Time budget:** every report statement runs with `SET LOCAL statement_timeout = 10 s`
@@ -170,7 +170,7 @@ glyph; other letters use the Latin fallback.
   `tsx`) they resolve next to the source. `ReportFontRegistry` loads and
   checks them **once at startup** — the file exists, it is the expected family, it can draw its
   sample text, the licence is there — and the API refuses to boot otherwise. A test pins each
-  file's SHA-256 (`report/fonts/report-fonts.ts`).
+  file's SHA-256 (`infrastructure/report/fonts/report-fonts.ts`).
 - **Adding a language** is one entry in `REPORT_FONT_FAMILIES`: its Unicode ranges, its two font
   files with their hashes, its licence and a sample text.
 - **Shaping:** Tamil and Devanagari need OpenType shaping; fontkit (inside PDFKit) applies it per
@@ -203,29 +203,40 @@ ordinary queries: `api.organizations.analyticsDashboard.useQuery({ orgSlug, from
 
 ## How the code is laid out
 
+Analytics is the **reporting** bounded context (`apps/api/src/contexts/reporting/`, queries only,
+plan §7.8). Every route is one query handler; the controllers make exactly one `QueryBus` call.
+
 ```mermaid
 flowchart LR
-    C[Controllers<br/>dashboard / export routes] --> D[AnalyticsDashboardService<br/>who sees what + comparison math]
-    C --> E[AnalyticsExportService]
-    E --> D
+    C[Controllers<br/>presentation/http] --> Q[Query handlers<br/>authorize, then assemble]
+    Q --> M[MerchantAccessPort<br/>merchant:view_analytics + store scope]
+    Q --> D[AnalyticsDashboardAssembler<br/>comparison math]
+    Q --> W[WeeklyAnalyticsAssembler<br/>weekly /analytics routes]
+    Q --> E[AnalyticsReportExporter]
     E --> B[buildMerchantReport / buildPlatformReport<br/>→ AnalyticsReport]
-    E --> R[AnalyticsReportRendererRegistry<br/>csv · xlsx · pdf]
-    E --> A[AuditTrailService.recordSensitiveRead]
-    D --> F[AnalyticsFactsRepository<br/>series · totals · cohorts]
-    D --> K[AnalyticsBreakdownRepository<br/>store · reward · method · merchant · category · city]
+    E --> R[ReportRendererPort<br/>csv · xlsx · pdf]
+    E --> A[ReportExportAuditPort<br/>AuditTrailService.recordSensitiveRead]
+    D --> F[AnalyticsFactsReadPort<br/>series · totals · cohorts]
+    D --> K[AnalyticsBreakdownReadPort<br/>store · reward · method · merchant · category · city]
     F --> S[AnalyticsSqlRunner<br/>statement_timeout + typed rows]
     K --> S
 ```
 
-`apps/api/src/modules/rewards/analytics/`:
+`apps/api/src/contexts/reporting/`:
 
-- `analytics-scope.ts` — `AnalyticsScope` (`platform` / `organization` + store scope / `customer`)
-  and the SQL filters for each fact table; a store-limited caller's filter is never "no filter".
-- `analytics-sql.ts` — the Postgres bucket generator, the statement-time budget, timeout mapping.
-- `report/analytics-report.ts` — the one report model; `report/renderers/*` — one class per
-  format behind `AnalyticsReportRenderer`. **A new format** = a value in
-  `AnalyticsExportFormatSchema` (+ its content type and extension), one renderer class, one entry
-  in the registry; renderers never query the database.
+- `domain/value-objects/analytics-scope.value-object.ts` — `AnalyticsScope` (`platform` /
+  `organization` + store scope / `customer`); `domain/policies/` — the comparison and weekly math.
+- `application/queries/<use-case>/` — `GetMerchantAnalytics`, `GetMerchantDashboard`,
+  `ExportMerchantReport`, `GetAdminSalesAnalytics`, `GetAdminDashboard`, `ExportPlatformReport`,
+  `GetConsumerClaimAnalytics`, `GetConsumerDashboard`. A merchant handler asks the merchant access
+  port first; a store-limited caller's scope is never "no filter".
+- `infrastructure/persistence/analytics-sql-conditions.ts` — the SQL filters for each fact table;
+  `analytics-sql.ts` — the Postgres bucket generator, the statement-time budget, timeout mapping.
+- `application/reports/analytics-report.ts` — the one report model;
+  `infrastructure/report/renderers/*` — one class per format behind `AnalyticsReportRenderer`.
+  **A new format** = a value in `AnalyticsExportFormatSchema` (+ its content type and extension),
+  one renderer class, one entry in the registry; renderers never query the database.
+- `presentation/http/analytics-export-rate-limit.guard.ts` — the per-caller export limit.
 
 Indexes used: `reward_sales (organization_id, paid_at)`, `(user_id, paid_at)`, `(paid_at)`;
 `reward_redemptions (organization_id)`, `(redeemed_at)`; `reward_claims (reward_id)`, `(user_id)`.

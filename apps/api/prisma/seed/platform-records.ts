@@ -1,26 +1,22 @@
-import * as bcrypt from "bcrypt";
 import type { OutboxEventStatus, Prisma } from "@prisma/client";
 import { JsonObjectSchema, PLATFORM_EVENT_TOPICS, PlatformEventEnvelopeSchema, type PlatformEventInput, DAY_MS } from "@workspace/shared";
 
-import { resolvePartitionKey } from "../../src/infrastructure/outbox/platform-outbox.service";
+import { resolvePartitionKey } from "../../src/platform/infrastructure/outbox/platform-outbox.service";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
-import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "./organizations";
+import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "./tenants";
 
 // ---------------------------------------------------------------------------
 // Platform records that no other seeder covers, so that after `db:seed` every
 // table and every column — soft-delete fields, optional columns, operational
 // ledgers — holds realistic, deterministic data:
 //
-//   logs                       info / warn / error rows with every column set
-//   outbox_events              one PUBLISHED and one dead-lettered (FAILED) event,
+//   OutboxEvent              one PUBLISHED and one dead-lettered (FAILED) event,
 //                              built from the real event envelope + topic map
-//   organization_slug_history  the KL merchant's previous slug, still reserved
-//   sample_category / product  a soft-deleted category with its soft-deleted
+//   TenantSlugHistory  the KL merchant's previous slug, still reserved
+//   SampleCategory / product  a soft-deleted category with its soft-deleted
 //                              product (cascade, as the app deletes them), and a
 //                              live, twice-edited product with an image
-//   urls / tags / clicks       a password-protected short URL (bcrypt hash),
-//                              a soft-deleted URL, tag and click
 //
 // Idempotent: every row is upserted on its id (deterministic) or its natural
 // unique key, with an empty update — re-running never duplicates or rewrites.
@@ -31,10 +27,8 @@ const NAMESPACE = "seed.platform_records";
 /** Fixed demo clock (2026-09-15T08:00:00Z) — byte-identical rows across runs. */
 const BASE_EPOCH_MS = 1_789_459_200_000;
 const ONE_MINUTE_MS = 60_000;
-/** How long a released organization slug stays reserved for its former owner. */
+/** How long a released tenant slug stays reserved for its former owner. */
 const SLUG_RESERVATION_DAYS = 90;
-/** bcrypt cost for seeded secrets (matches the users seeder). */
-const SEED_BCRYPT_ROUNDS = 10;
 /** Delivery attempts after which the outbox dispatcher dead-letters an event. */
 const OUTBOX_DEAD_LETTER_ATTEMPTS = 5;
 
@@ -49,62 +43,9 @@ export interface PlatformRecordsActors {
 }
 
 export interface PlatformRecordsSummary {
-	readonly logs: number;
 	readonly outboxEvents: number;
 	readonly slugHistory: number;
 	readonly softDeletedCatalogRows: number;
-	readonly urlRecords: number;
-}
-
-async function seedLogs(actors: PlatformRecordsActors): Promise<number> {
-	const rows: (Prisma.LogCreateInput & { readonly id: string })[] = [
-		{
-			id: id("log:info"),
-			level: "info",
-			message: "HTTP POST /api/v1/product completed with 201",
-			context: "HttpRequest",
-			userId: actors.adminId,
-			correlationId: correlation("log:info"),
-			metadata: { method: "POST", route: "/api/v1/product", status: 201 },
-			durationMs: 48,
-			errorGroup: null,
-			tags: ["http", "catalog"],
-			timestamp: at(0),
-			createdAt: at(0),
-		},
-		{
-			id: id("log:warn"),
-			level: "warn",
-			message: "Slow request: GET /api/v1/geo/cities took 1312ms",
-			context: "PerformanceInterceptor",
-			userId: actors.userId,
-			correlationId: correlation("log:warn"),
-			metadata: { method: "GET", route: "/api/v1/geo/cities", thresholdMs: 1000 },
-			durationMs: 1312,
-			errorGroup: null,
-			tags: ["http", "performance"],
-			timestamp: at(5),
-			createdAt: at(5),
-		},
-		{
-			id: id("log:error"),
-			level: "error",
-			message: "HTTP POST /api/v1/auth/login failed with 503 SERVICE_UNAVAILABLE",
-			context: "GlobalExceptionFilter",
-			userId: null,
-			correlationId: correlation("log:error"),
-			metadata: { httpStatus: 503, errorCode: "SERVICE_UNAVAILABLE", errorName: "DependencyUnavailableError" },
-			durationMs: 5004,
-			errorGroup: "database-unavailable",
-			tags: ["http", "auth", "dependency"],
-			timestamp: at(9),
-			createdAt: at(9),
-		},
-	];
-	for (const row of rows) {
-		await prisma.log.upsert({ where: { id: row.id }, create: row, update: {} });
-	}
-	return rows.length;
 }
 
 /** An outbox row exactly as `PlatformOutboxService.buildRow` writes it, at a fixed time and id. */
@@ -167,12 +108,12 @@ async function seedOutbox(actors: PlatformRecordsActors): Promise<number> {
 			updatedAt: at(16),
 		},
 		{
-			// Tagged with its tenant, so the analytics row is partitioned by organization.
+			// Tagged with its tenant, so the analytics row is partitioned by tenant.
 			...outboxRow(
 				"outbox:published-reward",
 				{
 					type: "reward.platform",
-					payload: { event: "reward.auto_published", actorUserId: null, organizationId: ORGANIZATION_SEED_IDS.klOrganization, metadata: { rewardCount: "2" } },
+					payload: { event: "reward.auto_published", actorUserId: null, tenantId: TENANT_SEED_IDS.klTenant, metadata: { rewardCount: "2" } },
 				},
 				25,
 			),
@@ -208,11 +149,11 @@ async function seedOutbox(actors: PlatformRecordsActors): Promise<number> {
 
 /** The KL merchant renamed its slug: the old one stays reserved for it (no one else can claim it). */
 async function seedSlugHistory(): Promise<number> {
-	const previousSlug = `${ORGANIZATION_SEED_SLUGS.kl}-cafe`;
-	await prisma.organizationSlugHistory.upsert({
+	const previousSlug = `${TENANT_SEED_SLUGS.kl}-cafe`;
+	await prisma.tenantSlugHistory.upsert({
 		where: { slug: previousSlug },
 		create: {
-			organizationId: ORGANIZATION_SEED_IDS.klOrganization,
+			tenantId: TENANT_SEED_IDS.klTenant,
 			slug: previousSlug,
 			reservedUntil: BigInt(Date.now() + SLUG_RESERVATION_DAYS * DAY_MS),
 			createdAt: at(-30 * 24 * 60),
@@ -298,78 +239,10 @@ async function seedCatalog(): Promise<number> {
 	return 2;
 }
 
-async function seedUrls(actors: PlatformRecordsActors): Promise<number> {
-	const protectedCode = "seed-locked";
-	await prisma.url.upsert({
-		where: { shortCode: protectedCode },
-		create: {
-			id: id("url:protected"),
-			userId: actors.userId,
-			shortCode: protectedCode,
-			originalUrl: "https://example.com/reports/q3-board-pack.pdf",
-			title: "Q3 board pack (password protected)",
-			passwordHash: await bcrypt.hash("BoardPack@2026", SEED_BCRYPT_ROUNDS),
-			clickLimit: 50,
-			expiresAt: BigInt(Date.now() + SLUG_RESERVATION_DAYS * DAY_MS),
-			createdAt: at(0),
-			updatedAt: at(0),
-		},
-		update: {},
-	});
-	const deletedCode = "seed-retired";
-	const retired = await prisma.url.upsert({
-		where: { shortCode: deletedCode },
-		create: {
-			id: id("url:retired"),
-			userId: actors.userId,
-			shortCode: deletedCode,
-			originalUrl: "https://example.com/promo/summer-2025",
-			title: "Summer 2025 promo (deleted)",
-			isActive: false,
-			isDeleted: true,
-			deletedAt: at(50),
-			createdAt: at(-120 * 24 * 60),
-			updatedAt: at(50),
-		},
-		update: {},
-	});
-	await prisma.click.upsert({
-		where: { id: id("click:retired") },
-		create: {
-			id: id("click:retired"),
-			urlId: retired.id,
-			ipAddress: "198.51.100.42",
-			country: "MY",
-			city: "Kuala Lumpur",
-			deviceType: "MOBILE",
-			os: "iOS",
-			browser: "Safari",
-			referrer: "https://www.instagram.com/",
-			utmSource: "instagram",
-			utmMedium: "social",
-			utmCampaign: "summer-2025",
-			clickedAt: at(-100 * 24 * 60),
-			isDeleted: true,
-			deletedAt: at(50),
-			createdAt: at(-100 * 24 * 60),
-			updatedAt: at(50),
-		},
-		update: {},
-	});
-	await prisma.tag.upsert({
-		where: { userId_name: { userId: actors.userId, name: "summer-2025" } },
-		create: { userId: actors.userId, name: "summer-2025", color: "#f59e0b", isDeleted: true, deletedAt: at(50), createdAt: at(-120 * 24 * 60), updatedAt: at(50) },
-		update: {},
-	});
-	return 4;
-}
-
 export async function seedPlatformRecords(actors: PlatformRecordsActors): Promise<PlatformRecordsSummary> {
 	return {
-		logs: await seedLogs(actors),
 		outboxEvents: await seedOutbox(actors),
 		slugHistory: await seedSlugHistory(),
 		softDeletedCatalogRows: await seedCatalog(),
-		urlRecords: await seedUrls(actors),
 	};
 }

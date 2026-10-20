@@ -1,12 +1,12 @@
-import { MerchantRedemptionsPageView } from "@/components/redemptions/merchant-redemptions-page-view";
+import { MerchantRedemptionsPageView } from "@/contexts/pos/components/redemptions/merchant-redemptions-page-view";
 import { toLocationQueryInput } from "@/features/tenant-context/selectors";
 import { loadMerchantServerContext } from "@/lib/merchant-server-api";
-import type { LocationScopedPrefetch } from "@/lib/org/location-prefetch";
-import { guardOrgPage } from "@/lib/org/org-page-guard";
-import { loadServerLocationScope } from "@/lib/org/server-location-scope";
-import { dayWindowContaining } from "@/lib/redemptions/today-window";
+import type { LocationScopedPrefetch } from "@/contexts/organizations/lib/org/location-prefetch";
+import { guardOrgPage } from "@/contexts/organizations/lib/org/org-page-guard";
+import { loadServerLocationScope } from "@/contexts/organizations/lib/org/server-location-scope";
+import { dayWindowContaining } from "@/contexts/pos/lib/redemptions/today-window";
 import { prefetchedDataOrUndefined, rethrowUnexpectedFailure } from "@/lib/server/server-query-outcome";
-import { REDEMPTIONS_URL_STATE, toRedemptionsDayCountQuery, toRedemptionsQuery } from "@/lib/url-state/redemptions";
+import { REDEMPTIONS_URL_STATE, toRedemptionsDayCountQuery, toRedemptionsQuery } from "@/contexts/pos/url-state/redemptions";
 import { toPrefetchedQuery, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import { nowEpochMs, type Envelope, type MerchantRedemptionListItem } from "@workspace/shared";
 import * as React from "react";

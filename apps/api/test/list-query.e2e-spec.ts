@@ -82,10 +82,10 @@ describe("List query grammar on GET /product (e2e, real Postgres)", () => {
 
 	beforeAll(async () => {
 		pool = new Pool({ connectionString: DATABASE_URL });
-		await pool.query(`INSERT INTO public.sample_category (id, name, slug, is_active) VALUES ($1, $2, $3, true)`, [categoryId, `${marker} category`, `${marker}-category`]);
+		await pool.query(`INSERT INTO public."SampleCategory" (id, name, slug, "isActive") VALUES ($1, $2, $3, true)`, [categoryId, `${marker} category`, `${marker}-category`]);
 		for (const fixture of fixtures) {
 			await pool.query(
-				`INSERT INTO public.product (id, category_id, name, sku, slug, price, brand, is_active, created_at, updated_at)
+				`INSERT INTO public."Product" (id, "categoryId", name, sku, slug, price, brand, "isActive", "createdAt", "updatedAt")
 				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)`,
 				[fixture.id, categoryId, fixture.name, `${marker}-${fixture.id}`, `${marker}-${fixture.id}`, fixture.price, fixture.brand, fixture.isActive, fixture.createdAt],
 			);
@@ -95,8 +95,8 @@ describe("List query grammar on GET /product (e2e, real Postgres)", () => {
 	});
 
 	afterAll(async () => {
-		await pool.query("DELETE FROM public.product WHERE category_id = $1", [categoryId]);
-		await pool.query("DELETE FROM public.sample_category WHERE id = $1", [categoryId]);
+		await pool.query('DELETE FROM public."Product" WHERE "categoryId" = $1', [categoryId]);
+		await pool.query('DELETE FROM public."SampleCategory" WHERE id = $1', [categoryId]);
 		await pool.end();
 		await app.close();
 	});

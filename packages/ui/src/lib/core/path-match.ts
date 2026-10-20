@@ -3,9 +3,9 @@ const SEGMENT_BOUNDARIES: ReadonlySet<string> = new Set<string>(["", "/", "?", "
 
 /**
  * Segment-aware prefix test — the one implementation every app uses
- * (`pathname` first, then the `prefix` it may sit under): `/rewardhub`
- * contains `/rewardhub`, `/rewardhub/wallet` and `/rewardhub?tab=1`, never
- * `/rewardhubs`; `/` contains only `/` itself (and its query / fragment).
+ * (`pathname` first, then the `prefix` it may sit under): `/dashboard`
+ * contains `/dashboard`, `/dashboard/wallet` and `/dashboard?tab=1`, never
+ * `/dashboards`; `/` contains only `/` itself (and its query / fragment).
  */
 export function isPathWithin(pathname: string, prefix: string): boolean {
 	if (!pathname.startsWith(prefix)) {

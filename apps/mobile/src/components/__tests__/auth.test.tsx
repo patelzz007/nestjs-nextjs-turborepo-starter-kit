@@ -18,14 +18,14 @@ describe("AuthShell", () => {
 	it("shows the brand large — tile, name and tagline — above the screens", async () => {
 		await render(
 			inFrame(
-				<AuthShell brandName="Reward Hub" tagline="Sign in to pick up where you left off." testID="shell">
+				<AuthShell brandName="Starter" tagline="Sign in to pick up where you left off." testID="shell">
 					<Text>sign-in form</Text>
 				</AuthShell>,
 			),
 		);
 
 		expect(screen.getByTestId("shell-brand")).toBeOnTheScreen();
-		expect(screen.getByRole("header", { name: "Reward Hub" })).toBeOnTheScreen();
+		expect(screen.getByRole("header", { name: "Starter" })).toBeOnTheScreen();
 		expect(screen.getByText("Sign in to pick up where you left off.")).toBeOnTheScreen();
 		expect(screen.getByText("sign-in form")).toBeOnTheScreen();
 	});
@@ -33,7 +33,7 @@ describe("AuthShell", () => {
 	it("folds the brand into one compact row while the keyboard is open", async () => {
 		await render(
 			inFrame(
-				<AuthShell brandName="Reward Hub" tagline="Sign in to pick up where you left off." compact testID="shell">
+				<AuthShell brandName="Starter" tagline="Sign in to pick up where you left off." compact testID="shell">
 					<Text>sign-in form</Text>
 				</AuthShell>,
 			),
@@ -41,7 +41,7 @@ describe("AuthShell", () => {
 
 		expect(screen.getByTestId("shell-brand-compact")).toBeOnTheScreen();
 		expect(screen.queryByTestId("shell-brand")).toBeNull();
-		expect(screen.getByRole("header", { name: "Reward Hub" })).toBeOnTheScreen();
+		expect(screen.getByRole("header", { name: "Starter" })).toBeOnTheScreen();
 		expect(screen.queryByText("Sign in to pick up where you left off.")).toBeNull();
 	});
 });

@@ -10,7 +10,7 @@
 --   ERROR: function app_rls_bypass() does not exist
 -- so `pnpm db:apply-security` aborted before any grants were applied.
 -- They now live here. The apply order and a use-before-define check live in
--- `RLS_APPLY_ORDER` (scripts/rls-apply-plan.ts) and run before any SQL executes.
+-- `RLS_APPLY_ORDER` (prisma/rls/apply-plan.ts) and run before any SQL executes.
 -- It also creates the `app_runtime` role — the ONLY place it is created. Every
 -- later file GRANTs to it (01 does so for its SECURITY DEFINER helpers), so on
 -- a brand-new cluster it must exist before anything else runs; the apply plan
@@ -32,8 +32,8 @@ GRANT app_runtime TO CURRENT_USER;
 
 -- ── app_enumerator role — the role of the `tenant.enumerate` system operation
 -- (apps/api/src/prisma/system-operation.registry.ts). Read-only and narrow:
--- 99-app-runtime-grants.sql grants it SELECT on `organizations` (plus the
--- `organization_memberships` table that policy reads) and nothing else, so a
+-- 99-app-runtime-grants.sql grants it SELECT on `Tenant` (plus the
+-- `Membership` table that policy reads) and nothing else, so a
 -- scheduler fan-out can list tenant ids but never read or write tenant data.
 -- Reached only via SET ROLE, like app_runtime.
 
@@ -71,12 +71,12 @@ LANGUAGE sql STABLE AS $$
   SELECT NULLIF(current_setting('app.current_user_id', true), '');
 $$;
 
-CREATE OR REPLACE FUNCTION app_current_organization_id() RETURNS text
+CREATE OR REPLACE FUNCTION app_current_tenant_id() RETURNS text
 LANGUAGE sql STABLE AS $$
-  SELECT NULLIF(current_setting('app.current_organization_id', true), '');
+  SELECT NULLIF(current_setting('app.current_tenant_id', true), '');
 $$;
 
 CREATE OR REPLACE FUNCTION app_owns(owner_id text) RETURNS boolean
 LANGUAGE sql STABLE AS $$
-  SELECT app_rls_bypass() OR (app_current_user_id() IS NOT NULL AND app_current_user_id() = owner_id);
+  SELECT app_current_user_id() IS NOT NULL AND app_current_user_id() = owner_id;
 $$;

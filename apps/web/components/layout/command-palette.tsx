@@ -1,6 +1,6 @@
 "use client";
 
-import { useCanAccessWebPath } from "@/components/auth/route-access-guard";
+import { useCanAccessWebPath } from "@/contexts/identity/components/route-access-guard";
 import { accessiblePaletteItems, renderWebPaletteIcon } from "@/lib/palette/nav-items";
 import { useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPaletteRecentSearches } from "@workspace/client/lib/features/command-palette/facade";
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/app-command-palette";
@@ -9,6 +9,7 @@ import { useThemeToggle } from "@workspace/ui/hooks/use-theme-toggle";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { ROUTES } from "@/lib/routes";
+import { BRAND_NAME } from "@workspace/tokens";
 
 export interface CommandPaletteProps {
 	readonly open?: boolean;
@@ -43,7 +44,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 				toggleTheme();
 			},
 		};
-		if (!canAccessPath(ROUTES.rewardHub.browse)) {
+		if (!canAccessPath(ROUTES.dashboard.browse)) {
 			return [toggleThemeAction];
 		}
 		return [
@@ -51,12 +52,12 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 			{
 				id: "browse-rewards",
 				title: "Browse rewards",
-				description: "Open the Reward Hub marketplace",
+				description: "Open the rewards marketplace",
 				icon: Gift,
 				color: "text-success bg-success-soft",
 				keywords: ["home", "discover", "deals", "marketplace"],
 				run: (): void => {
-					router.push(ROUTES.rewardHub.browse);
+					router.push(ROUTES.dashboard.browse);
 					closePalette();
 				},
 			},
@@ -74,7 +75,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 		<AppCommandPalette
 			{...(externalOpen !== undefined ? { open: externalOpen } : {})}
 			{...(externalSetOpen !== undefined ? { setOpen: externalSetOpen } : {})}
-			title="Search Reward Hub"
+			title={`Search ${BRAND_NAME}`}
 			description="Navigate pages, pin shortcuts, and run quick actions"
 			placeholder="Search rewards hub pages and actions…"
 			searchableItems={searchableItems}

@@ -95,6 +95,11 @@
           }
         ]
       },
+      "PosEmptyBodyDto": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
       "ResendWebhookEventDto": {
         "properties": {
           "created_at": {
@@ -325,8 +330,8 @@
   },
   "info": {
     "contact": {},
-    "description": "REST API for the Freebuff admin platform",
-    "title": "Freebuff API",
+    "description": "Every HTTP endpoint of the API, generated from its zod contracts",
+    "title": "REST API",
     "version": "1.0"
   },
   "openapi": "3.0.0",
@@ -7241,7 +7246,17 @@
     "/api/v1/admin/organizations/invites": {
       "post": {
         "operationId": "OrganizationAdminController_createInvite",
-        "parameters": [],
+        "parameters": [
+          {
+            "description": "Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -7404,7 +7419,169 @@
     "/api/v1/admin/permissions": {
       "get": {
         "operationId": "PermissionsController_list",
-        "parameters": [],
+        "parameters": [
+          {
+            "description": "Page number (1-indexed) for offset pagination",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (1-indexed) for offset pagination",
+              "example": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size (default 100, max 100)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "description": "Page size (default 100, max 100)",
+              "example": 100,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+              "example": "eyJpZCI6MX0",
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: group, resource, action, createdAt. Default: group,resource,action",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: group, resource, action, createdAt. Default: group,resource,action",
+              "example": "group,resource,action",
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: group, resource",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "additionalProperties": false,
+              "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: group, resource",
+              "properties": {
+                "group": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "resource": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "enum": [
+                        "USER",
+                        "PROFILE",
+                        "ROLE",
+                        "PERMISSION",
+                        "ADMIN_DASHBOARD",
+                        "SYSTEM_SETTINGS",
+                        "ANALYTICS",
+                        "AUDIT_LOG",
+                        "REPORT",
+                        "EMAIL",
+                        "GEO",
+                        "REWARD",
+                        "MERCHANT_ORG",
+                        "REDEMPTION",
+                        "SAMPLE_CATEGORY",
+                        "PRODUCT",
+                        "DEVTOOLS",
+                        "ORDER",
+                        "PAYMENT",
+                        "INVENTORY",
+                        "ORGANIZATION",
+                        "LOCATION",
+                        "STORE",
+                        "GITHUB",
+                        "GITHUB_PULL_REQUEST"
+                      ],
+                      "type": "string"
+                    },
+                    "in": {
+                      "items": {
+                        "enum": [
+                          "USER",
+                          "PROFILE",
+                          "ROLE",
+                          "PERMISSION",
+                          "ADMIN_DASHBOARD",
+                          "SYSTEM_SETTINGS",
+                          "ANALYTICS",
+                          "AUDIT_LOG",
+                          "REPORT",
+                          "EMAIL",
+                          "GEO",
+                          "REWARD",
+                          "MERCHANT_ORG",
+                          "REDEMPTION",
+                          "SAMPLE_CATEGORY",
+                          "PRODUCT",
+                          "DEVTOOLS",
+                          "ORDER",
+                          "PAYMENT",
+                          "INVENTORY",
+                          "ORGANIZATION",
+                          "LOCATION",
+                          "STORE",
+                          "GITHUB",
+                          "GITHUB_PULL_REQUEST"
+                        ],
+                        "type": "string"
+                      },
+                      "maxItems": 100,
+                      "minItems": 1,
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          },
+          {
+            "description": "Case-insensitive free-text search over the resource's search columns",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "description": "Case-insensitive free-text search over the resource's search columns",
+              "example": "john",
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -7412,92 +7589,75 @@
                 "schema": {
                   "properties": {
                     "data": {
-                      "properties": {
-                        "items": {
-                          "items": {
-                            "properties": {
-                              "action": {
-                                "enum": [
-                                  "CREATE",
-                                  "READ",
-                                  "UPDATE",
-                                  "DELETE",
-                                  "LIST",
-                                  "MANAGE"
-                                ],
-                                "type": "string"
-                              },
-                              "description": {
-                                "nullable": true,
-                                "type": "string"
-                              },
-                              "group": {
-                                "nullable": true,
-                                "type": "string"
-                              },
-                              "id": {
-                                "type": "string"
-                              },
-                              "isSystem": {
-                                "type": "boolean"
-                              },
-                              "resource": {
-                                "enum": [
-                                  "USER",
-                                  "PROFILE",
-                                  "ROLE",
-                                  "PERMISSION",
-                                  "ADMIN_DASHBOARD",
-                                  "SYSTEM_SETTINGS",
-                                  "URL",
-                                  "TAG",
-                                  "API_KEY",
-                                  "ANALYTICS",
-                                  "AUDIT_LOG",
-                                  "REPORT",
-                                  "EMAIL",
-                                  "GEO",
-                                  "REWARD",
-                                  "MERCHANT_ORG",
-                                  "REDEMPTION",
-                                  "SAMPLE_CATEGORY",
-                                  "PRODUCT",
-                                  "DEVTOOLS",
-                                  "ORDER",
-                                  "PAYMENT",
-                                  "INVENTORY",
-                                  "ORGANIZATION",
-                                  "LOCATION",
-                                  "STORE",
-                                  "GITHUB",
-                                  "GITHUB_PULL_REQUEST"
-                                ],
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "id",
-                              "action",
-                              "resource",
-                              "description",
-                              "group",
-                              "isSystem"
+                      "items": {
+                        "properties": {
+                          "action": {
+                            "enum": [
+                              "CREATE",
+                              "READ",
+                              "UPDATE",
+                              "DELETE",
+                              "LIST",
+                              "MANAGE"
                             ],
-                            "type": "object"
+                            "type": "string"
                           },
-                          "type": "array"
+                          "description": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "group": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "isSystem": {
+                            "type": "boolean"
+                          },
+                          "resource": {
+                            "enum": [
+                              "USER",
+                              "PROFILE",
+                              "ROLE",
+                              "PERMISSION",
+                              "ADMIN_DASHBOARD",
+                              "SYSTEM_SETTINGS",
+                              "ANALYTICS",
+                              "AUDIT_LOG",
+                              "REPORT",
+                              "EMAIL",
+                              "GEO",
+                              "REWARD",
+                              "MERCHANT_ORG",
+                              "REDEMPTION",
+                              "SAMPLE_CATEGORY",
+                              "PRODUCT",
+                              "DEVTOOLS",
+                              "ORDER",
+                              "PAYMENT",
+                              "INVENTORY",
+                              "ORGANIZATION",
+                              "LOCATION",
+                              "STORE",
+                              "GITHUB",
+                              "GITHUB_PULL_REQUEST"
+                            ],
+                            "type": "string"
+                          }
                         },
-                        "total": {
-                          "maximum": 9007199254740991,
-                          "minimum": 0,
-                          "type": "integer"
-                        }
+                        "required": [
+                          "id",
+                          "action",
+                          "resource",
+                          "description",
+                          "group",
+                          "isSystem"
+                        ],
+                        "type": "object"
                       },
-                      "required": [
-                        "items",
-                        "total"
-                      ],
-                      "type": "object"
+                      "type": "array"
                     },
                     "meta": {
                       "properties": {
@@ -7506,17 +7666,68 @@
                           "example": "abc123-def456",
                           "type": "string"
                         },
+                        "hasNext": {
+                          "description": "Whether a next page exists",
+                          "example": true,
+                          "type": "boolean"
+                        },
+                        "hasPrevious": {
+                          "description": "Whether a previous page exists",
+                          "example": false,
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "description": "Items per page",
+                          "example": 20,
+                          "maximum": 100,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "nextCursor": {
+                          "description": "Opaque cursor for the next page, or null when there are no more rows",
+                          "example": "Y2x1c18x",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "page": {
+                          "description": "Current page (1-indexed)",
+                          "example": 1,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
                         "timestamp": {
                           "description": "Epoch milliseconds when the response was generated",
                           "example": 1786300000000,
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "total": {
+                          "description": "Total rows matching the current filters",
+                          "example": 156,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "description": "Total pages for the current filters and page size",
+                          "example": 8,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
                         }
                       },
                       "required": [
                         "correlationId",
-                        "timestamp"
+                        "timestamp",
+                        "limit",
+                        "total",
+                        "page",
+                        "totalPages",
+                        "nextCursor",
+                        "hasNext",
+                        "hasPrevious"
                       ],
                       "type": "object"
                     },
@@ -7538,7 +7749,7 @@
                 }
               }
             },
-            "description": "List of permissions"
+            "description": "One page of the permissions; pagination is in `meta`"
           },
           "4XX": {
             "content": {
@@ -7614,9 +7825,6 @@
                       "PERMISSION",
                       "ADMIN_DASHBOARD",
                       "SYSTEM_SETTINGS",
-                      "URL",
-                      "TAG",
-                      "API_KEY",
                       "ANALYTICS",
                       "AUDIT_LOG",
                       "REPORT",
@@ -7719,9 +7927,6 @@
                             "PERMISSION",
                             "ADMIN_DASHBOARD",
                             "SYSTEM_SETTINGS",
-                            "URL",
-                            "TAG",
-                            "API_KEY",
                             "ANALYTICS",
                             "AUDIT_LOG",
                             "REPORT",
@@ -7885,9 +8090,6 @@
                       "PERMISSION",
                       "ADMIN_DASHBOARD",
                       "SYSTEM_SETTINGS",
-                      "URL",
-                      "TAG",
-                      "API_KEY",
                       "ANALYTICS",
                       "AUDIT_LOG",
                       "REPORT",
@@ -8739,9 +8941,6 @@
                             "PERMISSION",
                             "ADMIN_DASHBOARD",
                             "SYSTEM_SETTINGS",
-                            "URL",
-                            "TAG",
-                            "API_KEY",
                             "ANALYTICS",
                             "AUDIT_LOG",
                             "REPORT",
@@ -8976,9 +9175,6 @@
                             "PERMISSION",
                             "ADMIN_DASHBOARD",
                             "SYSTEM_SETTINGS",
-                            "URL",
-                            "TAG",
-                            "API_KEY",
                             "ANALYTICS",
                             "AUDIT_LOG",
                             "REPORT",
@@ -9194,9 +9390,6 @@
                             "PERMISSION",
                             "ADMIN_DASHBOARD",
                             "SYSTEM_SETTINGS",
-                            "URL",
-                            "TAG",
-                            "API_KEY",
                             "ANALYTICS",
                             "AUDIT_LOG",
                             "REPORT",
@@ -10884,6 +11077,7 @@
                 "properties": {
                   "reason": {
                     "maxLength": 2000,
+                    "minLength": 1,
                     "type": "string"
                   },
                   "rewardId": {
@@ -10893,6 +11087,7 @@
                   }
                 },
                 "required": [
+                  "reason",
                   "rewardId"
                 ],
                 "type": "object"
@@ -11294,7 +11489,96 @@
     "/api/v1/admin/roles": {
       "get": {
         "operationId": "RolesController_list",
-        "parameters": [],
+        "parameters": [
+          {
+            "description": "Page number (1-indexed) for offset pagination",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (1-indexed) for offset pagination",
+              "example": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size (default 20, max 100)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Page size (default 20, max 100)",
+              "example": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+              "example": "eyJpZCI6MX0",
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: name, createdAt. Default: name",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: name, createdAt. Default: name",
+              "example": "name",
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: isActive",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "additionalProperties": false,
+              "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: isActive",
+              "properties": {
+                "isActive": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          },
+          {
+            "description": "Case-insensitive free-text search over the resource's search columns",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "description": "Case-insensitive free-text search over the resource's search columns",
+              "example": "john",
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -11302,50 +11586,36 @@
                 "schema": {
                   "properties": {
                     "data": {
-                      "properties": {
-                        "items": {
-                          "items": {
-                            "properties": {
-                              "description": {
-                                "nullable": true,
-                                "type": "string"
-                              },
-                              "id": {
-                                "type": "string"
-                              },
-                              "isActive": {
-                                "type": "boolean"
-                              },
-                              "name": {
-                                "type": "string"
-                              },
-                              "parentId": {
-                                "nullable": true,
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "id",
-                              "name",
-                              "description",
-                              "isActive",
-                              "parentId"
-                            ],
-                            "type": "object"
+                      "items": {
+                        "properties": {
+                          "description": {
+                            "nullable": true,
+                            "type": "string"
                           },
-                          "type": "array"
+                          "id": {
+                            "type": "string"
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "parentId": {
+                            "nullable": true,
+                            "type": "string"
+                          }
                         },
-                        "total": {
-                          "maximum": 9007199254740991,
-                          "minimum": 0,
-                          "type": "integer"
-                        }
+                        "required": [
+                          "id",
+                          "name",
+                          "description",
+                          "isActive",
+                          "parentId"
+                        ],
+                        "type": "object"
                       },
-                      "required": [
-                        "items",
-                        "total"
-                      ],
-                      "type": "object"
+                      "type": "array"
                     },
                     "meta": {
                       "properties": {
@@ -11354,17 +11624,68 @@
                           "example": "abc123-def456",
                           "type": "string"
                         },
+                        "hasNext": {
+                          "description": "Whether a next page exists",
+                          "example": true,
+                          "type": "boolean"
+                        },
+                        "hasPrevious": {
+                          "description": "Whether a previous page exists",
+                          "example": false,
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "description": "Items per page",
+                          "example": 20,
+                          "maximum": 100,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "nextCursor": {
+                          "description": "Opaque cursor for the next page, or null when there are no more rows",
+                          "example": "Y2x1c18x",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "page": {
+                          "description": "Current page (1-indexed)",
+                          "example": 1,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
                         "timestamp": {
                           "description": "Epoch milliseconds when the response was generated",
                           "example": 1786300000000,
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "total": {
+                          "description": "Total rows matching the current filters",
+                          "example": 156,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "description": "Total pages for the current filters and page size",
+                          "example": 8,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
                         }
                       },
                       "required": [
                         "correlationId",
-                        "timestamp"
+                        "timestamp",
+                        "limit",
+                        "total",
+                        "page",
+                        "totalPages",
+                        "nextCursor",
+                        "hasNext",
+                        "hasPrevious"
                       ],
                       "type": "object"
                     },
@@ -11386,7 +11707,7 @@
                 }
               }
             },
-            "description": "List of roles"
+            "description": "One page of the roles; pagination is in `meta`"
           },
           "4XX": {
             "content": {
@@ -20175,7 +20496,73 @@
     "/api/v1/auth/sessions": {
       "get": {
         "operationId": "SessionsController_getSessions",
-        "parameters": [],
+        "parameters": [
+          {
+            "description": "Page number (1-indexed) for offset pagination",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (1-indexed) for offset pagination",
+              "example": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size (default 20, max 100)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Page size (default 20, max 100)",
+              "example": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+              "example": "eyJpZCI6MX0",
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: lastActiveAt, createdAt. Default: -lastActiveAt",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: lastActiveAt, createdAt. Default: -lastActiveAt",
+              "example": "-lastActiveAt",
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: none",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "additionalProperties": false,
+              "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: none",
+              "properties": {},
+              "type": "object"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -20360,17 +20747,68 @@
                           "example": "abc123-def456",
                           "type": "string"
                         },
+                        "hasNext": {
+                          "description": "Whether a next page exists",
+                          "example": true,
+                          "type": "boolean"
+                        },
+                        "hasPrevious": {
+                          "description": "Whether a previous page exists",
+                          "example": false,
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "description": "Items per page",
+                          "example": 20,
+                          "maximum": 100,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "nextCursor": {
+                          "description": "Opaque cursor for the next page, or null when there are no more rows",
+                          "example": "Y2x1c18x",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "page": {
+                          "description": "Current page (1-indexed)",
+                          "example": 1,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
                         "timestamp": {
                           "description": "Epoch milliseconds when the response was generated",
                           "example": 1786300000000,
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "total": {
+                          "description": "Total rows matching the current filters",
+                          "example": 156,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "description": "Total pages for the current filters and page size",
+                          "example": 8,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
                         }
                       },
                       "required": [
                         "correlationId",
-                        "timestamp"
+                        "timestamp",
+                        "limit",
+                        "total",
+                        "page",
+                        "totalPages",
+                        "nextCursor",
+                        "hasNext",
+                        "hasPrevious"
                       ],
                       "type": "object"
                     },
@@ -20392,7 +20830,7 @@
                 }
               }
             },
-            "description": "The caller's active device sessions"
+            "description": "One page of the caller's active device sessions; pagination is in `meta`"
           },
           "4XX": {
             "content": {
@@ -20423,7 +20861,7 @@
             "clientType": []
           }
         ],
-        "summary": "List the caller's signed-in devices (every client type): the current one first, then by last activity",
+        "summary": "List the caller's signed-in devices (every client type), most recently active first; `isCurrent` marks this one",
         "tags": [
           "Sessions"
         ]
@@ -21108,6 +21546,7 @@
     },
     "/api/v1/auth/stop-impersonation": {
       "post": {
+        "description": "Needs the administrator's own refresh token (the app's refresh cookie; client type mobile: `{ refreshToken }` in the body). The restored access token is bound to that device session (`sid`).",
         "operationId": "ImpersonationController_stopImpersonation",
         "parameters": [],
         "responses": {
@@ -22159,9 +22598,6 @@
                             "PERMISSION",
                             "ADMIN_DASHBOARD",
                             "SYSTEM_SETTINGS",
-                            "URL",
-                            "TAG",
-                            "API_KEY",
                             "ANALYTICS",
                             "AUDIT_LOG",
                             "REPORT",
@@ -22243,9 +22679,6 @@
                                   "PERMISSION",
                                   "ADMIN_DASHBOARD",
                                   "SYSTEM_SETTINGS",
-                                  "URL",
-                                  "TAG",
-                                  "API_KEY",
                                   "ANALYTICS",
                                   "AUDIT_LOG",
                                   "REPORT",
@@ -22397,9 +22830,6 @@
                 "PERMISSION",
                 "ADMIN_DASHBOARD",
                 "SYSTEM_SETTINGS",
-                "URL",
-                "TAG",
-                "API_KEY",
                 "ANALYTICS",
                 "AUDIT_LOG",
                 "REPORT",
@@ -23473,7 +23903,7 @@
     },
     "/api/v1/claims/analytics": {
       "get": {
-        "operationId": "ConsumerClaimsController_getAnalytics",
+        "operationId": "ConsumerAnalyticsController_getAnalytics",
         "parameters": [
           {
             "in": "query",
@@ -23931,7 +24361,7 @@
     "/api/v1/claims/analytics/dashboard": {
       "get": {
         "description": "Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 400 VALIDATION_ERROR); `interval` (day | week | month) defaults from the range length. Every number is computed in Postgres; buckets are cut in `range.timeZone`. A report query over its time budget answers 503 ANALYTICS_QUERY_TIMEOUT.",
-        "operationId": "ConsumerClaimsController_getAnalyticsDashboard",
+        "operationId": "ConsumerAnalyticsController_getAnalyticsDashboard",
         "parameters": [
           {
             "description": "Range start, epoch ms, inclusive. Default: 30 days before `to`.",
@@ -24715,9 +25145,9 @@
         ]
       }
     },
-    "/api/v1/claims/{claimId}/qr": {
+    "/api/v1/claims/{claimId}": {
       "get": {
-        "operationId": "ConsumerClaimsController_getClaimQr",
+        "operationId": "ConsumerClaimsController_getClaim",
         "parameters": [
           {
             "in": "path",
@@ -24732,6 +25162,188 @@
         ],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "claimExpiresAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "claimedAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "createdAt": {
+                          "description": "Epoch milliseconds when the record was created",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "deletedAt": {
+                          "description": "Epoch milliseconds when soft-delete occurred, or null if active",
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "isDeleted": {
+                          "description": "Soft-delete flag — false means the record is active",
+                          "example": false,
+                          "type": "boolean"
+                        },
+                        "isReferrerCredit": {
+                          "type": "boolean"
+                        },
+                        "redeemedAt": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "rewardId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "rewardTitle": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "PENDING",
+                            "REDEEMED",
+                            "EXPIRED"
+                          ],
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "description": "Epoch milliseconds when the record was last updated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "createdAt",
+                        "updatedAt",
+                        "isDeleted",
+                        "deletedAt",
+                        "id",
+                        "rewardId",
+                        "rewardTitle",
+                        "status",
+                        "claimedAt",
+                        "claimExpiresAt",
+                        "redeemedAt",
+                        "isReferrerCredit"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The claim"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "One of my claims (never carries the codes)",
+        "tags": [
+          "Claims"
+        ]
+      }
+    },
+    "/api/v1/claims/{claimId}/qr": {
+      "post": {
+        "operationId": "ConsumerClaimsController_issueQrCodes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "claimId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
             "content": {
               "application/json": {
                 "schema": {
@@ -24836,7 +25448,7 @@
             "clientType": []
           }
         ],
-        "summary": "Refresh QR payload for an active claim",
+        "summary": "Issue fresh QR and backup codes for an active claim (the previous codes stop working)",
         "tags": [
           "Claims"
         ]
@@ -37529,7 +38141,7 @@
             }
           },
           {
-            "description": "Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate → 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE.",
+            "description": "Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE.",
             "in": "header",
             "name": "Idempotency-Key",
             "required": true,
@@ -38769,7 +39381,7 @@
             }
           },
           {
-            "description": "Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate → 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE.",
+            "description": "Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE.",
             "in": "header",
             "name": "Idempotency-Key",
             "required": true,
@@ -39022,7 +39634,7 @@
             }
           },
           {
-            "description": "Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate → 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE.",
+            "description": "Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE.",
             "in": "header",
             "name": "Idempotency-Key",
             "required": true,
@@ -39931,7 +40543,7 @@
             }
           },
           {
-            "description": "Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate → 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE.",
+            "description": "Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE.",
             "in": "header",
             "name": "Idempotency-Key",
             "required": true,
@@ -45401,7 +46013,86 @@
     "/api/v1/orgs/memberships": {
       "get": {
         "operationId": "OrganizationMembershipsBootstrapController_listMemberships",
-        "parameters": [],
+        "parameters": [
+          {
+            "description": "Page number (1-indexed) for offset pagination",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (1-indexed) for offset pagination",
+              "example": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size (default 20, max 100)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Page size (default 20, max 100)",
+              "example": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+              "example": "eyJpZCI6MX0",
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt, displayName. Default: createdAt",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt, displayName. Default: createdAt",
+              "example": "createdAt",
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: none",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "additionalProperties": false,
+              "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: none",
+              "properties": {},
+              "type": "object"
+            }
+          },
+          {
+            "description": "Case-insensitive free-text search over the resource's search columns",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "description": "Case-insensitive free-text search over the resource's search columns",
+              "example": "john",
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -45480,17 +46171,68 @@
                           "example": "abc123-def456",
                           "type": "string"
                         },
+                        "hasNext": {
+                          "description": "Whether a next page exists",
+                          "example": true,
+                          "type": "boolean"
+                        },
+                        "hasPrevious": {
+                          "description": "Whether a previous page exists",
+                          "example": false,
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "description": "Items per page",
+                          "example": 20,
+                          "maximum": 100,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "nextCursor": {
+                          "description": "Opaque cursor for the next page, or null when there are no more rows",
+                          "example": "Y2x1c18x",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "page": {
+                          "description": "Current page (1-indexed)",
+                          "example": 1,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
                         "timestamp": {
                           "description": "Epoch milliseconds when the response was generated",
                           "example": 1786300000000,
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "total": {
+                          "description": "Total rows matching the current filters",
+                          "example": 156,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "description": "Total pages for the current filters and page size",
+                          "example": 8,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
                         }
                       },
                       "required": [
                         "correlationId",
-                        "timestamp"
+                        "timestamp",
+                        "limit",
+                        "total",
+                        "page",
+                        "totalPages",
+                        "nextCursor",
+                        "hasNext",
+                        "hasPrevious"
                       ],
                       "type": "object"
                     },
@@ -45512,7 +46254,7 @@
                 }
               }
             },
-            "description": "Organization reward hub memberships"
+            "description": "One page of the current user's organization memberships; pagination is in `meta`"
           },
           "4XX": {
             "content": {
@@ -45543,9 +46285,9 @@
             "clientType": []
           }
         ],
-        "summary": "List RewardHub organization memberships for the current user",
+        "summary": "List the current user's organization memberships",
         "tags": [
-          "Organization RewardHub"
+          "Organization memberships"
         ]
       }
     },
@@ -49090,7 +49832,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RewardsEmptyBodyDto"
+                "$ref": "#/components/schemas/PosEmptyBodyDto"
               }
             }
           },
@@ -50992,6 +51734,103 @@
                 }
               ]
             }
+          },
+          {
+            "description": "Page number (1-indexed) for offset pagination",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (1-indexed) for offset pagination",
+              "example": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size (default 20, max 100)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Page size (default 20, max 100)",
+              "example": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+              "example": "eyJpZCI6MX0",
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt, role. Default: createdAt",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt, role. Default: createdAt",
+              "example": "createdAt",
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: role",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "additionalProperties": false,
+              "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: role",
+              "properties": {
+                "role": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "enum": [
+                        "OWNER",
+                        "ADMIN",
+                        "MEMBER",
+                        "POLICY_ADMIN",
+                        "CASHIER"
+                      ],
+                      "type": "string"
+                    },
+                    "in": {
+                      "items": {
+                        "enum": [
+                          "OWNER",
+                          "ADMIN",
+                          "MEMBER",
+                          "POLICY_ADMIN",
+                          "CASHIER"
+                        ],
+                        "type": "string"
+                      },
+                      "maxItems": 100,
+                      "minItems": 1,
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
           }
         ],
         "responses": {
@@ -51099,17 +51938,68 @@
                           "example": "abc123-def456",
                           "type": "string"
                         },
+                        "hasNext": {
+                          "description": "Whether a next page exists",
+                          "example": true,
+                          "type": "boolean"
+                        },
+                        "hasPrevious": {
+                          "description": "Whether a previous page exists",
+                          "example": false,
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "description": "Items per page",
+                          "example": 20,
+                          "maximum": 100,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "nextCursor": {
+                          "description": "Opaque cursor for the next page, or null when there are no more rows",
+                          "example": "Y2x1c18x",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "page": {
+                          "description": "Current page (1-indexed)",
+                          "example": 1,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
                         "timestamp": {
                           "description": "Epoch milliseconds when the response was generated",
                           "example": 1786300000000,
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "total": {
+                          "description": "Total rows matching the current filters",
+                          "example": 156,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "description": "Total pages for the current filters and page size",
+                          "example": 8,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
                         }
                       },
                       "required": [
                         "correlationId",
-                        "timestamp"
+                        "timestamp",
+                        "limit",
+                        "total",
+                        "page",
+                        "totalPages",
+                        "nextCursor",
+                        "hasNext",
+                        "hasPrevious"
                       ],
                       "type": "object"
                     },
@@ -51131,7 +52021,7 @@
                 }
               }
             },
-            "description": "Organization member roster"
+            "description": "One page of the organization member roster; pagination is in `meta`"
           },
           "4XX": {
             "content": {
@@ -51363,6 +52253,71 @@
                 }
               ]
             }
+          },
+          {
+            "description": "Page number (1-indexed) for offset pagination",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (1-indexed) for offset pagination",
+              "example": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size (default 20, max 100)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Page size (default 20, max 100)",
+              "example": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+              "example": "eyJpZCI6MX0",
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt, expiresAt. Default: -createdAt",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt, expiresAt. Default: -createdAt",
+              "example": "-createdAt",
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: none",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "additionalProperties": false,
+              "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: none",
+              "properties": {},
+              "type": "object"
+            }
           }
         ],
         "responses": {
@@ -51466,17 +52421,68 @@
                           "example": "abc123-def456",
                           "type": "string"
                         },
+                        "hasNext": {
+                          "description": "Whether a next page exists",
+                          "example": true,
+                          "type": "boolean"
+                        },
+                        "hasPrevious": {
+                          "description": "Whether a previous page exists",
+                          "example": false,
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "description": "Items per page",
+                          "example": 20,
+                          "maximum": 100,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "nextCursor": {
+                          "description": "Opaque cursor for the next page, or null when there are no more rows",
+                          "example": "Y2x1c18x",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "page": {
+                          "description": "Current page (1-indexed)",
+                          "example": 1,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
                         "timestamp": {
                           "description": "Epoch milliseconds when the response was generated",
                           "example": 1786300000000,
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "total": {
+                          "description": "Total rows matching the current filters",
+                          "example": 156,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "description": "Total pages for the current filters and page size",
+                          "example": 8,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
                         }
                       },
                       "required": [
                         "correlationId",
-                        "timestamp"
+                        "timestamp",
+                        "limit",
+                        "total",
+                        "page",
+                        "totalPages",
+                        "nextCursor",
+                        "hasNext",
+                        "hasPrevious"
                       ],
                       "type": "object"
                     },
@@ -51498,7 +52504,7 @@
                 }
               }
             },
-            "description": "Pending organization team invitations"
+            "description": "One page of the pending organization team invitations; pagination is in `meta`"
           },
           "4XX": {
             "content": {
@@ -52029,178 +53035,6 @@
         ]
       }
     },
-    "/api/v1/orgs/{orgSlug}/memberships": {
-      "get": {
-        "operationId": "OrganizationRewardMembershipsController_listMemberships",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "orgSlug",
-            "required": true,
-            "schema": {
-              "anyOf": [
-                {
-                  "maxLength": 64,
-                  "minLength": 2,
-                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-                  "type": "string"
-                },
-                {
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                  "type": "string"
-                }
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "data": {
-                      "items": {
-                        "properties": {
-                          "createdAt": {
-                            "maximum": 9007199254740991,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "displayName": {
-                            "type": "string"
-                          },
-                          "kybStatus": {
-                            "enum": [
-                              "PENDING",
-                              "APPROVED",
-                              "REJECTED",
-                              "ACTION_REQUIRED"
-                            ],
-                            "type": "string"
-                          },
-                          "lifecycleState": {
-                            "enum": [
-                              "PROVISIONING",
-                              "ACTIVE",
-                              "RESTRICTED",
-                              "SUSPENDED",
-                              "PENDING_DELETION",
-                              "DELETED"
-                            ],
-                            "type": "string"
-                          },
-                          "organizationId": {
-                            "format": "uuid",
-                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                            "type": "string"
-                          },
-                          "organizationSlug": {
-                            "maxLength": 64,
-                            "minLength": 2,
-                            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-                            "type": "string"
-                          },
-                          "role": {
-                            "enum": [
-                              "OWNER",
-                              "ADMIN",
-                              "MEMBER",
-                              "POLICY_ADMIN",
-                              "CASHIER"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "organizationId",
-                          "organizationSlug",
-                          "displayName",
-                          "role",
-                          "kybStatus",
-                          "lifecycleState"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "meta": {
-                      "properties": {
-                        "correlationId": {
-                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
-                          "example": "abc123-def456",
-                          "type": "string"
-                        },
-                        "timestamp": {
-                          "description": "Epoch milliseconds when the response was generated",
-                          "example": 1786300000000,
-                          "maximum": 9007199254740991,
-                          "minimum": 0,
-                          "type": "integer"
-                        }
-                      },
-                      "required": [
-                        "correlationId",
-                        "timestamp"
-                      ],
-                      "type": "object"
-                    },
-                    "success": {
-                      "description": "Indicates the request was successful",
-                      "enum": [
-                        true
-                      ],
-                      "example": true,
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "data",
-                    "meta"
-                  ],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Organization reward hub memberships"
-          },
-          "4XX": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponseDto"
-                }
-              }
-            },
-            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
-          },
-          "5XX": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponseDto"
-                }
-              }
-            },
-            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          },
-          {
-            "clientType": []
-          }
-        ],
-        "summary": "List organization memberships for the current user",
-        "tags": [
-          "Organization RewardHub"
-        ]
-      }
-    },
     "/api/v1/orgs/{orgSlug}/redemptions": {
       "get": {
         "operationId": "OrganizationRedemptionsController_listRedemptions",
@@ -52511,6 +53345,103 @@
                   "type": "string"
                 }
               ]
+            }
+          },
+          {
+            "description": "Page number (1-indexed) for offset pagination",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (1-indexed) for offset pagination",
+              "example": 1,
+              "maximum": 10000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size (default 20, max 100)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Page size (default 20, max 100)",
+              "example": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "description": "Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order.",
+              "example": "eyJpZCI6MX0",
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt, expiryDate, title. Default: -createdAt",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt, expiryDate, title. Default: -createdAt",
+              "example": "-createdAt",
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "additionalProperties": false,
+              "description": "Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status",
+              "properties": {
+                "status": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eq": {
+                      "enum": [
+                        "DRAFT",
+                        "PENDING_REVIEW",
+                        "PUBLISHED",
+                        "EXPIRED",
+                        "DISABLED"
+                      ],
+                      "type": "string"
+                    },
+                    "in": {
+                      "items": {
+                        "enum": [
+                          "DRAFT",
+                          "PENDING_REVIEW",
+                          "PUBLISHED",
+                          "EXPIRED",
+                          "DISABLED"
+                        ],
+                        "type": "string"
+                      },
+                      "maxItems": 100,
+                      "minItems": 1,
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
             }
           },
           {
@@ -52848,17 +53779,68 @@
                           "example": "abc123-def456",
                           "type": "string"
                         },
+                        "hasNext": {
+                          "description": "Whether a next page exists",
+                          "example": true,
+                          "type": "boolean"
+                        },
+                        "hasPrevious": {
+                          "description": "Whether a previous page exists",
+                          "example": false,
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "description": "Items per page",
+                          "example": 20,
+                          "maximum": 100,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "nextCursor": {
+                          "description": "Opaque cursor for the next page, or null when there are no more rows",
+                          "example": "Y2x1c18x",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "page": {
+                          "description": "Current page (1-indexed)",
+                          "example": 1,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
                         "timestamp": {
                           "description": "Epoch milliseconds when the response was generated",
                           "example": 1786300000000,
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "total": {
+                          "description": "Total rows matching the current filters",
+                          "example": 156,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "description": "Total pages for the current filters and page size",
+                          "example": 8,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
                         }
                       },
                       "required": [
                         "correlationId",
-                        "timestamp"
+                        "timestamp",
+                        "limit",
+                        "total",
+                        "page",
+                        "totalPages",
+                        "nextCursor",
+                        "hasNext",
+                        "hasPrevious"
                       ],
                       "type": "object"
                     },
@@ -52880,7 +53862,7 @@
                 }
               }
             },
-            "description": "Rewards for the organization"
+            "description": "One page of the organization's rewards; pagination is in `meta`"
           },
           "4XX": {
             "content": {
@@ -53464,6 +54446,152 @@
           }
         ],
         "summary": "Create a draft reward",
+        "tags": [
+          "Organization Rewards"
+        ]
+      }
+    },
+    "/api/v1/orgs/{orgSlug}/rewards/summary": {
+      "get": {
+        "operationId": "OrganizationRewardsController_summarizeRewards",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgSlug",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 2,
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                  "type": "string"
+                },
+                {
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "locationId",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "countsByStatus": {
+                          "additionalProperties": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "required": [
+                            "DRAFT",
+                            "PENDING_REVIEW",
+                            "PUBLISHED",
+                            "EXPIRED",
+                            "DISABLED"
+                          ],
+                          "type": "object"
+                        },
+                        "unitsRemaining": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "countsByStatus",
+                        "unitsRemaining"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Reward catalog figures"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Organization reward figures: the count in each status and the units still claimable, over every reward in the store scope",
         "tags": [
           "Organization Rewards"
         ]
@@ -56228,7 +57356,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RewardsEmptyBodyDto"
+                "$ref": "#/components/schemas/PosEmptyBodyDto"
               }
             }
           },
@@ -57520,7 +58648,7 @@
         "operationId": "ProductController_create",
         "parameters": [
           {
-            "description": "Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate → 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE.",
+            "description": "Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE.",
             "in": "header",
             "name": "Idempotency-Key",
             "required": false,
@@ -59527,101 +60655,78 @@
                 "schema": {
                   "properties": {
                     "data": {
-                      "properties": {
-                        "hasNext": {
-                          "type": "boolean"
-                        },
-                        "items": {
-                          "items": {
-                            "properties": {
-                              "body": {
-                                "type": "string"
-                              },
-                              "createdAt": {
-                                "description": "Epoch milliseconds when the record was created",
-                                "example": 1786300000000,
-                                "maximum": 9007199254740991,
-                                "minimum": 0,
-                                "type": "integer"
-                              },
-                              "deletedAt": {
-                                "description": "Epoch milliseconds when soft-delete occurred, or null if active",
-                                "maximum": 9007199254740991,
-                                "minimum": 0,
-                                "nullable": true,
-                                "type": "integer"
-                              },
-                              "id": {
-                                "format": "uuid",
-                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                                "type": "string"
-                              },
-                              "isDeleted": {
-                                "description": "Soft-delete flag — false means the record is active",
-                                "example": false,
-                                "type": "boolean"
-                              },
-                              "metadata": {
-                                "allOf": [
-                                  {
-                                    "$ref": "#/components/schemas/ZodSchema_1d6cdc73a22c"
-                                  }
-                                ],
-                                "nullable": true
-                              },
-                              "readAt": {
-                                "maximum": 9007199254740991,
-                                "minimum": 0,
-                                "nullable": true,
-                                "type": "integer"
-                              },
-                              "title": {
-                                "type": "string"
-                              },
-                              "type": {
-                                "type": "string"
-                              },
-                              "updatedAt": {
-                                "description": "Epoch milliseconds when the record was last updated",
-                                "example": 1786300000000,
-                                "maximum": 9007199254740991,
-                                "minimum": 0,
-                                "type": "integer"
-                              }
-                            },
-                            "required": [
-                              "createdAt",
-                              "updatedAt",
-                              "isDeleted",
-                              "deletedAt",
-                              "id",
-                              "type",
-                              "title",
-                              "body",
-                              "readAt",
-                              "metadata"
-                            ],
-                            "type": "object"
+                      "items": {
+                        "properties": {
+                          "body": {
+                            "type": "string"
                           },
-                          "type": "array"
+                          "createdAt": {
+                            "description": "Epoch milliseconds when the record was created",
+                            "example": 1786300000000,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "deletedAt": {
+                            "description": "Epoch milliseconds when soft-delete occurred, or null if active",
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "isDeleted": {
+                            "description": "Soft-delete flag — false means the record is active",
+                            "example": false,
+                            "type": "boolean"
+                          },
+                          "metadata": {
+                            "allOf": [
+                              {
+                                "$ref": "#/components/schemas/ZodSchema_1d6cdc73a22c"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "readAt": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "description": "Epoch milliseconds when the record was last updated",
+                            "example": 1786300000000,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          }
                         },
-                        "nextCursor": {
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "unreadCount": {
-                          "maximum": 9007199254740991,
-                          "minimum": 0,
-                          "type": "integer"
-                        }
+                        "required": [
+                          "createdAt",
+                          "updatedAt",
+                          "isDeleted",
+                          "deletedAt",
+                          "id",
+                          "type",
+                          "title",
+                          "body",
+                          "readAt",
+                          "metadata"
+                        ],
+                        "type": "object"
                       },
-                      "required": [
-                        "items",
-                        "unreadCount",
-                        "nextCursor",
-                        "hasNext"
-                      ],
-                      "type": "object"
+                      "type": "array"
                     },
                     "meta": {
                       "properties": {
@@ -59630,17 +60735,68 @@
                           "example": "abc123-def456",
                           "type": "string"
                         },
+                        "hasNext": {
+                          "description": "Whether a next page exists",
+                          "example": true,
+                          "type": "boolean"
+                        },
+                        "hasPrevious": {
+                          "description": "Whether a previous page exists",
+                          "example": false,
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "description": "Items per page",
+                          "example": 20,
+                          "maximum": 100,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "nextCursor": {
+                          "description": "Opaque cursor for the next page, or null when there are no more rows",
+                          "example": "Y2x1c18x",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "page": {
+                          "description": "Current page (1-indexed)",
+                          "example": 1,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
                         "timestamp": {
                           "description": "Epoch milliseconds when the response was generated",
                           "example": 1786300000000,
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "total": {
+                          "description": "Total rows matching the current filters",
+                          "example": 156,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "description": "Total pages for the current filters and page size",
+                          "example": 8,
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
                         }
                       },
                       "required": [
                         "correlationId",
-                        "timestamp"
+                        "timestamp",
+                        "limit",
+                        "total",
+                        "page",
+                        "totalPages",
+                        "nextCursor",
+                        "hasNext",
+                        "hasPrevious"
                       ],
                       "type": "object"
                     },
@@ -59662,7 +60818,7 @@
                 }
               }
             },
-            "description": "Notifications with unread count"
+            "description": "One page of notifications, newest first; pagination is in `meta` (`filter[readAt][isNull]=true` counts the unread)"
           },
           "4XX": {
             "content": {
@@ -61134,7 +62290,17 @@
       },
       "post": {
         "operationId": "SampleCategoryController_create",
-        "parameters": [],
+        "parameters": [
+          {
+            "description": "Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -63510,7 +64676,7 @@
         ]
       },
       "post": {
-        "description": "Receives delivery events from Resend and updates EmailLog. Only accepts requests signed by Resend (standard-webhooks scheme). Swagger's \"Try it out\" sends no signature, so it will always get 403 Missing webhook signature headers — that is the security boundary working. To test manually: run `pnpm --filter @workspace/api exec tsx scripts/test-webhook-signature.ts` and copy the printed header values + body into this form. Two gotchas: (1) the body must match EXACTLY — the signature covers the raw bytes, and Swagger's pretty-printed example will NOT match; (2) the values expire after 5 minutes, so paste fast or re-run the script.",
+        "description": "Receives delivery events from Resend and updates EmailLog. Only accepts requests signed by Resend (standard-webhooks scheme). Swagger's \"Try it out\" sends no signature, so it will always get 403 Missing webhook signature headers — that is the security boundary working. To test manually: run `pnpm --filter @workspace/api webhook:test-signature` and copy the printed header values + body into this form. Two gotchas: (1) the body must match EXACTLY — the signature covers the raw bytes, and Swagger's pretty-printed example will NOT match; (2) the values expire after 5 minutes, so paste fast or re-run the script.",
         "operationId": "EmailWebhookController_receive",
         "parameters": [
           {
@@ -63732,7 +64898,10 @@
                       "items": {
                         "properties": {
                           "sunsetAt": {
-                            "type": "string"
+                            "description": "Epoch ms after which this version is removed",
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
                           },
                           "version": {
                             "enum": [

@@ -111,6 +111,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - name: Build every workspace
         run: pnpm turbo run build
+      # Per-route first-load JS of the Next apps and the mobile Hermes bundles against
+      # bundle-budgets.json (baseline + 10%, decision #57). Raising a budget is a reviewed edit.
+      - name: Bundle budgets
+        run: pnpm bundle:check
 
   rls-manifest:
     name: RLS manifest drift

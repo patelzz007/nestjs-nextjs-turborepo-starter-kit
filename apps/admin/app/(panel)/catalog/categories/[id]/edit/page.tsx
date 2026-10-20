@@ -1,8 +1,8 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
-import { readCategoryIdParam, type IdRouteParams } from "@/lib/catalog/route-params";
+import { readCategoryIdParam, type IdRouteParams } from "@/contexts/catalog/lib/route-params";
 import { prefetch, resolvePrefetchedData } from "@/lib/server/prefetch";
 
-import { EditCategoryView } from "../../category-editor";
+import { EditCategoryView } from "../../../../../../contexts/catalog/components/category-editor";
 
 export const dynamic = "force-dynamic";
 

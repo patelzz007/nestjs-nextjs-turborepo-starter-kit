@@ -1,6 +1,6 @@
-import { EmailVerificationGateDialog } from "@/components/email-verification-gate-dialog";
-import { guardOrgPage } from "@/lib/org/org-page-guard";
-import { SecuritySettingsPanel } from "@workspace/client/lib/auth/mfa/security-settings-panel";
+import { EmailVerificationGateDialog } from "@/contexts/identity/components/email-verification-gate-dialog";
+import { guardOrgPage } from "@/contexts/organizations/lib/org/org-page-guard";
+import { SecuritySettingsPanel } from "@workspace/client/lib/contexts/identity/mfa/security-settings-panel";
 import { AnalyticsPageHeader } from "@workspace/ui/components/analytics-page-header";
 import * as React from "react";
 

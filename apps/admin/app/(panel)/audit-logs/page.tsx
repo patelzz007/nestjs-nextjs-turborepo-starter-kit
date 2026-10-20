@@ -1,8 +1,8 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { prefetch, resolvePrefetchedQuery } from "@/lib/server/prefetch";
-import { AUDIT_LOG_URL_STATE, toAuditLogListQuery } from "@/lib/url-state/audit-logs";
+import { AUDIT_LOG_URL_STATE, toAuditLogListQuery } from "@/contexts/audit/url-state/audit-logs";
 
-import AuditLogView from "./audit-log-table";
+import AuditLogView from "../../../contexts/audit/components/audit-log-table";
 
 export const dynamic = "force-dynamic";
 

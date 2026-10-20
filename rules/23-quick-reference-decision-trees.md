@@ -2,6 +2,28 @@
 
 The other documents in `rules/` explain *why*. This one is for the moment you're mid-task and need a fast answer to "which way do I go?" Every tree below links to the full document that justifies it — if the tree's answer surprises you, read that document before overriding it.
 
+## Command handler or application service?
+
+Use this before adding a use case. The classification in `docs/architecture/ddd-cqrs-migration-plan.md` §7 wins when the use case is already listed there.
+
+```text
+Is this use case in §7? ── yes ──► use what §7 says. Stop.
+        │ no (new feature after the migration)
+        ▼
+Does it change state?
+   no ──► Query + QueryHandler (always; even trivial reads). The read port returns a DTO.
+   yes ─► Does ANY of these hold?
+            • a state transition or invariant (status machine, counters, limits)
+            • resource-level authorization beyond the endpoint permission
+            • more than one aggregate or context in the same transaction
+            • a domain event, outbox record, or email
+            • a concurrency hazard (two requests could race)
+          yes ─► Command + CommandHandler + aggregate.
+          no  ─► Application service method (simple path), e.g. catalog CRUD.
+```
+
+Catalog (`apps/api/src/contexts/catalog`) is the application-service example. The reward aggregate (`apps/api/src/contexts/rewards/domain/aggregates/reward.aggregate.ts`) is the command example. Jobs and CLI entry points dispatch the command through `SystemCommandDispatcher`, not `CommandBus`.
+
 ## Where does this code go?
 
 ```text

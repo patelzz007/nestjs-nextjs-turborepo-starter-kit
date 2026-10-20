@@ -101,7 +101,7 @@ flowchart LR
    the same run; session tokens, signed links, generated API keys and one-time secrets are redacted;
    arrays are cut to two items. Endpoints that cannot be captured are listed with the reason.
 4. **Render** — `pnpm docs:api` writes `docs/technical/api-reference/`. The docs unit tests
-   (`apps/docs/src/lib/api-reference/api-reference.artifact.test.ts`) fail when the committed pages
+   (`apps/docs/src/lib/api-reference/__tests__/api-reference.artifact.test.ts`) fail when the committed pages
    differ from what the three inputs render, when a controller cannot be matched, or when a new
    OpenAPI tag has no page.
 

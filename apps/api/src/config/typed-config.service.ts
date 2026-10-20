@@ -18,7 +18,7 @@ import type {
 	StorageConfig,
 	TenancyConfig,
 } from "./api-config.schema";
-import { RedisNamespace } from "../infrastructure/redis/redis-namespace";
+import { RedisNamespace } from "../platform/infrastructure/redis/redis-namespace";
 
 /** Client apps an auth flow can originate from (`X-Client-Type`). */
 const ADMIN_CLIENT_TYPE = "admin";
@@ -178,10 +178,5 @@ export class TypedConfigService {
 	/** Prisma query/info event logging (LOG_LEVEL debug or trace). */
 	public get isDebugLogging(): boolean {
 		return this.config.observability.logLevel === "debug" || this.config.observability.logLevel === "trace";
-	}
-
-	/** The organization a single-tenant deployment serves; `null` in multi-tenant mode. */
-	public get singleTenantOrganizationId(): string | null {
-		return this.config.tenancy.enabled ? null : this.config.tenancy.singleTenantOrganizationId;
 	}
 }

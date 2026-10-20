@@ -5,7 +5,7 @@
 // input must be:
 //   - validated by `ZodValidationPipe`, AND
 //   - documented from the same zod schema (the Zod request decorators in
-//     src/common/decorators/zod-request.decorators.ts attach it),
+//     src/platform/presentation/http/validation/decorators/zod-request.decorators.ts attach it),
 // and the matching operation must actually carry the `requestBody` / query /
 // path parameters. A future endpoint that uses a bare `@Body()` or
 // `@Body(new ZodValidationPipe(X))` (validated but invisible in Swagger)
@@ -25,17 +25,17 @@ import { API_VERSION, ApiAccessSchema, apiContract, apiVersionPrefix, isFunction
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { BEARER_SECURITY_SCHEME, buildOpenApiDocument, CLIENT_TYPE_SECURITY_SCHEME, collectPublicOperationIds } from "../src/common/api-docs";
-import { SKIP_ENVELOPE } from "../src/common/decorators/skip-envelope.decorator";
+import { BEARER_SECURITY_SCHEME, buildOpenApiDocument, CLIENT_TYPE_SECURITY_SCHEME, collectPublicOperationIds } from "../src/platform/presentation/http/api-docs";
+import { SKIP_ENVELOPE } from "../src/platform/presentation/http/validation/decorators/skip-envelope.decorator";
 import {
 	getFileResponseContract,
 	getResponseContract,
 	type FileResponseContract,
 	type ResponseContractTarget,
 	type RouteResponseContract,
-} from "../src/common/decorators/zod-response.decorators";
-import { zodToOpenApi } from "../src/common/openapi/zod-openapi-schema";
-import { ZodValidationPipe } from "../src/common/pipes/zod-validation.pipe";
+} from "../src/platform/presentation/http/validation/decorators/zod-response.decorators";
+import { zodToOpenApi } from "../src/platform/presentation/http/openapi/zod-openapi-schema";
+import { ZodValidationPipe } from "../src/platform/presentation/http/validation/pipes/zod-validation.pipe";
 import { createE2eApp } from "./e2e-helpers";
 
 type HttpMethod = "get" | "put" | "post" | "delete" | "patch";
@@ -475,9 +475,10 @@ describe("OpenAPI document (e2e)", () => {
 				}
 			}
 			expect(fileRoutes.map((route: RouteHandler): string => route.handler).sort()).toEqual([
-				"OrganizationAnalyticsController.exportReport",
+				"IntegrationAnalyticsController.exportReport",
 				"RewardsAdminAnalyticsController.exportReport",
 				"RewardsAdminRewardsController.downloadRewardImagesArchive",
+				"TenantAnalyticsController.exportReport",
 			]);
 			expect(problems).toEqual([]);
 		});

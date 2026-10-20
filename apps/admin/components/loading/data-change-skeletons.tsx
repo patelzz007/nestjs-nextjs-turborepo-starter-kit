@@ -3,7 +3,7 @@ import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { placeholderKeys } from "@workspace/ui/lib/skeleton/placeholders";
 import type * as React from "react";
 
-import { AUDIT_RECORD_GRID_BY_LAYOUT, type AuditRecordLayout } from "@/components/audit-logs/record-layout";
+import { AUDIT_RECORD_GRID_BY_LAYOUT, type AuditRecordLayout } from "@/contexts/audit/components/audit-logs/record-layout";
 import { DATA_CHANGE_RECORD_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { BadgeSkeleton, LabelledValueGridSkeleton } from "@/components/loading/skeleton-parts";
 

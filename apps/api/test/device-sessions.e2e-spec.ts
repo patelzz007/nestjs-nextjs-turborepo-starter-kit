@@ -8,7 +8,7 @@ import {
 	LoginMobileResponseSchema,
 	RefreshMobileResponseSchema,
 	RevokeSessionResponseSchema,
-	SessionListResponseSchema,
+	SessionSchema,
 	type LoginMobileResponse,
 	type Session,
 } from "@workspace/shared";
@@ -16,7 +16,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { createE2eApp, extractCookie, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type InjectResponse } from "./e2e-helpers";
+import { createE2eApp, extractCookie, mutationHeaders, parsePaginatedEnvelope, parseSuccessEnvelope, type InjectResponse, uniqueClientIp } from "./e2e-helpers";
 
 /**
  * Device sessions end to end (docs/technical/mobile/mobile-app.md §8, ADR 034):
@@ -32,7 +32,7 @@ const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:
 const PASSWORD = "DeviceSessions@123";
 const APP_VERSION = "1.4.0";
 const CHROME_MAC = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.54 Safari/537.36";
-const EXPO_IOS = "RewardHub/42 CFNetwork/1568.100.1 Darwin/24.0.0";
+const EXPO_IOS = "Starter/42 CFNetwork/1568.100.1 Darwin/24.0.0";
 const DEVICE_MODEL = "iPhone 15 Pro";
 const DEVICE_NAME = "Alex’s iPhone";
 
@@ -43,6 +43,7 @@ const HTTP_UNAUTHORIZED = 401;
 const HTTP_NOT_FOUND = 404;
 
 const SESSIONS_URL = `${API_VERSION_PREFIX}/auth/sessions`;
+const SessionListSchema = z.array(SessionSchema);
 
 const SessionRowSchema = z.object({ isDeleted: z.boolean(), deletedBy: z.string().nullable() });
 const CountSchema = z.object({ count: z.coerce.number() });
@@ -96,7 +97,7 @@ describe("Device sessions (e2e)", () => {
 			payload: { email, password: PASSWORD, fullName: "Device Sessions E2E" },
 		});
 		expect(signup.statusCode, signup.body).toBe(HTTP_CREATED);
-		const updated = await pool.query(`UPDATE public.users SET email_verified_at = $1 WHERE email = $2 RETURNING id`, [Date.now(), email]);
+		const updated = await pool.query(`UPDATE public."User" SET "emailVerifiedAt" = $1 WHERE email = $2 RETURNING id`, [Date.now(), email]);
 		const userId = z.object({ id: z.string() }).parse(updated.rows.at(0)).id;
 		members.push(email);
 		return { email, userId };
@@ -129,13 +130,13 @@ describe("Device sessions (e2e)", () => {
 	async function listAsBrowser(session: BrowserSession): Promise<Session[]> {
 		const response = await app.inject({ method: "GET", url: SESSIONS_URL, headers: browserHeaders(session.ip, { cookie: `accessToken=${session.accessToken}` }) });
 		expect(response.statusCode, response.body).toBe(HTTP_OK);
-		return parseSuccessEnvelope(response, SessionListResponseSchema).data;
+		return parseSuccessEnvelope(response, SessionListSchema).data;
 	}
 
 	async function listAsMobile(session: MobileSession): Promise<Session[]> {
 		const response = await app.inject({ method: "GET", url: SESSIONS_URL, headers: mobileHeaders(session.ip, { authorization: `Bearer ${session.accessToken}` }) });
 		expect(response.statusCode, response.body).toBe(HTTP_OK);
-		return parseSuccessEnvelope(response, SessionListResponseSchema).data;
+		return parseSuccessEnvelope(response, SessionListSchema).data;
 	}
 
 	async function revokeAsBrowser(session: BrowserSession, sessionId: string): Promise<InjectResponse> {
@@ -151,12 +152,12 @@ describe("Device sessions (e2e)", () => {
 	}
 
 	async function storedSession(sessionId: string): Promise<z.output<typeof SessionRowSchema>> {
-		const result = await pool.query(`SELECT is_deleted AS "isDeleted", deleted_by AS "deletedBy" FROM public.refresh_tokens WHERE id = $1`, [sessionId]);
+		const result = await pool.query(`SELECT "isDeleted" AS "isDeleted", "deletedBy" AS "deletedBy" FROM public."RefreshToken" WHERE id = $1`, [sessionId]);
 		return SessionRowSchema.parse(result.rows.at(0));
 	}
 
 	async function deletedByOfUser(userId: string): Promise<readonly (string | null)[]> {
-		const result = await pool.query(`SELECT deleted_by AS "deletedBy" FROM public.refresh_tokens WHERE "userId" = $1 ORDER BY "createdAt"`, [userId]);
+		const result = await pool.query(`SELECT "deletedBy" AS "deletedBy" FROM public."RefreshToken" WHERE "userId" = $1 ORDER BY "createdAt"`, [userId]);
 		return z
 			.array(SessionRowSchema.pick({ deletedBy: true }))
 			.parse(result.rows)
@@ -165,7 +166,7 @@ describe("Device sessions (e2e)", () => {
 
 	async function revokeDeviceEvents(userId: string): Promise<number> {
 		const result = await pool.query(
-			`SELECT count(*) AS count FROM public.outbox_events WHERE event_type = 'session.action' AND payload->'payload'->>'action' = 'revoke-device' AND payload->'payload'->>'userId' = $1`,
+			`SELECT count(*) AS count FROM public."OutboxEvent" WHERE "eventType" = 'session.action' AND payload->'payload'->>'action' = 'revoke-device' AND payload->'payload'->>'userId' = $1`,
 			[userId],
 		);
 		return CountSchema.parse(result.rows.at(0)).count;
@@ -185,7 +186,7 @@ describe("Device sessions (e2e)", () => {
 	});
 
 	afterAll(async () => {
-		await pool.query("UPDATE public.users SET is_deleted = true, deleted_at = $2 WHERE email = ANY($1)", [members, Date.now()]);
+		await pool.query('UPDATE public."User" SET "isDeleted" = true, "deletedAt" = $2 WHERE email = ANY($1)', [members, Date.now()]);
 		await pool.end();
 		await app.close();
 	});
@@ -226,6 +227,30 @@ describe("Device sessions (e2e)", () => {
 				signInMethod: "PASSWORD",
 				ipAddress: phone.ip,
 			});
+		});
+
+		it("pages the sessions, most recently active first, with the totals in meta", async () => {
+			const { email } = await newMember();
+			const phone = await signInMobile(email);
+			await signInBrowser(email);
+
+			const response = await app.inject({ method: "GET", url: `${SESSIONS_URL}?limit=1`, headers: mobileHeaders(phone.ip, { authorization: `Bearer ${phone.accessToken}` }) });
+			expect(response.statusCode, response.body).toBe(HTTP_OK);
+			const page = parsePaginatedEnvelope(response, SessionSchema);
+			const { meta } = page;
+
+			expect(page.data.map((session) => session.clientType)).toEqual(["web"]);
+			expect(meta).toMatchObject({ limit: 1, total: 2, page: 1, totalPages: 2, hasNext: true, hasPrevious: false });
+			expect(meta.nextCursor).not.toBeNull();
+		});
+
+		it("rejects a filter or sort the session list does not offer", async () => {
+			const { email } = await newMember();
+			const phone = await signInMobile(email);
+			const headers = mobileHeaders(phone.ip, { authorization: `Bearer ${phone.accessToken}` });
+
+			expect((await app.inject({ method: "GET", url: `${SESSIONS_URL}?sort=ipAddress`, headers })).statusCode).toBe(HTTP_BAD_REQUEST);
+			expect((await app.inject({ method: "GET", url: `${SESSIONS_URL}?filter[userId]=x`, headers })).statusCode).toBe(HTTP_BAD_REQUEST);
 		});
 
 		it("marks the mobile app's own session current on the bearer transport", async () => {
@@ -283,7 +308,7 @@ describe("Device sessions (e2e)", () => {
 			const rotated = await refreshMobile(phone.refreshToken);
 
 			const correlationId = z.string().parse(rotated.headers["x-correlation-id"]);
-			const audit = await pool.query(`SELECT auth_method::text AS "authMethod" FROM public.audit_logs WHERE correlation_id = $1`, [correlationId]);
+			const audit = await pool.query(`SELECT "authMethod"::text AS "authMethod" FROM public."AuditLog" WHERE "correlationId" = $1`, [correlationId]);
 			expect(AuthMethodSchema.parse(audit.rows.at(0)).authMethod).toBe("REFRESH_BODY");
 		});
 	});

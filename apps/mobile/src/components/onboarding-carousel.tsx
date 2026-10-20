@@ -5,7 +5,7 @@
 // page dots. Presentational and controlled by its slides: the caller supplies
 // the pages and what finishing does.
 //
-//   ▣ Reward Hub                Skip     brand row + skip
+//   ▣ App name                  Skip     brand row + skip
 //
 //            ◯  ◯                        illustration: the slide's mark on the
 //         ╭───────╮  ◇                   brand tile, inside soft rings, with two

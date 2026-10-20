@@ -15,8 +15,8 @@ import { Pool } from "pg";
 import { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { GITHUB_FETCH, type GithubFetch } from "../src/modules/github/github-http.transport";
-import { GITHUB_TOKEN_EXPIRATION_HEADER } from "../src/modules/github/pull-requests/github-pull-request.client";
+import { GITHUB_FETCH, type GithubFetch } from "../src/contexts/integrations-github/infrastructure/github-api/github-http.transport";
+import { GITHUB_TOKEN_EXPIRATION_HEADER } from "../src/contexts/integrations-github/infrastructure/github-api/github-pull-request.client";
 import { createE2eApp, login, markSeedUserEmailVerified, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
 import { AVATAR_PNG_BYTES } from "./support/avatar-png-fixture";
 import { restoreGithubAccountLinks, snapshotGithubAccountLinks, type GithubAccountLinkSnapshot } from "./support/github-account-link-snapshots";
@@ -142,7 +142,7 @@ describe("GitHub comment pictures kept in the repository (e2e)", () => {
 	}
 
 	async function userIdOf(email: string): Promise<string> {
-		const result = await pool.query<{ id: string }>("SELECT id FROM public.users WHERE email = $1", [email]);
+		const result = await pool.query<{ id: string }>('SELECT id FROM public."User" WHERE email = $1', [email]);
 		return z.string().parse(result.rows.at(0)?.id);
 	}
 
@@ -208,7 +208,7 @@ describe("GitHub comment pictures kept in the repository (e2e)", () => {
 	}
 
 	async function storedStatus(fileId: string): Promise<{ status: string; isDeleted: boolean } | undefined> {
-		const stored = await pool.query<{ status: string; isDeleted: boolean }>('SELECT status, is_deleted AS "isDeleted" FROM public.stored_files WHERE id = $1', [fileId]);
+		const stored = await pool.query<{ status: string; isDeleted: boolean }>('SELECT status, "isDeleted" AS "isDeleted" FROM public."StoredFile" WHERE id = $1', [fileId]);
 		return stored.rows.at(0);
 	}
 

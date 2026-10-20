@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { DatabaseError, Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
 /** PostgreSQL `unique_violation`. */
@@ -25,8 +25,8 @@ async function sqlStateOf(client: PoolClient, statement: string, values: readonl
 	}
 }
 
-const INSERT_VERSION = `INSERT INTO public.authorization_policy_versions
-  (id, organization_id, draft_id, scope, version, cedar_source, content_hash, published_at, published_by_id, superseded_at)
+const INSERT_VERSION = `INSERT INTO public."AuthorizationPolicyVersion"
+  (id, "tenantId", "draftId", scope, version, "cedarSource", "contentHash", "publishedAt", "publishedById", "supersededAt")
   VALUES ($1, NULL, $2, 'PLATFORM', $3, 'permit(principal, action, resource);', 'hash', 0, $4, $5)`;
 
 /**
@@ -43,7 +43,7 @@ describe("Policy version and tenant key integrity (integration)", () => {
 
 	beforeAll(async () => {
 		pool = new Pool({ connectionString: DATABASE_URL });
-		const draft = await pool.query<{ id: string; createdById: string }>(`SELECT id, created_by_id AS "createdById" FROM public.authorization_policy_drafts LIMIT 1`);
+		const draft = await pool.query<{ id: string; createdById: string }>(`SELECT id, "createdById" AS "createdById" FROM public."AuthorizationPolicyDraft" LIMIT 1`);
 		const row = draft.rows.at(0);
 		if (row === undefined) {
 			throw new Error("Seed data missing (policy drafts) — run pnpm db:seed");
@@ -67,7 +67,7 @@ describe("Policy version and tenant key integrity (integration)", () => {
 		}
 	}
 
-	it("keeps platform-scope (NULL organization) version numbers unique per scope", async () => {
+	it("keeps platform-scope (NULL tenant) version numbers unique per scope", async () => {
 		await inRolledBackTransaction(async () => {
 			const unusedVersion = 9_001;
 			expect(await sqlStateOf(client, INSERT_VERSION, [randomUUID(), draftId, unusedVersion, userId, 1])).toBeNull();
@@ -83,15 +83,15 @@ describe("Policy version and tenant key integrity (integration)", () => {
 		});
 	});
 
-	it("allows at most one ACTIVE tenant data key per organization, and ON CONFLICT DO NOTHING inserts nothing", async () => {
+	it("allows at most one ACTIVE tenant data key per tenant, and ON CONFLICT DO NOTHING inserts nothing", async () => {
 		await inRolledBackTransaction(async () => {
-			const organizationId: string = ORGANIZATION_SEED_IDS.klOrganization;
-			const insert = `INSERT INTO public.tenant_encryption_keys (id, organization_id, key_version, wrapped_key, kms_key_id, status)
+			const tenantId: string = TENANT_SEED_IDS.klTenant;
+			const insert = `INSERT INTO public."TenantEncryptionKey" (id, "tenantId", "keyVersion", "wrappedKey", "kmsKeyId", status)
         VALUES ($1, $2, $3, 'x', 'local-dev-kek/v1', 'ACTIVE')`;
-			// Make sure the organization holds an ACTIVE key (the seed's, or this one when the seed wrote none).
-			await client.query(`${insert} ON CONFLICT DO NOTHING`, [randomUUID(), organizationId, 9_200]);
-			expect(await sqlStateOf(client, insert, [randomUUID(), organizationId, 9_201])).toBe(UNIQUE_VIOLATION);
-			const skipped = await client.query(`${insert} ON CONFLICT DO NOTHING`, [randomUUID(), organizationId, 9_202]);
+			// Make sure the tenant holds an ACTIVE key (the seed's, or this one when the seed wrote none).
+			await client.query(`${insert} ON CONFLICT DO NOTHING`, [randomUUID(), tenantId, 9_200]);
+			expect(await sqlStateOf(client, insert, [randomUUID(), tenantId, 9_201])).toBe(UNIQUE_VIOLATION);
+			const skipped = await client.query(`${insert} ON CONFLICT DO NOTHING`, [randomUUID(), tenantId, 9_202]);
 			expect(skipped.rowCount).toBe(0);
 		});
 	});

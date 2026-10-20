@@ -3,7 +3,7 @@ import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { LIST_SLOT_INDEX, API_VERSION_PREFIX, ApiErrorResponseSchema, RewardClaimQrResponseSchema } from "@workspace/shared";
 
-import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
 import { clearPendingTeamInviteForEmail, createE2eApp, login, markSeedUserEmailVerified, mutationHeaders, parseSuccessEnvelope, uniqueClientIp } from "./e2e-helpers";
 
@@ -18,12 +18,12 @@ describe("Access hardening (e2e)", () => {
 
 		const pool = new Pool({ connectionString: DATABASE_URL });
 		await markSeedUserEmailVerified(pool, "alice.johnson@example.com");
-		await clearPendingTeamInviteForEmail(pool, ORGANIZATION_SEED_IDS.klOrganization, "user@example.com");
-		const result = await pool.query<{ id: string }>(`SELECT id FROM public.organization_api_keys WHERE organization_id = $1 LIMIT 1`, [ORGANIZATION_SEED_IDS.mlkOrganization]);
+		await clearPendingTeamInviteForEmail(pool, TENANT_SEED_IDS.klTenant, "user@example.com");
+		const result = await pool.query<{ id: string }>(`SELECT id FROM public."TenantApiKey" WHERE "tenantId" = $1 LIMIT 1`, [TENANT_SEED_IDS.mlkTenant]);
 		await pool.end();
 		const keyId = result.rows[LIST_SLOT_INDEX.first]?.id;
 		if (keyId === undefined) {
-			throw new Error("Seed data missing MLK organization API key — run pnpm db:seed");
+			throw new Error("Seed data missing MLK tenant API key — run pnpm db:seed");
 		}
 		mlkApiKeyId = keyId;
 	});
@@ -63,32 +63,32 @@ describe("Access hardening (e2e)", () => {
 		expect(response.statusCode).toBe(403);
 	});
 
-	it("prevents user B from reading user A claim QR payload", async () => {
+	it("prevents user B from issuing codes for user A's claim", async () => {
 		const bob = await login(app, "bob.smith@example.com", "Bob@123");
 
 		const response = await app.inject({
-			method: "GET",
+			method: "POST",
 			url: `${API_VERSION_PREFIX}/claims/${REWARD_SEED_IDS.claimPendingKl}/qr`,
-			headers: {
+			headers: mutationHeaders({
 				cookie: `accessToken=${bob.accessToken}; refreshToken=${bob.refreshToken}`,
-			},
+			}),
 		});
 
 		expect([403, 404]).toContain(response.statusCode);
 	});
 
-	it("allows the claim owner to refresh their QR payload", async () => {
+	it("allows the claim owner to issue fresh QR codes", async () => {
 		const alice = await login(app, "alice.johnson@example.com", "Alice@123");
 
 		const response = await app.inject({
-			method: "GET",
+			method: "POST",
 			url: `${API_VERSION_PREFIX}/claims/${REWARD_SEED_IDS.claimPendingKl}/qr`,
-			headers: {
+			headers: mutationHeaders({
 				cookie: `accessToken=${alice.accessToken}; refreshToken=${alice.refreshToken}`,
-			},
+			}),
 		});
 
-		expect(response.statusCode).toBe(200);
+		expect(response.statusCode).toBe(201);
 		expect(parseSuccessEnvelope(response, RewardClaimQrResponseSchema).success).toBe(true);
 	});
 
@@ -97,7 +97,7 @@ describe("Access hardening (e2e)", () => {
 
 		const response = await app.inject({
 			method: "PATCH",
-			url: `${API_VERSION_PREFIX}/orgs/${ORGANIZATION_SEED_SLUGS.mlk}/rewards/${REWARD_SEED_IDS.mlkRewardDisabled}`,
+			url: `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.mlk}/rewards/${REWARD_SEED_IDS.mlkRewardDisabled}`,
 			headers: mutationHeaders({
 				cookie: `merchantAccessToken=${klOwner.accessToken}; merchantRefreshToken=${klOwner.refreshToken}`,
 				"x-client-type": "merchant",
@@ -113,7 +113,7 @@ describe("Access hardening (e2e)", () => {
 
 		const response = await app.inject({
 			method: "POST",
-			url: `${API_VERSION_PREFIX}/orgs/${ORGANIZATION_SEED_SLUGS.mlk}/api-keys/${mlkApiKeyId}/revoke`,
+			url: `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.mlk}/api-keys/${mlkApiKeyId}/revoke`,
 			headers: mutationHeaders({
 				cookie: `merchantAccessToken=${klOwner.accessToken}; merchantRefreshToken=${klOwner.refreshToken}`,
 				"x-client-type": "merchant",
@@ -123,12 +123,12 @@ describe("Access hardening (e2e)", () => {
 		expect([403, 404]).toContain(response.statusCode);
 	});
 
-	it("does not change credentials when adding an existing user as an organization member", async () => {
+	it("does not change credentials when adding an existing user as a tenant member", async () => {
 		const klOwner = await login(app, "brew.owner@kl-rewards.demo", "BrewOwner@123", "merchant");
 
 		const createResponse = await app.inject({
 			method: "POST",
-			url: `${API_VERSION_PREFIX}/orgs/${ORGANIZATION_SEED_SLUGS.kl}/members/invite`,
+			url: `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.kl}/members/invite`,
 			headers: mutationHeaders({
 				cookie: `merchantAccessToken=${klOwner.accessToken}; merchantRefreshToken=${klOwner.refreshToken}`,
 				"x-client-type": "merchant",

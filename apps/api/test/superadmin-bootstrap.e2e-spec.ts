@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { LIST_SLOT_INDEX } from "@workspace/shared";
+import { epochMs, LIST_SLOT_INDEX } from "@workspace/shared";
 import { Readable } from "node:stream";
 
 import * as bcrypt from "bcrypt";
@@ -9,14 +9,15 @@ import { z } from "zod";
 
 import { TypedConfigService } from "../src/config/typed-config.service";
 import { PrismaService } from "../src/prisma/prisma.service";
-import { SessionRestrictionService } from "../src/modules/auth/services/session-restriction.service";
-import type { UserLogin } from "../src/modules/auth/repositories/user.repository";
-import { StdinPasswordReader, type PasswordReader } from "../src/modules/auth/bootstrap/password-reader";
-import { SuperAdminBootstrapCommand } from "../src/modules/auth/bootstrap/superadmin-bootstrap.command";
-import { createSuperAdminBootstrapService } from "../src/modules/auth/bootstrap/superadmin-bootstrap.composition";
-import { BOOTSTRAP_EXIT_CODES, SUPERADMIN_BOOTSTRAP_OPERATION } from "../src/modules/auth/bootstrap/superadmin-bootstrap.constants";
-import { BootstrapEmailTakenError, SuperAdminAlreadyExistsError, SuperAdminRoleMissingError } from "../src/modules/auth/bootstrap/superadmin-bootstrap.errors";
-import type { BootstrapOutcome, BootstrapRequest, SuperAdminBootstrapService } from "../src/modules/auth/bootstrap/superadmin-bootstrap.service";
+import type { BootstrapSuperAdminInput } from "../src/contexts/identity/application/commands/bootstrap-super-admin/bootstrap-super-admin.command";
+import type { BootstrapOutcome } from "../src/contexts/identity/application/commands/bootstrap-super-admin/bootstrap-super-admin.types";
+import { SUPERADMIN_BOOTSTRAP_OPERATION } from "../src/contexts/identity/application/ports/identity.tokens";
+import { BootstrapEmailTakenError, SuperAdminAlreadyExistsError, SuperAdminRoleMissingError } from "../src/contexts/identity/domain/errors/identity.errors";
+import { resolveSessionRestriction } from "../src/contexts/identity/domain/policies/session-restriction.policy";
+import { StdinPasswordReader, type PasswordReader } from "../src/contexts/identity/presentation/cli/password-reader";
+import { SuperAdminBootstrapCommand } from "../src/contexts/identity/presentation/cli/superadmin-bootstrap.cli-command";
+import { BOOTSTRAP_EXIT_CODES } from "../src/contexts/identity/presentation/cli/superadmin-bootstrap.cli.constants";
+import { createSuperAdminBootstrap, type SuperAdminBootstrap } from "../src/contexts/identity/superadmin-bootstrap.composition";
 import { createScratchDatabase, SCRATCH_SETUP_TIMEOUT_MS, type ScratchDatabase } from "./support/scratch-database";
 import { createTestTypedConfig } from "./support/test-api-env";
 
@@ -27,7 +28,7 @@ import { createTestTypedConfig } from "./support/test-api-env";
  */
 
 const PASSWORD = "Corr3ct-Horse-Battery!";
-const REQUEST: BootstrapRequest = { identity: { email: "root@acme.test", fullName: "Root Admin" }, password: PASSWORD };
+const REQUEST: BootstrapSuperAdminInput = { identity: { email: "root@acme.test", fullName: "Root Admin" }, password: PASSWORD };
 const CONCURRENT_RUNS = 4;
 
 const CountRowSchema = z.object({ count: z.number() });
@@ -35,15 +36,15 @@ const LoginRowSchema = z.object({
 	id: z.string(),
 	email: z.string(),
 	full_name: z.string(),
-	password_hash: z.string(),
-	is_active: z.boolean(),
+	passwordHash: z.string(),
+	isActive: z.boolean(),
 	is_super_admin: z.boolean(),
-	is_deleted: z.boolean(),
-	email_verified_at: z.string().nullable(),
-	mfa_enrollment_deadline: z.string().nullable(),
-	two_factor_enabled: z.boolean(),
+	isDeleted: z.boolean(),
+	emailVerifiedAt: z.string().nullable(),
+	mfaEnrollmentDeadline: z.string().nullable(),
+	twoFactorEnabled: z.boolean(),
 });
-const AuditRowSchema = z.object({ action: z.string(), actor_kind: z.string(), actor_id: z.string(), target_user_id: z.string().nullable(), detail: z.string().nullable() });
+const AuditRowSchema = z.object({ action: z.string(), actorKind: z.string(), actorId: z.string(), targetUserId: z.string().nullable(), detail: z.string().nullable() });
 
 describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 	let database: ScratchDatabase;
@@ -51,12 +52,12 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 	let config: TypedConfigService;
 
 	/** A fresh service over its OWN connection pool — each concurrent run is a separate database session, like separate CLI processes. */
-	async function newService(): Promise<SuperAdminBootstrapService> {
+	async function newService(): Promise<SuperAdminBootstrap> {
 		const prisma = new PrismaService(config);
 		prisma.onModuleInit();
 		await prisma.ensureConnected();
 		database.track((): Promise<void> => prisma.onModuleDestroy());
-		return createSuperAdminBootstrapService(config, prisma);
+		return createSuperAdminBootstrap(config, prisma);
 	}
 
 	async function count(sql: string): Promise<number> {
@@ -65,13 +66,13 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 
 	async function insertSuperAdminRole(): Promise<string> {
 		const id = randomUUID();
-		await scratch.query(`INSERT INTO roles (id, name, "isSystem") VALUES ($1, 'SuperAdmin', true)`, [id]);
+		await scratch.query(`INSERT INTO "Role" (id, name, "isSystem") VALUES ($1, 'SuperAdmin', true)`, [id]);
 		return id;
 	}
 
 	async function insertUser(email: string, flags: { readonly isSuperAdmin: boolean; readonly isActive: boolean; readonly isDeleted: boolean }): Promise<string> {
 		const id = randomUUID();
-		await scratch.query(`INSERT INTO users (id, email, "fullName", "passwordHash", "isSuperAdmin", "isActive", is_deleted) VALUES ($1, $2, 'Existing', 'x', $3, $4, $5)`, [
+		await scratch.query(`INSERT INTO "User" (id, email, "fullName", "passwordHash", "isSuperAdmin", "isActive", "isDeleted") VALUES ($1, $2, 'Existing', 'x', $3, $4, $5)`, [
 			id,
 			email,
 			flags.isSuperAdmin,
@@ -88,7 +89,7 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 	}, SCRATCH_SETUP_TIMEOUT_MS);
 
 	afterEach(async () => {
-		await scratch.query("TRUNCATE users, roles, permission_audit_logs CASCADE");
+		await scratch.query('TRUNCATE "User", "Role", "PermissionAuditLog" CASCADE');
 	});
 
 	afterAll(async () => {
@@ -102,22 +103,22 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 		const user = LoginRowSchema.parse(
 			(
 				await scratch.query(
-					`SELECT id, email, "fullName" AS full_name, "passwordHash" AS password_hash, "isActive" AS is_active, "isSuperAdmin" AS is_super_admin, is_deleted, email_verified_at::text, mfa_enrollment_deadline::text, two_factor_enabled FROM users WHERE id = $1`,
+					`SELECT id, email, "fullName" AS full_name, "passwordHash" AS "passwordHash", "isActive" AS "isActive", "isSuperAdmin" AS is_super_admin, "isDeleted", "emailVerifiedAt"::text, "mfaEnrollmentDeadline"::text, "twoFactorEnabled" FROM "User" WHERE id = $1`,
 					[outcome.userId],
 				)
 			).rows[LIST_SLOT_INDEX.first],
 		);
-		expect(user).toMatchObject({ email: "root@acme.test", full_name: "Root Admin", is_active: true, is_super_admin: true, is_deleted: false, two_factor_enabled: false });
-		expect(user.password_hash).not.toContain(PASSWORD);
-		expect(await bcrypt.compare(PASSWORD, user.password_hash)).toBe(true);
-		expect(user.email_verified_at).not.toBeNull();
-		expect(user.mfa_enrollment_deadline).not.toBeNull();
+		expect(user).toMatchObject({ email: "root@acme.test", full_name: "Root Admin", isActive: true, is_super_admin: true, isDeleted: false, twoFactorEnabled: false });
+		expect(user.passwordHash).not.toContain(PASSWORD);
+		expect(await bcrypt.compare(PASSWORD, user.passwordHash)).toBe(true);
+		expect(user.emailVerifiedAt).not.toBeNull();
+		expect(user.mfaEnrollmentDeadline).not.toBeNull();
 
-		expect(await count(`SELECT count(*)::int AS count FROM user_roles WHERE "userId" = '${outcome.userId}' AND "roleId" = '${roleId}' AND is_deleted = false`)).toBe(1);
-		const audits = (await scratch.query("SELECT * FROM permission_audit_logs ORDER BY action")).rows.map((row) => AuditRowSchema.parse(row));
+		expect(await count(`SELECT count(*)::int AS count FROM "UserRole" WHERE "userId" = '${outcome.userId}' AND "roleId" = '${roleId}' AND "isDeleted" = false`)).toBe(1);
+		const audits = (await scratch.query('SELECT * FROM "PermissionAuditLog" ORDER BY action')).rows.map((row) => AuditRowSchema.parse(row));
 		expect(audits.map((audit) => audit.action).sort()).toEqual(["ROLE_ASSIGNED_AT_PROVISIONING", "SUPER_ADMIN_BOOTSTRAPPED"]);
 		for (const audit of audits) {
-			expect(audit).toMatchObject({ actor_kind: "SYSTEM_OPERATION", actor_id: SUPERADMIN_BOOTSTRAP_OPERATION, target_user_id: outcome.userId });
+			expect(audit).toMatchObject({ actorKind: "SYSTEM_OPERATION", actorId: SUPERADMIN_BOOTSTRAP_OPERATION, targetUserId: outcome.userId });
 			expect(audit.detail).not.toContain(PASSWORD);
 			expect(z.object({ email: z.string(), ranBy: z.object({ osUser: z.string().min(1), host: z.string().min(1) }) }).parse(JSON.parse(audit.detail ?? "{}")).email).toBe(
 				"root@acme.test",
@@ -132,32 +133,19 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 		const row = LoginRowSchema.parse(
 			(
 				await scratch.query(
-					`SELECT id, email, "fullName" AS full_name, "passwordHash" AS password_hash, "isActive" AS is_active, "isSuperAdmin" AS is_super_admin, is_deleted, email_verified_at::text, mfa_enrollment_deadline::text, two_factor_enabled FROM users WHERE id = $1`,
+					`SELECT id, email, "fullName" AS full_name, "passwordHash" AS "passwordHash", "isActive" AS "isActive", "isSuperAdmin" AS is_super_admin, "isDeleted", "emailVerifiedAt"::text, "mfaEnrollmentDeadline"::text, "twoFactorEnabled" FROM "User" WHERE id = $1`,
 					[outcome.userId],
 				)
 			).rows[LIST_SLOT_INDEX.first],
 		);
-		const login: UserLogin = {
-			id: row.id,
-			email: row.email,
-			fullName: row.full_name,
-			isActive: row.is_active,
-			isSuperAdmin: row.is_super_admin,
-			createdAt: BigInt(0),
-			updatedAt: BigInt(0),
-			isDeleted: row.is_deleted,
-			deletedAt: null,
-			emailVerifiedAt: row.email_verified_at === null ? null : BigInt(row.email_verified_at),
-			tokenVersion: 0,
-			twoFactorEnabled: row.two_factor_enabled,
-			mfaEnrollmentDeadline: row.mfa_enrollment_deadline === null ? null : BigInt(row.mfa_enrollment_deadline),
-			mfaAssuredAt: null,
-			passwordHash: row.password_hash,
-			failedLoginAttempts: 0,
-			lockedUntil: null,
+		const subject = {
+			isEmailVerified: row.emailVerifiedAt !== null && Number(row.emailVerifiedAt) <= Date.now(),
+			twoFactorEnabled: row.twoFactorEnabled,
+			mfaEnrollmentDeadline: row.mfaEnrollmentDeadline === null ? null : epochMs(Number(row.mfaEnrollmentDeadline)),
+			enrollmentGraceMs: config.mfa.enrollmentDeadlineMs,
 		};
 
-		expect(new SessionRestrictionService(config).resolveSessionRestriction(login, true, Date.now())).toMatchObject({ restricted: true, reason: "mfa_enrollment" });
+		expect(resolveSessionRestriction(subject, epochMs(Date.now()))).toMatchObject({ restricted: true, reason: "mfa_enrollment" });
 	});
 
 	it("is one-time: a second run refuses and changes nothing", async () => {
@@ -167,8 +155,8 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 
 		await expect(service.bootstrap({ ...REQUEST, identity: { email: "second@acme.test", fullName: "Second Admin" } })).rejects.toBeInstanceOf(SuperAdminAlreadyExistsError);
 
-		expect(await count("SELECT count(*)::int AS count FROM users")).toBe(1);
-		expect(await count("SELECT count(*)::int AS count FROM permission_audit_logs")).toBe(2);
+		expect(await count('SELECT count(*)::int AS count FROM "User"')).toBe(1);
+		expect(await count('SELECT count(*)::int AS count FROM "PermissionAuditLog"')).toBe(2);
 	});
 
 	it("lets exactly one of several concurrent runs (separate sessions) succeed", async () => {
@@ -185,15 +173,15 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 				expect(result.reason).toBeInstanceOf(SuperAdminAlreadyExistsError);
 			}
 		}
-		expect(await count("SELECT count(*)::int AS count FROM users")).toBe(1);
-		expect(await count("SELECT count(*)::int AS count FROM user_roles")).toBe(1);
-		expect(await count("SELECT count(*)::int AS count FROM permission_audit_logs")).toBe(2);
+		expect(await count('SELECT count(*)::int AS count FROM "User"')).toBe(1);
+		expect(await count('SELECT count(*)::int AS count FROM "UserRole"')).toBe(1);
+		expect(await count('SELECT count(*)::int AS count FROM "PermissionAuditLog"')).toBe(2);
 	});
 
 	it("counts an active holder of the SuperAdmin ROLE (without the flag) as an existing SuperAdmin", async () => {
 		const roleId = await insertSuperAdminRole();
 		const holder = await insertUser("holder@acme.test", { isSuperAdmin: false, isActive: true, isDeleted: false });
-		await scratch.query(`INSERT INTO user_roles (id, "userId", "roleId") VALUES ($1, $2, $3)`, [randomUUID(), holder, roleId]);
+		await scratch.query(`INSERT INTO "UserRole" (id, "userId", "roleId") VALUES ($1, $2, $3)`, [randomUUID(), holder, roleId]);
 
 		await expect((await newService()).bootstrap(REQUEST)).rejects.toBeInstanceOf(SuperAdminAlreadyExistsError);
 	});
@@ -214,7 +202,7 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 
 		await expect((await newService()).bootstrap(REQUEST)).rejects.toBeInstanceOf(BootstrapEmailTakenError);
 
-		expect(await count("SELECT count(*)::int AS count FROM user_roles")).toBe(0);
+		expect(await count('SELECT count(*)::int AS count FROM "UserRole"')).toBe(0);
 	});
 
 	it("matches the email case-insensitively (citext)", async () => {
@@ -227,8 +215,8 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 	it("rolls everything back when the SuperAdmin role is missing (an unseeded database)", async () => {
 		await expect((await newService()).bootstrap(REQUEST)).rejects.toBeInstanceOf(SuperAdminRoleMissingError);
 
-		expect(await count("SELECT count(*)::int AS count FROM users")).toBe(0);
-		expect(await count("SELECT count(*)::int AS count FROM permission_audit_logs")).toBe(0);
+		expect(await count('SELECT count(*)::int AS count FROM "User"')).toBe(0);
+		expect(await count('SELECT count(*)::int AS count FROM "PermissionAuditLog"')).toBe(0);
 	});
 
 	it("runs end to end through the command: password from stdin, next steps printed, exit 0, then exit 1 on the repeat", async () => {
@@ -239,7 +227,7 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 		const command = (password: string): SuperAdminBootstrapCommand =>
 			new SuperAdminBootstrapCommand({
 				createPasswordReader: (): PasswordReader => new StdinPasswordReader(Readable.from([`${password}\n`])),
-				bootstrap: (request: BootstrapRequest): Promise<BootstrapOutcome> => service.bootstrap(request),
+				bootstrap: (request: BootstrapSuperAdminInput): Promise<BootstrapOutcome> => service.bootstrap(request),
 				loginUrl: (): string => config.clientApps.adminUrl,
 				log: (line: string): void => void logs.push(line),
 			});
@@ -251,6 +239,6 @@ describe("SuperAdmin bootstrap (integration, scratch database)", () => {
 		expect(output).toContain("Created the first SuperAdmin");
 		expect(output).toContain("Refused:");
 		expect(output).not.toContain(PASSWORD);
-		expect(await count("SELECT count(*)::int AS count FROM users")).toBe(1);
+		expect(await count('SELECT count(*)::int AS count FROM "User"')).toBe(1);
 	});
 });

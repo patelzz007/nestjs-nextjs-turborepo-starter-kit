@@ -3,7 +3,7 @@ title: "API reference — Geography reference data"
 description: "Regions, subregions, countries, states and cities: CRUD, autocomplete, import and export."
 order: 10
 author: "Generated from the OpenAPI export"
-lastUpdated: 1791158400000
+lastUpdated: 1792368000000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -25,7 +25,7 @@ Autocomplete search across all geo entities
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_autocomplete` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_autocomplete` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -73,8 +73,8 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [],
   "meta": {
-    "correlationId": "pPSHfGvpZniiUfvTAvFwe",
-    "timestamp": 1791193325246
+    "correlationId": "u3fkv3hieHHtSVQPktGqj",
+    "timestamp": 1792435596085
   }
 }
 ```
@@ -86,7 +86,7 @@ Preview cascade delete impact
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_cascadePreview` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_cascadePreview` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -135,12 +135,12 @@ Response `200 OK` (application/json):
     "id": 2485,
     "name": "Johor",
     "willDelete": {
-      "cities": 31
+      "cities": 35
     }
   },
   "meta": {
-    "correlationId": "vVHJIIFAoxGixcENWT_Th",
-    "timestamp": 1791193325264
+    "correlationId": "xUgWjtyQov4dh6py_I1qz",
+    "timestamp": 1792435596111
   }
 }
 ```
@@ -152,7 +152,7 @@ List cities
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_listCities` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_listCities` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -268,7 +268,7 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": 71051,
+      "id": 70919,
       "name": "Alor Gajah",
       "stateCode": "04",
       "countryCode": "MY",
@@ -281,11 +281,11 @@ Response `200 OK` (application/json):
       "flag": true,
       "stateId": 2490,
       "countryId": 130,
-      "createdAt": 1388577661000,
-      "updatedAt": 1791193139000
+      "createdAt": 1792435498050,
+      "updatedAt": 1792435498050
     },
     {
-      "id": 71028,
+      "id": 70891,
       "name": "Alor Setar",
       "stateCode": "02",
       "countryCode": "MY",
@@ -298,20 +298,20 @@ Response `200 OK` (application/json):
       "flag": true,
       "stateId": 2486,
       "countryId": 130,
-      "createdAt": 1388577661000,
-      "updatedAt": 1791193139000
+      "createdAt": 1792435498050,
+      "updatedAt": 1792435498050
     }
   ],
   "meta": {
     "limit": 2,
-    "total": 223,
+    "total": 250,
     "page": 1,
-    "totalPages": 112,
+    "totalPages": 125,
     "nextCursor": null,
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "rtK8TFJ7BmoJovHIfDhEt",
-    "timestamp": 1791193325215
+    "correlationId": "MRq56ti8pF5wjrYo_585C",
+    "timestamp": 1792435596001
   }
 }
 ```
@@ -323,9 +323,10 @@ Create a city
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `CREATE:GEO`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_createCity` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_createCity` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -384,7 +385,7 @@ Content-Type: application/json
 
 {
   "name": "Alor Gajah (copy)",
-  "stateId": 5257,
+  "stateId": 5270,
   "stateCode": "01",
   "countryId": 252,
   "countryCode": "MY",
@@ -399,7 +400,7 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": 153315,
+    "id": 152373,
     "name": "Alor Gajah (copy)",
     "stateCode": "01",
     "countryCode": "MY",
@@ -410,14 +411,14 @@ Response `201 Created` (application/json):
     "translations": null,
     "wikiDataId": null,
     "flag": true,
-    "stateId": 5257,
+    "stateId": 5270,
     "countryId": 252,
-    "createdAt": 1388577661000,
-    "updatedAt": 1791193326000
+    "createdAt": 1792435596576,
+    "updatedAt": 1792435596576
   },
   "meta": {
-    "correlationId": "ztVNLh7BW4rB_Zv52fZZP",
-    "timestamp": 1791193325541
+    "correlationId": "qcw3kCQ9OjiD4yMyVxa0i",
+    "timestamp": 1792435596586
   }
 }
 ```
@@ -429,7 +430,7 @@ Get city by ID
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_getCity` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_getCity` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -469,7 +470,7 @@ Get city by ID
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/geo/cities/71051
+GET /api/v1/geo/cities/70919
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -480,7 +481,7 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": 71051,
+    "id": 70919,
     "name": "Alor Gajah",
     "stateCode": "04",
     "countryCode": "MY",
@@ -493,12 +494,12 @@ Response `200 OK` (application/json):
     "flag": true,
     "stateId": 2490,
     "countryId": 130,
-    "createdAt": 1388577661000,
-    "updatedAt": 1791193139000
+    "createdAt": 1792435498050,
+    "updatedAt": 1792435498050
   },
   "meta": {
-    "correlationId": "FSq9C_98LbB0fE2SI610b",
-    "timestamp": 1791193325230
+    "correlationId": "9X_jzywQhSNCsl1tRgfI-",
+    "timestamp": 1792435596059
   }
 }
 ```
@@ -510,9 +511,10 @@ Update a city
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `UPDATE:GEO`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_updateCity` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_updateCity` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -569,7 +571,7 @@ Update a city
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/geo/cities/153315
+PATCH /api/v1/geo/cities/152373
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -586,7 +588,7 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": 153315,
+    "id": 152373,
     "name": "Alor Gajah (copy)",
     "stateCode": "01",
     "countryCode": "MY",
@@ -597,14 +599,14 @@ Response `200 OK` (application/json):
     "translations": null,
     "wikiDataId": null,
     "flag": true,
-    "stateId": 5257,
+    "stateId": 5270,
     "countryId": 252,
-    "createdAt": 1388577661000,
-    "updatedAt": 1791193326000
+    "createdAt": 1792435596576,
+    "updatedAt": 1792435596611
   },
   "meta": {
-    "correlationId": "P_oGZnM_ibmAuRC8kg3pI",
-    "timestamp": 1791193325567
+    "correlationId": "dlIUzih-scGkwbp5qLjqZ",
+    "timestamp": 1792435596622
   }
 }
 ```
@@ -616,9 +618,10 @@ Delete a city
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `DELETE:GEO`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_deleteCity` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_deleteCity` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -644,7 +647,7 @@ Delete a city
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-DELETE /api/v1/geo/cities/153315
+DELETE /api/v1/geo/cities/152373
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -656,11 +659,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "message": "City #153315 deleted"
+    "message": "City #152373 deleted"
   },
   "meta": {
-    "correlationId": "Uym22BRGhFAMTRdq4C1ml",
-    "timestamp": 1791193325587
+    "correlationId": "7pylWXdiixwLk2dVuoQt0",
+    "timestamp": 1792435596654
   }
 }
 ```
@@ -672,7 +675,7 @@ List countries
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_listCountries` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_listCountries` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -867,8 +870,8 @@ Response `200 OK` (application/json):
       "flag": true,
       "regionId": 3,
       "subregionId": 16,
-      "createdAt": 1388577661000,
-      "updatedAt": 1791193124000
+      "createdAt": 1792435478494,
+      "updatedAt": 1792435478494
     }
   ],
   "meta": {
@@ -879,8 +882,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "OuukoFcPXHv0j-i_l9m7t",
-    "timestamp": 1791193325066
+    "correlationId": "fwbcmHLLKzuX87iXS0AeT",
+    "timestamp": 1792435595672
   }
 }
 ```
@@ -892,9 +895,10 @@ Create a country
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `CREATE:GEO`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_createCountry` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_createCountry` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1019,12 +1023,12 @@ Response `201 Created` (application/json):
     "flag": true,
     "regionId": 8,
     "subregionId": 24,
-    "createdAt": 1388577661000,
-    "updatedAt": 1791193325000
+    "createdAt": 1792435596393,
+    "updatedAt": 1792435596393
   },
   "meta": {
-    "correlationId": "xT7v0fHRaY3uvjHIv2s5e",
-    "timestamp": 1791193325430
+    "correlationId": "ZULj-2KOCEv7q4uMI-o48",
+    "timestamp": 1792435596414
   }
 }
 ```
@@ -1036,7 +1040,7 @@ Get country by ID
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_getCountry` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_getCountry` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -1163,12 +1167,12 @@ Response `200 OK` (application/json):
     "flag": true,
     "regionId": 3,
     "subregionId": 16,
-    "createdAt": 1388577661000,
-    "updatedAt": 1791193124000
+    "createdAt": 1792435478494,
+    "updatedAt": 1792435478494
   },
   "meta": {
-    "correlationId": "1--g6_8jwfvMyO4E4rOkR",
-    "timestamp": 1791193325081
+    "correlationId": "wRH12niKPnlwGfESnRtXe",
+    "timestamp": 1792435595705
   }
 }
 ```
@@ -1180,9 +1184,10 @@ Update a country
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `UPDATE:GEO`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_updateCountry` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_updateCountry` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -1311,12 +1316,12 @@ Response `200 OK` (application/json):
     "flag": true,
     "regionId": 8,
     "subregionId": 24,
-    "createdAt": 1388577661000,
-    "updatedAt": 1791193325000
+    "createdAt": 1792435596393,
+    "updatedAt": 1792435596456
   },
   "meta": {
-    "correlationId": "5tMebHCXgI3lfG89tVs_9",
-    "timestamp": 1791193325458
+    "correlationId": "q3m3UX5Sm4bMbbQm6Ce3h",
+    "timestamp": 1792435596472
   }
 }
 ```
@@ -1328,9 +1333,10 @@ Delete a country
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `DELETE:GEO`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_deleteCountry` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_deleteCountry` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -1371,8 +1377,8 @@ Response `200 OK` (application/json):
     "message": "Country #252 deleted"
   },
   "meta": {
-    "correlationId": "do1gBantEygIE0oEd3PAO",
-    "timestamp": 1791193325627
+    "correlationId": "4ahnMP-MgtQyQJDceOAcy",
+    "timestamp": 1792435596727
   }
 }
 ```
@@ -1384,7 +1390,7 @@ Export the cities of the matching countries (rows are always JSON; `format=csv` 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_exportData` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_exportData` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -1439,7 +1445,7 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": 71051,
+      "id": 70919,
       "name": "Alor Gajah",
       "stateCode": "04",
       "countryCode": "MY",
@@ -1452,11 +1458,11 @@ Response `200 OK` (application/json):
       "flag": true,
       "stateId": 2490,
       "countryId": 130,
-      "createdAt": 1388577661000,
-      "updatedAt": 1791193139000
+      "createdAt": 1792435498050,
+      "updatedAt": 1792435498050
     },
     {
-      "id": 71028,
+      "id": 70891,
       "name": "Alor Setar",
       "stateCode": "02",
       "countryCode": "MY",
@@ -1469,13 +1475,13 @@ Response `200 OK` (application/json):
       "flag": true,
       "stateId": 2486,
       "countryId": 130,
-      "createdAt": 1388577661000,
-      "updatedAt": 1791193139000
+      "createdAt": 1792435498050,
+      "updatedAt": 1792435498050
     }
   ],
   "meta": {
-    "correlationId": "n-CwdR-43n9RsfWnoESqH",
-    "timestamp": 1791193325285
+    "correlationId": "_iTCHn_Qkmf2aUOOsXQHH",
+    "timestamp": 1792435596138
   }
 }
 ```
@@ -1488,9 +1494,10 @@ Bulk import geo data
 - **SuperAdmin only.**
 - **Permission** `CREATE:GEO`.
 - **Policy** `CREATE:GEO` — Import geo data.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_importData` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_importData` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1553,8 +1560,8 @@ Response `201 Created` (application/json):
     "errors": []
   },
   "meta": {
-    "correlationId": "7YXNlvRgfE3qRZFxyCwMO",
-    "timestamp": 1791193325720
+    "correlationId": "YUuuj8d-7JQs5RC6C0o_2",
+    "timestamp": 1792435596884
   }
 }
 ```
@@ -1565,9 +1572,10 @@ Validate geo import data without inserting
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_validateImport` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_validateImport` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1629,8 +1637,8 @@ Response `201 Created` (application/json):
     "errors": []
   },
   "meta": {
-    "correlationId": "Wyx7Nxpf-fJLvYbZTS7AB",
-    "timestamp": 1791193325694
+    "correlationId": "hCY1Ep0NbZRndmWuyOlN2",
+    "timestamp": 1792435596841
   }
 }
 ```
@@ -1642,7 +1650,7 @@ List regions
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_listRegions` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_listRegions` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -1762,8 +1770,8 @@ Response `200 OK` (application/json):
       },
       "wikiDataId": "Q15",
       "flag": true,
-      "createdAt": 1388577661000,
-      "updatedAt": 1791193123000
+      "createdAt": 1792435477464,
+      "updatedAt": 1792435477464
     },
     {
       "id": 2,
@@ -1789,8 +1797,8 @@ Response `200 OK` (application/json):
       },
       "wikiDataId": "Q828",
       "flag": true,
-      "createdAt": 1388577661000,
-      "updatedAt": 1791193123000
+      "createdAt": 1792435477464,
+      "updatedAt": 1792435477464
     }
   ],
   "meta": {
@@ -1801,8 +1809,8 @@ Response `200 OK` (application/json):
     "nextCursor": "eyJpZCI6Mn0",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "59TXlTFQCBZ22PG6sDdlA",
-    "timestamp": 1791193325000
+    "correlationId": "Sb0cWhoQvk4ClTknxRMG3",
+    "timestamp": 1792435595542
   }
 }
 ```
@@ -1814,9 +1822,10 @@ Create a region
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `CREATE:GEO`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_createRegion` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_createRegion` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1873,12 +1882,12 @@ Response `201 Created` (application/json):
     "translations": null,
     "wikiDataId": null,
     "flag": true,
-    "createdAt": 1388577661000,
-    "updatedAt": 1791193325000
+    "createdAt": 1792435596248,
+    "updatedAt": 1792435596248
   },
   "meta": {
-    "correlationId": "FcwZcbN-GYvSj5FfABzjX",
-    "timestamp": 1791193325337
+    "correlationId": "hY94khb1QDLWl1Zm3YhYH",
+    "timestamp": 1792435596260
   }
 }
 ```
@@ -1890,7 +1899,7 @@ Get region by ID
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_getRegion` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_getRegion` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -1956,12 +1965,12 @@ Response `200 OK` (application/json):
     },
     "wikiDataId": "Q15",
     "flag": true,
-    "createdAt": 1388577661000,
-    "updatedAt": 1791193123000
+    "createdAt": 1792435477464,
+    "updatedAt": 1792435477464
   },
   "meta": {
-    "correlationId": "Exlrz6GR-NDRFqdUfL6Ex",
-    "timestamp": 1791193325019
+    "correlationId": "4gwY2jmEhjZqfWG5_pclm",
+    "timestamp": 1792435595570
   }
 }
 ```
@@ -1973,9 +1982,10 @@ Update a region
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `UPDATE:GEO`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_updateRegion` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_updateRegion` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -2038,12 +2048,12 @@ Response `200 OK` (application/json):
     "translations": null,
     "wikiDataId": null,
     "flag": true,
-    "createdAt": 1388577661000,
-    "updatedAt": 1791193325000
+    "createdAt": 1792435596248,
+    "updatedAt": 1792435596285
   },
   "meta": {
-    "correlationId": "Q70W7stSaLifK_-7s3wfK",
-    "timestamp": 1791193325361
+    "correlationId": "VQixGnxBcQlAY04M74vt1",
+    "timestamp": 1792435596296
   }
 }
 ```
@@ -2055,9 +2065,10 @@ Delete a region
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `DELETE:GEO`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_deleteRegion` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_deleteRegion` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -2098,8 +2109,8 @@ Response `200 OK` (application/json):
     "message": "Region #8 deleted"
   },
   "meta": {
-    "correlationId": "vByPyMWiI3qC7-cIalm6B",
-    "timestamp": 1791193325680
+    "correlationId": "LbWyTqL_milC5zkpR3nqf",
+    "timestamp": 1792435596822
   }
 }
 ```
@@ -2111,7 +2122,7 @@ List states
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_listStates` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_listStates` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -2264,8 +2275,8 @@ Response `200 OK` (application/json):
       "wikiDataId": "Q183032",
       "flag": true,
       "countryId": 130,
-      "createdAt": 1388577661000,
-      "updatedAt": 1791193125000
+      "createdAt": 1792435480207,
+      "updatedAt": 1792435480207
     },
     {
       "id": 2486,
@@ -2305,8 +2316,8 @@ Response `200 OK` (application/json):
       "wikiDataId": "Q188947",
       "flag": true,
       "countryId": 130,
-      "createdAt": 1388577661000,
-      "updatedAt": 1791193125000
+      "createdAt": 1792435480207,
+      "updatedAt": 1792435480207
     }
   ],
   "meta": {
@@ -2317,8 +2328,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "2xaYycuW-HT3MWPBcpCiO",
-    "timestamp": 1791193325110
+    "correlationId": "k443j31SPvGETBhVkLpvn",
+    "timestamp": 1792435595755
   }
 }
 ```
@@ -2330,9 +2341,10 @@ Create a state
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `CREATE:GEO`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_createState` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_createState` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -2410,7 +2422,7 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": 5257,
+    "id": 5270,
     "name": "Johor (copy)",
     "countryCode": "MY",
     "fipsCode": null,
@@ -2427,12 +2439,12 @@ Response `201 Created` (application/json):
     "wikiDataId": null,
     "flag": true,
     "countryId": 252,
-    "createdAt": 1388577661000,
-    "updatedAt": 1791193325000
+    "createdAt": 1792435596497,
+    "updatedAt": 1792435596497
   },
   "meta": {
-    "correlationId": "diClUi3veR0QIjK4GtMr7",
-    "timestamp": 1791193325485
+    "correlationId": "BG_Z8XKcR32micBwbJu6n",
+    "timestamp": 1792435596508
   }
 }
 ```
@@ -2444,7 +2456,7 @@ Get state by ID
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_getState` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_getState` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -2536,12 +2548,12 @@ Response `200 OK` (application/json):
     "wikiDataId": "Q183032",
     "flag": true,
     "countryId": 130,
-    "createdAt": 1388577661000,
-    "updatedAt": 1791193125000
+    "createdAt": 1792435480207,
+    "updatedAt": 1792435480207
   },
   "meta": {
-    "correlationId": "LsixYucMFej4el7C5KjjW",
-    "timestamp": 1791193325124
+    "correlationId": "sFGJ7DhiNe-d478bhmgw1",
+    "timestamp": 1792435595788
   }
 }
 ```
@@ -2553,9 +2565,10 @@ Update a state
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `UPDATE:GEO`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_updateState` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_updateState` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -2620,7 +2633,7 @@ Update a state
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/geo/states/5257
+PATCH /api/v1/geo/states/5270
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -2637,7 +2650,7 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": 5257,
+    "id": 5270,
     "name": "Johor (copy)",
     "countryCode": "MY",
     "fipsCode": null,
@@ -2654,12 +2667,12 @@ Response `200 OK` (application/json):
     "wikiDataId": null,
     "flag": true,
     "countryId": 252,
-    "createdAt": 1388577661000,
-    "updatedAt": 1791193326000
+    "createdAt": 1792435596497,
+    "updatedAt": 1792435596546
   },
   "meta": {
-    "correlationId": "6r1FJOcpOUBPMthZhcxRJ",
-    "timestamp": 1791193325515
+    "correlationId": "I5qA7dF9LTXE0hL99Xlxb",
+    "timestamp": 1792435596554
   }
 }
 ```
@@ -2671,9 +2684,10 @@ Delete a state
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `DELETE:GEO`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_deleteState` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_deleteState` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -2699,7 +2713,7 @@ Delete a state
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-DELETE /api/v1/geo/states/5257
+DELETE /api/v1/geo/states/5270
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -2711,11 +2725,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "message": "State #5257 deleted"
+    "message": "State #5270 deleted"
   },
   "meta": {
-    "correlationId": "WBSwcHsEOA_z1mBHtwlMh",
-    "timestamp": 1791193325607
+    "correlationId": "rCGqesIUUgM7V2sBD2lVA",
+    "timestamp": 1792435596687
   }
 }
 ```
@@ -2727,7 +2741,7 @@ Get geo entity counts
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_getStats` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_getStats` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Response 200 OK** (`application/json`) — Entity counts for regions, subregions, countries, states, and cities
 
@@ -2764,12 +2778,12 @@ Response `200 OK` (application/json):
     "regions": 6,
     "subregions": 22,
     "countries": 250,
-    "states": 5255,
-    "cities": 153312
+    "states": 5268,
+    "cities": 152370
   },
   "meta": {
-    "correlationId": "rC5JkygCGudYedhKrDott",
-    "timestamp": 1791193324982
+    "correlationId": "uzTqNVFHm2qa1fnfTO3Q6",
+    "timestamp": 1792435595518
   }
 }
 ```
@@ -2781,7 +2795,7 @@ List subregions
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_listSubregions` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_listSubregions` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -2900,8 +2914,8 @@ Response `200 OK` (application/json):
       "wikiDataId": "Q45256",
       "flag": true,
       "regionId": 5,
-      "createdAt": 1388577661000,
-      "updatedAt": 1791193123000
+      "createdAt": 1792435477837,
+      "updatedAt": 1792435477837
     },
     {
       "id": 2,
@@ -2926,8 +2940,8 @@ Response `200 OK` (application/json):
       "wikiDataId": "Q664609",
       "flag": true,
       "regionId": 2,
-      "createdAt": 1388577661000,
-      "updatedAt": 1791193123000
+      "createdAt": 1792435477837,
+      "updatedAt": 1792435477837
     }
   ],
   "meta": {
@@ -2938,8 +2952,8 @@ Response `200 OK` (application/json):
     "nextCursor": "eyJpZCI6Mn0",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "WfbIrgDpjsF7l9q18Rty5",
-    "timestamp": 1791193325032
+    "correlationId": "9ZSwthSXeEKv4dOaxTGvp",
+    "timestamp": 1792435595596
   }
 }
 ```
@@ -2951,9 +2965,10 @@ Create a subregion
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `CREATE:GEO`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_createSubregion` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_createSubregion` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -3014,12 +3029,12 @@ Response `201 Created` (application/json):
     "wikiDataId": null,
     "flag": true,
     "regionId": 8,
-    "createdAt": 1388577661000,
-    "updatedAt": 1791193325000
+    "createdAt": 1792435596320,
+    "updatedAt": 1792435596320
   },
   "meta": {
-    "correlationId": "TV6FTlVTcPe2TP7gfuwAX",
-    "timestamp": 1791193325383
+    "correlationId": "h53TNMQYa-N2hIjXwK3gd",
+    "timestamp": 1792435596329
   }
 }
 ```
@@ -3031,7 +3046,7 @@ Get subregion by ID
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `READ:GEO`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_getSubregion` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_getSubregion` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -3097,12 +3112,12 @@ Response `200 OK` (application/json):
     "wikiDataId": "Q45256",
     "flag": true,
     "regionId": 5,
-    "createdAt": 1388577661000,
-    "updatedAt": 1791193123000
+    "createdAt": 1792435477837,
+    "updatedAt": 1792435477837
   },
   "meta": {
-    "correlationId": "3ulJZsNs4YaxmPGl5ZrFj",
-    "timestamp": 1791193325046
+    "correlationId": "o_bCipV67tOMaoTpJZClZ",
+    "timestamp": 1792435595636
   }
 }
 ```
@@ -3114,9 +3129,10 @@ Update a subregion
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `UPDATE:GEO`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_updateSubregion` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_updateSubregion` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -3182,12 +3198,12 @@ Response `200 OK` (application/json):
     "wikiDataId": null,
     "flag": true,
     "regionId": 8,
-    "createdAt": 1388577661000,
-    "updatedAt": 1791193325000
+    "createdAt": 1792435596320,
+    "updatedAt": 1792435596356
   },
   "meta": {
-    "correlationId": "76gky9KAS5aeYot-quen3",
-    "timestamp": 1791193325406
+    "correlationId": "Nzbk1BdEpFU_P9MiS205h",
+    "timestamp": 1792435596366
   }
 }
 ```
@@ -3199,9 +3215,10 @@ Delete a subregion
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
 - **Permission** `DELETE:GEO`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `GeoController_deleteSubregion` · [source](../../../apps/api/src/modules/geo/geo.controller.ts)
+- Operation id `GeoController_deleteSubregion` · [source](../../../apps/api/src/contexts/reference-data/presentation/http/geo.controller.ts)
 
 **Parameters**
 
@@ -3242,8 +3259,8 @@ Response `200 OK` (application/json):
     "message": "Subregion #24 deleted"
   },
   "meta": {
-    "correlationId": "VFwx5rvztPq77ldvd71LV",
-    "timestamp": 1791193325655
+    "correlationId": "4rILd7wXuKtEb2i4WTCPg",
+    "timestamp": 1792435596777
   }
 }
 ```

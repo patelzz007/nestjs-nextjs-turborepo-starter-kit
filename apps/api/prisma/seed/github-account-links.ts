@@ -2,7 +2,7 @@ import { GithubAccountLinkStatus } from "@prisma/client";
 
 import { getApiConfig } from "../../src/config/api-config";
 import { TypedConfigService } from "../../src/config/typed-config.service";
-import { GithubCredentialCipher } from "../../src/modules/github/pull-requests/github-credential.cipher";
+import { GithubCredentialCipher } from "../../src/contexts/integrations-github/infrastructure/adapters/github-credential.cipher";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
 

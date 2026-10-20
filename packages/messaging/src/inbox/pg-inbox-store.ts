@@ -1,5 +1,4 @@
-import { randomUUID } from "node:crypto";
-import { LIST_SLOT_INDEX } from "@workspace/shared";
+import { LIST_SLOT_INDEX, newRowId } from "@workspace/shared";
 
 import pg from "pg";
 
@@ -9,6 +8,21 @@ import { RETENTION_LOCK_NAMES, type LockedBatch, type RetentionLedger, type Rete
 
 /** `application_name` on every connection — shows in `pg_stat_activity` and the Postgres logs. */
 export const CONSUMER_APPLICATION_NAME = "analytics-consumer";
+
+/**
+ * Who the consumer's writes are recorded as. The consumer has no RLS session (no user, API key or system
+ * operation), so it names itself through `app.actor`: the database's row-audit trigger stamps `createdBy` /
+ * `updatedBy` / `deletedBy` from it (apps/api/prisma/rls/row-audit.ts).
+ */
+export const CONSUMER_ACTOR = "system:analytics-consumer";
+
+/**
+ * A value inside libpq's `options` startup string: whitespace separates `-c` switches there, so a
+ * backslash and each whitespace character are escaped with a backslash (libpq's own escaping rule).
+ */
+export function escapeLibpqOptionValue(value: string): string {
+	return value.replace(/[\\\s]/g, (character) => `\\${character}`);
+}
 
 /**
  * The consumer's Postgres pool: bounded size, bounded waits, and a
@@ -23,6 +37,7 @@ export function createConsumerPool(connectionString: string, settings: DbPoolSet
 		idleTimeoutMillis: settings.idleTimeoutMs,
 		statement_timeout: settings.statementTimeoutMs,
 		application_name: CONSUMER_APPLICATION_NAME,
+		options: `-c app.actor=${escapeLibpqOptionValue(CONSUMER_ACTOR)}`,
 	});
 }
 
@@ -31,9 +46,9 @@ class PgInboxTransaction implements InboxTransaction {
 
 	public async claim(claim: InboxClaim): Promise<boolean> {
 		const result = await this._client.query(
-			`INSERT INTO public.inbox_processed_events (consumer, event_id, topic, event_type)
+			`INSERT INTO public."InboxProcessedEvent" (consumer, "eventId", topic, "eventType")
 			 VALUES ($1, $2::uuid, $3, $4)
-			 ON CONFLICT (consumer, event_id) DO NOTHING`,
+			 ON CONFLICT (consumer, "eventId") DO NOTHING`,
 			[claim.consumer, claim.eventId, claim.topic, claim.eventType],
 		);
 		return result.rowCount === 1;
@@ -42,7 +57,7 @@ class PgInboxTransaction implements InboxTransaction {
 	public async insertAnalyticsEvent(row: AnalyticsEventRow): Promise<void> {
 		// The analytics row id IS the stable event id: a second guard behind the inbox claim.
 		await this._client.query(
-			`INSERT INTO public.analytics_events (id, topic, event_type, correlation_id, partition_key, payload, occurred_at)
+			`INSERT INTO public."AnalyticsEvent" (id, topic, "eventType", "correlationId", "partitionKey", payload, "occurredAt")
 			 VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
 			 ON CONFLICT (id) DO NOTHING`,
 			[row.eventId, row.topic, row.eventType, row.correlationId, row.partitionKey, JSON.stringify(row.payload), row.occurredAt],
@@ -52,18 +67,18 @@ class PgInboxTransaction implements InboxTransaction {
 
 /** One bounded, oldest-first DELETE per ledger, scoped to one consumer's rows. */
 const PURGE_SQL: Readonly<Record<RetentionLedger, string>> = {
-	inbox_claims: `DELETE FROM public.inbox_processed_events
-		 WHERE (consumer, event_id) IN (
-		   SELECT consumer, event_id FROM public.inbox_processed_events
-		   WHERE consumer = $1 AND processed_at < $2
-		   ORDER BY processed_at
+	inbox_claims: `DELETE FROM public."InboxProcessedEvent"
+		 WHERE (consumer, "eventId") IN (
+		   SELECT consumer, "eventId" FROM public."InboxProcessedEvent"
+		   WHERE consumer = $1 AND "processedAt" < $2
+		   ORDER BY "processedAt"
 		   LIMIT $3
 		 )`,
-	dead_letters: `DELETE FROM public.inbox_dead_letters
+	dead_letters: `DELETE FROM public."InboxDeadLetter"
 		 WHERE id IN (
-		   SELECT id FROM public.inbox_dead_letters
-		   WHERE consumer = $1 AND received_at < $2
-		   ORDER BY received_at
+		   SELECT id FROM public."InboxDeadLetter"
+		   WHERE consumer = $1 AND "receivedAt" < $2
+		   ORDER BY "receivedAt"
 		   LIMIT $3
 		 )`,
 };
@@ -84,13 +99,13 @@ export class PgInboxStore implements InboxStore, RetentionStore {
 	public async park(deadLetter: DeadLetterInput): Promise<void> {
 		const payload = deadLetter.payload;
 		await this._pool.query(
-			`INSERT INTO public.inbox_dead_letters
-			   (id, consumer, topic, partition, "offset", event_id, reason, error, attempts,
-			    raw_value, raw_value_size_bytes, raw_value_sha256, raw_value_truncated)
+			`INSERT INTO public."InboxDeadLetter"
+			   (id, consumer, topic, partition, "offset", "eventId", reason, error, attempts,
+			    "rawValue", "rawValueSizeBytes", "rawValueSha256", "rawValueTruncated")
 			 VALUES ($1, $2, $3, $4, $5, $6::uuid, $7::"InboxDeadLetterReason", $8, $9, $10, $11, $12, $13)
 			 ON CONFLICT (consumer, topic, partition, "offset") DO NOTHING`,
 			[
-				randomUUID(),
+				newRowId(),
 				deadLetter.consumer,
 				deadLetter.topic,
 				deadLetter.partition,

@@ -1,5 +1,7 @@
 # 10 — Security, Authentication & Authorization
 
+The global guard is the coarse filter. Resource-level checks belong in the handler through `AuthorizationPort` (ADR 026, amended by ADR 058). Rate limits are named policies in `rate-limit-policy.ts`, applied with `@RateLimit`. A mutation without a policy or an explicit skip fails the coverage test.
+
 ## Security principle
 
 The server is authoritative. The frontend may hide UI, but it cannot grant permission — every server-side handler re-checks authorization regardless of what the client believes is allowed, what a hidden button implies, or what a disabled form field suggests. See `05-contracts-zod-api.md`'s "Never trust the frontend" section — everything in this document is downstream of that one fact.
@@ -62,7 +64,7 @@ Every new (or modified) endpoint must have its authorization requirements explic
 | Ownership/relationship check | Reward must belong to the caller's organization |
 | Tenant/org boundary | Enforced via `tenantId` scoping in the query, not just the permission check |
 | ReBAC rule (if any) | Caller must be a `manager` of the `location` the reward belongs to |
-| RLS coverage (if enabled) | `rewards` table policy scopes by `organization_id` |
+| RLS coverage (if enabled) | `Reward` table policy scopes by `organizationId` |
 
 This mapping lives two places, kept in sync: as an explicit `@UseGuards(...)`/permission-decorator chain on the controller method (so it's enforced), and as a short entry in the feature's module documentation (so it's reviewable without reading every guard's implementation — see `14-documentation.md`). A PR adding an endpoint without this mapping is incomplete — see `16-code-review-checklist.md` and `18-definition-of-done.md`.
 
@@ -184,7 +186,7 @@ interface AuditLogEntry {
 
 ### Implementation approach
 
-In this repository the trail has two layers, joined by correlation id: the global HTTP audit row per request (ADR 025) and, underneath it, one `data_change_logs` row per row INSERT / UPDATE / DELETE / TRUNCATE, written by a database trigger in the same transaction with the full redacted row before and after (ADR 051). You never write either by hand. What you DO owe: run every write inside the request's RLS context (`TenantTransactionService`, or a named system operation for background work) so the change is attributed — a change recorded as `UNATTRIBUTED` from application code is a bug — and classify any new secret-bearing column in `prisma/rls/data-change-capture.ts` (the apply fails until you do).
+In this repository the trail has two layers, joined by correlation id: the global HTTP audit row per request (ADR 025) and, underneath it, one `DataChangeLog` row per row INSERT / UPDATE / DELETE / TRUNCATE, written by a database trigger in the same transaction with the full redacted row before and after (ADR 051). You never write either by hand. What you DO owe: run every write inside the request's RLS context (`TenantTransactionService`, or a named system operation for background work) so the change is attributed — a change recorded as `UNATTRIBUTED` from application code is a bug — and classify any new secret-bearing column in `prisma/rls/data-change-capture.ts` (the apply fails until you do).
 
 Write audit entries from a shared NestJS interceptor applied globally (or to every state-changing route), not by hand inside each controller method — an audit log that depends on every developer remembering to add a line of logging code to every new endpoint will, eventually, have gaps exactly where they matter most.
 

@@ -19,17 +19,17 @@ const config = [
 	// (@workspace/client, @workspace/ui, next, react, react-dom) — same block as apps/api.
 	backendImportBoundaryConfig,
 
-	// ── Env boundary: only src/env.ts reads process.env (validated with zod) ──
+	// ── Env boundary: only src/infrastructure/env.ts reads process.env (validated with zod) ──
 	{
 		files: ["src/**/*.ts"],
-		ignores: ["src/env.ts"],
+		ignores: ["src/infrastructure/env.ts"],
 		rules: {
 			"no-restricted-properties": [
 				"error",
 				{
 					object: "process",
 					property: "env",
-					message: "Read configuration through loadConsumerEnv() (src/env.ts), never process.env directly.",
+					message: "Read configuration through loadConsumerEnv() (src/infrastructure/env.ts), never process.env directly.",
 				},
 			],
 		},

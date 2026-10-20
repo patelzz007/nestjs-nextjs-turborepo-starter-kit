@@ -273,6 +273,6 @@ describe("sidebar active state on real pages (guard)", () => {
 
 	it("does not highlight anything for a URL outside every section", () => {
 		expect(activeIds("/merchantsx")).toEqual([]);
-		expect(activeIds("/rewardhub/pending")).toEqual([]);
+		expect(activeIds("/dashboard/pending")).toEqual([]);
 	});
 });

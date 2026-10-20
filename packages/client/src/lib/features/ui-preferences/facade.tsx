@@ -26,7 +26,7 @@ const uiPreferencesContext = createFeatureStoreContext<UiPreferencesState, UiPre
 const UiPreferencesContextProvider = uiPreferencesContext.provider;
 
 export interface UiPreferencesStoreProviderProps {
-	/** localStorage key for the persisted preferences (e.g. `rewardhub-view-mode`). */
+	/** localStorage key for the persisted preferences (e.g. `dashboard-view-mode`). */
 	readonly storageKey: string;
 	/** Redux DevTools instance name (e.g. `UI Preferences · web`). */
 	readonly devtoolsName: string;

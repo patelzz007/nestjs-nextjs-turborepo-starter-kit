@@ -2,11 +2,7 @@ import { Pool, type PoolClient, type PoolConfig } from "pg";
 
 import { ThrownErrorSchema } from "@workspace/shared";
 
-import { currentRequestCorrelationId } from "../common/context/request-context";
-import { currentRlsContextOrUnscoped, rlsSessionVariables } from "./rls-context";
-
-/** `app.correlation_id` outside a request: SQL has no "absent" for a setting, and the readers treat `''` as NULL. */
-const UNSET_CORRELATION_ID = "";
+import { DEFAULT_DATABASE_ROLE } from "./system-operation.registry";
 
 /** Fail checkout instead of hanging until Fastify's plugin timeout. */
 const DEFAULT_CONNECT_TIMEOUT_MS = 5_000;
@@ -17,9 +13,11 @@ export type RlsPoolConfig = PoolConfig & Required<Pick<PoolConfig, "connectionSt
 type ConnectCallback = (err: Error | undefined, client?: PoolClient, done?: (release?: boolean | Error) => void) => void;
 
 /**
- * Pool that stamps every checkout with `SET ROLE app_runtime` plus the RLS
- * session vars. Superuser `DATABASE_URL` bypasses RLS unless the session role
- * is a non-superuser (see `docs/technical/security/database-security.md`).
+ * Pool that switches every checkout to `app_runtime` (`SET ROLE`). The
+ * superuser `DATABASE_URL` would bypass row-level security otherwise.
+ * Identity settings (`app.current_user_id`, tenant, bypass, system operation)
+ * are not copied onto the connection: `TenantTransactionService` sets them
+ * transaction-locally, and they end when the transaction ends.
  *
  * `pg.Pool.query` checks out via `connect(callback)`. Overriding only the
  * Promise form drops that callback and hangs every query (API never listens,
@@ -80,27 +78,10 @@ export interface RlsSessionConnection {
 }
 
 /**
- * Stamp a checked-out connection with the RLS scope: the role (`SET ROLE` to
- * the scope's role — `app_runtime`, or a system operation's narrower role),
- * then the session variables the policies read. `set_config('role', …)` is
- * `SET ROLE` with a bind parameter; the value is always a `DatabaseRole`.
- * The current request's correlation id is stamped too (`''` outside a
- * request), so the data-change trail (ADR 051) can join a row change made
- * outside a `TenantTransactionService` transaction to its HTTP request; a
- * transaction overrides it transaction-locally.
+ * Switch a checked-out connection to the restricted runtime role.
+ * `set_config('role', …)` is `SET ROLE` with a bind parameter. Request identity
+ * is not stamped here; a transaction sets it with `is_local = true`.
  */
 export async function applyRlsSession(client: RlsSessionConnection): Promise<void> {
-	const ctx = currentRlsContextOrUnscoped();
-	if (ctx.kind === "user" && ctx.requireExplicitContext && ctx.organizationId === null) {
-		throw new Error("Tenant database access requires organization context — use TenantTransactionService");
-	}
-	const session = rlsSessionVariables(ctx);
-	await client.query("SELECT set_config('role', $1, false)", [session.role]);
-	await client.query("SELECT set_config('app.current_user_id', $1, false)", [session.currentUserId]);
-	await client.query("SELECT set_config('app.rls_bypass', $1, false)", [session.rlsBypass]);
-	await client.query("SELECT set_config('app.current_organization_id', $1, false)", [session.currentOrganizationId]);
-	await client.query("SELECT set_config('app.system_operation', $1, false)", [session.systemOperation]);
-	await client.query("SELECT set_config('app.current_api_key_id', $1, false)", [session.currentApiKeyId]);
-	await client.query("SELECT set_config('app.current_api_key_location_id', $1, false)", [session.currentApiKeyLocationId]);
-	await client.query("SELECT set_config('app.correlation_id', $1, false)", [currentRequestCorrelationId() ?? UNSET_CORRELATION_ID]);
+	await client.query("SELECT set_config('role', $1, false)", [DEFAULT_DATABASE_ROLE]);
 }

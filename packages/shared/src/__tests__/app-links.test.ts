@@ -23,7 +23,7 @@ describe("APP_LINKS", () => {
 			APP_LINKS.auth.resetPassword,
 			APP_LINKS.auth.forgotPassword,
 			APP_LINKS.web.home,
-			APP_LINKS.web.rewardHub,
+			APP_LINKS.web.dashboard,
 			APP_LINKS.web.wallet,
 			APP_LINKS.web.account,
 			APP_LINKS.merchant.onboarding,

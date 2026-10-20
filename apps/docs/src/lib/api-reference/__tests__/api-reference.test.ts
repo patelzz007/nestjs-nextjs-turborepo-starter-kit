@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { extractEndpointAccess } from "../endpoint-access";
+import { extractEndpointAccess, extractRateLimitPolicies } from "../endpoint-access";
 import { ApiSamplesFileSchema, isCapturedSample, listEndpoints, OpenApiDocumentSchema, type Endpoint } from "../openapi";
 import { pageForTags, REFERENCE_PAGES } from "../pages";
 import { accessLines, contentTypeLine, endpointHeading, headingAnchor, renderApiReference } from "../render";
@@ -102,7 +102,31 @@ const SAMPLES = ApiSamplesFileSchema.parse({
 	},
 });
 
-const ACCESS = extractEndpointAccess([{ path: "apps/api/src/demo.controller.ts", source: CONTROLLER }]);
+/** A rate-limit-policy.ts in miniature: constants, an alias window, config-driven values, both trackers. */
+const POLICY_SOURCE = `
+export const LOGIN_ATTEMPT_LIMIT = 5;
+export const ADMIN_SECURITY_MUTATION_LIMIT = 10;
+const MS_PER_MINUTE = 60_000;
+export const SECURITY_POLICY_WINDOW_MS = MS_PER_MINUTE;
+export const WEBHOOK_WINDOW_MS = MS_PER_MINUTE;
+export const RATE_LIMIT_POLICY = {
+	get login(): RateLimitPolicy {
+		return policy("LOGIN", "strict", "ip", LOGIN_ATTEMPT_LIMIT);
+	},
+	get authenticatedMutation(): RateLimitPolicy {
+		return policy("AUTHENTICATED_MUTATION", "default", "principal", getApiConfig().rateLimits.throttleDefaultLimit);
+	},
+	get webhook(): RateLimitPolicy {
+		// \`WEBHOOK_RATE_LIMIT_PER_MINUTE=0\` turns the webhook throttler off.
+		return policy("WEBHOOK", "webhook", "ip", getApiConfig().email.webhookRateLimitPerMinute, WEBHOOK_WINDOW_MS);
+	},
+	get adminSecurityMutation(): RateLimitPolicy {
+		return policy("ADMIN_SECURITY_MUTATION", "default", "principal", ADMIN_SECURITY_MUTATION_LIMIT, SECURITY_POLICY_WINDOW_MS);
+	},
+};
+`;
+
+const ACCESS = extractEndpointAccess([{ path: "apps/api/src/demo.controller.ts", source: CONTROLLER }], POLICY_SOURCE);
 
 function endpoint(operationId: string): Endpoint {
 	const found = listEndpoints(DOCUMENT).find((candidate) => candidate.operation.operationId === operationId);
@@ -123,6 +147,35 @@ describe("extractEndpointAccess", () => {
 		expect(update?.permissions).toEqual(["UPDATE:ROLE"]);
 		expect(update?.policies).toEqual(["UPDATE:USER (own record only) — User can only change their own role"]);
 		expect(update?.throttles).toEqual(["5 requests per 60 s per client IP (strict limiter)"]);
+	});
+
+	it("reads a named @RateLimit policy", () => {
+		const access = extractEndpointAccess(
+			[
+				{
+					path: "apps/api/src/demo.controller.ts",
+					source: `
+@Controller()
+export class AuthController {
+	@RateLimit(RATE_LIMIT_POLICY.login)
+	@Post("/login")
+	public login(): void {}
+}
+`,
+				},
+			],
+			POLICY_SOURCE,
+		);
+		expect(access.get("AuthController_login")?.throttles).toEqual(["5 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter)"]);
+	});
+
+	it("describes every named policy from the policy source: limits, windows, trackers and throttlers", () => {
+		expect(Object.fromEntries(extractRateLimitPolicies(POLICY_SOURCE))).toEqual({
+			login: "5 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter)",
+			authenticatedMutation: "`THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter)",
+			webhook: "`WEBHOOK_RATE_LIMIT_PER_MINUTE` requests per 60 s per client IP (webhook limiter)",
+			adminSecurityMutation: "10 requests per 60 s per signed-in principal (default limiter)",
+		});
 	});
 
 	it("does not treat parameter decorators or the constructor as routes", () => {
