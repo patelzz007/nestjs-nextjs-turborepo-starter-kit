@@ -125,11 +125,16 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # Generates the Prisma client (the default): the check reads the system-operation registry,
+      # which imports `Prisma` from it.
       - name: Set up workspace
         uses: ./.github/actions/setup-workspace
         with:
           node-version: ${{ env.NODE_VERSION }}
-          generate-prisma-client: "false"
+      # The check's script imports @workspace/shared, which a fresh checkout has not built (its
+      # package entry is dist/). ci:local hides this: it runs the check after its full build.
+      - name: Build workspace dependencies of the API
+        run: pnpm turbo run build --filter=@workspace/api^...
       - name: Check Prisma models ↔ RLS manifest ↔ RLS SQL
         run: pnpm --filter @workspace/api db:check-rls-manifest
 
