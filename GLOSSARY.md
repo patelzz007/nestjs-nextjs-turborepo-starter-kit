@@ -64,6 +64,34 @@ _Avoid_: Pending, open, waiting
 
 ## Context-owned terms
 
+**Tenant** (tenancy):
+The customer company and the isolation boundary: every tenant-owned row carries its `tenantId`. Shown to users as "Store" or "Business".
+_Avoid_: Organization, org, account
+
+**Location** (tenancy):
+A branch inside one tenant. Never a tenant itself.
+_Avoid_: Shop, outlet, site
+
+**Membership** (tenancy):
+The link between a user and a tenant, with a role and location scopes.
+_Avoid_: Employment, seat
+
+**Customer** (claims):
+A user with no membership. Their claims and wallet are user-owned, not tenant-owned.
+_Avoid_: Consumer account, member
+
+**Platform staff** (identity):
+RewardHub's own superadmins and admins, working in the admin app. Not tenant admins; on tenant data they need a support access grant.
+_Avoid_: Tenant admin, operator
+
+**Support access grant** (authorization):
+A tenant owner's time-boxed, audited approval for platform staff to work inside that tenant.
+_Avoid_: Backdoor, override
+
+**System operation** (platform):
+A named, audited privileged database access with an explicit table list. The only way any code passes an RLS bypass.
+_Avoid_: Bypass, superuser mode
+
 **Claim** (claims):
 A customer's request to redeem one reward. The claims context owns the claim row and its one-time code.
 _Avoid_: Redemption, coupon use
@@ -81,9 +109,9 @@ The know-your-business outcome for a merchant's evidence files. Rewards owns the
 _Avoid_: Verification, approval
 
 **Terminal pairing** (pos):
-The one-time step that binds a till to an organization and returns that till's API key. Organizations record the terminal. Point of sale performs the pairing.
+The one-time step that binds a till to a tenant and returns that till's API key. Tenants record the terminal. Point of sale performs the pairing.
 _Avoid_: Login, device registration
 
-**Store closure** (organizations):
-Closing a location so it can no longer sell. Organizations owns the location lifecycle.
+**Store closure** (tenants):
+Closing a location so it can no longer sell. Tenants owns the location lifecycle.
 _Avoid_: Delete store, deactivate

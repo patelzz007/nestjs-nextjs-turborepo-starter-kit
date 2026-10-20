@@ -29,7 +29,7 @@ const SEARCH_SHORTCUT_KEY = "/";
 /** A page the member pinned from the command palette. */
 export interface PanelSidebarPinnedItem {
 	readonly title: string;
-	/** Already resolved for this app (e.g. organization-scoped). */
+	/** Already resolved for this app (e.g. tenant-scoped). */
 	readonly url: string;
 	readonly icon?: string | undefined;
 	/** Shown but not followable (e.g. while enrollment locks navigation). */

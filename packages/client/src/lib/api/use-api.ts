@@ -76,15 +76,26 @@ export type ApiClient<R extends object = RouterTree> = ApiClientProcedureBinding
  * @param clientType - The frontend whose isolated cookie set every call uses
  * @param onUnauthorized - Called when a request is still 401 after refresh
  * @param onRefresh - Called on 401 to silently refresh the session
+ * @param requestHeaders - Read as each request is sent (e.g. the merchant console's tenant and store)
  */
-export function useApi<R extends object>(router: R, baseUrl: string, clientType: AuthClientType, onUnauthorized: OnUnauthorized, onRefresh: OnRefresh): ApiClient<R> {
+export function useApi<R extends object>(
+	router: R,
+	baseUrl: string,
+	clientType: AuthClientType,
+	onUnauthorized: OnUnauthorized,
+	onRefresh: OnRefresh,
+	requestHeaders?: () => Readonly<Record<string, string>>,
+): ApiClient<R> {
 	return useMemo(() => {
-		const routerContext: ApiRequestContext = createApiClientContext({
-			baseUrl,
-			clientType,
-			transport: { kind: "cookie", refreshSession: onRefresh },
-			onSessionExpired: onUnauthorized,
-		});
+		const routerContext: ApiRequestContext = {
+			...createApiClientContext({
+				baseUrl,
+				clientType,
+				transport: { kind: "cookie", refreshSession: onRefresh },
+				onSessionExpired: onUnauthorized,
+			}),
+			requestHeaders,
+		};
 
 		function procedure<Input extends SerializableInput, Resp extends DataValue>(def: QueryDef<Input, Resp>): ClientQueryProcedure<Input, Resp>;
 		function procedure<Input extends SerializableInput, Resp extends DataValue>(def: MutationDef<Input, Resp>): ClientMutationProcedure<Input, Resp>;
@@ -110,5 +121,5 @@ export function useApi<R extends object>(router: R, baseUrl: string, clientType:
 			download,
 			...buildClientRouter(router, routerContext),
 		};
-	}, [router, baseUrl, clientType, onUnauthorized, onRefresh]);
+	}, [router, baseUrl, clientType, onUnauthorized, onRefresh, requestHeaders]);
 }

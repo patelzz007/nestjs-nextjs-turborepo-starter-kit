@@ -349,7 +349,7 @@ A grab-bag "utils" file is usually the first sign that "where does this go?" sto
 
 ```ts
 // ❌ DON'T — packages/ui/src/index.ts re-exporting 200 components with
-// no organization, making it impossible to tell what's actually meant
+// no tenant, making it impossible to tell what's actually meant
 // to be public API versus an internal implementation detail that just
 // happened to get swept into the barrel
 export * from './components/button';

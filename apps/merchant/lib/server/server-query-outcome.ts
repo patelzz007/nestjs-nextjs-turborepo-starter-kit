@@ -9,7 +9,7 @@ import { settleServerQuery, type ExpectedServerQueryFailure } from "@workspace/c
 // the data or a failure the page declared as expected, and logs + rethrows every
 // other failure so the nearest `error.tsx` renders it instead of the page
 // silently showing an empty state built from missing data (e.g. "you have no
-// organization" during an API outage). Merchant pages treat every access
+// tenant" during an API outage). Merchant pages treat every access
 // failure as "the client query loads it / the guard decides", so these helpers
 // declare all three as expected.
 

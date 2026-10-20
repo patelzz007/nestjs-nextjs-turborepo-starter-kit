@@ -6,7 +6,7 @@ import type * as React from "react";
 const DEFAULT_SIDEBAR_OPEN = true;
 
 /**
- * The entry routes (`/`, `/account`) while they resolve the member's organization and redirect into its workspace —
+ * The entry routes (`/`, `/account`) while they resolve the member's tenant and redirect into its workspace —
  * and the org shell while its layout loads. Reads the same sidebar cookie as the org layout, so the outline opens or
  * collapses the sidebar exactly as the workspace will.
  */

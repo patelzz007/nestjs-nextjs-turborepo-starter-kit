@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import type { MerchantRewardFormValues, OrganizationContextResponse } from "@workspace/shared";
+import type { MerchantRewardFormValues, TenantContextResponse } from "@workspace/shared";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { useForm } from "react-hook-form";
@@ -11,7 +11,7 @@ import { TenantContextProvider } from "@/features/tenant-context/facade";
 import { TEST_ORG_SLUG } from "@/test/authorization";
 import { testEnvelope } from "@/test/envelope";
 import { TestQueryClientProvider } from "@/test/query-client";
-import { contextQueryState, organizationContextFixture, STORE_A_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
+import { contextQueryState, tenantContextFixture, STORE_A_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
 import { STORE_A, STORE_B } from "@/test/terminals";
 
 const { contextQuery } = vi.hoisted(() => ({
@@ -19,7 +19,7 @@ const { contextQuery } = vi.hoisted(() => ({
 }));
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
-	useAuth: (): object => ({ api: { organizations: { context: { useQuery: contextQuery } } } }),
+	useAuth: (): object => ({ api: { tenants: { context: { useQuery: contextQuery } } } }),
 }));
 
 /** jsdom has no ResizeObserver; base-ui tolerates its absence, stub to be safe. */
@@ -43,12 +43,12 @@ function LocationFieldsHarness(): React.JSX.Element {
 	return <MerchantRewardLocationFields control={control} errors={formState.errors} setValue={setValue} />;
 }
 
-function renderLocationFields(context: OrganizationContextResponse): void {
+function renderLocationFields(context: TenantContextResponse): void {
 	vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 	contextQuery.mockReturnValue(contextQueryState(context));
 	render(
 		<TestQueryClientProvider>
-			<TenantContextProvider orgSlug={TEST_ORG_SLUG} initialLocationId={null} initialOrganizationContext={testEnvelope(context)}>
+			<TenantContextProvider tenantSlug={TEST_ORG_SLUG} initialLocationId={null} initialTenantContext={testEnvelope(context)}>
 				<LocationFieldsHarness />
 			</TenantContextProvider>
 		</TestQueryClientProvider>,
@@ -80,8 +80,8 @@ describe("MerchantRewardLocationFields", () => {
 		expect(screen.getByRole("checkbox", { name: STORE_B.name })).toBeTruthy();
 	});
 
-	it("renders nothing for a single-store organization", (): void => {
-		renderLocationFields(organizationContextFixture({ locations: [STORE_A_LOCATION] }));
+	it("renders nothing for a single-store tenant", (): void => {
+		renderLocationFields(tenantContextFixture({ locations: [STORE_A_LOCATION] }));
 		expect(screen.queryByRole("radiogroup")).toBeNull();
 	});
 });

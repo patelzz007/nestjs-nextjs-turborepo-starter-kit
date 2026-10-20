@@ -42,8 +42,8 @@ import { DemoBlock } from "../demo-block";
 
 const AVATAR_SIZES: readonly AvatarSize[] = ["sm", "md", "lg"];
 const PERSON_NAME = "Aisyah Rahman";
-const ORGANIZATION_NAME = "Kopi Corner";
-/** GitHub's own organization picture: a stable public image for the "with a picture" example. */
+const TENANT_NAME = "Kopi Corner";
+/** GitHub's own tenant picture: a stable public image for the "with a picture" example. */
 const PICTURE_URL = "https://avatars.githubusercontent.com/u/9919";
 
 // ── Badge ──────────────────────────────────────────────────────────────────
@@ -144,7 +144,7 @@ export function DisplayDemos(): React.JSX.Element {
 
 function AvatarDemo(): React.JSX.Element {
 	return (
-		<DemoBlock title="Avatar" description="A picture, or the name's initials. Round for a person, a rounded square for an organization.">
+		<DemoBlock title="Avatar" description="A picture, or the name's initials. Round for a person, a rounded square for a tenant.">
 			<View className="flex-row flex-wrap items-center gap-3">
 				{AVATAR_SIZES.map((size: AvatarSize): React.JSX.Element => (
 					<Avatar key={size} name={PERSON_NAME} imageUrl={null} size={size} />
@@ -153,7 +153,7 @@ function AvatarDemo(): React.JSX.Element {
 			</View>
 			<View className="flex-row flex-wrap items-center gap-3">
 				{AVATAR_SIZES.map((size: AvatarSize): React.JSX.Element => (
-					<Avatar key={size} name={ORGANIZATION_NAME} imageUrl={null} size={size} shape="rounded" />
+					<Avatar key={size} name={TENANT_NAME} imageUrl={null} size={size} shape="rounded" />
 				))}
 				<View className="rounded-xl bg-primary p-2">
 					<Avatar name={PERSON_NAME} imageUrl={null} size="md" tone="inverse" />

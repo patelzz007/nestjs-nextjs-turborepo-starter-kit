@@ -132,7 +132,7 @@ export function accessLines(endpoint: Endpoint, access: EndpointAccess | undefin
 	}
 	if (endpoint.path.includes("/orgs/{orgSlug}") && !access.isPublic) {
 		lines.push(
-			"**Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).",
+			"**Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).",
 		);
 	}
 	if (access.allowsIntegrationKey) lines.push("Also accepts an **INTEGRATION-scope merchant API key**.");

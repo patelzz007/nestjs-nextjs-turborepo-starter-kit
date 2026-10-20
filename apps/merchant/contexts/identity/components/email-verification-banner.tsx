@@ -1,8 +1,8 @@
 "use client";
 
 import { useMerchantEnrollmentLock } from "@/contexts/identity/lib/enrollment";
-import { useOrganizationPath } from "@/contexts/organizations";
-import { ORG_ROUTES } from "@/lib/routes";
+import { useTenantPath } from "@/contexts/tenancy";
+import { TENANT_ROUTES } from "@/lib/routes";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { Mail, ShieldAlert } from "lucide-react";
@@ -12,7 +12,7 @@ import * as React from "react";
 /** Persistent banner shown while a merchant account still needs enrollment. */
 export function EmailVerificationBanner(): React.JSX.Element | null {
 	const { isLocked, enrollmentReason } = useMerchantEnrollmentLock();
-	const accountPath = useOrganizationPath(ORG_ROUTES.account);
+	const accountPath = useTenantPath(TENANT_ROUTES.account);
 
 	if (!isLocked) {
 		return null;

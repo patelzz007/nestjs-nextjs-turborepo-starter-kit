@@ -34,7 +34,7 @@ export function selectFeaturedOffers(rewards: readonly RewardResponse[], now: nu
 			return {
 				id: reward.id,
 				title: reward.title,
-				merchantName: reward.organizationName,
+				merchantName: reward.tenantName,
 				category: reward.category,
 				coverImageUrl: cover?.url ?? null,
 				coverSources: cover?.sources ?? [],
@@ -55,7 +55,7 @@ export const FEATURED_MERCHANT_LIMIT = 8;
 export function selectMerchantNames(rewards: readonly RewardResponse[], limit: number = FEATURED_MERCHANT_LIMIT): readonly string[] {
 	const names = new Set<string>();
 	for (const reward of rewards) {
-		const name: string | undefined = reward.organizationName?.trim();
+		const name: string | undefined = reward.tenantName?.trim();
 		if (name !== undefined && name.length > 0) names.add(name);
 		if (names.size === limit) break;
 	}

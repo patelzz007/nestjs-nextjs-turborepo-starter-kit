@@ -5,7 +5,7 @@ import { AUDIT_LOG_PAGE_SIZE, AUDIT_LOG_URL_STATE, auditLogListHref, isAuditLogF
 import { AUDIT_LOG_RECORD_URL_STATE, DATA_CHANGE_RECORD_URL_STATE } from "../../../../lib/url-state/selection";
 
 const ACTOR_ID = "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b";
-const ORGANIZATION_ID = "7a2d3b63-0b4f-4e49-8b66-1e2f3a4b5c6d";
+const TENANT_ID = "7a2d3b63-0b4f-4e49-8b66-1e2f3a4b5c6d";
 
 describe("audit log URL state", () => {
 	it("maps a full URL to the API input the list schema accepts", () => {
@@ -18,7 +18,7 @@ describe("audit log URL state", () => {
 				"filter[method]": "DELETE",
 				"filter[authMethod]": "BEARER_TOKEN",
 				"filter[actorUserId]": ACTOR_ID,
-				"filter[organizationId]": ORGANIZATION_ID,
+				"filter[tenantId]": TENANT_ID,
 				"filter[correlationId]": "corr-123",
 			}),
 		);
@@ -33,7 +33,7 @@ describe("audit log URL state", () => {
 				method: { eq: "DELETE" },
 				authMethod: { eq: "BEARER_TOKEN" },
 				actorUserId: { eq: ACTOR_ID },
-				organizationId: { eq: ORGANIZATION_ID },
+				tenantId: { eq: TENANT_ID },
 				correlationId: { eq: "corr-123" },
 			},
 		});
@@ -68,9 +68,9 @@ describe("audit log URL state", () => {
 });
 
 describe("auditLogListHref", () => {
-	it("links to the table filtered by one actor, organization or correlation id", () => {
+	it("links to the table filtered by one actor, tenant or correlation id", () => {
 		expect(auditLogListHref({ actorUserId: ACTOR_ID })).toBe(`/audit-logs?filter[actorUserId]=${ACTOR_ID}`);
-		expect(auditLogListHref({ organizationId: ORGANIZATION_ID })).toBe(`/audit-logs?filter[organizationId]=${ORGANIZATION_ID}`);
+		expect(auditLogListHref({ tenantId: TENANT_ID })).toBe(`/audit-logs?filter[tenantId]=${TENANT_ID}`);
 		expect(auditLogListHref({ correlationId: "corr-1" })).toBe("/audit-logs?filter[correlationId]=corr-1");
 	});
 

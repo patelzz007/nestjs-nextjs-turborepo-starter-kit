@@ -22,9 +22,9 @@ interface ApiKeyRevokedAtFilter {
 	readonly revokedAt: { readonly isNull: boolean };
 }
 
-/** `GET /orgs/:orgSlug/api-keys` input for one view of the list. */
+/** `GET /t/:orgSlug/api-keys` input for one view of the list. */
 export interface ApiKeyListQueryInput {
-	readonly orgSlug: string;
+	readonly tenantSlug: string;
 	readonly page: number;
 	readonly limit: number;
 	/** The tenant-context store scope (`undefined` = every store the member may see). */
@@ -50,14 +50,19 @@ export function toApiKeyRevokedAtFilter(filter: ApiKeyFilter): ApiKeyRevokedAtFi
  * the server page (prefetch) and the view (query) from the same inputs, so the
  * prefetched page lands under the client's query key.
  */
-export function toApiKeyListQuery(orgSlug: string, locationId: string | undefined, filter: ApiKeyFilter, limit: number = MERCHANT_API_KEYS_PAGE_SIZE): ApiKeyListQueryInput {
+export function toApiKeyListQuery(
+	tenantSlug: string,
+	locationId: string | undefined,
+	filter: ApiKeyFilter,
+	limit: number = MERCHANT_API_KEYS_PAGE_SIZE,
+): ApiKeyListQueryInput {
 	const revokedAtFilter = toApiKeyRevokedAtFilter(filter);
-	return { orgSlug, page: 1, limit, locationId, ...(revokedAtFilter === undefined ? {} : { filter: revokedAtFilter }) };
+	return { tenantSlug, page: 1, limit, locationId, ...(revokedAtFilter === undefined ? {} : { filter: revokedAtFilter }) };
 }
 
 /** Stores covered by active keys — exact only when every active key is loaded. */
 export type ApiKeyStoreCoverage =
-	| { readonly kind: "exact"; readonly stores: number; readonly hasOrganizationWideKey: boolean }
+	| { readonly kind: "exact"; readonly stores: number; readonly hasTenantWideKey: boolean }
 	/** More active keys exist than one page holds: counting the loaded ones would understate it. */
 	| { readonly kind: "unavailable" };
 
@@ -78,10 +83,10 @@ export function isActiveApiKey(key: MerchantApiKeySummary): boolean {
 	return key.revokedAt === null;
 }
 
-/** Distinct stores (and whether one key is organization-wide) across a COMPLETE set of active keys. */
+/** Distinct stores (and whether one key is tenant-wide) across a COMPLETE set of active keys. */
 function coverageOf(activeKeys: readonly MerchantApiKeySummary[]): ApiKeyStoreCoverage {
 	const stores = new Set(activeKeys.flatMap((key): string[] => (key.locationId === null ? [] : [key.locationId])));
-	return { kind: "exact", stores: stores.size, hasOrganizationWideKey: activeKeys.some((key) => key.locationId === null) };
+	return { kind: "exact", stores: stores.size, hasTenantWideKey: activeKeys.some((key) => key.locationId === null) };
 }
 
 /**

@@ -2,44 +2,44 @@ import { z } from "zod";
 
 import { BaseResponseSchema, EpochMsSchema } from "../../../schemas/api/common";
 import { defineListQuery, LIST_MAX_LIMIT, listFilter } from "../../../schemas/api/list-query";
-import { OrganizationLocationFilterSchema } from "../../organizations/schemas/location-filter";
+import { LocationFilterSchema } from "../../tenancy/schemas/location-filter";
 
-// ── Merchant API keys (till / integration credentials, `OrganizationApiKey`) ──
+// ── Merchant API keys (till / integration credentials, `TenantApiKey`) ──
 
 /** Longest POS API key (terminal) name — shared by the create form and the API. */
 export const MERCHANT_API_KEY_NAME_MAX_LENGTH = 100;
 
 /**
- * What a merchant API key may call (mirrors the Prisma `OrganizationApiKeyScope` enum):
+ * What a merchant API key may call (mirrors the Prisma `TenantApiKeyScope` enum):
  * - `POS` — a till: only the POS redemption routes (`/redemptions/*`). Every key a
  *   terminal receives by pairing is a POS key.
- * - `INTEGRATION` — a back-office integration: the POS routes plus the organization
+ * - `INTEGRATION` — a back-office integration: the POS routes plus the tenant
  *   reward / redemption-history / analytics API.
  */
-export const OrganizationApiKeyScopeSchema = z.enum(["POS", "INTEGRATION"]);
+export const TenantApiKeyScopeSchema = z.enum(["POS", "INTEGRATION"]);
 
-export type OrganizationApiKeyScope = z.output<typeof OrganizationApiKeyScopeSchema>;
+export type TenantApiKeyScope = z.output<typeof TenantApiKeyScopeSchema>;
 
 /** The scope a manually created key gets when none is chosen — least privilege. */
-export const DEFAULT_MERCHANT_API_KEY_SCOPE: OrganizationApiKeyScope = "POS";
+export const DEFAULT_MERCHANT_API_KEY_SCOPE: TenantApiKeyScope = "POS";
 
 /**
- * `POST /orgs/:orgSlug/api-keys`. `locationId` limits the key to one store; a member
+ * `POST /tenants/:tenantSlug/api-keys`. `locationId` limits the key to one store; a member
  * limited to some stores must choose one of them (only an all-stores member may create
- * an organization-wide key).
+ * a tenant-wide key).
  */
 export const MerchantCreateApiKeySchema = z
 	.object({
 		name: z.string().trim().min(1).max(MERCHANT_API_KEY_NAME_MAX_LENGTH).optional(),
 		locationId: z.uuid().optional(),
-		scope: OrganizationApiKeyScopeSchema.optional().default(DEFAULT_MERCHANT_API_KEY_SCOPE),
+		scope: TenantApiKeyScopeSchema.optional().default(DEFAULT_MERCHANT_API_KEY_SCOPE),
 	})
 	.strict();
 
 /**
- * `GET /orgs/:orgSlug/api-keys` list query — newest first, `filter[revokedAt][isNull]=true`
+ * `GET /tenants/:tenantSlug/api-keys` list query — newest first, `filter[revokedAt][isNull]=true`
  * lists active keys. `locationId` is an authorization SCOPE (checked against the member's stores).
- * Pages are as large as the grammar allows: an organization has a handful of terminal keys.
+ * Pages are as large as the grammar allows: a tenant has a handful of terminal keys.
  */
 /** One page holds every key a store realistically has; the merchant page says so when there are more. */
 export const MERCHANT_API_KEYS_PAGE_SIZE = LIST_MAX_LIMIT;
@@ -50,7 +50,7 @@ export const merchantApiKeyListQuery = defineListQuery({
 	filter: {
 		revokedAt: listFilter.epochMs({ isNull: true }),
 	},
-	params: OrganizationLocationFilterSchema.shape,
+	params: LocationFilterSchema.shape,
 	defaultLimit: MERCHANT_API_KEYS_PAGE_SIZE,
 });
 
@@ -67,7 +67,7 @@ export const MerchantApiKeySummarySchema = BaseResponseSchema.extend({
 	name: z.string(),
 	locationId: z.uuid().nullable(),
 	locationName: z.string().nullable(),
-	scope: OrganizationApiKeyScopeSchema,
+	scope: TenantApiKeyScopeSchema,
 	revokedAt: EpochMsSchema.nullable(),
 });
 
@@ -77,7 +77,7 @@ export const MerchantApiKeyCreatedSchema = z.object({
 	id: z.uuid(),
 	apiKey: z.string(),
 	name: z.string(),
-	scope: OrganizationApiKeyScopeSchema,
+	scope: TenantApiKeyScopeSchema,
 	locationId: z.uuid().nullable(),
 });
 

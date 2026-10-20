@@ -5,7 +5,7 @@ import { z } from "zod";
 import { stripQueryAndHash } from "@/lib/routes";
 
 /**
- * Every page under `app/orgs/[orgSlug]/`, as its org-relative route pattern
+ * Every page under `app/t/[tenantSlug]/`, as its org-relative route pattern
  * (dynamic segments keep their `[param]` folder name). A test fails when a
  * page exists without an entry here, when an entry has no page, or when a
  * page does not call `guardOrgPage` with its own pattern — so no org route
@@ -45,7 +45,7 @@ export interface OrgPageRequirement {
 	readonly mode?: "any" | "all";
 }
 
-/** A page every member of the organization may open; `reason` documents why it carries no capability. */
+/** A page every member of the tenant may open; `reason` documents why it carries no capability. */
 export interface OpenOrgPageRule {
 	readonly kind: "open";
 	readonly reason: string;
@@ -62,7 +62,7 @@ export type OrgPageRule = OpenOrgPageRule | CapabilityOrgPageRule;
 
 const OWNER_ONLY_VERIFICATION_DENIAL: OrgPageDenialCopy = {
 	title: "Owner access required",
-	description: "Business verification is submitted and updated by the organization owner. Contact your store owner if details need to change.",
+	description: "Business verification is submitted and updated by the tenant owner. Contact your store owner if details need to change.",
 };
 
 const TEAM_DENIAL: OrgPageDenialCopy = {
@@ -78,39 +78,39 @@ const TEAM_DENIAL: OrgPageDenialCopy = {
  */
 export const ORG_PAGE_RULES: Readonly<Record<OrgPageRoute, OrgPageRule>> = {
 	"/": { kind: "open", reason: "Redirects to the dashboard, which is guarded itself." },
-	// Organization summary from the member-wide GET /orgs/:orgSlug/context.
+	// Tenant summary from the member-wide GET /t/:tenantSlug/context.
 	"/dashboard": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewDashboard] } },
-	// GET /orgs/:orgSlug/rewards (merchant:view_rewards).
+	// GET /t/:tenantSlug/rewards (merchant:view_rewards).
 	"/rewards": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewRewards] } },
-	// POST /orgs/:orgSlug/rewards (merchant:manage_rewards).
+	// POST /t/:tenantSlug/rewards (merchant:manage_rewards).
 	"/rewards/new": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageRewards] } },
-	// GET /orgs/:orgSlug/rewards (merchant:view_rewards) — the read-only reward page; its edit and submit actions need merchant:manage_rewards in-page.
+	// GET /t/:tenantSlug/rewards (merchant:view_rewards) — the read-only reward page; its edit and submit actions need merchant:manage_rewards in-page.
 	"/rewards/[rewardId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewRewards] } },
-	// PATCH /orgs/:orgSlug/rewards/:rewardId (merchant:manage_rewards).
+	// PATCH /t/:tenantSlug/rewards/:rewardId (merchant:manage_rewards).
 	"/rewards/[rewardId]/edit": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageRewards] } },
-	// GET /orgs/:orgSlug/redemptions (merchant:view_redemptions).
+	// GET /t/:tenantSlug/redemptions (merchant:view_redemptions).
 	"/redemptions": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewRedemptions] } },
-	// GET /orgs/:orgSlug/analytics (merchant:view_analytics).
+	// GET /t/:tenantSlug/analytics (merchant:view_analytics).
 	"/analytics": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewAnalytics] } },
-	// /orgs/:orgSlug/terminals[/settings] (merchant:manage_api_keys — a paired till receives an API key).
+	// /t/:tenantSlug/terminals[/settings] (merchant:manage_api_keys — a paired till receives an API key).
 	"/terminals": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageApiKeys] } },
-	// /orgs/:orgSlug/api-keys (merchant:manage_api_keys).
+	// /t/:tenantSlug/api-keys (merchant:manage_api_keys).
 	"/api-keys": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageApiKeys] } },
 	// Settings index: reachable when at least one settings page is.
 	"/settings": {
 		kind: "capability",
 		requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam, MERCHANT_CAPABILITY.viewLocations, MERCHANT_CAPABILITY.manageVerification], mode: "any" },
 	},
-	// GET /orgs/:orgSlug/members[/invites], POST …/members/invite (merchant:manage_team).
+	// GET /t/:tenantSlug/members[/invites], POST …/members/invite (merchant:manage_team).
 	"/settings/team": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] }, denial: TEAM_DENIAL },
 	// Reads the member-wide org context; requesting stores needs merchant:manage_locations in-page.
 	"/settings/locations": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewLocations] } },
 	// Reads the logo from the member-wide org context; uploading or removing it (POST /files, DELETE /files/:id) needs merchant:manage_locations in-page.
 	"/settings/branding": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewLocations] } },
-	// GET/PATCH /orgs/:orgSlug/kyb (merchant:manage_verification, owner-only).
+	// GET/PATCH /t/:tenantSlug/kyb (merchant:manage_verification, owner-only).
 	"/settings/verification": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageVerification] }, denial: OWNER_ONLY_VERIFICATION_DENIAL },
 	"/account": { kind: "open", reason: "Personal account (password, 2FA, email) — restricted enrollment sessions must always reach it." },
-	"/stores": { kind: "open", reason: "The member's own stores (GET /orgs/memberships lists only the caller's memberships) — the way to switch to any of them." },
+	"/stores": { kind: "open", reason: "The member's own stores (GET /t/memberships lists only the caller's memberships) — the way to switch to any of them." },
 };
 
 function isDynamicSegment(segment: string): boolean {

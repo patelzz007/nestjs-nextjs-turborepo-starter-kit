@@ -30,8 +30,8 @@ export class RewardImageNotPublishedError extends Error {
 }
 
 export interface RewardImageUploadInput {
-	/** The organization the image belongs to (only its reward managers may upload). */
-	readonly organizationId: string;
+	/** The tenant the image belongs to (only its reward managers may upload). */
+	readonly tenantId: string;
 	/** The prepared image (cropped to 16:9, Full HD to 4K — see `image-preparation`). */
 	readonly file: File;
 }
@@ -50,9 +50,9 @@ export interface RewardImageUploadInput {
 export function useUploadRewardImage(): UseMutationResult<UploadedRewardImage, Error, RewardImageUploadInput> {
 	const { api } = useAuth();
 	return useMutation({
-		mutationFn: async ({ organizationId, file }: RewardImageUploadInput): Promise<UploadedRewardImage> => {
+		mutationFn: async ({ tenantId, file }: RewardImageUploadInput): Promise<UploadedRewardImage> => {
 			assertImageFileAllowed(file, REWARD_IMAGE_FILE_POLICY);
-			const uploaded = await uploadFileDirect(api, { category: "REWARD_IMAGE", organizationId, fileName: file.name, mimeType: toDocumentMimeType(file) }, file);
+			const uploaded = await uploadFileDirect(api, { category: "REWARD_IMAGE", tenantId, fileName: file.name, mimeType: toDocumentMimeType(file) }, file);
 			const ready = await waitForFileReady(api, uploaded.fileId);
 			const url = ready.file.publicUrl;
 			if (url === null) {

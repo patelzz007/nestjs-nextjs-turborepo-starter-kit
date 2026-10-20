@@ -21,17 +21,17 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 This is what happens to every HTTP request, step by step (spec §74):
 
 ```text
- 1. RlsPreHandlerMiddleware   opens the "request.pre_handler" RLS scope (see tenancy guide)
+ 1. RequestContextMiddleware  binds the request context (guards open their own auth lookups)
  2. ApiKeyAuthGuard           optional merchant/POS API key
  3. AuthGuard                 validates the JWT → request.user
  4. RestrictedSessionGuard    blocks restricted sessions (email / MFA not done)
  5. AuthorizationGuard        ← THIS PAGE
       a. validate the token version (revoked tokens → 401)
-      b. resolve + verify the tenant (x-organization-id / x-store-id / x-location-id)
+      b. resolve + verify the tenant (:tenantSlug) and any store / location (x-store-id, route, query, body)
       c. SuperAdmin? → audited bypass
       d. enforce every decorator through the Kernel (audited)
       e. compute hasAdminAccess
- 6. RlsInterceptor            narrows the RLS scope to this user + verified organization
+ 6. RlsInterceptor            narrows the RLS scope to this user + verified tenant
  7. Controller → Service → Prisma → PostgreSQL (RLS applies)
 ```
 
@@ -76,7 +76,7 @@ import { Authorize, fromParam, self, attributesFromBody } from "../authorization
 Rules the guard applies (see `guards/authorization.guard.ts`):
 
 - **Fail closed:** if you declare `resourceId` and it cannot be resolved (missing param, anonymous caller for `self()`), the request is **denied**. It is never silently turned into a global check.
-- **Tenant attributes win:** the organization / store / location the request targets are added to the resource attributes **after** your `attributes`, so a body cannot override the routed tenant.
+- **Tenant attributes win:** the tenant / store / location the request targets are added to the resource attributes **after** your `attributes`, so a body cannot override the routed tenant.
 - `attributesFromBody` only keeps policy-safe scalar values (string, number, boolean, null, lists).
 
 ### 2.3 What a denial looks like
@@ -111,18 +111,18 @@ An `AuthorizationRequest` looks like:
 
 ```ts
 {
-  subject: { userId: "u-1", organizationId: "org-a", storeId: "store-1", isSuperAdmin: false },
+  subject: { userId: "u-1", tenantId: "org-a", storeId: "store-1", isSuperAdmin: false },
   action: "UPDATE",
   resource: "ORDER",
   resourceId: "order-123",                          // optional
-  resourceAttributes: { organizationId: "org-a", storeId: "store-1", status: "PENDING" }, // optional
+  resourceAttributes: { tenantId: "org-a", storeId: "store-1", status: "PENDING" }, // optional
 }
 ```
 
 > [!IMPORTANT]
-> `subject.organizationId`, `storeId` and `locationId` are **claims**. The kernel
-> re-verifies them against memberships every time. Passing a forged organization gets
-> `DENY`, not "access to that organization".
+> `subject.tenantId`, `storeId` and `locationId` are **claims**. The kernel
+> re-verifies them against memberships every time. Passing a forged tenant gets
+> `DENY`, not "access to that tenant".
 
 ---
 
@@ -133,7 +133,7 @@ The kernel evaluates in this exact order (spec §39, §65). The first step that 
 ```text
  1. SuperAdmin                              → ALLOW   (platform bypass; the guard audits it)
  2. Unknown action or resource              → DENY    (fail closed)
- 3. Tenant verification                     → DENY if the claimed organization / store /
+ 3. Tenant verification                     → DENY if the claimed tenant / store /
                                                         location is not proven by membership
  4. Explicit DENY — per-user override       → DENY
  5. Explicit DENY — ACL entry               → DENY
@@ -155,10 +155,10 @@ The kernel evaluates in this exact order (spec §39, §65). The first step that 
 | Manager role grants `ORDER:DELETE`, user has a `DENY` override for it | **DENY** | 4 |
 | Role grants `ORDER:DELETE`, ACL `DENY` on order #9 for this user | **DENY** on #9, ALLOW elsewhere | 5 |
 | No role permission, ACL `ALLOW` on order #7 | **ALLOW** on #7 only | 6 |
-| Member of Org A with no roles asks to `DELETE ORGANIZATION` | **DENY** — membership alone grants nothing | 7 |
-| `UPDATE:ORDER:ORGANIZATION` grant, order belongs to Org B | **DENY** — wrong tenant | 7 |
+| Member of Org A with no roles asks to `DELETE TENANT` | **DENY** — membership alone grants nothing | 7 |
+| `UPDATE:ORDER:TENANT` grant, order belongs to Org B | **DENY** — wrong tenant | 7 |
 | Grant OK, policy "completed orders are immutable" matches | **DENY** | 8 |
-| Header `x-organization-id` for an org you're not in | **403** before the kernel even runs | guard |
+| `/tenants/:tenantSlug` of a tenant you're not in | **404** before the kernel even runs | guard |
 
 ---
 
@@ -186,15 +186,15 @@ complete list. Deleting your own account still needs an assigned permission.
 | Scope | Satisfied when | Typical holder |
 |---|---|---|
 | `GLOBAL` | always | platform staff (`Admin`, `Manager`) |
-| `ORGANIZATION` | the request has a **verified** organization **and** (for a specific record) the record's `organizationId` matches | organization-wide roles |
+| `TENANT` | the request has a **verified** tenant **and** (for a specific record) the record's `tenantId` matches | tenant-wide roles |
 | `STORE` | the request has a **verified** store, the grant is bound to that store (store memberships), and the record's `storeId` matches | `Store Manager`, `Store Staff` |
 | `LOCATION` | verified location, record's `locationId` matches | location-scoped roles |
 | `OWN` | a specific record is targeted **and** the DB says the caller owns it | customers (`User` role) |
 | `RESOURCE` | never by itself — only through explicit ACL entries | — |
 
 > [!WARNING]
-> For `ORGANIZATION` / `STORE` / `LOCATION` grants on a **specific record**, the kernel
-> needs to know the record's tenant (`resourceAttributes.organizationId` / `storeId` /
+> For `TENANT` / `STORE` / `LOCATION` grants on a **specific record**, the kernel
+> needs to know the record's tenant (`resourceAttributes.tenantId` / `storeId` /
 > `locationId`). If you do not pass it, the grant does **not** apply (fail closed).
 
 ### 5.3 Ownership
@@ -229,7 +229,7 @@ resource Z". Use them **only for exceptions** (spec §124), not for ordinary acc
 | `action` | exact action; an entry with `MANAGE` covers every action |
 | `resourceType` + `resourceId` | `resourceId = null` means **every** resource of that type |
 | `effect` | `ALLOW` or `DENY` (DENY always wins) |
-| `organizationId` / `locationId` | optional: the entry only applies inside that verified tenant |
+| `tenantId` / `locationId` | optional: the entry only applies inside that verified tenant |
 | `conditions` | optional JSON rule (same language as policies) |
 | `expiresAt`, `isDeleted` | expired or deleted entries never match |
 
@@ -244,7 +244,7 @@ There is **no** `eval`, no stored JavaScript (spec §43).
 ```json
 {
   "all": [
-    { "condition": { "field": "order.organizationId", "operator": "equals", "valueRef": "$user.organizationId" } },
+    { "condition": { "field": "order.tenantId", "operator": "equals", "valueRef": "$user.tenantId" } },
     { "condition": { "field": "order.status", "operator": "not_equals", "value": "COMPLETED" } }
   ]
 }
@@ -254,7 +254,7 @@ There is **no** `eval`, no stored JavaScript (spec §43).
 - **Operators:** `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`,
   `starts_with`, `ends_with`, `greater_than`, `greater_than_or_equals`, `less_than`,
   `less_than_or_equals`, `exists`, `not_exists`.
-- **Fields:** `$user.<key>` (subject: `userId`, `organizationId`, `storeId`, `locationId`,
+- **Fields:** `$user.<key>` (subject: `userId`, `tenantId`, `storeId`, `locationId`,
   `Role`, `isSuperAdmin`, or custom attributes), `$resource.<key>`, `<resource>.<key>`
   (e.g. `order.status`), or a bare key (resource attribute).
 - `value` is a literal; `valueRef` points at another field.
@@ -282,7 +282,7 @@ const result = await kernel.explain(request);
 // result.evaluation →
 // [
 //   { source: "acl",   effect: "NO_MATCH", reason: "No explicit ACL entry" },
-//   { source: "scope", effect: "DENY", reason: "Resource belongs to another organization" },
+//   { source: "scope", effect: "DENY", reason: "Resource belongs to another tenant" },
 //   { source: "default", effect: "DENY", reason: "No grant applies in this scope — default deny" }
 // ]
 ```
@@ -304,23 +304,23 @@ Never load everything and filter in JavaScript (spec §32, §57). Ask the kernel
 `where` fragment:
 
 ```ts
-const where = await kernel.filter({ userId, organizationId, storeId }, "LIST", "REDEMPTION");
+const where = await kernel.filter({ userId, tenantId, storeId }, "LIST", "REDEMPTION");
 return prisma.rewardRedemption.findMany({ where: { AND: [where, { /* your own filters */ }] } });
 ```
 
 | Subject holds | `filter()` returns |
 |---|---|
 | SuperAdmin, a `GLOBAL` grant, or a type-wide ACL `ALLOW` | `{}` (no restriction — RLS still applies) |
-| `ORGANIZATION` grant + verified org | `{ organizationId }` |
-| `STORE` grants | `{ organizationId, storeId }` per store (only the active store when one is selected) |
-| `LOCATION` grant | `{ organizationId, locationId }` |
+| `TENANT` grant + verified org | `{ tenantId }` |
+| `STORE` grants | `{ tenantId, storeId }` per store (only the active store when one is selected) |
+| `LOCATION` grant | `{ tenantId, locationId }` |
 | `OWN` grant | `{ userId }` (`{ id: { in: [userId] } }` for `USER` / `PROFILE`) |
 | resource-specific ACL `ALLOW`s | `{ id: { in: [...] } }` |
 | several of the above | `{ OR: [...] }` |
 | resource-specific ACL `DENY`s | wrapped as `{ AND: [base, { NOT: { id: { in: [...] } } }] }` |
 | nothing / DENY override / type-wide ACL DENY / unconditional DENY policy / forged tenant | `{ id: { in: [] } }` → **no rows** |
 
-> Your table must use these column names (`organizationId`, `storeId`, `locationId`,
+> Your table must use these column names (`tenantId`, `storeId`, `locationId`,
 > `userId`, `id`) for the filter to apply. Row-level **conditions** (e.g. "status must be
 > PAID") are enforced per operation with `authorize()`, not in the filter.
 
@@ -407,52 +407,52 @@ assigns the default `User` role with the new account as its own audited actor �
 
 Merchant endpoints use **merchant capabilities** (`merchant:*` slugs, `MERCHANT_CAPABILITY.*`)
 instead of platform permissions — **never** membership role names. Every check goes through
-one method, `OrganizationRewardAuthService.requireMembershipCapability()`
-(`modules/organization/services/organization-reward-auth.service.ts`), reached via
+one method, `TenantRewardAuthService.requireMembershipCapability()`
+(`modules/tenant/services/tenant-reward-auth.service.ts`), reached via
 `MerchantContextService.requireActorCapability()` / `requireUserCapability()` (rewards, API
 keys, analytics, KYB) or directly (team, store locations). It checks, in order:
 
 1. **POS API keys** (`requireActorCapability` only) — only `view_rewards`, `manage_rewards`,
    `view_redemptions`, `view_analytics`. A key can never manage the team, locations,
    verification, other keys or terminals. (A till *gets* its key by pairing:
-   `POST /pos/terminals/pair` exchanges a one-time code a member issued for a key bound to
+   `POST /integration/terminals/pair` exchanges a one-time code a member issued for a key bound to
    that terminal — see [POS integration](../pos-integration.md).)
 2. **The role table** `MERCHANT_ROLE_CAPABILITIES` (`packages/shared/src/authorization/permission.ts`,
    shared with the merchant app, so the UI hides exactly what the API denies). Denial:
-   `403 ORGANIZATION_ROLE_CAPABILITY_REQUIRED`.
+   `403 TENANT_ROLE_CAPABILITY_REQUIRED`.
 
    | Capability | `OWNER` | `ADMIN` | `CASHIER` | `POLICY_ADMIN` | `MEMBER` | API rule it guards |
    |---|:-:|:-:|:-:|:-:|:-:|---|
    | `merchant:view_dashboard` | ✅ | ✅ | ✅ | ✅ | ✅ | none — membership context (UX only) |
-   | `merchant:view_rewards` | ✅ | ✅ | ✅ | — | — | `GET /orgs/:orgSlug/rewards` |
+   | `merchant:view_rewards` | ✅ | ✅ | ✅ | — | — | `GET /tenants/:tenantSlug/rewards` |
    | `merchant:manage_rewards` | ✅ | ✅ | — | — | — | create / update / publish rewards |
-   | `merchant:view_redemptions` | ✅ | ✅ | ✅ | — | — | `GET /orgs/:orgSlug/redemptions` |
-   | `merchant:manage_api_keys` | ✅ | ✅ | — | — | — | `/orgs/:orgSlug/api-keys`, `/orgs/:orgSlug/terminals` (POS terminal registration and pairing) |
-   | `merchant:view_analytics` | ✅ | ✅ | ✅ | — | — | `GET /orgs/:orgSlug/analytics` |
-   | `merchant:manage_team` | ✅ | ✅ | — | — | — | `GET /orgs/:orgSlug/members[/invites]`, `POST …/members/invite`, `POST …/invites/:id/revoke` |
-   | `merchant:view_locations` | ✅ | ✅ | ✅ | ✅ | ✅ | none — locations come from the member-wide `GET /orgs/:orgSlug/context` (UX only) |
-   | `merchant:manage_locations` | ✅ | ✅ | — | — | — | `POST /orgs/:orgSlug/locations`, `PATCH …/locations/:id`; store logo / banner uploads |
-   | `merchant:manage_verification` | ✅ | — | — | — | — | `GET` / `PATCH /orgs/:orgSlug/kyb`, KYB document download and upload |
+   | `merchant:view_redemptions` | ✅ | ✅ | ✅ | — | — | `GET /tenants/:tenantSlug/redemptions` |
+   | `merchant:manage_api_keys` | ✅ | ✅ | — | — | — | `/tenants/:tenantSlug/api-keys`, `/tenants/:tenantSlug/terminals` (POS terminal registration and pairing) |
+   | `merchant:view_analytics` | ✅ | ✅ | ✅ | — | — | `GET /tenants/:tenantSlug/analytics` |
+   | `merchant:manage_team` | ✅ | ✅ | — | — | — | `GET /tenants/:tenantSlug/members[/invites]`, `POST …/members/invite`, `POST …/invites/:id/revoke` |
+   | `merchant:view_locations` | ✅ | ✅ | ✅ | ✅ | ✅ | none — locations come from the member-wide `GET /tenants/:tenantSlug/context` (UX only) |
+   | `merchant:manage_locations` | ✅ | ✅ | — | — | — | `POST /tenants/:tenantSlug/locations`, `PATCH …/locations/:id`; store logo / banner uploads |
+   | `merchant:manage_verification` | ✅ | — | — | — | — | `GET` / `PATCH /tenants/:tenantSlug/kyb`, KYB document download and upload |
 
 3. **Tenant Cedar policies** — the capability's Cedar action
-   (`MERCHANT_CAPABILITY_CEDAR_ACTIONS`, `modules/organization/constants/merchant-capability-cedar-actions.ts`,
+   (`MERCHANT_CAPABILITY_CEDAR_ACTIONS`, `modules/tenant/constants/merchant-capability-cedar-actions.ts`,
    e.g. `merchant:manage_team` → `tenant:manage_team`) is evaluated against the
-   organization's published policy and audited (`authorize.<action>` in
-   `OrganizationAuditLog`). Cedar may only **narrow** the table; the default tenant policy
+   tenant's published policy and audited (`authorize.<action>` in
+   `TenantAuditLog`). Cedar may only **narrow** the table; the default tenant policy
    (`DEFAULT_TENANT_CEDAR`) permits `OWNER` / `ADMIN` / `CASHIER` for every action, so
    it never denies what the table grants (a unit test proves the two agree). Denial:
-   `403 ORGANIZATION_ACTION_FORBIDDEN`.
+   `403 TENANT_ACTION_FORBIDDEN`.
 
 Capabilities mapped to `null` in `MERCHANT_CAPABILITY_CEDAR_ACTIONS` (`view_dashboard`,
 `view_locations`) guard no API action; asking the API to enforce one fails closed
-(`403 ORGANIZATION_CAPABILITY_UNKNOWN`). The map is a `Record` over the shared vocabulary, so a
+(`403 TENANT_CAPABILITY_UNKNOWN`). The map is a `Record` over the shared vocabulary, so a
 new capability does not compile until it is mapped.
 
 > [!NOTE]
 > Team, store-location and KYB endpoints used to check hard-coded role lists
 > (`assertCanManageTeam`, `assertCanManageLocations`, `requireOwnerRole`) that returned
-> `ORGANIZATION_TEAM_FORBIDDEN`, `ORGANIZATION_LOCATION_FORBIDDEN` and
-> `ORGANIZATION_OWNER_REQUIRED`. They now return `ORGANIZATION_ROLE_CAPABILITY_REQUIRED`
+> `TENANT_TEAM_FORBIDDEN`, `TENANT_LOCATION_FORBIDDEN` and
+> `TENANT_OWNER_REQUIRED`. They now return `TENANT_ROLE_CAPABILITY_REQUIRED`
 > (still `403`), for the same allowed roles.
 
 ---
@@ -472,13 +472,13 @@ service, then acts.
 | `REWARD_IMAGE` | `merchant:manage_rewards` | `merchant:view_rewards` (the published copy and its renditions are public); reviewers open the reward (`GET /admin/rewards/:rewardId`, any status) and download the original through `GET /admin/rewards/:rewardId/images/:fileId/download`, or all of a reward's originals as one ZIP through `GET /admin/rewards/:rewardId/images/archive` (`MANAGE REWARD`) |
 | SuperAdmin | any | any |
 
-- **Same check as the rest of the merchant API.** Organization capabilities that guard an action go
-  through `OrganizationRewardAuthService.requireMembershipCapability`: the shared role table, then the
+- **Same check as the rest of the merchant API.** Tenant capabilities that guard an action go
+  through `TenantRewardAuthService.requireMembershipCapability`: the shared role table, then the
   tenant Cedar policy, with an audited decision. Membership-only capabilities (Cedar action `null`,
   e.g. reading store branding) use the role table alone.
-- **Re-checked at completion.** Completing a branding upload rebinds the organization's logo or banner,
+- **Re-checked at completion.** Completing a branding upload rebinds the tenant's logo or banner,
   so a member demoted after requesting the ticket cannot finish it.
-- **Organization files belong to the organization.** Whoever holds the capability *now* may delete
+- **Tenant files belong to the tenant.** Whoever holds the capability *now* may delete
   them; a former member who uploaded them may not. Non-members never get a download URL.
 - The caller's role is read through the allowlisted system operation `files.authorization`.
 
@@ -512,7 +512,7 @@ POST /api/v1/authorization/decisions
 | `Store Staff` | `STORE`-scoped: store read, rewards read / list, redemptions create |
 
 Seeded ABAC examples (`prisma/seed/authorization-kernel.ts`): *completed orders are immutable*
-(DENY), *payment update limit* (conditional ALLOW), *inventory same organization* (conditional ALLOW).
+(DENY), *payment update limit* (conditional ALLOW), *inventory same tenant* (conditional ALLOW).
 
 Permission rows are defined in code in `PERMISSION_DEFINITIONS`
 (`packages/shared/src/schemas/domain/rbac/permissions-registry.ts`), one row per

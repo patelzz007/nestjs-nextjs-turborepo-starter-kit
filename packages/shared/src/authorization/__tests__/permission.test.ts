@@ -13,7 +13,7 @@ import {
 	withResourceCapability,
 } from "../permission";
 import { PolicyConditionsSchema } from "../policy-dsl.schema";
-import { OrganizationMembershipRoleSchema } from "../../contexts/organizations/schemas/organization";
+import { MembershipRoleSchema } from "../../contexts/tenancy/schemas/tenant";
 
 describe("permission vocabulary", () => {
 	it("derives platform capability slugs from resource × action", () => {
@@ -52,7 +52,7 @@ describe("policy DSL schema", () => {
 	it("accepts nested all/any/condition rules", () => {
 		const parsed = PolicyConditionsSchema.safeParse({
 			all: [
-				{ condition: { field: "order.organizationId", operator: "equals", valueRef: "$user.organizationId" } },
+				{ condition: { field: "order.tenantId", operator: "equals", valueRef: "$user.tenantId" } },
 				{ any: [{ condition: { field: "order.status", operator: "not_equals", value: "COMPLETED" } }] },
 			],
 		});
@@ -103,7 +103,7 @@ describe("merchant role capabilities", () => {
 	});
 
 	it("lets every member read the store locations (the org context is member-wide on the API)", () => {
-		for (const role of OrganizationMembershipRoleSchema.options) {
+		for (const role of MembershipRoleSchema.options) {
 			expect(merchantRoleHasCapability(role, MERCHANT_CAPABILITY.viewLocations)).toBe(true);
 		}
 	});

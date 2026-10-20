@@ -133,12 +133,12 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
 	},
 
 	// Merchant orgs
-	{ action: "CREATE", resource: "MERCHANT_ORG", description: "Create merchant organizations", group: "Merchant" },
-	{ action: "READ", resource: "MERCHANT_ORG", description: "View merchant organization details", group: "Merchant" },
-	{ action: "UPDATE", resource: "MERCHANT_ORG", description: "Update merchant organizations", group: "Merchant" },
-	{ action: "DELETE", resource: "MERCHANT_ORG", description: "Delete merchant organizations", group: "Merchant" },
-	{ action: "LIST", resource: "MERCHANT_ORG", description: "List merchant organizations", group: "Merchant" },
-	{ action: "MANAGE", resource: "MERCHANT_ORG", description: "Full merchant organization management", group: "Merchant" },
+	{ action: "CREATE", resource: "MERCHANT_ORG", description: "Create merchant tenants", group: "Merchant" },
+	{ action: "READ", resource: "MERCHANT_ORG", description: "View merchant tenant details", group: "Merchant" },
+	{ action: "UPDATE", resource: "MERCHANT_ORG", description: "Update merchant tenants", group: "Merchant" },
+	{ action: "DELETE", resource: "MERCHANT_ORG", description: "Delete merchant tenants", group: "Merchant" },
+	{ action: "LIST", resource: "MERCHANT_ORG", description: "List merchant tenants", group: "Merchant" },
+	{ action: "MANAGE", resource: "MERCHANT_ORG", description: "Full merchant tenant management", group: "Merchant" },
 
 	// Redemptions
 	{ action: "CREATE", resource: "REDEMPTION", description: "Confirm redemptions at POS", group: "Redemptions" },

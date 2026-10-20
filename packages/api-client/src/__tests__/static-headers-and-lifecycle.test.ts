@@ -65,6 +65,28 @@ describe("ApiClientConfig.headers", () => {
 		expect(headersOf(firstFetchCall(fetchMock).init)["X-Device-Name"]).toBe("Override");
 	});
 
+	it("reads requestHeaders as each request is sent, so a changed value reaches the next call", async () => {
+		const fetchMock = stubFetch(() => Promise.resolve(jsonResponse(200, successEnvelope({ id: "user-1" }))));
+		let location = "loc-1";
+		const context = { ...mobileContext(new MemoryTokenProvider(PAIR)), requestHeaders: (): Readonly<Record<string, string>> => ({ "X-Location-Id": location }) };
+
+		await fetchQueryOrThrow(context, meDef, undefined);
+		location = "loc-2";
+		await fetchQueryOrThrow(context, meDef, undefined);
+
+		const [first, second] = fetchCalls(fetchMock).map(({ init }) => headersOf(init)["X-Location-Id"]);
+		expect([first, second]).toEqual(["loc-1", "loc-2"]);
+	});
+
+	it("lets a per-call header win over requestHeaders", async () => {
+		const fetchMock = stubFetch(() => Promise.resolve(jsonResponse(200, successEnvelope({ id: "user-1" }))));
+		const context = { ...mobileContext(new MemoryTokenProvider(PAIR)), requestHeaders: (): Readonly<Record<string, string>> => ({ "X-Location-Id": "loc-1" }) };
+
+		await fetchQueryOrThrow(context, meDef, undefined, { headers: { "X-Location-Id": "loc-call" } });
+
+		expect(headersOf(firstFetchCall(fetchMock).init)["X-Location-Id"]).toBe("loc-call");
+	});
+
 	it("sends the static headers with the body-token refresh too", async () => {
 		const fetchMock = stubFetch((input, init) => {
 			if (inputUrl(input) === REFRESH_URL) {

@@ -31,7 +31,7 @@ export type FileStatus = z.output<typeof FileStatusSchema>;
 
 /**
  * What a stored file is for. `REWARD_IMAGE` is one of the (1–10) images a
- * merchant shows on a reward: uploaded to the organization first, then named
+ * merchant shows on a reward: uploaded to the tenant first, then named
  * in the reward's `imageFileIds` (the first is the cover). `GITHUB_COMMENT_IMAGE`
  * is a picture an admin attaches to a GitHub comment from the app (ADR 052):
  * GitHub has no API for its own uploads, so it is uploaded here first — checked
@@ -331,7 +331,7 @@ export const CreateFileUploadUrlSchema = z
 		sizeBytes: z.number().int().positive(),
 		checksumSha256: z.string().length(64),
 		productId: z.uuid().optional(),
-		organizationId: z.uuid().optional(),
+		tenantId: z.uuid().optional(),
 		userId: z.uuid().optional(),
 		assetType: MerchantAssetTypeSchema.optional(),
 	})
@@ -340,8 +340,8 @@ export const CreateFileUploadUrlSchema = z
 		if (value.category === "PRODUCT_IMAGE" && value.productId === undefined) {
 			ctx.addIssue({ code: "custom", message: "productId is required for PRODUCT_IMAGE uploads", path: ["productId"] });
 		}
-		if ((value.category === "STORE_LOGO" || value.category === "STORE_BANNER") && value.organizationId === undefined) {
-			ctx.addIssue({ code: "custom", message: "organizationId is required for store asset uploads", path: ["organizationId"] });
+		if ((value.category === "STORE_LOGO" || value.category === "STORE_BANNER") && value.tenantId === undefined) {
+			ctx.addIssue({ code: "custom", message: "tenantId is required for store asset uploads", path: ["tenantId"] });
 		}
 		if ((value.category === "STORE_LOGO" || value.category === "STORE_BANNER") && value.assetType === undefined) {
 			ctx.addIssue({ code: "custom", message: "assetType is required for store asset uploads", path: ["assetType"] });
@@ -360,11 +360,11 @@ export const CreateFileUploadUrlSchema = z
 		if (value.category === "GITHUB_COMMENT_IMAGE" && value.userId === undefined) {
 			ctx.addIssue({ code: "custom", message: "userId is required for GITHUB_COMMENT_IMAGE uploads", path: ["userId"] });
 		}
-		if (value.category === "REWARD_IMAGE" && value.organizationId === undefined) {
-			ctx.addIssue({ code: "custom", message: "organizationId is required for REWARD_IMAGE uploads", path: ["organizationId"] });
+		if (value.category === "REWARD_IMAGE" && value.tenantId === undefined) {
+			ctx.addIssue({ code: "custom", message: "tenantId is required for REWARD_IMAGE uploads", path: ["tenantId"] });
 		}
-		if (value.category === "MERCHANT_KYB" && value.organizationId === undefined) {
-			ctx.addIssue({ code: "custom", message: "organizationId is required for MERCHANT_KYB uploads", path: ["organizationId"] });
+		if (value.category === "MERCHANT_KYB" && value.tenantId === undefined) {
+			ctx.addIssue({ code: "custom", message: "tenantId is required for MERCHANT_KYB uploads", path: ["tenantId"] });
 		}
 	});
 

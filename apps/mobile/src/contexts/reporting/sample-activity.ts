@@ -16,7 +16,7 @@ import { DAY_PART_HOURS, DayPartSchema, weekdayOf, type DayPart } from "./activi
 
 /** A shop the sample customer visits. */
 export interface SampleMerchant {
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly merchantName: string;
 	readonly category: MerchantBusinessCategory;
 	/** A usual bill there, in sen; each visit varies around it. */
@@ -30,7 +30,7 @@ export interface SampleMerchant {
 /** Most visited first: visits lean towards the top of the list. */
 export const SAMPLE_MERCHANTS: readonly SampleMerchant[] = [
 	{
-		organizationId: "6f1c2a4e-3b7d-4e9a-8c21-5d4f7a9b0e13",
+		tenantId: "6f1c2a4e-3b7d-4e9a-8c21-5d4f7a9b0e13",
 		merchantName: "Kopi Kaki",
 		category: "cafe",
 		typicalBillMinor: 1_450,
@@ -39,7 +39,7 @@ export const SAMPLE_MERCHANTS: readonly SampleMerchant[] = [
 		rewardValueMinor: 650,
 	},
 	{
-		organizationId: "a2d9e7c4-51b3-4f6e-9a08-7c3e2b1d4f56",
+		tenantId: "a2d9e7c4-51b3-4f6e-9a08-7c3e2b1d4f56",
 		merchantName: "Nasi Lemak Corner",
 		category: "restaurant",
 		typicalBillMinor: 2_200,
@@ -48,7 +48,7 @@ export const SAMPLE_MERCHANTS: readonly SampleMerchant[] = [
 		rewardValueMinor: 1_200,
 	},
 	{
-		organizationId: "c47e1b9a-8d2f-4a35-b6e1-0f9d3c7a2e84",
+		tenantId: "c47e1b9a-8d2f-4a35-b6e1-0f9d3c7a2e84",
 		merchantName: "Teh Tarik House",
 		category: "beverage",
 		typicalBillMinor: 900,
@@ -57,7 +57,7 @@ export const SAMPLE_MERCHANTS: readonly SampleMerchant[] = [
 		rewardValueMinor: 450,
 	},
 	{
-		organizationId: "e8b3f6d1-2c9a-47e5-a1d7-4b6c8e0f3a29",
+		tenantId: "e8b3f6d1-2c9a-47e5-a1d7-4b6c8e0f3a29",
 		merchantName: "Urban Threads",
 		category: "retail",
 		typicalBillMinor: 8_900,
@@ -66,7 +66,7 @@ export const SAMPLE_MERCHANTS: readonly SampleMerchant[] = [
 		rewardValueMinor: 2_000,
 	},
 	{
-		organizationId: "1d5a8c3f-7e2b-4c90-8f46-9a2e5d1b7c03",
+		tenantId: "1d5a8c3f-7e2b-4c90-8f46-9a2e5d1b7c03",
 		merchantName: "Starlight Cinemas",
 		category: "entertainment",
 		typicalBillMinor: 3_600,
@@ -75,7 +75,7 @@ export const SAMPLE_MERCHANTS: readonly SampleMerchant[] = [
 		rewardValueMinor: 1_800,
 	},
 	{
-		organizationId: "9b4e2d7a-6f1c-4b38-9e5a-3c8d0f2a6b71",
+		tenantId: "9b4e2d7a-6f1c-4b38-9e5a-3c8d0f2a6b71",
 		merchantName: "Serene Day Spa",
 		category: "wellness",
 		typicalBillMinor: 12_000,

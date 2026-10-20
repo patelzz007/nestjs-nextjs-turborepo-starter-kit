@@ -22,7 +22,7 @@ export function RewardMoreFromMerchant({ reward, detailPathPrefix }: RewardMoreF
 		listStateToListQuery(rewardListQuery, {
 			pagination: { page: 1, limit: MORE_OFFERS_SHOWN + 1 },
 			sort: "expiryDate",
-			filter: { organizationId: eqFilter(reward.organizationId) },
+			filter: { tenantId: eqFilter(reward.tenantId) },
 		}),
 	);
 	const others = (query.data?.data ?? []).filter((other) => other.id !== reward.id).slice(0, MORE_OFFERS_SHOWN);
@@ -33,7 +33,7 @@ export function RewardMoreFromMerchant({ reward, detailPathPrefix }: RewardMoreF
 	return (
 		<section aria-labelledby="reward-more-from-merchant" className="space-y-4">
 			<h2 id="reward-more-from-merchant" className="text-lg font-semibold tracking-tight">
-				{reward.organizationName === undefined ? "More from this merchant" : `More from ${reward.organizationName}`}
+				{reward.tenantName === undefined ? "More from this merchant" : `More from ${reward.tenantName}`}
 			</h2>
 			<ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				{others.map((other) => (

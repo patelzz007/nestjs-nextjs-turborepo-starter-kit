@@ -49,9 +49,9 @@ export const apiRoutes = {
     list: "/rewards",                                       // static
     detail: "/rewards/:rewardId",                           // parameterized
   },
-  organizations: {
+  tenants: {
     rewards: {
-      publish: "/orgs/:orgSlug/rewards/:rewardId/publish",
+      publish: "/tenants/:tenantSlug/rewards/:rewardId/publish",
     },
   },
 } satisfies Record<string, RouteTree>;
@@ -289,7 +289,7 @@ public get(@ZodParams(ProductIdParamSchema) params: { id: string }) { … }
   typed filter AST; the `sort` / `filter` parameter descriptions list the whitelisted fields. The
   grammar, the Prisma translators and the client adapter are in [List queries](./list-queries.md).
 - `@ZodParams(schema)` validates the whole `params` object, so its schema must cover **every**
-  `:segment` of the route (extend `OrganizationSlugParamSchema` rather than mixing it with a bare
+  `:segment` of the route (extend `TenantSlugParamSchema` rather than mixing it with a bare
   `@Param("otherId")`).
 
 ### Responses — documented AND enforced, from the same zod schema
@@ -389,7 +389,7 @@ typically a UUID generated once per user action and reused for every retry of th
 **Scope.** A key lives in `http:<principal>|org:<id>:store:<id>:loc:<id>|<METHOD> <route template>`:
 the principal is `user:<id>` (plus `:as:<impersonator>` while impersonating) or `key:<apiKeyId>`,
 and the tenant is the server-verified one from the request context (never a raw header) — the same
-user can never replay one organization's response in another.
+user can never replay one tenant's response in another.
 
 **Ledger.** `PlatformResourceIdempotencyRecord` (RLS bypass-only, `http.idempotency` system
 operation). A row is `IN_PROGRESS` with a 60-second lease and a fresh **fencing token**

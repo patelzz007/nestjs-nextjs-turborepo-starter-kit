@@ -121,7 +121,7 @@ export type AdminAlertEmailProps = z.output<typeof AdminAlertEmailPropsSchema>;
 export const ApiKeyCreatedEmailPropsSchema = BaseEmailPropsSchema.extend({
 	keyName: z.string().min(1),
 	createdAt: EpochMsSchema,
-	/** Absolute URL of the organization's API-keys page (merchant app, org-scoped). */
+	/** Absolute URL of the tenant's API-keys page (merchant app, org-scoped). */
 	manageKeysUrl: z.url(),
 }).strict();
 
@@ -156,7 +156,7 @@ export const MerchantInviteEmailPropsSchema = BaseEmailPropsSchema.extend({
 export type MerchantInviteEmailProps = z.output<typeof MerchantInviteEmailPropsSchema>;
 
 export const TeamMemberInviteEmailPropsSchema = BaseEmailPropsSchema.extend({
-	organizationName: z.string().min(1),
+	tenantName: z.string().min(1),
 	roleLabel: z.string().min(1),
 	locationSummary: z.string().min(1),
 	inviteUrl: z.url(),

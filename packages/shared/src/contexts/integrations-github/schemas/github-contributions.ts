@@ -15,7 +15,7 @@ import { EpochMsSchema } from "../../../schemas/api/common";
 
 // ── Identifiers ────────────────────────────────────────────────────────────
 
-/** GitHub's own limit on a user or organization login. */
+/** GitHub's own limit on a user or tenant login. */
 export const GITHUB_OWNER_MAX_LENGTH = 39;
 /** GitHub's own limit on a repository name. */
 export const GITHUB_REPOSITORY_NAME_MAX_LENGTH = 100;
@@ -27,13 +27,13 @@ const GITHUB_REPOSITORY_NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
 /** `.` and `..` match the pattern above but GitHub reserves them. */
 const RESERVED_REPOSITORY_NAMES: readonly string[] = [".", ".."];
 
-/** A GitHub user or organization login (`vercel`, `octo-org`). */
+/** A GitHub user or tenant login (`vercel`, `octo-org`). */
 export const GithubOwnerSchema = z
 	.string()
 	.min(1)
 	.max(GITHUB_OWNER_MAX_LENGTH)
-	.regex(GITHUB_OWNER_PATTERN, "must be a GitHub user or organization name")
-	.meta({ description: "GitHub user or organization", example: "octo-org" });
+	.regex(GITHUB_OWNER_PATTERN, "must be a GitHub user or tenant name")
+	.meta({ description: "GitHub user or tenant", example: "octo-org" });
 
 /** A GitHub repository name (`next.js`, `hello-world`). */
 export const GithubRepositoryNameSchema = z

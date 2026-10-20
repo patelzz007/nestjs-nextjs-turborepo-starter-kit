@@ -47,7 +47,8 @@
 						{
 							"title": "Invites",
 							"url": "/merchants/invites",
-							"icon": "Send"
+							"icon": "Send",
+							"featureFlag": "merchant-invites"
 						},
 						{
 							"title": "Verification",

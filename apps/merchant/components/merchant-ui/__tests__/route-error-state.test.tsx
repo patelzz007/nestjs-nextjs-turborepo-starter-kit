@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import MerchantOrgPageError from "@/app/orgs/[orgSlug]/error";
+import MerchantOrgPageError from "@/app/t/[tenantSlug]/error";
 
 afterEach((): void => {
 	cleanup();
@@ -12,7 +12,7 @@ afterEach((): void => {
 describe("MerchantOrgPageError", () => {
 	it("shows a user-safe message with the support reference, never the error's own text, and retries", () => {
 		const retry = vi.fn();
-		const error = Object.assign(new Error("organizations.analytics failed during server render: HTTP 503"), { digest: "abc123" });
+		const error = Object.assign(new Error("tenants.analytics failed during server render: HTTP 503"), { digest: "abc123" });
 		render(<MerchantOrgPageError error={error} retry={retry} />);
 
 		expect(screen.getByRole("alert").textContent).toContain("abc123");

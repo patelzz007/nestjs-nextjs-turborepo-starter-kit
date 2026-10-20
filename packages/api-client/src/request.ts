@@ -72,6 +72,12 @@ export interface ApiRequestContext {
 	readonly appVersion?: string | undefined;
 	/** Static headers sent with every request (`ApiClientConfig.headers`); a per-call header of the same name wins. */
 	readonly headers?: Readonly<Record<string, string>> | undefined;
+	/**
+	 * Headers read when each request is sent, after the static ones — for values that change while the
+	 * client lives (the merchant console's current tenant and store). A procedure or per-call header of
+	 * the same name wins.
+	 */
+	readonly requestHeaders?: (() => Readonly<Record<string, string>>) | undefined;
 }
 
 /** Context for lifecycle calls that must bypass the 401 refresh pipeline (refresh / logout). */
@@ -354,6 +360,7 @@ function procedureHeaders<Input extends SerializableInput, Resp extends DataValu
 		context.clientType,
 		{
 			...context.headers,
+			...context.requestHeaders?.(),
 			...def.baseOptions?.headers,
 			...options?.headers,
 		},
@@ -461,6 +468,7 @@ export class TokenTransportRequiredError extends Error {
 export async function fetchBodyTokenLifecycleMutation<Resp extends DataValue>(
 	context: ApiRequestContext,
 	def: MutationDef<RefreshTokenInput, Resp>,
+	options?: ProcedureCallOptions,
 ): Promise<ApiResponse<Resp>> {
 	const transport = context.transport;
 	if (transport?.kind !== "token") {
@@ -472,6 +480,7 @@ export async function fetchBodyTokenLifecycleMutation<Resp extends DataValue>(
 		{ baseUrl: context.baseUrl, clientType: context.clientType, appVersion: context.appVersion, headers: context.headers, transport: ANONYMOUS_TOKEN_REQUEST_TRANSPORT },
 		def,
 		input,
+		options,
 	);
 }
 

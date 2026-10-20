@@ -15,7 +15,7 @@ interface RewardOverrides {
 	readonly title?: string;
 	readonly quantityRemaining?: number;
 	readonly expiryDate?: number;
-	readonly organizationName?: string;
+	readonly tenantName?: string;
 }
 
 /** A complete, schema-valid reward; `overrides` set only what a case is about. */
@@ -23,10 +23,10 @@ function reward(overrides: RewardOverrides = {}): RewardResponse {
 	sequence += 1;
 	return RewardResponseSchema.parse({
 		id: `00000000-0000-4000-8000-${String(sequence).padStart(12, "0")}`,
-		organizationId: "00000000-0000-4000-8000-0000000000aa",
-		organizationName: "Brew & Bean KL",
-		organizationLogoUrl: null,
-		organizationLogoSources: [],
+		tenantId: "00000000-0000-4000-8000-0000000000aa",
+		tenantName: "Brew & Bean KL",
+		tenantLogoUrl: null,
+		tenantLogoSources: [],
 		title: `Offer ${String(sequence)}`,
 		description: "A reward",
 		rewardType: "FREE_ITEM",
@@ -104,17 +104,17 @@ describe("selectFeaturedOffers", () => {
 describe("selectMerchantNames", () => {
 	it("names each merchant once, in first-seen order, skipping blank names", () => {
 		const rewards = [
-			reward({ organizationName: "Brew & Bean KL" }),
-			reward({ organizationName: "Jonker Street Kitchen" }),
-			reward({ organizationName: "Brew & Bean KL" }),
-			reward({ organizationName: "  " }),
+			reward({ tenantName: "Brew & Bean KL" }),
+			reward({ tenantName: "Jonker Street Kitchen" }),
+			reward({ tenantName: "Brew & Bean KL" }),
+			reward({ tenantName: "  " }),
 		];
 
 		expect(selectMerchantNames(rewards)).toEqual(["Brew & Bean KL", "Jonker Street Kitchen"]);
 	});
 
 	it("caps the list", () => {
-		const rewards = ["A", "B", "C"].map((name: string) => reward({ organizationName: name }));
+		const rewards = ["A", "B", "C"].map((name: string) => reward({ tenantName: name }));
 
 		expect(selectMerchantNames(rewards, 2)).toEqual(["A", "B"]);
 	});

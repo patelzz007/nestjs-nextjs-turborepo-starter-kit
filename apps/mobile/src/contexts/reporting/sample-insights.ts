@@ -44,9 +44,9 @@ function rewardOf(visit: DatedVisit): VisitReward {
 
 function activityVisitOf(visit: DatedVisit, index: number): ActivityVisit {
 	return {
-		id: `${String(visit.dayStartMs)}-${String(index)}-${visit.merchant.organizationId}`,
+		id: `${String(visit.dayStartMs)}-${String(index)}-${visit.merchant.tenantId}`,
 		at: EpochMsSchema.parse(visit.dayStartMs + visit.minuteOfDay * MINUTE_MS),
-		organizationId: visit.merchant.organizationId,
+		tenantId: visit.merchant.tenantId,
 		merchantName: visit.merchant.merchantName,
 		category: visit.merchant.category,
 		billMinor: visit.billMinor,
@@ -93,9 +93,9 @@ function savedOf(visits: readonly DatedVisit[]): number {
 function stampCardsOf(range: AnalyticsReportRange): readonly StampCard[] {
 	const visits = visitsOf(daysOf(range.to - STAMP_WINDOW_DAYS * DAY_MS, range.to));
 	return SAMPLE_MERCHANTS.map((merchant: SampleMerchant): StampCard => {
-		const count = visits.filter((visit: DatedVisit): boolean => visit.merchant.organizationId === merchant.organizationId).length;
+		const count = visits.filter((visit: DatedVisit): boolean => visit.merchant.tenantId === merchant.tenantId).length;
 		return {
-			organizationId: merchant.organizationId,
+			tenantId: merchant.tenantId,
 			merchantName: merchant.merchantName,
 			rewardName: merchant.rewardName,
 			stamps: count % merchant.stampsPerReward,

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { PermissionActionSchema, PermissionResourceSchema, type PermissionAction, type PermissionResource } from "../contexts/authorization/schemas/permission-enums";
 import { toPlatformCapabilitySlug, type CapabilitySlug } from "../contexts/authorization/schemas/capabilities";
-import type { OrganizationMembershipRole } from "../contexts/organizations/schemas/organization";
+import type { MembershipRole } from "../contexts/tenancy/schemas/tenant";
 
 /**
  * Shared permission vocabulary for the frontend and backend.
@@ -58,7 +58,7 @@ export const PERMISSION: PermissionRegistry = {
 	ORDER: actionSlugs("ORDER"),
 	PAYMENT: actionSlugs("PAYMENT"),
 	INVENTORY: actionSlugs("INVENTORY"),
-	ORGANIZATION: actionSlugs("ORGANIZATION"),
+	TENANT: actionSlugs("TENANT"),
 	LOCATION: actionSlugs("LOCATION"),
 	STORE: actionSlugs("STORE"),
 	GITHUB: actionSlugs("GITHUB"),
@@ -66,7 +66,7 @@ export const PERMISSION: PermissionRegistry = {
 };
 
 /**
- * Merchant-app capability slugs (organization-scoped, granted per membership
+ * Merchant-app capability slugs (tenant-scoped, granted per membership
  * role by the API's tenant policies). Same `can()` / `<Can>` API as platform
  * permissions: `can(MERCHANT_CAPABILITY.manageRewards)`.
  *
@@ -97,7 +97,7 @@ export interface MerchantCapabilityRegistry {
 	readonly viewAnalytics: MerchantCapability;
 	/** Team roster, invitations, and revocations. */
 	readonly manageTeam: MerchantCapability;
-	/** Read the organization's store locations (membership context — every member). */
+	/** Read the tenant's store locations (membership context — every member). */
 	readonly viewLocations: MerchantCapability;
 	/** Request / resubmit store locations and change store branding. */
 	readonly manageLocations: MerchantCapability;
@@ -121,10 +121,10 @@ export const MERCHANT_CAPABILITY: MerchantCapabilityRegistry = {
 /**
  * Tenant Cedar action the API evaluates after the membership-role table for
  * each merchant capability (Cedar may only narrow the role table). `null`
- * marks a capability satisfied by organization membership itself (the
+ * marks a capability satisfied by tenant membership itself (the
  * dashboard, the store list, store branding reads); asking the API to enforce
  * one of those fails closed. A `Record`, so a new capability fails to compile
- * until it is mapped here. Shared by the organizations (capability gate) and
+ * until it is mapped here. Shared by the tenants (capability gate) and
  * authorization (Cedar schema) contexts.
  */
 export const MERCHANT_CAPABILITY_CEDAR_ACTIONS: Readonly<Record<MerchantCapability, string | null>> = {
@@ -141,7 +141,7 @@ export const MERCHANT_CAPABILITY_CEDAR_ACTIONS: Readonly<Record<MerchantCapabili
 };
 
 /**
- * Baseline merchant capabilities per organization membership role — the single
+ * Baseline merchant capabilities per tenant membership role — the single
  * table both the API (before tenant Cedar policies, which may only narrow it)
  * and the merchant app derive from.
  *
@@ -158,7 +158,7 @@ const OWNER_ONLY_MERCHANT_CAPABILITIES: readonly MerchantCapability[] = [MERCHAN
 
 const MEMBER_MERCHANT_CAPABILITIES: readonly MerchantCapability[] = [MERCHANT_CAPABILITY.viewDashboard, MERCHANT_CAPABILITY.viewLocations];
 
-export const MERCHANT_ROLE_CAPABILITIES: Readonly<Record<OrganizationMembershipRole, readonly MerchantCapability[]>> = {
+export const MERCHANT_ROLE_CAPABILITIES: Readonly<Record<MembershipRole, readonly MerchantCapability[]>> = {
 	OWNER: ALL_MERCHANT_CAPABILITIES,
 	ADMIN: ALL_MERCHANT_CAPABILITIES.filter((capability) => !OWNER_ONLY_MERCHANT_CAPABILITIES.includes(capability)),
 	CASHIER: [
@@ -173,7 +173,7 @@ export const MERCHANT_ROLE_CAPABILITIES: Readonly<Record<OrganizationMembershipR
 };
 
 /** Whether a membership role holds a merchant capability (fails closed on unknown slugs). */
-export function merchantRoleHasCapability(role: OrganizationMembershipRole, capability: string): boolean {
+export function merchantRoleHasCapability(role: MembershipRole, capability: string): boolean {
 	const parsed = MerchantCapabilitySchema.safeParse(capability);
 	return parsed.success && MERCHANT_ROLE_CAPABILITIES[role].includes(parsed.data);
 }

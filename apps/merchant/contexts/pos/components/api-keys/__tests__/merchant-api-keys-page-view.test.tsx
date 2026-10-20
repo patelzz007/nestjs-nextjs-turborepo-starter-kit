@@ -6,15 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { API_KEY_STATS_LOADING_LABELS, MerchantApiKeysPageView } from "@/contexts/pos/components/api-keys/merchant-api-keys-page-view";
 import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
 import { testEnvelope } from "@/test/envelope";
-import {
-	contextQueryState,
-	organizationContextFixture,
-	STORE_A_LOCATION,
-	STORE_B_LOCATION,
-	twoStoreSeed,
-	TWO_STORE_CONTEXT,
-	type ContextQueryState,
-} from "@/test/tenant-context";
+import { contextQueryState, tenantContextFixture, STORE_A_LOCATION, STORE_B_LOCATION, twoStoreSeed, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
 import { STORE_A, STORE_B } from "@/test/terminals";
 import { ApiError } from "@workspace/client/lib/api/use-api";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
@@ -32,7 +24,7 @@ import { API_KEY_LIST_LOADING_LABELS } from "@/contexts/pos/components/api-keys/
 import { MERCHANT_API_KEYS_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
 import { busyRegionAnnouncements } from "@/test/skeleton";
 
-type ApiKeysListInput = Parameters<typeof apiRouter.organizations.apiKeys.list.queryKey>[0];
+type ApiKeysListInput = Parameters<typeof apiRouter.tenants.apiKeys.list.queryKey>[0];
 
 interface ApiKeysListOptions {
 	readonly initialData?: Envelope<MerchantApiKeySummary[]>;
@@ -66,7 +58,7 @@ const { apiKeysListQuery, contextQuery, createMutation, revokeMutation, createMu
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
 		api: {
-			organizations: {
+			tenants: {
 				apiKeys: {
 					list: { useQuery: apiKeysListQuery },
 					create: { useMutation: createMutation },
@@ -85,7 +77,7 @@ vi.mock("next/navigation", async (importOriginal) => {
 	return { ...actual, useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search) };
 });
 
-const PATH = `/orgs/${TEST_ORG_SLUG}/api-keys`;
+const PATH = `/t/${TEST_ORG_SLUG}/api-keys`;
 const NOW = 1_790_812_800_000;
 
 function apiKey(id: string, name: string, revokedAt: number | null): MerchantApiKeySummary {
@@ -163,7 +155,7 @@ function mutationState(mutate: (input: object) => void, error: Error | null = nu
 }
 
 function renderAsAdmin(): void {
-	renderWithAuthorization(<MerchantApiKeysPageView orgSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(null) });
+	renderWithAuthorization(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(null) });
 }
 
 beforeEach((): void => {
@@ -210,7 +202,7 @@ describe("MerchantApiKeysPageView authorization", () => {
 	});
 
 	it("renders the access-denied page and never lists keys without the capability", () => {
-		renderWithAuthorization(<MerchantApiKeysPageView orgSlug={TEST_ORG_SLUG} />, { role: "CASHIER" });
+		renderWithAuthorization(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />, { role: "CASHIER" });
 
 		expect(screen.getByText("Owner or admin access required")).toBeTruthy();
 		expect(screen.queryByRole("button", { name: "Create API key" })).toBeNull();
@@ -218,7 +210,7 @@ describe("MerchantApiKeysPageView authorization", () => {
 	});
 
 	it("renders the loading state while the membership resolves", () => {
-		renderWithAuthorization(<MerchantApiKeysPageView orgSlug={TEST_ORG_SLUG} />, { isLoading: true });
+		renderWithAuthorization(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />, { isLoading: true });
 
 		expect(busyRegionAnnouncements()).toEqual([MERCHANT_API_KEYS_LOADING_LABELS.loading]);
 		expect(screen.queryByText("Owner or admin access required")).toBeNull();
@@ -229,7 +221,7 @@ describe("MerchantApiKeysPageView totals and filters (server-side)", () => {
 	it("asks the API to filter the status view instead of filtering one loaded page", () => {
 		renderAsAdmin();
 
-		expect(apiKeysListQuery).toHaveBeenCalledWith(expect.objectContaining({ orgSlug: TEST_ORG_SLUG, page: 1, filter: { revokedAt: { isNull: true } } }), expect.anything());
+		expect(apiKeysListQuery).toHaveBeenCalledWith(expect.objectContaining({ tenantSlug: TEST_ORG_SLUG, page: 1, filter: { revokedAt: { isNull: true } } }), expect.anything());
 		expect(apiKeysListQuery).toHaveBeenCalledWith(expect.objectContaining({ filter: { revokedAt: { isNull: false } } }), expect.anything());
 	});
 
@@ -260,7 +252,7 @@ describe("MerchantApiKeysPageView totals and filters (server-side)", () => {
 
 	it("opens on active keys and pushes revoked or all to the URL", () => {
 		const pushState = vi.spyOn(window.history, "pushState");
-		const view = renderWithAuthorization(<MerchantApiKeysPageView orgSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(null) });
+		const view = renderWithAuthorization(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(null) });
 		const list = (): HTMLElement => screen.getByRole("region", { name: "Terminal keys" });
 
 		expect(within(list()).queryByText("Old tablet")).toBeNull();
@@ -268,7 +260,7 @@ describe("MerchantApiKeysPageView totals and filters (server-side)", () => {
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(window.location.search).toBe("?status=revoked");
 
-		view.rerender(<MerchantApiKeysPageView orgSlug={TEST_ORG_SLUG} />);
+		view.rerender(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />);
 		expect(within(list()).getByText("Old tablet")).toBeTruthy();
 		expect(within(list()).queryByText("Front counter")).toBeNull();
 
@@ -309,7 +301,7 @@ describe("MerchantApiKeysPageView totals and filters (server-side)", () => {
 });
 
 describe("MerchantApiKeysPageView create", () => {
-	it("needs an explicit store under All locations — it never silently creates an organization-wide key", async () => {
+	it("needs an explicit store under All locations — it never silently creates a tenant-wide key", async () => {
 		renderAsAdmin();
 
 		fireEvent.change(screen.getByLabelText("Terminal name"), { target: { value: "Back office" } });
@@ -320,31 +312,31 @@ describe("MerchantApiKeysPageView create", () => {
 		expect(screen.getByLabelText("Store").textContent).toContain(STORE_B.name);
 		fireEvent.click(screen.getByRole("button", { name: "Create API key" }));
 
-		expect(createMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, name: "Back office", locationId: STORE_B.id, scope: "POS" });
+		expect(createMutate).toHaveBeenCalledWith({ tenantSlug: TEST_ORG_SLUG, name: "Back office", locationId: STORE_B.id, scope: "POS" });
 	});
 
-	it("offers organization-wide keys only to an all-locations member", async () => {
+	it("offers tenant-wide keys only to an all-locations member", async () => {
 		renderAsAdmin();
 		fireEvent.click(screen.getByLabelText("Store"));
-		expect(await screen.findByRole("option", { name: "Every store (organization-wide)" })).toBeTruthy();
+		expect(await screen.findByRole("option", { name: "Every store (tenant-wide)" })).toBeTruthy();
 		cleanup();
 
-		const limited = organizationContextFixture({ locations: [STORE_A_LOCATION, STORE_B_LOCATION], locationScopeType: "SELECTED", locationIds: [STORE_B.id] });
+		const limited = tenantContextFixture({ locations: [STORE_A_LOCATION, STORE_B_LOCATION], locationScopeType: "SELECTED", locationIds: [STORE_B.id] });
 		contextQuery.mockReturnValue(contextQueryState(limited));
-		renderWithAuthorization(<MerchantApiKeysPageView orgSlug={TEST_ORG_SLUG} />, {
+		renderWithAuthorization(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />, {
 			role: "ADMIN",
-			tenantContext: { initialLocationId: null, initialOrganizationContext: testEnvelope(limited) },
+			tenantContext: { initialLocationId: null, initialTenantContext: testEnvelope(limited) },
 		});
 
 		expect(screen.getByLabelText("Store").textContent).toContain(STORE_B.name);
 		fireEvent.click(screen.getByLabelText("Store"));
 		expect(await screen.findByRole("option", { name: STORE_B.name })).toBeTruthy();
-		expect(screen.queryByRole("option", { name: "Every store (organization-wide)" })).toBeNull();
+		expect(screen.queryByRole("option", { name: "Every store (tenant-wide)" })).toBeNull();
 		expect(screen.queryByRole("option", { name: STORE_A.name })).toBeNull();
 	});
 
 	it("preselects the store in view", () => {
-		renderWithAuthorization(<MerchantApiKeysPageView orgSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(STORE_A.id) });
+		renderWithAuthorization(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(STORE_A.id) });
 
 		fireEvent.click(screen.getByRole("button", { name: "Create API key" }));
 
@@ -354,12 +346,12 @@ describe("MerchantApiKeysPageView create", () => {
 	it("creates a key from the trimmed name, switches to active keys and shows its secret once", async () => {
 		window.history.replaceState(null, "", `${PATH}?status=revoked`);
 		const replaceState = vi.spyOn(window.history, "replaceState");
-		renderWithAuthorization(<MerchantApiKeysPageView orgSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(STORE_A.id) });
+		renderWithAuthorization(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(STORE_A.id) });
 
 		fireEvent.change(screen.getByLabelText("Terminal name"), { target: { value: "  Back office  " } });
 		fireEvent.click(screen.getByRole("button", { name: "Create API key" }));
 
-		expect(createMutate).toHaveBeenCalledWith(expect.objectContaining({ orgSlug: TEST_ORG_SLUG, name: "Back office" }));
+		expect(createMutate).toHaveBeenCalledWith(expect.objectContaining({ tenantSlug: TEST_ORG_SLUG, name: "Back office" }));
 		expect(replaceState).toHaveBeenCalledTimes(1);
 		expect(window.location.search).toBe("");
 		const notice = await screen.findByRole("status", { name: /Copy “Back office” now/u });
@@ -371,17 +363,17 @@ describe("MerchantApiKeysPageView create", () => {
 
 	it("shows why a create failed and keeps the input", () => {
 		createMutation.mockImplementation((): MutationState => mutationState(createMutate, new ApiError({ message: "Forbidden", error: "FORBIDDEN", statusCode: 403 })));
-		renderWithAuthorization(<MerchantApiKeysPageView orgSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(STORE_A.id) });
+		renderWithAuthorization(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(STORE_A.id) });
 
 		expect(within(screen.getByRole("region", { name: "Create a terminal key" })).getByRole("alert").textContent).not.toBe("");
 		expect(screen.getByLabelText("Terminal name")).toHaveProperty("value", "POS Terminal");
 	});
 
-	it("shows the API's refusal of an organization-wide key on the Store field", () => {
+	it("shows the API's refusal of a tenant-wide key on the Store field", () => {
 		createMutation.mockImplementation((): MutationState =>
 			mutationState(createMutate, new ApiError({ message: "Choose one of your stores", error: MerchantErrorCodes.API_KEY_LOCATION_REQUIRED, statusCode: 403 })),
 		);
-		renderWithAuthorization(<MerchantApiKeysPageView orgSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(STORE_A.id) });
+		renderWithAuthorization(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(STORE_A.id) });
 
 		const store = screen.getByLabelText("Store");
 		expect(store.getAttribute("aria-invalid")).toBe("true");
@@ -389,7 +381,7 @@ describe("MerchantApiKeysPageView create", () => {
 	});
 
 	it("creates a POS key by default and an integration key when chosen", async () => {
-		renderWithAuthorization(<MerchantApiKeysPageView orgSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(STORE_A.id) });
+		renderWithAuthorization(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(STORE_A.id) });
 
 		expect(screen.getByLabelText("Access").textContent).toContain("POS terminal");
 		await chooseInSelect(document.body, "Access", "Integration");
@@ -405,7 +397,7 @@ describe("MerchantApiKeysPageView create", () => {
 	});
 
 	it("does not submit a blank terminal name", () => {
-		renderWithAuthorization(<MerchantApiKeysPageView orgSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(STORE_A.id) });
+		renderWithAuthorization(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(STORE_A.id) });
 
 		fireEvent.change(screen.getByLabelText("Terminal name"), { target: { value: "   " } });
 
@@ -424,7 +416,7 @@ describe("MerchantApiKeysPageView revoke", () => {
 
 		fireEvent.click(within(dialog).getByRole("button", { name: "Revoke key" }));
 		await waitFor(() => {
-			expect(revokeMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, keyId: ACTIVE_KEY.id });
+			expect(revokeMutate).toHaveBeenCalledWith({ tenantSlug: TEST_ORG_SLUG, keyId: ACTIVE_KEY.id });
 		});
 	});
 
@@ -449,7 +441,7 @@ describe("MerchantApiKeysPageView server prefetch (no double fetch)", () => {
 		const active = envelope([ACTIVE_KEY], 1);
 		const revokedCount = envelope([REVOKED_KEY], 9);
 		renderWithAuthorization(
-			<MerchantApiKeysPageView orgSlug={TEST_ORG_SLUG} initialKeys={{ locationId: STORE_A.id, data: { list: { stateKey: "", data: active }, active, revokedCount } }} />,
+			<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} initialKeys={{ locationId: STORE_A.id, data: { list: { stateKey: "", data: active }, active, revokedCount } }} />,
 			{ role: "ADMIN", tenantContext: twoStoreSeed(STORE_A.id) },
 		);
 
@@ -463,7 +455,7 @@ describe("MerchantApiKeysPageView server prefetch (no double fetch)", () => {
 		const active = envelope([ACTIVE_KEY], 1);
 		renderWithAuthorization(
 			<MerchantApiKeysPageView
-				orgSlug={TEST_ORG_SLUG}
+				tenantSlug={TEST_ORG_SLUG}
 				initialKeys={{ locationId: undefined, data: { list: { stateKey: "", data: active }, active, revokedCount: active } }}
 			/>,
 			{ role: "ADMIN", tenantContext: twoStoreSeed(STORE_A.id) },

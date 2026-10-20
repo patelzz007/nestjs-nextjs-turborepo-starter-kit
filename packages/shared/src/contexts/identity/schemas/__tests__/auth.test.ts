@@ -54,7 +54,7 @@ describe("LoginClientResponseSchema (every variant round-trips intact)", () => {
 			enrollmentReason: "mfa_enrollment",
 			message: "Complete MFA enrollment to continue.",
 			user,
-			organizationSlug: "acme-coffee",
+			tenantSlug: "acme-coffee",
 		};
 
 		expect(LoginClientResponseSchema.parse(payload)).toEqual(payload);

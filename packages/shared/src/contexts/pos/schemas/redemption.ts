@@ -3,7 +3,7 @@ import { z } from "zod";
 import { EpochMsSchema } from "../../../schemas/api/common";
 import { defineListQuery, listFilter } from "../../../schemas/api/list-query";
 import { RewardBackupCodeSchema } from "../../claims/schemas/claim-enums";
-import { OrganizationLocationFilterSchema } from "../../organizations/schemas/location-filter";
+import { LocationFilterSchema } from "../../tenancy/schemas/location-filter";
 import { REWARD_LIST_DEFAULT_LIMIT } from "../../rewards/schemas/reward";
 import { RewardTypeSchema } from "../../rewards/schemas/reward-enums";
 import { RewardRedemptionMethodSchema } from "./pos-enums";
@@ -11,7 +11,7 @@ import { RewardRedemptionMethodSchema } from "./pos-enums";
 // ── POS redemption: validate / checkout at the till, and the merchant's redemption history ──
 
 /**
- * `GET /orgs/:orgSlug/redemptions` list query. `locationId` is an authorization SCOPE (checked against the member's stores), not a filter.
+ * `GET /tenants/:tenantSlug/redemptions` list query. `locationId` is an authorization SCOPE (checked against the member's stores), not a filter.
  * `filter[redeemedAt][gte]` / `[lt]` narrow to a time window — e.g. "today" in the viewer's time zone; the response's
  * `meta.total` is then the server-side count of that window (never a count of the rows on one page).
  */
@@ -21,7 +21,7 @@ export const merchantRedemptionListQuery = defineListQuery({
 	filter: {
 		redeemedAt: listFilter.epochMs({ gte: true, lt: true }),
 	},
-	params: OrganizationLocationFilterSchema.shape,
+	params: LocationFilterSchema.shape,
 	defaultLimit: REWARD_LIST_DEFAULT_LIMIT,
 });
 
@@ -98,7 +98,7 @@ export const MAX_BILL_TOTAL_MINOR = 100_000_000;
 export const MINOR_UNITS_PER_MAJOR = 100;
 
 /**
- * `POST /redemptions/checkout` — after the customer has paid, the POS reports
+ * `POST /integration/redemptions/checkout` — after the customer has paid, the POS reports
  * the bill and every reward redeemed on it. All-or-nothing: if any code is
  * invalid nothing is redeemed. Idempotent: retrying with the same
  * `idempotencyKey` and payload replays the original result.
@@ -117,7 +117,7 @@ export type RedemptionCheckoutInput = z.output<typeof RedemptionCheckoutSchema>;
 /**
  * Why a scanned code cannot be redeemed right now (`null` when it can).
  * `STORE_REQUIRED`: the reward is limited to selected stores, but the call
- * carries no store (an organization-wide key with an unregistered terminal id),
+ * carries no store (a tenant-wide key with an unregistered terminal id),
  * so the till must be registered to its store first.
  */
 export const RedemptionInvalidReasonSchema = z.enum(["ALREADY_REDEEMED", "EXPIRED", "NOT_VALID_AT_STORE", "STORE_REQUIRED"]);

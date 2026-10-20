@@ -19,7 +19,7 @@ page describes what the API does today.
 Every request gets a correlation id (from `X-Correlation-Id` if the caller sent one, otherwise
 generated). It is returned in the `X-Correlation-Id` response header and in `meta.correlationId` of
 every response — success or error — and stamped on every log line written while handling that
-request, together with `userId`, `impersonatorId` and `organizationId` once known (one typed request
+request, together with `userId`, `impersonatorId` and `tenantId` once known (one typed request
 context, [ADR 017](../../adr/017-unified-request-context.md)). Quote it in bug reports.
 
 ## Logs
@@ -34,8 +34,8 @@ context, [ADR 017](../../adr/017-unified-request-context.md)). Quote it in bug r
   actor and correlation id ([Database security](../security/database-security.md)). Outside a
   request (jobs, workers) `TenantTransactionService` generates one correlation id per transaction;
   it is written to the transaction (`app.correlation_id`) and to that log line, and rows that record
-  a correlation id (for example `OrganizationLifecycleEvent`, via
-  `OrganizationLifecycleEventRecorder`) read it back from the transaction, so the row and the log
+  a correlation id (for example `TenantLifecycleEvent`, via
+  `TenantLifecycleEventRecorder`) read it back from the transaction, so the row and the log
   line always agree.
 
 ### Redaction
@@ -102,7 +102,7 @@ service.
 Every HTTP request — reads included, successful or refused — writes exactly one append-only row
 to `AuditLog` (only the automated health probes `/health/live`, `/health/ready`, `/health` and SSE
 streams are exempt): user, impersonator and impersonation session, credential (session cookie /
-bearer token / refresh cookie / API key), organization, epoch-ms time and duration, method and
+bearer token / refresh cookie / API key), tenant, epoch-ms time and duration, method and
 route, sanitized request and response, outcome, IP with its version and address class (public,
 private, loopback, carrier NAT …), user agent parsed into browser / OS / device type / model,
 the client's country / region / city / time zone from the CDN edge (trusted proxies only), client

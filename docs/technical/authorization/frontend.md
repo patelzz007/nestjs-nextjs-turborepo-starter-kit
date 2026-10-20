@@ -118,7 +118,7 @@ MERCHANT_CAPABILITY.manageRewards  // "merchant:manage_rewards"
 |---|---|---|
 | Admin | `GET /auth/permissions`, preloaded on the server in `app/(panel)/layout.tsx`, then `useSessionPermissionsQuery()` (`lib/session/capabilities.ts`) | refetch on window focus + every 60 s; **live data wins even when empty** (a user whose permissions were all revoked immediately sees nothing) |
 | Web | same endpoint, in `WebAuthorizationProvider` (`components/auth/web-authorization-provider.tsx`) mounted in `app/layout.tsx` | same rules; **guests never call the endpoint** and get an empty set |
-| Merchant | the active organization membership (`api.organizations.membershipsBootstrap`) → role → `MERCHANT_ROLE_CAPABILITIES`, in `MerchantAuthorizationProvider`; the server page guard reads the same memberships per request | refetched with the memberships query |
+| Merchant | the active tenant membership (`api.tenants.membershipsBootstrap`) → role → `MERCHANT_ROLE_CAPABILITIES`, in `MerchantAuthorizationProvider`; the server page guard reads the same memberships per request | refetched with the memberships query |
 
 Platform SuperAdmins receive **every** platform capability from `/auth/permissions`, because
 the backend lets them do everything.
@@ -193,7 +193,7 @@ membership role name. Capabilities come from the active membership's role throug
 | Provider | `components/access/merchant-authorization-provider.tsx` — `MerchantAuthorizationProvider` (feeds `CapabilitiesProvider`), `useMerchantAuthorizationStatus()` (`isLoading`, `capabilities`) |
 | Capability gate | `components/access/merchant-capability-gate.tsx` — `MerchantCapabilityGate` (while the membership resolves it renders its `loading` prop — each page view passes its own page skeleton, the same one its `loading.tsx` draws — or a generic page skeleton announcing "Checking access…"; then `<Can fallback={<MerchantAccessDenied/>}>`), `MerchantAccessDenied`, `MerchantReadOnlyNotice` |
 | Capability hook | `lib/org/capabilities.ts` — `useMerchantCapabilities()` (membership → capabilities) |
-| **Org route map** | `lib/navigation/org-route-authorization.ts` — `ORG_PAGE_RULES`: every page under `app/orgs/[orgSlug]/` → its capability requirement, or explicitly `open` with a reason |
+| **Org route map** | `lib/navigation/org-route-authorization.ts` — `ORG_PAGE_RULES`: every page under `app/tenants/[orgSlug]/` → its capability requirement, or explicitly `open` with a reason |
 | **Server page guard** | `lib/org/org-page-guard.tsx` — `guardOrgPage(orgSlug, route)`; decision in `lib/org/org-page-access.ts` |
 
 ### 5.1 Page guard (brute-force navigation)
@@ -201,19 +201,19 @@ membership role name. Capabilities come from the active membership's role throug
 Every org page calls the guard **first**, on the server, before it fetches anything:
 
 ```tsx
-export default async function OrganizationTeamPage({ params }: Props): Promise<React.JSX.Element> {
+export default async function TenantTeamPage({ params }: Props): Promise<React.JSX.Element> {
 	const { orgSlug } = await params;
 	const denied = await guardOrgPage(orgSlug, "/settings/team");
 	if (denied !== null) {
 		return denied; // MerchantAccessDenied, rendered on the server
 	}
-	return <OrganizationTeamPageView orgSlug={orgSlug} />;
+	return <TenantTeamPageView orgSlug={tenantSlug} />;
 }
 ```
 
-- The guard reads the membership for **the organization in the URL** (never another
+- The guard reads the membership for **the tenant in the URL** (never another
   membership's role) and evaluates the route's rule in `ORG_PAGE_RULES`. No membership in that
-  organization → denied.
+  tenant → denied.
 - It runs per page, not in the org layout: layouts do not re-render on client-side navigation,
   so a layout check would be skipped when moving between org pages.
 - `lib/navigation/org-route-authorization.test.ts` fails when a page has no rule, a rule has no

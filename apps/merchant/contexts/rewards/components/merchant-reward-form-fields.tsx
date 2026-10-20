@@ -55,13 +55,13 @@ export interface MerchantRewardFormFieldsProps {
 	readonly control: Control<MerchantRewardFormValues>;
 	readonly errors: FieldErrors<MerchantRewardFormValues>;
 	readonly setValue: UseFormSetValue<MerchantRewardFormValues>;
-	/** The organization photos are uploaded to (`undefined` while it loads). */
-	readonly organizationId: string | undefined;
+	/** The tenant photos are uploaded to (`undefined` while it loads). */
+	readonly tenantId: string | undefined;
 	/** The saved photos in display order when editing; none for a new reward. */
 	readonly initialImages: readonly SavedRewardImage[];
 	/** The ready photos changed — the editor saves their ids and previews the cover. */
 	readonly onImagesChange: (images: readonly SavedRewardImage[]) => void;
-	/** The "Where" section's body — store availability — or `null` when the organization has one store. */
+	/** The "Where" section's body — store availability — or `null` when the tenant has one store. */
 	readonly stores: React.ReactNode;
 	/** Every field is locked while the reward saves. */
 	readonly disabled?: boolean;
@@ -78,7 +78,7 @@ export function MerchantRewardFormFields({
 	control,
 	errors,
 	setValue,
-	organizationId,
+	tenantId,
 	initialImages,
 	onImagesChange,
 	stores,
@@ -227,7 +227,7 @@ export function MerchantRewardFormFields({
 
 			<RewardEditorSection id="reward-photos" title="Photos" description={REWARD_IMAGES_GUIDANCE}>
 				<MerchantRewardImagesField
-					organizationId={organizationId}
+					tenantId={tenantId}
 					initialImages={initialImages}
 					onImagesChange={onImagesChange}
 					errorMessage={errors.imageFileIds?.message}

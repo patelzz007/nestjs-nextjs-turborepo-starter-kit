@@ -4,15 +4,15 @@
  *
  * Conventions:
  * - Plural, kebab-case nouns. CRUD: list `/x`, create `/x/new`, view `/x/[id]`, edit `/x/[id]/edit`.
- * - Business pages live under the organization scope `/orgs/[orgSlug]`.
- *   `ORG_ROUTES` holds those paths **relative to the org scope** (they are the
+ * - Business pages live under the tenant scope `/t/[tenantSlug]`.
+ *   `TENANT_ROUTES` holds those paths **relative to the org scope** (they are the
  *   URLs used by `data/merchant-sidebar-menu.json` and the command palette);
- *   `orgPath(slug, path)` / `orgRoutes(slug)` turn them into browser hrefs.
+ *   `tenantPath(slug, path)` / `tenantRoutes(slug)` turn them into browser hrefs.
  * - Paths another process builds into URLs (the API's emails and invite links)
  *   come from `APP_LINKS` in `@workspace/shared`, so the app and the emails
  *   cannot drift.
  * - `account` is the signed-in user's PERSONAL settings (profile, password,
- *   2FA, sessions). `settings` is ORGANIZATION configuration (team, locations,
+ *   2FA, sessions). `settings` is TENANT configuration (team, locations,
  *   business verification).
  */
 
@@ -73,17 +73,17 @@ export interface AuthRouteTable {
 
 /** Top-level (non-org) routes. */
 export interface AppRouteTable {
-	/** Post-login entry — resolves the organization server-side and redirects into it. */
+	/** Post-login entry — resolves the tenant server-side and redirects into it. */
 	readonly home: AppPath;
-	/** Personal-account entry — resolves the organization server-side, then `/orgs/{slug}/account`. */
+	/** Personal-account entry — resolves the tenant server-side, then `/t/{slug}/account`. */
 	readonly account: AppPath;
 	readonly onboarding: AppPath;
 	readonly teamInvite: AppPath;
 	readonly auth: AuthRouteTable;
 }
 
-/** Prefix of every organization-scoped route. */
-export const ORG_SCOPE_PREFIX: AppPath = "/orgs";
+/** Prefix of every tenant-scoped route. */
+export const TENANT_SCOPE_PREFIX: AppPath = "/t";
 
 export const ROUTES: AppRouteTable = {
 	home: "/",
@@ -98,7 +98,7 @@ export const ROUTES: AppRouteTable = {
 	},
 };
 
-export const ORG_ROUTES: OrgRouteTable = {
+export const TENANT_ROUTES: OrgRouteTable = {
 	dashboard: "/dashboard",
 	rewards: {
 		list: "/rewards",
@@ -121,22 +121,22 @@ export const ORG_ROUTES: OrgRouteTable = {
 	},
 };
 
-/** Every static org-relative route — guarded by tests against `app/orgs/[orgSlug]/**\/page.tsx`. */
-export const ORG_STATIC_ROUTES: readonly AppPath[] = [
-	ORG_ROUTES.dashboard,
-	ORG_ROUTES.rewards.list,
-	ORG_ROUTES.rewards.new,
-	ORG_ROUTES.redemptions,
-	ORG_ROUTES.analytics,
-	ORG_ROUTES.terminals,
-	ORG_ROUTES.apiKeys,
-	ORG_ROUTES.account,
-	ORG_ROUTES.stores,
-	ORG_ROUTES.settings.index,
-	ORG_ROUTES.settings.team,
-	ORG_ROUTES.settings.locations,
-	ORG_ROUTES.settings.branding,
-	ORG_ROUTES.settings.verification,
+/** Every static org-relative route — guarded by tests against `app/t/[tenantSlug]/**\/page.tsx`. */
+export const TENANT_STATIC_ROUTES: readonly AppPath[] = [
+	TENANT_ROUTES.dashboard,
+	TENANT_ROUTES.rewards.list,
+	TENANT_ROUTES.rewards.new,
+	TENANT_ROUTES.redemptions,
+	TENANT_ROUTES.analytics,
+	TENANT_ROUTES.terminals,
+	TENANT_ROUTES.apiKeys,
+	TENANT_ROUTES.account,
+	TENANT_ROUTES.stores,
+	TENANT_ROUTES.settings.index,
+	TENANT_ROUTES.settings.team,
+	TENANT_ROUTES.settings.locations,
+	TENANT_ROUTES.settings.branding,
+	TENANT_ROUTES.settings.verification,
 ];
 
 /** Every static top-level route — guarded by tests against `app/**\/page.tsx`. */
@@ -160,27 +160,27 @@ export function stripQueryAndHash(href: string): string {
 	return cut === -1 ? href : href.slice(0, cut);
 }
 
-/** Organization scope root: `/orgs/{slug}`. */
-export function orgRoot(slug: string): AppPath {
-	return `${ORG_SCOPE_PREFIX}/${encodeURIComponent(slug)}`;
+/** Tenant scope root: `/t/{slug}`. */
+export function tenantRoot(slug: string): AppPath {
+	return `${TENANT_SCOPE_PREFIX}/${encodeURIComponent(slug)}`;
 }
 
-/** Org-scoped browser href for an org-relative route: `orgPath("acme", ORG_ROUTES.rewards.list)` → `/orgs/acme/rewards`. */
-export function orgPath(slug: string, path: AppPath): AppPath {
-	return path === "/" ? orgRoot(slug) : `${orgRoot(slug)}${path}`;
+/** Org-scoped browser href for an org-relative route: `tenantPath("acme", TENANT_ROUTES.rewards.list)` → `/t/acme/rewards`. */
+export function tenantPath(slug: string, path: AppPath): AppPath {
+	return path === "/" ? tenantRoot(slug) : `${tenantRoot(slug)}${path}`;
 }
 
-/** True when `pathname` is already an org-scoped browser path (`/orgs/...`). */
-export function isOrgScopedPath(pathname: string): boolean {
-	return pathname.startsWith(`${ORG_SCOPE_PREFIX}/`);
+/** True when `pathname` is already an org-scoped browser path (`/t/...`). */
+export function isTenantScopedPath(pathname: string): boolean {
+	return pathname.startsWith(`${TENANT_SCOPE_PREFIX}/`);
 }
 
 /**
- * Org-relative part of an org-scoped browser path: `/orgs/acme/rewards/1/edit`
- * → `/rewards/1/edit`, `/orgs/acme` → `/`. `undefined` for paths outside `/orgs/{slug}`.
+ * Org-relative part of an org-scoped browser path: `/t/acme/rewards/1/edit`
+ * → `/rewards/1/edit`, `/t/acme` → `/`. `undefined` for paths outside `/t/{slug}`.
  */
-export function toOrgRelativePath(pathname: string): AppPath | undefined {
-	if (!isOrgScopedPath(pathname)) {
+export function toTenantRelativePath(pathname: string): AppPath | undefined {
+	if (!isTenantScopedPath(pathname)) {
 		return undefined;
 	}
 	const [, , slug, ...rest] = pathname.split("/");
@@ -191,16 +191,16 @@ export function toOrgRelativePath(pathname: string): AppPath | undefined {
 }
 
 /**
- * Href for an org-relative route when the organization may not be known yet.
+ * Href for an org-relative route when the tenant may not be known yet.
  * Without a slug the user is sent to the top-level entry page that resolves
- * the organization server-side (`/account` for the personal account, `/` for
+ * the tenant server-side (`/account` for the personal account, `/` for
  * everything else).
  */
-export function resolveOrgHref(slug: string | undefined, path: AppPath): AppPath {
+export function resolveTenantHref(slug: string | undefined, path: AppPath): AppPath {
 	if (slug !== undefined && slug.length > 0) {
-		return orgPath(slug, path);
+		return tenantPath(slug, path);
 	}
-	return isPathWithin(path, ORG_ROUTES.account) ? ROUTES.account : ROUTES.home;
+	return isPathWithin(path, TENANT_ROUTES.account) ? ROUTES.account : ROUTES.home;
 }
 
 export interface OrgRewardHrefs {
@@ -231,30 +231,30 @@ export interface OrgHrefs {
 	readonly settings: OrgSettingsHrefs;
 }
 
-/** Browser hrefs for one organization: `orgRoutes("acme").rewards.edit(id)` → `/orgs/acme/rewards/{id}/edit`. */
-export function orgRoutes(slug: string): OrgHrefs {
+/** Browser hrefs for one tenant: `tenantRoutes("acme").rewards.edit(id)` → `/t/acme/rewards/{id}/edit`. */
+export function tenantRoutes(slug: string): OrgHrefs {
 	return {
-		root: orgRoot(slug),
-		dashboard: orgPath(slug, ORG_ROUTES.dashboard),
+		root: tenantRoot(slug),
+		dashboard: tenantPath(slug, TENANT_ROUTES.dashboard),
 		rewards: {
-			list: orgPath(slug, ORG_ROUTES.rewards.list),
-			new: orgPath(slug, ORG_ROUTES.rewards.new),
-			detail: (rewardId: string): AppPath => orgPath(slug, ORG_ROUTES.rewards.detail(rewardId)),
-			edit: (rewardId: string): AppPath => orgPath(slug, ORG_ROUTES.rewards.edit(rewardId)),
+			list: tenantPath(slug, TENANT_ROUTES.rewards.list),
+			new: tenantPath(slug, TENANT_ROUTES.rewards.new),
+			detail: (rewardId: string): AppPath => tenantPath(slug, TENANT_ROUTES.rewards.detail(rewardId)),
+			edit: (rewardId: string): AppPath => tenantPath(slug, TENANT_ROUTES.rewards.edit(rewardId)),
 		},
-		redemptions: orgPath(slug, ORG_ROUTES.redemptions),
-		analytics: orgPath(slug, ORG_ROUTES.analytics),
+		redemptions: tenantPath(slug, TENANT_ROUTES.redemptions),
+		analytics: tenantPath(slug, TENANT_ROUTES.analytics),
 		// Built by the API into emails too — `APP_LINKS` is the shared source.
 		terminals: toAppPath(APP_LINKS.merchant.terminals(slug)),
 		apiKeys: toAppPath(APP_LINKS.merchant.apiKeys(slug)),
-		account: orgPath(slug, ORG_ROUTES.account),
-		stores: orgPath(slug, ORG_ROUTES.stores),
+		account: tenantPath(slug, TENANT_ROUTES.account),
+		stores: tenantPath(slug, TENANT_ROUTES.stores),
 		settings: {
-			index: orgPath(slug, ORG_ROUTES.settings.index),
-			team: orgPath(slug, ORG_ROUTES.settings.team),
-			locations: orgPath(slug, ORG_ROUTES.settings.locations),
-			branding: orgPath(slug, ORG_ROUTES.settings.branding),
-			verification: orgPath(slug, ORG_ROUTES.settings.verification),
+			index: tenantPath(slug, TENANT_ROUTES.settings.index),
+			team: tenantPath(slug, TENANT_ROUTES.settings.team),
+			locations: tenantPath(slug, TENANT_ROUTES.settings.locations),
+			branding: tenantPath(slug, TENANT_ROUTES.settings.branding),
+			verification: tenantPath(slug, TENANT_ROUTES.settings.verification),
 		},
 	};
 }

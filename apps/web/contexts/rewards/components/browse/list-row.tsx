@@ -60,9 +60,7 @@ export function RewardListRow({ reward, detailPathPrefix = ROUTE_PREFIXES.dashbo
 						</Badge>
 					) : null}
 				</div>
-				{reward.organizationName !== undefined ? (
-					<p className="mt-0.5 truncate text-xs font-medium text-muted-foreground sm:text-[0.8125rem]">{reward.organizationName}</p>
-				) : null}
+				{reward.tenantName !== undefined ? <p className="mt-0.5 truncate text-xs font-medium text-muted-foreground sm:text-[0.8125rem]">{reward.tenantName}</p> : null}
 				<div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
 					<span>{rewardTypeLabel(reward.rewardType)}</span>
 					<span className="inline-flex items-center gap-1">

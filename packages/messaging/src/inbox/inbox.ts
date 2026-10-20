@@ -47,7 +47,7 @@ export interface AnalyticsEventRow {
 		readonly eventId: string;
 		readonly type: string;
 		readonly correlationId: string | null;
-		readonly organizationId: string | null;
+		readonly tenantId: string | null;
 		readonly occurredAt: number;
 	};
 	readonly occurredAt: number;

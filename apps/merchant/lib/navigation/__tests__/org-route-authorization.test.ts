@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/contexts/authorization/permission-check";
 import type { CompiledSidebarMenuData, CompiledSidebarMenuItem } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
-import { MERCHANT_CAPABILITY, MerchantCapabilitySchema, OrganizationMembershipRoleSchema, type CapabilitySlug, type OrganizationMembershipRole } from "@workspace/shared";
+import { MERCHANT_CAPABILITY, MerchantCapabilitySchema, MembershipRoleSchema, type CapabilitySlug, type MembershipRole } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
@@ -13,7 +13,7 @@ import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
 import { membershipFixture } from "@/test/authorization";
 
-const ORG_APP_DIR: string = fileURLToPath(new URL("../../../app/orgs/[orgSlug]", import.meta.url));
+const ORG_APP_DIR: string = fileURLToPath(new URL("../../../app/t/[tenantSlug]", import.meta.url));
 
 interface OrgPageFile {
 	/** Org-relative route pattern, e.g. `/rewards/[rewardId]/edit`. */
@@ -43,15 +43,9 @@ function collectOrgPages(directory: string): readonly OrgPageFile[] {
 const ORG_PAGES: readonly OrgPageFile[] = collectOrgPages(ORG_APP_DIR);
 
 /** Server data access a page must not start before its guard has run. */
-const DATA_ACCESS_MARKERS: readonly string[] = [
-	"loadMerchantServerContext(",
-	".query(",
-	"readOrganizationLocationCookie(",
-	"loadOrganizationContext(",
-	"loadServerLocationScope(",
-];
+const DATA_ACCESS_MARKERS: readonly string[] = ["loadMerchantServerContext(", ".query(", "readTenantLocationCookie(", "loadTenantContext(", "loadServerLocationScope("];
 
-function predicateFor(role: OrganizationMembershipRole | undefined): (capability: CapabilitySlug) => boolean {
+function predicateFor(role: MembershipRole | undefined): (capability: CapabilitySlug) => boolean {
 	const granted = createGrantedCapabilities(resolveMerchantCapabilities(role === undefined ? undefined : membershipFixture(role)));
 	return (capability: CapabilitySlug): boolean => isCapabilityGranted(granted, capability);
 }
@@ -78,7 +72,7 @@ function flattenSidebar(menu: CompiledSidebarMenuData): readonly FlatSidebarItem
 
 const SIDEBAR_ROWS: readonly FlatSidebarItem[] = flattenSidebar(MERCHANT_SIDEBAR_MENU);
 
-function visibleSidebarUrls(role: OrganizationMembershipRole | undefined): readonly string[] {
+function visibleSidebarUrls(role: MembershipRole | undefined): readonly string[] {
 	const membership = role === undefined ? undefined : membershipFixture(role);
 	const filtered = filterCompiledSidebarMenu(MERCHANT_SIDEBAR_MENU, resolveMerchantCapabilities(membership));
 	return [
@@ -94,9 +88,9 @@ function byName(left: string, right: string): number {
 	return left.localeCompare(right);
 }
 
-const ROLES_AND_GUEST: readonly (OrganizationMembershipRole | undefined)[] = [...OrganizationMembershipRoleSchema.options, undefined];
+const ROLES_AND_GUEST: readonly (MembershipRole | undefined)[] = [...MembershipRoleSchema.options, undefined];
 
-describe("org route map ↔ app/orgs/[orgSlug] pages", () => {
+describe("org route map ↔ app/t/[tenantSlug] pages", () => {
 	it("discovers the org pages it guards", () => {
 		expect(ORG_PAGES.map((page) => page.route)).toContain("/settings/team");
 		expect(ORG_PAGES.map((page) => page.route)).toContain("/rewards/[rewardId]");
@@ -111,7 +105,7 @@ describe("org route map ↔ app/orgs/[orgSlug] pages", () => {
 	});
 
 	it.each(ORG_PAGES.map((page): [string, string] => [page.route, page.source]))("page %s calls guardOrgPage with its own route before loading data", (route, source) => {
-		const guardCall = `guardOrgPage(orgSlug, "${route}")`;
+		const guardCall = `guardOrgPage(tenantSlug, "${route}")`;
 		const guardIndex = source.indexOf(guardCall);
 
 		expect(guardIndex).toBeGreaterThan(-1);
@@ -162,7 +156,7 @@ describe("resolveOrgPageRoute", () => {
 });
 
 describe("org page rules per membership role", () => {
-	const EXPECTED_SETTINGS_ACCESS: readonly [OrganizationMembershipRole | undefined, boolean, boolean, boolean, boolean][] = [
+	const EXPECTED_SETTINGS_ACCESS: readonly [MembershipRole | undefined, boolean, boolean, boolean, boolean][] = [
 		// role,         settings index, team,  locations, verification
 		["OWNER", true, true, true, true],
 		["ADMIN", true, true, true, false],
@@ -220,7 +214,7 @@ describe("merchant sidebar ↔ org route map", () => {
 		expect(mismatches).toEqual([]);
 	});
 
-	it.each(ROLES_AND_GUEST.map((role): [string, OrganizationMembershipRole | undefined] => [role ?? "no membership", role]))(
+	it.each(ROLES_AND_GUEST.map((role): [string, MembershipRole | undefined] => [role ?? "no membership", role]))(
 		"shows %s exactly the pages it may open (hidden when denied, never disabled-but-visible)",
 		(_label, role) => {
 			const visible = new Set(visibleSidebarUrls(role));
@@ -254,7 +248,7 @@ describe("merchant sidebar ↔ org route map", () => {
 		expect(visible).not.toContain("/settings/verification");
 	});
 
-	it("shows owners every organization setting", () => {
+	it("shows owners every tenant setting", () => {
 		expect(visibleSidebarUrls("OWNER")).toEqual(expect.arrayContaining(["/settings", "/settings/team", "/settings/locations", "/settings/verification"]));
 	});
 
@@ -262,7 +256,7 @@ describe("merchant sidebar ↔ org route map", () => {
 		expect(visibleSidebarUrls(undefined)).toEqual(["/account"]);
 	});
 
-	it("gates the settings pages on the new organization capabilities", () => {
+	it("gates the settings pages on the new tenant capabilities", () => {
 		expect(ORG_PAGE_RULES["/settings/team"]).toMatchObject({ requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] } });
 		expect(ORG_PAGE_RULES["/settings/locations"]).toMatchObject({ requirement: { permissions: [MERCHANT_CAPABILITY.viewLocations] } });
 		expect(ORG_PAGE_RULES["/settings/verification"]).toMatchObject({ requirement: { permissions: [MERCHANT_CAPABILITY.manageVerification] } });

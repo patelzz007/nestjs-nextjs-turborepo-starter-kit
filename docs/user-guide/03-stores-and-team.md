@@ -10,7 +10,7 @@ tags: ["user-guide", "merchant", "stores", "team", "invites"]
 
 # 3. Stores and team
 
-A merchant organization has one **primary store** (created during onboarding) and any number of
+A merchant tenant has one **primary store** (created during onboarding) and any number of
 further stores. Rewards, POS terminals, API keys, staff access, redemptions and analytics can all
 be limited to particular stores.
 
@@ -58,7 +58,7 @@ Only a **rejected** request can be edited; saving it sends it back to the admin 
 
 ## Store logo
 
-**Settings → Branding** (`/orgs/<slug>/settings/branding`) sets the logo shown with your rewards in
+**Settings → Branding** (`/tenants/<slug>/settings/branding`) sets the logo shown with your rewards in
 the customer web app. Without one, the initials of your store are shown.
 
 1. **Upload logo** (or **Replace logo**) and pick an image: JPEG, PNG, WebP or AVIF, up to 10 MB.
@@ -81,7 +81,7 @@ flowchart TD
     D --> F[Membership ACTIVE<br/>with role + store scope]
     E --> F
     A --> R[Revoke a pending invite]
-    G[Existing user: request access<br/>to the organization] --> H{Owner/Admin reviews}
+    G[Existing user: request access<br/>to the tenant] --> H{Owner/Admin reviews}
     H -- approve: role + stores --> F
     H -- reject --> X[Request closed]
     F --> S[Remove member from one store]
@@ -96,14 +96,14 @@ flowchart TD
 3. The invitee gets an email with a link to `/team-invite?token=…` in the merchant portal. The
    invite is valid for **7 days**; pending invites can be **revoked** from the same page.
 4. The invitee either signs in and presses **Accept**, or creates an account right on the invite
-   page (that also signs them in). Either way they land on the organization's dashboard.
+   page (that also signs them in). Either way they land on the tenant's dashboard.
 
 Try it: `alice.kl@kl-rewards.demo` / `AliceKl@123` has a pending invite to Brew & Bean KL (link
 `/team-invite?token=seed_team_invite_token_kl_alice`).
 
 ### Access requests
 
-A signed-in user can ask to join an organization. Owners and admins see the request, and either
+A signed-in user can ask to join a tenant. Owners and admins see the request, and either
 approve it — choosing the role and the stores — or reject it.
 
 ### Remove a member from a store
@@ -112,11 +112,11 @@ On the member's row, remove a single store from their access. Removing their **l
 an explicit confirmation (`allowNoStores`): they stay a member but can no longer see any store.
 The removal is audited.
 
-### Your display name in an organization
+### Your display name in a tenant
 
-Every member can choose how their name appears in one organization (for example
+Every member can choose how their name appears in one tenant (for example
 "Kak Mira" or "Lee — Bukit Bintang counter"), shown on the team roster instead of the account's full
-name. It is per organization, up to 100 characters, trimmed; clearing it shows the full name
+name. It is per tenant, up to 100 characters, trimmed; clearing it shows the full name
 again. Only the member can change their own display name — an owner cannot rename someone else, and
 it cannot be changed while a platform admin is impersonating the member. Every change is audited
 with the old and the new value.
@@ -125,34 +125,34 @@ with the old and the new value.
 
 | Step | API |
 | --- | --- |
-| Request / edit / close a store | `POST /api/v1/orgs/{orgSlug}/locations`, `PATCH …/locations/{locationId}`, `POST …/locations/{locationId}/close` |
-| Admin store review | `GET /api/v1/admin/location-requests`, `PATCH /api/v1/admin/merchants/{organizationId}/locations/{locationId}/review`, `POST /api/v1/admin/merchants/{organizationId}/locations` |
+| Request / edit / close a store | `POST /api/v1/tenants/{tenantSlug}/locations`, `PATCH …/locations/{locationId}`, `POST …/locations/{locationId}/close` |
+| Admin store review | `GET /api/v1/admin/location-requests`, `PATCH /api/v1/admin/merchants/{tenantId}/locations/{locationId}/review`, `POST /api/v1/admin/merchants/{tenantId}/locations` |
 | Team | `GET …/members`, `POST …/members/invite`, `GET …/members/invites`, `POST …/members/invites/{inviteId}/revoke`, `POST …/members/{membershipId}/stores/{locationId}/remove` |
-| Own display name | `PATCH /api/v1/orgs/{orgSlug}/members/me` with `{ "displayName": "Kak Mira" }` or `{ "displayName": null }` |
-| Invite link | `POST /api/v1/orgs/invites/validate`, `…/accept`, `…/register-and-accept` |
+| Own display name | `PATCH /api/v1/tenants/{tenantSlug}/members/me` with `{ "displayName": "Kak Mira" }` or `{ "displayName": null }` |
+| Invite link | `POST /api/v1/tenants/invites/validate`, `…/accept`, `…/register-and-accept` |
 | Access requests | `POST …/access-requests`, `POST …/access-requests/{requestId}/review` |
 
 ### Guarantees and error codes
 
 | Action | Who | Guarantees | Errors |
 | --- | --- | --- | --- |
-| Remove a member from a store | `merchant:manage_team` and a location scope covering the store (else `403 ORGANIZATION_STORE_OUT_OF_SCOPE`) | One transaction with its audit row (real actor). Deletes the member's SELECTED scope row and soft-deletes their store membership (`deletedAt`, `deletedBy`). The member row is locked (`FOR UPDATE`) first, so two removals cannot both pass the last-store check. | `404` unknown member or not scoped to that store · `409 ORGANIZATION_OWNER_PROTECTED` · `409 ORGANIZATION_MEMBER_COVERS_ALL_STORES` (narrow them first) · `409 ORGANIZATION_MEMBER_LAST_STORE` (send `allowNoStores: true`) |
+| Remove a member from a store | `merchant:manage_team` and a location scope covering the store (else `403 TENANT_STORE_OUT_OF_SCOPE`) | One transaction with its audit row (real actor). Deletes the member's SELECTED scope row and soft-deletes their store membership (`deletedAt`, `deletedBy`). The member row is locked (`FOR UPDATE`) first, so two removals cannot both pass the last-store check. | `404` unknown member or not scoped to that store · `409 TENANT_OWNER_PROTECTED` · `409 TENANT_MEMBER_COVERS_ALL_STORES` (narrow them first) · `409 TENANT_MEMBER_LAST_STORE` (send `allowNoStores: true`) |
 | Close a store | `merchant:manage_locations` and a covering location scope; body `{ "reason": "<1–500 chars>" }` | One transaction: the location (`status = INACTIVE`, `closureReason`, `deletedAt`, `deletedBy`) and its store are soft-deleted, the store's memberships soft-deleted, SELECTED scope rows to it deleted, terminals removed and their keys revoked, one audit row. A reward offered only at closed stores cannot be claimed (out of stock); held claims stay redeemable at the reward's other open stores. | `409` primary store · `400` missing reason · `404` already closed |
-| Set or clear your display name | Any live ACTIVE member, for their **own** membership only | One tenant transaction: the caller's membership row is locked (`FOR UPDATE`) and updated, then `membership.display_name_updated` is audited (actor = the member, `previousDisplayName` → `displayName`). | `400` blank, longer than 100 characters, or unknown fields · `404` not a member of that organization · `403 ORGANIZATION_MEMBERSHIP_UPDATE_DURING_IMPERSONATION` |
+| Set or clear your display name | Any live ACTIVE member, for their **own** membership only | One tenant transaction: the caller's membership row is locked (`FOR UPDATE`) and updated, then `membership.display_name_updated` is audited (actor = the member, `previousDisplayName` → `displayName`). | `400` blank, longer than 100 characters, or unknown fields · `404` not a member of that tenant · `403 TENANT_MEMBERSHIP_UPDATE_DURING_IMPERSONATION` |
 
 Seed data: `prisma/seed/store-closure.ts` creates one closed store ("Taman Melaka Raya (Closed)")
 and one member removed from a store (the Jonker cashier, removed from Bukit Katil); the demo
-members of both organizations have display names except the Jonker Street Kitchen owner.
+members of both tenants have display names except the Jonker Street Kitchen owner.
 
 ### Invite links — how they are protected
 
 - The invite token is 32 random bytes; only its SHA-256 hash is stored
-  (`OrganizationInvitation.tokenHash`, `kind = TEAM_MEMBER`), and the raw token exists only in the
+  (`TenantInvitation.tokenHash`, `kind = TEAM_MEMBER`), and the raw token exists only in the
   email link. With `EMAIL_MODE=log-only` the link is in the API log.
 - `validate` and `register-and-accept` are public routes that also declare `@RlsBypass()` — a public
   route alone does **not** bypass row-level security. Every invite write runs under its own
-  allow-listed system operation (`organization.invitation.create`, `.revoke`,
-  `.register_and_accept`, `organization.membership.accept`, …).
+  allow-listed system operation (`tenant.invitation.create`, `.revoke`,
+  `.register_and_accept`, `tenant.membership.accept`, …).
 - `register-and-accept` creates the account, its default `User` role and the membership in **one**
   transaction, then signs the user in (or asks for the email code first).
 - An invitee with no membership yet may still sign in to the merchant portal while a pending,
@@ -162,12 +162,12 @@ members of both organizations have display names except the Jonker Street Kitche
 | Error | When |
 | --- | --- |
 | `404` on validate | Unknown, revoked, used or expired token |
-| `403 ORGANIZATION_INVITE_EMAIL_MISMATCH` | Accepting while signed in with a different email — sign in with the invited address |
-| `409 ORGANIZATION_INVITE_PENDING` | Inviting an email that already has a pending invite (revoke it first) |
-| `409 ORGANIZATION_ALREADY_MEMBER` | The invitee (or the person accepting) is already a member |
-| `409 ORGANIZATION_INVITE_ACCOUNT_EXISTS` | `register-and-accept` for an email that already has an account — sign in and accept instead |
-| `409 ORGANIZATION_INVITE_NO_LONGER_PENDING` | The invite was used, revoked or expired between opening and accepting |
+| `403 TENANT_INVITE_EMAIL_MISMATCH` | Accepting while signed in with a different email — sign in with the invited address |
+| `409 TENANT_INVITE_PENDING` | Inviting an email that already has a pending invite (revoke it first) |
+| `409 TENANT_ALREADY_MEMBER` | The invitee (or the person accepting) is already a member |
+| `409 TENANT_INVITE_ACCOUNT_EXISTS` | `register-and-accept` for an email that already has an account — sign in and accept instead |
+| `409 TENANT_INVITE_NO_LONGER_PENDING` | The invite was used, revoked or expired between opening and accepting |
 
-Examples: [Merchant organizations API](../technical/api-reference/merchant-organizations.md). How
+Examples: [Merchant tenants API](../technical/api-reference/merchant-tenants.md). How
 store scoping is enforced in the database: [Tenancy and RLS](../technical/authorization/tenancy-and-rls.md).
 

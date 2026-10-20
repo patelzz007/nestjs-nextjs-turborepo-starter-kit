@@ -29,7 +29,7 @@ describe("isAdminTokenAuthPath", () => {
 describe("resolveSafeAdminRedirect", () => {
 	it("accepts in-app panel paths and returns them normalized", () => {
 		expect(resolveSafeAdminRedirect("/", ADMIN_ORIGIN)).toBe("/");
-		expect(resolveSafeAdminRedirect("/merchants/verification?organizationId=org_1", ADMIN_ORIGIN)).toBe("/merchants/verification?organizationId=org_1");
+		expect(resolveSafeAdminRedirect("/merchants/verification?tenantId=org_1", ADMIN_ORIGIN)).toBe("/merchants/verification?tenantId=org_1");
 		expect(resolveSafeAdminRedirect("/authors", ADMIN_ORIGIN)).toBe("/authors");
 		expect(resolveSafeAdminRedirect("/users/./../merchants#top", ADMIN_ORIGIN)).toBe("/merchants#top");
 	});

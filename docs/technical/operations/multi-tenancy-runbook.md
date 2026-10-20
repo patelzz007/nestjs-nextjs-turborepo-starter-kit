@@ -24,8 +24,8 @@ order: 1
 | Switch | Env / flag | Effect |
 | --- | --- | --- |
 | Policy publish freeze | `POLICY_PUBLISH_FROZEN=true` | Block new policy versions |
-| Organization creation freeze | `ORG_CREATION_FROZEN=true` | Platform invite only (already default) |
-| Tenant write freeze | Per-org `RESTRICTED` state | Read-only for organization |
+| Tenant creation freeze | `ORG_CREATION_FROZEN=true` | Platform invite only (already default) |
+| Tenant write freeze | Per-org `RESTRICTED` state | Read-only for tenant |
 | Support access revoke all | Admin API `POST /admin/support-access/revoke-all` | Expire all active grants |
 
 ## Rollback rule
@@ -36,7 +36,7 @@ On Cedar/RLS disagreement after cutover:
 
 1. Fail closed (deny ambiguous requests)
 2. Roll back application and policy bundle versions
-3. Place affected organizations in read-only maintenance if needed
+3. Place affected tenants in read-only maintenance if needed
 4. Use audited repair tooling
 
 ## Backup and restore (pilot)
@@ -49,7 +49,7 @@ On Cedar/RLS disagreement after cutover:
 
 1. Restore backup into isolated database
 2. Verify checksums
-3. Extract one `organizationId` dataset
+3. Extract one `tenantId` dataset
 4. Re-import with full audit trail
 
 ## Tenant deletion

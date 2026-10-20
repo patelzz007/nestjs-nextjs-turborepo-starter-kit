@@ -55,7 +55,7 @@ import { z, ZodType } from "zod";
 // works with any TanStack Query adapter and in SSR hydration.
 //
 // Every query key is `[...scope, input]`: a SCOPE (the resource the data
-// belongs to, e.g. `["organization", orgSlug, "kyb"]`) followed by the WHOLE
+// belongs to, e.g. `["tenant", tenantSlug, "kyb"]`) followed by the WHOLE
 // parsed input. Two consequences, both by construction:
 // - no input field can be left out of a key (no silently shared cache entries
 //   between, say, two stores or two date ranges);
@@ -77,14 +77,14 @@ export type ApiQueryKey = readonly DataValue[];
  */
 type ScopeFields = Readonly<Record<string, DataValue | undefined>>;
 
-/** Scope of every organization-owned resource. */
-export interface OrganizationScope extends ScopeFields {
-	readonly orgSlug: string;
+/** Scope of every tenant-owned resource. */
+export interface TenantScope extends ScopeFields {
+	readonly tenantSlug: string;
 }
 
-/** Scope of one admin-managed organization. */
-export interface AdminOrganizationScope extends ScopeFields {
-	readonly organizationId: string;
+/** Scope of one admin-managed tenant. */
+export interface AdminTenantScope extends ScopeFields {
+	readonly tenantId: string;
 }
 
 /** Scope of one configured GitHub repository. */
@@ -379,7 +379,7 @@ export function defineMutation<Input extends SerializableInput, Data extends Dat
 
 // ── REST serialization (shared by client + server) ─────────────────────────
 
-/** Marks a path segment as a parameter: `/orgs/:orgSlug` → `orgSlug`. */
+/** Marks a path segment as a parameter: `/tenants/:tenantSlug` → `tenantSlug`. */
 const PARAM_SEGMENT_PREFIX = ":";
 const PATH_SEPARATOR = "/";
 
@@ -703,79 +703,79 @@ export const apiRouter = {
 		downloadUrl: defineQuery(apiContract.files.downloadUrl, { scope: ({ fileId }: { readonly fileId: string }): ApiQueryKey => ["files", "download-url", fileId] }),
 		delete: defineMutation(apiContract.files.delete),
 	},
-	organizations: {
-		/** The member's organizations (membership + capabilities) — invalidate after any identity or membership change. */
-		membershipsBootstrap: defineQuery(apiContract.organizations.membershipsBootstrap, { scope: (): ApiQueryKey => ["organizations", "memberships"] }),
-		context: defineQuery(apiContract.organizations.context, { scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "context"] }),
-		listMembers: defineQuery(apiContract.organizations.listMembers, { scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "members", "list"] }),
-		listMemberInvites: defineQuery(apiContract.organizations.listMemberInvites, {
-			scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "members", "invites"],
+	tenants: {
+		/** The member's tenants (membership + capabilities) — invalidate after any identity or membership change. */
+		membershipsBootstrap: defineQuery(apiContract.tenants.membershipsBootstrap, { scope: (): ApiQueryKey => ["tenants", "memberships"] }),
+		context: defineQuery(apiContract.tenants.context, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "context"] }),
+		listMembers: defineQuery(apiContract.tenants.listMembers, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "members", "list"] }),
+		listMemberInvites: defineQuery(apiContract.tenants.listMemberInvites, {
+			scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "members", "invites"],
 		}),
-		inviteMember: defineMutation(apiContract.organizations.inviteMember),
-		revokeMemberInvite: defineMutation(apiContract.organizations.revokeMemberInvite),
-		removeMemberFromStore: defineMutation(apiContract.organizations.removeMemberFromStore),
-		/** The signed-in member's own membership (display name). Invalidate `context` and `listMembers` of the organization after it. */
-		updateOwnMembership: defineMutation(apiContract.organizations.updateOwnMembership),
-		validateTeamInvite: defineMutation(apiContract.organizations.validateTeamInvite),
-		acceptTeamInvite: defineMutation(apiContract.organizations.acceptTeamInvite),
-		registerAndAcceptTeamInvite: defineMutation(apiContract.organizations.registerAndAcceptTeamInvite, { baseOptions: { headers: clientTypeHeader("merchant") } }),
+		inviteMember: defineMutation(apiContract.tenants.inviteMember),
+		revokeMemberInvite: defineMutation(apiContract.tenants.revokeMemberInvite),
+		removeMemberFromStore: defineMutation(apiContract.tenants.removeMemberFromStore),
+		/** The signed-in member's own membership (display name). Invalidate `context` and `listMembers` of the tenant after it. */
+		updateOwnMembership: defineMutation(apiContract.tenants.updateOwnMembership),
+		validateTeamInvite: defineMutation(apiContract.tenants.validateTeamInvite),
+		acceptTeamInvite: defineMutation(apiContract.tenants.acceptTeamInvite),
+		registerAndAcceptTeamInvite: defineMutation(apiContract.tenants.registerAndAcceptTeamInvite, { baseOptions: { headers: clientTypeHeader("merchant") } }),
 		kyb: {
-			get: defineQuery(apiContract.organizations.kyb.get, { scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "kyb"] }),
-			submit: defineMutation(apiContract.organizations.kyb.submit),
-			downloadDocument: defineQuery(apiContract.organizations.kyb.downloadDocument, {
-				scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "kyb", "documents", "download"],
+			get: defineQuery(apiContract.tenants.kyb.get, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "kyb"] }),
+			submit: defineMutation(apiContract.tenants.kyb.submit),
+			downloadDocument: defineQuery(apiContract.tenants.kyb.downloadDocument, {
+				scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "kyb", "documents", "download"],
 			}),
 		},
 		rewards: {
-			list: defineQuery(apiContract.organizations.rewards.list, { scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "rewards", "list"] }),
-			get: defineQuery(apiContract.organizations.rewards.get, { scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "rewards", "detail"] }),
-			summary: defineQuery(apiContract.organizations.rewards.summary, {
-				scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "rewards", "summary"],
+			list: defineQuery(apiContract.tenants.rewards.list, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "rewards", "list"] }),
+			get: defineQuery(apiContract.tenants.rewards.get, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "rewards", "detail"] }),
+			summary: defineQuery(apiContract.tenants.rewards.summary, {
+				scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "rewards", "summary"],
 			}),
-			create: defineMutation(apiContract.organizations.rewards.create),
-			update: defineMutation(apiContract.organizations.rewards.update),
-			publish: defineMutation(apiContract.organizations.rewards.publish),
+			create: defineMutation(apiContract.tenants.rewards.create),
+			update: defineMutation(apiContract.tenants.rewards.update),
+			publish: defineMutation(apiContract.tenants.rewards.publish),
 		},
 		apiKeys: {
-			list: defineQuery(apiContract.organizations.apiKeys.list, { scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "api-keys", "list"] }),
-			create: defineMutation(apiContract.organizations.apiKeys.create),
-			revoke: defineMutation(apiContract.organizations.apiKeys.revoke),
+			list: defineQuery(apiContract.tenants.apiKeys.list, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "api-keys", "list"] }),
+			create: defineMutation(apiContract.tenants.apiKeys.create),
+			revoke: defineMutation(apiContract.tenants.apiKeys.revoke),
 		},
 		terminals: {
-			list: defineQuery(apiContract.organizations.terminals.list, { scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "terminals", "list"] }),
-			summary: defineQuery(apiContract.organizations.terminals.summary, {
-				scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "terminals", "summary"],
+			list: defineQuery(apiContract.tenants.terminals.list, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "terminals", "list"] }),
+			summary: defineQuery(apiContract.tenants.terminals.summary, {
+				scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "terminals", "summary"],
 			}),
-			get: defineQuery(apiContract.organizations.terminals.get, { scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "terminals", "detail"] }),
-			create: defineMutation(apiContract.organizations.terminals.create),
-			pairingCode: defineMutation(apiContract.organizations.terminals.pairingCode),
-			remove: defineMutation(apiContract.organizations.terminals.remove),
-			settings: defineQuery(apiContract.organizations.terminals.settings, {
-				scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "terminals", "settings"],
+			get: defineQuery(apiContract.tenants.terminals.get, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "terminals", "detail"] }),
+			create: defineMutation(apiContract.tenants.terminals.create),
+			pairingCode: defineMutation(apiContract.tenants.terminals.pairingCode),
+			remove: defineMutation(apiContract.tenants.terminals.remove),
+			settings: defineQuery(apiContract.tenants.terminals.settings, {
+				scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "terminals", "settings"],
 			}),
-			updateSettings: defineMutation(apiContract.organizations.terminals.updateSettings),
+			updateSettings: defineMutation(apiContract.tenants.terminals.updateSettings),
 		},
-		redemptions: defineQuery(apiContract.organizations.redemptions, { scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "redemptions"] }),
-		analytics: defineQuery(apiContract.organizations.analytics, { scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "analytics"] }),
-		/** The merchant analytics dashboard (custom range + interval, breakdowns); the export is `apiDownloads.organizations.analyticsExport`. */
-		analyticsDashboard: defineQuery(apiContract.organizations.analyticsDashboard, {
-			scope: ({ orgSlug }: OrganizationScope): ApiQueryKey => ["organization", orgSlug, "analytics", "dashboard"],
+		redemptions: defineQuery(apiContract.tenants.redemptions, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "redemptions"] }),
+		analytics: defineQuery(apiContract.tenants.analytics, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "analytics"] }),
+		/** The merchant analytics dashboard (custom range + interval, breakdowns); the export is `apiDownloads.tenants.analyticsExport`. */
+		analyticsDashboard: defineQuery(apiContract.tenants.analyticsDashboard, {
+			scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "analytics", "dashboard"],
 		}),
 		locations: {
-			create: defineMutation(apiContract.organizations.locations.create),
-			update: defineMutation(apiContract.organizations.locations.update),
-			close: defineMutation(apiContract.organizations.locations.close),
+			create: defineMutation(apiContract.tenants.locations.create),
+			update: defineMutation(apiContract.tenants.locations.update),
+			close: defineMutation(apiContract.tenants.locations.close),
 		},
 		onboarding: {
-			validate: defineMutation(apiContract.organizations.onboarding.validate),
-			complete: defineMutation(apiContract.organizations.onboarding.complete),
-			documentUploadUrl: defineMutation(apiContract.organizations.onboarding.documentUploadUrl),
-			documentBatchUploadUrl: defineMutation(apiContract.organizations.onboarding.documentBatchUploadUrl),
-			documentUploadComplete: defineMutation(apiContract.organizations.onboarding.documentUploadComplete),
-			documentBatchUploadComplete: defineMutation(apiContract.organizations.onboarding.documentBatchUploadComplete),
-			documentsSubmit: defineMutation(apiContract.organizations.onboarding.documentsSubmit),
+			validate: defineMutation(apiContract.tenants.onboarding.validate),
+			complete: defineMutation(apiContract.tenants.onboarding.complete),
+			documentUploadUrl: defineMutation(apiContract.tenants.onboarding.documentUploadUrl),
+			documentBatchUploadUrl: defineMutation(apiContract.tenants.onboarding.documentBatchUploadUrl),
+			documentUploadComplete: defineMutation(apiContract.tenants.onboarding.documentUploadComplete),
+			documentBatchUploadComplete: defineMutation(apiContract.tenants.onboarding.documentBatchUploadComplete),
+			documentsSubmit: defineMutation(apiContract.tenants.onboarding.documentsSubmit),
 			// POST (the invite token stays out of URLs): poll it from a query whose queryFn calls `.mutate`.
-			documentStatus: defineMutation(apiContract.organizations.onboarding.documentStatus),
+			documentStatus: defineMutation(apiContract.tenants.onboarding.documentStatus),
 		},
 	},
 
@@ -785,14 +785,16 @@ export const apiRouter = {
 		getReward: defineQuery(apiContract.rewardsAdmin.getReward, {
 			scope: ({ rewardId }: { readonly rewardId: string }): ApiQueryKey => ["rewards-admin", "rewards", rewardId],
 		}),
-		listOrganizations: defineQuery(apiContract.rewardsAdmin.listOrganizations, { scope: (): ApiQueryKey => ["rewards-admin", "organizations"] }),
-		getOrganization: defineQuery(apiContract.rewardsAdmin.getOrganization, {
-			scope: ({ organizationId }: AdminOrganizationScope): ApiQueryKey => ["rewards-admin", "organization", organizationId],
+		listTenants: defineQuery(apiContract.rewardsAdmin.listTenants, { scope: (): ApiQueryKey => ["rewards-admin", "tenants"] }),
+		getTenant: defineQuery(apiContract.rewardsAdmin.getTenant, {
+			scope: ({ tenantId }: AdminTenantScope): ApiQueryKey => ["rewards-admin", "tenant", tenantId],
 		}),
-		downloadOrganizationDocument: defineQuery(apiContract.rewardsAdmin.downloadOrganizationDocument, {
-			scope: ({ organizationId }: AdminOrganizationScope): ApiQueryKey => ["rewards-admin", "organization", organizationId, "documents", "download"],
+		downloadTenantDocument: defineQuery(apiContract.rewardsAdmin.downloadTenantDocument, {
+			scope: ({ tenantId }: AdminTenantScope): ApiQueryKey => ["rewards-admin", "tenant", tenantId, "documents", "download"],
 		}),
 		createInvite: defineMutation(apiContract.rewardsAdmin.createInvite),
+		/** Whether this deployment may invite a new merchant (false in single-tenant mode). */
+		inviteAvailability: defineQuery(apiContract.rewardsAdmin.inviteAvailability, { scope: (): ApiQueryKey => ["rewards-admin", "invites", "availability"] }),
 		previewInviteEmail: defineQuery(apiContract.rewardsAdmin.previewInviteEmail, { scope: (): ApiQueryKey => ["rewards-admin", "invites", "preview-email"] }),
 		salesAnalytics: defineQuery(apiContract.rewardsAdmin.salesAnalytics, { scope: (): ApiQueryKey => ["rewards-admin", "analytics", "sales"] }),
 		/** The platform analytics dashboard; the export is `apiDownloads.rewardsAdmin.analyticsExport`. */
@@ -805,8 +807,8 @@ export const apiRouter = {
 		rejectReward: defineMutation(apiContract.rewardsAdmin.rejectReward),
 		updateKyb: defineMutation(apiContract.rewardsAdmin.updateKyb),
 		listLocationRequests: defineQuery(apiContract.rewardsAdmin.listLocationRequests, { scope: (): ApiQueryKey => ["rewards-admin", "location-requests"] }),
-		createOrganizationLocation: defineMutation(apiContract.rewardsAdmin.createOrganizationLocation),
-		reviewOrganizationLocation: defineMutation(apiContract.rewardsAdmin.reviewOrganizationLocation),
+		createLocation: defineMutation(apiContract.rewardsAdmin.createLocation),
+		reviewLocation: defineMutation(apiContract.rewardsAdmin.reviewLocation),
 	},
 	sampleCategory: {
 		list: defineQuery(apiContract.sampleCategory.list, { scope: (): ApiQueryKey => ["sample-category", "list"] }),

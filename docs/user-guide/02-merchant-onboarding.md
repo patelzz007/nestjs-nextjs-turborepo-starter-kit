@@ -22,7 +22,7 @@ flowchart TD
     E --> F[3 Documents: upload at least one file]
     F --> G[4 Owner account: name + password]
     G --> H[Submit]
-    H --> I[Organization created,<br/>owner membership, primary store]
+    H --> I[Tenant created,<br/>owner membership, primary store]
     I --> J[Documents uploaded straight to storage,<br/>checked, then submitted]
     J --> K[KYB status PENDING<br/>in Merchants → Verification]
     K --> L{Admin decision}
@@ -59,7 +59,7 @@ A timeline beside the form shows your progress and every step. Select a complete
 back and change it; your answers are kept until you submit, as long as the tab stays open. On a
 phone the timeline is condensed into a row of numbered marks above the form.
 
-When you press **Submit**, the platform creates your organization, your owner membership and your
+When you press **Submit**, the platform creates your tenant, your owner membership and your
 primary store in one step, uploads the documents directly to storage and submits the
 application. If something fails you can press **Submit** again: nothing is created twice.
 
@@ -110,15 +110,15 @@ changed by a scan.
 | Step | API |
 | --- | --- |
 | Invite / preview | `POST /api/v1/admin/invites`, `GET /api/v1/admin/invites/preview-email` |
-| Check the link | `POST /api/v1/orgs/onboarding/validate` |
-| Create organization + owner | `POST /api/v1/orgs/onboarding/complete` |
-| Upload documents | `POST /api/v1/orgs/onboarding/documents/upload-url(s)` → upload to storage → `…/upload-complete(-batch)` → `…/status` → `…/submit` |
-| Owner resubmits | `PATCH /api/v1/orgs/{orgSlug}/kyb` |
-| Admin reviews | `GET /api/v1/admin/merchants/{organizationId}`, `PATCH /api/v1/admin/merchants/{organizationId}/kyb` |
+| Check the link | `POST /api/v1/tenants/onboarding/validate` |
+| Create tenant + owner | `POST /api/v1/tenants/onboarding/complete` |
+| Upload documents | `POST /api/v1/tenants/onboarding/documents/upload-url(s)` → upload to storage → `…/upload-complete(-batch)` → `…/status` → `…/submit` |
+| Owner resubmits | `PATCH /api/v1/tenants/{tenantSlug}/kyb` |
+| Admin reviews | `GET /api/v1/admin/merchants/{tenantId}`, `PATCH /api/v1/admin/merchants/{tenantId}/kyb` |
 
 `complete` is one all-or-nothing transaction: it claims the PENDING, unexpired invite with a
 compare-and-set (exactly one request wins), creates the owner membership, saves the profile and
-stores, activates the organization (lifecycle event + audit row) and commits — or rolls everything
+stores, activates the tenant (lifecycle event + audit row) and commits — or rolls everything
 back. Repeating it:
 
 | Situation | Answer | What the client does |
@@ -131,10 +131,10 @@ back. Repeating it:
 | Submitting after the review was approved or rejected | `409 KYB_REVIEW_CLOSED` | Nothing to resubmit |
 
 Why the documents are separate calls after `complete`: KYB files are private uploads through the
-normal direct-to-storage pipeline, and a file can only be bound to an organization and an owner that
-already exist. After `complete`, the invite token becomes a narrow credential for this organization's
+normal direct-to-storage pipeline, and a file can only be bound to a tenant and an owner that
+already exist. After `complete`, the invite token becomes a narrow credential for this tenant's
 document endpoints only (`ONBOARDING_DOCUMENTS_WINDOW_MS`, 24 hours, until `submit` consumes it).
 
-Request and response examples: [Merchant organizations API](../technical/api-reference/merchant-organizations.md)
+Request and response examples: [Merchant tenants API](../technical/api-reference/merchant-tenants.md)
 and [Platform administration API](../technical/api-reference/platform-admin.md). Upload
 mechanics: [Object storage](../technical/storage/overview.md).

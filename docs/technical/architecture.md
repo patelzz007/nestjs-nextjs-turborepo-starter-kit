@@ -23,7 +23,7 @@ belongs in detail is [`rules/01-repository-architecture.md`](../../rules/01-repo
 | `apps/api` | `@workspace/api` | NestJS 12 on Fastify: every endpoint, auth, authorization, Prisma, queues, outbox | 8080 |
 | `apps/web` | `@workspace/web` | Customer app (dashboard) | 3000 |
 | `apps/admin` | `@workspace/admin` | Platform admin panel | 3001 |
-| `apps/merchant` | `@workspace/merchant` | Merchant portal (`/orgs/[orgSlug]/…`) | 3003 |
+| `apps/merchant` | `@workspace/merchant` | Merchant portal (`/tenants/[orgSlug]/…`) | 3003 |
 | `apps/docs` | `@workspace/docs` | This documentation site (Astro, static) | 3002 |
 | `apps/analytics-consumer` | `@workspace/analytics-consumer` | Kafka consumer → inbox (dedupe) → `AnalyticsEvent` | — |
 | `apps/aws-infrastructure` | `@workspace/aws-infrastructure` | CDK stack: S3 buckets, CloudFront, API upload user ([AWS S3](./storage/aws-s3.md)) | — |
@@ -132,11 +132,11 @@ sequenceDiagram
 
 ## 5. Tenancy
 
-The **organization** is the tenant. Merchant routes carry it in the URL (`/orgs/{orgSlug}/…`);
-the API resolves the slug to an organization the caller is an active member of, then every query
-runs in a transaction whose PostgreSQL settings name the user, organization and store scope.
-`TENANCY_ENABLED=false` (default) runs single-tenant against `DEFAULT_ORGANIZATION_ID`. Details:
-[Tenancy and RLS](./authorization/tenancy-and-rls.md) and ADRs 007–014.
+The **tenant** is the tenant. Merchant routes carry it in the URL (`/tenants/{tenantSlug}/…`);
+the API resolves the slug to a tenant the caller is an active member of, then every query
+runs in a transaction whose PostgreSQL settings name the user, tenant and store scope.
+`TENANCY_ENABLED=true` (the `.env.example` default, RewardHub's mode) runs multi-tenant with no default tenant; `TENANCY_ENABLED=false` runs single-tenant against `DEFAULT_TENANT_ID`. Details:
+[Tenancy and RLS](./authorization/tenancy-and-rls.md), [switching modes](./operations/switching-tenancy-mode.md) and [ADR 062](../adr/062-tenancy-modes-and-isolation.md).
 
 ## 6. API versioning
 

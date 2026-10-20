@@ -21,12 +21,12 @@ import { emailRoutes, merchantInviteEmailPreviewRoutes } from "./contexts/notifi
 import { auditLogsRoutes, auditTrailRoutes, dataChangesRoutes } from "./contexts/audit/routes";
 import { githubPicturesRoutes, githubPullRequestsRoutes, githubRoutes } from "./contexts/integrations-github/routes";
 import { geoRoutes } from "./contexts/reference-data/routes";
-import { legalRoutes, organizationRewardsRoutes, rewardsAdminRewardRoutes, rewardsRoutes } from "./contexts/rewards/routes";
+import { integrationRewardsRoutes, legalRoutes, tenantRewardsRoutes, rewardsAdminRewardRoutes, rewardsRoutes } from "./contexts/rewards/routes";
 import { claimsRoutes, rewardNotificationsRoutes } from "./contexts/claims/routes";
-import { claimsAnalyticsRoutes, organizationAnalyticsRoutes, rewardsAdminAnalyticsRoutes } from "./contexts/reporting/routes";
-import { organizationApiKeysRoutes, organizationRedemptionsRoutes, organizationTerminalsRoutes, posRoutes, redemptionsRoutes } from "./contexts/pos/routes";
+import { claimsAnalyticsRoutes, integrationAnalyticsRoutes, tenantAnalyticsRoutes, rewardsAdminAnalyticsRoutes } from "./contexts/reporting/routes";
+import { integrationRedemptionsRoutes, tenantApiKeysRoutes, tenantRedemptionsRoutes, tenantTerminalsRoutes } from "./contexts/pos/routes";
 import { filesRoutes } from "./contexts/files/routes";
-import { adminOrganizationsRoutes, organizationsRoutes, rewardsAdminOrganizationRoutes } from "./contexts/organizations/routes";
+import { adminTenantsRoutes, tenantsRoutes, rewardsAdminTenantRoutes } from "./contexts/tenancy/routes";
 import { productRoutes, sampleCategoryRoutes } from "./contexts/catalog/routes";
 import type { RouteTree } from "./route-tree";
 
@@ -58,21 +58,24 @@ export const apiRoutes = {
 		...claimsAnalyticsRoutes,
 	},
 	rewardNotifications: rewardNotificationsRoutes,
-	pos: posRoutes,
-	redemptions: redemptionsRoutes,
 	files: filesRoutes,
-	organizations: {
-		...organizationsRoutes,
-		...organizationAnalyticsRoutes,
-		...organizationRedemptionsRoutes,
-		rewards: organizationRewardsRoutes,
-		terminals: organizationTerminalsRoutes,
-		apiKeys: organizationApiKeysRoutes,
+	tenants: {
+		...tenantsRoutes,
+		...tenantAnalyticsRoutes,
+		...tenantRedemptionsRoutes,
+		rewards: tenantRewardsRoutes,
+		terminals: tenantTerminalsRoutes,
+		apiKeys: tenantApiKeysRoutes,
 	},
-	adminOrganizations: adminOrganizationsRoutes,
+	integration: {
+		...integrationAnalyticsRoutes,
+		...integrationRedemptionsRoutes,
+		rewards: integrationRewardsRoutes,
+	},
+	adminTenants: adminTenantsRoutes,
 	supportAccess: supportAccessRoutes,
 	rewardsAdmin: {
-		...rewardsAdminOrganizationRoutes,
+		...rewardsAdminTenantRoutes,
 		...merchantInviteEmailPreviewRoutes,
 		...rewardsAdminRewardRoutes,
 		...rewardsAdminAnalyticsRoutes,

@@ -195,7 +195,7 @@ export const GALLERY_ENTRIES: Readonly<Record<GalleryComponentKey, GalleryEntry>
 	separator: entry("separator", "Separator", "A thin rule between groups of content, horizontal or vertical."),
 	avatar: entry("avatar", "Avatar", "A person's image with an initials fallback, a status badge and stacked groups."),
 	userAvatar: entry("user-avatar", "UserAvatar", "A user's photo (responsive renditions) or their initials."),
-	entityAvatar: entry("entity-avatar", "EntityAvatar", "An organisation's or product's logo, or a monogram tinted from its name."),
+	entityAvatar: entry("entity-avatar", "EntityAvatar", "A tenant's or product's logo, or a monogram tinted from its name."),
 	aspectRatio: entry("aspect-ratio", "AspectRatio", "Keeps its content at a fixed width-to-height ratio."),
 	coverImage: entry("cover-image", "CoverImage", "A responsive image at a fixed ratio, with a loading shimmer and a fallback."),
 	carousel: entry("carousel", "Carousel", "A horizontally or vertically scrolling strip of slides with arrows."),

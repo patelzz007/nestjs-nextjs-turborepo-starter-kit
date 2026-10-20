@@ -19,8 +19,8 @@ import type { NextRequest } from "next/server";
 import { isAllowedMerchantPostLoginRedirect, isMerchantAuthPath, isMerchantProtectedPath, isMerchantTokenAuthPath } from "@/contexts/identity/lib/routes";
 import { clientEnv } from "@/lib/env/env.client";
 import { serverEnv } from "@/lib/env/env.server";
-import { isCanonicalOrganizationSlug } from "@/contexts/organizations/lib/org/resolve-slug";
-import { ORGANIZATION_SLUG_COOKIE_NAME } from "@/contexts/organizations/lib/org/slug";
+import { isCanonicalTenantSlug } from "@/contexts/tenancy/lib/org/resolve-slug";
+import { TENANT_SLUG_COOKIE_NAME } from "@/contexts/tenancy/lib/org/slug";
 import { ROUTES } from "@/lib/routes";
 
 const ACCESS_TOKEN_COOKIE = "merchantAccessToken";
@@ -68,14 +68,14 @@ function serveGuestResponse(response: NextResponse, rotatedCookies: readonly str
 }
 
 /**
- * The `organizationSlug` preference for the enrollment redirect, only when it
+ * The `tenantSlug` preference for the enrollment redirect, only when it
  * is a canonical slug — a cookie is client input, so a tampered value never
  * becomes part of a redirect path. (Membership is checked by the org layout
  * the redirect lands on; the proxy stays cheap and does not call the API.)
  */
-function readPreferredOrganizationSlug(request: NextRequest): string | undefined {
-	const value = request.cookies.get(ORGANIZATION_SLUG_COOKIE_NAME)?.value;
-	return value !== undefined && isCanonicalOrganizationSlug(value) ? value : undefined;
+function readPreferredTenantSlug(request: NextRequest): string | undefined {
+	const value = request.cookies.get(TENANT_SLUG_COOKIE_NAME)?.value;
+	return value !== undefined && isCanonicalTenantSlug(value) ? value : undefined;
 }
 
 /** @internal Clears the module-scope refresh cooldown between tests. */
@@ -128,7 +128,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 	if (isProtectedRouteMatch && isAuthenticated && effectiveAccessToken !== undefined && isRestrictedSession(effectiveAccessToken) && !isEnrollmentAllowedPath(pathname)) {
 		const payload = decodeJwtPayload(effectiveAccessToken);
 		const enrollmentReason = payload?.isEmailVerified === false ? "email_verification" : "mfa_enrollment";
-		const enrollmentPath = getEnrollmentRedirectPath("merchant", enrollmentReason, readPreferredOrganizationSlug(request));
+		const enrollmentPath = getEnrollmentRedirectPath("merchant", enrollmentReason, readPreferredTenantSlug(request));
 		return applyRotatedCookies(NextResponse.redirect(new URL(enrollmentPath, request.url)), rotatedCookies);
 	}
 

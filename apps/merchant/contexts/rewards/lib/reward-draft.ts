@@ -9,7 +9,7 @@ import {
 	parseRewardDateInputToEpochMs,
 	PLATFORM_DISPLAY_REGION,
 	type MerchantRewardFormValues,
-	type OrganizationLocationResponse,
+	type LocationResponse,
 } from "@workspace/shared";
 import { describeRewardStores, type RewardStores } from "@/contexts/rewards/lib/presentation";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
@@ -92,11 +92,11 @@ export function formatDraftRewardEnd(expiryDate: string | undefined): string {
 /** Where a reward still being written can be redeemed, named the way the catalog names it. */
 export function describeDraftRewardStores(
 	values: { readonly locationScopeType: MerchantRewardFormValues["locationScopeType"] | undefined; readonly locationIds: readonly string[] | undefined },
-	locations: readonly Pick<OrganizationLocationResponse, "id" | "name">[],
-	organizationName: string | undefined,
+	locations: readonly Pick<LocationResponse, "id" | "name">[],
+	tenantName: string | undefined,
 ): RewardStores {
 	const locationScopeType = values.locationScopeType ?? "ALL_LOCATIONS";
 	const locationIds = values.locationIds ?? [];
 	const locationNames = locations.filter((location) => locationIds.includes(location.id)).map((location) => location.name);
-	return describeRewardStores({ locationScopeType, locationIds: [...locationIds], locationNames, ...(organizationName === undefined ? {} : { organizationName }) });
+	return describeRewardStores({ locationScopeType, locationIds: [...locationIds], locationNames, ...(tenantName === undefined ? {} : { tenantName }) });
 }

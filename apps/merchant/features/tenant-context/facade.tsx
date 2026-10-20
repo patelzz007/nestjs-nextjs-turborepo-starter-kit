@@ -1,13 +1,14 @@
 "use client";
 
-import { canSelectAllLocations, resolveMemberLocationAccess, type MemberLocationAccess } from "@/contexts/organizations/lib/org/location-access";
-import { clearOrganizationLocationCookie, writeOrganizationLocationCookie } from "@/contexts/organizations/lib/org/location";
+import { canSelectAllLocations, resolveMemberLocationAccess, type MemberLocationAccess } from "@/contexts/tenancy/lib/org/location-access";
+import { clearLocationCookie, writeLocationCookie } from "@/contexts/tenancy/lib/org/location";
+import { useRequestScope } from "@/lib/session/request-scope";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { createFeatureStoreContext } from "@workspace/client/lib/state/feature-store-context";
-import type { Envelope, OrganizationContextResponse, OrganizationLocationResponse } from "@workspace/shared";
+import type { Envelope, TenantContextResponse, LocationResponse } from "@workspace/shared";
 import * as React from "react";
 
 import { tenantContextActions, type TenantContextAction } from "./actions";
@@ -34,49 +35,49 @@ import { createTenantContextStore, type TenantContextStore } from "./store";
 
 const TENANT_CONTEXT_DEVTOOLS_NAME = "Tenant Context · merchant";
 
-/** The browser cookie of ONE organization's store choice (`organizationLocationId.<orgSlug>`). */
-function createBrowserLocationCookie(orgSlug: string): LocationCookieWriter {
+/** The browser cookie of ONE tenant's store choice (`tenantLocationId.<orgSlug>`). */
+function createBrowserLocationCookie(tenantSlug: string): LocationCookieWriter {
 	return {
 		write: (locationId: string): void => {
-			writeOrganizationLocationCookie(orgSlug, locationId);
+			writeLocationCookie(tenantSlug, locationId);
 		},
 		clear: (): void => {
-			clearOrganizationLocationCookie(orgSlug);
+			clearLocationCookie(tenantSlug);
 		},
 	};
 }
 
-const NO_LOCATIONS: readonly OrganizationLocationResponse[] = [];
+const NO_LOCATIONS: readonly LocationResponse[] = [];
 
 const tenantContext = createFeatureStoreContext<TenantContextState, TenantContextAction>("Tenant Context");
 const TenantContextStoreProvider = tenantContext.provider;
 
 /** Per-mount inputs from the server: the tenant (URL segment) and the context seed. Not state — never changes for a mount. */
 interface TenantScope {
-	readonly orgSlug: string;
-	readonly initialOrganizationContext: Envelope<OrganizationContextResponse> | undefined;
+	readonly tenantSlug: string;
+	readonly initialTenantContext: Envelope<TenantContextResponse> | undefined;
 }
 
 const TenantScopeContext = React.createContext<TenantScope | null>(null);
 TenantScopeContext.displayName = "TenantScopeContext";
 
 export interface TenantContextProviderProps {
-	/** The `[orgSlug]` URL segment — the tenant. Another organization mounts a fresh store. */
-	readonly orgSlug: string;
-	/** This organization's store-choice cookie as the server read it (`ServerLocationScope.selectedLocationId`). Seeds the store once per mount. */
+	/** The `[tenantSlug]` URL segment — the tenant. Another tenant mounts a fresh store. */
+	readonly tenantSlug: string;
+	/** This tenant's store-choice cookie as the server read it (`ServerLocationScope.selectedLocationId`). Seeds the store once per mount. */
 	readonly initialLocationId: string | null;
-	/** The organization context the server loaded — the API's own envelope — seeds the query so the first render already validates the choice. */
-	readonly initialOrganizationContext?: Envelope<OrganizationContextResponse> | undefined;
+	/** The tenant context the server loaded — the API's own envelope — seeds the query so the first render already validates the choice. */
+	readonly initialTenantContext?: Envelope<TenantContextResponse> | undefined;
 	readonly children: React.ReactNode;
 }
 
-/** Mount once in the persistent `/orgs/[orgSlug]` shell so page navigation keeps the chosen store. */
+/** Mount once in the persistent `/t/[tenantSlug]` shell so page navigation keeps the chosen store. */
 export function TenantContextProvider(props: TenantContextProviderProps): React.JSX.Element {
-	return <OrganizationTenantContextProvider key={props.orgSlug} {...props} />;
+	return <TenantTenantContextProvider key={props.tenantSlug} {...props} />;
 }
 
-function OrganizationTenantContextProvider({ orgSlug, initialLocationId, initialOrganizationContext, children }: TenantContextProviderProps): React.JSX.Element {
-	// The provider builds its store ONCE per mount (and the mount is keyed by the organization), so the
+function TenantTenantContextProvider({ tenantSlug, initialLocationId, initialTenantContext, children }: TenantContextProviderProps): React.JSX.Element {
+	// The provider builds its store ONCE per mount (and the mount is keyed by the tenant), so the
 	// factory is fixed for the mount's lifetime too — `initialLocationId` only seeds the first state.
 	const queryClient = useQueryClient();
 	const [createStore] = React.useState(
@@ -84,29 +85,29 @@ function OrganizationTenantContextProvider({ orgSlug, initialLocationId, initial
 			createTenantContextStore(
 				{
 					devtoolsName: TENANT_CONTEXT_DEVTOOLS_NAME,
-					locationCookie: createBrowserLocationCookie(orgSlug),
-					refreshOrganizationContext: (): void => {
-						void queryClient.invalidateQueries({ queryKey: apiRouter.organizations.context.scopeKey({ orgSlug }) });
+					locationCookie: createBrowserLocationCookie(tenantSlug),
+					refreshTenantContext: (): void => {
+						void queryClient.invalidateQueries({ queryKey: apiRouter.tenants.context.scopeKey({ tenantSlug }) });
 					},
 				},
 				initialLocationId,
 			),
 	);
-	// A store the API refuses for this member (403 ORGANIZATION_LOCATION_FORBIDDEN on any of this
-	// organization's queries) is rejected: the choice resets, the cookie is rewritten, the context re-read.
+	// A store the API refuses for this member (403 TENANT_LOCATION_FORBIDDEN on any of this
+	// tenant's queries) is rejected: the choice resets, the cookie is rewritten, the context re-read.
 	const [handleMount] = React.useState(
 		() =>
 			(store: TenantContextStore): (() => void) =>
-				subscribeToLocationRejections(queryClient.getQueryCache(), orgSlug, (locationId: string): void => {
+				subscribeToLocationRejections(queryClient.getQueryCache(), tenantSlug, (locationId: string): void => {
 					store.dispatch(tenantContextActions.locationRejected(locationId));
 				}),
 	);
 	const scope = React.useMemo(
 		(): TenantScope => ({
-			orgSlug,
-			initialOrganizationContext,
+			tenantSlug,
+			initialTenantContext,
 		}),
-		[initialOrganizationContext, orgSlug],
+		[initialTenantContext, tenantSlug],
 	);
 
 	return (
@@ -118,6 +119,16 @@ function OrganizationTenantContextProvider({ orgSlug, initialLocationId, initial
 	);
 }
 
+/**
+ * Names this tenant and the store in effect on every API call (`X-Tenant-Id`, `X-Location-Id`).
+ * Render it once inside {@link TenantContextProvider}, under the session (it reads the tenant
+ * context query), as the merchant shell does.
+ */
+export function TenantRequestScope(): null {
+	useRequestScope({ tenantId: useActiveTenantId(), locationId: useActiveLocationId() });
+	return null;
+}
+
 function useTenantScope(): TenantScope {
 	const scope = React.useContext(TenantScopeContext);
 	if (scope === null) {
@@ -127,7 +138,7 @@ function useTenantScope(): TenantScope {
 }
 
 interface MemberLocationAccessState {
-	/** `undefined` until the organization context has loaded. */
+	/** `undefined` until the tenant context has loaded. */
 	readonly access: MemberLocationAccess | undefined;
 	readonly isLoading: boolean;
 }
@@ -135,9 +146,9 @@ interface MemberLocationAccessState {
 /** Server state: what the member may access, read from the shared context query (never stored in Zustand). */
 function useMemberLocationAccess(): MemberLocationAccessState {
 	const { api } = useAuth();
-	const { orgSlug, initialOrganizationContext } = useTenantScope();
+	const { tenantSlug, initialTenantContext } = useTenantScope();
 	const rejectedLocationIds = tenantContext.useFeatureSelector(selectRejectedLocationIds);
-	const contextQuery = api.organizations.context.useQuery({ orgSlug }, initialDataOption(initialOrganizationContext));
+	const contextQuery = api.tenants.context.useQuery({ tenantSlug }, initialDataOption(initialTenantContext));
 	const context = contextQuery.data?.data;
 	const access = React.useMemo(
 		(): MemberLocationAccess | undefined => (context === undefined ? undefined : withoutRejectedLocations(resolveMemberLocationAccess(context), rejectedLocationIds)),
@@ -190,14 +201,14 @@ export interface MerchantLocationState {
 	/** The filter in effect, API input form (`undefined` = all stores). */
 	readonly locationId: string | undefined;
 	/** The accessible location the filter points at (`undefined` for all stores). */
-	readonly activeLocation: OrganizationLocationResponse | undefined;
+	readonly activeLocation: LocationResponse | undefined;
 	/** Active locations the member may operate on (empty until loaded). */
-	readonly accessibleLocations: readonly OrganizationLocationResponse[];
+	readonly accessibleLocations: readonly LocationResponse[];
 	/** Whether "All locations" (org-wide rollups) is an option for this member. */
 	readonly canSelectAllLocations: boolean;
-	/** Whether the membership covers the whole organization — only then may the member create organization-wide credentials. */
-	readonly hasOrganizationWideAccess: boolean;
-	/** True until the organization context has loaded for the first time. */
+	/** Whether the membership covers the whole tenant — only then may the member create tenant-wide credentials. */
+	readonly hasTenantWideAccess: boolean;
+	/** True until the tenant context has loaded for the first time. */
 	readonly isLoading: boolean;
 }
 
@@ -213,7 +224,7 @@ export function useMerchantLocation(): MerchantLocationState {
 			activeLocation: resolveActiveLocation(effectiveLocationId, access?.locations),
 			accessibleLocations: access?.locations ?? NO_LOCATIONS,
 			canSelectAllLocations: access !== undefined && canSelectAllLocations(access),
-			hasOrganizationWideAccess: access?.hasOrganizationWideAccess ?? false,
+			hasTenantWideAccess: access?.hasTenantWideAccess ?? false,
 			isLoading,
 		}),
 		[access, effectiveLocationId, isLoading],
@@ -221,51 +232,51 @@ export function useMerchantLocation(): MerchantLocationState {
 }
 
 /**
- * The active organization's id (`undefined` until its context has loaded) —
+ * The active tenant's id (`undefined` until its context has loaded) —
  * for API inputs keyed by id rather than slug, e.g. file uploads. Read from the
- * shared organization-context query, never stored.
+ * shared tenant-context query, never stored.
  */
-export function useActiveOrganizationId(): string | undefined {
-	return useActiveOrganizationSummary()?.id;
+export function useActiveTenantId(): string | undefined {
+	return useActiveTenantSummary()?.id;
 }
 
 /**
- * The active organization's display name (`undefined` until its context has
+ * The active tenant's display name (`undefined` until its context has
  * loaded) — e.g. to shorten store names that repeat it. Read from the shared
- * organization-context query, never stored.
+ * tenant-context query, never stored.
  */
-export function useActiveOrganizationName(): string | undefined {
-	return useActiveOrganizationSummary()?.displayName;
+export function useActiveTenantName(): string | undefined {
+	return useActiveTenantSummary()?.displayName;
 }
 
 /**
- * The active organization's store logo — `null` when it has none (screens show
+ * The active tenant's store logo — `null` when it has none (screens show
  * a name monogram), `undefined` until its context has loaded. Read from the
- * shared organization-context query, which every logo change reloads.
+ * shared tenant-context query, which every logo change reloads.
  */
-export function useActiveOrganizationLogo(): OrganizationContextResponse["organization"]["logo"] | undefined {
-	return useActiveOrganizationSummary()?.logo;
+export function useActiveTenantLogo(): TenantContextResponse["tenant"]["logo"] | undefined {
+	return useActiveTenantSummary()?.logo;
 }
 
-/** The signed-in member's own membership in the active organization, as the organization context answers it. */
+/** The signed-in member's own membership in the active tenant, as the tenant context answers it. */
 export interface ActiveMembershipState {
 	/** `undefined` until loaded — and for a non-member (the context answers 404): every capability fails closed. */
-	readonly membership: OrganizationContextResponse["membership"] | undefined;
+	readonly membership: TenantContextResponse["membership"] | undefined;
 	readonly isLoading: boolean;
 }
 
-/** The member's role (and store scope) in the URL's organization — the source of the merchant capabilities. */
+/** The member's role (and store scope) in the URL's tenant — the source of the merchant capabilities. */
 export function useActiveMembership(): ActiveMembershipState {
 	const { api } = useAuth();
-	const { orgSlug, initialOrganizationContext } = useTenantScope();
-	const contextQuery = api.organizations.context.useQuery({ orgSlug }, initialDataOption(initialOrganizationContext));
+	const { tenantSlug, initialTenantContext } = useTenantScope();
+	const contextQuery = api.tenants.context.useQuery({ tenantSlug }, initialDataOption(initialTenantContext));
 	return { membership: contextQuery.data?.data.membership, isLoading: contextQuery.isPending && contextQuery.fetchStatus !== "idle" };
 }
 
-/** The active organization as the shared organization-context query has it (`undefined` until loaded). */
-function useActiveOrganizationSummary(): OrganizationContextResponse["organization"] | undefined {
+/** The active tenant as the shared tenant-context query has it (`undefined` until loaded). */
+function useActiveTenantSummary(): TenantContextResponse["tenant"] | undefined {
 	const { api } = useAuth();
-	const { orgSlug, initialOrganizationContext } = useTenantScope();
-	const contextQuery = api.organizations.context.useQuery({ orgSlug }, initialDataOption(initialOrganizationContext));
-	return contextQuery.data?.data.organization;
+	const { tenantSlug, initialTenantContext } = useTenantScope();
+	const contextQuery = api.tenants.context.useQuery({ tenantSlug }, initialDataOption(initialTenantContext));
+	return contextQuery.data?.data.tenant;
 }

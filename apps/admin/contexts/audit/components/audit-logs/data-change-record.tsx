@@ -84,7 +84,7 @@ function DataChangeDiff({ record }: { readonly record: DataChangeLogDetail }): R
  * of which table, how it changed (column by column, redacted), who it is
  * attributed to, and the database connection that made it. Ids link to the
  * audit log filtered to the request / job behind the change, to the actor,
- * the organization, and to the row's whole history.
+ * the tenant, and to the row's whole history.
  */
 export function DataChangeRecord({ record, layout }: { readonly record: DataChangeLogDetail; readonly layout: AuditRecordLayout }): React.JSX.Element {
 	return (
@@ -126,12 +126,12 @@ export function DataChangeRecord({ record, layout }: { readonly record: DataChan
 						</span>
 					)}
 				</RecordField>
-				<RecordField label="Organization">
-					{record.organization === null ? (
+				<RecordField label="Tenant">
+					{record.tenant === null ? (
 						NOT_RECORDED
 					) : (
-						<Link href={auditLogListHref({ organizationId: record.organization.id })} className="text-primary hover:underline">
-							{record.organization.name ?? record.organization.id}
+						<Link href={auditLogListHref({ tenantId: record.tenant.id })} className="text-primary hover:underline">
+							{record.tenant.name ?? record.tenant.id}
 						</Link>
 					)}
 				</RecordField>

@@ -207,6 +207,12 @@ export interface AuthProviderProps {
 	 * guest or when the server could not ask.
 	 */
 	readonly serverSession?: ServerRenderedSession | undefined;
+	/**
+	 * Headers added to every API call, read as each request is sent — the merchant console names its
+	 * current tenant and store this way (`X-Tenant-Id`, `X-Location-Id`). Keep its identity stable: a
+	 * new function rebuilds the API client.
+	 */
+	readonly requestHeaders?: (() => Readonly<Record<string, string>>) | undefined;
 }
 
 /** The cross-tab channel as the store's effects see it: posts go to whichever channel is open. */
@@ -269,6 +275,7 @@ function AuthSession({
 	shouldRedirectOnUnauthorized,
 	revalidateSessionEnabled = true,
 	sessionHint = true,
+	requestHeaders,
 	tabLink,
 }: AuthSessionProps): React.JSX.Element {
 	const store = authContext.useFeatureStore();
@@ -555,7 +562,7 @@ function AuthSession({
 	}, [clearServerSession, dispatch, finalizeSessionExit, invalidateSession, shouldRedirectOnUnauthorized]);
 
 	// Cookie auth + silent refresh on 401 for every typed API call.
-	const api = useApi(apiRouter, baseUrl, clientType, handleUnauthorized, refreshOnce);
+	const api = useApi(apiRouter, baseUrl, clientType, handleUnauthorized, refreshOnce, requestHeaders);
 
 	// ── Commands.
 	const login = React.useCallback(

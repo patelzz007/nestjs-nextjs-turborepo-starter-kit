@@ -20,7 +20,7 @@ import { sidebarMenuSkeletonShape, type SidebarMenuSkeletonShape } from "@worksp
 import { AppPanelShell } from "@workspace/ui/components/app-panel-shell";
 import { AppShellHeaderSkeleton, PanelSidebarSkeleton, PanelSidebarSwitcherSkeleton, type AppShellHeaderSkeletonAction } from "@workspace/ui/components/panel-shell-skeleton";
 import { SecuritySettingsPanelSkeleton } from "@workspace/client/lib/contexts/identity/mfa/security-settings-panel-skeleton";
-import { MerchantKybVerificationSkeleton } from "@workspace/client/lib/contexts/organizations/kyb/verification-skeleton";
+import { MerchantKybVerificationSkeleton } from "@workspace/client/lib/contexts/tenancy/kyb/verification-skeleton";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { ChartSkeleton, FormSkeleton, ListSkeleton, PageHeaderSkeleton, ProseSkeleton, StatCardsSkeleton } from "@workspace/ui/components/skeleton-patterns";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
@@ -72,7 +72,7 @@ const DASHBOARD_LINKS_PER_COLUMN = 3;
 const DASHBOARD_LINK_COLUMNS = 2;
 /** Notes under the dashboard hero ("You are here", "Merchant home"). */
 const DASHBOARD_HERO_NOTES = 2;
-/** Tenant-snapshot facts: organization ID, membership status, location scope, merchant contact. */
+/** Tenant-snapshot facts: tenant ID, membership status, location scope, merchant contact. */
 const DASHBOARD_SNAPSHOT_FACTS = 4;
 /** Analytics sales KPIs (sales, bills, average bill, customers). */
 const ANALYTICS_SALES_KPIS = 4;
@@ -107,7 +107,7 @@ const REWARD_SCHEDULE_FIELDS = 4;
 const REWARD_DETAIL_ROWS = 5;
 /** Counts in the reward page's performance row: claimed, redeemed (stock is drawn as a meter). */
 const REWARD_PERFORMANCE_COUNTS = 2;
-/** Organization-settings link cards: team, locations, verification. */
+/** Tenant-settings link cards: team, locations, verification. */
 const SETTINGS_LINK_CARDS = 4;
 /** Store-location cards while the locations load. */
 export const LOCATION_SKELETON_CARDS = 4;
@@ -188,7 +188,7 @@ export interface MerchantWorkspaceSkeletonProps {
 
 /**
  * The merchant shell itself while the workspace loads — the entry routes
- * (`/`, `/account`) that resolve the member's organization and redirect into
+ * (`/`, `/account`) that resolve the member's tenant and redirect into
  * it, and the org layout's first render. It is the real `AppPanelShell` (frame,
  * sidebar width, page panel) with the real sidebar header; only what loads is
  * a placeholder: the menu (outlined from the merchant menu), the header's
@@ -214,9 +214,9 @@ export function MerchantWorkspaceSkeleton({ sidebarOpen }: MerchantWorkspaceSkel
 	);
 }
 
-// ── Organization dashboard ───────────────────────────────────────────────────
+// ── Tenant dashboard ───────────────────────────────────────────────────
 
-/** `/orgs/[orgSlug]/dashboard`: the workspace hero, four stat cards, two columns of shortcuts and the tenant snapshot. */
+/** `/t/[tenantSlug]/dashboard`: the workspace hero, four stat cards, two columns of shortcuts and the tenant snapshot. */
 export interface MerchantDashboardPageSkeletonProps {
 	/** What the region announces — the dashboard's own load by default, or the whole workspace's. */
 	readonly labels?: UiKitLabelsOverride<"skeletonRegion">;
@@ -274,7 +274,7 @@ export function MerchantDashboardPageSkeleton({ labels = MERCHANT_DASHBOARD_LOAD
 
 // ── Analytics ────────────────────────────────────────────────────────────────
 
-/** `/orgs/[orgSlug]/analytics`: header with export, range controls, the sales and reward KPI rows, four charts and three breakdowns. */
+/** `/t/[tenantSlug]/analytics`: header with export, range controls, the sales and reward KPI rows, four charts and three breakdowns. */
 export function MerchantAnalyticsPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={MERCHANT_ANALYTICS_LOADING_LABELS} className="flex flex-col gap-6">
@@ -301,7 +301,7 @@ export function MerchantAnalyticsPageSkeleton(): React.JSX.Element {
 
 // ── API keys ─────────────────────────────────────────────────────────────────
 
-/** `/orgs/[orgSlug]/api-keys`: header, the three key stats, the create-key card, the filtered key list and the integration guide. */
+/** `/t/[tenantSlug]/api-keys`: header, the three key stats, the create-key card, the filtered key list and the integration guide. */
 export function MerchantApiKeysPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={MERCHANT_API_KEYS_LOADING_LABELS} className={PAGE_STACK}>
@@ -334,7 +334,7 @@ export function MerchantApiKeysPageSkeleton(): React.JSX.Element {
 
 // ── Terminals ────────────────────────────────────────────────────────────────
 
-/** `/orgs/[orgSlug]/terminals`: header with "Add terminal", the three till stats, the till list, the security policy card and the pairing guide. */
+/** `/t/[tenantSlug]/terminals`: header with "Add terminal", the three till stats, the till list, the security policy card and the pairing guide. */
 export function MerchantTerminalsPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={MERCHANT_TERMINALS_LOADING_LABELS} className={PAGE_STACK}>
@@ -360,7 +360,7 @@ export function RedemptionRowsSkeleton(): React.JSX.Element {
 	return <MerchantBorderedRowsSkeleton rows={REDEMPTION_SKELETON_ROWS} lines={1} trailing="text" surface="panel" />;
 }
 
-/** `/orgs/[orgSlug]/redemptions`: header, the "showing" and "today" stats, then the log. */
+/** `/t/[tenantSlug]/redemptions`: header, the "showing" and "today" stats, then the log. */
 export function MerchantRedemptionsPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={MERCHANT_REDEMPTIONS_LOADING_LABELS} className={PAGE_STACK}>
@@ -373,7 +373,7 @@ export function MerchantRedemptionsPageSkeleton(): React.JSX.Element {
 
 // ── Rewards ──────────────────────────────────────────────────────────────────
 
-/** `/orgs/[orgSlug]/rewards`: header with "New reward", the summary strip, the status tabs with the layout switch, and the reward grid. */
+/** `/t/[tenantSlug]/rewards`: header with "New reward", the summary strip, the status tabs with the layout switch, and the reward grid. */
 export function MerchantRewardsPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={MERCHANT_REWARDS_LOADING_LABELS} className={PAGE_STACK}>
@@ -538,7 +538,7 @@ export function MerchantRewardDetailPageSkeleton(): React.JSX.Element {
 
 // ── Settings ─────────────────────────────────────────────────────────────────
 
-/** `/orgs/[orgSlug]/settings`: the header, one link card per settings area, and the pointer to Account. */
+/** `/t/[tenantSlug]/settings`: the header, one link card per settings area, and the pointer to Account. */
 export function MerchantSettingsPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={MERCHANT_SETTINGS_LOADING_LABELS} className={PAGE_STACK}>
@@ -555,7 +555,7 @@ export function MerchantSettingsPageSkeleton(): React.JSX.Element {
 }
 
 /** The store-location list: the summary panel, then the two-column grid of location cards. Bones only. */
-export function OrganizationLocationsSkeleton(): React.JSX.Element {
+export function LocationsSkeleton(): React.JSX.Element {
 	return (
 		<>
 			<Card className="gap-3 p-5 sm:p-6">
@@ -586,12 +586,12 @@ export function OrganizationLocationsSkeleton(): React.JSX.Element {
 	);
 }
 
-/** `/orgs/[orgSlug]/settings/locations`: header with "Add store", the summary and the location cards. */
+/** `/t/[tenantSlug]/settings/locations`: header with "Add store", the summary and the location cards. */
 export function MerchantLocationsPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={MERCHANT_LOCATIONS_LOADING_LABELS} className={PAGE_STACK}>
 			<MerchantPageHeaderSkeleton actions={1} />
-			<OrganizationLocationsSkeleton />
+			<LocationsSkeleton />
 		</SkeletonRegion>
 	);
 }
@@ -615,7 +615,7 @@ export function StoreLogoSkeleton(): React.JSX.Element {
 	);
 }
 
-/** `/orgs/[orgSlug]/settings/branding`: header and the store-logo panel. */
+/** `/t/[tenantSlug]/settings/branding`: header and the store-logo panel. */
 export function MerchantBrandingPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={MERCHANT_BRANDING_LOADING_LABELS} className={PAGE_STACK}>
@@ -635,13 +635,13 @@ function RosterHeadingSkeleton(): React.JSX.Element {
 	);
 }
 
-/** `/orgs/[orgSlug]/settings/team`: header, current members, pending invitations and the invite form. */
+/** `/t/[tenantSlug]/settings/team`: header, current members, pending invitations and the invite form. */
 /** Store rows drawn while the stores page loads. */
 export const STORE_ROW_SKELETON_ROWS = 4;
 /** Lines of one store row: its name and the member's role. */
 export const STORE_ROW_LINES = 2;
 
-/** `/orgs/[orgSlug]/stores`: the header, the search box and the store rows. */
+/** `/t/[tenantSlug]/stores`: the header, the search box and the store rows. */
 export function MerchantStoresPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={MERCHANT_STORES_LOADING_LABELS} className={PAGE_STACK}>
@@ -686,7 +686,7 @@ export function MerchantKybVerificationSectionSkeleton(): React.JSX.Element {
 	);
 }
 
-/** `/orgs/[orgSlug]/settings/verification`: header, the pointer to Account, and the verification form. */
+/** `/t/[tenantSlug]/settings/verification`: header, the pointer to Account, and the verification form. */
 export function MerchantVerificationPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={MERCHANT_VERIFICATION_LOADING_LABELS} className={PAGE_STACK}>
@@ -699,7 +699,7 @@ export function MerchantVerificationPageSkeleton(): React.JSX.Element {
 
 // ── Account ──────────────────────────────────────────────────────────────────
 
-/** `/orgs/[orgSlug]/account`: header, then the security panel's sections. */
+/** `/t/[tenantSlug]/account`: header, then the security panel's sections. */
 export function MerchantAccountPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={MERCHANT_ACCOUNT_LOADING_LABELS} className={PAGE_STACK}>

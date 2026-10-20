@@ -18,12 +18,12 @@ Five routes serve every analytics screen. The JSON shapes live in
 | Route | Who | Response |
 | --- | --- | --- |
 | `GET /api/v1/claims/analytics/dashboard` | the signed-in customer (self only) | `CustomerAnalyticsDashboard` |
-| `GET /api/v1/orgs/{orgSlug}/analytics/dashboard` | member with `merchant:view_analytics` (or an INTEGRATION API key), within their store scope | `MerchantAnalyticsDashboard` |
+| `GET /api/v1/tenants/{tenantSlug}/analytics/dashboard` | member with `merchant:view_analytics` (or an INTEGRATION API key), within their store scope | `MerchantAnalyticsDashboard` |
 | `GET /api/v1/admin/analytics/dashboard` | `READ ANALYTICS` | `AdminAnalyticsDashboard` |
-| `GET /api/v1/orgs/{orgSlug}/analytics/export` | as the merchant dashboard | the report file |
+| `GET /api/v1/tenants/{tenantSlug}/analytics/export` | as the merchant dashboard | the report file |
 | `GET /api/v1/admin/analytics/export` | `READ ANALYTICS` | the report file |
 
-The weekly v1 summaries (`/claims/analytics`, `/orgs/{orgSlug}/analytics`,
+The weekly v1 summaries (`/claims/analytics`, `/tenants/{tenantSlug}/analytics`,
 `/admin/analytics/sales`) are unchanged for API clients; no web, merchant or admin screen reads them
 any more — every analytics screen uses the dashboards
 ([Analytics dashboards](../frontend/analytics-charts.md)).
@@ -47,9 +47,9 @@ any more — every analytics screen uses the dashboards
   local midnight / Monday 00:00 / the 1st: a day is 23 or 25 hours across a DST change, a month
   its real length. The first and last bucket are clipped to the range and flagged `isPartial`.
   Every bucket is present; empty ones are zero.
-- Zone: the merchant's `Organization.timeZone`; **UTC** for the admin and customer views (the same
+- Zone: the merchant's `Tenant.timeZone`; **UTC** for the admin and customer views (the same
   rule as the v1 summaries). `range.timeZone` says which — label buckets in it. Members read the
-  merchant's zone up front in `GET /orgs/{orgSlug}/context` (`organization.timeZone`).
+  merchant's zone up front in `GET /tenants/{tenantSlug}/context` (`tenant.timeZone`).
 - Every KPI is `{ value, previous, change, changePercent }` against the equally long range before
   (`range.previousFrom` / `previousTo`). `changePercent` has one decimal and is `null` when
   `previous` is 0.
@@ -74,7 +74,7 @@ happened.
 Real response from the seeded API (arrays cut to two items):
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/analytics/dashboard?interval=week
+GET /api/v1/tenants/brew-bean-kl/analytics/dashboard?interval=week
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -113,7 +113,7 @@ customer samples are in the [API reference](../api-reference/platform-admin.md) 
 `to` are **required**, so a file is reproducible and its name deterministic.
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/analytics/export?from=1788596410692&to=1791188410692&format=xlsx
+GET /api/v1/tenants/brew-bean-kl/analytics/export?from=1788596410692&to=1791188410692&format=xlsx
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 
@@ -134,7 +134,7 @@ X-Content-Type-Options: nosniff
   (`ANALYTICS_EXPORT_RATE_LIMIT` / `…_WINDOW_MS` in `@workspace/shared`), counted in the shared
   Redis throttler store so every API instance enforces one budget.
 - **Audit:** every export writes one `AuditLog` row before a byte is sent — actor, impersonator,
-  organization, IP, device, endpoint, query, and as `responseBody`
+  tenant, IP, device, endpoint, query, and as `responseBody`
   `{ export: { report, subject, format, fileName, from, to, timeZone, interval, rowCounts } }`
   (never the data). If the row cannot be written the export fails with `500`.
 - **Time budget:** every report statement runs with `SET LOCAL statement_timeout = 10 s`
@@ -191,14 +191,14 @@ glyph; other letters use the Latin fallback.
 import { apiDownloads, saveDownloadedFile } from "@workspace/client/lib/api/download";
 
 const { api } = useAuth();
-const file = await api.download(apiDownloads.organizations.analyticsExport, { orgSlug, from, to, interval, format: "xlsx" });
+const file = await api.download(apiDownloads.tenants.analyticsExport, { orgSlug, from, to, interval, format: "xlsx" });
 saveDownloadedFile(file); // file.blob, file.fileName (from Content-Disposition), file.contentType
 ```
 
 `api.download` (= `fetchDownload` with the session's refresh pipeline) validates the input with
 the shared schema, refuses a body that is not one of the contract's media types, and rejects with
 `ApiDownloadError` (`code`, `statusCode`, `retryAfterSeconds`, `correlationId`). Dashboards are
-ordinary queries: `api.organizations.analyticsDashboard.useQuery({ orgSlug, from, to, interval })`,
+ordinary queries: `api.tenants.analyticsDashboard.useQuery({ orgSlug, from, to, interval })`,
 `api.rewardsAdmin.analyticsDashboard`, `api.claims.analyticsDashboard`.
 
 ## How the code is laid out
@@ -225,7 +225,7 @@ flowchart LR
 `apps/api/src/contexts/reporting/`:
 
 - `domain/value-objects/analytics-scope.value-object.ts` — `AnalyticsScope` (`platform` /
-  `organization` + store scope / `customer`); `domain/policies/` — the comparison and weekly math.
+  `tenant` + store scope / `customer`); `domain/policies/` — the comparison and weekly math.
 - `application/queries/<use-case>/` — `GetMerchantAnalytics`, `GetMerchantDashboard`,
   `ExportMerchantReport`, `GetAdminSalesAnalytics`, `GetAdminDashboard`, `ExportPlatformReport`,
   `GetConsumerClaimAnalytics`, `GetConsumerDashboard`. A merchant handler asks the merchant access
@@ -238,10 +238,10 @@ flowchart LR
   one renderer class, one entry in the registry; renderers never query the database.
 - `presentation/http/analytics-export-rate-limit.guard.ts` — the per-caller export limit.
 
-Indexes used: `reward_sales (organization_id, paid_at)`, `(user_id, paid_at)`, `(paid_at)`;
-`reward_redemptions (organization_id)`, `(redeemed_at)`; `reward_claims (reward_id)`, `(user_id)`.
+Indexes used: `reward_sales (tenant_id, paid_at)`, `(user_id, paid_at)`, `(paid_at)`;
+`reward_redemptions (tenant_id)`, `(redeemed_at)`; `reward_claims (reward_id)`, `(user_id)`.
 The first-bill lookup of new vs returning customers is one `(user_id, paid_at)` probe per buyer.
-Composite `reward_redemptions (organization_id, redeemed_at)` and `reward_claims (reward_id,
+Composite `reward_redemptions (tenant_id, redeemed_at)` and `reward_claims (reward_id,
 claimed_at)` indexes would tighten the merchant aggregates on large tenants; they need a generated
 migration and are a follow-up.
 

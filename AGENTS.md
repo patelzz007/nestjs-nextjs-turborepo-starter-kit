@@ -24,7 +24,7 @@ This is a production-grade **NestJS + Next.js + Expo** Turborepo monorepo, built
 
 ## This is a starter kit — there is no acceptable shortcut
 
-Every other product in this organization gets built on top of what's in this repository. A hack, a "temporary" workaround, or a corner cut here doesn't stay contained — it gets copied as "the pattern" into everything built from it. Do things the proper way, every time, even when it's slower, even for something that looks trivial, even under time pressure. If you genuinely believe a shortcut is warranted, say so explicitly rather than taking it silently — see `rules/15-feature-development-process.md`.
+Every other product in this tenant gets built on top of what's in this repository. A hack, a "temporary" workaround, or a corner cut here doesn't stay contained — it gets copied as "the pattern" into everything built from it. Do things the proper way, every time, even when it's slower, even for something that looks trivial, even under time pressure. If you genuinely believe a shortcut is warranted, say so explicitly rather than taking it silently — see `rules/15-feature-development-process.md`.
 
 ## Completion gate — a task is NOT done until this passes
 

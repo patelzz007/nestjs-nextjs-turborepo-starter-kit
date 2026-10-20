@@ -430,7 +430,7 @@ describe('CancelOrderService', () => {
   });
 
   describe('authorization boundaries', () => {
-    it('does not reveal or modify an order from another organization', async (): Promise<void> => { /* ... */ });
+    it('does not reveal or modify an order from another tenant', async (): Promise<void> => { /* ... */ });
   });
 });
 ```

@@ -1,11 +1,11 @@
 "use client";
 
 import { MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
-import { useOrganizationPath } from "@/contexts/organizations";
+import { useTenantPath } from "@/contexts/tenancy";
 import { RewardStockMeter } from "@/contexts/rewards/components/reward-stock-meter";
 import { describeRewardStores, formatRewardEnd, isRewardEnded } from "@/contexts/rewards/lib/presentation";
 import { formatRewardOffer } from "@workspace/client/lib/contexts/rewards/reward-offer";
-import { ORG_ROUTES } from "@/lib/routes";
+import { TENANT_ROUTES } from "@/lib/routes";
 import { PLATFORM_DISPLAY_REGION, type RewardResponse } from "@workspace/shared";
 import { CoverImage } from "@workspace/ui/components/cover-image";
 import { cn } from "@workspace/ui/lib/core/utils";
@@ -37,7 +37,7 @@ export interface MerchantRewardListRowProps {
 
 /** Dense row for scanning many offers — the same facts as the grid card, in columns. The whole row opens the reward. */
 export function MerchantRewardListRow({ reward, canManageRewards }: MerchantRewardListRowProps): React.JSX.Element {
-	const rewardPath = useOrganizationPath(ORG_ROUTES.rewards.detail(reward.id));
+	const rewardPath = useTenantPath(TENANT_ROUTES.rewards.detail(reward.id));
 	const ended = isRewardEnded(reward.status);
 	const stores = describeRewardStores(reward);
 	const { locale } = PLATFORM_DISPLAY_REGION;

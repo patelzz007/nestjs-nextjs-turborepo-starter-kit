@@ -59,8 +59,8 @@ always on ([Authentication](../security/authentication.md#login-hardening)).
 
 - **Nest middleware runs before the body is parsed.** Nest bundles `middie`, so `NestMiddleware`
   works, but it runs during Fastify's `onRequest` against the raw Node `IncomingMessage` — there is
-  no `req.body` yet. The two middlewares (`RequestContextMiddleware`, `RlsPreHandlerMiddleware`) only
-  need headers. Anything that needs the parsed body belongs in a guard, pipe or interceptor.
+  no `req.body` yet. `RequestContextMiddleware` only
+  needs headers. Anything that needs the parsed body belongs in a guard, pipe or interceptor.
 - **Query strings are flat.** Fastify does not parse `?filter[status][in]=A,B` into nested objects;
   bracket keys stay literal and a repeated key becomes an array. List endpoints run
   `BracketQueryPipe` (through `@ZodListQuery`), which nests them with a prototype-pollution-safe

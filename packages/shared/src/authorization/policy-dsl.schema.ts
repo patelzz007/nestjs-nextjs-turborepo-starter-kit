@@ -33,7 +33,7 @@ export const PolicyConditionSchema = z
 		field: z.string().min(1),
 		operator: PolicyOperatorSchema,
 		value: PolicyValueSchema.optional(),
-		/** Reference to actor attribute like $user.organizationId */
+		/** Reference to actor attribute like $user.tenantId */
 		valueRef: z.string().min(1).optional(),
 	})
 	.strict();
@@ -72,9 +72,9 @@ export const PolicyRuleSchema: z.ZodType<PolicyRule> = z.lazy(() =>
  *   "all": [
  *     {
  *       "condition": {
- *         "field": "order.organizationId",
+ *         "field": "order.tenantId",
  *         "operator": "equals",
- *         "valueRef": "$user.organizationId"
+ *         "valueRef": "$user.tenantId"
  *       }
  *     },
  *     {
@@ -91,7 +91,7 @@ export const PolicyConditionsSchema = PolicyRuleSchema;
 
 export type PolicyConditions = z.infer<typeof PolicyConditionsSchema>;
 
-export const PermissionScopeSchema = z.enum(["GLOBAL", "ORGANIZATION", "STORE", "LOCATION", "RESOURCE", "OWN"]);
+export const PermissionScopeSchema = z.enum(["GLOBAL", "TENANT", "STORE", "LOCATION", "RESOURCE", "OWN"]);
 
 export type PermissionScope = z.infer<typeof PermissionScopeSchema>;
 
@@ -122,14 +122,14 @@ export type AuthorizationAttributes = z.infer<typeof AuthorizationAttributesSche
 /**
  * Authorization context - the subject performing an action.
  *
- * `organizationId` / `storeId` / `locationId` must only ever be populated from a
+ * `tenantId` / `storeId` / `locationId` must only ever be populated from a
  * server-verified membership (see `AuthorizationContextResolver`); the kernel
- * re-verifies them before any ORGANIZATION / LOCATION scoped grant applies.
+ * re-verifies them before any TENANT / LOCATION scoped grant applies.
  */
 export const AuthorizationContextSchema = z
 	.object({
 		userId: z.string(),
-		organizationId: z.string().optional(),
+		tenantId: z.string().optional(),
 		/** Active store — only honoured after the kernel verifies a store membership. */
 		storeId: z.string().optional(),
 		locationId: z.string().optional(),
@@ -192,7 +192,7 @@ export type AuthorizationResult = z.infer<typeof AuthorizationResultSchema>;
 export const AuthorizationAuditLogRequestSchema = z
 	.object({
 		actorId: z.string().optional(),
-		organizationId: z.string().optional(),
+		tenantId: z.string().optional(),
 		locationId: z.string().optional(),
 		action: z.string(),
 		resource: z.string(),
@@ -223,20 +223,20 @@ export const OwnershipRowFilterSchema = z
 export type OwnershipRowFilter = z.output<typeof OwnershipRowFilterSchema>;
 
 /**
- * Restricts rows to a tenant scope: the organization (optionally narrowed to
+ * Restricts rows to a tenant scope: the tenant (optionally narrowed to
  * one location) or a single location. When both are present they are
  * conjunctive — a location condition never widens past the org boundary.
  */
 export const TenantRowFilterSchema = z.union([
 	z
 		.object({
-			organizationId: z.string(),
+			tenantId: z.string(),
 			storeId: z.string(),
 		})
 		.strict(),
 	z
 		.object({
-			organizationId: z.string(),
+			tenantId: z.string(),
 			locationId: z.string().optional(),
 		})
 		.strict(),

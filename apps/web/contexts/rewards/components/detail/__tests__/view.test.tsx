@@ -61,7 +61,7 @@ vi.mock("next/navigation", () => ({
 function buildReward(overrides: RewardFixtureOverrides = {}): RewardResponse {
 	return buildRewardResponse({
 		id: REWARD_ID,
-		organizationName: "Brew & Bean KL",
+		tenantName: "Brew & Bean KL",
 		title: "Free coffee",
 		category: "food",
 		expiryDate: Date.now() + 10 * DAY_MS,
@@ -152,11 +152,11 @@ describe("RewardDetailView loading", () => {
 });
 
 describe("RewardDetailView merchant identity", () => {
-	const LOGO_URL = "https://cdn.example.com/organizations/brew-bean/logo.png";
+	const LOGO_URL = "https://cdn.example.com/tenants/brew-bean/logo.png";
 
 	it("names the offering shop beside its logo", () => {
 		rewardUseQuery.mockReturnValue({
-			data: { data: buildReward({ organizationLogoUrl: LOGO_URL }) },
+			data: { data: buildReward({ tenantLogoUrl: LOGO_URL }) },
 			isLoading: false,
 			refetch: (): Promise<void> => Promise.resolve(),
 		});
@@ -330,7 +330,7 @@ describe("RewardDetailView more from the merchant", () => {
 		expect(screen.getByRole("heading", { name: "More from Brew & Bean KL" })).toBeDefined();
 		expect(screen.getByText("Free croissant")).toBeDefined();
 		expect(screen.getAllByRole("link", { name: "View offer" }).map((link) => link.getAttribute("href"))).toEqual([`/rewards/${other.id}`]);
-		expect(rewardListUseQuery).toHaveBeenCalledWith(expect.objectContaining({ filter: { organizationId: { eq: "00000000-0000-4000-8000-0000000000aa" } } }));
+		expect(rewardListUseQuery).toHaveBeenCalledWith(expect.objectContaining({ filter: { tenantId: { eq: "00000000-0000-4000-8000-0000000000aa" } } }));
 	});
 
 	it("leaves the section out when the merchant has nothing else live", () => {

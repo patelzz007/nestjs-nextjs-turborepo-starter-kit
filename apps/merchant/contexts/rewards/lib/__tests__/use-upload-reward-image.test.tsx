@@ -7,9 +7,9 @@ import { TestQueryClientProvider } from "@/test/query-client";
 
 import { REWARD_IMAGE_FILE_RULES, REWARD_IMAGE_RULES, RewardImageNotPublishedError, useUploadRewardImage, type UploadedRewardImage } from "../use-upload-reward-image";
 
-const ORGANIZATION_ID = "0d5c7a3e-2b8f-4e61-9c4d-7a1b2c3d4e5f";
+const TENANT_ID = "0d5c7a3e-2b8f-4e61-9c4d-7a1b2c3d4e5f";
 const FILE_ID = "4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b";
-const PUBLIC_URL = `https://cdn.example.com/stores/${ORGANIZATION_ID}/reward-images/${FILE_ID}.webp`;
+const PUBLIC_URL = `https://cdn.example.com/stores/${TENANT_ID}/reward-images/${FILE_ID}.webp`;
 const API = { files: {} };
 
 const { uploadFileDirect, waitForFileReady } = vi.hoisted(() => ({
@@ -51,7 +51,7 @@ afterEach((): void => {
 });
 
 describe("useUploadRewardImage", () => {
-	it("uploads the image as the organization's REWARD_IMAGE, waits for the checks, and returns the published image", async () => {
+	it("uploads the image as the tenant's REWARD_IMAGE, waits for the checks, and returns the published image", async () => {
 		uploadFileDirect.mockResolvedValue({ fileId: FILE_ID });
 		waitForFileReady.mockResolvedValue(readyFile(PUBLIC_URL));
 		const { result } = renderHook(useUploadRewardImage, { wrapper: TestQueryClientProvider });
@@ -59,10 +59,10 @@ describe("useUploadRewardImage", () => {
 
 		let image: UploadedRewardImage | undefined;
 		await act(async (): Promise<void> => {
-			image = await result.current.mutateAsync({ organizationId: ORGANIZATION_ID, file });
+			image = await result.current.mutateAsync({ tenantId: TENANT_ID, file });
 		});
 
-		expect(uploadFileDirect).toHaveBeenCalledWith(API, { category: "REWARD_IMAGE", organizationId: ORGANIZATION_ID, fileName: "kuih.webp", mimeType: "image/webp" }, file);
+		expect(uploadFileDirect).toHaveBeenCalledWith(API, { category: "REWARD_IMAGE", tenantId: TENANT_ID, fileName: "kuih.webp", mimeType: "image/webp" }, file);
 		expect(waitForFileReady).toHaveBeenCalledWith(API, FILE_ID);
 		expect(image).toEqual({ fileId: FILE_ID, url: PUBLIC_URL });
 	});
@@ -71,7 +71,7 @@ describe("useUploadRewardImage", () => {
 		const { result } = renderHook(useUploadRewardImage, { wrapper: TestQueryClientProvider });
 
 		act((): void => {
-			result.current.mutate({ organizationId: ORGANIZATION_ID, file: imageFile("application/pdf") });
+			result.current.mutate({ tenantId: TENANT_ID, file: imageFile("application/pdf") });
 		});
 
 		await waitFor((): void => {
@@ -86,7 +86,7 @@ describe("useUploadRewardImage", () => {
 		const { result } = renderHook(useUploadRewardImage, { wrapper: TestQueryClientProvider });
 
 		act((): void => {
-			result.current.mutate({ organizationId: ORGANIZATION_ID, file: imageFile() });
+			result.current.mutate({ tenantId: TENANT_ID, file: imageFile() });
 		});
 
 		await waitFor((): void => {

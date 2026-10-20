@@ -98,12 +98,12 @@ Every reward shows 1–10 photos in order (`RewardImage`, position 0 is the cove
   published next to the original. `RewardResponse.images[]` carries each image's `url`, size and
   `sources[]`, which clients render as `srcset`/`sizes`, so a phone downloads ~100 KB, not 4K.
   A failed render fails the promotion and withdraws whatever was published.
-- **Upload first, then save.** The merchant uploads `REWARD_IMAGE` files to the organization
+- **Upload first, then save.** The merchant uploads `REWARD_IMAGE` files to the tenant
   (`merchant:manage_rewards`); each goes ticket → upload → complete (pixel check) → scan → READY and
   is bound to nothing (`StoredFileBinding` `NONE`). The reward names them, in order, in
   `imageFileIds` on create or edit (`1`–`10`, no duplicates).
 - **Checked on every save.** `RewardRepository` locks the file rows (`FOR UPDATE`) and requires
-  each to be the organization's own READY, public, published, live `REWARD_IMAGE` inside the
+  each to be the tenant's own READY, public, published, live `REWARD_IMAGE` inside the
   reward write's transaction; otherwise `400 REWARD_IMAGES_INVALID`. An edit soft-deletes the
   previous rows and writes the new order. A referrer reward shares its consumer reward's images.
 - **Never deleted while in use.** `DELETE /files/:id` takes the same row lock and answers
@@ -118,7 +118,7 @@ Every reward shows 1–10 photos in order (`RewardImage`, position 0 is the cove
   (`MANAGE REWARD`, the moderation permission) signs a short-lived URL for the image's original
   upload with `Content-Disposition: attachment`, named after the uploaded file. Only a live image of
   that live reward resolves (`404 REWARD_IMAGE_NOT_FOUND` otherwise), so a reviewer needs no file
-  capability in the merchant's organization.
+  capability in the merchant's tenant.
 - **Downloadable all at once.** `GET /admin/rewards/:rewardId/images/archive` (`MANAGE REWARD`)
   streams every live image of the reward as one ZIP (`<reward-title>-photos.zip`) of the original
   uploads, in display order, as entries `1-<original name>`, `2-…` (names through
@@ -130,8 +130,8 @@ Every reward shows 1–10 photos in order (`RewardImage`, position 0 is the cove
   byte is sent; an object missing from storage mid-way aborts the response instead of ending a
   truncated archive. Any other set of already-authorized files (KYB evidence, say) can reuse
   `createZipArchive`.
-- Keys: originals at `stores/{organizationId}/reward-images/{fileId}.{ext}`, renditions at
-  `stores/{organizationId}/reward-images/{kind}/{fileId}.webp`. Seed photos (4K WebP — above the
+- Keys: originals at `stores/{tenantId}/reward-images/{fileId}.{ext}`, renditions at
+  `stores/{tenantId}/reward-images/{kind}/{fileId}.webp`. Seed photos (4K WebP — above the
   Full HD minimum, so they get every rendition — one folder per
   set, `01` is the cover) live in `apps/api/prisma/seed/assets/reward-images/` with `manifest.json`
   (Unsplash License, credits in `CREDITS.md`); the seed stores, checks and renders them through
@@ -153,11 +153,11 @@ first, then on the stored bytes at `complete` (`400 FILE_IMAGE_DIMENSIONS_INVALI
   out to the whole photo over a blurred copy of it, so a wide wordmark logo keeps every letter.
 - **Avatar:** `ProfileAvatarEditor` (`lib/auth/profile`) on the admin profile page and the web
   account settings; bound to the uploader on READY.
-- **Store logo:** `/orgs/{slug}/settings/branding` in the merchant console (`merchant:view_locations`
+- **Store logo:** `/tenants/{slug}/settings/branding` in the merchant console (`merchant:view_locations`
   to see it, `merchant:manage_locations` to change it — the API's `STORE_LOGO` rule). Bound as the
-  organization's `LOGO` asset on READY, replacing the previous one; `GET /orgs/:orgSlug/context`
-  returns it as `organization.logo` (`{ fileId, url, sources }` or `null`) and reward responses as
-  `organizationLogoUrl` + `organizationLogoSources`, both through `ORGANIZATION_LOGO_ASSETS_SELECT`.
+  tenant's `LOGO` asset on READY, replacing the previous one; `GET /tenants/:tenantSlug/context`
+  returns it as `tenant.logo` (`{ fileId, url, sources }` or `null`) and reward responses as
+  `tenantLogoUrl` + `tenantLogoSources`, both through `TENANT_LOGO_ASSETS_SELECT`.
   The upload ticket's `assetType` must match the category (`LOGO` for `STORE_LOGO`, `BANNER` for
   `STORE_BANNER`); a mismatch is a `400`.
 - **Served in their renditions.** Avatars (`GET /auth/profile` → `avatar.sources`) and logos carry

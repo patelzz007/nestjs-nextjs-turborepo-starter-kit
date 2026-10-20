@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { defineContract } from "../../contracts/define-contract";
 import { paginatedResponse, singleResponse } from "../../contracts/response";
-import { AdminMerchantInvitePreviewQuerySchema } from "../organizations/schemas/merchant";
+import { AdminMerchantInvitePreviewQuerySchema } from "../tenancy/schemas/merchant";
 import { emailRoutes, merchantInviteEmailPreviewRoutes } from "./routes";
 import { EmailLogEntrySchema, EmailLogListQuerySchema, EmailPreviewListResponseSchema, EmailPreviewSchema, EmailSendResultSchema } from "./schemas/email";
 

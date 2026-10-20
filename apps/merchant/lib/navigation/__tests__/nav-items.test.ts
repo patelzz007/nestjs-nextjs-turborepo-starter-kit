@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { filterMerchantNavItems, MERCHANT_NAV_ITEMS, resolvePinnedMerchantNavItems } from "@/lib/navigation/nav-items";
 import { buildMerchantPaletteItems } from "@/lib/palette/nav-items";
 import { resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
-import { ORG_ROUTES } from "@/lib/routes";
+import { TENANT_ROUTES } from "@/lib/routes";
 import { membershipFixture } from "@/test/authorization";
 
 function predicateFor(capabilities: readonly CapabilitySlug[]): (permission: CapabilitySlug) => boolean {
@@ -55,7 +55,7 @@ describe("merchant nav authorization", () => {
 	it("drops pinned entries the role can no longer open", () => {
 		const can = predicateFor([MERCHANT_CAPABILITY.viewDashboard]);
 
-		expect(resolvePinnedMerchantNavItems([ORG_ROUTES.apiKeys, ORG_ROUTES.terminals, ORG_ROUTES.dashboard], can).map((item) => item.id)).toEqual(["dashboard"]);
+		expect(resolvePinnedMerchantNavItems([TENANT_ROUTES.apiKeys, TENANT_ROUTES.terminals, TENANT_ROUTES.dashboard], can).map((item) => item.id)).toEqual(["dashboard"]);
 	});
 
 	it("ignores pins saved under retired URLs", () => {
@@ -67,7 +67,7 @@ describe("merchant nav authorization", () => {
 	it("drops a pinned team page once the role loses merchant:manage_team", () => {
 		const can = predicateFor(resolveMerchantCapabilities(membershipFixture("MEMBER")));
 
-		expect(resolvePinnedMerchantNavItems([ORG_ROUTES.settings.team, ORG_ROUTES.settings.locations], can).map((item) => item.id)).toEqual(["settings-locations"]);
+		expect(resolvePinnedMerchantNavItems([TENANT_ROUTES.settings.team, TENANT_ROUTES.settings.locations], can).map((item) => item.id)).toEqual(["settings-locations"]);
 	});
 
 	it("leaves only the open account entry without a membership", () => {

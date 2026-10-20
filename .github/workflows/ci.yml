@@ -266,6 +266,8 @@ jobs:
         uses: ./.github/actions/write-api-ci-env
         with:
           database-url: ${{ env.DATABASE_URL }}
+          # RewardHub runs multi-tenant: the full suite runs as it will in production (MT-70).
+          tenancy-mode: multi
 
       - name: Build workspace dependencies of the API
         run: pnpm turbo run build --filter=@workspace/api^...
@@ -293,11 +295,72 @@ jobs:
         # job unless apps/api/prisma/seed/coverage-exemptions.ts lists it with a reason.
         run: pnpm --filter @workspace/api db:check-seed-coverage
 
-      - name: API e2e tests
+      - name: Tenant integrity (no child row references another tenant's parent)
+        run: pnpm --filter @workspace/api db:check-tenant-integrity
+
+      - name: API e2e tests (multi-tenant)
         run: pnpm --filter @workspace/api test:e2e
+
+      - name: Tenancy isolation suite (multi-tenant, plan §8)
+        run: pnpm --filter @workspace/api test:e2e:tenancy
+
+      - name: RLS runtime-role suite (DB-001…007)
+        run: pnpm --filter @workspace/api test:e2e:rls
 
       - name: Seed the enterprise scenario (additive; proves the scenario still runs)
         run: pnpm db:seed -- --scenario enterprise --seed 1
+
+  e2e-single-tenant:
+    name: Single-tenant e2e + RLS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        # Keep in step with compose.yml (local dev) — same major, same patch.
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d app_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      # Throwaway service-container database; nothing here is a real credential.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_ci?schema=public
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Write throwaway apps/api/.env
+        uses: ./.github/actions/write-api-ci-env
+        with:
+          database-url: ${{ env.DATABASE_URL }}
+          # The two-tenant fixture's Tenant A (test/support/two-tenant-fixture.ts) is the default tenant.
+          tenancy-mode: single
+          default-tenant-id: 019b76da-a810-7000-8000-0000000000a1
+
+      - name: Build workspace dependencies of the API
+        run: pnpm turbo run build --filter=@workspace/api^...
+
+      - name: Apply migrations + RLS (prisma migrate deploy → db:apply-security)
+        run: pnpm db:deploy
+
+      - name: Tenancy single-mode suite (ST-001…005)
+        run: pnpm --filter @workspace/api test:e2e:tenancy:single
+
+      - name: RLS runtime-role suite (DB-001…007)
+        run: pnpm --filter @workspace/api test:e2e:rls
 
   browser-e2e:
     name: Browser e2e (Playwright — web + admin)
@@ -348,6 +411,9 @@ jobs:
         uses: ./.github/actions/write-api-ci-env
         with:
           database-url: ${{ env.DATABASE_URL }}
+          # The browser suites drive the seeded single-tenant demo (the tenant `pnpm db:seed` creates).
+          tenancy-mode: single
+          default-tenant-id: 019b76da-a800-7a94-a198-23ad1b4cfdd9
 
       - name: Build the API, web and admin
         run: pnpm turbo run build --filter=@workspace/api --filter=@workspace/web --filter=@workspace/admin

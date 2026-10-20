@@ -184,7 +184,7 @@ export default function RewardReviewDetailView({ rewardId, initialReward }: Rewa
 	const status = REWARD_STATUS_PRESENTATION[reward.status];
 	const isAwaitingReview = reward.status === "PENDING_REVIEW";
 	const isBusy = approveMutation.isPending || rejectMutation.isPending;
-	const merchantName = reward.organizationName ?? "Merchant";
+	const merchantName = reward.tenantName ?? "Merchant";
 
 	return (
 		<div className="mx-auto w-full max-w-6xl space-y-6">
@@ -197,7 +197,7 @@ export default function RewardReviewDetailView({ rewardId, initialReward }: Rewa
 					<StatusBadge tone={status.tone}>{status.label}</StatusBadge>
 					<h1 className="text-2xl font-semibold tracking-tight">{reward.title}</h1>
 					<div className="flex items-center gap-2 text-sm text-muted-foreground">
-						<EntityAvatar name={merchantName} src={reward.organizationLogoUrl} sources={reward.organizationLogoSources} alt="" size="sm" />
+						<EntityAvatar name={merchantName} src={reward.tenantLogoUrl} sources={reward.tenantLogoSources} alt="" size="sm" />
 						<span>{merchantName}</span>
 					</div>
 				</div>

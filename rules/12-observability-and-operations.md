@@ -248,7 +248,7 @@ logger.error('user clicked button');
 logger.info('database connection failed');
 
 // ✅ DO
-logger.info({ event: 'reward.published', rewardId, organizationId, requestId });
+logger.info({ event: 'reward.published', rewardId, tenantId, requestId });
 logger.error({ event: 'payment.charge_failed', orderId, requestId, errorCode });
 ```
 
@@ -264,7 +264,7 @@ export const LogEntrySchema = z.object({
   requestId: z.string().optional(),
   traceId: z.string().optional(),
   userId: z.string().optional(),
-  organizationId: z.string().optional(),
+  tenantId: z.string().optional(),
   durationMs: z.number().nonnegative().optional(),
   outcome: z.enum(['success', 'failure']).optional(),
 });

@@ -14,9 +14,9 @@ order: 2
 
 | Class | Meaning | RLS / access |
 | --- | --- | --- |
-| **GLOBAL** | Platform-wide; not organization-scoped | Bypass or public read catalog |
-| **TENANT** | Owned by one organization | `organizationId` + membership policies |
-| **MEMBERSHIP** | Junction between user and organization | Membership-scoped |
+| **GLOBAL** | Platform-wide; not tenant-scoped | Bypass or public read catalog |
+| **TENANT** | Owned by one tenant | `tenantId` + membership policies |
+| **MEMBERSHIP** | Junction between user and tenant | Membership-scoped |
 | **USER** | Owned by individual user (consumer) | `app_owns(user_id)` |
 | **OPERATIONAL** | Infrastructure; no tenant business data | System operations only |
 
@@ -36,25 +36,25 @@ order: 2
 | EmailLog | OPERATIONAL | — | Redacted operational logs |
 | Region, Subregion, Country, State, City | GLOBAL | — | Geo reference |
 | Product, SampleCategory, ProductImage | GLOBAL | — | Platform catalog |
-| Organization | TENANT | id | Canonical tenant root |
-| OrganizationSlugHistory | TENANT | organization_id | Slug alias history |
-| OrganizationLocation | TENANT | organization_id | Store/site |
-| OrganizationMembership | MEMBERSHIP | organization_id | User ↔ org |
-| OrganizationMembershipLocationScope | MEMBERSHIP | organization_id | Location grants |
-| OrganizationMerchantProfile | TENANT | organization_id | KYB/branding |
-| OrganizationInvitation, OrganizationAccessRequest | TENANT | organization_id | Join flows |
-| OrganizationLifecycleEvent | OPERATIONAL | organization_id | State transitions audit |
-| TenantPlacement | TENANT | organization_id | Future shard/dedicated routing |
-| AuthorizationPolicyDraft/Version/Simulation | TENANT + GLOBAL | organization_id nullable | Platform guardrails have null org |
-| SupportAccessGrant | OPERATIONAL | organization_id | JIT support |
-| TenantEncryptionKey | TENANT | organization_id | Envelope key metadata |
-| OrganizationAuditLog | TENANT | organization_id | Security + mutation audit |
-| MerchantOrg | TENANT | organization_id | Legacy; links to Organization |
-| MerchantMember | MEMBERSHIP | organization_id via org | Migrating to OrganizationMembership |
-| MerchantApiKey, MerchantTerminal, MerchantInvite | TENANT | organization_id | |
-| Reward, RewardRedemption, RewardAuditLog | TENANT | organization_id | |
-| MerchantKybDocument, MerchantKybFile, MerchantAsset | TENANT | organization_id | |
-| StoredFile | TENANT or USER | organization_id optional | User avatar vs org files |
+| Tenant | TENANT | id | Canonical tenant root |
+| TenantSlugHistory | TENANT | tenant_id | Slug alias history |
+| TenantLocation | TENANT | tenant_id | Store/site |
+| TenantMembership | MEMBERSHIP | tenant_id | User ↔ org |
+| TenantMembershipLocationScope | MEMBERSHIP | tenant_id | Location grants |
+| TenantMerchantProfile | TENANT | tenant_id | KYB/branding |
+| TenantInvitation, TenantAccessRequest | TENANT | tenant_id | Join flows |
+| TenantLifecycleEvent | OPERATIONAL | tenant_id | State transitions audit |
+| TenantPlacement | TENANT | tenant_id | Future shard/dedicated routing |
+| AuthorizationPolicyDraft/Version/Simulation | TENANT + GLOBAL | tenant_id nullable | Platform guardrails have null org |
+| SupportAccessGrant | OPERATIONAL | tenant_id | JIT support |
+| TenantEncryptionKey | TENANT | tenant_id | Envelope key metadata |
+| TenantAuditLog | TENANT | tenant_id | Security + mutation audit |
+| MerchantOrg | TENANT | tenant_id | Legacy; links to Tenant |
+| MerchantMember | MEMBERSHIP | tenant_id via org | Migrating to TenantMembership |
+| MerchantApiKey, MerchantTerminal, MerchantInvite | TENANT | tenant_id | |
+| Reward, RewardRedemption, RewardAuditLog | TENANT | tenant_id | |
+| MerchantKybDocument, MerchantKybFile, MerchantAsset | TENANT | tenant_id | |
+| StoredFile | TENANT or USER | tenant_id optional | User avatar vs org files |
 | FileVariant | TENANT or USER | via parent file | |
 | RewardClaim, RewardReferral, RewardOtpChallenge | USER | user_id | Consumer-owned |
 | RewardLegalAcceptance, RewardNotification | USER | user_id | |
@@ -69,12 +69,12 @@ order: 2
 | --- | --- | --- |
 | Redis auth cache | OPERATIONAL | Key: `auth:{userId}` — not tenant data |
 | Redis authorization cache | OPERATIONAL | Include `policyVersion` |
-| Merchant React Query cache | TENANT | Key must include `organizationId` |
+| Merchant React Query cache | TENANT | Key must include `tenantId` |
 | BullMQ job payloads | TENANT | Signed `TenantJobContext` |
-| S3 object paths | TENANT | `orgs/{organizationId}/...` prefix |
+| S3 object paths | TENANT | `orgs/{tenantId}/...` prefix |
 | Kafka platform events | OPERATIONAL | Tenant id in envelope only. No email addresses: `email.log.updated` carries no recipient and is not keyed by it (the address stays in `EmailLog`) |
-| Analytics warehouse rows | OPERATIONAL | `organizationId` tag + row policies |
-| Webhook secrets | TENANT | Envelope-encrypted per organization |
+| Analytics warehouse rows | OPERATIONAL | `tenantId` tag + row policies |
+| Webhook secrets | TENANT | Envelope-encrypted per tenant |
 | Cedar policy bundle cache | OPERATIONAL | Versioned; org-scoped tenant policies |
 
 ## Schema test requirement

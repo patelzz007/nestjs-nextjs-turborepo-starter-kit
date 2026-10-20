@@ -41,7 +41,7 @@ flowchart LR
 - Every change bumps the affected users' token version, so new permissions apply on their next
   request.
 
-Merchant staff roles (Owner, Admin, Cashier, …) are a separate, per-organization system managed
+Merchant staff roles (Owner, Admin, Cashier, …) are a separate, per-tenant system managed
 by the merchant ([Stores and team](./03-stores-and-team.md)). Tenant policies (Cedar) can narrow
 what a merchant role may do; publishing a policy needs two SuperAdmins (the author cannot publish
 their own draft).
@@ -56,7 +56,7 @@ a record).
 
 - **The table** shows, newest first: time and duration, method and endpoint, outcome and HTTP
   status (with the error code of a refused request), the user (and the SuperAdmin behind an
-  impersonation), organization, device (desktop / mobile / tablet / bot, browser and OS), IP
+  impersonation), tenant, device (desktop / mobile / tablet / bot, browser and OS), IP
   address with its class (public, private network, carrier NAT …), country and city, and the
   credential — colour-coded. Filter by outcome, method, credential, device or address class, or
   search a path, endpoint, error code, IP address, User-Agent or correlation id. Filters live in
@@ -69,7 +69,7 @@ a record).
   and location, user agent, client app, Origin, Referer, Accept-Language, host, HTTP version,
   request size, idempotency key, correlation and trace ids, the row-level-security bypasses the
   request used, and the route params, request body and response body. Click an actor,
-  organization or correlation id to see every other record for it.
+  tenant or correlation id to see every other record for it.
 - Secrets read `[REDACTED]` and personal data is masked: they are removed **before** a record is
   stored, so nobody — including you — can see them.
 - Looking at the audit log is itself recorded, so you can always answer "who looked at this?" —

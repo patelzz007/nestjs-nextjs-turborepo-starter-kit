@@ -2,18 +2,18 @@
 
 import {
 	useActiveMembership,
-	useActiveOrganizationLogo,
-	useActiveOrganizationName,
+	useActiveTenantLogo,
+	useActiveTenantName,
 	useMerchantLocation,
 	useTenantContextCommands,
 	type TenantContextCommands,
 } from "@/features/tenant-context/facade";
-import { resolveLocationShortLabel } from "@/contexts/organizations/lib/org/location-display";
-import { ORGANIZATION_ROLE_LABELS } from "@/contexts/organizations/lib/org/role-labels";
-import { useOrganizationPath } from "@/contexts/organizations/lib/org/use-organization-path";
-import { ORG_ROUTES } from "@/lib/routes";
+import { resolveLocationShortLabel } from "@/contexts/tenancy/lib/org/location-display";
+import { TENANT_ROLE_LABELS } from "@/contexts/tenancy/lib/org/role-labels";
+import { useTenantPath } from "@/contexts/tenancy/lib/org/use-tenant-path";
+import { TENANT_ROUTES } from "@/lib/routes";
 import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
-import type { OrganizationMembershipRole, OrganizationRewardMembershipResponse } from "@workspace/shared";
+import type { MembershipRole, TenantRewardMembershipResponse } from "@workspace/shared";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
 import { EntityAvatar } from "@workspace/ui/components/entity-avatar";
 import { IconTile } from "@workspace/ui/components/icon-tile";
@@ -92,10 +92,10 @@ export function locationSwitcherSubtitle(activeLocation: SwitcherLocation | unde
 
 export interface MerchantContextSwitcherProps {
 	/** The first page of the member's stores. */
-	readonly memberships: readonly OrganizationRewardMembershipResponse[];
+	readonly memberships: readonly TenantRewardMembershipResponse[];
 	/** Whether the member has more stores than that page: the menu then offers "All stores" (the stores page). */
 	readonly hasMoreStores: boolean;
-	readonly organizationSlug: string | undefined;
+	readonly tenantSlug: string | undefined;
 	readonly onStoreChange: (slug: string) => void;
 }
 
@@ -103,7 +103,7 @@ export interface MerchantContextSwitcherProps {
 export interface SwitcherStore {
 	readonly slug: string;
 	readonly displayName: string;
-	readonly role: OrganizationMembershipRole;
+	readonly role: MembershipRole;
 }
 
 /**
@@ -111,9 +111,9 @@ export interface SwitcherStore {
  * page does not hold it (a store opened from "All stores" or a link), so the selected value always has
  * its option.
  */
-export function storeSwitcherStores(memberships: readonly OrganizationRewardMembershipResponse[], active: SwitcherStore | undefined): readonly SwitcherStore[] {
+export function storeSwitcherStores(memberships: readonly TenantRewardMembershipResponse[], active: SwitcherStore | undefined): readonly SwitcherStore[] {
 	const listed: readonly SwitcherStore[] = memberships.map((membership): SwitcherStore => ({
-		slug: membership.organizationSlug,
+		slug: membership.tenantSlug,
 		displayName: membership.displayName,
 		role: membership.role,
 	}));
@@ -129,17 +129,17 @@ export function storeSwitcherStores(memberships: readonly OrganizationRewardMemb
  * choosing a store navigates to it. Members who may see locations also get
  * "Manage locations".
  */
-export function MerchantContextSwitcher({ memberships, hasMoreStores, organizationSlug, onStoreChange }: MerchantContextSwitcherProps): React.JSX.Element {
+export function MerchantContextSwitcher({ memberships, hasMoreStores, tenantSlug, onStoreChange }: MerchantContextSwitcherProps): React.JSX.Element {
 	const { locationId, activeLocation, accessibleLocations, canSelectAllLocations, isLoading } = useMerchantLocation();
 	const commands = useTenantContextCommands();
-	const logo = useActiveOrganizationLogo();
+	const logo = useActiveTenantLogo();
 	const { can } = useAuthorization();
 	const router = useRouter();
-	const locationsPath = useOrganizationPath(ORG_ROUTES.settings.locations);
-	const storesPath = useOrganizationPath(ORG_ROUTES.stores);
-	// The active store and the member's role in it come from the organization context, not from the list page.
+	const locationsPath = useTenantPath(TENANT_ROUTES.settings.locations);
+	const storesPath = useTenantPath(TENANT_ROUTES.stores);
+	// The active store and the member's role in it come from the tenant context, not from the list page.
 	const { membership: activeMembership } = useActiveMembership();
-	const storeName = useActiveOrganizationName() ?? "Select a store";
+	const storeName = useActiveTenantName() ?? "Select a store";
 
 	const handleLocationChange = React.useCallback(
 		(value: string): void => {
@@ -158,8 +158,8 @@ export function MerchantContextSwitcher({ memberships, hasMoreStores, organizati
 
 	const activeStore = React.useMemo(
 		(): SwitcherStore | undefined =>
-			organizationSlug === undefined || activeMembership === undefined ? undefined : { slug: organizationSlug, displayName: storeName, role: activeMembership.role },
-		[activeMembership, organizationSlug, storeName],
+			tenantSlug === undefined || activeMembership === undefined ? undefined : { slug: tenantSlug, displayName: storeName, role: activeMembership.role },
+		[activeMembership, tenantSlug, storeName],
 	);
 
 	const groups = React.useMemo((): readonly PanelSidebarSwitcherGroup[] => {
@@ -179,15 +179,15 @@ export function MerchantContextSwitcher({ memberships, hasMoreStores, organizati
 					? storeSwitcherStores(memberships, activeStore).map((store: SwitcherStore): PanelSidebarSwitcherOption => ({
 							value: store.slug,
 							label: store.displayName,
-							description: ORGANIZATION_ROLE_LABELS[store.role],
+							description: TENANT_ROLE_LABELS[store.role],
 							visual: <EntityAvatar name={store.displayName} size="sm" className="size-8" />,
 						}))
 					: [],
-			value: organizationSlug ?? "",
+			value: tenantSlug ?? "",
 			onValueChange: onStoreChange,
 		};
 		return [locationGroup, storeGroup];
-	}, [accessibleLocations, activeStore, canSelectAllLocations, handleLocationChange, hasMoreStores, isLoading, locationId, memberships, onStoreChange, organizationSlug]);
+	}, [accessibleLocations, activeStore, canSelectAllLocations, handleLocationChange, hasMoreStores, isLoading, locationId, memberships, onStoreChange, tenantSlug]);
 
 	const actions = React.useMemo(
 		(): readonly PanelSidebarSwitcherAction[] => [
@@ -200,8 +200,7 @@ export function MerchantContextSwitcher({ memberships, hasMoreStores, organizati
 	);
 
 	const subtitle =
-		locationSwitcherSubtitle(activeLocation, locationId, canSelectAllLocations) ??
-		(activeMembership === undefined ? undefined : ORGANIZATION_ROLE_LABELS[activeMembership.role]);
+		locationSwitcherSubtitle(activeLocation, locationId, canSelectAllLocations) ?? (activeMembership === undefined ? undefined : TENANT_ROLE_LABELS[activeMembership.role]);
 
 	return (
 		<PanelSidebarSwitcher

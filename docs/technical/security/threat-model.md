@@ -1,7 +1,7 @@
 ---
 title: "Multi-Tenancy Threat Model"
 tags: ["security", "tenancy", "threat-model", "mobile"]
-description: "Abuse cases and mitigations for organization-scoped multi-tenancy."
+description: "Abuse cases and mitigations for tenant-scoped multi-tenancy."
 author: "Backend Team"
 lastUpdated: 1791504000000
 coverImage: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=1200&h=630&fit=crop"
@@ -12,7 +12,7 @@ order: 1
 
 ## Scope
 
-Organization-scoped isolation for the merchant portal, shared PostgreSQL with RLS, in-process Cedar ABAC, background jobs, object storage, caches, analytics, and JIT support access.
+Tenant-scoped isolation for the merchant portal, shared PostgreSQL with RLS, in-process Cedar ABAC, background jobs, object storage, caches, analytics, and JIT support access.
 
 **Out of scope at pilot launch:** HIPAA/PHI, contractual RPO/RTO on single-VPS topology.
 
@@ -20,12 +20,12 @@ Organization-scoped isolation for the merchant portal, shared PostgreSQL with RL
 
 | Asset | Owner |
 | --- | --- |
-| Organization business data (rewards, KYB, files, keys) | Organization |
+| Tenant business data (rewards, KYB, files, keys) | Tenant |
 | User credentials and MFA secrets | Global user |
 | Platform RBAC catalog | Platform |
-| Cedar policy bundles | Platform + organization |
+| Cedar policy bundles | Platform + tenant |
 | Audit and support-grant records | Platform (tenant-scoped views for org admins) |
-| Encryption key metadata | Organization |
+| Encryption key metadata | Tenant |
 
 ## Trust boundaries
 
@@ -37,7 +37,7 @@ flowchart TB
     AdminUI[Platform Admin]
   end
   subgraph api [API Layer]
-    OrgCtx[Organization Context]
+    OrgCtx[Tenant Context]
     Cedar[Cedar Evaluator]
     TenantTx[Tenant Transaction]
   end
@@ -60,10 +60,10 @@ flowchart TB
 
 | ID | Threat | Impact | Mitigation |
 | --- | --- | --- | --- |
-| T1 | Confused deputy via client tenant header | Cross-tenant read/write | URL slug resolution + membership check; reject client `organizationId` |
+| T1 | Confused deputy via client tenant header | Cross-tenant read/write | URL slug resolution + membership check; reject client `tenantId` |
 | T2 | Slug enumeration | Tenant discovery | Uniform not-found; rate limits |
-| T3 | IDOR on organization resources | Data leak | RLS + Cedar + composite FKs |
-| T4 | Cross-tenant FK reference | Integrity break | Composite `(organizationId, id)` constraints |
+| T3 | IDOR on tenant resources | Data leak | RLS + Cedar + composite FKs |
+| T4 | Cross-tenant FK reference | Integrity break | Composite `(tenantId, id)` constraints |
 | T5 | Pool/session context bleed | Wrong-tenant query | Transaction-local `SET LOCAL`; fail-closed without context |
 | T6 | Implicit RLS bypass | Global data exposure | Remove default bypass; allowlisted system ops only |
 | T7 | Stale authorization cache | Post-revocation access | Policy version in cache keys; pub/sub invalidation; seconds SLA |
@@ -92,19 +92,19 @@ flowchart TB
 ### AC2: Attacker reuses old slug after org rename
 
 **Precondition:** Org renamed from `acme` to `acme-corp`.  
-**Attack:** Request `/orgs/acme/...`.  
+**Attack:** Request `/tenants/acme/...`.  
 **Expected:** Redirect or not-found per slug history policy; never attach to wrong org.
 
 ### AC3: Policy admin removes all owners
 
 **Precondition:** Tenant policy admin with builder access.  
-**Attack:** Publish policy denying all `OrganizationOwner` actions.  
+**Attack:** Publish policy denying all `TenantOwner` actions.  
 **Expected:** Simulation blocks last-owner removal; platform forbid prevents owner strip.
 
 ### AC4: Worker job forged without signature
 
 **Precondition:** Compromised queue producer.  
-**Attack:** Enqueue job with arbitrary `organizationId`.  
+**Attack:** Enqueue job with arbitrary `tenantId`.  
 **Expected:** Signature verification fails; job rejected and audited.
 
 ## Mobile client

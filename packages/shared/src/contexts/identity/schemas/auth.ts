@@ -3,7 +3,7 @@ import { canonicalEmailSchema } from "../../../schemas/api/email-address";
 import { EnrollmentReasonSchema, SessionScopeSchema } from "./enrollment";
 import { LoginVerificationPendingResponseSchema } from "./login-verification";
 import { LoginTwoFactorPendingResponseSchema } from "./two-factor";
-import { OrganizationSlugSchema } from "../../organizations/schemas/organization";
+import { TenantSlugSchema } from "../../tenancy/schemas/tenant";
 import { VerifyEmailTokenParamSchema } from "../../../schemas/domain/platform/param-schemas";
 import { strongPassword } from "./password";
 import { UserResponseSchema } from "./user";
@@ -170,7 +170,7 @@ export const LoginRestrictedEnrollmentResponseSchema = z
 		message: z.string(),
 		user: UserResponseSchema.optional(),
 		/** Present for merchant portal logins so the client can route to org-scoped settings. */
-		organizationSlug: OrganizationSlugSchema.optional(),
+		tenantSlug: TenantSlugSchema.optional(),
 		accessToken: z.string(),
 		refreshToken: z.string(),
 	})
@@ -185,7 +185,7 @@ export const LoginRestrictedEnrollmentClientResponseSchema = z.object({
 	message: z.string(),
 	user: UserResponseSchema.optional(),
 	/** Present for merchant portal logins so the client can route to org-scoped settings. */
-	organizationSlug: OrganizationSlugSchema.optional(),
+	tenantSlug: TenantSlugSchema.optional(),
 });
 
 export type LoginRestrictedEnrollmentClientResponse = z.output<typeof LoginRestrictedEnrollmentClientResponseSchema>;

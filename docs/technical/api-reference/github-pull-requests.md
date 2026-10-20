@@ -3,7 +3,7 @@ title: "API reference — GitHub pull requests"
 description: "Admins link their own fine-grained GitHub token, then list and read pull requests — conversation, commits, files with diffs, line-comment threads and edit histories — as themselves."
 order: 12
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792368000000
+lastUpdated: 1792454400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -203,7 +203,7 @@ Whether a repository's pull requests update live
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 
 **Response 200 OK** (`application/json`) — Live updates of the repository
@@ -245,7 +245,7 @@ Registers a webhook on the repository with your token (it needs "Webhooks: Read 
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 
 **Response 200 OK** (`application/json`) — Live updates are on
@@ -295,7 +295,7 @@ Deletes its webhook on GitHub with your token. Already off changes nothing. Post
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 
 **Response 200 OK** (`application/json`) — Live updates are off
@@ -341,7 +341,7 @@ One repository's pull-request changes, live (SSE)
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 
 **Response 200 OK** — A `{ owner, repository, number }` frame per change, `resync` when changes may have been missed, a `ping` every 25 s (no envelope, no response contract) (`text/event-stream`)
@@ -374,7 +374,7 @@ A picture kept in a repository, read with your GitHub token
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | query | string | yes | GitHub user or organization |
+| `owner` | query | string | yes | GitHub user or tenant |
 | `repository` | query | string | yes | GitHub repository name |
 | `ref` | query | string | yes |  |
 | `path` | query | string | yes |  |
@@ -474,7 +474,7 @@ One page of your pull requests
 | `data.items[].labels[].color` | string | yes | pattern `^[0-9a-fA-F]{6}$` |
 | `data.items[].labels[].name` | string | yes | length 1–50 |
 | `data.items[].number` | integer | yes | Pull request number in its repository; range 1–2147483647 |
-| `data.items[].owner` | string | yes | GitHub user or organization; length 1–39; pattern `^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$` |
+| `data.items[].owner` | string | yes | GitHub user or tenant; length 1–39; pattern `^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$` |
 | `data.items[].repository` | string | yes | GitHub repository name; length 1–100; pattern `^[A-Za-z0-9._-]+$` |
 | `data.items[].reviewDecision` | "approved" \| "changesRequested" \| "reviewRequired" \| null | yes |  |
 | `data.items[].state` | "open" \| "closed" \| "merged" | yes |  |
@@ -517,7 +517,7 @@ One pull request with the first page of its conversation
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 | `number` | path | integer | yes | Pull request number in its repository |
 
@@ -541,7 +541,7 @@ One pull request with the first page of its conversation
 | `data.commitCount` | integer | yes |  |
 | `data.createdAt` | integer | yes |  |
 | `data.deletions` | integer | yes |  |
-| `data.headOwner` | string \| null | yes | GitHub user or organization; length 1–39; pattern `^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$` |
+| `data.headOwner` | string \| null | yes | GitHub user or tenant; length 1–39; pattern `^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$` |
 | `data.headRef` | string | yes | length 1–255 |
 | `data.htmlUrl` | string (uri) | yes |  |
 | `data.id` | string | yes | GitHub node id; length 1–100; pattern `^[A-Za-z0-9_=-]+$` |
@@ -551,7 +551,7 @@ One pull request with the first page of its conversation
 | `data.labels[].name` | string | yes | length 1–50 |
 | `data.mergedAt` | integer \| null | yes |  |
 | `data.number` | integer | yes | Pull request number in its repository; range 1–2147483647 |
-| `data.owner` | string | yes | GitHub user or organization; length 1–39; pattern `^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$` |
+| `data.owner` | string | yes | GitHub user or tenant; length 1–39; pattern `^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$` |
 | `data.reactions` | object[] | yes | 0–8 items |
 | `data.reactions[].content` | "thumbsUp" \| "thumbsDown" \| "laugh" \| "hooray" \| "confused" \| "heart" \| "rocket" \| "eyes" | yes |  |
 | `data.reactions[].count` | integer | yes |  |
@@ -651,7 +651,7 @@ Posted to GitHub as your linked account. Send an Idempotency-Key header: a retry
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 | `number` | path | integer | yes | Pull request number in its repository |
 | `Idempotency-Key` | header | string | yes | Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE. |
@@ -726,7 +726,7 @@ A pull request's commits, oldest first
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 | `number` | path | integer | yes | Pull request number in its repository |
 | `cursor` | query | string | no | `nextCursor` of the previous page; omit for the first page |
@@ -785,7 +785,7 @@ Read with your own token, so any repository it can see. The first 100 files, wit
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 | `number` | path | integer | yes | Pull request number in its repository |
 | `sha` | path | string | yes | Full commit SHA (40 lowercase hex characters) |
@@ -857,7 +857,7 @@ One page of a pull request's changed files with their diffs
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 | `number` | path | integer | yes | Pull request number in its repository |
 | `page` | query | integer | no | Page of changed files, from 1 |
@@ -917,7 +917,7 @@ Merges as you (your token needs "Contents: Read and write") with `merge`, `squas
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 | `number` | path | integer | yes | Pull request number in its repository |
 | `Idempotency-Key` | header | string | yes | Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE. |
@@ -982,7 +982,7 @@ Commit an uploaded picture to the repository, to link from a comment
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 | `number` | path | integer | yes | Pull request number in its repository |
 | `Idempotency-Key` | header | string | yes | Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE. |
@@ -1038,7 +1038,7 @@ The subject is the pull request, a conversation comment or a line comment (a rev
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 | `number` | path | integer | yes | Pull request number in its repository |
 
@@ -1104,7 +1104,7 @@ At most 100 threads of 50 comments each. 409 GITHUB_ACCOUNT_NOT_LINKED before yo
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 | `number` | path | integer | yes | Pull request number in its repository |
 
@@ -1187,7 +1187,7 @@ A summary is required to comment or request changes. Posted to GitHub as your li
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 | `number` | path | integer | yes | Pull request number in its repository |
 | `Idempotency-Key` | header | string | yes | Client-generated key (8–128 chars of [A-Za-z0-9._:-], e.g. a UUID), scoped to the caller, tenant and endpoint. An identical retry within 24h replays the stored response (`Idempotent-Replayed: true`); a different request with the same key → 409 IDEMPOTENCY_KEY_REUSED; a concurrent duplicate waits up to 5 s for the first request and replays its response (or runs, if the first one failed), else 409 IDEMPOTENCY_REQUEST_IN_PROGRESS; a non-JSON body → 415 UNSUPPORTED_MEDIA_TYPE. |
@@ -1294,7 +1294,7 @@ The head commit's checks as GitHub rolls them up (`none` without checks, `unavai
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 | `number` | path | integer | yes | Pull request number in its repository |
 
@@ -1355,7 +1355,7 @@ Pass the previous page's `nextCursor` as `cursor`. 409 GITHUB_ACCOUNT_NOT_LINKED
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 | `number` | path | integer | yes | Pull request number in its repository |
 | `cursor` | query | string | no | `nextCursor` of the previous page; omit for the first page |

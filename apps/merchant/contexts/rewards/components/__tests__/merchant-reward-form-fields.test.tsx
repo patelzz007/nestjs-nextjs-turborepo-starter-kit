@@ -75,7 +75,7 @@ function FieldsHarness({ stores, onValid }: FieldsHarnessProps): React.JSX.Eleme
 				control={control}
 				errors={formState.errors}
 				setValue={setValue}
-				organizationId={undefined}
+				tenantId={undefined}
 				initialImages={[]}
 				onImagesChange={ignoreImages}
 				stores={stores}

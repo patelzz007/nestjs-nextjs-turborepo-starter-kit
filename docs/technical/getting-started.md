@@ -121,7 +121,7 @@ then create named staff. Guarantees, audit rows and exit codes: [Bootstrap the f
 
 | Symptom | Fix |
 | --- | --- |
-| API exits listing `DEFAULT_ORGANIZATION_ID`, `MALWARE_SCANNER`, a secret … | Fill in the named variables; `pnpm secrets:generate apps/api/.env` for secrets. Single-tenant mode needs `DEFAULT_ORGANIZATION_ID` to be a real organization (the seed creates Brew & Bean KL). |
+| API exits listing `DEFAULT_TENANT_ID`, `MALWARE_SCANNER`, a secret … | Fill in the named variables; `pnpm secrets:generate apps/api/.env` for secrets. Single-tenant mode needs `DEFAULT_TENANT_ID` to be a real tenant (the seed creates Brew & Bean KL); multi-tenant mode needs it unset. |
 | `Refusing to seed` | The seed only runs against a local database with `NODE_ENV` development/test (or `--allow-destructive`). |
 | `EADDRINUSE :8080` | `pnpm kill:all` |
 | Logins return `RATE_LIMITED` | 5 attempts per minute per IP on login; wait, or raise `THROTTLE_*` locally. |

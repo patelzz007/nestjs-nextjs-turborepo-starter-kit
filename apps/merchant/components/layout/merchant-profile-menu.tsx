@@ -2,7 +2,7 @@ import type { AppShellProfileMenuItem } from "@workspace/ui/components/app-shell
 import { CircleUser, KeyRound, LayoutDashboard, Settings } from "lucide-react";
 import * as React from "react";
 
-/** The organization-scoped pages the profile menu leads to. */
+/** The tenant-scoped pages the profile menu leads to. */
 export interface MerchantProfileMenuPaths {
 	readonly account: string;
 	readonly dashboard: string;
@@ -21,7 +21,7 @@ export interface MerchantProfileMenuAccess {
 /**
  * The merchant portal's profile menu (opened from the sidebar's account row):
  * the personal account, then the dashboard and API keys when the member's
- * capabilities allow them, and the organization's settings.
+ * capabilities allow them, and the tenant's settings.
  */
 export function merchantProfileMenuItems(
 	access: MerchantProfileMenuAccess,
@@ -43,6 +43,6 @@ export function merchantProfileMenuItems(
 	if (access.canManageApiKeys) {
 		items.push({ label: "API keys", icon: <KeyRound className="size-4" aria-hidden="true" />, onClick: goTo(paths.apiKeys) });
 	}
-	items.push({ label: "Organization settings", icon: <Settings className="size-4" aria-hidden="true" />, onClick: goTo(paths.settings) });
+	items.push({ label: "Tenant settings", icon: <Settings className="size-4" aria-hidden="true" />, onClick: goTo(paths.settings) });
 	return items;
 }

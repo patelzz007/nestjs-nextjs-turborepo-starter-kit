@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { ApiKeyIntegrationGuide, buildCheckoutSnippet, buildValidateRedemptionSnippet } from "@/contexts/pos/components/api-keys/api-key-integration-guide";
 
 const API = "https://api.example.com/";
-const TERMINALS_HREF = "/orgs/acme-coffee/terminals";
+const TERMINALS_HREF = "/t/acme-coffee/terminals";
 
 afterEach((): void => {
 	cleanup();
@@ -23,7 +23,7 @@ function bodyOf(snippet: string): string {
 describe("POS integration snippets", () => {
 	it("target the versioned endpoints with both POS headers", () => {
 		for (const snippet of [buildValidateRedemptionSnippet(API), buildCheckoutSnippet(API)]) {
-			expect(snippet).toContain(`https://api.example.com${API_VERSION_PREFIX}/redemptions/`);
+			expect(snippet).toContain(`https://api.example.com${API_VERSION_PREFIX}/integration/redemptions/`);
 			expect(snippet).toContain('-H "X-API-Key: <your-terminal-key>"');
 			expect(snippet).toContain('-H "X-Terminal-Id: FRONT-COUNTER-01"');
 		}
@@ -42,10 +42,10 @@ describe("ApiKeyIntegrationGuide", () => {
 		const guide = screen.getByRole("region", { name: "Connect a terminal" });
 
 		expect(within(guide).getAllByRole("listitem").length).toBeGreaterThanOrEqual(3);
-		expect(within(guide).getByText("POST /redemptions/validate")).toBeTruthy();
+		expect(within(guide).getByText("POST /integration/redemptions/validate")).toBeTruthy();
 
 		fireEvent.click(within(guide).getByRole("tab", { name: "3 · Check out" }));
-		expect(within(guide).getByText("POST /redemptions/checkout")).toBeTruthy();
+		expect(within(guide).getByText("POST /integration/redemptions/checkout")).toBeTruthy();
 	});
 
 	it("starts by pairing the till on the POS terminals page, keeping manual keys for server-to-server use", () => {

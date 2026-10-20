@@ -5,9 +5,9 @@ import { BaseResponseSchema, type EpochMs, EpochMsSchema } from "../../../schema
 import { defineListQuery, listFilter, ListSearchSchema } from "../../../schemas/api/list-query";
 import { JsonObjectSchema } from "../../../schemas/runtime/json";
 import { ImageSourceSchema } from "../../files/schemas/storage";
-import { OrganizationLocationFilterSchema } from "../../organizations/schemas/location-filter";
-import { type OrganizationLocationScopeType, OrganizationLocationScopeTypeSchema } from "../../organizations/schemas/organization";
-import { PilotCitySchema } from "../../organizations/schemas/organization-enums";
+import { LocationFilterSchema } from "../../tenancy/schemas/location-filter";
+import { type LocationScopeType, LocationScopeTypeSchema } from "../../tenancy/schemas/tenant";
+import { PilotCitySchema } from "../../tenancy/schemas/tenant-enums";
 import {
 	type RewardCategory,
 	RewardCategorySchema,
@@ -32,7 +32,7 @@ export const rewardListQuery = defineListQuery({
 		category: listFilter.enumeration(RewardCategorySchema, { eq: true, in: true }),
 		city: listFilter.enumeration(PilotCitySchema, { eq: true, in: true }),
 		/** One merchant's live offers (e.g. "More from this merchant" on a reward page). */
-		organizationId: listFilter.uuid({ eq: true }),
+		tenantId: listFilter.uuid({ eq: true }),
 	},
 	params: { search: ListSearchSchema },
 	defaultLimit: REWARD_LIST_DEFAULT_LIMIT,
@@ -61,7 +61,7 @@ export type AdminPendingRewardListSortField = (typeof adminPendingRewardListQuer
 
 /** The store-availability fields a reward create payload and the reward form both carry. */
 interface RewardLocationScopeValue {
-	readonly locationScopeType?: OrganizationLocationScopeType | undefined;
+	readonly locationScopeType?: LocationScopeType | undefined;
 	readonly locationIds?: readonly string[] | undefined;
 }
 
@@ -94,7 +94,7 @@ export const MAX_REWARD_IMAGES = 10;
 
 /**
  * The reward's images, in display order (the first is the cover): READY,
- * public `REWARD_IMAGE` files uploaded to the same organization
+ * public `REWARD_IMAGE` files uploaded to the same tenant
  * (`POST /files/upload-url`). One to {@link MAX_REWARD_IMAGES}, each once.
  */
 const RewardImageFileIdsSchema = z
@@ -120,7 +120,7 @@ export const MerchantCreateRewardSchema = z
 		referralPoolTotal: RewardReferralPoolSchema.optional(),
 		referrerRewardTitle: RewardTitleSchema.optional(),
 		saveAsDraft: z.boolean().optional().default(true),
-		locationScopeType: OrganizationLocationScopeTypeSchema.optional().default("ALL_LOCATIONS"),
+		locationScopeType: LocationScopeTypeSchema.optional().default("ALL_LOCATIONS"),
 		locationIds: z.array(z.uuid()).optional().default([]),
 	})
 	.strict()
@@ -152,7 +152,7 @@ export const MerchantRewardFormFieldsSchema = z
 		expiryDate: z.string().regex(DATE_INPUT_PATTERN),
 		quantityTotal: RewardQuantitySchema,
 		maxClaimsPerUser: z.number().int().min(1).max(10),
-		locationScopeType: OrganizationLocationScopeTypeSchema.optional(),
+		locationScopeType: LocationScopeTypeSchema.optional(),
 		locationIds: z.array(z.uuid()).optional(),
 	})
 	.strict()
@@ -292,7 +292,7 @@ export const MerchantUpdateRewardPathInputSchema = MerchantUpdateRewardSchema.ex
 export type MerchantUpdateRewardPathInput = z.output<typeof MerchantUpdateRewardPathInputSchema>;
 
 /**
- * `GET /orgs/:orgSlug/rewards` list query — the organization's rewards newest first; `filter[status][in]`
+ * `GET /tenants/:tenantSlug/rewards` list query — the tenant's rewards newest first; `filter[status][in]`
  * picks a catalog tab. `locationId` is an authorization SCOPE (checked against the member's stores).
  */
 export const merchantRewardListQuery = defineListQuery({
@@ -301,7 +301,7 @@ export const merchantRewardListQuery = defineListQuery({
 	filter: {
 		status: listFilter.enumeration(RewardStatusSchema, { eq: true, in: true }),
 	},
-	params: OrganizationLocationFilterSchema.shape,
+	params: LocationFilterSchema.shape,
 });
 
 export const MerchantRewardListQuerySchema = merchantRewardListQuery.schema;
@@ -310,13 +310,13 @@ export type MerchantRewardListQuery = z.output<typeof MerchantRewardListQuerySch
 
 export type MerchantRewardListSortField = (typeof merchantRewardListQuery.sortable)[number];
 
-/** `GET /orgs/:orgSlug/rewards/summary` query — the same store scope as the list. */
-export const MerchantRewardSummaryQuerySchema = OrganizationLocationFilterSchema;
+/** `GET /tenants/:tenantSlug/rewards/summary` query — the same store scope as the list. */
+export const MerchantRewardSummaryQuerySchema = LocationFilterSchema;
 
 export type MerchantRewardSummaryQuery = z.output<typeof MerchantRewardSummaryQuerySchema>;
 
 /**
- * `GET /orgs/:orgSlug/rewards/summary` — figures over EVERY reward in the store scope (every page of the
+ * `GET /tenants/:tenantSlug/rewards/summary` — figures over EVERY reward in the store scope (every page of the
  * list): how many rewards are in each status, and the units still claimable across them.
  */
 export const MerchantRewardSummarySchema = z.object({
@@ -413,16 +413,16 @@ export type RewardImageResponse = z.output<typeof RewardImageResponseSchema>;
 
 export const RewardResponseSchema = BaseResponseSchema.extend({
 	id: z.uuid(),
-	organizationId: z.uuid(),
-	organizationName: z.string().optional(),
+	tenantId: z.uuid(),
+	tenantName: z.string().optional(),
 	/**
-	 * Public URL of the merchant's logo (the organization's READY `LOGO` asset),
+	 * Public URL of the merchant's logo (the tenant's READY `LOGO` asset),
 	 * or `null` when none is uploaded — clients then show a name monogram.
 	 * http(s) only: it is rendered straight into an `<img src>`.
 	 */
-	organizationLogoUrl: z.url({ protocol: /^https?$/ }).nullable(),
+	tenantLogoUrl: z.url({ protocol: /^https?$/ }).nullable(),
 	/** The logo's served sizes, smallest first, for `srcset` (empty without a logo, or for one uploaded before logos had renditions). */
-	organizationLogoSources: z.array(ImageSourceSchema),
+	tenantLogoSources: z.array(ImageSourceSchema),
 	title: z.string(),
 	description: z.string(),
 	rewardType: RewardTypeSchema,
@@ -450,7 +450,7 @@ export const RewardResponseSchema = BaseResponseSchema.extend({
 	referrerRewardId: z.uuid().nullable(),
 	rules: RewardRulesResponseSchema.nullable(),
 	shareUrl: z.url().optional(),
-	locationScopeType: OrganizationLocationScopeTypeSchema,
+	locationScopeType: LocationScopeTypeSchema,
 	locationIds: z.array(z.uuid()),
 	locationNames: z.array(z.string()).optional(),
 });
@@ -472,7 +472,7 @@ export const RewardPlatformEventSchema = z
 			"reward.claim_expired",
 		]),
 		actorUserId: z.uuid().nullable(),
-		organizationId: z.uuid().nullable(),
+		tenantId: z.uuid().nullable(),
 		metadata: JsonObjectSchema,
 		durationMs: z.number().int().nonnegative().optional(),
 	})

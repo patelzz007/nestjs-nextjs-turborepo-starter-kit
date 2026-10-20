@@ -11,12 +11,12 @@ import {
 	MerchantOrgResponseSchema,
 } from "@workspace/shared";
 
-import { AUDIT_LOG_RECORD_PARAM, DATA_CHANGE_RECORD_PARAM, EMAIL_TEMPLATE_KEY_PARAM, MERCHANT_VERIFICATION_ORGANIZATION_PARAM, REVIEW_REQUEST_PARAM } from "@/lib/routes";
+import { AUDIT_LOG_RECORD_PARAM, DATA_CHANGE_RECORD_PARAM, EMAIL_TEMPLATE_KEY_PARAM, MERCHANT_VERIFICATION_TENANT_PARAM, REVIEW_REQUEST_PARAM } from "@/lib/routes";
 
-/** `/merchants/verification?organizationId=` — the merchant open in the KYB review panel. */
+/** `/merchants/verification?tenantId=` — the merchant open in the KYB review panel. */
 export const KYB_REVIEW_URL_STATE = defineUrlState(
-	{ organizationId: optionalUrlParam(MerchantOrgResponseSchema.shape.id) },
-	{ urlKeys: { organizationId: MERCHANT_VERIFICATION_ORGANIZATION_PARAM } },
+	{ tenantId: optionalUrlParam(MerchantOrgResponseSchema.shape.id) },
+	{ urlKeys: { tenantId: MERCHANT_VERIFICATION_TENANT_PARAM } },
 );
 
 export type KybReviewUrlState = typeof KYB_REVIEW_URL_STATE.defaults;

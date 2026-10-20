@@ -52,7 +52,7 @@ export const AuthorizationExplainQuerySchema = z
 		resource: PermissionResourceSchema,
 		resourceId: ResourceIdSchema.optional(),
 		userId: ResourceIdSchema.optional(),
-		organizationId: ResourceIdSchema.optional(),
+		tenantId: ResourceIdSchema.optional(),
 		storeId: ResourceIdSchema.optional(),
 		locationId: ResourceIdSchema.optional(),
 	})

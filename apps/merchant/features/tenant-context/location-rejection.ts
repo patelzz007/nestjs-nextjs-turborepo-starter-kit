@@ -5,32 +5,32 @@ import { z } from "zod";
 
 /**
  * Detects the API refusing a store for this member: a query of THIS
- * organization that failed with 403 `ORGANIZATION_LOCATION_FORBIDDEN`. The
+ * tenant that failed with 403 `TENANT_LOCATION_FORBIDDEN`. The
  * store it asked for is read from the query's key — every org-scoped query key
- * is `["organization", orgSlug, …, input]`, and a location-scoped input carries
+ * is `["tenant", orgSlug, …, input]`, and a location-scoped input carries
  * its `locationId` — and validated, never assumed.
  */
 
-/** Key segment every organization-scoped query starts with (`apiRouter` scopes). */
-const ORGANIZATION_KEY_SEGMENT = "organization";
+/** Key segment every tenant-scoped query starts with (`apiRouter` scopes). */
+const TENANT_KEY_SEGMENT = "tenant";
 
-/** An organization-scoped query key: the scope segments, then the request input object. */
-const OrganizationQueryKeySchema = z.tuple([z.literal(ORGANIZATION_KEY_SEGMENT), z.string()]).rest(z.union([z.string(), z.looseObject({})]));
+/** A tenant-scoped query key: the scope segments, then the request input object. */
+const TenantQueryKeySchema = z.tuple([z.literal(TENANT_KEY_SEGMENT), z.string()]).rest(z.union([z.string(), z.looseObject({})]));
 const LocationScopedInputSchema = z.looseObject({ locationId: z.uuid() });
 const QueryErrorSchema = z.instanceof(Error);
 
 /** Whether `error` is the API refusing a store as outside the member's scope. */
 export function isLocationForbiddenError(error: Error): boolean {
-	return error instanceof ApiError && error.code === MerchantErrorCodes.ORGANIZATION_LOCATION_FORBIDDEN;
+	return error instanceof ApiError && error.code === MerchantErrorCodes.TENANT_LOCATION_FORBIDDEN;
 }
 
 /** The store a failed query of `orgSlug` asked for, when its error is a location refusal; otherwise `undefined`. */
-export function readRejectedLocationId(queryKey: QueryKey, error: Error, orgSlug: string): string | undefined {
+export function readRejectedLocationId(queryKey: QueryKey, error: Error, tenantSlug: string): string | undefined {
 	if (!isLocationForbiddenError(error)) {
 		return undefined;
 	}
-	const key = OrganizationQueryKeySchema.safeParse(queryKey);
-	if (!key.success || key.data[LIST_SLOT_INDEX.second] !== orgSlug) {
+	const key = TenantQueryKeySchema.safeParse(queryKey);
+	if (!key.success || key.data[LIST_SLOT_INDEX.second] !== tenantSlug) {
 		return undefined;
 	}
 	const input = LocationScopedInputSchema.safeParse(key.data.at(-1));
@@ -38,18 +38,18 @@ export function readRejectedLocationId(queryKey: QueryKey, error: Error, orgSlug
 }
 
 /** Calls `onRejected` with each store the API refuses for `orgSlug`; returns the unsubscribe. */
-export function subscribeToLocationRejections(queryCache: QueryCache, orgSlug: string, onRejected: (locationId: string) => void): () => void {
+export function subscribeToLocationRejections(queryCache: QueryCache, tenantSlug: string, onRejected: (locationId: string) => void): () => void {
 	return queryCache.subscribe((event): void => {
 		if (event.type !== "updated" || event.action.type !== "error") {
 			return;
 		}
 		// The cache types keys and errors loosely: both are validated before use.
-		const key = OrganizationQueryKeySchema.safeParse(event.query.queryKey);
+		const key = TenantQueryKeySchema.safeParse(event.query.queryKey);
 		const error = QueryErrorSchema.safeParse(event.action.error);
 		if (!key.success || !error.success) {
 			return;
 		}
-		const locationId = readRejectedLocationId(key.data, error.data, orgSlug);
+		const locationId = readRejectedLocationId(key.data, error.data, tenantSlug);
 		if (locationId !== undefined) {
 			onRejected(locationId);
 		}

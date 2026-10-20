@@ -6,18 +6,18 @@ import { ApiError } from "@workspace/client/lib/api/use-api";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { clearAllOrganizationLocationCookies, organizationLocationCookieName } from "@/contexts/organizations/lib/org/location";
+import { clearAllLocationCookies, locationCookieName } from "@/contexts/tenancy/lib/org/location";
 import { TEST_ORG_SLUG } from "@/test/authorization";
 import { testEnvelope } from "@/test/envelope";
 import { contextQueryState, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
 import { STORE_A, STORE_B } from "@/test/terminals";
-import { MerchantErrorCodes, type Envelope, type OrganizationContextResponse } from "@workspace/shared";
+import { MerchantErrorCodes, type Envelope, type TenantContextResponse } from "@workspace/shared";
 
 import {
 	TenantContextProvider,
 	useActiveLocationFilter,
-	useActiveOrganizationId,
-	useActiveOrganizationName,
+	useActiveTenantId,
+	useActiveTenantName,
 	useActiveLocationId,
 	useMerchantLocation,
 	useTenantContextCommands,
@@ -27,11 +27,11 @@ import {
 } from "../facade";
 
 interface ContextQueryInput {
-	readonly orgSlug: string;
+	readonly tenantSlug: string;
 }
 
 interface ContextQueryOptions {
-	readonly initialData?: Envelope<OrganizationContextResponse>;
+	readonly initialData?: Envelope<TenantContextResponse>;
 }
 
 const { contextQuery } = vi.hoisted(() => ({
@@ -39,7 +39,7 @@ const { contextQuery } = vi.hoisted(() => ({
 }));
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
-	useAuth: (): object => ({ api: { organizations: { context: { useQuery: contextQuery } } } }),
+	useAuth: (): object => ({ api: { tenants: { context: { useQuery: contextQuery } } } }),
 }));
 
 const OTHER_ORG_SLUG = "bean-there";
@@ -48,7 +48,7 @@ const REMOVED_STORE_ID = "0f0f0f0f-0000-4000-8000-0000000000ff";
 type ProviderInputs = Omit<TenantContextProviderProps, "children">;
 
 /** Props the wrapper renders the provider with — change them, then `rerender()`. */
-let providerInputs: ProviderInputs = { orgSlug: TEST_ORG_SLUG, initialLocationId: null };
+let providerInputs: ProviderInputs = { tenantSlug: TEST_ORG_SLUG, initialLocationId: null };
 /** A fresh cache per test — the provider subscribes to it for the API's location refusals. */
 let queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
@@ -60,10 +60,10 @@ function wrapper({ children }: { readonly children: React.ReactNode }): React.JS
 	);
 }
 
-/** One of this organization's queries for `locationId` fails the way the API refuses an out-of-scope store. */
+/** One of this tenant's queries for `locationId` fails the way the API refuses an out-of-scope store. */
 async function apiRefusesStore(locationId: string): Promise<void> {
-	const key = apiRouter.organizations.redemptions.queryKey({ orgSlug: TEST_ORG_SLUG, page: 1, limit: 20, locationId });
-	const refusal = new ApiError({ message: "Location is outside your membership scope", error: MerchantErrorCodes.ORGANIZATION_LOCATION_FORBIDDEN, statusCode: 403 });
+	const key = apiRouter.tenants.redemptions.queryKey({ tenantSlug: TEST_ORG_SLUG, page: 1, limit: 20, locationId });
+	const refusal = new ApiError({ message: "Location is outside your membership scope", error: MerchantErrorCodes.TENANT_LOCATION_FORBIDDEN, statusCode: 403 });
 	await act(async (): Promise<void> => {
 		await queryClient.query({ queryKey: key, queryFn: (): Promise<string> => Promise.reject(refusal) }).catch((): void => undefined);
 	});
@@ -81,7 +81,7 @@ function useTenantProbe(): TenantProbe {
 }
 
 function cookieValue(): string | undefined {
-	const prefix = `${organizationLocationCookieName(TEST_ORG_SLUG)}=`;
+	const prefix = `${locationCookieName(TEST_ORG_SLUG)}=`;
 	return document.cookie
 		.split("; ")
 		.find((entry) => entry.startsWith(prefix))
@@ -90,14 +90,14 @@ function cookieValue(): string | undefined {
 
 beforeEach((): void => {
 	queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-	providerInputs = { orgSlug: TEST_ORG_SLUG, initialLocationId: null, initialOrganizationContext: testEnvelope(TWO_STORE_CONTEXT) };
+	providerInputs = { tenantSlug: TEST_ORG_SLUG, initialLocationId: null, initialTenantContext: testEnvelope(TWO_STORE_CONTEXT) };
 	contextQuery.mockReturnValue(contextQueryState(TWO_STORE_CONTEXT));
 });
 
 afterEach((): void => {
 	cleanup();
 	contextQuery.mockReset();
-	clearAllOrganizationLocationCookies();
+	clearAllLocationCookies();
 });
 
 describe("tenant-context facade", () => {
@@ -112,39 +112,39 @@ describe("tenant-context facade", () => {
 			activeLocation: STORE_B_LOCATION,
 			accessibleLocations: [STORE_A_LOCATION, STORE_B_LOCATION],
 			canSelectAllLocations: true,
-			hasOrganizationWideAccess: true,
+			hasTenantWideAccess: true,
 			isLoading: false,
 		});
 	});
 
-	it("exposes the active organization's id from the context, and nothing before it has loaded", () => {
-		const { result, rerender } = renderHook(useActiveOrganizationId, { wrapper });
-		expect(result.current).toBe(TWO_STORE_CONTEXT.organization.id);
+	it("exposes the active tenant's id from the context, and nothing before it has loaded", () => {
+		const { result, rerender } = renderHook(useActiveTenantId, { wrapper });
+		expect(result.current).toBe(TWO_STORE_CONTEXT.tenant.id);
 
 		contextQuery.mockReturnValue(contextQueryState(undefined));
 		rerender();
 		expect(result.current).toBeUndefined();
 	});
 
-	it("exposes the active organization's name from the context, and nothing before it has loaded", () => {
-		const { result, rerender } = renderHook(useActiveOrganizationName, { wrapper });
-		expect(result.current).toBe(TWO_STORE_CONTEXT.organization.displayName);
+	it("exposes the active tenant's name from the context, and nothing before it has loaded", () => {
+		const { result, rerender } = renderHook(useActiveTenantName, { wrapper });
+		expect(result.current).toBe(TWO_STORE_CONTEXT.tenant.displayName);
 
 		contextQuery.mockReturnValue(contextQueryState(undefined));
 		rerender();
 		expect(result.current).toBeUndefined();
 	});
 
-	it("seeds the organization-context query for this organization from the server", () => {
+	it("seeds the tenant-context query for this tenant from the server", () => {
 		renderHook(useTenantProbe, { wrapper });
 
 		const [input, options] = contextQuery.mock.calls.at(0) ?? [];
-		expect(input).toEqual({ orgSlug: TEST_ORG_SLUG });
+		expect(input).toEqual({ tenantSlug: TEST_ORG_SLUG });
 		expect(options?.initialData?.data).toEqual(TWO_STORE_CONTEXT);
 	});
 
 	it("keeps the stored store provisionally while the locations load", () => {
-		providerInputs = { orgSlug: TEST_ORG_SLUG, initialLocationId: STORE_B.id };
+		providerInputs = { tenantSlug: TEST_ORG_SLUG, initialLocationId: STORE_B.id };
 		contextQuery.mockReturnValue(contextQueryState(undefined));
 
 		const { result } = renderHook(useTenantProbe, { wrapper });
@@ -154,7 +154,7 @@ describe("tenant-context facade", () => {
 			activeLocation: undefined,
 			accessibleLocations: [],
 			canSelectAllLocations: false,
-			hasOrganizationWideAccess: false,
+			hasTenantWideAccess: false,
 			isLoading: true,
 		});
 	});
@@ -168,15 +168,15 @@ describe("tenant-context facade", () => {
 		expect(result.current.filter).toEqual({ locationId: undefined });
 	});
 
-	it("mirrors the choice to THIS organization's cookie only", () => {
+	it("mirrors the choice to THIS tenant's cookie only", () => {
 		const { result } = renderHook(useTenantProbe, { wrapper });
 
 		act(() => {
 			result.current.commands.selectLocation(STORE_A.id);
 		});
 
-		expect(document.cookie).toContain(`${organizationLocationCookieName(TEST_ORG_SLUG)}=${STORE_A.id}`);
-		expect(document.cookie).not.toContain(`${organizationLocationCookieName(OTHER_ORG_SLUG)}=`);
+		expect(document.cookie).toContain(`${locationCookieName(TEST_ORG_SLUG)}=${STORE_A.id}`);
+		expect(document.cookie).not.toContain(`${locationCookieName(OTHER_ORG_SLUG)}=`);
 	});
 
 	it("changes the filter through commands and mirrors it to the cookie", () => {
@@ -207,7 +207,7 @@ describe("tenant-context facade", () => {
 		expect(result.current.filter).toBe(first.filter);
 	});
 
-	it("keeps the member's choice when the layout re-renders with a new seed for the same organization", () => {
+	it("keeps the member's choice when the layout re-renders with a new seed for the same tenant", () => {
 		const { result, rerender } = renderHook(useTenantProbe, { wrapper });
 		act(() => {
 			result.current.commands.selectLocation(STORE_A.id);
@@ -219,18 +219,18 @@ describe("tenant-context facade", () => {
 		expect(result.current.activeLocationId).toBe(STORE_A.id);
 	});
 
-	it("starts a fresh store, from its own seed, when the organization changes", () => {
+	it("starts a fresh store, from its own seed, when the tenant changes", () => {
 		const { result, rerender } = renderHook(useTenantProbe, { wrapper });
 		act(() => {
 			result.current.commands.selectLocation(STORE_A.id);
 		});
 
-		providerInputs = { orgSlug: OTHER_ORG_SLUG, initialLocationId: null };
+		providerInputs = { tenantSlug: OTHER_ORG_SLUG, initialLocationId: null };
 		contextQuery.mockReturnValue(contextQueryState(undefined));
 		rerender();
 
 		expect(result.current.activeLocationId).toBeNull();
-		expect(contextQuery).toHaveBeenLastCalledWith({ orgSlug: OTHER_ORG_SLUG }, {});
+		expect(contextQuery).toHaveBeenLastCalledWith({ tenantSlug: OTHER_ORG_SLUG }, {});
 	});
 
 	it("recovers from a refused (stale) store: resets the choice, rewrites the cookie, re-reads the context — and never picks it again", async () => {
@@ -247,7 +247,7 @@ describe("tenant-context facade", () => {
 		expect(result.current.activeLocationId).not.toBe(STORE_B.id);
 		expect(result.current.location.accessibleLocations).toEqual([STORE_A_LOCATION]);
 		expect(cookieValue()).toBeUndefined();
-		expect(invalidate).toHaveBeenCalledWith({ queryKey: apiRouter.organizations.context.scopeKey({ orgSlug: TEST_ORG_SLUG }) });
+		expect(invalidate).toHaveBeenCalledWith({ queryKey: apiRouter.tenants.context.scopeKey({ tenantSlug: TEST_ORG_SLUG }) });
 
 		// The same refusal again changes nothing — no loop.
 		invalidate.mockClear();

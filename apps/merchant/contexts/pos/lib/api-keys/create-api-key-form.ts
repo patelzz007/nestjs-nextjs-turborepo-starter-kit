@@ -2,9 +2,9 @@ import {
 	DEFAULT_MERCHANT_API_KEY_SCOPE,
 	MerchantCreateApiKeySchema,
 	MerchantErrorCodes,
-	OrganizationApiKeyScopeSchema,
+	TenantApiKeyScopeSchema,
 	type MerchantCreateApiKeyInput,
-	type OrganizationApiKeyScope,
+	type TenantApiKeyScope,
 } from "@workspace/shared";
 import { z } from "zod";
 
@@ -13,11 +13,11 @@ import type { FieldErrorMap } from "@/lib/forms/api-field-errors";
 /**
  * The store a new API key is limited to is an explicit, validated form field —
  * never the page's location filter (under "All locations" that filter is
- * absent, which would silently create an organization-wide key).
+ * absent, which would silently create a tenant-wide key).
  */
 
-/** Select value of the organization-wide choice (store ids are UUIDs, so it can never collide). */
-export const ORGANIZATION_WIDE_STORE_CHOICE = "organization";
+/** Select value of the tenant-wide choice (store ids are UUIDs, so it can never collide). */
+export const TENANT_WIDE_STORE_CHOICE = "tenant";
 
 /** A store the member may create a key for. */
 export interface ApiKeyStoreOption {
@@ -25,10 +25,10 @@ export interface ApiKeyStoreOption {
 	readonly name: string;
 }
 
-/** What the member may choose: their own stores, plus organization-wide only for an all-locations membership. */
+/** What the member may choose: their own stores, plus tenant-wide only for an all-locations membership. */
 export interface ApiKeyStoreChoices {
 	readonly stores: readonly ApiKeyStoreOption[];
-	readonly allowOrganizationWide: boolean;
+	readonly allowTenantWide: boolean;
 }
 
 /** The raw form values (the store select's value is `""` until the member picks). */
@@ -46,25 +46,25 @@ export type CreateApiKeyField = "name" | "store" | "scope";
 export const CREATE_API_KEY_FIELD_ERRORS: FieldErrorMap<CreateApiKeyField> = {
 	[MerchantErrorCodes.API_KEY_LOCATION_REQUIRED]: {
 		field: "store",
-		message: "Choose one of your stores — only members with access to every store can create an organization-wide key.",
+		message: "Choose one of your stores — only members with access to every store can create a tenant-wide key.",
 	},
 };
 
 /** A new key gets the least privilege unless the merchant chooses otherwise. */
-export const DEFAULT_API_KEY_SCOPE_CHOICE: OrganizationApiKeyScope = DEFAULT_MERCHANT_API_KEY_SCOPE;
+export const DEFAULT_API_KEY_SCOPE_CHOICE: TenantApiKeyScope = DEFAULT_MERCHANT_API_KEY_SCOPE;
 
 /** What each scope lets a key do, in the order the form offers them. */
-export const API_KEY_SCOPE_OPTIONS: readonly { readonly scope: OrganizationApiKeyScope; readonly label: string; readonly description: string }[] = [
-	{ scope: OrganizationApiKeyScopeSchema.enum.POS, label: "POS terminal", description: "Only validates and confirms redemptions at the till." },
+export const API_KEY_SCOPE_OPTIONS: readonly { readonly scope: TenantApiKeyScope; readonly label: string; readonly description: string }[] = [
+	{ scope: TenantApiKeyScopeSchema.enum.POS, label: "POS terminal", description: "Only validates and confirms redemptions at the till." },
 	{
-		scope: OrganizationApiKeyScopeSchema.enum.INTEGRATION,
+		scope: TenantApiKeyScopeSchema.enum.INTEGRATION,
 		label: "Integration",
 		description: "Also reads rewards, redemption history and analytics — for back-office systems.",
 	},
 ];
 
 /** Display label of a key's scope (the list shows it next to each key). */
-export function apiKeyScopeLabel(scope: OrganizationApiKeyScope): string {
+export function apiKeyScopeLabel(scope: TenantApiKeyScope): string {
 	return API_KEY_SCOPE_OPTIONS.find((option) => option.scope === scope)?.label ?? scope;
 }
 
@@ -76,7 +76,7 @@ export function defaultApiKeyStoreChoice(choices: ApiKeyStoreChoices, activeStor
 	if (activeStoreId !== undefined && choices.stores.some((store) => store.id === activeStoreId)) {
 		return activeStoreId;
 	}
-	const onlyStore = choices.stores.length === 1 && !choices.allowOrganizationWide ? choices.stores.at(0) : undefined;
+	const onlyStore = choices.stores.length === 1 && !choices.allowTenantWide ? choices.stores.at(0) : undefined;
 	return onlyStore?.id ?? "";
 }
 
@@ -87,12 +87,12 @@ export function defaultApiKeyStoreChoice(choices: ApiKeyStoreChoices, activeStor
  */
 export function parseCreateApiKeyForm(values: CreateApiKeyFormValues, choices: ApiKeyStoreChoices): MerchantCreateApiKeyInput | undefined {
 	const name = ApiKeyNameSchema.safeParse(values.name);
-	const scope = OrganizationApiKeyScopeSchema.safeParse(values.scope);
+	const scope = TenantApiKeyScopeSchema.safeParse(values.scope);
 	if (!name.success || !scope.success) {
 		return undefined;
 	}
-	if (values.storeChoice === ORGANIZATION_WIDE_STORE_CHOICE) {
-		return choices.allowOrganizationWide ? MerchantCreateApiKeySchema.parse({ name: name.data, scope: scope.data }) : undefined;
+	if (values.storeChoice === TENANT_WIDE_STORE_CHOICE) {
+		return choices.allowTenantWide ? MerchantCreateApiKeySchema.parse({ name: name.data, scope: scope.data }) : undefined;
 	}
 	const locationId = z.uuid().safeParse(values.storeChoice);
 	if (!locationId.success || !choices.stores.some((store) => store.id === locationId.data)) {

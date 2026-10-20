@@ -15,7 +15,7 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 
 const RECORD_ID = "55555555-5555-4555-8555-555555555555";
 const ACTOR_ID = "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b";
-const ORGANIZATION_ID = "7a2d3b63-0b4f-4e49-8b66-1e2f3a4b5c6d";
+const TENANT_ID = "7a2d3b63-0b4f-4e49-8b66-1e2f3a4b5c6d";
 
 const RECORD: HttpAuditLogDetail = HttpAuditLogDetailSchema.parse({
 	id: RECORD_ID,
@@ -34,7 +34,7 @@ const RECORD: HttpAuditLogDetail = HttpAuditLogDetailSchema.parse({
 	impersonator: null,
 	apiKeyId: null,
 	terminalId: null,
-	organization: { id: ORGANIZATION_ID, name: "Kopi Corner" },
+	tenant: { id: TENANT_ID, name: "Kopi Corner" },
 	storeId: null,
 	locationId: null,
 	ipAddress: "203.0.113.24",
@@ -54,6 +54,7 @@ const RECORD: HttpAuditLogDetail = HttpAuditLogDetailSchema.parse({
 	clientType: null,
 	traceId: "corr-1",
 	impersonationSessionId: null,
+	supportAccessGrantId: null,
 	httpVersion: "1.1",
 	host: "api.example.com",
 	origin: null,
@@ -111,11 +112,11 @@ describe("AuditLogDetailView", () => {
 		expect(screen.getByText("Nothing recorded.")).toBeTruthy();
 	});
 
-	it("links the actor, organization and correlation id back to the filtered table", () => {
+	it("links the actor, tenant and correlation id back to the filtered table", () => {
 		render(<AuditLogDetailView id={RECORD_ID} />);
 
 		expect(screen.getByRole("link", { name: ACTOR_ID }).getAttribute("href")).toBe(`/audit-logs?filter[actorUserId]=${ACTOR_ID}`);
-		expect(screen.getByRole("link", { name: "Kopi Corner" }).getAttribute("href")).toBe(`/audit-logs?filter[organizationId]=${ORGANIZATION_ID}`);
+		expect(screen.getByRole("link", { name: "Kopi Corner" }).getAttribute("href")).toBe(`/audit-logs?filter[tenantId]=${TENANT_ID}`);
 		expect(screen.getByRole("link", { name: "corr-1" }).getAttribute("href")).toBe("/audit-logs?filter[correlationId]=corr-1");
 	});
 
@@ -135,7 +136,7 @@ describe("AuditLogDetailView", () => {
 						changedColumns: [],
 						actorKind: "USER",
 						actor: null,
-						organization: null,
+						tenant: null,
 						apiKeyId: null,
 						systemOperation: null,
 						correlationId: "corr-1",

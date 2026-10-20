@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { NO_STORE_LABEL, reportTimeZone, toRedemptionMethodSegments, toRewardItems, toStoreItems } from "@/contexts/reporting/lib/merchant-analytics";
 import { buildMerchantDashboard } from "@/test/analytics-dashboard";
-import { organizationContextFixture } from "@/test/tenant-context";
+import { tenantContextFixture } from "@/test/tenant-context";
 
 const FORMATTERS = analyticsFormatters("MYR", "en-MY");
 
@@ -50,10 +50,10 @@ describe("toRedemptionMethodSegments", () => {
 });
 
 describe("reportTimeZone", () => {
-	it("is the organization's own zone from its context, the platform's without one", () => {
-		const context = organizationContextFixture({ locations: [] });
+	it("is the tenant's own zone from its context, the platform's without one", () => {
+		const context = tenantContextFixture({ locations: [] });
 
-		expect(reportTimeZone({ ...context, organization: { ...context.organization, timeZone: "Asia/Tokyo" } })).toBe("Asia/Tokyo");
+		expect(reportTimeZone({ ...context, tenant: { ...context.tenant, timeZone: "Asia/Tokyo" } })).toBe("Asia/Tokyo");
 		expect(reportTimeZone(undefined)).toBe("Asia/Kuala_Lumpur");
 	});
 });

@@ -58,7 +58,7 @@ numbers, charts, breakdowns and the export — follows the same choice.
 
 | View | A day starts at | Why |
 | --- | --- | --- |
-| Merchant | midnight in the **merchant organization's time zone** (default `Asia/Kuala_Lumpur`) | A café's "Monday" must match its own calendar |
+| Merchant | midnight in the **merchant tenant's time zone** (default `Asia/Kuala_Lumpur`) | A café's "Monday" must match its own calendar |
 | Platform admin | midnight **UTC** | One view across merchants in different zones |
 | Customer | midnight **UTC** | A customer spends across merchants and zones |
 
@@ -107,7 +107,7 @@ screen:
 | **Excel (XLSX)** | Working with the numbers: a Summary sheet plus one sheet per table, real numbers, percentages and dates, header row frozen. |
 | **PDF** | Sharing: a branded report with the headline numbers, charts and every table. Names in English, Malay, Tamil, Chinese and Hindi print correctly. |
 
-- The file is named after the organization (or `platform`), the first and last day and the
+- The file is named after the tenant (or `platform`), the first and last day and the
   interval, e.g. `analytics_brew-bean-kl_2026-09-01_2026-09-30_day.xlsx`.
 - The button is disabled while a file is being prepared; the file is saved under the name above.
 - You can start **10 exports every 10 minutes**; after that a message says how long to wait.
@@ -118,7 +118,7 @@ screen:
 
 ## Under the hood
 
-`GET /api/v1/orgs/{orgSlug}/analytics/dashboard`, `GET /api/v1/admin/analytics/dashboard`,
+`GET /api/v1/tenants/{tenantSlug}/analytics/dashboard`, `GET /api/v1/admin/analytics/dashboard`,
 `GET /api/v1/claims/analytics/dashboard` and the two `…/analytics/export` routes — details in the
 [Analytics API](../technical/api/analytics.md) and the [API reference](../technical/api-reference/README.md).
 Amounts are integer **sen** (minor units). How the screens are built:

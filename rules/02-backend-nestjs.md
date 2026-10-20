@@ -425,7 +425,7 @@ export class MegaGuard implements CanActivate {
 }
 
 // ✅ DO — small, composable, single-purpose guards, stacked per endpoint
-@UseGuards(AuthGuard, PermissionGuard(Permission.REWARD_PUBLISH), OwnershipGuard('reward', 'organization'))
+@UseGuards(AuthGuard, PermissionGuard(Permission.REWARD_PUBLISH), OwnershipGuard('reward', 'tenant'))
 @Post('rewards/:id/publish')
 async publish() { ... }
 ```
@@ -719,11 +719,11 @@ Every one of this document's individual rules — thin controllers, a named poli
 ## Caching in the backend — a reference pattern
 
 ```ts
-public async getRewardCatalog(organizationId: string): Promise<Reward[]> {
-  const key = cacheKeys.rewardCatalog(organizationId);          // tenant is part of the key — never share across orgs
+public async getRewardCatalog(tenantId: string): Promise<Reward[]> {
+  const key = cacheKeys.rewardCatalog(tenantId);          // tenant is part of the key — never share across orgs
   const cached = await this.cache.get(key, RewardListSchema);   // re-validated on read: a stale/poisoned entry can't leak a bad shape
   if (cached) return cached;
-  const fresh = await this.repository.listPublished(organizationId);
+  const fresh = await this.repository.listPublished(tenantId);
   await this.cache.set(key, fresh, REWARD_CATALOG_TTL_SECONDS);
   return fresh;
 }

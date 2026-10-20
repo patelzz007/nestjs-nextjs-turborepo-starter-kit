@@ -264,7 +264,7 @@ function visitsLabel(visits: number, formatters: ActivityFormatters): string {
 /** The top shops, highest spend first ("Kopi Kaki · Café · 4 visits · RM 58.20"). */
 export function topShopItemsOf(dashboard: CustomerAnalyticsDashboard, formatters: ActivityFormatters): readonly RankedBarItem[] {
 	return dashboard.spendingByMerchant.map((merchant: CustomerMerchantSpend): RankedBarItem => ({
-		key: merchant.organizationId,
+		key: merchant.tenantId,
 		label: merchant.merchantName,
 		detail: `${categoryLabelOf(merchant.category)} · ${visitsLabel(merchant.visits, formatters)}`,
 		value: merchant.totalMinor,

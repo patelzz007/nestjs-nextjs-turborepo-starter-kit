@@ -13,7 +13,7 @@ export type AuthAppMode = AuthClientType;
  *
  * - web: `/dashboard/account` (the signed-in shell lives under `/dashboard`)
  * - admin: `/account`
- * - merchant: `/orgs/{slug}/account`; `/account` resolves the organization
+ * - merchant: `/t/{slug}/account`; `/account` resolves the tenant
  *   server-side when the slug is not known yet
  */
 const WEB_ACCOUNT_PATH = "/dashboard/account";
@@ -21,7 +21,7 @@ const ACCOUNT_PATH = "/account";
 
 const ENROLLMENT_ALLOWED_PREFIXES: readonly string[] = ["/auth/verify-email", "/auth/login", WEB_ACCOUNT_PATH, ACCOUNT_PATH];
 
-const ORG_ACCOUNT_PATH_PATTERN = /^\/orgs\/[^/]+\/account(?:\/|$)/;
+const TENANT_ACCOUNT_PATH_PATTERN = /^\/t\/[^/]+\/account(?:\/|$)/;
 
 /** Whether the access token represents a restricted enrollment session. */
 export function isRestrictedSession(token: string): boolean {
@@ -30,10 +30,10 @@ export function isRestrictedSession(token: string): boolean {
 }
 
 /** Account path where the user completes email verification or MFA enrollment. */
-export function getEnrollmentRedirectPath(mode: AuthAppMode, _enrollmentReason: EnrollmentReason, organizationSlug?: string): string {
+export function getEnrollmentRedirectPath(mode: AuthAppMode, _enrollmentReason: EnrollmentReason, tenantSlug?: string): string {
 	if (mode === "web") return WEB_ACCOUNT_PATH;
 
-	if (mode === "merchant" && organizationSlug !== undefined && organizationSlug.length > 0) return `/orgs/${organizationSlug}${ACCOUNT_PATH}`;
+	if (mode === "merchant" && tenantSlug !== undefined && tenantSlug.length > 0) return `/t/${tenantSlug}${ACCOUNT_PATH}`;
 
 	return ACCOUNT_PATH;
 }
@@ -44,5 +44,5 @@ export function isEnrollmentAllowedPath(pathname: string): boolean {
 		return true;
 	}
 
-	return ORG_ACCOUNT_PATH_PATTERN.test(pathname);
+	return TENANT_ACCOUNT_PATH_PATTERN.test(pathname);
 }

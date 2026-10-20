@@ -23,10 +23,10 @@ export const REWARD_FIXTURE_EXPIRY_MS = 1_794_614_400_000;
 export function rewardFixture(overrides: Partial<RewardResponse> = {}): RewardResponse {
 	return RewardResponseSchema.parse({
 		id: "0b6e2c1a-3d4f-4a5b-8c9d-1e2f3a4b5c6d",
-		organizationId: "7f5f0f0e-7a53-4f5c-9d0a-0d6a6b8f2c11",
-		organizationName: "Jonker Street Kitchen",
-		organizationLogoUrl: null,
-		organizationLogoSources: [],
+		tenantId: "7f5f0f0e-7a53-4f5c-9d0a-0d6a6b8f2c11",
+		tenantName: "Jonker Street Kitchen",
+		tenantLogoUrl: null,
+		tenantLogoSources: [],
 		title: "Nyonya kuih sampler",
 		description: "Three-piece kuih platter.",
 		rewardType: "FREE_ITEM",

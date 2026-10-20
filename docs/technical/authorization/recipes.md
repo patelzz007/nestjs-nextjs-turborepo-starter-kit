@@ -66,7 +66,7 @@ public async remove(@Param("id") id: string): Promise<void> { … }
 
 ### 2.3 Tenant- or condition-dependent decisions → authorize in the service
 
-When the decision needs the record's tenant or state (organization, store, status, amount),
+When the decision needs the record's tenant or state (tenant, store, status, amount),
 load the record **with a tenant-safe query** first (RLS makes this safe, spec §95), then ask
 the kernel:
 
@@ -78,19 +78,19 @@ public async refund(actor: AuthenticatedUser, tenant: VerifiedTenantContext, ord
 	}
 
 	await this.kernel.authorize({
-		subject: { userId: actor.id, isSuperAdmin: actor.isSuperAdmin, organizationId: tenant.organizationId, storeId: tenant.storeId },
+		subject: { userId: actor.id, isSuperAdmin: actor.isSuperAdmin, tenantId: tenant.tenantId, storeId: tenant.storeId },
 		action: "UPDATE",
 		resource: "PAYMENT",
 		resourceId: order.paymentId,
-		resourceAttributes: { organizationId: order.organizationId, storeId: order.storeId, status: order.status, amount: order.total },
+		resourceAttributes: { tenantId: order.tenantId, storeId: order.storeId, status: order.status, amount: order.total },
 	});
 
 	// … business validation (e.g. "COMPLETED → PENDING is invalid") is a SEPARATE step (spec §96)
 }
 ```
 
-Always pass the record's `organizationId` / `storeId` / `locationId` as resource attributes —
-without them, `ORGANIZATION` / `STORE` / `LOCATION` grants do not apply (fail closed).
+Always pass the record's `tenantId` / `storeId` / `locationId` as resource attributes —
+without them, `TENANT` / `STORE` / `LOCATION` grants do not apply (fail closed).
 Read the tenant from the request context — `requestContext.current()?.tenant` (the guard verified it), never from
 headers or the body.
 
@@ -107,7 +107,7 @@ headers or the body.
 ```ts
 public async list(user: AuthenticatedUser, tenant: VerifiedTenantContext, query: ListQuery): Promise<Order[]> {
 	const allowed = await this.kernel.filter(
-		{ userId: user.id, isSuperAdmin: user.isSuperAdmin, organizationId: tenant.organizationId, storeId: tenant.storeId },
+		{ userId: user.id, isSuperAdmin: user.isSuperAdmin, tenantId: tenant.tenantId, storeId: tenant.storeId },
 		"LIST",
 		"ORDER",
 	);
@@ -117,7 +117,7 @@ public async list(user: AuthenticatedUser, tenant: VerifiedTenantContext, query:
 
 - ✅ one query; the database does the filtering.
 - ❌ never `findMany()` everything and `.filter()` in JavaScript (spec §32, §57).
-- The filter assumes columns named `organizationId`, `storeId`, `locationId`, `userId`, `id`.
+- The filter assumes columns named `tenantId`, `storeId`, `locationId`, `userId`, `id`.
 
 ---
 
@@ -163,17 +163,17 @@ Web: use `AccessGate`.
 
 2. Add them to the `Store Manager` / `Store Staff` matrices in `apps/api/src/contexts/authorization/infrastructure/reference-data/system-role-catalog.ts`
    (`matchesAny(p, "INVENTORY", ["UPDATE"], "STORE")`), then re-run `db:sync-reference-data`, or to a new role in the admin panel.
-3. Your table needs `organizationId` and `storeId` columns (plus RLS — recipe 7).
+3. Your table needs `tenantId` and `storeId` columns (plus RLS — recipe 7).
 4. The client sends the active store: header **`x-store-id: <storeId>`**. The guard verifies
    the membership (forged → 403).
 5. In the service, authorize with the record's tenant:
 
    ```ts
-   await this.kernel.authorize({ subject: { userId, organizationId, storeId }, action: "UPDATE", resource: "INVENTORY",
-     resourceId: item.id, resourceAttributes: { organizationId: item.organizationId, storeId: item.storeId } });
+   await this.kernel.authorize({ subject: { userId, tenantId, storeId }, action: "UPDATE", resource: "INVENTORY",
+     resourceId: item.id, resourceAttributes: { tenantId: item.tenantId, storeId: item.storeId } });
    ```
 
-6. Lists: `kernel.filter(...)` returns `{ organizationId, storeId }` for the member's store(s).
+6. Lists: `kernel.filter(...)` returns `{ tenantId, storeId }` for the member's store(s).
 
 Store memberships are created by the seed today (`prisma/seed/stores.ts`: owners / admins →
 `Store Manager` in every store their location scope covers, other members → `Store Staff` in
@@ -200,23 +200,23 @@ Add a unit test for owner / non-owner / missing. Never read the owner from the r
 
 ## 7. Add a new tenant table with RLS
 
-1. Prisma model with `organizationId` (and `storeId` / `locationId` if relevant), `@@map("snake_case")`,
+1. Prisma model with `tenantId` (and `storeId` / `locationId` if relevant), `@@map("snake_case")`,
    an index on the tenant columns, and a `/// RLS:` doc comment like its neighbours.
 2. Migration: `pnpm --filter @workspace/api db:migrate:create`, then check the SQL.
 3. Add the table name to the right profile in `apps/api/prisma/rls/manifest-index.ts`
-   (usually `organization_tenant`).
+   (usually `tenant_tenant`).
 4. Enable + force RLS and add policies in `apps/api/prisma/rls.sql`, e.g.:
 
    ```sql
    DROP POLICY IF EXISTS invoices_member ON public.invoices;
    CREATE POLICY invoices_member ON public.invoices
-     USING (app_rls_bypass() OR app_tenant_organization_member_of(organization_id))
-     WITH CHECK (app_rls_bypass() OR app_tenant_organization_member_of(organization_id));
+     USING (app_rls_bypass() OR app_tenant_tenant_member_of(tenant_id))
+     WITH CHECK (app_rls_bypass() OR app_tenant_tenant_member_of(tenant_id));
    ```
 
 5. `pnpm --filter @workspace/api db:check-rls-manifest` → must print "No RLS manifest drift".
 6. `pnpm db:apply-security`.
-7. Add an e2e test that reads / writes another organization's rows and expects nothing / an error
+7. Add an e2e test that reads / writes another tenant's rows and expects nothing / an error
    (spec §102).
 
 ---
@@ -295,7 +295,7 @@ with a description. Never inject `SystemPrismaService` for this.
 1. Admin with `READ:PERMISSION`:
 
    ```http
-   GET /api/v1/authorization/decisions/explain?action=UPDATE&resource=ORDER&resourceId=order-123&userId=<user>&organizationId=<org>
+   GET /api/v1/authorization/decisions/explain?action=UPDATE&resource=ORDER&resourceId=order-123&userId=<user>&tenantId=<org>
    ```
 
 2. In code / tests: `await kernel.explain(request)` and read `evaluation`.

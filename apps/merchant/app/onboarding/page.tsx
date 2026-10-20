@@ -1,8 +1,8 @@
 "use client";
 
 import { ROUTES } from "@/lib/routes";
-import { MerchantOnboardingView, MerchantOnboardingViewSkeleton } from "@workspace/client/lib/contexts/organizations/onboarding/view";
-import { MerchantOnboardingPageFrame } from "@/contexts/organizations/components/onboarding/onboarding-page-frame";
+import { MerchantOnboardingView, MerchantOnboardingViewSkeleton } from "@workspace/client/lib/contexts/tenancy/onboarding/view";
+import { MerchantOnboardingPageFrame } from "@/contexts/tenancy/components/onboarding/onboarding-page-frame";
 import { useSearchParams } from "next/navigation";
 import { Suspense, type JSX } from "react";
 

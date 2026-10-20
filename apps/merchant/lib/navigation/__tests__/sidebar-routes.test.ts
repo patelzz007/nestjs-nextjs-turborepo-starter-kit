@@ -11,7 +11,7 @@ import { MERCHANT_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
 import { MERCHANT_NAV_ITEMS } from "@/lib/navigation/nav-items";
 import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
-import { APP_STATIC_ROUTES, isPathWithin, ORG_STATIC_ROUTES, orgPath, orgRoutes, type AppPath } from "@/lib/routes";
+import { APP_STATIC_ROUTES, isPathWithin, TENANT_STATIC_ROUTES, tenantPath, tenantRoutes, type AppPath } from "@/lib/routes";
 
 const ORG_SLUG = "acme-coffee";
 const SAMPLE_REWARD_ID = "3f1c2b8e-9a4d-4c3e-8b7a-1d2e3f4a5b6c";
@@ -49,7 +49,7 @@ const RESOLVED_ITEMS: readonly CompiledSidebarMenuItem[] = [...RESOLVED_MENU.sec
 const RESOLVED_ROWS: readonly FlatMenuItem[] = flattenMenu(RESOLVED_MENU);
 const ENABLED_ROWS: readonly FlatMenuItem[] = RESOLVED_ROWS.filter((row) => row.isEnabled);
 
-/** Route patterns (`/orgs/[orgSlug]/rewards/[rewardId]/edit`) for every `app/**\/page.tsx`. */
+/** Route patterns (`/t/[tenantSlug]/rewards/[rewardId]/edit`) for every `app/**\/page.tsx`. */
 function collectPageRoutePatterns(directory: string): readonly (readonly string[])[] {
 	const patterns: (readonly string[])[] = [];
 	for (const entry of readdirSync(directory, { withFileTypes: true })) {
@@ -112,23 +112,23 @@ function idOfUrl(url: string): string | undefined {
 describe("merchant route table ↔ app/ pages", () => {
 	it("discovers the page files it guards", () => {
 		expect(PAGE_PATTERNS.length).toBeGreaterThan(0);
-		expect(hasPage("/orgs/any-org/rewards/any-id/edit")).toBe(true);
-		expect(hasPage("/orgs/any-org/rewards/any-id")).toBe(true);
-		expect(hasPage("/orgs/any-org/rewards/any-id/history")).toBe(false);
+		expect(hasPage("/t/any-org/rewards/any-id/edit")).toBe(true);
+		expect(hasPage("/t/any-org/rewards/any-id")).toBe(true);
+		expect(hasPage("/t/any-org/rewards/any-id/history")).toBe(false);
 	});
 
 	it.each(APP_STATIC_ROUTES)("top-level route %s has a page", (route: string): void => {
 		expect(hasPage(route)).toBe(true);
 	});
 
-	it.each(ORG_STATIC_ROUTES)("org route %s has a page under /orgs/[orgSlug]", (route: AppPath): void => {
-		expect(hasPage(orgPath(ORG_SLUG, route))).toBe(true);
+	it.each(TENANT_STATIC_ROUTES)("org route %s has a page under /t/[tenantSlug]", (route: AppPath): void => {
+		expect(hasPage(tenantPath(ORG_SLUG, route))).toBe(true);
 	});
 
 	it("has a page for the dynamic reward view and edit routes and the org root", () => {
-		expect(hasPage(orgRoutes(ORG_SLUG).rewards.detail(SAMPLE_REWARD_ID))).toBe(true);
-		expect(hasPage(orgRoutes(ORG_SLUG).rewards.edit(SAMPLE_REWARD_ID))).toBe(true);
-		expect(hasPage(orgRoutes(ORG_SLUG).root)).toBe(true);
+		expect(hasPage(tenantRoutes(ORG_SLUG).rewards.detail(SAMPLE_REWARD_ID))).toBe(true);
+		expect(hasPage(tenantRoutes(ORG_SLUG).rewards.edit(SAMPLE_REWARD_ID))).toBe(true);
+		expect(hasPage(tenantRoutes(ORG_SLUG).root)).toBe(true);
 	});
 
 	it("removed the legacy top-level redirect stubs (hard cut)", () => {
@@ -160,7 +160,7 @@ describe("merchant sidebar menu", () => {
 	it("every menu URL is an app path, not a placeholder or a bare subpath", () => {
 		const raw = flattenMenu(MERCHANT_SIDEBAR_MENU);
 		expect(raw.filter((row) => !row.item.url.startsWith("/")).map((row) => row.item.title)).toEqual([]);
-		expect(raw.filter((row) => row.item.url.startsWith("/orgs/")).map((row) => row.item.title)).toEqual([]);
+		expect(raw.filter((row) => row.item.url.startsWith("/t/")).map((row) => row.item.title)).toEqual([]);
 	});
 
 	it("no two enabled navigable items share a URL", () => {
@@ -189,7 +189,7 @@ describe("merchant sidebar menu", () => {
 });
 
 describe("merchant sidebar active state (real menu + resolver + shared algorithm)", () => {
-	const routes = orgRoutes(ORG_SLUG);
+	const routes = tenantRoutes(ORG_SLUG);
 
 	it("lights exactly one item on the redemptions page", () => {
 		expect(activeIdsFor(routes.redemptions)).toEqual([idOfUrl(routes.redemptions)]);
@@ -209,7 +209,7 @@ describe("merchant sidebar active state (real menu + resolver + shared algorithm
 		expect(activeIdsFor(routes.settings.team)).toEqual(["settings-team"]);
 	});
 
-	it("lights Settings → Overview on the organization settings index", () => {
+	it("lights Settings → Overview on the tenant settings index", () => {
 		expect(activeIdsFor(routes.settings.index)).toEqual(["settings-overview"]);
 	});
 
@@ -221,7 +221,7 @@ describe("merchant sidebar active state (real menu + resolver + shared algorithm
 		expect(activeIdsFor(routes.dashboard)).toEqual(["overview-dashboard"]);
 	});
 
-	it.each(ORG_STATIC_ROUTES)("never lights more than one item on %s", (route: AppPath): void => {
-		expect(activeIdsFor(orgPath(ORG_SLUG, route)).length).toBeLessThanOrEqual(1);
+	it.each(TENANT_STATIC_ROUTES)("never lights more than one item on %s", (route: AppPath): void => {
+		expect(activeIdsFor(tenantPath(ORG_SLUG, route)).length).toBeLessThanOrEqual(1);
 	});
 });

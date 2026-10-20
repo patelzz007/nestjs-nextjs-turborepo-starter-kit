@@ -35,7 +35,7 @@ export const REWARD_POINTS_MAX = 1_000_000;
 // ignore fields added later (ADR 022). Epoch-ms numbers, never Date / bigint.
 export const RewardSchema = z.object({
   id: RewardIdSchema,
-  organizationId: z.uuid(),
+  tenantId: z.uuid(),
   name: z.string().min(1, 'Name is required').max(REWARD_NAME_MAX_LENGTH),
   pointsCost: z.number().int().positive().max(REWARD_POINTS_MAX),
   status: RewardStatusSchema,
@@ -78,13 +78,13 @@ Why it looks like this: branded ID (no mixing IDs), named constants (no magic nu
 ```prisma
 /// @extends BaseModel
 model Reward {
-  organizationId String
+  tenantId String
   name           String
   pointsCost     Int
   status         RewardStatus @default(DRAFT)
   version        Int          @default(0)
 
-  @@index([organizationId, isDeleted, status, createdAt])
+  @@index([tenantId, isDeleted, status, createdAt])
 }
 
 enum RewardStatus {
@@ -156,19 +156,19 @@ export class RewardsRepository extends PrismaBaseRepository<Reward, RewardId, Pr
     super(prisma);
   }
 
-  public async findById(id: RewardId, organizationId: string): Promise<Reward | null> {
+  public async findById(id: RewardId, tenantId: string): Promise<Reward | null> {
     const row = await this.prisma.reward.findFirst({
-      where: { id, organizationId, isDeleted: false }, // tenant boundary is visible in the query
+      where: { id, tenantId, isDeleted: false }, // tenant boundary is visible in the query
     });
     return row ? this.toDomain(row) : null;
   }
 
-  public async list(organizationId: string, query: RewardListQuery): Promise<RepositoryListResult<Reward>> {
+  public async list(tenantId: string, query: RewardListQuery): Promise<RepositoryListResult<Reward>> {
     const result = await fetchListPage(query, {
       // tenant scope is an argument, never a client filter; every API field maps to ONE explicit column
       where: {
         AND: [
-          { organizationId, isDeleted: false },
+          { tenantId, isDeleted: false },
           ...fieldWhere(toPrismaEqualityFilter(query.filter?.status), (status) => ({ status })),
           ...fieldWhere(toPrismaComparableFilter(query.filter?.pointsCost), (pointsCost) => ({ pointsCost })),
           ...(query.search !== undefined ? [{ name: { contains: query.search, mode: 'insensitive' } }] : []),
@@ -184,22 +184,22 @@ export class RewardsRepository extends PrismaBaseRepository<Reward, RewardId, Pr
     return mapListResult(result, (row) => this.toDomain(row));
   }
 
-  public async publish(id: RewardId, organizationId: string): Promise<Reward> {
+  public async publish(id: RewardId, tenantId: string): Promise<Reward> {
     // Atomic conditional update: only succeeds if the reward is STILL a draft
     // at the instant this statement runs. Two concurrent publishes cannot both win.
     const result = await this.prisma.reward.updateMany({
-      where: { id, organizationId, status: 'DRAFT', isDeleted: false },
+      where: { id, tenantId, status: 'DRAFT', isDeleted: false },
       data: { status: 'PUBLISHED', version: { increment: 1 } },
     });
     if (result.count === 0) throw new RewardNotPublishableError(id);
-    const reward = await this.findById(id, organizationId);
+    const reward = await this.findById(id, tenantId);
     if (!reward) throw new RewardNotFoundError(id);
     return reward;
   }
 
-  public async softDelete(id: RewardId, organizationId: string, deletedBy: string): Promise<void> {
+  public async softDelete(id: RewardId, tenantId: string, deletedBy: string): Promise<void> {
     const result = await this.prisma.reward.updateMany({
-      where: { id, organizationId, isDeleted: false },
+      where: { id, tenantId, isDeleted: false },
       data: { isDeleted: true, deletedAt: new Date(), deletedBy },
     });
     if (result.count === 0) throw new RewardNotFoundError(id);
@@ -225,15 +225,15 @@ export class PublishRewardService {
   ) {}
 
   public async execute(id: RewardId, user: AuthUser): Promise<Reward> {
-    const reward = await this.rewards.findById(id, user.organizationId);
+    const reward = await this.rewards.findById(id, user.tenantId);
     if (!reward) throw new RewardNotFoundError(id);
 
     const decision = this.policy.canPublish(reward);
     if (!decision.allowed) throw new RewardNotEligibleError(decision.reason);
 
     return this.prisma.$transaction(async (tx) => {
-      const published = await this.rewards.publish(id, user.organizationId);
-      await this.outbox.write(tx, { type: 'reward.published.v1', payload: { rewardId: id, organizationId: user.organizationId } });
+      const published = await this.rewards.publish(id, user.tenantId);
+      await this.outbox.write(tx, { type: 'reward.published.v1', payload: { rewardId: id, tenantId: user.tenantId } });
       return published; // no Kafka call inside the transaction
     });
   }
@@ -261,7 +261,7 @@ export class RewardsController {
   }
 
   @Post(':id/publish')
-  @UseGuards(AuthGuard, PermissionGuard(Permission.REWARD_PUBLISH), OwnershipGuard('reward', 'organization'))
+  @UseGuards(AuthGuard, PermissionGuard(Permission.REWARD_PUBLISH), OwnershipGuard('reward', 'tenant'))
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @ZodResponse(RewardSchema, { description: 'The published reward' })
   public async publish(
@@ -344,9 +344,9 @@ The backend independently re-validates `CreateRewardSchema` — the client check
 
 ```ts
 describe('POST /rewards/:id/publish', () => {
-  it('publishes a draft reward for an authorized user in the same organization', ...);
+  it('publishes a draft reward for an authorized user in the same tenant', ...);
   it('returns 403 for a user without REWARD.PUBLISH', ...);
-  it('returns 404/403 for a reward in a different organization (tenant isolation)', ...);
+  it('returns 404/403 for a reward in a different tenant (tenant isolation)', ...);
   it('returns 401 when unauthenticated', ...);
   it('returns 409 when the reward is already published', ...);
   it('publishes exactly once when two requests race (concurrency)', ...);

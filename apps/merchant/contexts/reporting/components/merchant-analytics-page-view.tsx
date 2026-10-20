@@ -1,7 +1,7 @@
 "use client";
 
 import { MerchantAnalyticsPageSkeleton } from "@/components/loading/merchant-page-skeletons";
-import { MerchantCapabilityGate } from "@/contexts/organizations";
+import { MerchantCapabilityGate } from "@/contexts/tenancy";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import { useActiveLocationFilter } from "@/features/tenant-context/facade";
 import {
@@ -15,7 +15,7 @@ import {
 	toRewardItems,
 	toStoreItems,
 } from "@/contexts/reporting/lib/merchant-analytics";
-import { orgRoutes } from "@/lib/routes";
+import { tenantRoutes } from "@/lib/routes";
 import { keepPreviousData } from "@tanstack/react-query";
 import { AnalyticsExportMenu } from "@workspace/client/lib/contexts/reporting/analytics-export-menu";
 import { AnalyticsKpiGrid } from "@workspace/client/lib/contexts/reporting/analytics-kpi-grid";
@@ -61,10 +61,10 @@ import Link from "next/link";
 import * as React from "react";
 
 export interface MerchantAnalyticsPageViewProps {
-	readonly orgSlug: string;
+	readonly tenantSlug: string;
 	/** The request time the server page resolved the range with — the client resolves the same range from it. */
 	readonly nowMs: number;
-	/** The organization's report zone (`range.timeZone`) as the server learned it; days are cut in it. */
+	/** The tenant's report zone (`range.timeZone`) as the server learned it; days are cut in it. */
 	readonly timeZone: string;
 	/** The server prefetch and the exact request (range + store) it answered. */
 	readonly initialDashboard?: PrefetchedQuery<Envelope<MerchantAnalyticsDashboard>> | undefined;
@@ -84,7 +84,7 @@ function storeScope(locationId: string | undefined): string {
 	return locationId ?? "";
 }
 
-function MerchantAnalyticsContent({ orgSlug, nowMs, timeZone, initialDashboard }: MerchantAnalyticsPageViewProps): React.JSX.Element {
+function MerchantAnalyticsContent({ tenantSlug, nowMs, timeZone, initialDashboard }: MerchantAnalyticsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const { can } = useAuthorization();
 	const { locationId } = useActiveLocationFilter();
@@ -93,7 +93,7 @@ function MerchantAnalyticsContent({ orgSlug, nowMs, timeZone, initialDashboard }
 	const input = React.useMemo(() => MerchantAnalyticsDashboardQuerySchema.parse({ ...rangeQuery, locationId }), [rangeQuery, locationId]);
 	// Seed only with what the server fetched for this exact range AND store — never another store's numbers under this key.
 	const prefetched = prefetchedDataFor(initialDashboard, analyticsPrefetchKey(rangeQuery, storeScope(locationId)));
-	const dashboardQuery = api.organizations.analyticsDashboard.useQuery({ orgSlug, ...input }, { ...initialDataOption(prefetched), placeholderData: keepPreviousData });
+	const dashboardQuery = api.tenants.analyticsDashboard.useQuery({ tenantSlug, ...input }, { ...initialDataOption(prefetched), placeholderData: keepPreviousData });
 
 	const dashboard = dashboardQuery.data?.data;
 	const { refetch } = dashboardQuery;
@@ -111,18 +111,18 @@ function MerchantAnalyticsContent({ orgSlug, nowMs, timeZone, initialDashboard }
 
 	// The export reads the same range, interval and store as the screen; the API re-checks the member's store scope.
 	const exportInputFor = React.useCallback(
-		(format: AnalyticsExportFormat) => ({ orgSlug, ...MerchantAnalyticsExportQuerySchema.parse({ ...rangeQuery, locationId, format }) }),
-		[orgSlug, rangeQuery, locationId],
+		(format: AnalyticsExportFormat) => ({ tenantSlug, ...MerchantAnalyticsExportQuerySchema.parse({ ...rangeQuery, locationId, format }) }),
+		[tenantSlug, rangeQuery, locationId],
 	);
-	// The empty sales state links to API keys only for members who may create one (POST /orgs/:orgSlug/api-keys).
-	const apiKeysHref = can(MERCHANT_CAPABILITY.manageApiKeys) ? orgRoutes(orgSlug).apiKeys : undefined;
+	// The empty sales state links to API keys only for members who may create one (POST /t/:orgSlug/api-keys).
+	const apiKeysHref = can(MERCHANT_CAPABILITY.manageApiKeys) ? tenantRoutes(tenantSlug).apiKeys : undefined;
 
 	return (
 		<div className="space-y-6">
 			<AnalyticsPageHeader
 				title="Analytics"
 				description="Sales, customers and reward performance across your stores."
-				actions={<AnalyticsExportMenu definition={apiDownloads.organizations.analyticsExport} inputFor={exportInputFor} />}
+				actions={<AnalyticsExportMenu definition={apiDownloads.tenants.analyticsExport} inputFor={exportInputFor} />}
 			/>
 			<MerchantLocationScopeBanner
 				filteredNote="Every number, chart and export below is for this store."

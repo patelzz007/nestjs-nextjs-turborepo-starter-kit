@@ -17,7 +17,7 @@ import {
 } from "../message-handler";
 
 const EVENT_ID = "0b8f5a52-6a3c-4c3e-9d8e-5d8b5f0f4a11";
-const ORGANIZATION_ID = "5c1f7a9e-2b4d-4e8f-a1b2-c3d4e5f60718";
+const TENANT_ID = "5c1f7a9e-2b4d-4e8f-a1b2-c3d4e5f60718";
 const OCCURRED_AT_MS = 1_790_812_800_000;
 
 /** `pg` DatabaseError carries its SQLSTATE in `code`. */
@@ -112,7 +112,7 @@ function rewardMessage(overrides: Readonly<Record<string, string | number | null
 		type: "reward.platform",
 		correlationId: "corr-1",
 		occurredAt: OCCURRED_AT_MS,
-		payload: { event: "reward.auto_published", actorUserId: null, organizationId: ORGANIZATION_ID, metadata: { rewardId: "reward-1" } },
+		payload: { event: "reward.auto_published", actorUserId: null, tenantId: TENANT_ID, metadata: { rewardId: "reward-1" } },
 		...overrides,
 	});
 }
@@ -173,8 +173,8 @@ describe("handlePlatformMessage", () => {
 				topic: "platform.rewards",
 				eventType: "reward.platform",
 				correlationId: "corr-1",
-				partitionKey: ORGANIZATION_ID,
-				payload: { eventId: EVENT_ID, type: "reward.platform", correlationId: "corr-1", organizationId: ORGANIZATION_ID, occurredAt: OCCURRED_AT_MS },
+				partitionKey: TENANT_ID,
+				payload: { eventId: EVENT_ID, type: "reward.platform", correlationId: "corr-1", tenantId: TENANT_ID, occurredAt: OCCURRED_AT_MS },
 				occurredAt: OCCURRED_AT_MS,
 			},
 		]);

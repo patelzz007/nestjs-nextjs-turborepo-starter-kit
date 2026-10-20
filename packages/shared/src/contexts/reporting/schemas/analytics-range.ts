@@ -123,7 +123,7 @@ export const AnalyticsReportRangeSchema = z.object({
 	from: EpochMsSchema,
 	/** Exclusive. */
 	to: EpochMsSchema,
-	/** IANA zone every bucket was cut in: the merchant's `Organization.timeZone`, or UTC for the admin and customer views. */
+	/** IANA zone every bucket was cut in: the merchant's `Tenant.timeZone`, or UTC for the admin and customer views. */
 	timeZone: IanaTimeZoneSchema,
 	interval: AnalyticsIntervalSchema,
 	/** The equally long range right before `[from, to)` — the base of every `change` / `changePercent`. */

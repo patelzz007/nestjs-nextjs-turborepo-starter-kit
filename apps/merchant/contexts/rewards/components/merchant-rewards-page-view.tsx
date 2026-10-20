@@ -1,12 +1,12 @@
 "use client";
 
-import { MerchantCapabilityGate, MerchantReadOnlyNotice } from "@/contexts/organizations";
+import { MerchantCapabilityGate, MerchantReadOnlyNotice } from "@/contexts/tenancy";
 import { MerchantRewardsPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantRewardsCatalog } from "@/contexts/rewards/components/merchant-rewards-catalog";
 import { MerchantRewardsSummaryStrip, MerchantRewardsSummaryStripSkeleton } from "@/contexts/rewards/components/merchant-rewards-summary-strip";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { useMerchantLocation } from "@/features/tenant-context/facade";
-import { orgRoutes } from "@/lib/routes";
+import { tenantRoutes } from "@/lib/routes";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
 import { REWARDS_STALE_TIME_MS, retryTransientFailures, userSafeErrorMessage } from "@/lib/query/query-policy";
@@ -31,29 +31,29 @@ const REWARDS_LOAD_FAILED_MESSAGE = "The rewards catalog failed to load. Try aga
 const PAGER_LABELS: UiKitLabelsOverride<"listPager"> = { ariaLabel: "Reward pages" };
 
 export interface MerchantRewardsPageViewProps {
-	readonly orgSlug: string;
+	readonly tenantSlug: string;
 }
 
 /** Rewards catalog route — requires `merchant:view_rewards` (list endpoint); create CTAs need `merchant:manage_rewards`. */
-export function MerchantRewardsPageView({ orgSlug }: MerchantRewardsPageViewProps): React.JSX.Element {
+export function MerchantRewardsPageView({ tenantSlug }: MerchantRewardsPageViewProps): React.JSX.Element {
 	return (
 		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewRewards} loading={<MerchantRewardsPageSkeleton />}>
-			<MerchantRewardsPageContent orgSlug={orgSlug} />
+			<MerchantRewardsPageContent tenantSlug={tenantSlug} />
 		</MerchantCapabilityGate>
 	);
 }
 
-function MerchantRewardsPageContent({ orgSlug }: MerchantRewardsPageViewProps): React.JSX.Element {
+function MerchantRewardsPageContent({ tenantSlug }: MerchantRewardsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const { can } = useAuthorization();
-	const createRewardPath = orgRoutes(orgSlug).rewards.new;
+	const createRewardPath = tenantRoutes(tenantSlug).rewards.new;
 	const { locationId, isLoading: isLocationLoading } = useMerchantLocation();
 	const canManageRewards = can(MERCHANT_CAPABILITY.manageRewards);
 
 	// The catalog's figures over every reward in the store scope: the tab counts and the summary strip.
-	const summaryQuery = api.organizations.rewards.summary.useQuery(
-		{ orgSlug, locationId },
-		{ enabled: orgSlug.length > 0 && !isLocationLoading, staleTime: REWARDS_STALE_TIME_MS, retry: retryTransientFailures },
+	const summaryQuery = api.tenants.rewards.summary.useQuery(
+		{ tenantSlug, locationId },
+		{ enabled: tenantSlug.length > 0 && !isLocationLoading, staleTime: REWARDS_STALE_TIME_MS, retry: retryTransientFailures },
 	);
 	const summary = summaryQuery.data?.data;
 	const groups = React.useMemo(() => (summary === undefined ? [] : groupStatusCounts(summary.countsByStatus)), [summary]);
@@ -61,9 +61,9 @@ function MerchantRewardsPageContent({ orgSlug }: MerchantRewardsPageViewProps): 
 	// The open tab and its page are URL state; without a tab in the URL the catalog opens on the first one with rewards.
 	const [urlState, updateUrlState] = useUrlState(REWARDS_URL_STATE);
 	const selectedGroupId: RewardStatusGroupId = urlState.status ?? defaultRewardStatusGroupId(groups);
-	const rewardsQuery = api.organizations.rewards.list.useQuery(toRewardsQuery(orgSlug, locationId, urlState, selectedGroupId), {
+	const rewardsQuery = api.tenants.rewards.list.useQuery(toRewardsQuery(tenantSlug, locationId, urlState, selectedGroupId), {
 		// The default tab depends on the figures: wait for them unless the URL names the tab.
-		enabled: orgSlug.length > 0 && !isLocationLoading && (urlState.status !== undefined || summaryQuery.isSuccess),
+		enabled: tenantSlug.length > 0 && !isLocationLoading && (urlState.status !== undefined || summaryQuery.isSuccess),
 		// Cached like every other list: mutations on the edit/create pages invalidate it.
 		staleTime: REWARDS_STALE_TIME_MS,
 		retry: retryTransientFailures,

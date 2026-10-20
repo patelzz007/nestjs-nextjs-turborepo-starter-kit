@@ -1,7 +1,7 @@
 // ============================================
 // lib/analytics/merchant-analytics.ts - the merchant dashboard's KPIs, series and breakdowns, mapped for the shared primitives
 // ============================================
-// `GET /orgs/:orgSlug/analytics/dashboard` (merchant:view_analytics) → props of
+// `GET /t/:orgSlug/analytics/dashboard` (merchant:view_analytics) → props of
 // the packages/ui analytics primitives. Colour slots are fixed per entity on
 // the page: sales / claims / QR scans take slot 1, redemptions / backup codes
 // slot 2 (docs/technical/frontend/analytics-charts.md).
@@ -12,7 +12,7 @@ import {
 	PLATFORM_DISPLAY_REGION,
 	type MerchantAnalyticsDashboard,
 	type MerchantDashboardTotals,
-	type OrganizationContextResponse,
+	type TenantContextResponse,
 	type RewardRedemptionMethod,
 } from "@workspace/shared";
 import type { RankedBarItem } from "@workspace/ui/components/ranked-bar-list";
@@ -22,13 +22,13 @@ import type { ChartColorSlot } from "@workspace/ui/lib/charts/chart-colors";
 import { Receipt, ShoppingBag, Ticket, TicketCheck, TrendingUp, Users, Wallet } from "lucide-react";
 
 /**
- * The zone a merchant's dashboard is cut in: the organization's own
- * (`organization.timeZone` of the context the merchant app loads). Without a
+ * The zone a merchant's dashboard is cut in: the tenant's own
+ * (`tenant.timeZone` of the context the merchant app loads). Without a
  * context (not a member — the page then renders the access state) it is the
- * platform's, which is also `Organization.timeZone`'s default.
+ * platform's, which is also `Tenant.timeZone`'s default.
  */
-export function reportTimeZone(context: OrganizationContextResponse | undefined): string {
-	return context?.organization.timeZone ?? PLATFORM_DISPLAY_REGION.timeZone;
+export function reportTimeZone(context: TenantContextResponse | undefined): string {
+	return context?.tenant.timeZone ?? PLATFORM_DISPLAY_REGION.timeZone;
 }
 
 type MerchantKpiKey = keyof MerchantDashboardTotals;

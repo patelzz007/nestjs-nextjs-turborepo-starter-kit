@@ -1,10 +1,10 @@
 "use client";
 
 import { RewardVoucher } from "@/contexts/rewards/components/reward-voucher";
-import { useOrganizationPath } from "@/contexts/organizations";
+import { useTenantPath } from "@/contexts/tenancy";
 import { describeRewardStores, formatRewardEnd, isRewardEnded } from "@/contexts/rewards/lib/presentation";
 import { formatRewardOffer } from "@workspace/client/lib/contexts/rewards/reward-offer";
-import { ORG_ROUTES } from "@/lib/routes";
+import { TENANT_ROUTES } from "@/lib/routes";
 import type { RewardResponse } from "@workspace/shared";
 import Link from "next/link";
 import * as React from "react";
@@ -19,7 +19,7 @@ const CARD_COVER_SIZES = "(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100
 
 /** Grid tile for a merchant reward: the reward's voucher, whose title link stretches over the whole card to open the reward. */
 export function MerchantRewardCard({ reward, canManageRewards }: MerchantRewardCardProps): React.JSX.Element {
-	const rewardPath = useOrganizationPath(ORG_ROUTES.rewards.detail(reward.id));
+	const rewardPath = useTenantPath(TENANT_ROUTES.rewards.detail(reward.id));
 	const [cover] = reward.images;
 
 	return (

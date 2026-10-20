@@ -36,7 +36,7 @@ export const DEV_SERVERS = [
 	{ id: "mobile", port: 8081, path: "/status", readiness: "metro" },
 ];
 
-/** The seeded organization the merchant route opens (apps/api/prisma/seed/organizations.ts → ORGANIZATION_SEED_SLUGS.kl). */
+/** The seeded tenant the merchant route opens (apps/api/prisma/seed/tenants.ts → TENANT_SEED_SLUGS.kl). */
 const SEEDED_MERCHANT_SLUG = "brew-bean-kl";
 
 /**

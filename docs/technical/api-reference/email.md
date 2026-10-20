@@ -3,7 +3,7 @@ title: "API reference — Email log, templates and delivery webhooks"
 description: "The outbound email log, template previews and test sends, and the Resend delivery webhook."
 order: 9
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792368000000
+lastUpdated: 1792454400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -85,22 +85,22 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "01a1557c-9d05-785a-8439-6da73d771d1e",
+      "id": "01a15a8b-2a7a-7e68-91ad-14738902ae46",
       "templateKey": "admin-alert",
-      "to": "recipient@example.com",
+      "to": "david.lee@example.com",
       "subject": "[Admin] MFA Recovery Denied",
       "status": "sent",
-      "createdAt": 1792435592437,
-      "updatedAt": 1792435592437
+      "createdAt": 1792520432230,
+      "updatedAt": 1792520432230
     },
     {
-      "id": "01a1557c-9c5c-7f1e-aa96-2769cdb63155",
+      "id": "01a15a8b-29f7-7cd5-a937-b7cd89e66756",
       "templateKey": "admin-alert",
-      "to": "recipient@example.com",
+      "to": "superadmin@example.com",
       "subject": "[Admin] MFA Recovery Review Required",
       "status": "sent",
-      "createdAt": 1792435592267,
-      "updatedAt": 1792435592267
+      "createdAt": 1792520432100,
+      "updatedAt": 1792520432100
     }
   ],
   "meta": {
@@ -108,11 +108,11 @@ Response `200 OK` (application/json):
     "total": 16,
     "page": 1,
     "totalPages": 8,
-    "nextCursor": "eyJhdCI6MTc5MjQzNTU5MjI2NywiaWQiOiIwMWExNTU3Yy05YzVjLTdmMWUtYWE5Ni0yNzY5Y2RiNjMxNTUifQ",
+    "nextCursor": "eyJhdCI6MTc5MjUyMDQzMjEwMCwiaWQiOiIwMWExNWE4Yi0yOWY3LTdjZDUtYTkzNy1iN2NkODllNjY3NTYifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "SHx5YQAcdcHYKngIN3QyF",
-    "timestamp": 1792435597588
+    "correlationId": "juVdCzid1d57AzBc5I4Mw",
+    "timestamp": 1792520437576
   }
 }
 ```
@@ -203,8 +203,8 @@ Response `200 OK` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "XrcQ7UTLvUIWbpmBlZAx2",
-    "timestamp": 1792435597608
+    "correlationId": "ZezHIDoYICwJtBtsP2udc",
+    "timestamp": 1792520437610
   }
 }
 ```
@@ -278,8 +278,8 @@ Response `200 OK` (application/json):
     }
   },
   "meta": {
-    "correlationId": "dwQFfCq3qPNqYC7lhPdS-",
-    "timestamp": 1792435597636
+    "correlationId": "puC5rZzRyC1ieOlAXbQOM",
+    "timestamp": 1792520437646
   }
 }
 ```
@@ -339,12 +339,12 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "ok": true,
-    "id": "01a1557c-b165-75d8-a7e8-0116970b495f",
+    "id": "01a15a8b-3fb1-70f1-b8c1-c8484e1c7fe5",
     "mode": "log-only"
   },
   "meta": {
-    "correlationId": "3Hy7zjecyCOFy7ia9uZS5",
-    "timestamp": 1792435597673
+    "correlationId": "tnk60SdBSLkflZ6_GyoJI",
+    "timestamp": 1792520437687
   }
 }
 ```
@@ -393,8 +393,8 @@ Response `200 OK` (application/json):
     "path": "/notifications/email-webhook"
   },
   "meta": {
-    "correlationId": "SOIiuzk7Ui2xc1_LBuMa2",
-    "timestamp": 1792435597687
+    "correlationId": "PZWVjcvxqosgYoQ7Bq_o7",
+    "timestamp": 1792520437703
   }
 }
 ```
@@ -407,7 +407,6 @@ Receives delivery events from Resend and updates EmailLog. Only accepts requests
 
 - **Public** — no session required.
 - Rate limit: `WEBHOOK_RATE_LIMIT_PER_MINUTE` requests per 60 s per client IP (webhook limiter).
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `EmailWebhookController_receive` · [source](../../../apps/api/src/contexts/notifications/presentation/http/email-webhook.controller.ts)
 
@@ -460,17 +459,17 @@ Receives delivery events from Resend and updates EmailLog. Only accepts requests
 
 ```http
 POST /notifications/email-webhook
-svix-id: msg_5c367c8efbb1493c89a8b9b5e7b13f38
-svix-timestamp: 1792435597
+svix-id: msg_bd1480e1f48f409c81ce1c7abcda6b77
+svix-timestamp: 1792520437
 Content-Type: application/json
 
 {
   "type": "email.delivered",
-  "created_at": "2026-10-19T18:46:37.718Z",
+  "created_at": "2026-10-20T18:20:37.758Z",
   "data": {
     "email_id": "seed",
     "to": [
-      "recipient@example.com"
+      "jamie@example.com"
     ]
   }
 }
@@ -486,8 +485,8 @@ Response `403 Forbidden` (application/json):
     "message": "Missing webhook signature header(s): webhook-signature/svix-signature. Resend signs every webhook with these headers — a browser/curl request without them is rejected by design."
   },
   "meta": {
-    "correlationId": "QzNYqdy581U28cc_b6fVn",
-    "timestamp": 1792435597727
+    "correlationId": "9nsCfANdMQOCcFBV6OwBb",
+    "timestamp": 1792520437767
   }
 }
 ```

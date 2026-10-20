@@ -24,8 +24,8 @@ import {
 	RewardListQuerySchema,
 	RewardResponseSchema,
 } from "./schemas/reward";
-import { OrganizationSlugParamSchema } from "../organizations/schemas/organization";
-import { legalRoutes, organizationRewardsRoutes, rewardsAdminRewardRoutes, rewardsRoutes } from "./routes";
+import { TenantSlugParamSchema } from "../tenancy/schemas/tenant";
+import { integrationRewardsRoutes, legalRoutes, tenantRewardsRoutes, rewardsAdminRewardRoutes, rewardsRoutes } from "./routes";
 
 /** Contract leaves composed into `apiContract.rewardsAdmin` (pendingRewards, getReward, approveReward, rejectReward, downloadRewardImage, downloadRewardImagesArchive). */
 export const rewardsAdminRewardContract = {
@@ -90,42 +90,85 @@ export const legalContract = {
 	status: defineContract({ method: "GET", path: legalRoutes.status, input: z.undefined(), response: singleResponse(RewardClaimCheckoutStatusSchema) }),
 };
 
-/** Contract leaves composed into `apiContract.organizations.rewards`. */
-export const organizationRewardsContract = {
+/** Contract leaves composed into `apiContract.tenants.rewards`. */
+/**
+ * Contract leaves composed into `apiContract.integration.rewards`: the same catalog operations as
+ * `tenants.rewards`, for an integration API key. The key names its tenant, so the input has no slug.
+ */
+export const integrationRewardsContract = {
 	list: defineContract({
 		method: "GET",
-		path: organizationRewardsRoutes.list,
-		input: z.intersection(OrganizationSlugParamSchema, MerchantRewardListQuerySchema),
+		path: integrationRewardsRoutes.list,
+		input: MerchantRewardListQuerySchema,
 		response: paginatedResponse(RewardResponseSchema),
 	}),
 	summary: defineContract({
 		method: "GET",
-		path: organizationRewardsRoutes.summary,
-		input: z.intersection(OrganizationSlugParamSchema, MerchantRewardSummaryQuerySchema),
+		path: integrationRewardsRoutes.summary,
+		input: MerchantRewardSummaryQuerySchema,
 		response: singleResponse(MerchantRewardSummarySchema),
 	}),
 	get: defineContract({
 		method: "GET",
-		path: organizationRewardsRoutes.get,
-		input: z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, rewardId: UuidParamSchema }).strict(),
+		path: integrationRewardsRoutes.get,
+		input: z.object({ rewardId: UuidParamSchema }).strict(),
 		response: singleResponse(RewardResponseSchema),
 	}),
 	create: defineContract({
 		method: "POST",
-		path: organizationRewardsRoutes.create,
-		input: z.intersection(OrganizationSlugParamSchema, MerchantCreateRewardSchema),
+		path: integrationRewardsRoutes.create,
+		input: MerchantCreateRewardSchema,
 		response: singleResponse(RewardResponseSchema),
 	}),
 	update: defineContract({
 		method: "PATCH",
-		path: organizationRewardsRoutes.update,
-		input: MerchantUpdateRewardPathInputSchema.extend({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug }),
+		path: integrationRewardsRoutes.update,
+		input: MerchantUpdateRewardPathInputSchema,
 		response: singleResponse(RewardResponseSchema),
 	}),
 	publish: defineContract({
 		method: "POST",
-		path: organizationRewardsRoutes.publish,
-		input: z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, rewardId: UuidParamSchema }).strict(),
+		path: integrationRewardsRoutes.publish,
+		input: z.object({ rewardId: UuidParamSchema }).strict(),
+		response: singleResponse(RewardResponseSchema),
+	}),
+};
+
+export const tenantRewardsContract = {
+	list: defineContract({
+		method: "GET",
+		path: tenantRewardsRoutes.list,
+		input: z.intersection(TenantSlugParamSchema, MerchantRewardListQuerySchema),
+		response: paginatedResponse(RewardResponseSchema),
+	}),
+	summary: defineContract({
+		method: "GET",
+		path: tenantRewardsRoutes.summary,
+		input: z.intersection(TenantSlugParamSchema, MerchantRewardSummaryQuerySchema),
+		response: singleResponse(MerchantRewardSummarySchema),
+	}),
+	get: defineContract({
+		method: "GET",
+		path: tenantRewardsRoutes.get,
+		input: z.object({ tenantSlug: TenantSlugParamSchema.shape.tenantSlug, rewardId: UuidParamSchema }).strict(),
+		response: singleResponse(RewardResponseSchema),
+	}),
+	create: defineContract({
+		method: "POST",
+		path: tenantRewardsRoutes.create,
+		input: z.intersection(TenantSlugParamSchema, MerchantCreateRewardSchema),
+		response: singleResponse(RewardResponseSchema),
+	}),
+	update: defineContract({
+		method: "PATCH",
+		path: tenantRewardsRoutes.update,
+		input: MerchantUpdateRewardPathInputSchema.extend({ tenantSlug: TenantSlugParamSchema.shape.tenantSlug }),
+		response: singleResponse(RewardResponseSchema),
+	}),
+	publish: defineContract({
+		method: "POST",
+		path: tenantRewardsRoutes.publish,
+		input: z.object({ tenantSlug: TenantSlugParamSchema.shape.tenantSlug, rewardId: UuidParamSchema }).strict(),
 		response: singleResponse(RewardResponseSchema),
 	}),
 };

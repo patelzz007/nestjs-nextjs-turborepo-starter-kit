@@ -6,13 +6,13 @@ import {
 	PlatformEventEnvelopeSchema,
 	PlatformEventInputSchema,
 	PlatformEventMessageSchema,
-	readPlatformEventOrganizationId,
+	readPlatformEventTenantId,
 	type PlatformEventEnvelope,
 	type PlatformEventType,
 } from "../kafka";
 
 const EVENT_ID = "0b8f5a52-6a3c-4c3e-9d8e-5d8b5f0f4a11";
-const ORGANIZATION_ID = "5c1f7a9e-2b4d-4e8f-a1b2-c3d4e5f60718";
+const TENANT_ID = "5c1f7a9e-2b4d-4e8f-a1b2-c3d4e5f60718";
 const OCCURRED_AT_MS = 1_790_812_800_000;
 
 function buildSessionEnvelope(): PlatformEventEnvelope {
@@ -80,7 +80,7 @@ describe("PlatformEventInputSchema", () => {
 	it("accepts only the type and payload a producer owns", () => {
 		const input = PlatformEventInputSchema.parse({
 			type: "reward.platform",
-			payload: { event: "reward.auto_published", actorUserId: null, organizationId: ORGANIZATION_ID, metadata: { rewardId: "reward-1" } },
+			payload: { event: "reward.auto_published", actorUserId: null, tenantId: TENANT_ID, metadata: { rewardId: "reward-1" } },
 		});
 
 		expect(input.type).toBe("reward.platform");
@@ -107,12 +107,12 @@ describe("PLATFORM_EVENT_TOPICS", () => {
 	});
 });
 
-describe("readPlatformEventOrganizationId", () => {
+describe("readPlatformEventTenantId", () => {
 	it("returns the tenant tag when the payload carries one", () => {
-		expect(readPlatformEventOrganizationId({ event: "reward.claim_expired", actorUserId: null, organizationId: ORGANIZATION_ID, metadata: {} })).toBe(ORGANIZATION_ID);
+		expect(readPlatformEventTenantId({ event: "reward.claim_expired", actorUserId: null, tenantId: TENANT_ID, metadata: {} })).toBe(TENANT_ID);
 	});
 
 	it("returns null for payloads without a tenant tag", () => {
-		expect(readPlatformEventOrganizationId(buildSessionEnvelope().payload)).toBeNull();
+		expect(readPlatformEventTenantId(buildSessionEnvelope().payload)).toBeNull();
 	});
 });

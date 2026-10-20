@@ -9,7 +9,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
 /**
- * Square brand mark for a named entity (a shop, organization, team): its logo
+ * Square brand mark for a named entity (a shop, tenant, team): its logo
  * when one is given, otherwise a monogram of the name on a tint picked
  * deterministically from the theme's chart palette — the same name always gets
  * the same colour, so an entity stays recognisable before it has a logo.

@@ -8,22 +8,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import MerchantAuthLoading from "@/app/auth/loading";
 import MerchantEntryLoading from "@/app/loading";
 import MerchantOnboardingLoading from "@/app/onboarding/loading";
-import MerchantAccountLoading from "@/app/orgs/[orgSlug]/account/loading";
-import MerchantAnalyticsLoading from "@/app/orgs/[orgSlug]/analytics/loading";
-import MerchantApiKeysLoading from "@/app/orgs/[orgSlug]/api-keys/loading";
-import MerchantDashboardLoading from "@/app/orgs/[orgSlug]/dashboard/loading";
-import MerchantOrganizationLoading from "@/app/orgs/[orgSlug]/loading";
-import MerchantRedemptionsLoading from "@/app/orgs/[orgSlug]/redemptions/loading";
-import MerchantEditRewardLoading from "@/app/orgs/[orgSlug]/rewards/[rewardId]/edit/loading";
-import MerchantRewardDetailLoading from "@/app/orgs/[orgSlug]/rewards/[rewardId]/loading";
-import MerchantRewardsLoading from "@/app/orgs/[orgSlug]/rewards/loading";
-import MerchantCreateRewardLoading from "@/app/orgs/[orgSlug]/rewards/new/loading";
-import MerchantSettingsLoading from "@/app/orgs/[orgSlug]/settings/loading";
-import MerchantBrandingLoading from "@/app/orgs/[orgSlug]/settings/branding/loading";
-import MerchantLocationsLoading from "@/app/orgs/[orgSlug]/settings/locations/loading";
-import MerchantTeamLoading from "@/app/orgs/[orgSlug]/settings/team/loading";
-import MerchantVerificationLoading from "@/app/orgs/[orgSlug]/settings/verification/loading";
-import MerchantTerminalsLoading from "@/app/orgs/[orgSlug]/terminals/loading";
+import MerchantAccountLoading from "@/app/t/[tenantSlug]/account/loading";
+import MerchantAnalyticsLoading from "@/app/t/[tenantSlug]/analytics/loading";
+import MerchantApiKeysLoading from "@/app/t/[tenantSlug]/api-keys/loading";
+import MerchantDashboardLoading from "@/app/t/[tenantSlug]/dashboard/loading";
+import MerchantTenantLoading from "@/app/t/[tenantSlug]/loading";
+import MerchantRedemptionsLoading from "@/app/t/[tenantSlug]/redemptions/loading";
+import MerchantEditRewardLoading from "@/app/t/[tenantSlug]/rewards/[rewardId]/edit/loading";
+import MerchantRewardDetailLoading from "@/app/t/[tenantSlug]/rewards/[rewardId]/loading";
+import MerchantRewardsLoading from "@/app/t/[tenantSlug]/rewards/loading";
+import MerchantCreateRewardLoading from "@/app/t/[tenantSlug]/rewards/new/loading";
+import MerchantSettingsLoading from "@/app/t/[tenantSlug]/settings/loading";
+import MerchantBrandingLoading from "@/app/t/[tenantSlug]/settings/branding/loading";
+import MerchantLocationsLoading from "@/app/t/[tenantSlug]/settings/locations/loading";
+import MerchantTeamLoading from "@/app/t/[tenantSlug]/settings/team/loading";
+import MerchantVerificationLoading from "@/app/t/[tenantSlug]/settings/verification/loading";
+import MerchantTerminalsLoading from "@/app/t/[tenantSlug]/terminals/loading";
 import MerchantTeamInviteLoading from "@/app/team-invite/loading";
 import { MERCHANT_AUTH_LOADING_LABELS } from "@/components/loading/auth-skeletons";
 import {
@@ -52,10 +52,10 @@ import {
 	TEAM_INVITE_SKELETON_ROWS,
 	TEAM_MEMBER_SKELETON_ROWS,
 } from "@/components/loading/merchant-page-skeletons";
-import { TEAM_INVITE_LOADING_LABELS } from "@/contexts/organizations/components/team-invite/team-invite-skeletons";
+import { TEAM_INVITE_LOADING_LABELS } from "@/contexts/tenancy/components/team-invite/team-invite-skeletons";
 import { busyRegionAnnouncements } from "@/test/skeleton";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
-import { MERCHANT_ONBOARDING_LOADING_LABELS, MERCHANT_ONBOARDING_STEP_COUNT } from "@workspace/client/lib/contexts/organizations/onboarding/view";
+import { MERCHANT_ONBOARDING_LOADING_LABELS, MERCHANT_ONBOARDING_STEP_COUNT } from "@workspace/client/lib/contexts/tenancy/onboarding/view";
 
 // The entry loading reads the saved sidebar state on the server; each test chooses it.
 const sidebarCookie = vi.hoisted((): { open: boolean | undefined } => ({ open: undefined }));
@@ -81,7 +81,7 @@ afterEach((): void => {
 const DASHBOARD_LINK_COLUMNS = 2;
 /** The analytics page's time-series charts. */
 const ANALYTICS_CHARTS = 4;
-/** The organization-settings link cards: team, locations, branding, verification. */
+/** The tenant-settings link cards: team, locations, branding, verification. */
 const SETTINGS_LINK_CARDS = 4;
 /** The invitation's detail rows: role, invited email, location access. */
 const INVITE_DETAILS = 3;
@@ -138,13 +138,13 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		landmarks: [{ selector: slot("team-invite-detail-skeleton"), count: INVITE_DETAILS }],
 	},
 	{
-		route: "/orgs/[orgSlug]",
-		element: <MerchantOrganizationLoading />,
+		route: "/t/[tenantSlug]",
+		element: <MerchantTenantLoading />,
 		labels: MERCHANT_DASHBOARD_LOADING_LABELS,
 		landmarks: [{ selector: slot("dashboard-links-skeleton"), count: DASHBOARD_LINK_COLUMNS }],
 	},
 	{
-		route: "/orgs/[orgSlug]/dashboard",
+		route: "/t/[tenantSlug]/dashboard",
 		element: <MerchantDashboardLoading />,
 		labels: MERCHANT_DASHBOARD_LOADING_LABELS,
 		landmarks: [
@@ -153,7 +153,7 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		],
 	},
 	{
-		route: "/orgs/[orgSlug]/account",
+		route: "/t/[tenantSlug]/account",
 		element: <MerchantAccountLoading />,
 		labels: MERCHANT_ACCOUNT_LOADING_LABELS,
 		landmarks: [
@@ -162,7 +162,7 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		],
 	},
 	{
-		route: "/orgs/[orgSlug]/analytics",
+		route: "/t/[tenantSlug]/analytics",
 		element: <MerchantAnalyticsLoading />,
 		labels: MERCHANT_ANALYTICS_LOADING_LABELS,
 		landmarks: [
@@ -172,7 +172,7 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		],
 	},
 	{
-		route: "/orgs/[orgSlug]/api-keys",
+		route: "/t/[tenantSlug]/api-keys",
 		element: <MerchantApiKeysLoading />,
 		labels: MERCHANT_API_KEYS_LOADING_LABELS,
 		landmarks: [
@@ -181,7 +181,7 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		],
 	},
 	{
-		route: "/orgs/[orgSlug]/terminals",
+		route: "/t/[tenantSlug]/terminals",
 		element: <MerchantTerminalsLoading />,
 		labels: MERCHANT_TERMINALS_LOADING_LABELS,
 		landmarks: [
@@ -190,7 +190,7 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		],
 	},
 	{
-		route: "/orgs/[orgSlug]/redemptions",
+		route: "/t/[tenantSlug]/redemptions",
 		element: <MerchantRedemptionsLoading />,
 		labels: MERCHANT_REDEMPTIONS_LOADING_LABELS,
 		landmarks: [
@@ -199,7 +199,7 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		],
 	},
 	{
-		route: "/orgs/[orgSlug]/rewards",
+		route: "/t/[tenantSlug]/rewards",
 		element: <MerchantRewardsLoading />,
 		labels: MERCHANT_REWARDS_LOADING_LABELS,
 		landmarks: [
@@ -209,7 +209,7 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		],
 	},
 	{
-		route: "/orgs/[orgSlug]/rewards/new",
+		route: "/t/[tenantSlug]/rewards/new",
 		element: <MerchantCreateRewardLoading />,
 		labels: MERCHANT_REWARD_EDITOR_LOADING_LABELS,
 		landmarks: [
@@ -219,7 +219,7 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		],
 	},
 	{
-		route: "/orgs/[orgSlug]/rewards/[rewardId]",
+		route: "/t/[tenantSlug]/rewards/[rewardId]",
 		element: <MerchantRewardDetailLoading />,
 		labels: MERCHANT_REWARD_LOADING_LABELS,
 		landmarks: [
@@ -228,7 +228,7 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		],
 	},
 	{
-		route: "/orgs/[orgSlug]/rewards/[rewardId]/edit",
+		route: "/t/[tenantSlug]/rewards/[rewardId]/edit",
 		element: <MerchantEditRewardLoading />,
 		labels: MERCHANT_REWARD_EDITOR_LOADING_LABELS,
 		landmarks: [
@@ -238,31 +238,31 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		],
 	},
 	{
-		route: "/orgs/[orgSlug]/settings",
+		route: "/t/[tenantSlug]/settings",
 		element: <MerchantSettingsLoading />,
 		labels: MERCHANT_SETTINGS_LOADING_LABELS,
 		landmarks: [{ selector: slot("settings-link-skeleton"), count: SETTINGS_LINK_CARDS }],
 	},
 	{
-		route: "/orgs/[orgSlug]/settings/locations",
+		route: "/t/[tenantSlug]/settings/locations",
 		element: <MerchantLocationsLoading />,
 		labels: MERCHANT_LOCATIONS_LOADING_LABELS,
 		landmarks: [{ selector: slot("location-card-skeleton"), count: LOCATION_SKELETON_CARDS }],
 	},
 	{
-		route: "/orgs/[orgSlug]/settings/branding",
+		route: "/t/[tenantSlug]/settings/branding",
 		element: <MerchantBrandingLoading />,
 		labels: MERCHANT_BRANDING_LOADING_LABELS,
 		landmarks: [{ selector: slot("store-logo-skeleton"), count: 1 }],
 	},
 	{
-		route: "/orgs/[orgSlug]/settings/team",
+		route: "/t/[tenantSlug]/settings/team",
 		element: <MerchantTeamLoading />,
 		labels: MERCHANT_TEAM_LOADING_LABELS,
 		landmarks: [{ selector: slot("merchant-bordered-row-skeleton"), count: TEAM_MEMBER_SKELETON_ROWS + TEAM_INVITE_SKELETON_ROWS }],
 	},
 	{
-		route: "/orgs/[orgSlug]/settings/verification",
+		route: "/t/[tenantSlug]/settings/verification",
 		element: <MerchantVerificationLoading />,
 		labels: MERCHANT_VERIFICATION_LOADING_LABELS,
 		landmarks: [{ selector: slot("kyb-verification-skeleton"), count: 1 }],

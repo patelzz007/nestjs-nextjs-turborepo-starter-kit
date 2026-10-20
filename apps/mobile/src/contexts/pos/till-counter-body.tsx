@@ -1,7 +1,7 @@
 // The paired till at the counter: scan the customer's reward QR (or type its
 // backup code), see what it is and whether it can be redeemed here
-// (`POST /redemptions/validate`), enter the bill, and redeem it
-// (`POST /redemptions/checkout`). The checkout is idempotent: a retry after a
+// (`POST /integration/redemptions/validate`), enter the bill, and redeem it
+// (`POST /integration/redemptions/checkout`). The checkout is idempotent: a retry after a
 // lost answer reuses the same Idempotency-Key, so a reward is never redeemed
 // twice for one bill (rules/09), and the API stays the authority on every rule
 // (minimum spend, store, expiry) — the checks here only spare a round trip.

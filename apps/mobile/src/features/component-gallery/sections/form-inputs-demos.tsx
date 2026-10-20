@@ -182,7 +182,7 @@ function FieldDemo(): React.JSX.Element {
 			<Field label="Work email" hint="We send receipts here" error={emailError}>
 				<Input value={email} onChange={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
 			</Field>
-			<Field label="Organisation" hint="Managed by your administrator" disabled>
+			<Field label="Tenant" hint="Managed by your administrator" disabled>
 				<Input value="Acme Sdn Bhd" onChange={setEmail} />
 			</Field>
 		</DemoBlock>

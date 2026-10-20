@@ -6,7 +6,7 @@ import { Label } from "@workspace/ui/components/label";
 import { Select, SelectContent, SelectItem, type SelectOption, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import {
 	API_KEY_SCOPE_OPTIONS,
-	ORGANIZATION_WIDE_STORE_CHOICE,
+	TENANT_WIDE_STORE_CHOICE,
 	type ApiKeyStoreChoices,
 	type ApiKeyStoreOption,
 	type CreateApiKeyField,
@@ -26,10 +26,10 @@ export interface CreateApiKeyCardProps {
 	readonly name: string;
 	readonly onNameChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 	readonly onSubmit: (event: React.SyntheticEvent<HTMLFormElement>) => void;
-	/** The select's value: a store id, {@link ORGANIZATION_WIDE_STORE_CHOICE}, or `""` until chosen. */
+	/** The select's value: a store id, {@link TENANT_WIDE_STORE_CHOICE}, or `""` until chosen. */
 	readonly storeChoice: string;
 	readonly onStoreChoiceChange: (choice: string) => void;
-	/** The stores this member may create a key for (organization-wide only for an all-locations member). */
+	/** The stores this member may create a key for (tenant-wide only for an all-locations member). */
 	readonly storeChoices: ApiKeyStoreChoices;
 	/** The select's value: one of the shared API key scopes. */
 	readonly scope: string;
@@ -41,8 +41,8 @@ export interface CreateApiKeyCardProps {
 	readonly submissionError: FormSubmissionError<CreateApiKeyField> | null;
 }
 
-/** The organization-wide choice, as the store field names it. */
-const ORGANIZATION_WIDE_LABEL = "Every store (organization-wide)";
+/** The tenant-wide choice, as the store field names it. */
+const TENANT_WIDE_LABEL = "Every store (tenant-wide)";
 
 /** The shared scope options as `{ value, label }` — the scope select's `items` and its rendered options. */
 const API_KEY_SCOPE_SELECT_OPTIONS: readonly SelectOption<string>[] = API_KEY_SCOPE_OPTIONS.map((option): SelectOption<string> => ({
@@ -72,7 +72,7 @@ export function CreateApiKeyCard({
 	isPending,
 	submissionError,
 }: CreateApiKeyCardProps): React.JSX.Element {
-	const hasNoStore = storeChoices.stores.length === 0 && !storeChoices.allowOrganizationWide;
+	const hasNoStore = storeChoices.stores.length === 0 && !storeChoices.allowTenantWide;
 	const storeError = fieldErrorMessage(submissionError, "store");
 	const formError = formErrorMessage(submissionError);
 	const scopeDescription = API_KEY_SCOPE_OPTIONS.find((option) => option.scope === scope)?.description;
@@ -81,7 +81,7 @@ export function CreateApiKeyCard({
 	const storeOptions = React.useMemo(
 		(): readonly SelectOption<string>[] => [
 			...storeChoices.stores.map((store: ApiKeyStoreOption): SelectOption<string> => ({ value: store.id, label: store.name })),
-			...(storeChoices.allowOrganizationWide ? [{ value: ORGANIZATION_WIDE_STORE_CHOICE, label: ORGANIZATION_WIDE_LABEL }] : []),
+			...(storeChoices.allowTenantWide ? [{ value: TENANT_WIDE_STORE_CHOICE, label: TENANT_WIDE_LABEL }] : []),
 		],
 		[storeChoices],
 	);

@@ -90,7 +90,7 @@ function statusText(status: ExportStatus): string {
 }
 
 export interface AnalyticsExportMenuProps<TInput extends SerializableInput> {
-	/** The file route (`apiDownloads.organizations.analyticsExport`, `apiDownloads.rewardsAdmin.analyticsExport`). */
+	/** The file route (`apiDownloads.tenants.analyticsExport`, `apiDownloads.rewardsAdmin.analyticsExport`). */
 	readonly definition: DownloadDef<TInput>;
 	/** The request for one format — the range, interval (and store) on screen. */
 	readonly inputFor: (format: AnalyticsExportFormat) => TInput;

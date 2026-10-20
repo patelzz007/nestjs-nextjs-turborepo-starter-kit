@@ -9,7 +9,7 @@ import { constraintNotes, resolveSchema, schemaRows, typeLabel } from "../schema
 const CONTROLLER = `
 @ApiTags("Redemptions")
 @SkipMutationIntent()
-@Controller(apiPath("/redemptions"))
+@Controller(apiPath("/integration/redemptions"))
 export class RedemptionsController {
 	public constructor(private readonly service: RedemptionService) {}
 
@@ -41,7 +41,7 @@ export class RolesController {
 
 const DOCUMENT = OpenApiDocumentSchema.parse({
 	paths: {
-		"/api/v1/redemptions/checkout": {
+		"/api/v1/integration/redemptions/checkout": {
 			post: {
 				operationId: "RedemptionsController_checkout",
 				summary: "POS checkout",
@@ -95,7 +95,7 @@ const SAMPLES = ApiSamplesFileSchema.parse({
 	samples: {
 		RedemptionsController_checkout: {
 			as: "machine client (no session)",
-			request: { method: "POST", path: "/api/v1/redemptions/checkout", headers: { "X-API-Key": "mk_live_seed" }, body: { codes: [{ backupCode: "ABCD2345" }] } },
+			request: { method: "POST", path: "/api/v1/integration/redemptions/checkout", headers: { "X-API-Key": "mk_live_seed" }, body: { codes: [{ backupCode: "ABCD2345" }] } },
 			response: { status: 201, contentType: "application/json", body: { success: true, data: { saleId: "s-1" } } },
 		},
 		RolesController_update: { notCaptured: "Needs a second SuperAdmin." },
@@ -237,7 +237,7 @@ describe("renderApiReference", () => {
 		const files = renderApiReference({ document: DOCUMENT, access: ACCESS, samples: SAMPLES });
 		expect([...files.keys()]).toEqual(["README.md", ...REFERENCE_PAGES.map((page) => `${page.slug}.md`)]);
 		const pos = files.get("pos.md") ?? "";
-		expect(pos).toContain("### POST /api/v1/redemptions/checkout");
+		expect(pos).toContain("### POST /api/v1/integration/redemptions/checkout");
 		expect(pos).toContain("| `codes[].backupCode` |");
 		expect(pos).toContain("| `data.saleId` | string (uuid) | yes |");
 		expect(pos).toContain("| 409 | `IDEMPOTENCY_KEY_REUSED` |");

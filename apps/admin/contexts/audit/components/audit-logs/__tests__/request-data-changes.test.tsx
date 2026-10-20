@@ -22,7 +22,7 @@ const CHANGE = DataChangeLogSummarySchema.parse({
 	changedColumns: ["fullName", "phone"],
 	actorKind: "USER",
 	actor: null,
-	organization: null,
+	tenant: null,
 	apiKeyId: null,
 	systemOperation: null,
 	correlationId: "corr-7",

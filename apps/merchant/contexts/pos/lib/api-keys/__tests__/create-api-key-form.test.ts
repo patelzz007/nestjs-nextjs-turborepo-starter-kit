@@ -4,14 +4,14 @@ import {
 	apiKeyScopeLabel,
 	DEFAULT_API_KEY_SCOPE_CHOICE,
 	defaultApiKeyStoreChoice,
-	ORGANIZATION_WIDE_STORE_CHOICE,
+	TENANT_WIDE_STORE_CHOICE,
 	parseCreateApiKeyForm,
 	type ApiKeyStoreChoices,
 } from "@/contexts/pos/lib/api-keys/create-api-key-form";
 import { STORE_A, STORE_B } from "@/test/terminals";
 
-const ALL_LOCATIONS_MEMBER: ApiKeyStoreChoices = { stores: [STORE_A, STORE_B], allowOrganizationWide: true };
-const STORE_LIMITED_MEMBER: ApiKeyStoreChoices = { stores: [STORE_B], allowOrganizationWide: false };
+const ALL_LOCATIONS_MEMBER: ApiKeyStoreChoices = { stores: [STORE_A, STORE_B], allowTenantWide: true };
+const STORE_LIMITED_MEMBER: ApiKeyStoreChoices = { stores: [STORE_B], allowTenantWide: false };
 const OTHER_STORE_ID = "0f0f0f0f-0000-4000-8000-0000000000ff";
 
 describe("parseCreateApiKeyForm", () => {
@@ -23,9 +23,9 @@ describe("parseCreateApiKeyForm", () => {
 		});
 	});
 
-	it("creates an organization-wide key only when explicitly chosen by an all-locations member", () => {
-		expect(parseCreateApiKeyForm({ name: "HQ", storeChoice: ORGANIZATION_WIDE_STORE_CHOICE, scope: "POS" }, ALL_LOCATIONS_MEMBER)).toEqual({ name: "HQ", scope: "POS" });
-		expect(parseCreateApiKeyForm({ name: "HQ", storeChoice: ORGANIZATION_WIDE_STORE_CHOICE, scope: "POS" }, STORE_LIMITED_MEMBER)).toBeUndefined();
+	it("creates a tenant-wide key only when explicitly chosen by an all-locations member", () => {
+		expect(parseCreateApiKeyForm({ name: "HQ", storeChoice: TENANT_WIDE_STORE_CHOICE, scope: "POS" }, ALL_LOCATIONS_MEMBER)).toEqual({ name: "HQ", scope: "POS" });
+		expect(parseCreateApiKeyForm({ name: "HQ", storeChoice: TENANT_WIDE_STORE_CHOICE, scope: "POS" }, STORE_LIMITED_MEMBER)).toBeUndefined();
 	});
 
 	it("refuses a missing store, a store outside the member's scope, and a blank name", () => {
@@ -62,7 +62,7 @@ describe("defaultApiKeyStoreChoice", () => {
 		expect(defaultApiKeyStoreChoice(STORE_LIMITED_MEMBER, STORE_A.id)).toBe(STORE_B.id);
 	});
 
-	it("never preselects organization-wide — under All locations the member must pick", () => {
+	it("never preselects tenant-wide — under All locations the member must pick", () => {
 		expect(defaultApiKeyStoreChoice(ALL_LOCATIONS_MEMBER, undefined)).toBe("");
 	});
 });

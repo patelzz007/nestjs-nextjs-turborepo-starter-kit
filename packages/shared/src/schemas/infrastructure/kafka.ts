@@ -121,17 +121,17 @@ export const PLATFORM_EVENT_TOPICS: Readonly<Record<PlatformEventType, KafkaTopi
 };
 
 /** Optional tenant tag publishers may include on any platform event payload. */
-export const PlatformEventOrganizationIdSchema = z.object({
-	organizationId: z.uuid(),
+export const PlatformEventTenantIdSchema = z.object({
+	tenantId: z.uuid(),
 });
 
-export type PlatformEventOrganizationId = z.output<typeof PlatformEventOrganizationIdSchema>;
+export type PlatformEventTenantId = z.output<typeof PlatformEventTenantIdSchema>;
 
 /** Returns the tenant id when the publisher tagged the payload; otherwise null. */
-export function readPlatformEventOrganizationId(payload: PlatformEventPayload): string | null {
-	const parsed = PlatformEventOrganizationIdSchema.safeParse(payload);
+export function readPlatformEventTenantId(payload: PlatformEventPayload): string | null {
+	const parsed = PlatformEventTenantIdSchema.safeParse(payload);
 	if (!parsed.success) {
 		return null;
 	}
-	return parsed.data.organizationId;
+	return parsed.data.tenantId;
 }

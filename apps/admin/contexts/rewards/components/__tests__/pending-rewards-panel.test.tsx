@@ -22,7 +22,7 @@ interface PendingRewardStub {
 	readonly id: string;
 	readonly title: string;
 	readonly description: string;
-	readonly organizationName?: string | undefined;
+	readonly tenantName?: string | undefined;
 	readonly rewardType: string;
 	readonly status: string;
 	readonly quantityRemaining: number;
@@ -74,7 +74,7 @@ const REWARD: PendingRewardStub = {
 	id: "5b2c7e19-0d4a-4e8f-9a3b-6c1d2e3f4a5b",
 	title: "Free coffee",
 	description: "One free latte",
-	organizationName: "Sunrise Café",
+	tenantName: "Sunrise Café",
 	rewardType: "FREE_ITEM",
 	status: "PENDING_REVIEW",
 	quantityRemaining: 10,
@@ -148,7 +148,7 @@ describe("PendingRewardsPanel", () => {
 	});
 
 	it("names the merchant generically when the API leaves the name out", () => {
-		const withoutMerchant: PendingRewardStub = { ...REWARD, organizationName: undefined };
+		const withoutMerchant: PendingRewardStub = { ...REWARD, tenantName: undefined };
 		pendingQuery.mockReturnValue({ data: { data: [withoutMerchant], meta: pageMeta(1, 1, 1) }, isLoading: false, isError: false, refetch });
 		renderPanel();
 

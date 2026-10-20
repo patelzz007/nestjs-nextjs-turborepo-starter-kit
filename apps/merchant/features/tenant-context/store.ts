@@ -12,8 +12,8 @@ export interface TenantContextStoreDependencies {
 	readonly devtoolsName: string;
 	/** Cookie the server reads to prefetch the chosen store (a fake in tests). */
 	readonly locationCookie: LocationCookieWriter;
-	/** Re-reads the organization context (invalidates its query) — after the API refused a store. */
-	readonly refreshOrganizationContext: () => void;
+	/** Re-reads the tenant context (invalidates its query) — after the API refused a store. */
+	readonly refreshTenantContext: () => void;
 }
 
 /**
@@ -26,7 +26,7 @@ export function createTenantContextStore(dependencies: TenantContextStoreDepende
 		name: dependencies.devtoolsName,
 		initialState: INITIAL_TENANT_CONTEXT_STATE,
 		reducer: tenantContextReducer,
-		effects: [createLocationCookieEffect(dependencies.locationCookie), createScopeRefreshEffect(dependencies.refreshOrganizationContext)],
+		effects: [createLocationCookieEffect(dependencies.locationCookie), createScopeRefreshEffect(dependencies.refreshTenantContext)],
 	});
 	store.dispatch(tenantContextActions.initialized(initialLocationId));
 	return store;

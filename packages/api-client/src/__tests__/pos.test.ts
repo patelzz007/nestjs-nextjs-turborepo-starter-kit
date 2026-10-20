@@ -7,7 +7,12 @@ import { firstFetchCall, headersOf, jsonResponse, MemoryTokenProvider, type Fetc
 import { createTokenRequestTransport } from "../transport";
 
 const BASE_URL = "http://api.test";
-const CREDENTIALS: PosTerminalCredentials = { apiKey: "pos_live_key", terminalId: "TERM-7F3K9QX2" };
+const CREDENTIALS: PosTerminalCredentials = {
+	apiKey: "pos_live_key",
+	terminalId: "TERM-7F3K9QX2",
+	tenantId: "2c7e9a14-5b3d-4f8e-a1c6-9d0b3e7f2a58",
+	locationId: "5b1f2c4e-8a3d-4e6f-9b7a-1c2d3e4f5a6b",
+};
 const SESSION = { accessToken: "person-access-token", refreshToken: "person-refresh-token" };
 const VALIDATE_TOKEN = "t".repeat(32);
 const META = { correlationId: "corr-1", timestamp: 1_790_812_800_000 };
@@ -39,8 +44,13 @@ function personContext(): ApiRequestContext {
 }
 
 describe("posCredentialHeaders", () => {
-	it("names the API key and the terminal", () => {
-		expect(posCredentialHeaders(CREDENTIALS)).toEqual({ [POS_API_KEY_HEADER]: CREDENTIALS.apiKey, [POS_TERMINAL_ID_HEADER]: CREDENTIALS.terminalId });
+	it("names the API key, the terminal, and (as information) the till's tenant and store", () => {
+		expect(posCredentialHeaders(CREDENTIALS)).toEqual({
+			[POS_API_KEY_HEADER]: CREDENTIALS.apiKey,
+			[POS_TERMINAL_ID_HEADER]: CREDENTIALS.terminalId,
+			"X-Tenant-Id": CREDENTIALS.tenantId,
+			"X-Location-Id": CREDENTIALS.locationId,
+		});
 	});
 });
 
@@ -60,7 +70,7 @@ describe("createPosRequestContext", () => {
 		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, { success: true, data: PREVIEW, meta: META }));
 		vi.stubGlobal("fetch", fetchMock);
 		try {
-			const result = await fetchMutation(createPosRequestContext(personContext(), CREDENTIALS), posRouter.redemptions.validate, { token: VALIDATE_TOKEN });
+			const result = await fetchMutation(createPosRequestContext(personContext(), CREDENTIALS), posRouter.integration.validateRedemption, { token: VALIDATE_TOKEN });
 
 			expect(result.ok).toBe(true);
 			const { init } = firstFetchCall(fetchMock);
@@ -68,6 +78,8 @@ describe("createPosRequestContext", () => {
 			expect(headers[AUTHORIZATION_HEADER]).toBeUndefined();
 			expect(headers[POS_API_KEY_HEADER]).toBe(CREDENTIALS.apiKey);
 			expect(headers[POS_TERMINAL_ID_HEADER]).toBe(CREDENTIALS.terminalId);
+			expect(headers["X-Tenant-Id"]).toBe(CREDENTIALS.tenantId);
+			expect(headers["X-Location-Id"]).toBe(CREDENTIALS.locationId);
 			expect(init.credentials).toBe("omit");
 		} finally {
 			vi.unstubAllGlobals();
@@ -77,9 +89,9 @@ describe("createPosRequestContext", () => {
 
 describe("posRouter", () => {
 	it("binds pairing and the two redemption calls to their POST routes", () => {
-		expect(posRouter.pos.pairTerminal).toMatchObject({ kind: "mutation", method: "POST" });
-		expect(posRouter.redemptions.validate).toMatchObject({ kind: "mutation", method: "POST" });
-		expect(posRouter.redemptions.checkout).toMatchObject({ kind: "mutation", method: "POST" });
+		expect(posRouter.integration.pairTerminal).toMatchObject({ kind: "mutation", method: "POST" });
+		expect(posRouter.integration.validateRedemption).toMatchObject({ kind: "mutation", method: "POST" });
+		expect(posRouter.integration.checkoutRedemption).toMatchObject({ kind: "mutation", method: "POST" });
 	});
 });
 
@@ -104,7 +116,7 @@ describe("createPosCaller", () => {
 			apiKey: "mk_live_x",
 			terminalId: "TERM-7F3K9QX2",
 			terminalName: "Front till",
-			organization: { slug: "acme", displayName: "Acme" },
+			tenant: { id: "2c7e9a14-5b3d-4f8e-a1c6-9d0b3e7f2a58", slug: "acme", displayName: "Acme" },
 			location: { id: PREVIEW.claimId, name: "KLCC" },
 		};
 		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, { success: true, data: paired, meta: META }));

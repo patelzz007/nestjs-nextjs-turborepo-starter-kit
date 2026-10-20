@@ -9,7 +9,7 @@ import type { RewardImageUploadInput, UploadedRewardImage } from "@/contexts/rew
 
 import { MerchantRewardImagesField, type SavedRewardImage } from "../merchant-reward-images-field";
 
-const ORGANIZATION_ID = "0d5c7a3e-2b8f-4e61-9c4d-7a1b2c3d4e5f";
+const TENANT_ID = "0d5c7a3e-2b8f-4e61-9c4d-7a1b2c3d4e5f";
 const SAVED: readonly SavedRewardImage[] = [
 	{ fileId: "11111111-1111-4111-8111-111111111111", url: "https://cdn.example.com/a.webp", sources: [{ width: 640, url: "https://cdn.example.com/a-640.webp" }] },
 	{ fileId: "22222222-2222-4222-8222-222222222222", url: "https://cdn.example.com/b.webp", sources: [] },
@@ -89,7 +89,7 @@ function handleImagesChange(images: readonly SavedRewardImage[]): void {
 function renderField(initialImages: readonly SavedRewardImage[] = []): typeof onImagesChange {
 	render(
 		<UiKitTestProviders>
-			<MerchantRewardImagesField organizationId={ORGANIZATION_ID} initialImages={initialImages} onImagesChange={handleImagesChange} />
+			<MerchantRewardImagesField tenantId={TENANT_ID} initialImages={initialImages} onImagesChange={handleImagesChange} />
 		</UiKitTestProviders>,
 	);
 	return onImagesChange;
@@ -137,9 +137,9 @@ describe("MerchantRewardImagesField", () => {
 		});
 		// The full images travel with the ids, so the editor's preview can draw the cover straight away.
 		expect(reportedImages?.map((image) => image.url)).toEqual(["https://cdn.example.com/one.webp", "https://cdn.example.com/two.webp"]);
-		expect(mutateAsync.mock.calls.map(([input]) => [input.organizationId, input.file.name])).toEqual([
-			[ORGANIZATION_ID, "one.webp"],
-			[ORGANIZATION_ID, "two.webp"],
+		expect(mutateAsync.mock.calls.map(([input]) => [input.tenantId, input.file.name])).toEqual([
+			[TENANT_ID, "one.webp"],
+			[TENANT_ID, "two.webp"],
 		]);
 		expect(tileSources()).toEqual(["https://cdn.example.com/one.webp", "https://cdn.example.com/two.webp"]);
 	});
@@ -207,7 +207,7 @@ describe("MerchantRewardImagesField", () => {
 		await waitFor((): void => {
 			expect(onImagesChange).toHaveBeenLastCalledWith(["cccccccc-cccc-4ccc-8ccc-cccccccccccc"]);
 		});
-		expect(mutateAsync).toHaveBeenCalledWith({ organizationId: ORGANIZATION_ID, file: cropped });
+		expect(mutateAsync).toHaveBeenCalledWith({ tenantId: TENANT_ID, file: cropped });
 	});
 
 	it("drops a photo whose upload failed and says why", async () => {

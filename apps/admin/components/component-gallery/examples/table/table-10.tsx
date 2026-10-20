@@ -35,8 +35,8 @@ const subscriptions: readonly Subscription[] = [
 		statusVariant: "success-light",
 	},
 	{
-		service: "Figma Organization",
-		plan: "Organization",
+		service: "Figma Tenant",
+		plan: "Tenant",
 		planVariant: "warning-light",
 		billing: "$45/editor/mo",
 		nextBilling: "Apr 1, 2025",

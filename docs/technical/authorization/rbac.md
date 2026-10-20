@@ -158,11 +158,11 @@ shared by the API and the merchant app.
 
 New accounts get their platform role when they are created — never by hand:
 
-| Flow | Platform role | Organization access |
+| Flow | Platform role | Tenant access |
 | --- | --- | --- |
 | Signup (`POST /auth/signup`) | `User` | — |
-| Merchant onboarding (`POST /orgs/onboarding/complete`) | `User` (new or existing account) | `OWNER` membership of the new organization |
-| Team invite, new account (`POST /orgs/invites/register-and-accept`) | `User`, in the same transaction as the membership | the invited role and stores |
+| Merchant onboarding (`POST /tenants/onboarding/complete`) | `User` (new or existing account) | `OWNER` membership of the new tenant |
+| Team invite, new account (`POST /tenants/invites/register-and-accept`) | `User`, in the same transaction as the membership | the invited role and stores |
 
 `UserProvisioningService` (`modules/auth/services/`) creates the account and assigns
 `DEFAULT_CONSUMER_ROLE_NAME` (`User`) through `RoleService`, with the new account as its own

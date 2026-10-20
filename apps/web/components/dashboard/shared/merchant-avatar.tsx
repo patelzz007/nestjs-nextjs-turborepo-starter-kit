@@ -15,7 +15,7 @@ const CATEGORY_TILE_CLASSES: Readonly<Record<RewardMerchantAvatarSize, { readonl
 };
 
 export interface RewardMerchantAvatarProps {
-	readonly reward: Pick<RewardResponse, "organizationName" | "organizationLogoUrl" | "organizationLogoSources" | "category">;
+	readonly reward: Pick<RewardResponse, "tenantName" | "tenantLogoUrl" | "tenantLogoSources" | "category">;
 	readonly size: RewardMerchantAvatarSize;
 	readonly className?: string;
 }
@@ -27,8 +27,8 @@ export interface RewardMerchantAvatarProps {
  * without merchant context falls back to its category glyph.
  */
 export function RewardMerchantAvatar({ reward, size, className }: RewardMerchantAvatarProps): React.JSX.Element {
-	if (reward.organizationName !== undefined) {
-		return <EntityAvatar name={reward.organizationName} src={reward.organizationLogoUrl} sources={reward.organizationLogoSources} alt="" size={size} className={className} />;
+	if (reward.tenantName !== undefined) {
+		return <EntityAvatar name={reward.tenantName} src={reward.tenantLogoUrl} sources={reward.tenantLogoSources} alt="" size={size} className={className} />;
 	}
 
 	const classes = CATEGORY_TILE_CLASSES[size];

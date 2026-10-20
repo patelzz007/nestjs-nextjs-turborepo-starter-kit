@@ -30,7 +30,7 @@ describe("buildPairTerminalSnippet", () => {
 	it("posts to the versioned pairing route without an API key (pairing is how the till gets one)", () => {
 		const snippet = buildPairTerminalSnippet(API);
 
-		expect(snippet).toContain(`curl -X POST https://api.example.com${API_VERSION_PREFIX}/pos/terminals/pair`);
+		expect(snippet).toContain(`curl -X POST https://api.example.com${API_VERSION_PREFIX}/integration/terminals/pair`);
 		expect(snippet).not.toContain("X-API-Key");
 		expect(snippet).toContain(PAIRING_CODE_PLACEHOLDER);
 	});
@@ -53,6 +53,6 @@ describe("PairTerminalSnippet", () => {
 		render(<PairTerminalSnippet apiBaseUrl={API} />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByText(PAIR_TERMINAL_SNIPPET_TITLE)).toBeTruthy();
-		expect(PAIR_TERMINAL_SNIPPET_TITLE).toBe("POST /pos/terminals/pair");
+		expect(PAIR_TERMINAL_SNIPPET_TITLE).toBe("POST /integration/terminals/pair");
 	});
 });

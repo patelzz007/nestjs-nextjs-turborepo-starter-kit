@@ -4,8 +4,9 @@
 // Both are the token transport's lifecycle calls: the API identifies the
 // session by the stored refresh token in the body (ADR 029).
 // - Sign out revokes this device session, then always clears the tokens: the
-//   device leaves even when the API cannot be reached (the session then ends
-//   at its expiry, or from the device list on another client).
+//   device leaves even when the API refuses, cannot be reached, or does not
+//   answer within SIGN_OUT_REVOKE_TIMEOUT_MS (the session then ends at its
+//   expiry, or from the device list on another client).
 // - Sign out everywhere must succeed to leave: on failure the devices are still
 //   signed in, and saying otherwise would be a lie (same as the web).
 
@@ -16,6 +17,7 @@ import { useApiClient } from "../../../lib/api-context";
 import { minimumVersionOf } from "../../../lib/query-client";
 import { useReadyRuntime } from "../../../runtime/runtime-context";
 import { useSessionCommands } from "../../../features/session/facade";
+import { signOutDevice } from "./sign-out-device";
 
 export interface SignOutCommands {
 	readonly signOut: () => Promise<void>;
@@ -35,11 +37,10 @@ export function useSignOut(): SignOutCommands {
 		};
 		return {
 			signOut: async (): Promise<void> => {
-				try {
-					await fetchBodyTokenLifecycleMutation(context, apiRouter.auth.logout);
-				} finally {
-					await leave();
-				}
+				await signOutDevice({
+					revoke: async (signal: AbortSignal): Promise<boolean> => (await fetchBodyTokenLifecycleMutation(context, apiRouter.auth.logout, { signal })).ok,
+					leave,
+				});
 			},
 			signOutEverywhere: async (): Promise<boolean> => {
 				const response = await fetchBodyTokenLifecycleMutation(context, apiRouter.auth.logoutAll);

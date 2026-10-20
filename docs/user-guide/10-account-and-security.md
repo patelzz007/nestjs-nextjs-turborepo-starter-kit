@@ -102,7 +102,7 @@ A SuperAdmin can act as another user to reproduce a problem:
 ```mermaid
 stateDiagram-v2
     [*] --> PENDING_TENANT_APPROVAL: SuperAdmin requests<br/>reason, ticket, mode, 15–480 min
-    PENDING_TENANT_APPROVAL --> ACTIVE: The organization's OWNER approves
+    PENDING_TENANT_APPROVAL --> ACTIVE: The tenant's OWNER approves
     ACTIVE --> EXPIRED: Duration ends
     PENDING_TENANT_APPROVAL --> REVOKED: SuperAdmin revokes
     ACTIVE --> REVOKED: SuperAdmin revokes
@@ -110,8 +110,8 @@ stateDiagram-v2
 
 Support staff never get standing access to a merchant's data. A SuperAdmin asks for a grant with
 a reason, an optional ticket reference, a mode (`READ_ONLY` by default, or `WRITE_ELEVATED`) and a
-duration (15–480 minutes, default 60). Only an active **owner** of that organization can approve
-it. Every step is written to the organization's audit trail; a revoked or expired grant can never
+duration (15–480 minutes, default 60). Only an active **owner** of that tenant can approve
+it. Every step is written to the tenant's audit trail; a revoked or expired grant can never
 be revived.
 
 ## For platform admins: locked accounts and sessions

@@ -16,8 +16,8 @@ import type { DayWindow } from "@/contexts/pos/lib/redemptions/today-window";
 const REDEMPTIONS_PAGE_SIZES: readonly number[] = [MERCHANT_REDEMPTIONS_PAGE_SIZE];
 
 /**
- * `/orgs/[orgSlug]/redemptions?page=&cursor=&sort=` — the list keys of
- * `GET /orgs/:orgSlug/redemptions`, so the URL maps 1:1 onto the request.
+ * `/t/[tenantSlug]/redemptions?page=&cursor=&sort=` — the list keys of
+ * `GET /t/:orgSlug/redemptions`, so the URL maps 1:1 onto the request.
  */
 export const REDEMPTIONS_URL_STATE = defineUrlState({
 	...listUrlParams(merchantRedemptionListQuery, { pageSizes: REDEMPTIONS_PAGE_SIZES, defaultLimit: MERCHANT_REDEMPTIONS_PAGE_SIZE }),
@@ -25,21 +25,21 @@ export const REDEMPTIONS_URL_STATE = defineUrlState({
 
 export type RedemptionsUrlState = typeof REDEMPTIONS_URL_STATE.defaults;
 
-/** The redemptions request: the URL's list keys (the log has no filters), the organization, and the store scope. */
+/** The redemptions request: the URL's list keys (the log has no filters), the tenant, and the store scope. */
 export type RedemptionsQueryInput = Pick<TableListQueryInput<TableFilterState>, "page" | "limit" | "cursor" | "sort"> & {
-	readonly orgSlug: string;
+	readonly tenantSlug: string;
 	/** The tenant-context store filter (`undefined` = every store the member may see). */
 	readonly locationId: string | undefined;
 };
 
 /**
- * The `GET /orgs/:orgSlug/redemptions` input for a URL state and store scope —
+ * The `GET /t/:orgSlug/redemptions` input for a URL state and store scope —
  * built by the server page (prefetch) and the view (query) from the same
  * inputs, so the prefetched page lands under the client's query key.
  */
-export function toRedemptionsQuery(orgSlug: string, locationId: string | undefined, state: RedemptionsUrlState): RedemptionsQueryInput {
+export function toRedemptionsQuery(tenantSlug: string, locationId: string | undefined, state: RedemptionsUrlState): RedemptionsQueryInput {
 	const { page, limit, cursor, sort } = listStateToListQuery(merchantRedemptionListQuery, { pagination: state, sort: state.sort });
-	return { orgSlug, page, limit, ...(cursor !== undefined ? { cursor } : {}), ...(sort !== undefined ? { sort } : {}), locationId };
+	return { tenantSlug, page, limit, ...(cursor !== undefined ? { cursor } : {}), ...(sort !== undefined ? { sort } : {}), locationId };
 }
 
 /** A count request needs only `meta.total`; one row is the smallest page the list grammar accepts. */
@@ -47,13 +47,13 @@ export const REDEMPTIONS_COUNT_PAGE_SIZE = 1;
 
 /** The "redeemed today" count request: the redemptions of `day` in the store scope — the API's `meta.total` is the count. */
 export interface RedemptionsDayCountQueryInput {
-	readonly orgSlug: string;
+	readonly tenantSlug: string;
 	readonly page: number;
 	readonly limit: number;
 	readonly locationId: string | undefined;
 	readonly filter: { readonly redeemedAt: { readonly gte: number; readonly lt: number } };
 }
 
-export function toRedemptionsDayCountQuery(orgSlug: string, locationId: string | undefined, day: DayWindow): RedemptionsDayCountQueryInput {
-	return { orgSlug, page: 1, limit: REDEMPTIONS_COUNT_PAGE_SIZE, locationId, filter: { redeemedAt: { gte: day.fromMs, lt: day.toMs } } };
+export function toRedemptionsDayCountQuery(tenantSlug: string, locationId: string | undefined, day: DayWindow): RedemptionsDayCountQueryInput {
+	return { tenantSlug, page: 1, limit: REDEMPTIONS_COUNT_PAGE_SIZE, locationId, filter: { redeemedAt: { gte: day.fromMs, lt: day.toMs } } };
 }

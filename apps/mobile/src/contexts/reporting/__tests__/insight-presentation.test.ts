@@ -35,7 +35,7 @@ const NONE: DayPartValues = { morning: 0, midday: 0, afternoon: 0, evening: 0 };
 const VISIT: ActivityVisit = {
 	id: "v1",
 	at: EpochMsSchema.parse(Date.UTC(2026, 9, 10, 19, 42)),
-	organizationId: "6f1c2a4e-3b7d-4e9a-8c21-5d4f7a9b0e13",
+	tenantId: "6f1c2a4e-3b7d-4e9a-8c21-5d4f7a9b0e13",
 	merchantName: "Kopi Kaki",
 	category: "cafe",
 	billMinor: 1_450,
@@ -56,7 +56,7 @@ const INSIGHTS: ActivityInsights = {
 	savedMinor: { value: 650, previous: 500, change: 150, changePercent: 30 },
 	biggestBill: VISIT,
 	recentVisits: [VISIT, { ...VISIT, id: "v2", merchantName: "Urban Threads", category: "retail", billMinor: 8_900, reward: "none" }],
-	stampCards: [{ organizationId: VISIT.organizationId, merchantName: "Kopi Kaki", rewardName: "Free kopi", stamps: 9, stampsPerReward: 10 }],
+	stampCards: [{ tenantId: VISIT.tenantId, merchantName: "Kopi Kaki", rewardName: "Free kopi", stamps: 9, stampsPerReward: 10 }],
 	monthBudget: {
 		from: EpochMsSchema.parse(Date.UTC(2026, 9, 1)),
 		to: EpochMsSchema.parse(Date.UTC(2026, 9, 11)),
@@ -214,9 +214,9 @@ describe("budgetViewOf", () => {
 describe("stampItemsOf", () => {
 	it("counts the stamps and the visits still to go", () => {
 		expect(stampItemsOf(INSIGHTS.stampCards, FORMATTERS)).toStrictEqual([
-			{ key: VISIT.organizationId, label: "Kopi Kaki", detail: "Free kopi · 1 more visit", value: 9, max: 10, valueLabel: "9 of 10" },
+			{ key: VISIT.tenantId, label: "Kopi Kaki", detail: "Free kopi · 1 more visit", value: 9, max: 10, valueLabel: "9 of 10" },
 		]);
-		const fresh: StampCard = { organizationId: VISIT.organizationId, merchantName: "Kopi Kaki", rewardName: "Free kopi", stamps: 2, stampsPerReward: 10 };
+		const fresh: StampCard = { tenantId: VISIT.tenantId, merchantName: "Kopi Kaki", rewardName: "Free kopi", stamps: 2, stampsPerReward: 10 };
 		expect(stampItemsOf([fresh], FORMATTERS).at(0)?.detail).toBe("Free kopi · 8 more visits");
 	});
 });

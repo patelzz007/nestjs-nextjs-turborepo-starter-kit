@@ -24,12 +24,8 @@ function fakeLocationCookie(): FakeLocationCookie {
 	};
 }
 
-function createStore(
-	initialLocationId: string | null,
-	cookie: LocationCookieWriter,
-	refreshOrganizationContext: () => void = vi.fn(),
-): ReturnType<typeof createTenantContextStore> {
-	return createTenantContextStore({ devtoolsName: "Tenant Context · test", locationCookie: cookie, refreshOrganizationContext }, initialLocationId);
+function createStore(initialLocationId: string | null, cookie: LocationCookieWriter, refreshTenantContext: () => void = vi.fn()): ReturnType<typeof createTenantContextStore> {
+	return createTenantContextStore({ devtoolsName: "Tenant Context · test", locationCookie: cookie, refreshTenantContext }, initialLocationId);
 }
 
 describe("tenant-context store + cookie effect", () => {
@@ -62,7 +58,7 @@ describe("tenant-context store + cookie effect", () => {
 		expect(cookie.writes).toEqual([null]);
 	});
 
-	it("clears the cookie and re-reads the organization context when the chosen store is rejected", () => {
+	it("clears the cookie and re-reads the tenant context when the chosen store is rejected", () => {
 		const cookie = fakeLocationCookie();
 		const refresh = vi.fn();
 		const store = createStore(STORE_A.id, cookie, refresh);
@@ -92,7 +88,7 @@ describe("tenant-context store + cookie effect", () => {
 		expect(cookie.writes).toEqual([]);
 	});
 
-	it("gives every store its own state — nothing is shared between organizations or requests", () => {
+	it("gives every store its own state — nothing is shared between tenants or requests", () => {
 		const first = createStore(STORE_A.id, fakeLocationCookie());
 		const second = createStore(null, fakeLocationCookie());
 

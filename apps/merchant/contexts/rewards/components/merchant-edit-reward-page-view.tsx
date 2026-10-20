@@ -1,18 +1,18 @@
 "use client";
 
 import { MerchantRewardEditorPageSkeleton } from "@/components/loading/merchant-page-skeletons";
-import { MerchantCapabilityGate } from "@/contexts/organizations";
+import { MerchantCapabilityGate } from "@/contexts/tenancy";
 import { MerchantRewardEditorLayout, RewardPageBackLink } from "@/contexts/rewards/components/merchant-reward-editor-layout";
 import { MerchantRewardFormFields } from "@/contexts/rewards/components/merchant-reward-form-fields";
 import type { SavedRewardImage } from "@/contexts/rewards/components/merchant-reward-images-field";
 import { MerchantRewardPreview } from "@/contexts/rewards/components/merchant-reward-preview";
 import { MerchantRewardUnavailable } from "@/contexts/rewards/components/merchant-reward-unavailable";
 import type { RewardVoucherCover } from "@/contexts/rewards/components/reward-voucher";
-import { useActiveOrganizationId, useMerchantLocation } from "@/features/tenant-context/facade";
+import { useActiveTenantId, useMerchantLocation } from "@/features/tenant-context/facade";
 import { describeRewardStores } from "@/contexts/rewards/lib/presentation";
 import { applyMerchantRewardChange } from "@/contexts/rewards/lib/query-cache";
 import { isRewardEditable, useMerchantReward } from "@/contexts/rewards/lib/use-merchant-reward";
-import { orgRoutes } from "@/lib/routes";
+import { tenantRoutes } from "@/lib/routes";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import {
@@ -36,9 +36,9 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 
 export interface MerchantEditRewardPageViewProps {
-	readonly orgSlug: string;
+	readonly tenantSlug: string;
 	readonly rewardId: string;
-	/** The reward as the server fetched it (`GET /orgs/:orgSlug/rewards/:rewardId`, the API's own envelope). */
+	/** The reward as the server fetched it (`GET /t/:orgSlug/rewards/:rewardId`, the API's own envelope). */
 	readonly initialReward?: Envelope<RewardResponse> | undefined;
 }
 
@@ -51,9 +51,9 @@ export function MerchantEditRewardPageView(props: MerchantEditRewardPageViewProp
 	);
 }
 
-function MerchantEditRewardPageContent({ orgSlug, rewardId, initialReward }: MerchantEditRewardPageViewProps): React.JSX.Element {
-	const state = useMerchantReward(orgSlug, rewardId, initialReward);
-	const routes = orgRoutes(orgSlug);
+function MerchantEditRewardPageContent({ tenantSlug, rewardId, initialReward }: MerchantEditRewardPageViewProps): React.JSX.Element {
+	const state = useMerchantReward(tenantSlug, rewardId, initialReward);
+	const routes = tenantRoutes(tenantSlug);
 
 	if (state.kind === "loading") {
 		return <MerchantRewardEditorPageSkeleton />;
@@ -62,19 +62,19 @@ function MerchantEditRewardPageContent({ orgSlug, rewardId, initialReward }: Mer
 		return <MerchantRewardUnavailable state={state} rewardsHref={routes.rewards.list} />;
 	}
 	if (!isRewardEditable(state.reward.status)) {
-		return <MerchantRewardLocked orgSlug={orgSlug} reward={state.reward} />;
+		return <MerchantRewardLocked tenantSlug={tenantSlug} reward={state.reward} />;
 	}
-	return <MerchantRewardEditForm orgSlug={orgSlug} reward={state.reward} />;
+	return <MerchantRewardEditForm tenantSlug={tenantSlug} reward={state.reward} />;
 }
 
 interface MerchantRewardEditFormProps {
-	readonly orgSlug: string;
+	readonly tenantSlug: string;
 	readonly reward: RewardResponse;
 }
 
 /** A live or ended reward keeps its offer: say so, and lead back to the reward. */
-function MerchantRewardLocked({ orgSlug, reward }: MerchantRewardEditFormProps): React.JSX.Element {
-	const detailHref = orgRoutes(orgSlug).rewards.detail(reward.id);
+function MerchantRewardLocked({ tenantSlug, reward }: MerchantRewardEditFormProps): React.JSX.Element {
+	const detailHref = tenantRoutes(tenantSlug).rewards.detail(reward.id);
 	return (
 		<div className="flex flex-col gap-6">
 			<RewardPageBackLink href={detailHref} label="Back to reward" />
@@ -92,13 +92,13 @@ function MerchantRewardLocked({ orgSlug, reward }: MerchantRewardEditFormProps):
 }
 
 /** The editor, mounted once the reward is known: its fields start from the saved reward. */
-function MerchantRewardEditForm({ orgSlug, reward }: MerchantRewardEditFormProps): React.JSX.Element {
+function MerchantRewardEditForm({ tenantSlug, reward }: MerchantRewardEditFormProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const router = useRouter();
-	const organizationId = useActiveOrganizationId();
+	const tenantId = useActiveTenantId();
 	const { accessibleLocations } = useMerchantLocation();
-	const routes = orgRoutes(orgSlug);
+	const routes = tenantRoutes(tenantSlug);
 	const detailHref = routes.rewards.detail(reward.id);
 	// The photos as the editor holds them: the first is the cover the preview draws.
 	const [images, setImages] = React.useState<readonly RewardVoucherCover[]>(reward.images);
@@ -119,9 +119,9 @@ function MerchantRewardEditForm({ orgSlug, reward }: MerchantRewardEditFormProps
 		resetOptions: { keepDirtyValues: true },
 	});
 
-	const updateMutation = api.organizations.rewards.update.useMutation({
+	const updateMutation = api.tenants.rewards.update.useMutation({
 		onSuccess: (response): void => {
-			void applyMerchantRewardChange(queryClient, orgSlug, response);
+			void applyMerchantRewardChange(queryClient, tenantSlug, response);
 			toastMessage.success({ title: "Changes saved", description: "The reward shows your latest edits." });
 			router.push(routes.rewards.detail(response.data.id), { scroll: false });
 		},
@@ -146,10 +146,10 @@ function MerchantRewardEditForm({ orgSlug, reward }: MerchantRewardEditFormProps
 	const handleFormSubmit = React.useCallback(
 		(event: React.SubmitEvent<HTMLFormElement>): void => {
 			void handleSubmit((form): void => {
-				mutate({ orgSlug, rewardId: reward.id, ...mapMerchantUpdateRewardFormToInput(form) });
+				mutate({ tenantSlug, rewardId: reward.id, ...mapMerchantUpdateRewardFormToInput(form) });
 			})(event);
 		},
-		[handleSubmit, mutate, orgSlug, reward.id],
+		[handleSubmit, mutate, tenantSlug, reward.id],
 	);
 
 	const stores = describeRewardStores(reward);
@@ -168,7 +168,7 @@ function MerchantRewardEditForm({ orgSlug, reward }: MerchantRewardEditFormProps
 					control={control}
 					errors={errors}
 					setValue={setValue}
-					organizationId={organizationId}
+					tenantId={tenantId}
 					initialImages={reward.images}
 					onImagesChange={handleImagesChange}
 					stores={

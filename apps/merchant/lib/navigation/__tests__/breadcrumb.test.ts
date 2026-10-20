@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { resolveMerchantTrail } from "@/lib/navigation/breadcrumb";
 import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
-import { orgRoutes } from "@/lib/routes";
+import { tenantRoutes } from "@/lib/routes";
 
 const SLUG = "acme-coffee";
-const routes = orgRoutes(SLUG);
+const routes = tenantRoutes(SLUG);
 const resolveHref = createMerchantNavHrefResolver(SLUG);
 
 function trailOf(pathname: string): readonly { readonly label: string; readonly href: string | undefined }[] {
@@ -45,7 +45,7 @@ describe("resolveMerchantTrail", () => {
 		]);
 	});
 
-	it("links an unknown org page back to the organization root", () => {
+	it("links an unknown org page back to the tenant root", () => {
 		expect(trailOf(`${routes.root}/not-a-page`)).toEqual([{ label: "Dashboard", href: routes.root }]);
 	});
 });

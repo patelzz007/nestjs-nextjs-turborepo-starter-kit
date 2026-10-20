@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 import { isMerchantEnrollmentAllowedPath } from "@/contexts/identity/lib/enrollment";
 
 describe("isMerchantEnrollmentAllowedPath", () => {
-	it.each(["/account", "/account/security", "/orgs/acme/account", "/orgs/acme/account/sessions"])("keeps %s reachable during enrollment", (pathname: string): void => {
+	it.each(["/account", "/account/security", "/t/acme/account", "/t/acme/account/sessions"])("keeps %s reachable during enrollment", (pathname: string): void => {
 		expect(isMerchantEnrollmentAllowedPath(pathname)).toBe(true);
 	});
 
-	it.each(["/settings", "/orgs/acme/settings", "/orgs/acme/settings/team", "/orgs/acme/dashboard", "/accounts", "/orgs/acme/accounts", "/orgs/account", "/"])(
+	it.each(["/settings", "/t/acme/settings", "/t/acme/settings/team", "/t/acme/dashboard", "/accounts", "/t/acme/accounts", "/t/account", "/"])(
 		"locks %s during enrollment",
 		(pathname: string): void => {
 			expect(isMerchantEnrollmentAllowedPath(pathname)).toBe(false);

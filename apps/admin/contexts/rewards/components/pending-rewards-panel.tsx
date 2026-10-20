@@ -87,7 +87,7 @@ function PendingRewardRow({ reward }: { readonly reward: RewardResponse }): Reac
 					<h2 id={titleId} className="truncate font-medium">
 						{reward.title}
 					</h2>
-					<p className="truncate text-sm text-muted-foreground">{reward.organizationName ?? "Merchant"}</p>
+					<p className="truncate text-sm text-muted-foreground">{reward.tenantName ?? "Merchant"}</p>
 				</div>
 				<Link
 					href={ROUTES.rewards.reviewDetail(reward.id)}

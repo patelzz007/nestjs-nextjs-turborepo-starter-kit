@@ -28,118 +28,123 @@ import {
 	PosPairTerminalSchema,
 	PosPairedTerminalSchema,
 } from "./schemas/terminals";
-import { OrganizationSlugParamSchema } from "../organizations/schemas/organization";
-import { organizationApiKeysRoutes, organizationRedemptionsRoutes, organizationTerminalsRoutes, posRoutes, redemptionsRoutes } from "./routes";
+import { TenantSlugParamSchema } from "../tenancy/schemas/tenant";
+import { integrationRedemptionsRoutes, tenantApiKeysRoutes, tenantRedemptionsRoutes, tenantTerminalsRoutes } from "./routes";
 
-/** Contract leaves composed into `apiContract.organizations` (redemptions). */
-export const organizationRedemptionsContract = {
+/** Contract leaves composed into `apiContract.tenants` (redemptions). */
+export const tenantRedemptionsContract = {
 	redemptions: defineContract({
 		method: "GET",
-		path: organizationRedemptionsRoutes.redemptions,
-		input: z.intersection(OrganizationSlugParamSchema, MerchantRedemptionListQuerySchema),
+		path: tenantRedemptionsRoutes.redemptions,
+		input: z.intersection(TenantSlugParamSchema, MerchantRedemptionListQuerySchema),
 		response: paginatedResponse(MerchantRedemptionListItemSchema),
 	}),
 };
 
-/** Contract leaves composed into `apiContract.pos`. */
-export const posContract = {
+/**
+ * Contract leaves composed into `apiContract.integration`: a till's pairing, validate and checkout
+ * calls, and an integration API key's own redemption history (tenant and store from the key).
+ */
+export const integrationRedemptionsContract = {
+	redemptions: defineContract({
+		method: "GET",
+		path: integrationRedemptionsRoutes.redemptions,
+		input: MerchantRedemptionListQuerySchema,
+		response: paginatedResponse(MerchantRedemptionListItemSchema),
+	}),
+	validateRedemption: defineContract({
+		access: "public",
+		method: "POST",
+		path: integrationRedemptionsRoutes.validateRedemption,
+		input: RedemptionValidateSchema,
+		response: singleResponse(RedemptionPreviewResponseSchema),
+	}),
+	checkoutRedemption: defineContract({
+		access: "public",
+		method: "POST",
+		path: integrationRedemptionsRoutes.checkoutRedemption,
+		input: RedemptionCheckoutSchema,
+		response: singleResponse(RedemptionCheckoutResponseSchema),
+	}),
 	pairTerminal: defineContract({
 		access: "public",
 		method: "POST",
-		path: posRoutes.pairTerminal,
+		path: integrationRedemptionsRoutes.pairTerminal,
 		input: PosPairTerminalSchema,
 		response: singleResponse(PosPairedTerminalSchema),
 	}),
 };
 
-/** Contract leaves composed into `apiContract.redemptions`. */
-export const redemptionsContract = {
-	validate: defineContract({
-		access: "public",
-		method: "POST",
-		path: redemptionsRoutes.validate,
-		input: RedemptionValidateSchema,
-		response: singleResponse(RedemptionPreviewResponseSchema),
-	}),
-	checkout: defineContract({
-		access: "public",
-		method: "POST",
-		path: redemptionsRoutes.checkout,
-		input: RedemptionCheckoutSchema,
-		response: singleResponse(RedemptionCheckoutResponseSchema),
-	}),
-};
-
-/** Contract leaves composed into `apiContract.organizations.terminals`. */
-export const organizationTerminalsContract = {
+/** Contract leaves composed into `apiContract.tenants.terminals`. */
+export const tenantTerminalsContract = {
 	list: defineContract({
 		method: "GET",
-		path: organizationTerminalsRoutes.list,
-		input: z.intersection(OrganizationSlugParamSchema, MerchantTerminalListQuerySchema),
+		path: tenantTerminalsRoutes.list,
+		input: z.intersection(TenantSlugParamSchema, MerchantTerminalListQuerySchema),
 		response: paginatedResponse(MerchantTerminalSummarySchema),
 	}),
 	summary: defineContract({
 		method: "GET",
-		path: organizationTerminalsRoutes.summary,
-		input: z.intersection(OrganizationSlugParamSchema, MerchantTerminalStatusSummaryQuerySchema),
+		path: tenantTerminalsRoutes.summary,
+		input: z.intersection(TenantSlugParamSchema, MerchantTerminalStatusSummaryQuerySchema),
 		response: singleResponse(MerchantTerminalStatusSummarySchema),
 	}),
 	get: defineContract({
 		method: "GET",
-		path: organizationTerminalsRoutes.get,
-		input: z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, id: UuidParamSchema }).strict(),
+		path: tenantTerminalsRoutes.get,
+		input: z.object({ tenantSlug: TenantSlugParamSchema.shape.tenantSlug, id: UuidParamSchema }).strict(),
 		response: singleResponse(MerchantTerminalSummarySchema),
 	}),
 	create: defineContract({
 		method: "POST",
-		path: organizationTerminalsRoutes.create,
-		input: z.intersection(OrganizationSlugParamSchema, MerchantCreateTerminalSchema),
+		path: tenantTerminalsRoutes.create,
+		input: z.intersection(TenantSlugParamSchema, MerchantCreateTerminalSchema),
 		response: singleResponse(MerchantTerminalPairingSchema),
 	}),
 	pairingCode: defineContract({
 		method: "POST",
-		path: organizationTerminalsRoutes.pairingCode,
-		input: z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, id: UuidParamSchema }).strict(),
+		path: tenantTerminalsRoutes.pairingCode,
+		input: z.object({ tenantSlug: TenantSlugParamSchema.shape.tenantSlug, id: UuidParamSchema }).strict(),
 		response: singleResponse(MerchantTerminalPairingSchema),
 	}),
 	remove: defineContract({
 		method: "DELETE",
-		path: organizationTerminalsRoutes.remove,
-		input: z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, id: UuidParamSchema }).strict(),
+		path: tenantTerminalsRoutes.remove,
+		input: z.object({ tenantSlug: TenantSlugParamSchema.shape.tenantSlug, id: UuidParamSchema }).strict(),
 		response: singleResponse(OkResponseSchema),
 	}),
 	settings: defineContract({
 		method: "GET",
-		path: organizationTerminalsRoutes.settings,
-		input: OrganizationSlugParamSchema,
+		path: tenantTerminalsRoutes.settings,
+		input: TenantSlugParamSchema,
 		response: singleResponse(MerchantTerminalSettingsResponseSchema),
 	}),
 	updateSettings: defineContract({
 		method: "PATCH",
-		path: organizationTerminalsRoutes.settings,
-		input: z.intersection(OrganizationSlugParamSchema, MerchantTerminalSettingsSchema),
+		path: tenantTerminalsRoutes.settings,
+		input: z.intersection(TenantSlugParamSchema, MerchantTerminalSettingsSchema),
 		response: singleResponse(MerchantTerminalSettingsResponseSchema),
 	}),
 };
 
-/** Contract leaves composed into `apiContract.organizations.apiKeys`. */
-export const organizationApiKeysContract = {
+/** Contract leaves composed into `apiContract.tenants.apiKeys`. */
+export const tenantApiKeysContract = {
 	list: defineContract({
 		method: "GET",
-		path: organizationApiKeysRoutes.list,
-		input: z.intersection(OrganizationSlugParamSchema, MerchantApiKeyListQuerySchema),
+		path: tenantApiKeysRoutes.list,
+		input: z.intersection(TenantSlugParamSchema, MerchantApiKeyListQuerySchema),
 		response: paginatedResponse(MerchantApiKeySummarySchema),
 	}),
 	create: defineContract({
 		method: "POST",
-		path: organizationApiKeysRoutes.create,
-		input: z.intersection(OrganizationSlugParamSchema, MerchantCreateApiKeySchema),
+		path: tenantApiKeysRoutes.create,
+		input: z.intersection(TenantSlugParamSchema, MerchantCreateApiKeySchema),
 		response: singleResponse(MerchantApiKeyCreatedSchema),
 	}),
 	revoke: defineContract({
 		method: "POST",
-		path: organizationApiKeysRoutes.revoke,
-		input: z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, keyId: UuidParamSchema }).strict(),
+		path: tenantApiKeysRoutes.revoke,
+		input: z.object({ tenantSlug: TenantSlugParamSchema.shape.tenantSlug, keyId: UuidParamSchema }).strict(),
 		response: singleResponse(OkResponseSchema),
 	}),
 };

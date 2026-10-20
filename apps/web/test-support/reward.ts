@@ -28,10 +28,10 @@ export type RewardFixtureOverrides = Partial<z.input<typeof RewardResponseSchema
 export function buildRewardResponse(overrides: RewardFixtureOverrides = {}): RewardResponse {
 	return RewardResponseSchema.parse({
 		id: "00000000-0000-4000-8000-000000000001",
-		organizationId: "00000000-0000-4000-8000-0000000000aa",
-		organizationName: "Brew & Bean KL",
-		organizationLogoUrl: null,
-		organizationLogoSources: [],
+		tenantId: "00000000-0000-4000-8000-0000000000aa",
+		tenantName: "Brew & Bean KL",
+		tenantLogoUrl: null,
+		tenantLogoSources: [],
 		title: "Free coffee",
 		description: "One free latte",
 		rewardType: "FREE_ITEM",

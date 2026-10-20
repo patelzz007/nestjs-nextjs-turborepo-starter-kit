@@ -4,7 +4,7 @@
 // can leak a personal address into the published docs. Every email address in
 // the samples must belong to a documentation/demo domain.
 
-/** Domains reserved for documentation (RFC 2606) and the seed's demo organizations. */
+/** Domains reserved for documentation (RFC 2606) and the seed's demo tenants. */
 const TEMPLATE_EMAIL_DOMAIN_PATTERNS: readonly RegExp[] = [/^example\.(com|org|net)$/, /\.example$/, /\.demo$/, /^localhost$/];
 
 const EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@(?<domain>[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)/g;

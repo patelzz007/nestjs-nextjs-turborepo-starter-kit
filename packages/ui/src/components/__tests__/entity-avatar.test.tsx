@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { EntityAvatar, getEntityAvatarTone } from "../entity-avatar";
 
 const SHOP_NAME = "Brew & Bean KL";
-const LOGO_URL = "https://cdn.example.com/organizations/brew-bean/logo.png";
+const LOGO_URL = "https://cdn.example.com/tenants/brew-bean/logo.png";
 
 afterEach((): void => {
 	cleanup();
@@ -36,17 +36,15 @@ describe("EntityAvatar logo", () => {
 				name={SHOP_NAME}
 				src={LOGO_URL}
 				sources={[
-					{ width: 256, url: "https://cdn.example.com/organizations/brew-bean/medium.webp" },
-					{ width: 128, url: "https://cdn.example.com/organizations/brew-bean/thumbnail.webp" },
+					{ width: 256, url: "https://cdn.example.com/tenants/brew-bean/medium.webp" },
+					{ width: 128, url: "https://cdn.example.com/tenants/brew-bean/thumbnail.webp" },
 				]}
 				size="sm"
 			/>,
 		);
 
 		const logo = screen.getByAltText(SHOP_NAME);
-		expect(logo.getAttribute("srcset")).toBe(
-			"https://cdn.example.com/organizations/brew-bean/thumbnail.webp 128w, https://cdn.example.com/organizations/brew-bean/medium.webp 256w",
-		);
+		expect(logo.getAttribute("srcset")).toBe("https://cdn.example.com/tenants/brew-bean/thumbnail.webp 128w, https://cdn.example.com/tenants/brew-bean/medium.webp 256w");
 		expect(logo.getAttribute("sizes")).toBe("32px");
 	});
 

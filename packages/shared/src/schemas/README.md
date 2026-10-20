@@ -23,7 +23,7 @@ src/
   api-routes.ts             → `apiRoutes` composition
 ```
 
-The 14 contexts: `identity`, `authorization`, `organizations`, `rewards`, `claims`, `pos`, `referrals`, `reporting`, `files`, `notifications`, `catalog`, `reference-data`, `audit`, `integrations-github`.
+The 14 contexts: `identity`, `authorization`, `tenants`, `rewards`, `claims`, `pos`, `referrals`, `reporting`, `files`, `notifications`, `catalog`, `reference-data`, `audit`, `integrations-github`.
 
 ## Rules
 

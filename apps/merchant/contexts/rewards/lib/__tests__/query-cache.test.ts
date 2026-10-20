@@ -12,10 +12,10 @@ const NOW = 1_790_812_800_000;
 function reward(title: string): RewardResponse {
 	return RewardResponseSchema.parse({
 		id: "0b6e2c1a-3d4f-4a5b-8c9d-1e2f3a4b5c6d",
-		organizationId: "7f5f0f0e-7a53-4f5c-9d0a-0d6a6b8f2c11",
-		organizationName: "Acme Coffee",
-		organizationLogoUrl: null,
-		organizationLogoSources: [],
+		tenantId: "7f5f0f0e-7a53-4f5c-9d0a-0d6a6b8f2c11",
+		tenantName: "Acme Coffee",
+		tenantLogoUrl: null,
+		tenantLogoSources: [],
 		title,
 		description: "One free latte",
 		rewardType: "FREE_ITEM",
@@ -59,9 +59,9 @@ const META = { correlationId: "c-1", timestamp: epochMs(NOW) };
 describe("applyMerchantRewardChange", () => {
 	it("stores the API's answer as the reward's own entry and marks every catalog page and the figures stale", async () => {
 		const client = new QueryClient();
-		const pageKey = apiRouter.organizations.rewards.list.queryKey({ orgSlug: ORG, page: 2, limit: 12, locationId: undefined });
-		const summaryKey = apiRouter.organizations.rewards.summary.queryKey({ orgSlug: ORG, locationId: undefined });
-		const otherOrgKey = apiRouter.organizations.rewards.list.queryKey({ orgSlug: "other-org", page: 1, limit: 12, locationId: undefined });
+		const pageKey = apiRouter.tenants.rewards.list.queryKey({ tenantSlug: ORG, page: 2, limit: 12, locationId: undefined });
+		const summaryKey = apiRouter.tenants.rewards.summary.queryKey({ tenantSlug: ORG, locationId: undefined });
+		const otherOrgKey = apiRouter.tenants.rewards.list.queryKey({ tenantSlug: "other-org", page: 1, limit: 12, locationId: undefined });
 		client.setQueryData(pageKey, { success: true, data: [reward("Old")], meta: META });
 		client.setQueryData(summaryKey, { success: true, data: { countsByStatus: {}, unitsRemaining: 0 }, meta: META });
 		client.setQueryData(otherOrgKey, { success: true, data: [], meta: META });
@@ -69,7 +69,7 @@ describe("applyMerchantRewardChange", () => {
 
 		await applyMerchantRewardChange(client, ORG, answer);
 
-		expect(client.getQueryData(apiRouter.organizations.rewards.get.queryKey({ orgSlug: ORG, rewardId: answer.data.id }))).toEqual(answer);
+		expect(client.getQueryData(apiRouter.tenants.rewards.get.queryKey({ tenantSlug: ORG, rewardId: answer.data.id }))).toEqual(answer);
 		expect(client.getQueryState(pageKey)?.isInvalidated).toBe(true);
 		expect(client.getQueryState(summaryKey)?.isInvalidated).toBe(true);
 		expect(client.getQueryState(otherOrgKey)?.isInvalidated).toBe(false);

@@ -1,7 +1,7 @@
 "use client";
 
 import { MerchantRewardDetailPageSkeleton } from "@/components/loading/merchant-page-skeletons";
-import { MerchantCapabilityGate } from "@/contexts/organizations";
+import { MerchantCapabilityGate } from "@/contexts/tenancy";
 import { MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
 import { RewardPageBackLink } from "@/contexts/rewards/components/merchant-reward-editor-layout";
 import { MerchantRewardUnavailable } from "@/contexts/rewards/components/merchant-reward-unavailable";
@@ -10,7 +10,7 @@ import { describeRewardStores, isRewardEnded } from "@/contexts/rewards/lib/pres
 import { applyMerchantRewardChange } from "@/contexts/rewards/lib/query-cache";
 import { describeRewardStatusNote, formatRewardClaimLimit, formatRewardMinimumSpend, formatRewardRunDates } from "@/contexts/rewards/lib/reward-detail";
 import { isRewardEditable, useMerchantReward } from "@/contexts/rewards/lib/use-merchant-reward";
-import { orgRoutes } from "@/lib/routes";
+import { tenantRoutes } from "@/lib/routes";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
@@ -31,9 +31,9 @@ import * as React from "react";
 const GALLERY_SIZES = "(min-width: 1024px) 55vw, 100vw";
 
 export interface MerchantRewardDetailPageViewProps {
-	readonly orgSlug: string;
+	readonly tenantSlug: string;
 	readonly rewardId: string;
-	/** The reward as the server fetched it (`GET /orgs/:orgSlug/rewards/:rewardId`, the API's own envelope). */
+	/** The reward as the server fetched it (`GET /t/:orgSlug/rewards/:rewardId`, the API's own envelope). */
 	readonly initialReward?: Envelope<RewardResponse> | undefined;
 }
 
@@ -46,20 +46,20 @@ export function MerchantRewardDetailPageView(props: MerchantRewardDetailPageView
 	);
 }
 
-function MerchantRewardDetailPageContent({ orgSlug, rewardId, initialReward }: MerchantRewardDetailPageViewProps): React.JSX.Element {
-	const state = useMerchantReward(orgSlug, rewardId, initialReward);
+function MerchantRewardDetailPageContent({ tenantSlug, rewardId, initialReward }: MerchantRewardDetailPageViewProps): React.JSX.Element {
+	const state = useMerchantReward(tenantSlug, rewardId, initialReward);
 
 	if (state.kind === "loading") {
 		return <MerchantRewardDetailPageSkeleton />;
 	}
 	if (state.kind !== "ready") {
-		return <MerchantRewardUnavailable state={state} rewardsHref={orgRoutes(orgSlug).rewards.list} />;
+		return <MerchantRewardUnavailable state={state} rewardsHref={tenantRoutes(tenantSlug).rewards.list} />;
 	}
-	return <MerchantRewardDetail orgSlug={orgSlug} reward={state.reward} />;
+	return <MerchantRewardDetail tenantSlug={tenantSlug} reward={state.reward} />;
 }
 
 interface MerchantRewardDetailProps {
-	readonly orgSlug: string;
+	readonly tenantSlug: string;
 	readonly reward: RewardResponse;
 }
 
@@ -94,11 +94,11 @@ function Stat({ label, value }: StatProps): React.JSX.Element {
 }
 
 /** The reward as the merchant reviews it: the photos and offer first, then how it is doing, then every detail. */
-function MerchantRewardDetail({ orgSlug, reward }: MerchantRewardDetailProps): React.JSX.Element {
+function MerchantRewardDetail({ tenantSlug, reward }: MerchantRewardDetailProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const { can } = useAuthorization();
-	const routes = orgRoutes(orgSlug);
+	const routes = tenantRoutes(tenantSlug);
 	const canManageRewards = can(MERCHANT_CAPABILITY.manageRewards);
 	const canEdit = canManageRewards && isRewardEditable(reward.status);
 	const canSubmit = canManageRewards && reward.status === "DRAFT";
@@ -116,10 +116,10 @@ function MerchantRewardDetail({ orgSlug, reward }: MerchantRewardDetailProps): R
 		[reward.images, reward.title],
 	);
 
-	const publishMutation = api.organizations.rewards.publish.useMutation({
+	const publishMutation = api.tenants.rewards.publish.useMutation({
 		onSuccess: (response): void => {
 			toastMessage.success({ title: "Submitted for review", description: "It's reviewed before it goes live." });
-			void applyMerchantRewardChange(queryClient, orgSlug, response);
+			void applyMerchantRewardChange(queryClient, tenantSlug, response);
 		},
 		onError: (): void => {
 			toastMessage.error({ title: "Not submitted", description: "Check your connection and try again." });
@@ -128,8 +128,8 @@ function MerchantRewardDetail({ orgSlug, reward }: MerchantRewardDetailProps): R
 
 	const { mutate: publish } = publishMutation;
 	const handleSubmitForReview = React.useCallback((): void => {
-		publish({ orgSlug, rewardId: reward.id });
-	}, [orgSlug, publish, reward.id]);
+		publish({ tenantSlug, rewardId: reward.id });
+	}, [tenantSlug, publish, reward.id]);
 
 	return (
 		<div className="flex flex-col gap-8">

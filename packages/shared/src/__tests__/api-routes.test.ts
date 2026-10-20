@@ -40,6 +40,6 @@ describe("apiRoutes", () => {
 
 	it("parameterized routes are path templates with :param placeholders", () => {
 		expect(apiRoutes.geo.countryDetail).toBe("/geo/countries/:id");
-		expect(apiRoutes.organizations.reviewAccessRequest).toBe("/orgs/:orgSlug/access-requests/:requestId/review");
+		expect(apiRoutes.tenants.reviewAccessRequest).toBe("/tenants/:tenantSlug/access-requests/:requestId/review");
 	});
 });

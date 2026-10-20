@@ -36,10 +36,10 @@ The schema is one file, **`apps/api/prisma/schema.prisma`**, always plain valid 
 /// An order placed by a customer.
 /// @extends BaseModel
 model Order {
-  organizationId String
+  tenantId String
   status         OrderStatus @default(PENDING)
 
-  @@index([organizationId, isDeleted, status, createdAt])
+  @@index([tenantId, isDeleted, status, createdAt])
 }
 ```
 
@@ -54,7 +54,7 @@ model Order {
   …
   // ── end BaseModel ──
 
-  organizationId String
+  tenantId String
   …
 }
 ```
@@ -122,6 +122,16 @@ async function getOrders(tenantId: TenantId): Promise<Order[]> {
 ```
 
 Never rely on the UI to hide another tenant's data. Where PostgreSQL RLS is used, it's defense-in-depth, not a replacement for application-level authorization (`10-security-auth-authorization.md`).
+
+Vocabulary (`GLOSSARY.md`): a **tenant** is the customer company and the isolation boundary (`Tenant`, the `tenantId` column); a **location** is a branch inside a tenant, never a tenant; a **membership** links a user to a tenant; a **customer** is a user with no membership, whose data is user-owned (`userId`), not tenant-owned.
+
+A new tenant-owned table, in the same change:
+
+1. carries a non-null `tenantId` and a `/// RLS:` annotation naming its policy class;
+2. enables **and forces** RLS in the RLS SQL (`db:apply-security`) — boot fails otherwise;
+3. references every same-tenant parent through a composite foreign key, `fields: [tenantId, <fk>], references: [tenantId, id]`, with `@@unique([tenantId, id])` on the parent. Use `onDelete: Restrict`, not `SetNull`, on an optional one: `SetNull` would also null the non-null `tenantId`;
+4. adds its row to `docs/technical/database/rls-coverage.md` and its relation to `TENANT_INTEGRITY_RELATIONS` (`pnpm db:check-tenant-integrity`);
+5. seeds its rows through the seed's `seed.demo_dataset` operation (the seed runs as `app_runtime` under forced RLS, so a table it hard-deletes needs a policy that admits it).
 
 ## Transactions and race conditions
 
@@ -419,12 +429,12 @@ model Vote {
 On a soft-deletable model, decide explicitly whether a soft-deleted row should still hold its unique value. Usually it should not (a deleted till must not block re-registering its id), so make the constraint partial with the `partialIndexes` preview feature, which is enabled in `apps/api/prisma/schema.prisma`:
 
 ```prisma
-model OrganizationTerminal {
+model TenantTerminal {
   // ...
   isDeleted Boolean @default(false)
 
   // ✅ DO — unique among live rows only
-  @@unique([organizationId, terminalId], where: { isDeleted: false })
+  @@unique([tenantId, terminalId], where: { isDeleted: false })
 }
 ```
 
@@ -538,17 +548,17 @@ This is the single most important pattern in this entire document to internalize
 ALTER TABLE "Reward" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Reward" FORCE ROW LEVEL SECURITY;
 
--- Policy: a session may only see/modify rows for its own organization
+-- Policy: a session may only see/modify rows for its own tenant
 CREATE POLICY reward_org_isolation ON "Reward"
-  USING ("organizationId" = current_setting('app.current_org_id', true))
-  WITH CHECK ("organizationId" = current_setting('app.current_org_id', true));
+  USING ("tenantId" = current_setting('app.current_org_id', true))
+  WITH CHECK ("tenantId" = current_setting('app.current_org_id', true));
 ```
 
 ```ts
 // Set the tenant context per request/transaction — NEVER from client input,
 // always from the authenticated session
 await this.prisma.$transaction(async (tx) => {
-  await tx.$executeRaw`SELECT set_config('app.current_org_id', ${user.organizationId}, true)`; // true = local to this transaction
+  await tx.$executeRaw`SELECT set_config('app.current_org_id', ${user.tenantId}, true)`; // true = local to this transaction
   return tx.reward.findMany({ where: { isDeleted: false } });
 });
 ```
@@ -562,7 +572,7 @@ await this.prisma.$transaction(async (tx) => {
    rows for org B, and a session with NO org set must get zero rows at all.
 ```
 
-RLS remains defense-in-depth: the application still filters by `organizationId` explicitly (so the tenant boundary is visible in code and RLS is the safety net when someone forgets).
+RLS remains defense-in-depth: the application still filters by `tenantId` explicitly (so the tenant boundary is visible in code and RLS is the safety net when someone forgets).
 
 ## Migration safety patterns
 
@@ -619,10 +629,10 @@ export async function backfillRewardVersions(prisma: PrismaService, batchSize: n
 ## Tenant-scoped uniqueness
 
 ```prisma
-// ❌ globally unique slug — two organizations cannot both have "summer-sale"
+// ❌ globally unique slug — two tenants cannot both have "summer-sale"
 model Campaign { slug String @unique }
 // ✅ unique within the tenant
-model Campaign { organizationId String  slug String  @@unique([organizationId, slug]) }
+model Campaign { tenantId String  slug String  @@unique([tenantId, slug]) }
 ```
 
 If soft delete exists, decide explicitly whether a soft-deleted row still occupies the unique key (usually: use a partial unique index `WHERE "isDeleted" = false`) and document it.

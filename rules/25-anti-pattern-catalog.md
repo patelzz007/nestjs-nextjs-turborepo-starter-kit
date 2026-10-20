@@ -144,14 +144,14 @@ return UserResponseSchema.parse(toDomain(row));
 // ❌ endpoint with no guard
 @Delete(':id') remove(@Param('id') id: string) {}
 // ✅ permission + ownership explicit
-@Delete(':id') @UseGuards(AuthGuard, PermissionGuard(Permission.ORDER_DELETE), OwnershipGuard('order','organization')) remove(...) {}
+@Delete(':id') @UseGuards(AuthGuard, PermissionGuard(Permission.ORDER_DELETE), OwnershipGuard('order','tenant')) remove(...) {}
 ```
 
 ```ts
-// ❌ organizationId taken from the request body
-const orgId = dto.organizationId;
+// ❌ tenantId taken from the request body
+const orgId = dto.tenantId;
 // ✅ from the authenticated session
-const orgId = user.organizationId;
+const orgId = user.tenantId;
 ```
 
 ```ts

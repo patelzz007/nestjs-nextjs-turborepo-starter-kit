@@ -46,9 +46,9 @@ export interface MerchantAppLinks {
 	readonly onboarding: string;
 	/** Invite-token team invitation (`?token=`). */
 	readonly teamInvite: string;
-	/** An organization's API keys. */
-	readonly apiKeys: (organizationSlug: string) => string;
-	readonly terminals: (organizationSlug: string) => string;
+	/** A tenant's API keys. */
+	readonly apiKeys: (tenantSlug: string) => string;
+	readonly terminals: (tenantSlug: string) => string;
 }
 
 /** Admin app pages the API links to. */
@@ -84,8 +84,8 @@ export const APP_LINKS: AppLinks = {
 	merchant: {
 		onboarding: "/onboarding",
 		teamInvite: "/team-invite",
-		apiKeys: (organizationSlug: string): string => `/orgs/${encodeURIComponent(organizationSlug)}/api-keys`,
-		terminals: (organizationSlug: string): string => `/orgs/${encodeURIComponent(organizationSlug)}/terminals`,
+		apiKeys: (tenantSlug: string): string => `/t/${encodeURIComponent(tenantSlug)}/api-keys`,
+		terminals: (tenantSlug: string): string => `/t/${encodeURIComponent(tenantSlug)}/terminals`,
 	},
 	admin: {
 		home: "/",

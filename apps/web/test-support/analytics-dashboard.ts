@@ -66,7 +66,7 @@ export function buildCustomerDashboard(overrides: Partial<CustomerAnalyticsDashb
 		],
 		spendingByMerchant: [
 			{
-				organizationId: TEH_TARIK_ID,
+				tenantId: TEH_TARIK_ID,
 				merchantName: "Teh Tarik House",
 				category: "beverage",
 				totalMinor: 3_000,
@@ -77,7 +77,7 @@ export function buildCustomerDashboard(overrides: Partial<CustomerAnalyticsDashb
 				],
 			},
 			{
-				organizationId: BREW_BEAN_ID,
+				tenantId: BREW_BEAN_ID,
 				merchantName: "Brew & Bean",
 				category: null,
 				totalMinor: 1_200,
