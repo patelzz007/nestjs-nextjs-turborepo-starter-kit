@@ -11,7 +11,7 @@ tags: ["frontend", "analytics", "charts", "recharts", "accessibility", "exports"
 # Analytics dashboards and chart primitives
 
 Three pages read the [analytics API](../api/analytics.md): **My Activity** in the web app
-(`/dashboard/activity`), **Analytics** in the merchant app (`/orgs/[orgSlug]/analytics`) and
+(`/dashboard/activity`), **Analytics** in the merchant app (`/tenants/[orgSlug]/analytics`) and
 **Analytics** in the admin panel (`/analytics`; the old `/analytics/sales` redirects there). All
 three are built from one set of primitives, so a chart looks and behaves the same everywhere.
 
@@ -86,7 +86,7 @@ they take `ref` as a prop — React 19) and takes no business copy: labels arriv
 | Page | Report zone | Store | Export |
 | --- | --- | --- | --- |
 | Customer `/dashboard/activity` | UTC | — | none (own data only) |
-| Merchant `/orgs/[orgSlug]/analytics` | The organization's zone, read up front from the organization context the app already loads (`organization.timeZone`; `reportTimeZone`) | The member's store selector (the same tenant-context filter every merchant page uses), part of the query and prefetch key | yes |
+| Merchant `/tenants/[orgSlug]/analytics` | The tenant's zone, read up front from the tenant context the app already loads (`tenant.timeZone`; `reportTimeZone`) | The member's store selector (the same tenant-context filter every merchant page uses), part of the query and prefetch key | yes |
 | Admin `/analytics` | UTC | — | yes |
 
 The merchant store filter deliberately stays in the store selector (cookie + tenant context), not

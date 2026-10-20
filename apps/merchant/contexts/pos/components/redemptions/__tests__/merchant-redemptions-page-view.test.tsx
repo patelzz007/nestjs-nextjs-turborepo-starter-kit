@@ -15,7 +15,7 @@ import { ApiPaginatedMetaSchema, MerchantRedemptionListItemSchema, type ApiPagin
 import { MERCHANT_REDEMPTIONS_LOADING_LABELS, REDEMPTION_SKELETON_ROWS, REDEMPTION_STAT_CARDS } from "@/components/loading/merchant-page-skeletons";
 import { busyRegionAnnouncements } from "@/test/skeleton";
 
-type RedemptionsInput = Parameters<typeof apiRouter.organizations.redemptions.queryKey>[0];
+type RedemptionsInput = Parameters<typeof apiRouter.tenants.redemptions.queryKey>[0];
 
 interface RedemptionsQueryOptions {
 	readonly initialData?: Envelope<MerchantRedemptionListItem[]>;
@@ -28,7 +28,7 @@ const { redemptionsQuery, contextQuery } = vi.hoisted(() => ({
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
-		api: { organizations: { redemptions: { useQuery: redemptionsQuery }, context: { useQuery: contextQuery } } },
+		api: { tenants: { redemptions: { useQuery: redemptionsQuery }, context: { useQuery: contextQuery } } },
 	}),
 }));
 
@@ -39,7 +39,7 @@ vi.mock("next/navigation", async (importOriginal) => {
 	return { ...actual, useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search) };
 });
 
-const PATH = `/orgs/${TEST_ORG_SLUG}/redemptions`;
+const PATH = `/t/${TEST_ORG_SLUG}/redemptions`;
 /** "Today" as the server decided it (2026-10-01 in the stores' zone). */
 const TODAY: DayWindow = { fromMs: TERMINAL_FIXTURE_NOW - 8 * 3_600_000, toMs: TERMINAL_FIXTURE_NOW + 16 * 3_600_000 };
 
@@ -90,20 +90,20 @@ afterEach((): void => {
 
 describe("MerchantRedemptionsPageView authorization", () => {
 	it("renders the redemption log with merchant:view_redemptions", () => {
-		renderWithAuthorization(<MerchantRedemptionsPageView orgSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
+		renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
 
 		expect(screen.getByText("No redemptions yet")).toBeTruthy();
 	});
 
 	it("denies the page and skips the redemptions query without the capability", () => {
-		renderWithAuthorization(<MerchantRedemptionsPageView orgSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "MEMBER" });
+		renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "MEMBER" });
 
 		expect(screen.getByText("You don't have access to this page")).toBeTruthy();
 		expect(redemptionsQuery).not.toHaveBeenCalled();
 	});
 
 	it("renders the loading state while the membership resolves", () => {
-		renderWithAuthorization(<MerchantRedemptionsPageView orgSlug={TEST_ORG_SLUG} today={TODAY} />, { isLoading: true });
+		renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { isLoading: true });
 
 		expect(busyRegionAnnouncements()).toEqual([MERCHANT_REDEMPTIONS_LOADING_LABELS.loading]);
 	});
@@ -112,7 +112,7 @@ describe("MerchantRedemptionsPageView authorization", () => {
 describe("MerchantRedemptionsPageView loading", () => {
 	it("draws the stat cards and redemption rows — never a count of zero — while the first page loads", () => {
 		redemptionsQuery.mockReturnValue({ data: undefined, isLoading: true });
-		renderWithAuthorization(<MerchantRedemptionsPageView orgSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
+		renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
 
 		expect(busyRegionAnnouncements()).toEqual([MERCHANT_REDEMPTIONS_LOADING_LABELS.loading]);
 		expect(document.querySelectorAll('[data-slot="merchant-bordered-row-skeleton"]')).toHaveLength(REDEMPTION_SKELETON_ROWS);
@@ -131,15 +131,15 @@ describe("MerchantRedemptionsPageView paging (URL state)", () => {
 
 	it("requests the page the URL names, for the selected store", () => {
 		window.history.replaceState(null, "", `${PATH}?page=3`);
-		renderWithAuthorization(<MerchantRedemptionsPageView orgSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER", tenantContext: twoStoreSeed(STORE_A.id) });
+		renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER", tenantContext: twoStoreSeed(STORE_A.id) });
 
-		expect(lastInput()).toEqual({ orgSlug: TEST_ORG_SLUG, page: 3, limit: MERCHANT_REDEMPTIONS_PAGE_SIZE, locationId: STORE_A.id });
+		expect(lastInput()).toEqual({ tenantSlug: TEST_ORG_SLUG, page: 3, limit: MERCHANT_REDEMPTIONS_PAGE_SIZE, locationId: STORE_A.id });
 	});
 
 	it("pushes the next page with the response's keyset cursor, and the previous page by offset", () => {
 		const pushState = vi.spyOn(window.history, "pushState");
 		redemptionsQuery.mockReturnValue({ data: envelope(1, 3), isLoading: false });
-		const view = renderWithAuthorization(<MerchantRedemptionsPageView orgSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
+		const view = renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
 
 		expect(screen.getByText("Page 1 of 3")).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -147,27 +147,27 @@ describe("MerchantRedemptionsPageView paging (URL state)", () => {
 		expect(window.location.search).toBe(`?page=2&cursor=${NEXT_CURSOR}`);
 
 		redemptionsQuery.mockReturnValue({ data: envelope(2, 3), isLoading: false });
-		view.rerender(<MerchantRedemptionsPageView orgSlug={TEST_ORG_SLUG} today={TODAY} />);
-		expect(lastInput()).toEqual({ orgSlug: TEST_ORG_SLUG, page: 2, limit: MERCHANT_REDEMPTIONS_PAGE_SIZE, cursor: NEXT_CURSOR, locationId: undefined });
+		view.rerender(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />);
+		expect(lastInput()).toEqual({ tenantSlug: TEST_ORG_SLUG, page: 2, limit: MERCHANT_REDEMPTIONS_PAGE_SIZE, cursor: NEXT_CURSOR, locationId: undefined });
 		fireEvent.click(screen.getByRole("button", { name: "Previous" }));
 		expect(window.location.search).toBe("");
 	});
 
 	it("follows the URL on back/forward", () => {
 		window.history.replaceState(null, "", `${PATH}?page=2`);
-		const view = renderWithAuthorization(<MerchantRedemptionsPageView orgSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
+		const view = renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
 
 		act((): void => {
 			window.history.replaceState(null, "", PATH);
 		});
-		view.rerender(<MerchantRedemptionsPageView orgSlug={TEST_ORG_SLUG} today={TODAY} />);
+		view.rerender(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />);
 
 		expect(lastInput()?.page).toBe(1);
 	});
 
 	it("offers a way back to the latest redemptions from a page past the end", () => {
 		window.history.replaceState(null, "", `${PATH}?page=9`);
-		renderWithAuthorization(<MerchantRedemptionsPageView orgSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
+		renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
 
 		expect(screen.getByText("No redemptions on this page")).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: "Go to the latest redemptions" }));
@@ -176,7 +176,7 @@ describe("MerchantRedemptionsPageView paging (URL state)", () => {
 
 	it("hides the pager when the log fits on one page", () => {
 		redemptionsQuery.mockReturnValue({ data: envelope(1, 1), isLoading: false });
-		renderWithAuthorization(<MerchantRedemptionsPageView orgSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
+		renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
 
 		expect(screen.getByText("Free latte")).toBeTruthy();
 		expect(screen.queryByRole("navigation", { name: "Redemptions pages" })).toBeNull();
@@ -194,7 +194,7 @@ describe("MerchantRedemptionsPageView server prefetch (no double fetch)", () => 
 	it("seeds the first render with the server's rows when they were fetched for the store the client filters by", () => {
 		renderWithAuthorization(
 			<MerchantRedemptionsPageView
-				orgSlug={TEST_ORG_SLUG}
+				tenantSlug={TEST_ORG_SLUG}
 				today={TODAY}
 				initialRedemptions={{ locationId: STORE_A.id, data: { stateKey: "", data: PREFETCHED_FIRST_PAGE } }}
 			/>,
@@ -206,8 +206,8 @@ describe("MerchantRedemptionsPageView server prefetch (no double fetch)", () => 
 
 		const { input, options } = firstRenderQuery();
 		expect(input?.locationId).toBe(STORE_A.id);
-		expect(input === undefined ? [] : apiRouter.organizations.redemptions.queryKey(input)).toEqual(
-			apiRouter.organizations.redemptions.queryKey({ orgSlug: TEST_ORG_SLUG, page: 1, limit: MERCHANT_REDEMPTIONS_PAGE_SIZE, locationId: STORE_A.id }),
+		expect(input === undefined ? [] : apiRouter.tenants.redemptions.queryKey(input)).toEqual(
+			apiRouter.tenants.redemptions.queryKey({ tenantSlug: TEST_ORG_SLUG, page: 1, limit: MERCHANT_REDEMPTIONS_PAGE_SIZE, locationId: STORE_A.id }),
 		);
 		expect(options?.initialData?.data).toEqual([LATTE_REDEMPTION]);
 	});
@@ -215,7 +215,7 @@ describe("MerchantRedemptionsPageView server prefetch (no double fetch)", () => 
 	it("never caches another store's rows under the client's key — the query fetches instead", () => {
 		renderWithAuthorization(
 			<MerchantRedemptionsPageView
-				orgSlug={TEST_ORG_SLUG}
+				tenantSlug={TEST_ORG_SLUG}
 				today={TODAY}
 				initialRedemptions={{ locationId: STORE_A.id, data: { stateKey: "", data: PREFETCHED_FIRST_PAGE } }}
 			/>,
@@ -234,7 +234,7 @@ describe("MerchantRedemptionsPageView server prefetch (no double fetch)", () => 
 		window.history.replaceState(null, "", `${PATH}?page=2`);
 		renderWithAuthorization(
 			<MerchantRedemptionsPageView
-				orgSlug={TEST_ORG_SLUG}
+				tenantSlug={TEST_ORG_SLUG}
 				today={TODAY}
 				initialRedemptions={{ locationId: STORE_A.id, data: { stateKey: "", data: PREFETCHED_FIRST_PAGE } }}
 			/>,
@@ -260,11 +260,11 @@ describe("MerchantRedemptionsPageView today count", () => {
 				? { data: testEnvelope([LATTE_REDEMPTION], TODAY_COUNT_META), isLoading: false, isError: false }
 				: { data: envelope(1, 3), isLoading: false, isError: false },
 		);
-		renderWithAuthorization(<MerchantRedemptionsPageView orgSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER", tenantContext: twoStoreSeed(STORE_A.id) });
+		renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER", tenantContext: twoStoreSeed(STORE_A.id) });
 
 		expect(screen.getByText("Today").parentElement?.textContent).toContain("57");
 		expect(redemptionsQuery).toHaveBeenCalledWith(
-			{ orgSlug: TEST_ORG_SLUG, page: 1, limit: 1, locationId: STORE_A.id, filter: { redeemedAt: { gte: TODAY.fromMs, lt: TODAY.toMs } } },
+			{ tenantSlug: TEST_ORG_SLUG, page: 1, limit: 1, locationId: STORE_A.id, filter: { redeemedAt: { gte: TODAY.fromMs, lt: TODAY.toMs } } },
 			expect.anything(),
 		);
 	});
@@ -273,7 +273,7 @@ describe("MerchantRedemptionsPageView today count", () => {
 		redemptionsQuery.mockImplementation((input: RedemptionsInput): object =>
 			isDayCountInput(input) ? { data: undefined, isLoading: false, isError: true } : { data: envelope(1, 1), isLoading: false, isError: false },
 		);
-		renderWithAuthorization(<MerchantRedemptionsPageView orgSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
+		renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
 
 		const card = screen.getByText("Today").parentElement;
 		expect(card?.textContent).toContain("—");

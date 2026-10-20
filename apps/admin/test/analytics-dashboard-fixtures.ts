@@ -59,8 +59,8 @@ export function buildAdminDashboard(overrides: Partial<AdminAnalyticsDashboard> 
 			},
 		],
 		topMerchants: [
-			{ organizationId: "3f2a8c3e-7a53-4f5c-9d0a-0d6a6b8f2c11", name: "Sunrise Café", category: "cafe", salesMinor: 750_000, bills: 1_200, averageBillMinor: 625 },
-			{ organizationId: "9b1d2e4f-1c2d-4e5f-8a9b-0c1d2e3f4a5b", name: "Corner Shop", category: null, salesMinor: 250_000, bills: 300, averageBillMinor: 833 },
+			{ tenantId: "3f2a8c3e-7a53-4f5c-9d0a-0d6a6b8f2c11", name: "Sunrise Café", category: "cafe", salesMinor: 750_000, bills: 1_200, averageBillMinor: 625 },
+			{ tenantId: "9b1d2e4f-1c2d-4e5f-8a9b-0c1d2e3f4a5b", name: "Corner Shop", category: null, salesMinor: 250_000, bills: 300, averageBillMinor: 833 },
 		],
 		byCategory: [{ category: "cafe", salesMinor: 750_000, bills: 1_200, merchants: 1 }],
 		byCity: [{ city: "KUALA_LUMPUR", salesMinor: 1_000_000, bills: 1_500, merchants: 2 }],

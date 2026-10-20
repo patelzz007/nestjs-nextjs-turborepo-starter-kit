@@ -5,10 +5,12 @@ import { posEndpointUrl } from "@/contexts/pos/lib/pos/pos-endpoint-url";
 
 describe("posEndpointUrl", () => {
 	it("joins the API origin, the version prefix and the route", () => {
-		expect(posEndpointUrl("https://api.example.com", apiRoutes.pos.pairTerminal)).toBe(`https://api.example.com${API_VERSION_PREFIX}/pos/terminals/pair`);
+		expect(posEndpointUrl("https://api.example.com", apiRoutes.integration.pairTerminal)).toBe(`https://api.example.com${API_VERSION_PREFIX}/integration/terminals/pair`);
 	});
 
 	it("drops trailing slashes from the origin so the path never doubles up", () => {
-		expect(posEndpointUrl("https://api.example.com//", "/redemptions/validate")).toBe(`https://api.example.com${API_VERSION_PREFIX}/redemptions/validate`);
+		expect(posEndpointUrl("https://api.example.com//", "/integration/redemptions/validate")).toBe(
+			`https://api.example.com${API_VERSION_PREFIX}/integration/redemptions/validate`,
+		);
 	});
 });

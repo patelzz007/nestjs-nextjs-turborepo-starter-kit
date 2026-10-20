@@ -1,24 +1,24 @@
 ---
-title: "API reference — Merchant organizations (portal API)"
+title: "API reference — Merchant tenants (portal API)"
 description: "Everything the merchant portal calls under /orgs/{orgSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics."
 order: 5
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792368000000
+lastUpdated: 1792454400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
 
 <!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm docs:api -->
 
-# API reference — Merchant organizations (portal API)
+# API reference — Merchant tenants (portal API)
 
 Everything the merchant portal calls under /orgs/{orgSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics.
 
 How these endpoints fit together: [Stores and team guide](../../user-guide/03-stores-and-team.md). Conventions shared by every endpoint (envelope, auth, errors, pagination): [API reference overview](./README.md).
 
-## Organizations
+## Tenants
 
-### POST /api/v1/admin/organizations/invites
+### POST /api/v1/admin/tenants/invites
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
@@ -27,7 +27,7 @@ How these endpoints fit together: [Stores and team guide](../../user-guide/03-st
 - Idempotent: send an `Idempotency-Key` header; a retry with the same key replays the first response.
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationAdminController_createInvite` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization-admin.controller.ts)
+- Operation id `TenantAdminController_createInvite` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant-admin.controller.ts)
 
 **Parameters**
 
@@ -46,12 +46,12 @@ How these endpoints fit together: [Stores and team guide](../../user-guide/03-st
 | `intendedRole` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | no | default `"OWNER"` |
 | `slug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 
-**Response 201 Created** (`application/json`) — Organization invite created
+**Response 201 Created** (`application/json`) — Tenant invite created
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.inviteToken` | string | yes | at least 1 characters |
-| `data.organizationId` | string (uuid) | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -65,7 +65,7 @@ How these endpoints fit together: [Stores and team guide](../../user-guide/03-st
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/organizations/invites
+POST /api/v1/admin/tenants/invites
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -87,30 +87,29 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "organizationId": "01a1557c-c1e4-771b-89c7-d6f91e7751d1",
-    "inviteToken": "6b84d2b88eac316d75a8364924b701283426a5a3e07b0b965ef5104cd404ed23"
+    "tenantId": "01a15a8b-51ca-736b-9e56-22919c281d31",
+    "inviteToken": "5bb4177367c2f17fe241435bed72d7419e423f0c697534a5f8e51d951106e1d8"
   },
   "meta": {
-    "correlationId": "olhET_ghcS30k3dLaun-_",
-    "timestamp": 1792435601918
+    "correlationId": "TZs7vZT_f-hNZjbBj5iZ1",
+    "timestamp": 1792520442369
   }
 }
 ```
 
-### POST /api/v1/orgs/{orgSlug}/access-requests
+### POST /api/v1/tenants/{tenantSlug}/access-requests
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationController_requestAccess` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization.controller.ts)
+- Operation id `TenantController_requestAccess` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 
 **Request body** (`application/json`, required)
 
@@ -118,15 +117,15 @@ Response `201 Created` (application/json):
 | --- | --- | --- | --- |
 | `message` | string | no | at most 500 characters |
 
-**Response 201 Created** (`application/json`) — Organization access request created
+**Response 201 Created** (`application/json`) — Tenant access request created
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.createdAt` | integer | yes |  |
 | `data.id` | string (uuid) | yes |  |
 | `data.message` | string \| null | yes |  |
-| `data.organizationId` | string (uuid) | yes |  |
 | `data.status` | "PENDING" \| "APPROVED" \| "REJECTED" \| "CANCELLED" | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
 | `data.userId` | string (uuid) | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -140,7 +139,7 @@ Response `201 Created` (application/json):
 **Example** — called as bob.smith@example.com (web app).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/access-requests
+POST /api/v1/tenants/brew-bean-kl/access-requests
 X-Client-Type: web
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -157,34 +156,33 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a1557c-e35a-7844-9af7-99073c3cb119",
-    "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-    "userId": "01a1557a-c0c7-753f-974a-a5d794c564ed",
+    "id": "01a15a8b-7812-7ad0-b474-f9d4ebcae190",
+    "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+    "userId": "01a15a89-701f-77be-925b-403c7abefb5b",
     "status": "PENDING",
     "message": "I run the Bangsar morning shift",
-    "createdAt": 1792435610448
+    "createdAt": 1792520452110
   },
   "meta": {
-    "correlationId": "u32rTcBTFBTSOPz7xp0pS",
-    "timestamp": 1792435610475
+    "correlationId": "8o4mVv6vPJRHh3ZFiu_dI",
+    "timestamp": 1792520452121
   }
 }
 ```
 
-### POST /api/v1/orgs/{orgSlug}/access-requests/{requestId}/review
+### POST /api/v1/tenants/{tenantSlug}/access-requests/{requestId}/review
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationController_reviewAccessRequest` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization.controller.ts)
+- Operation id `TenantController_reviewAccessRequest` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `requestId` | path | string (uuid) | yes |  |
 
 **Request body** (`application/json`, required)
@@ -197,7 +195,7 @@ Response `201 Created` (application/json):
 | `⟨shape 1⟩ role` | "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
 | `⟨shape 2⟩ approve` | false | yes |  |
 
-**Response 201 Created** (`application/json`) — Organization access request reviewed
+**Response 201 Created** (`application/json`) — Tenant access request reviewed
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -214,7 +212,7 @@ Response `201 Created` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/access-requests/01a1557c-e35a-7844-9af7-99073c3cb119/review
+POST /api/v1/tenants/brew-bean-kl/access-requests/01a15a8b-7812-7ad0-b474-f9d4ebcae190/review
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -239,26 +237,25 @@ Response `201 Created` (application/json):
     "message": "Access request reviewed"
   },
   "meta": {
-    "correlationId": "w_Z4z6GnyvvQr03Sm4OVP",
-    "timestamp": 1792435610644
+    "correlationId": "L52fbWMMp3O4P9WPpIRxT",
+    "timestamp": 1792520452285
   }
 }
 ```
 
-### GET /api/v1/orgs/{orgSlug}/context
+### GET /api/v1/tenants/{tenantSlug}/context
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationController_getContext` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization.controller.ts)
+- Operation id `TenantController_getContext` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 
-**Response 200 OK** (`application/json`) — Organization context for the signed-in member
+**Response 200 OK** (`application/json`) — Tenant context for the signed-in member
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -271,9 +268,9 @@ Response `201 Created` (application/json):
 | `data.locations[].id` | string (uuid) | yes |  |
 | `data.locations[].isPrimary` | boolean | yes |  |
 | `data.locations[].name` | string | yes |  |
-| `data.locations[].organizationId` | string (uuid) | yes |  |
 | `data.locations[].rejectionReason` | string \| null | yes |  |
 | `data.locations[].status` | "PENDING_APPROVAL" \| "ACTIVE" \| "REJECTED" \| "INACTIVE" | yes |  |
+| `data.locations[].tenantId` | string (uuid) | yes |  |
 | `data.locations[].updatedAt` | integer | yes |  |
 | `data.membership` | object | yes |  |
 | `data.membership.createdAt` | integer | yes |  |
@@ -281,9 +278,9 @@ Response `201 Created` (application/json):
 | `data.membership.id` | string (uuid) | yes |  |
 | `data.membership.locationIds` | string (uuid)[] | yes |  |
 | `data.membership.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
-| `data.membership.organizationId` | string (uuid) | yes |  |
 | `data.membership.role` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
 | `data.membership.status` | "ACTIVE" \| "SUSPENDED" \| "PENDING" | yes |  |
+| `data.membership.tenantId` | string (uuid) | yes |  |
 | `data.membership.updatedAt` | integer | yes |  |
 | `data.membership.userId` | string (uuid) | yes |  |
 | `data.merchantProfile` | object \| null | yes |  |
@@ -293,23 +290,23 @@ Response `201 Created` (application/json):
 | `data.merchantProfile.contactPhone` | string \| null | yes |  |
 | `data.merchantProfile.kybStatus` | "PENDING" \| "APPROVED" \| "REJECTED" \| "ACTION_REQUIRED" | yes |  |
 | `data.merchantProfile.legalName` | string \| null | yes |  |
-| `data.merchantProfile.organizationId` | string (uuid) | yes |  |
-| `data.organization` | object | yes |  |
-| `data.organization.createdAt` | integer | yes |  |
-| `data.organization.displayName` | string | yes |  |
-| `data.organization.id` | string (uuid) | yes |  |
-| `data.organization.lifecycleState` | "PROVISIONING" \| "ACTIVE" \| "RESTRICTED" \| "SUSPENDED" \| "PENDING_DELETION" \| "DELETED" | yes |  |
-| `data.organization.logo` | object \| null | yes |  |
-| `data.organization.logo.fileId` | string (uuid) | yes |  |
-| `data.organization.logo.sources` | object[] | yes |  |
-| `data.organization.logo.sources[].url` | string (uri) | yes |  |
-| `data.organization.logo.sources[].width` | integer | yes |  |
-| `data.organization.logo.url` | string (uri) | yes |  |
-| `data.organization.primaryLocationId` | string (uuid) \| null | yes |  |
-| `data.organization.slug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
-| `data.organization.timeZone` | string | yes | length 1–64 |
-| `data.organization.updatedAt` | integer | yes |  |
+| `data.merchantProfile.tenantId` | string (uuid) | yes |  |
 | `data.policyVersion` | integer | yes |  |
+| `data.tenant` | object | yes |  |
+| `data.tenant.createdAt` | integer | yes |  |
+| `data.tenant.displayName` | string | yes |  |
+| `data.tenant.id` | string (uuid) | yes |  |
+| `data.tenant.lifecycleState` | "PROVISIONING" \| "ACTIVE" \| "RESTRICTED" \| "SUSPENDED" \| "PENDING_DELETION" \| "DELETED" | yes |  |
+| `data.tenant.logo` | object \| null | yes |  |
+| `data.tenant.logo.fileId` | string (uuid) | yes |  |
+| `data.tenant.logo.sources` | object[] | yes |  |
+| `data.tenant.logo.sources[].url` | string (uri) | yes |  |
+| `data.tenant.logo.sources[].width` | integer | yes |  |
+| `data.tenant.logo.url` | string (uri) | yes |  |
+| `data.tenant.primaryLocationId` | string (uuid) \| null | yes |  |
+| `data.tenant.slug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
+| `data.tenant.timeZone` | string | yes | length 1–64 |
+| `data.tenant.updatedAt` | integer | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -322,7 +319,7 @@ Response `201 Created` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/context
+GET /api/v1/tenants/brew-bean-kl/context
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -333,33 +330,33 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "organization": {
+    "tenant": {
       "id": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
       "slug": "brew-bean-kl",
       "displayName": "Brew & Bean KL",
       "lifecycleState": "ACTIVE",
       "primaryLocationId": "019b76da-a800-701a-abbd-a9a411b6958b",
-      "createdAt": 1792435514595,
-      "updatedAt": 1792435514595,
+      "createdAt": 1792520365841,
+      "updatedAt": 1792520365841,
       "timeZone": "Asia/Kuala_Lumpur",
       "logo": null
     },
     "membership": {
       "id": "019b76da-a800-7b1d-b660-30bdb341a50c",
-      "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+      "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
       "userId": "019b76da-a800-763a-b64a-fd037629f93f",
       "role": "OWNER",
       "status": "ACTIVE",
       "displayName": "Ahmad (Owner)",
       "locationScopeType": "ALL_LOCATIONS",
       "locationIds": [],
-      "createdAt": 1792435514638,
-      "updatedAt": 1792435514638
+      "createdAt": 1792520365955,
+      "updatedAt": 1792520365955
     },
     "locations": [
       {
         "id": "019b76da-a800-701a-abbd-a9a411b6958b",
-        "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+        "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
         "name": "Brew & Bean KL — Bukit Bintang",
         "code": "primary",
         "addressText": "12 Jalan Bukit Bintang, Kuala Lumpur",
@@ -368,12 +365,12 @@ Response `200 OK` (application/json):
         "status": "ACTIVE",
         "rejectionReason": null,
         "isPrimary": true,
-        "createdAt": 1792435514608,
-        "updatedAt": 1792435514608
+        "createdAt": 1792520365875,
+        "updatedAt": 1792520365875
       }
     ],
     "merchantProfile": {
-      "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+      "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
       "legalName": "Brew & Bean KL Sdn Bhd",
       "category": "cafe",
       "city": "KUALA_LUMPUR",
@@ -384,26 +381,25 @@ Response `200 OK` (application/json):
     "policyVersion": 1
   },
   "meta": {
-    "correlationId": "JUWPn4K-CX_C51f0Rtshg",
-    "timestamp": 1792435605201
+    "correlationId": "VBMEassugzjejc4mEUvxT",
+    "timestamp": 1792520445803
   }
 }
 ```
 
-### POST /api/v1/orgs/{orgSlug}/locations
+### POST /api/v1/tenants/{tenantSlug}/locations
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationController_createLocation` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization.controller.ts)
+- Operation id `TenantController_createLocation` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 
 **Request body** (`application/json`, required)
 
@@ -413,7 +409,7 @@ Response `200 OK` (application/json):
 | `contactPhone` | string | no | length 1–20 |
 | `name` | string | yes | length 1–200 |
 
-**Response 201 Created** (`application/json`) — Organization store location requested
+**Response 201 Created** (`application/json`) — Tenant store location requested
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -425,9 +421,9 @@ Response `200 OK` (application/json):
 | `data.id` | string (uuid) | yes |  |
 | `data.isPrimary` | boolean | yes |  |
 | `data.name` | string | yes |  |
-| `data.organizationId` | string (uuid) | yes |  |
 | `data.rejectionReason` | string \| null | yes |  |
 | `data.status` | "PENDING_APPROVAL" \| "ACTIVE" \| "REJECTED" \| "INACTIVE" | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
 | `data.updatedAt` | integer | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -441,7 +437,7 @@ Response `200 OK` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/locations
+POST /api/v1/tenants/brew-bean-kl/locations
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -460,8 +456,8 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a1557c-d78b-7fd2-944c-6be971eedf85",
-    "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+    "id": "01a15a8b-6906-7f9a-ac09-e9f7dea0f458",
+    "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "name": "Brew & Bean KL — Bangsar",
     "code": "brew-bean-kl-bangsar",
     "addressText": "21 Jalan Telawi 3, Bangsar Baru, 59100 Kuala Lumpur",
@@ -470,30 +466,29 @@ Response `201 Created` (application/json):
     "status": "PENDING_APPROVAL",
     "rejectionReason": null,
     "isPrimary": false,
-    "createdAt": 1792435607436,
-    "updatedAt": 1792435607436
+    "createdAt": 1792520448265,
+    "updatedAt": 1792520448265
   },
   "meta": {
-    "correlationId": "w9qf504S4L3rgLm5595xV",
-    "timestamp": 1792435607449
+    "correlationId": "g5wyjH9KdRUhdRbpHt61E",
+    "timestamp": 1792520448292
   }
 }
 ```
 
-### PATCH /api/v1/orgs/{orgSlug}/locations/{locationId}
+### PATCH /api/v1/tenants/{tenantSlug}/locations/{locationId}
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationController_updateLocation` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization.controller.ts)
+- Operation id `TenantController_updateLocation` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `locationId` | path | string (uuid) | yes |  |
 
 **Request body** (`application/json`, required)
@@ -504,7 +499,7 @@ Response `201 Created` (application/json):
 | `contactPhone` | string | no | length 1–20 |
 | `name` | string | yes | length 1–200 |
 
-**Response 200 OK** (`application/json`) — Rejected organization store location resubmitted
+**Response 200 OK** (`application/json`) — Rejected tenant store location resubmitted
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -516,9 +511,9 @@ Response `201 Created` (application/json):
 | `data.id` | string (uuid) | yes |  |
 | `data.isPrimary` | boolean | yes |  |
 | `data.name` | string | yes |  |
-| `data.organizationId` | string (uuid) | yes |  |
 | `data.rejectionReason` | string \| null | yes |  |
 | `data.status` | "PENDING_APPROVAL" \| "ACTIVE" \| "REJECTED" \| "INACTIVE" | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
 | `data.updatedAt` | integer | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -532,7 +527,7 @@ Response `201 Created` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-PATCH /api/v1/orgs/brew-bean-kl/locations/01a1557c-d78b-7fd2-944c-6be971eedf85
+PATCH /api/v1/tenants/brew-bean-kl/locations/01a15a8b-6906-7f9a-ac09-e9f7dea0f458
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -551,8 +546,8 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a1557c-d78b-7fd2-944c-6be971eedf85",
-    "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+    "id": "01a15a8b-6906-7f9a-ac09-e9f7dea0f458",
+    "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "name": "Brew & Bean KL — Bangsar",
     "code": "brew-bean-kl-bangsar",
     "addressText": "Lot G-21, 21 Jalan Telawi 3, Bangsar Baru, 59100 Kuala Lumpur",
@@ -561,30 +556,29 @@ Response `200 OK` (application/json):
     "status": "PENDING_APPROVAL",
     "rejectionReason": null,
     "isPrimary": false,
-    "createdAt": 1792435607436,
-    "updatedAt": 1792435607627
+    "createdAt": 1792520448265,
+    "updatedAt": 1792520448553
   },
   "meta": {
-    "correlationId": "0WbhfxbEMFTNqIw7LDsBC",
-    "timestamp": 1792435607638
+    "correlationId": "ugPihEYALckMtQTCeOT1J",
+    "timestamp": 1792520448595
   }
 }
 ```
 
-### POST /api/v1/orgs/{orgSlug}/locations/{locationId}/close
+### POST /api/v1/tenants/{tenantSlug}/locations/{locationId}/close
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationController_closeLocation` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization.controller.ts)
+- Operation id `TenantController_closeLocation` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `locationId` | path | string (uuid) | yes |  |
 
 **Request body** (`application/json`, required)
@@ -617,7 +611,7 @@ Response `200 OK` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/locations/01a1557c-d8af-76e2-9fe2-3227d9fadde4/close
+POST /api/v1/tenants/brew-bean-kl/locations/01a15a8b-6aff-721b-b831-06975ac94238/close
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -634,9 +628,9 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "locationId": "01a1557c-d8af-76e2-9fe2-3227d9fadde4",
-    "storeId": "01a1557c-d8b5-70ba-947e-683fbd693b57",
-    "closedAt": 1792435607870,
+    "locationId": "01a15a8b-6aff-721b-b831-06975ac94238",
+    "storeId": "01a15a8b-6b0a-757e-9006-05b9217bd469",
+    "closedAt": 1792520449013,
     "reason": "Mall lease not renewed",
     "storeMembershipsRemoved": 0,
     "memberScopesRemoved": 0,
@@ -644,31 +638,30 @@ Response `201 Created` (application/json):
     "apiKeysRevoked": 0
   },
   "meta": {
-    "correlationId": "BPWrCEwr_OOfu7yYdf9bi",
-    "timestamp": 1792435607900
+    "correlationId": "XfLSoACGptE2TMcjjtoIx",
+    "timestamp": 1792520449076
   }
 }
 ```
 
-### GET /api/v1/orgs/{orgSlug}/members
+### GET /api/v1/tenants/{tenantSlug}/members
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationController_listMembers` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization.controller.ts)
+- Operation id `TenantController_listMembers` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `page` | query | integer | no | Page number (1-indexed) for offset pagination |
 | `limit` | query | integer | no | Page size (default 20, max 100) |
 | `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
 | `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt, role. Default: createdAt |
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: role |
 
-**Response 200 OK** (`application/json`) — One page of the organization member roster; pagination is in `meta`
+**Response 200 OK** (`application/json`) — One page of the tenant member roster; pagination is in `meta`
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -680,9 +673,9 @@ Response `201 Created` (application/json):
 | `data[].id` | string (uuid) | yes |  |
 | `data[].locationIds` | string (uuid)[] | yes |  |
 | `data[].locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
-| `data[].organizationId` | string (uuid) | yes |  |
 | `data[].role` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
 | `data[].status` | "ACTIVE" \| "SUSPENDED" \| "PENDING" | yes |  |
+| `data[].tenantId` | string (uuid) | yes |  |
 | `data[].updatedAt` | integer | yes |  |
 | `data[].userId` | string (uuid) | yes |  |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
@@ -704,7 +697,7 @@ Response `201 Created` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/members
+GET /api/v1/tenants/brew-bean-kl/members
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -716,9 +709,9 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "019b76da-a800-7887-9947-75f244c2edf0",
-      "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-      "userId": "01a1557a-c131-76ea-aaaf-cce3d7c7afd2",
+      "id": "019b76da-a800-7546-81bf-a03bddee6096",
+      "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+      "userId": "01a15a89-70b6-72fc-858f-99764c6236b5",
       "email": "user-02@example.com",
       "fullName": "Olivia Johnson",
       "role": "CASHIER",
@@ -729,11 +722,11 @@ Response `200 OK` (application/json):
         "019b76da-a800-701a-abbd-a9a411b6958b"
       ],
       "createdAt": 1788753600000,
-      "updatedAt": 1792435554407
+      "updatedAt": 1792520397725
     },
     {
       "id": "019b76da-a800-7b1d-b660-30bdb341a50c",
-      "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+      "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
       "userId": "019b76da-a800-763a-b64a-fd037629f93f",
       "email": "brew.owner@kl-rewards.demo",
       "fullName": "Ahmad Brew",
@@ -742,8 +735,8 @@ Response `200 OK` (application/json):
       "displayName": "Ahmad (Owner)",
       "locationScopeType": "ALL_LOCATIONS",
       "locationIds": [],
-      "createdAt": 1792435514638,
-      "updatedAt": 1792435514638
+      "createdAt": 1792520365955,
+      "updatedAt": 1792520365955
     }
   ],
   "meta": {
@@ -754,26 +747,25 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "FDyu-iigkVeZ54ICW02Gk",
-    "timestamp": 1792435605478
+    "correlationId": "uY1rGZsyvH5HHyY7Su32x",
+    "timestamp": 1792520445967
   }
 }
 ```
 
-### POST /api/v1/orgs/{orgSlug}/members/{membershipId}/stores/{locationId}/remove
+### POST /api/v1/tenants/{tenantSlug}/members/{membershipId}/stores/{locationId}/remove
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationController_removeMemberFromStore` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization.controller.ts)
+- Operation id `TenantController_removeMemberFromStore` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string | yes |  |
+| `tenantSlug` | path | string | yes |  |
 | `membershipId` | path | string (uuid) | yes |  |
 | `locationId` | path | string (uuid) | yes |  |
 
@@ -803,7 +795,7 @@ Response `200 OK` (application/json):
 **Example** — called as jonker.owner@melaka-rewards.demo (merchant portal). Jonker Street Kitchen removes its cashier from the Bukit Beruang store (the cashier's only store, hence allowNoStores).
 
 ```http
-POST /api/v1/orgs/jonker-street-kitchen/members/019b76da-a800-7b0f-b2e9-e7ccd28b72af/stores/019b76da-a800-7685-9734-84f5f07eb21f/remove
+POST /api/v1/tenants/jonker-street-kitchen/members/019b76da-a800-7b0f-b2e9-e7ccd28b72af/stores/019b76da-a800-7685-9734-84f5f07eb21f/remove
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -822,30 +814,29 @@ Response `201 Created` (application/json):
   "data": {
     "membershipId": "019b76da-a800-7b0f-b2e9-e7ccd28b72af",
     "locationId": "019b76da-a800-7685-9734-84f5f07eb21f",
-    "removedAt": 1792435608440,
+    "removedAt": 1792520449855,
     "remainingLocationIds": []
   },
   "meta": {
-    "correlationId": "idttFKYU5ku4Sa1A-kxvv",
-    "timestamp": 1792435608460
+    "correlationId": "7qtwJDq-mOaeEjQ2W4nC4",
+    "timestamp": 1792520449898
   }
 }
 ```
 
-### POST /api/v1/orgs/{orgSlug}/members/invite
+### POST /api/v1/tenants/{tenantSlug}/members/invite
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationController_inviteMember` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization.controller.ts)
+- Operation id `TenantController_inviteMember` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 
 **Request body** (`application/json`, required)
 
@@ -856,7 +847,7 @@ Response `201 Created` (application/json):
 | `locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | no | default `"ALL_LOCATIONS"` |
 | `role` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
 
-**Response 201 Created** (`application/json`) — Organization team invitation sent
+**Response 201 Created** (`application/json`) — Tenant team invitation sent
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -874,7 +865,7 @@ Response `201 Created` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/members/invite
+POST /api/v1/tenants/brew-bean-kl/members/invite
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -896,35 +887,34 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "inviteId": "01a1557c-d9ed-7aea-96be-ff164caac32f",
+    "inviteId": "01a15a8b-6ce3-7e91-a1e8-f4c19cc5e686",
     "message": "Invitation sent"
   },
   "meta": {
-    "correlationId": "qfJUQ-5y75E7AyGX9i7DZ",
-    "timestamp": 1792435608062
+    "correlationId": "BJqM_OLOVw-4Ple_2CkVp",
+    "timestamp": 1792520449293
   }
 }
 ```
 
-### GET /api/v1/orgs/{orgSlug}/members/invites
+### GET /api/v1/tenants/{tenantSlug}/members/invites
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationController_listMemberInvites` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization.controller.ts)
+- Operation id `TenantController_listMemberInvites` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `page` | query | integer | no | Page number (1-indexed) for offset pagination |
 | `limit` | query | integer | no | Page size (default 20, max 100) |
 | `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
 | `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt, expiresAt. Default: -createdAt |
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: none |
 
-**Response 200 OK** (`application/json`) — One page of the pending organization team invitations; pagination is in `meta`
+**Response 200 OK** (`application/json`) — One page of the pending tenant team invitations; pagination is in `meta`
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -938,8 +928,8 @@ Response `201 Created` (application/json):
 | `data[].invitedByUserId` | string (uuid) | yes |  |
 | `data[].locationIds` | string (uuid)[] | yes |  |
 | `data[].locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
-| `data[].organizationId` | string (uuid) | yes |  |
 | `data[].status` | "PENDING" \| "ACCEPTED" \| "EXPIRED" \| "REVOKED" | yes |  |
+| `data[].tenantId` | string (uuid) | yes |  |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
 | `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
 | `meta.limit` | integer | yes | Items per page; range 1–100 |
@@ -959,7 +949,7 @@ Response `201 Created` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/members/invites
+GET /api/v1/tenants/brew-bean-kl/members/invites
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -972,7 +962,7 @@ Response `200 OK` (application/json):
   "data": [
     {
       "id": "019b76da-a800-7926-8bff-ff84232b77f0",
-      "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+      "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
       "email": "alice.kl@kl-rewards.demo",
       "intendedRole": "CASHIER",
       "locationScopeType": "SELECTED",
@@ -982,8 +972,8 @@ Response `200 OK` (application/json):
       "status": "PENDING",
       "invitedByUserId": "019b76da-a800-763a-b64a-fd037629f93f",
       "invitedByName": "Ahmad Brew",
-      "expiresAt": 1793040314664,
-      "createdAt": 1792435514665
+      "expiresAt": 1793125165986,
+      "createdAt": 1792520365987
     }
   ],
   "meta": {
@@ -994,29 +984,28 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "Oy9IQ5fh26ZHhJqsC6QYJ",
-    "timestamp": 1792435605563
+    "correlationId": "zMYggYsGVVhSbYbeq3ztn",
+    "timestamp": 1792520446177
   }
 }
 ```
 
-### POST /api/v1/orgs/{orgSlug}/members/invites/{inviteId}/revoke
+### POST /api/v1/tenants/{tenantSlug}/members/invites/{inviteId}/revoke
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationController_revokeMemberInvite` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization.controller.ts)
+- Operation id `TenantController_revokeMemberInvite` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string | yes |  |
+| `tenantSlug` | path | string | yes |  |
 | `inviteId` | path | string (uuid) | yes |  |
 
-**Response 201 Created** (`application/json`) — Organization team invitation revoked
+**Response 201 Created** (`application/json`) — Tenant team invitation revoked
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1033,7 +1022,7 @@ Response `200 OK` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/members/invites/01a1557c-d9ed-7aea-96be-ff164caac32f/revoke
+POST /api/v1/tenants/brew-bean-kl/members/invites/01a15a8b-6ce3-7e91-a1e8-f4c19cc5e686/revoke
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1048,26 +1037,25 @@ Response `201 Created` (application/json):
     "message": "Invitation revoked"
   },
   "meta": {
-    "correlationId": "jExYLXLyyjxpMHAn06TX-",
-    "timestamp": 1792435608240
+    "correlationId": "N9soxYI4WbKPjvklxhObj",
+    "timestamp": 1792520449559
   }
 }
 ```
 
-### PATCH /api/v1/orgs/{orgSlug}/members/me
+### PATCH /api/v1/tenants/{tenantSlug}/members/me
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationController_updateOwnMembership` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization.controller.ts)
+- Operation id `TenantController_updateOwnMembership` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 
 **Request body** (`application/json`, required)
 
@@ -1075,7 +1063,7 @@ Response `201 Created` (application/json):
 | --- | --- | --- | --- |
 | `displayName` | string \| null | yes | length 1–100 |
 
-**Response 200 OK** (`application/json`) — The signed-in member's own membership after setting (or, with null, clearing) their display name in this organization
+**Response 200 OK** (`application/json`) — The signed-in member's own membership after setting (or, with null, clearing) their display name in this tenant
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1084,9 +1072,9 @@ Response `201 Created` (application/json):
 | `data.id` | string (uuid) | yes |  |
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
-| `data.organizationId` | string (uuid) | yes |  |
 | `data.role` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
 | `data.status` | "ACTIVE" \| "SUSPENDED" \| "PENDING" | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
 | `data.updatedAt` | integer | yes |  |
 | `data.userId` | string (uuid) | yes |  |
 
@@ -1101,7 +1089,7 @@ Response `201 Created` (application/json):
 **Example** — called as jonker.owner@melaka-rewards.demo (merchant portal). Jonker Street Kitchen's owner sets her display name; it is trimmed. `{ "displayName": null }` clears it.
 
 ```http
-PATCH /api/v1/orgs/jonker-street-kitchen/members/me
+PATCH /api/v1/tenants/jonker-street-kitchen/members/me
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1119,30 +1107,30 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "id": "019b76da-a800-7d4c-924e-c4e9e246a509",
-    "organizationId": "019b76da-a800-72b9-80b8-91bd729eddbe",
+    "tenantId": "019b76da-a800-72b9-80b8-91bd729eddbe",
     "userId": "019b76da-a800-727d-bf31-03f65b3b9058",
     "role": "OWNER",
     "status": "ACTIVE",
     "displayName": "Siti (Owner)",
     "locationScopeType": "ALL_LOCATIONS",
     "locationIds": [],
-    "createdAt": 1792435514648,
-    "updatedAt": 1792435608523
+    "createdAt": 1792520365968,
+    "updatedAt": 1792520450086
   },
   "meta": {
-    "correlationId": "cZyhFfst2vudg3ng7fT1L",
-    "timestamp": 1792435608528
+    "correlationId": "nb9jhwKqjwmY9XEixcyVs",
+    "timestamp": 1792520450105
   }
 }
 ```
 
-### POST /api/v1/orgs/invites/accept
+### POST /api/v1/tenants/invites/accept
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationTeamInviteController_acceptTeamInvite` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization-team-invite.controller.ts)
+- Operation id `TenantTeamInviteController_acceptTeamInvite` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant-team-invite.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1155,7 +1143,7 @@ Response `200 OK` (application/json):
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.message` | string | yes |  |
-| `data.organizationSlug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
+| `data.tenantSlug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -1168,7 +1156,7 @@ Response `200 OK` (application/json):
 **Example** — called as alice.kl@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/invites/accept
+POST /api/v1/tenants/invites/accept
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1185,23 +1173,22 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "organizationSlug": "brew-bean-kl",
+    "tenantSlug": "brew-bean-kl",
     "message": "Invitation accepted"
   },
   "meta": {
-    "correlationId": "s12Hk5C3f2rUCjxlch5v5",
-    "timestamp": 1792435609212
+    "correlationId": "kbog-btDpkA0F8e0Y_o5O",
+    "timestamp": 1792520450881
   }
 }
 ```
 
-### POST /api/v1/orgs/invites/register-and-accept
+### POST /api/v1/tenants/invites/register-and-accept
 
 - **Public** — no session required.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationTeamInviteController_registerAndAcceptTeamInvite` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization-team-invite.controller.ts)
+- Operation id `TenantTeamInviteController_registerAndAcceptTeamInvite` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant-team-invite.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1218,9 +1205,9 @@ Response `201 Created` (application/json):
 | `data.⟨shape 1⟩ accessToken` | string | yes | Access token — send as `Authorization: Bearer`; length 1–8192 |
 | `data.⟨shape 1⟩ enrollmentReason` | "email_verification" \| "mfa_enrollment" | yes |  |
 | `data.⟨shape 1⟩ message` | string | yes |  |
-| `data.⟨shape 1⟩ organizationSlug` | string | no | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 | `data.⟨shape 1⟩ refreshToken` | string | yes | Refresh token — present once to `POST /auth/refresh`; rotated on every use; length 1–4096 |
 | `data.⟨shape 1⟩ requiresEnrollment` | true | yes |  |
+| `data.⟨shape 1⟩ tenantSlug` | string | no | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 | `data.⟨shape 1⟩ tokenTransport` | "body" | yes | The tokens travel in this body (client type `mobile`) |
 | `data.⟨shape 1⟩ user` | object | no |  |
 | `data.⟨shape 1⟩ user.createdAt` | integer | yes | Epoch milliseconds when the record was created |
@@ -1242,8 +1229,8 @@ Response `201 Created` (application/json):
 | `data.⟨shape 1⟩ user.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 | `data.⟨shape 2⟩ enrollmentReason` | "email_verification" \| "mfa_enrollment" | yes |  |
 | `data.⟨shape 2⟩ message` | string | yes |  |
-| `data.⟨shape 2⟩ organizationSlug` | string | no | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 | `data.⟨shape 2⟩ requiresEnrollment` | true | yes |  |
+| `data.⟨shape 2⟩ tenantSlug` | string | no | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 | `data.⟨shape 2⟩ user` | object | no |  |
 | `data.⟨shape 2⟩ user.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.⟨shape 2⟩ user.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
@@ -1318,7 +1305,7 @@ Response `201 Created` (application/json):
 **Example** — called as barista (merchant portal).
 
 ```http
-POST /api/v1/orgs/invites/register-and-accept
+POST /api/v1/tenants/invites/register-and-accept
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1341,11 +1328,11 @@ Response `201 Created` (application/json):
     "enrollmentReason": "email_verification",
     "message": "Verify your email address to continue.",
     "user": {
-      "createdAt": 1792435609674,
-      "updatedAt": 1792435609674,
+      "createdAt": 1792520451406,
+      "updatedAt": 1792520451406,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a1557c-e053-7041-9410-35c6af01b7ac",
+      "id": "01a15a8b-7557-70c6-aa2d-4bbfaec22e1a",
       "email": "barista.bangsar@kl-rewards.demo",
       "fullName": "Bangsar Barista",
       "isActive": true,
@@ -1356,28 +1343,27 @@ Response `201 Created` (application/json):
       "tokenVersion": 0,
       "roles": [
         {
-          "id": "01a1557a-bbc2-7672-b075-9f725142745f",
+          "id": "01a15a89-6ad6-72cd-8e42-f9e9bfec3693",
           "name": "User",
           "description": "Customer app — own profile and own analytics (no admin panel)"
         }
       ]
     },
-    "organizationSlug": "brew-bean-kl"
+    "tenantSlug": "brew-bean-kl"
   },
   "meta": {
-    "correlationId": "2d5p9UJQYJRLrafO9xEBM",
-    "timestamp": 1792435609823
+    "correlationId": "xETFIkKsujWUbknYRQQvS",
+    "timestamp": 1792520451527
   }
 }
 ```
 
-### POST /api/v1/orgs/invites/validate
+### POST /api/v1/tenants/invites/validate
 
 - **Public** — no session required.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationTeamInviteController_validateTeamInvite` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization-team-invite.controller.ts)
+- Operation id `TenantTeamInviteController_validateTeamInvite` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant-team-invite.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1398,8 +1384,8 @@ Response `201 Created` (application/json):
 | `data.locationLabels[].id` | string (uuid) | yes |  |
 | `data.locationLabels[].name` | string | yes |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
-| `data.organizationDisplayName` | string | yes |  |
-| `data.organizationSlug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
+| `data.tenantDisplayName` | string | yes |  |
+| `data.tenantSlug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -1411,7 +1397,7 @@ Response `201 Created` (application/json):
 **Example** — called as no session.
 
 ```http
-POST /api/v1/orgs/invites/validate
+POST /api/v1/tenants/invites/validate
 X-Client-Type: web
 X-Mutation-Intent: same-origin
 Content-Type: application/json
@@ -1428,8 +1414,8 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "email": "alice.kl@kl-rewards.demo",
-    "organizationDisplayName": "Brew & Bean KL",
-    "organizationSlug": "brew-bean-kl",
+    "tenantDisplayName": "Brew & Bean KL",
+    "tenantSlug": "brew-bean-kl",
     "intendedRole": "CASHIER",
     "locationScopeType": "SELECTED",
     "locationIds": [
@@ -1441,25 +1427,25 @@ Response `201 Created` (application/json):
         "name": "Brew & Bean KL — Bukit Bintang"
       }
     ],
-    "expiresAt": 1793040314664,
+    "expiresAt": 1793125165986,
     "hasExistingAccount": true
   },
   "meta": {
-    "correlationId": "egBleevG1QlzNjIFCvuAx",
-    "timestamp": 1792435608653
+    "correlationId": "3Ybn4erdxKEjX3sswnIRP",
+    "timestamp": 1792520450304
   }
 }
 ```
 
-## Organization memberships
+## Tenant memberships
 
-### GET /api/v1/orgs/memberships
+### GET /api/v1/tenants/memberships
 
-List the current user's organization memberships
+List the current user's tenant memberships
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationMembershipsBootstrapController_listMemberships` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization-memberships.controller.ts)
+- Operation id `MembershipsBootstrapController_listMemberships` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant-memberships.controller.ts)
 
 **Parameters**
 
@@ -1472,7 +1458,7 @@ List the current user's organization memberships
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: none |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 
-**Response 200 OK** (`application/json`) — One page of the current user's organization memberships; pagination is in `meta`
+**Response 200 OK** (`application/json`) — One page of the current user's tenant memberships; pagination is in `meta`
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -1481,9 +1467,9 @@ List the current user's organization memberships
 | `data[].displayName` | string | yes |  |
 | `data[].kybStatus` | "PENDING" \| "APPROVED" \| "REJECTED" \| "ACTION_REQUIRED" | yes |  |
 | `data[].lifecycleState` | "PROVISIONING" \| "ACTIVE" \| "RESTRICTED" \| "SUSPENDED" \| "PENDING_DELETION" \| "DELETED" | yes |  |
-| `data[].organizationId` | string (uuid) | yes |  |
-| `data[].organizationSlug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 | `data[].role` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
+| `data[].tenantId` | string (uuid) | yes |  |
+| `data[].tenantSlug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
 | `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
 | `meta.limit` | integer | yes | Items per page; range 1–100 |
@@ -1503,7 +1489,7 @@ List the current user's organization memberships
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/memberships
+GET /api/v1/tenants/memberships
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -1515,13 +1501,13 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-      "organizationSlug": "brew-bean-kl",
+      "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+      "tenantSlug": "brew-bean-kl",
       "displayName": "Brew & Bean KL",
       "role": "OWNER",
       "kybStatus": "APPROVED",
       "lifecycleState": "ACTIVE",
-      "createdAt": 1792435514638
+      "createdAt": 1792520365955
     }
   ],
   "meta": {
@@ -1532,23 +1518,22 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "1zchVpZ2USvmduzXQOc39",
-    "timestamp": 1792435604969
+    "correlationId": "AAAjvGp9RR95ojZRet34s",
+    "timestamp": 1792520445567
   }
 }
 ```
 
-## Organization Onboarding
+## Tenant Onboarding
 
-### POST /api/v1/orgs/onboarding/complete
+### POST /api/v1/tenants/onboarding/complete
 
 Complete merchant onboarding — links OWNER membership and platform User role
 
 - **Public** — no session required.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `MerchantOnboardingController_completeOnboarding` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-onboarding.controller.ts)
+- Operation id `MerchantOnboardingController_completeOnboarding` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/merchant-onboarding.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1571,14 +1556,14 @@ Complete merchant onboarding — links OWNER membership and platform User role
 | `taxId` | string | yes | length 1–100 |
 | `token` | string | yes | at least 1 characters |
 
-**Response 201 Created** (`application/json`) — Organization linked to the account
+**Response 201 Created** (`application/json`) — Tenant linked to the account
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.businessName` | string | yes |  |
-| `data.organizationId` | string (uuid) | yes |  |
-| `data.organizationSlug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 | `data.role` | "OWNER" \| "CASHIER" | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
+| `data.tenantSlug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -1590,7 +1575,7 @@ Complete merchant onboarding — links OWNER membership and platform User role
 **Example** — called as nyonya.house@melaka-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/onboarding/complete
+POST /api/v1/tenants/onboarding/complete
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1619,27 +1604,26 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "organizationId": "01a1557c-c113-7083-94bf-ff330c46bb32",
-    "organizationSlug": "nyonya-house-melaka",
+    "tenantId": "01a15a8b-5152-7a50-8d1e-08544d56cbad",
+    "tenantSlug": "nyonya-house-melaka",
     "businessName": "Nyonya House Melaka",
     "role": "OWNER"
   },
   "meta": {
-    "correlationId": "Mv4zf_D8Ze_eK4aKEtB8p",
-    "timestamp": 1792435602435
+    "correlationId": "zkurZE_Qya6-sINpzAnLc",
+    "timestamp": 1792520442946
   }
 }
 ```
 
-### POST /api/v1/orgs/onboarding/documents/status
+### POST /api/v1/tenants/onboarding/documents/status
 
 Scan status of this onboarding's KYB uploads (same document window as the upload endpoints)
 
 - **Public** — no session required.
 - Rate limit: 30 requests per `THROTTLE_TTL_MS` ms per client IP (strict limiter).
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `MerchantOnboardingController_documentStatus` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-onboarding.controller.ts)
+- Operation id `MerchantOnboardingController_documentStatus` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/merchant-onboarding.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1670,7 +1654,7 @@ Scan status of this onboarding's KYB uploads (same document window as the upload
 **Example** — called as no session.
 
 ```http
-POST /api/v1/orgs/onboarding/documents/status
+POST /api/v1/tenants/onboarding/documents/status
 X-Client-Type: web
 X-Mutation-Intent: same-origin
 Content-Type: application/json
@@ -1678,8 +1662,8 @@ Content-Type: application/json
 {
   "token": "<redacted: one-time secret>",
   "fileIds": [
-    "01a1557c-c423-70c9-babb-8e4c0774309d",
-    "01a1557c-c4bc-79a6-8c6c-8720e1a5f142"
+    "01a15a8b-5459-7f11-aef5-207cd01084a4",
+    "01a15a8b-54d9-724c-a814-7f768172e951"
   ]
 }
 ```
@@ -1692,39 +1676,38 @@ Response `201 Created` (application/json):
   "data": {
     "documents": [
       {
-        "id": "01a1557c-c423-70c9-babb-8e4c0774309d",
+        "id": "01a15a8b-5459-7f11-aef5-207cd01084a4",
         "fileName": "sample.png",
         "mimeType": "image/png",
         "sizeBytes": 2004,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1792435602470
+        "uploadedAt": 1792520442970
       },
       {
-        "id": "01a1557c-c4bc-79a6-8c6c-8720e1a5f142",
+        "id": "01a15a8b-54d9-724c-a814-7f768172e951",
         "fileName": "sample.png",
         "mimeType": "image/png",
         "sizeBytes": 2004,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1792435602623
+        "uploadedAt": 1792520443098
       }
     ]
   },
   "meta": {
-    "correlationId": "cMg7r9YWqWi-qq3It1DYX",
-    "timestamp": 1792435604285
+    "correlationId": "ERGNJhw8Hoa-i972yBFvo",
+    "timestamp": 1792520444789
   }
 }
 ```
 
-### POST /api/v1/orgs/onboarding/documents/submit
+### POST /api/v1/tenants/onboarding/documents/submit
 
 Attach onboarding KYB documents and submit the merchant for admin review
 
 - **Public** — no session required.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `MerchantOnboardingController_submitDocuments` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-onboarding.controller.ts)
+- Operation id `MerchantOnboardingController_submitDocuments` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/merchant-onboarding.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1749,7 +1732,7 @@ Attach onboarding KYB documents and submit the merchant for admin review
 **Example** — called as no session.
 
 ```http
-POST /api/v1/orgs/onboarding/documents/submit
+POST /api/v1/tenants/onboarding/documents/submit
 X-Client-Type: web
 X-Mutation-Intent: same-origin
 Content-Type: application/json
@@ -1757,8 +1740,8 @@ Content-Type: application/json
 {
   "token": "<redacted: one-time secret>",
   "documentFileIds": [
-    "01a1557c-c423-70c9-babb-8e4c0774309d",
-    "01a1557c-c4bc-79a6-8c6c-8720e1a5f142"
+    "01a15a8b-5459-7f11-aef5-207cd01084a4",
+    "01a15a8b-54d9-724c-a814-7f768172e951"
   ]
 }
 ```
@@ -1772,21 +1755,20 @@ Response `201 Created` (application/json):
     "success": true
   },
   "meta": {
-    "correlationId": "8W0cmxDGG5JNfi-7YwaAo",
-    "timestamp": 1792435604363
+    "correlationId": "OCZV7h4Y4voBII92LuBuY",
+    "timestamp": 1792520444975
   }
 }
 ```
 
-### POST /api/v1/orgs/onboarding/documents/upload-complete
+### POST /api/v1/tenants/onboarding/documents/upload-complete
 
 Complete an invite-authorized KYB document upload
 
 - **Public** — no session required.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `MerchantOnboardingController_completeDocumentUpload` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-onboarding.controller.ts)
+- Operation id `MerchantOnboardingController_completeDocumentUpload` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/merchant-onboarding.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1822,14 +1804,14 @@ Complete an invite-authorized KYB document upload
 **Example** — called as no session.
 
 ```http
-POST /api/v1/orgs/onboarding/documents/upload-complete
+POST /api/v1/tenants/onboarding/documents/upload-complete
 X-Client-Type: web
 X-Mutation-Intent: same-origin
 Content-Type: application/json
 
 {
   "token": "<redacted: one-time secret>",
-  "fileId": "01a1557c-c423-70c9-babb-8e4c0774309d",
+  "fileId": "01a15a8b-5459-7f11-aef5-207cd01084a4",
   "checksumSha256": "79dc184da4077faf9a1025d14d8cc30faceea511c4fee4ba4deb4de2d486a8a2"
 }
 ```
@@ -1841,7 +1823,7 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "file": {
-      "id": "01a1557c-c423-70c9-babb-8e4c0774309d",
+      "id": "01a15a8b-5459-7f11-aef5-207cd01084a4",
       "category": "MERCHANT_KYB",
       "visibility": "PRIVATE",
       "originalName": "sample.png",
@@ -1850,25 +1832,24 @@ Response `201 Created` (application/json):
       "status": "SCANNING",
       "scanStatus": "SCANNING",
       "publicUrl": null,
-      "uploadedAt": 1792435602470
+      "uploadedAt": 1792520442970
     }
   },
   "meta": {
-    "correlationId": "nOVu4mXvESRe5PCeP9pVZ",
-    "timestamp": 1792435602595
+    "correlationId": "Ybz4KSrjUp-yJO4QfdKGD",
+    "timestamp": 1792520443074
   }
 }
 ```
 
-### POST /api/v1/orgs/onboarding/documents/upload-complete-batch
+### POST /api/v1/tenants/onboarding/documents/upload-complete-batch
 
 Complete invite-authorized KYB document uploads in one request
 
 - **Public** — no session required.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `MerchantOnboardingController_completeDocumentUploads` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-onboarding.controller.ts)
+- Operation id `MerchantOnboardingController_completeDocumentUploads` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/merchant-onboarding.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1895,7 +1876,7 @@ Complete invite-authorized KYB document uploads in one request
 **Example** — called as no session.
 
 ```http
-POST /api/v1/orgs/onboarding/documents/upload-complete-batch
+POST /api/v1/tenants/onboarding/documents/upload-complete-batch
 X-Client-Type: web
 X-Mutation-Intent: same-origin
 Content-Type: application/json
@@ -1904,7 +1885,7 @@ Content-Type: application/json
   "token": "<redacted: one-time secret>",
   "completions": [
     {
-      "fileId": "01a1557c-c4bc-79a6-8c6c-8720e1a5f142",
+      "fileId": "01a15a8b-54d9-724c-a814-7f768172e951",
       "checksumSha256": "79dc184da4077faf9a1025d14d8cc30faceea511c4fee4ba4deb4de2d486a8a2"
     }
   ]
@@ -1918,25 +1899,24 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "fileIds": [
-      "01a1557c-c4bc-79a6-8c6c-8720e1a5f142"
+      "01a15a8b-54d9-724c-a814-7f768172e951"
     ]
   },
   "meta": {
-    "correlationId": "r3FFyBj2hK3eltZPBM4qu",
-    "timestamp": 1792435602712
+    "correlationId": "JHR5I1QO3S5lu9idxJc-y",
+    "timestamp": 1792520443219
   }
 }
 ```
 
-### POST /api/v1/orgs/onboarding/documents/upload-url
+### POST /api/v1/tenants/onboarding/documents/upload-url
 
 Create an invite-authorized KYB document upload ticket
 
 - **Public** — no session required.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `MerchantOnboardingController_createDocumentUploadUrl` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-onboarding.controller.ts)
+- Operation id `MerchantOnboardingController_createDocumentUploadUrl` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/merchant-onboarding.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -1970,7 +1950,7 @@ Create an invite-authorized KYB document upload ticket
 **Example** — called as no session.
 
 ```http
-POST /api/v1/orgs/onboarding/documents/upload-url
+POST /api/v1/tenants/onboarding/documents/upload-url
 X-Client-Type: web
 X-Mutation-Intent: same-origin
 Content-Type: application/json
@@ -1990,32 +1970,31 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "fileId": "01a1557c-c423-70c9-babb-8e4c0774309d",
-    "objectPath": "staging/kyb/01a1557c-c113-7083-94bf-ff330c46bb32/01a1557c-c423-70c9-babb-8e4c0774309d-sample.png",
+    "fileId": "01a15a8b-5459-7f11-aef5-207cd01084a4",
+    "objectPath": "staging/kyb/01a15a8b-5152-7a50-8d1e-08544d56cbad/01a15a8b-5459-7f11-aef5-207cd01084a4-sample.png",
     "expiresIn": 300,
     "method": "POST_MULTIPART",
-    "uploadUrl": "http://10.155.3.236:8097/api/v1/files/01a1557c-c423-70c9-babb-8e4c0774309d/local-upload",
+    "uploadUrl": "http://192.168.100.23:8097/api/v1/files/01a15a8b-5459-7f11-aef5-207cd01084a4/local-upload",
     "fields": {
-      "key": "staging/kyb/01a1557c-c113-7083-94bf-ff330c46bb32/01a1557c-c423-70c9-babb-8e4c0774309d-sample.png",
+      "key": "staging/kyb/01a15a8b-5152-7a50-8d1e-08544d56cbad/01a15a8b-5459-7f11-aef5-207cd01084a4-sample.png",
       "token": "<redacted: one-time secret>"
     }
   },
   "meta": {
-    "correlationId": "Kqi6e6ZZ0VIt-DjxsJxHY",
-    "timestamp": 1792435602477
+    "correlationId": "Y0uPp9KDcOOpx8VyOtAKw",
+    "timestamp": 1792520442973
   }
 }
 ```
 
-### POST /api/v1/orgs/onboarding/documents/upload-urls
+### POST /api/v1/tenants/onboarding/documents/upload-urls
 
 Create invite-authorized KYB document upload tickets in one request
 
 - **Public** — no session required.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `MerchantOnboardingController_createDocumentUploadUrls` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-onboarding.controller.ts)
+- Operation id `MerchantOnboardingController_createDocumentUploadUrls` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/merchant-onboarding.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -2051,7 +2030,7 @@ Create invite-authorized KYB document upload tickets in one request
 **Example** — called as no session.
 
 ```http
-POST /api/v1/orgs/onboarding/documents/upload-urls
+POST /api/v1/tenants/onboarding/documents/upload-urls
 X-Client-Type: web
 X-Mutation-Intent: same-origin
 Content-Type: application/json
@@ -2077,34 +2056,33 @@ Response `201 Created` (application/json):
   "data": {
     "uploads": [
       {
-        "fileId": "01a1557c-c4bc-79a6-8c6c-8720e1a5f142",
-        "objectPath": "staging/kyb/01a1557c-c113-7083-94bf-ff330c46bb32/01a1557c-c4bc-79a6-8c6c-8720e1a5f142-sample.png",
+        "fileId": "01a15a8b-54d9-724c-a814-7f768172e951",
+        "objectPath": "staging/kyb/01a15a8b-5152-7a50-8d1e-08544d56cbad/01a15a8b-54d9-724c-a814-7f768172e951-sample.png",
         "expiresIn": 300,
         "method": "POST_MULTIPART",
-        "uploadUrl": "http://10.155.3.236:8097/api/v1/files/01a1557c-c4bc-79a6-8c6c-8720e1a5f142/local-upload",
+        "uploadUrl": "http://192.168.100.23:8097/api/v1/files/01a15a8b-54d9-724c-a814-7f768172e951/local-upload",
         "fields": {
-          "key": "staging/kyb/01a1557c-c113-7083-94bf-ff330c46bb32/01a1557c-c4bc-79a6-8c6c-8720e1a5f142-sample.png",
+          "key": "staging/kyb/01a15a8b-5152-7a50-8d1e-08544d56cbad/01a15a8b-54d9-724c-a814-7f768172e951-sample.png",
           "token": "<redacted: one-time secret>"
         }
       }
     ]
   },
   "meta": {
-    "correlationId": "lPkjLN_nG2VmlWd6MIoYg",
-    "timestamp": 1792435602624
+    "correlationId": "XkylYPskNRSnIb2jhyuJM",
+    "timestamp": 1792520443101
   }
 }
 ```
 
-### POST /api/v1/orgs/onboarding/validate
+### POST /api/v1/tenants/onboarding/validate
 
 Validate a merchant onboarding invite token
 
 - **Public** — no session required.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `MerchantOnboardingController_validateInvite` · [source](../../../apps/api/src/contexts/organizations/presentation/http/merchant-onboarding.controller.ts)
+- Operation id `MerchantOnboardingController_validateInvite` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/merchant-onboarding.controller.ts)
 
 **Request body** (`application/json`, required)
 
@@ -2132,7 +2110,7 @@ Validate a merchant onboarding invite token
 **Example** — called as no session.
 
 ```http
-POST /api/v1/orgs/onboarding/validate
+POST /api/v1/tenants/onboarding/validate
 X-Client-Type: web
 X-Mutation-Intent: same-origin
 Content-Type: application/json
@@ -2151,34 +2129,33 @@ Response `201 Created` (application/json):
     "email": "nyonya.house@melaka-rewards.demo",
     "businessName": "Nyonya House Melaka",
     "city": "MELAKA",
-    "expiresAt": 1793040401683,
+    "expiresAt": 1793125242194,
     "hasExistingAccount": false
   },
   "meta": {
-    "correlationId": "6_P28p2mCZUJw6sBFmF3B",
-    "timestamp": 1792435601958
+    "correlationId": "uhfqvuw5SyOWEisH7o-et",
+    "timestamp": 1792520442432
   }
 }
 ```
 
-## Organization KYB
+## Tenant KYB
 
-### GET /api/v1/orgs/{orgSlug}/kyb
+### GET /api/v1/tenants/{tenantSlug}/kyb
 
-Get the organization KYB profile (owner only)
+Get the tenant KYB profile (owner only)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationKybController_getProfile` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization-kyb.controller.ts)
+- Operation id `TenantKybController_getProfile` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant-kyb.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 
-**Response 200 OK** (`application/json`) — Organization KYB profile
+**Response 200 OK** (`application/json`) — Tenant KYB profile
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2197,8 +2174,8 @@ Get the organization KYB profile (owner only)
 | `data.kybFields` | any JSON \| null | yes |  |
 | `data.kybStatus` | "PENDING" \| "APPROVED" \| "REJECTED" \| "ACTION_REQUIRED" | yes |  |
 | `data.legalName` | string \| null | yes |  |
-| `data.organizationId` | string (uuid) | yes |  |
 | `data.status` | "ONBOARDING" \| "ACTIVE" \| "SUSPENDED" | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -2211,7 +2188,7 @@ Get the organization KYB profile (owner only)
 **Example** — called as nyonya.house@melaka-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/nyonya-house-melaka/kyb
+GET /api/v1/tenants/nyonya-house-melaka/kyb
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -2222,7 +2199,7 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "organizationId": "01a1557c-c113-7083-94bf-ff330c46bb32",
+    "tenantId": "01a15a8b-5152-7a50-8d1e-08544d56cbad",
     "businessName": "Nyonya House Melaka",
     "legalName": "Nyonya House Melaka Sdn Bhd",
     "addressText": "88 Jalan Hang Jebat, 75200 Melaka",
@@ -2232,53 +2209,52 @@ Response `200 OK` (application/json):
     "kybStatus": "PENDING",
     "kybFields": {
       "taxId": "C2584563202",
-      "submittedAt": 1792435602369,
+      "submittedAt": 1792520442884,
       "documentType": "SSM",
       "registrationNo": "202601012345"
     },
     "documents": [
       {
-        "id": "01a1557c-c423-70c9-babb-8e4c0774309d",
+        "id": "01a15a8b-5459-7f11-aef5-207cd01084a4",
         "fileName": "sample.png",
         "mimeType": "image/png",
         "sizeBytes": 2004,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1792435602470
+        "uploadedAt": 1792520442970
       },
       {
-        "id": "01a1557c-c4bc-79a6-8c6c-8720e1a5f142",
+        "id": "01a15a8b-54d9-724c-a814-7f768172e951",
         "fileName": "sample.png",
         "mimeType": "image/png",
         "sizeBytes": 2004,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1792435602623
+        "uploadedAt": 1792520443098
       }
     ],
     "status": "ACTIVE"
   },
   "meta": {
-    "correlationId": "HNCIdO-1IOxcpe2H_4tm0",
-    "timestamp": 1792435607119
+    "correlationId": "gx-MrUx7dhoPpnD6Jchp3",
+    "timestamp": 1792520447865
   }
 }
 ```
 
-### PATCH /api/v1/orgs/{orgSlug}/kyb
+### PATCH /api/v1/tenants/{tenantSlug}/kyb
 
 Submit or resubmit business verification details (owner only)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationKybController_submitKyb` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization-kyb.controller.ts)
+- Operation id `TenantKybController_submitKyb` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant-kyb.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 
 **Request body** (`application/json`, required)
 
@@ -2293,7 +2269,7 @@ Submit or resubmit business verification details (owner only)
 | `registrationNo` | string | yes | length 1–100 |
 | `taxId` | string | yes | length 1–100 |
 
-**Response 200 OK** (`application/json`) — Updated organization KYB profile
+**Response 200 OK** (`application/json`) — Updated tenant KYB profile
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2312,8 +2288,8 @@ Submit or resubmit business verification details (owner only)
 | `data.kybFields` | any JSON \| null | yes |  |
 | `data.kybStatus` | "PENDING" \| "APPROVED" \| "REJECTED" \| "ACTION_REQUIRED" | yes |  |
 | `data.legalName` | string \| null | yes |  |
-| `data.organizationId` | string (uuid) | yes |  |
 | `data.status` | "ONBOARDING" \| "ACTIVE" \| "SUSPENDED" | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -2326,7 +2302,7 @@ Submit or resubmit business verification details (owner only)
 **Example** — called as nyonya.house@melaka-rewards.demo (merchant portal).
 
 ```http
-PATCH /api/v1/orgs/nyonya-house-melaka/kyb
+PATCH /api/v1/tenants/nyonya-house-melaka/kyb
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -2341,8 +2317,8 @@ Content-Type: application/json
   "addressText": "88 Jalan Hang Jebat, 75200 Melaka",
   "contactPhone": "+60 6-282 1234",
   "documentFileIds": [
-    "01a1557c-c423-70c9-babb-8e4c0774309d",
-    "01a1557c-c4bc-79a6-8c6c-8720e1a5f142"
+    "01a15a8b-5459-7f11-aef5-207cd01084a4",
+    "01a15a8b-54d9-724c-a814-7f768172e951"
   ]
 }
 ```
@@ -2353,7 +2329,7 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "organizationId": "01a1557c-c113-7083-94bf-ff330c46bb32",
+    "tenantId": "01a15a8b-5152-7a50-8d1e-08544d56cbad",
     "businessName": "Nyonya House Melaka",
     "legalName": "Nyonya House Melaka Sdn Bhd",
     "addressText": "88 Jalan Hang Jebat, 75200 Melaka",
@@ -2363,51 +2339,50 @@ Response `200 OK` (application/json):
     "kybStatus": "PENDING",
     "kybFields": {
       "taxId": "C2584563202",
-      "submittedAt": 1792435607216,
+      "submittedAt": 1792520448029,
       "documentType": "SSM",
       "registrationNo": "202601012345"
     },
     "documents": [
       {
-        "id": "01a1557c-c423-70c9-babb-8e4c0774309d",
+        "id": "01a15a8b-5459-7f11-aef5-207cd01084a4",
         "fileName": "sample.png",
         "mimeType": "image/png",
         "sizeBytes": 2004,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1792435602470
+        "uploadedAt": 1792520442970
       },
       {
-        "id": "01a1557c-c4bc-79a6-8c6c-8720e1a5f142",
+        "id": "01a15a8b-54d9-724c-a814-7f768172e951",
         "fileName": "sample.png",
         "mimeType": "image/png",
         "sizeBytes": 2004,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1792435602623
+        "uploadedAt": 1792520443098
       }
     ],
     "status": "ACTIVE"
   },
   "meta": {
-    "correlationId": "Mv_-w1FFWkbfwX8Uks-Ln",
-    "timestamp": 1792435607238
+    "correlationId": "FKLnX3d-iIqQk0-H6GSP_",
+    "timestamp": 1792520448055
   }
 }
 ```
 
-### GET /api/v1/orgs/{orgSlug}/kyb/documents/{documentId}/download
+### GET /api/v1/tenants/{tenantSlug}/kyb/documents/{documentId}/download
 
 Get a short-lived signed download URL for a CLEAN KYB document (owner only)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationKybController_downloadDocument` · [source](../../../apps/api/src/contexts/organizations/presentation/http/organization-kyb.controller.ts)
+- Operation id `TenantKybController_downloadDocument` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/tenant-kyb.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `documentId` | path | string (uuid) | yes |  |
 | `disposition` | query | "inline" \| "attachment" | no |  |
 
@@ -2431,7 +2406,7 @@ Get a short-lived signed download URL for a CLEAN KYB document (owner only)
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/kyb/documents/019b76da-a800-7159-b799-9b0589c815e1/download
+GET /api/v1/tenants/brew-bean-kl/kyb/documents/019b76da-a800-7159-b799-9b0589c815e1/download
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -2444,33 +2419,31 @@ Response `200 OK` (application/json):
   "data": {
     "documentId": "019b76da-a800-7159-b799-9b0589c815e1",
     "scanStatus": "SCANNING",
-    "downloadUrl": "http://10.155.3.236:8097/api/v1/files/local-download?token=<redacted>",
-    "expiresAt": 1792435905758
+    "downloadUrl": "http://192.168.100.23:8097/api/v1/files/local-download?token=<redacted>",
+    "expiresAt": 1792520746542
   },
   "meta": {
-    "correlationId": "G4PqKpfAXzvK2R1zZGAMW",
-    "timestamp": 1792435605758
+    "correlationId": "wNt0hRd8pzgifjdUoMD59",
+    "timestamp": 1792520446542
   }
 }
 ```
 
-## Organization Rewards
+## Tenant Rewards
 
-### GET /api/v1/orgs/{orgSlug}/rewards
+### GET /api/v1/tenants/{tenantSlug}/rewards
 
-List organization rewards
+List tenant rewards
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
-- Also accepts an **INTEGRATION-scope merchant API key**.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationRewardsController_listRewards` · [source](../../../apps/api/src/contexts/rewards/presentation/http/organization-rewards.controller.ts)
+- Operation id `TenantRewardsController_listRewards` · [source](../../../apps/api/src/contexts/rewards/presentation/http/tenant-rewards.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `page` | query | integer | no | Page number (1-indexed) for offset pagination |
 | `limit` | query | integer | no | Page size (default 20, max 100) |
 | `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
@@ -2478,7 +2451,7 @@ List organization rewards
 | `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status |
 | `locationId` | query | string (uuid) | no |  |
 
-**Response 200 OK** (`application/json`) — One page of the organization's rewards; pagination is in `meta`
+**Response 200 OK** (`application/json`) — One page of the tenant's rewards; pagination is in `meta`
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -2502,12 +2475,6 @@ List organization rewards
 | `data[].locationIds` | string (uuid)[] | yes |  |
 | `data[].locationNames` | string[] | no |  |
 | `data[].locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
-| `data[].organizationId` | string (uuid) | yes |  |
-| `data[].organizationLogoSources` | object[] | yes |  |
-| `data[].organizationLogoSources[].url` | string (uri) | yes |  |
-| `data[].organizationLogoSources[].width` | integer | yes |  |
-| `data[].organizationLogoUrl` | string (uri) \| null | yes |  |
-| `data[].organizationName` | string | no |  |
 | `data[].quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data[].quantityReserved` | integer | yes | min -9007199254740991 |
 | `data[].quantityTotal` | integer | yes | min -9007199254740991 |
@@ -2525,6 +2492,12 @@ List organization rewards
 | `data[].shareUrl` | string (uri) | no |  |
 | `data[].startDate` | integer \| null | yes |  |
 | `data[].status` | "DRAFT" \| "PENDING_REVIEW" \| "PUBLISHED" \| "EXPIRED" \| "DISABLED" | yes |  |
+| `data[].tenantId` | string (uuid) | yes |  |
+| `data[].tenantLogoSources` | object[] | yes |  |
+| `data[].tenantLogoSources[].url` | string (uri) | yes |  |
+| `data[].tenantLogoSources[].width` | integer | yes |  |
+| `data[].tenantLogoUrl` | string (uri) \| null | yes |  |
+| `data[].tenantName` | string | no |  |
 | `data[].termsConditions` | string \| null | yes |  |
 | `data[].title` | string | yes |  |
 | `data[].updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
@@ -2547,7 +2520,7 @@ List organization rewards
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/rewards
+GET /api/v1/tenants/brew-bean-kl/rewards
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -2559,15 +2532,15 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792435551088,
-      "updatedAt": 1792435551088,
+      "createdAt": 1792520395167,
+      "updatedAt": 1792520395167,
       "isDeleted": false,
       "deletedAt": null,
       "id": "019b76da-a800-75d7-95fa-18e695a7ff33",
-      "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-      "organizationName": "Brew & Bean KL",
-      "organizationLogoUrl": null,
-      "organizationLogoSources": [],
+      "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+      "tenantName": "Brew & Bean KL",
+      "tenantLogoUrl": null,
+      "tenantLogoSources": [],
       "title": "Free cake for every visit",
       "description": "Unlimited free cake with any purchase.",
       "rewardType": "FREE_ITEM",
@@ -2578,17 +2551,17 @@ Response `200 OK` (application/json):
       "images": [
         {
           "fileId": "019b76da-a800-7d08-8be5-bc0104035de1",
-          "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/UHD/local-public",
+          "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/UHD/local-public",
           "width": 3840,
           "height": 2160,
           "sources": [
             {
               "width": 640,
-              "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/THUMBNAIL/local-public"
+              "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/THUMBNAIL/local-public"
             },
             {
               "width": 1280,
-              "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/MEDIUM/local-public"
+              "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/MEDIUM/local-public"
             }
           ]
         }
@@ -2597,7 +2570,7 @@ Response `200 OK` (application/json):
       "quantityRemaining": 500,
       "quantityReserved": 0,
       "startDate": null,
-      "expiryDate": 1795027514222,
+      "expiryDate": 1795112365388,
       "status": "DRAFT",
       "claimCount": 0,
       "redemptionCount": 0,
@@ -2610,15 +2583,15 @@ Response `200 OK` (application/json):
       "locationIds": []
     },
     {
-      "createdAt": 1792435550899,
-      "updatedAt": 1792435551075,
+      "createdAt": 1792520394700,
+      "updatedAt": 1792520395154,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a1557b-fab2-7310-b3dc-36fe4e734701",
-      "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-      "organizationName": "Brew & Bean KL",
-      "organizationLogoUrl": null,
-      "organizationLogoSources": [],
+      "id": "01a15a8a-97cb-776a-a101-cfa104596bd9",
+      "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+      "tenantName": "Brew & Bean KL",
+      "tenantLogoUrl": null,
+      "tenantLogoSources": [],
       "title": "Wellness: Free yoga class voucher",
       "description": "One free drop-in class at our partner yoga studio next door.",
       "rewardType": "FREE_ITEM",
@@ -2629,17 +2602,17 @@ Response `200 OK` (application/json):
       "images": [
         {
           "fileId": "019b76da-a800-7cce-a513-c34650bd2a0e",
-          "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7cce-a513-c34650bd2a0e/variants/UHD/local-public",
+          "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7cce-a513-c34650bd2a0e/variants/UHD/local-public",
           "width": 3840,
           "height": 2160,
           "sources": [
             {
               "width": 640,
-              "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7cce-a513-c34650bd2a0e/variants/THUMBNAIL/local-public"
+              "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7cce-a513-c34650bd2a0e/variants/THUMBNAIL/local-public"
             },
             {
               "width": 1280,
-              "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7cce-a513-c34650bd2a0e/variants/MEDIUM/local-public"
+              "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7cce-a513-c34650bd2a0e/variants/MEDIUM/local-public"
             }
           ]
         }
@@ -2648,7 +2621,7 @@ Response `200 OK` (application/json):
       "quantityRemaining": 20,
       "quantityReserved": 1,
       "startDate": null,
-      "expiryDate": 1796323550898,
+      "expiryDate": 1796408394698,
       "status": "PUBLISHED",
       "claimCount": 0,
       "redemptionCount": 0,
@@ -2669,29 +2642,27 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "K5sKBt1dL5-JSPYvBTV0Y",
-    "timestamp": 1792435610819
+    "correlationId": "lKvhvr5HfaC4fd4DNZnGQ",
+    "timestamp": 1792520452643
   }
 }
 ```
 
-### POST /api/v1/orgs/{orgSlug}/rewards
+### POST /api/v1/tenants/{tenantSlug}/rewards
 
 Create a draft reward
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
-- Also accepts an **INTEGRATION-scope merchant API key**.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationRewardsController_createReward` · [source](../../../apps/api/src/contexts/rewards/presentation/http/organization-rewards.controller.ts)
+- Operation id `TenantRewardsController_createReward` · [source](../../../apps/api/src/contexts/rewards/presentation/http/tenant-rewards.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 
 **Request body** (`application/json`, required)
 
@@ -2740,12 +2711,6 @@ Create a draft reward
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
-| `data.organizationId` | string (uuid) | yes |  |
-| `data.organizationLogoSources` | object[] | yes |  |
-| `data.organizationLogoSources[].url` | string (uri) | yes |  |
-| `data.organizationLogoSources[].width` | integer | yes |  |
-| `data.organizationLogoUrl` | string (uri) \| null | yes |  |
-| `data.organizationName` | string | no |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |
@@ -2763,6 +2728,12 @@ Create a draft reward
 | `data.shareUrl` | string (uri) | no |  |
 | `data.startDate` | integer \| null | yes |  |
 | `data.status` | "DRAFT" \| "PENDING_REVIEW" \| "PUBLISHED" \| "EXPIRED" \| "DISABLED" | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
+| `data.tenantLogoSources` | object[] | yes |  |
+| `data.tenantLogoSources[].url` | string (uri) | yes |  |
+| `data.tenantLogoSources[].width` | integer | yes |  |
+| `data.tenantLogoUrl` | string (uri) \| null | yes |  |
+| `data.tenantName` | string | no |  |
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
@@ -2778,7 +2749,7 @@ Create a draft reward
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/rewards
+POST /api/v1/tenants/brew-bean-kl/rewards
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -2786,7 +2757,7 @@ Content-Type: application/json
 
 {
   "imageFileIds": [
-    "01a1557c-e595-73bc-9e96-5c157329d77c"
+    "01a15a8b-7b4f-7637-b0d1-a42f040b6e31"
   ],
   "title": "Free Kopi O with any breakfast set",
   "description": "One free Kopi O when you order any breakfast set at Brew & Bean KL.",
@@ -2794,8 +2765,8 @@ Content-Type: application/json
   "rewardType": "FREE_ITEM",
   "rewardValue": 6,
   "quantityTotal": 200,
-  "startDate": 1792435612648,
-  "expiryDate": 1797619612648,
+  "startDate": 1792520454635,
+  "expiryDate": 1797704454635,
   "locationScopeType": "ALL_LOCATIONS",
   "rules": {
     "maxUsePerUser": 1,
@@ -2814,15 +2785,15 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792435612778,
-    "updatedAt": 1792435612807,
+    "createdAt": 1792520454844,
+    "updatedAt": 1792520454916,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a1557c-ec6c-7c5c-983d-6cd525177f31",
-    "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-    "organizationName": "Brew & Bean KL",
-    "organizationLogoUrl": null,
-    "organizationLogoSources": [],
+    "id": "01a15a8b-82c6-7486-a020-2dc6156d2593",
+    "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+    "tenantName": "Brew & Bean KL",
+    "tenantLogoUrl": null,
+    "tenantLogoSources": [],
     "title": "Free Kopi O with any breakfast set",
     "description": "One free Kopi O when you order any breakfast set at Brew & Bean KL.",
     "rewardType": "FREE_ITEM",
@@ -2832,18 +2803,18 @@ Response `201 Created` (application/json):
     "category": "cafe",
     "images": [
       {
-        "fileId": "01a1557c-e595-73bc-9e96-5c157329d77c",
-        "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/LARGE/local-public",
+        "fileId": "01a15a8b-7b4f-7637-b0d1-a42f040b6e31",
+        "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/LARGE/local-public",
         "width": 1920,
         "height": 1080,
         "sources": [
           {
             "width": 640,
-            "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/THUMBNAIL/local-public"
+            "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/THUMBNAIL/local-public"
           },
           {
             "width": 1280,
-            "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/MEDIUM/local-public"
+            "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/MEDIUM/local-public"
           }
         ]
       }
@@ -2851,15 +2822,15 @@ Response `201 Created` (application/json):
     "quantityTotal": 200,
     "quantityRemaining": 200,
     "quantityReserved": 0,
-    "startDate": 1792435612648,
-    "expiryDate": 1797619612648,
+    "startDate": 1792520454635,
+    "expiryDate": 1797704454635,
     "status": "DRAFT",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "01a1557c-ec6d-755c-8669-5f451d8efaac",
+    "referrerRewardId": "01a15a8b-82c6-7d80-9792-bf78bab3e1d2",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -2868,27 +2839,25 @@ Response `201 Created` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "UhaKoDxzrorBhMBtptRY1",
-    "timestamp": 1792435612845
+    "correlationId": "JOKbDsqF626kbMgjlqWu9",
+    "timestamp": 1792520455047
   }
 }
 ```
 
-### GET /api/v1/orgs/{orgSlug}/rewards/{rewardId}
+### GET /api/v1/tenants/{tenantSlug}/rewards/{rewardId}
 
-Read one organization reward (404 when not offered at any of the caller's stores)
+Read one tenant reward (404 when not offered at any of the caller's stores)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
-- Also accepts an **INTEGRATION-scope merchant API key**.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationRewardsController_getReward` · [source](../../../apps/api/src/contexts/rewards/presentation/http/organization-rewards.controller.ts)
+- Operation id `TenantRewardsController_getReward` · [source](../../../apps/api/src/contexts/rewards/presentation/http/tenant-rewards.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `rewardId` | path | string (uuid) | yes |  |
 
 **Response 200 OK** (`application/json`) — Reward
@@ -2914,12 +2883,6 @@ Read one organization reward (404 when not offered at any of the caller's stores
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
-| `data.organizationId` | string (uuid) | yes |  |
-| `data.organizationLogoSources` | object[] | yes |  |
-| `data.organizationLogoSources[].url` | string (uri) | yes |  |
-| `data.organizationLogoSources[].width` | integer | yes |  |
-| `data.organizationLogoUrl` | string (uri) \| null | yes |  |
-| `data.organizationName` | string | no |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |
@@ -2937,6 +2900,12 @@ Read one organization reward (404 when not offered at any of the caller's stores
 | `data.shareUrl` | string (uri) | no |  |
 | `data.startDate` | integer \| null | yes |  |
 | `data.status` | "DRAFT" \| "PENDING_REVIEW" \| "PUBLISHED" \| "EXPIRED" \| "DISABLED" | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
+| `data.tenantLogoSources` | object[] | yes |  |
+| `data.tenantLogoSources[].url` | string (uri) | yes |  |
+| `data.tenantLogoSources[].width` | integer | yes |  |
+| `data.tenantLogoUrl` | string (uri) \| null | yes |  |
+| `data.tenantName` | string | no |  |
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
@@ -2952,7 +2921,7 @@ Read one organization reward (404 when not offered at any of the caller's stores
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/rewards/019b76da-a800-75d7-95fa-18e695a7ff33
+GET /api/v1/tenants/brew-bean-kl/rewards/019b76da-a800-75d7-95fa-18e695a7ff33
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -2963,15 +2932,15 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792435551088,
-    "updatedAt": 1792435551088,
+    "createdAt": 1792520395167,
+    "updatedAt": 1792520395167,
     "isDeleted": false,
     "deletedAt": null,
     "id": "019b76da-a800-75d7-95fa-18e695a7ff33",
-    "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-    "organizationName": "Brew & Bean KL",
-    "organizationLogoUrl": null,
-    "organizationLogoSources": [],
+    "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+    "tenantName": "Brew & Bean KL",
+    "tenantLogoUrl": null,
+    "tenantLogoSources": [],
     "title": "Free cake for every visit",
     "description": "Unlimited free cake with any purchase.",
     "rewardType": "FREE_ITEM",
@@ -2982,17 +2951,17 @@ Response `200 OK` (application/json):
     "images": [
       {
         "fileId": "019b76da-a800-7d08-8be5-bc0104035de1",
-        "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/UHD/local-public",
+        "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/UHD/local-public",
         "width": 3840,
         "height": 2160,
         "sources": [
           {
             "width": 640,
-            "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/THUMBNAIL/local-public"
+            "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/THUMBNAIL/local-public"
           },
           {
             "width": 1280,
-            "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/MEDIUM/local-public"
+            "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/MEDIUM/local-public"
           }
         ]
       }
@@ -3001,7 +2970,7 @@ Response `200 OK` (application/json):
     "quantityRemaining": 500,
     "quantityReserved": 0,
     "startDate": null,
-    "expiryDate": 1795027514222,
+    "expiryDate": 1795112365388,
     "status": "DRAFT",
     "claimCount": 0,
     "redemptionCount": 0,
@@ -3014,29 +2983,27 @@ Response `200 OK` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "4qtiQGI5uNFW08VBBEtus",
-    "timestamp": 1792435610971
+    "correlationId": "9F6eAMZ0JSZozHYUajh-3",
+    "timestamp": 1792520452874
   }
 }
 ```
 
-### PATCH /api/v1/orgs/{orgSlug}/rewards/{rewardId}
+### PATCH /api/v1/tenants/{tenantSlug}/rewards/{rewardId}
 
 Update a draft or pending reward
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
-- Also accepts an **INTEGRATION-scope merchant API key**.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationRewardsController_updateReward` · [source](../../../apps/api/src/contexts/rewards/presentation/http/organization-rewards.controller.ts)
+- Operation id `TenantRewardsController_updateReward` · [source](../../../apps/api/src/contexts/rewards/presentation/http/tenant-rewards.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `rewardId` | path | string (uuid) | yes |  |
 
 **Request body** (`application/json`, required)
@@ -3082,12 +3049,6 @@ Update a draft or pending reward
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
-| `data.organizationId` | string (uuid) | yes |  |
-| `data.organizationLogoSources` | object[] | yes |  |
-| `data.organizationLogoSources[].url` | string (uri) | yes |  |
-| `data.organizationLogoSources[].width` | integer | yes |  |
-| `data.organizationLogoUrl` | string (uri) \| null | yes |  |
-| `data.organizationName` | string | no |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |
@@ -3105,6 +3066,12 @@ Update a draft or pending reward
 | `data.shareUrl` | string (uri) | no |  |
 | `data.startDate` | integer \| null | yes |  |
 | `data.status` | "DRAFT" \| "PENDING_REVIEW" \| "PUBLISHED" \| "EXPIRED" \| "DISABLED" | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
+| `data.tenantLogoSources` | object[] | yes |  |
+| `data.tenantLogoSources[].url` | string (uri) | yes |  |
+| `data.tenantLogoSources[].width` | integer | yes |  |
+| `data.tenantLogoUrl` | string (uri) \| null | yes |  |
+| `data.tenantName` | string | no |  |
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
@@ -3120,7 +3087,7 @@ Update a draft or pending reward
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-PATCH /api/v1/orgs/brew-bean-kl/rewards/01a1557c-ec6c-7c5c-983d-6cd525177f31
+PATCH /api/v1/tenants/brew-bean-kl/rewards/01a15a8b-82c6-7486-a020-2dc6156d2593
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -3137,15 +3104,15 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792435612778,
-    "updatedAt": 1792435612962,
+    "createdAt": 1792520454844,
+    "updatedAt": 1792520455215,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a1557c-ec6c-7c5c-983d-6cd525177f31",
-    "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-    "organizationName": "Brew & Bean KL",
-    "organizationLogoUrl": null,
-    "organizationLogoSources": [],
+    "id": "01a15a8b-82c6-7486-a020-2dc6156d2593",
+    "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+    "tenantName": "Brew & Bean KL",
+    "tenantLogoUrl": null,
+    "tenantLogoSources": [],
     "title": "Free Kopi O with any breakfast set",
     "description": "One free Kopi O when you order any breakfast set at Brew & Bean KL.",
     "rewardType": "FREE_ITEM",
@@ -3155,18 +3122,18 @@ Response `200 OK` (application/json):
     "category": "cafe",
     "images": [
       {
-        "fileId": "01a1557c-e595-73bc-9e96-5c157329d77c",
-        "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/LARGE/local-public",
+        "fileId": "01a15a8b-7b4f-7637-b0d1-a42f040b6e31",
+        "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/LARGE/local-public",
         "width": 1920,
         "height": 1080,
         "sources": [
           {
             "width": 640,
-            "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/THUMBNAIL/local-public"
+            "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/THUMBNAIL/local-public"
           },
           {
             "width": 1280,
-            "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/MEDIUM/local-public"
+            "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/MEDIUM/local-public"
           }
         ]
       }
@@ -3174,15 +3141,15 @@ Response `200 OK` (application/json):
     "quantityTotal": 250,
     "quantityRemaining": 250,
     "quantityReserved": 0,
-    "startDate": 1792435612648,
-    "expiryDate": 1797619612648,
+    "startDate": 1792520454635,
+    "expiryDate": 1797704454635,
     "status": "DRAFT",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "01a1557c-ec6d-755c-8669-5f451d8efaac",
+    "referrerRewardId": "01a15a8b-82c6-7d80-9792-bf78bab3e1d2",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -3191,29 +3158,27 @@ Response `200 OK` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "Aayj-tMBx-fWwi9Qhv1MK",
-    "timestamp": 1792435612999
+    "correlationId": "XDrkkjq0IIM6IWiuDaiXW",
+    "timestamp": 1792520455316
   }
 }
 ```
 
-### POST /api/v1/orgs/{orgSlug}/rewards/{rewardId}/publish
+### POST /api/v1/tenants/{tenantSlug}/rewards/{rewardId}/publish
 
 Submit reward for moderation review (no body required)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
-- Also accepts an **INTEGRATION-scope merchant API key**.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationRewardsController_publishReward` · [source](../../../apps/api/src/contexts/rewards/presentation/http/organization-rewards.controller.ts)
+- Operation id `TenantRewardsController_publishReward` · [source](../../../apps/api/src/contexts/rewards/presentation/http/tenant-rewards.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `rewardId` | path | string (uuid) | yes |  |
 
 **Request body** (`application/json`)
@@ -3243,12 +3208,6 @@ _No fields._
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
-| `data.organizationId` | string (uuid) | yes |  |
-| `data.organizationLogoSources` | object[] | yes |  |
-| `data.organizationLogoSources[].url` | string (uri) | yes |  |
-| `data.organizationLogoSources[].width` | integer | yes |  |
-| `data.organizationLogoUrl` | string (uri) \| null | yes |  |
-| `data.organizationName` | string | no |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |
@@ -3266,6 +3225,12 @@ _No fields._
 | `data.shareUrl` | string (uri) | no |  |
 | `data.startDate` | integer \| null | yes |  |
 | `data.status` | "DRAFT" \| "PENDING_REVIEW" \| "PUBLISHED" \| "EXPIRED" \| "DISABLED" | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
+| `data.tenantLogoSources` | object[] | yes |  |
+| `data.tenantLogoSources[].url` | string (uri) | yes |  |
+| `data.tenantLogoSources[].width` | integer | yes |  |
+| `data.tenantLogoUrl` | string (uri) \| null | yes |  |
+| `data.tenantName` | string | no |  |
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
@@ -3281,7 +3246,7 @@ _No fields._
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/rewards/01a1557c-ec6c-7c5c-983d-6cd525177f31/publish
+POST /api/v1/tenants/brew-bean-kl/rewards/01a15a8b-82c6-7486-a020-2dc6156d2593/publish
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -3296,15 +3261,15 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792435612778,
-    "updatedAt": 1792435613083,
+    "createdAt": 1792520454844,
+    "updatedAt": 1792520455478,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a1557c-ec6c-7c5c-983d-6cd525177f31",
-    "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-    "organizationName": "Brew & Bean KL",
-    "organizationLogoUrl": null,
-    "organizationLogoSources": [],
+    "id": "01a15a8b-82c6-7486-a020-2dc6156d2593",
+    "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+    "tenantName": "Brew & Bean KL",
+    "tenantLogoUrl": null,
+    "tenantLogoSources": [],
     "title": "Free Kopi O with any breakfast set",
     "description": "One free Kopi O when you order any breakfast set at Brew & Bean KL.",
     "rewardType": "FREE_ITEM",
@@ -3314,18 +3279,18 @@ Response `201 Created` (application/json):
     "category": "cafe",
     "images": [
       {
-        "fileId": "01a1557c-e595-73bc-9e96-5c157329d77c",
-        "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/LARGE/local-public",
+        "fileId": "01a15a8b-7b4f-7637-b0d1-a42f040b6e31",
+        "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/LARGE/local-public",
         "width": 1920,
         "height": 1080,
         "sources": [
           {
             "width": 640,
-            "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/THUMBNAIL/local-public"
+            "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/THUMBNAIL/local-public"
           },
           {
             "width": 1280,
-            "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/MEDIUM/local-public"
+            "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/MEDIUM/local-public"
           }
         ]
       }
@@ -3333,15 +3298,15 @@ Response `201 Created` (application/json):
     "quantityTotal": 250,
     "quantityRemaining": 250,
     "quantityReserved": 0,
-    "startDate": 1792435612648,
-    "expiryDate": 1797619612648,
+    "startDate": 1792520454635,
+    "expiryDate": 1797704454635,
     "status": "PENDING_REVIEW",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "01a1557c-ec6d-755c-8669-5f451d8efaac",
+    "referrerRewardId": "01a15a8b-82c6-7d80-9792-bf78bab3e1d2",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -3350,27 +3315,25 @@ Response `201 Created` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "eHwgHRXnK3o5pgRUYudN6",
-    "timestamp": 1792435613132
+    "correlationId": "YpqLWGDyJyVWjHO4SZ6GE",
+    "timestamp": 1792520455593
   }
 }
 ```
 
-### GET /api/v1/orgs/{orgSlug}/rewards/summary
+### GET /api/v1/tenants/{tenantSlug}/rewards/summary
 
-Organization reward figures: the count in each status and the units still claimable, over every reward in the store scope
+Tenant reward figures: the count in each status and the units still claimable, over every reward in the store scope
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
-- Also accepts an **INTEGRATION-scope merchant API key**.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationRewardsController_summarizeRewards` · [source](../../../apps/api/src/contexts/rewards/presentation/http/organization-rewards.controller.ts)
+- Operation id `TenantRewardsController_summarizeRewards` · [source](../../../apps/api/src/contexts/rewards/presentation/http/tenant-rewards.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `locationId` | query | string (uuid) | no |  |
 
 **Response 200 OK** (`application/json`) — Reward catalog figures
@@ -3391,22 +3354,21 @@ Organization reward figures: the count in each status and the units still claima
 > [!WARNING]
 > No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
 
-## Organization POS Terminals
+## Tenant POS Terminals
 
-### GET /api/v1/orgs/{orgSlug}/terminals
+### GET /api/v1/tenants/{tenantSlug}/terminals
 
-List the organization's POS terminals
+List the tenant's POS terminals
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationTerminalsController_list` · [source](../../../apps/api/src/contexts/pos/presentation/http/organization-terminals.controller.ts)
+- Operation id `TenantTerminalsController_list` · [source](../../../apps/api/src/contexts/pos/presentation/http/tenant-terminals.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `page` | query | integer | no | Page number (1-indexed) for offset pagination |
 | `limit` | query | integer | no | Page size (default 100, max 100) |
 | `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
@@ -3451,7 +3413,7 @@ List the organization's POS terminals
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/terminals
+GET /api/v1/tenants/brew-bean-kl/terminals
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -3463,8 +3425,8 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792435551070,
-      "updatedAt": 1792435555274,
+      "createdAt": 1792520395144,
+      "updatedAt": 1792520399919,
       "isDeleted": false,
       "deletedAt": null,
       "id": "019b76da-a800-7cb8-a368-3b87952401bc",
@@ -3474,21 +3436,21 @@ Response `200 OK` (application/json):
       "locationName": "Brew & Bean KL — Bukit Bintang",
       "status": "ACTIVE",
       "pairingCodeExpiresAt": null,
-      "pairedAt": 1792176374222,
+      "pairedAt": 1792261225388,
       "lastSeenAt": 1788253380000
     },
     {
-      "createdAt": 1792435550828,
-      "updatedAt": 1792435550828,
+      "createdAt": 1792520394608,
+      "updatedAt": 1792520394608,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a1557b-fa6b-768f-86e6-b2b9f08651fe",
+      "id": "01a15a8a-976f-704d-b977-1756cee29751",
       "terminalId": "KL-REGISTER-02",
       "name": "Drive-through",
       "locationId": "019b76da-a800-701a-abbd-a9a411b6958b",
       "locationName": "Brew & Bean KL — Bukit Bintang",
       "status": "AWAITING_PAIRING",
-      "pairingCodeExpiresAt": 1792436414222,
+      "pairingCodeExpiresAt": 1792521265388,
       "pairedAt": null,
       "lastSeenAt": null
     }
@@ -3501,28 +3463,27 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "XWZQwaZlw1Nz7sxbuylrC",
-    "timestamp": 1792435614578
+    "correlationId": "ADRtmvbXhyVeFs7q5AmL4",
+    "timestamp": 1792520458078
   }
 }
 ```
 
-### POST /api/v1/orgs/{orgSlug}/terminals
+### POST /api/v1/tenants/{tenantSlug}/terminals
 
 Register a POS terminal at a store and get its one-time pairing code
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationTerminalsController_create` · [source](../../../apps/api/src/contexts/pos/presentation/http/organization-terminals.controller.ts)
+- Operation id `TenantTerminalsController_create` · [source](../../../apps/api/src/contexts/pos/presentation/http/tenant-terminals.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 
 **Request body** (`application/json`, required)
 
@@ -3564,7 +3525,7 @@ Register a POS terminal at a store and get its one-time pairing code
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/terminals
+POST /api/v1/tenants/brew-bean-kl/terminals
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -3584,44 +3545,43 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "terminal": {
-      "createdAt": 1792435615048,
-      "updatedAt": 1792435615048,
+      "createdAt": 1792520458957,
+      "updatedAt": 1792520458957,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a1557c-f549-71f1-a3a2-0317494fcc88",
+      "id": "01a15a8b-92d1-7664-817f-d362c49b9750",
       "terminalId": "KL-BANGSAR-01",
       "name": "Bangsar front counter",
       "locationId": "019b76da-a800-701a-abbd-a9a411b6958b",
       "locationName": "Brew & Bean KL — Bukit Bintang",
       "status": "AWAITING_PAIRING",
-      "pairingCodeExpiresAt": 1792436515049,
+      "pairingCodeExpiresAt": 1792521358960,
       "pairedAt": null,
       "lastSeenAt": null
     },
-    "pairingCode": "63YNMGZE",
-    "pairingCodeExpiresAt": 1792436515049
+    "pairingCode": "SYELVK37",
+    "pairingCodeExpiresAt": 1792521358960
   },
   "meta": {
-    "correlationId": "pg8UCJLdpxc-pQKblr0Lk",
-    "timestamp": 1792435615061
+    "correlationId": "ICtES_R--3qf4cv62Y_yx",
+    "timestamp": 1792520458977
   }
 }
 ```
 
-### GET /api/v1/orgs/{orgSlug}/terminals/{id}
+### GET /api/v1/tenants/{tenantSlug}/terminals/{id}
 
 Read one POS terminal (404 outside the caller's stores)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationTerminalsController_get` · [source](../../../apps/api/src/contexts/pos/presentation/http/organization-terminals.controller.ts)
+- Operation id `TenantTerminalsController_get` · [source](../../../apps/api/src/contexts/pos/presentation/http/tenant-terminals.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `id` | path | string (uuid) | yes |  |
 
 **Response 200 OK** (`application/json`) — POS terminal
@@ -3653,7 +3613,7 @@ Read one POS terminal (404 outside the caller's stores)
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/terminals/01a1557c-f549-71f1-a3a2-0317494fcc88
+GET /api/v1/tenants/brew-bean-kl/terminals/01a15a8b-92d1-7664-817f-d362c49b9750
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -3664,43 +3624,42 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792435615048,
-    "updatedAt": 1792435615048,
+    "createdAt": 1792520458957,
+    "updatedAt": 1792520458957,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a1557c-f549-71f1-a3a2-0317494fcc88",
+    "id": "01a15a8b-92d1-7664-817f-d362c49b9750",
     "terminalId": "KL-BANGSAR-01",
     "name": "Bangsar front counter",
     "locationId": "019b76da-a800-701a-abbd-a9a411b6958b",
     "locationName": "Brew & Bean KL — Bukit Bintang",
     "status": "AWAITING_PAIRING",
-    "pairingCodeExpiresAt": 1792436515049,
+    "pairingCodeExpiresAt": 1792521358960,
     "pairedAt": null,
     "lastSeenAt": null
   },
   "meta": {
-    "correlationId": "hOF2JwRxBHdrS30NMNumz",
-    "timestamp": 1792435615167
+    "correlationId": "jteHif03mxq0mMjD8boe7",
+    "timestamp": 1792520459167
   }
 }
 ```
 
-### DELETE /api/v1/orgs/{orgSlug}/terminals/{id}
+### DELETE /api/v1/tenants/{tenantSlug}/terminals/{id}
 
 Remove a POS terminal and revoke its API key
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationTerminalsController_remove` · [source](../../../apps/api/src/contexts/pos/presentation/http/organization-terminals.controller.ts)
+- Operation id `TenantTerminalsController_remove` · [source](../../../apps/api/src/contexts/pos/presentation/http/tenant-terminals.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `id` | path | string (uuid) | yes |  |
 
 **Response 200 OK** (`application/json`) — Terminal removed
@@ -3720,7 +3679,7 @@ Remove a POS terminal and revoke its API key
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-DELETE /api/v1/orgs/brew-bean-kl/terminals/01a1557c-f549-71f1-a3a2-0317494fcc88
+DELETE /api/v1/tenants/brew-bean-kl/terminals/01a15a8b-92d1-7664-817f-d362c49b9750
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -3735,28 +3694,27 @@ Response `200 OK` (application/json):
     "ok": true
   },
   "meta": {
-    "correlationId": "KpeCbgaVd9WJe-kuDVfBI",
-    "timestamp": 1792435616672
+    "correlationId": "VfAkKXPUBZiJn09DpYt4X",
+    "timestamp": 1792520464933
   }
 }
 ```
 
-### POST /api/v1/orgs/{orgSlug}/terminals/{id}/pairing-code
+### POST /api/v1/tenants/{tenantSlug}/terminals/{id}/pairing-code
 
 Issue a new pairing code (first pairing, expired code, or re-pair — the old key stops working once the new code is used)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationTerminalsController_issuePairingCode` · [source](../../../apps/api/src/contexts/pos/presentation/http/organization-terminals.controller.ts)
+- Operation id `TenantTerminalsController_issuePairingCode` · [source](../../../apps/api/src/contexts/pos/presentation/http/tenant-terminals.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `id` | path | string (uuid) | yes |  |
 
 **Request body** (`application/json`)
@@ -3795,7 +3753,7 @@ _No fields._
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/terminals/01a1557c-f549-71f1-a3a2-0317494fcc88/pairing-code
+POST /api/v1/tenants/brew-bean-kl/terminals/01a15a8b-92d1-7664-817f-d362c49b9750/pairing-code
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -3811,44 +3769,43 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "terminal": {
-      "createdAt": 1792435615048,
-      "updatedAt": 1792435615264,
+      "createdAt": 1792520458957,
+      "updatedAt": 1792520459365,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a1557c-f549-71f1-a3a2-0317494fcc88",
+      "id": "01a15a8b-92d1-7664-817f-d362c49b9750",
       "terminalId": "KL-BANGSAR-01",
       "name": "Bangsar front counter",
       "locationId": "019b76da-a800-701a-abbd-a9a411b6958b",
       "locationName": "Brew & Bean KL — Bukit Bintang",
       "status": "AWAITING_PAIRING",
-      "pairingCodeExpiresAt": 1792436515264,
+      "pairingCodeExpiresAt": 1792521359365,
       "pairedAt": null,
       "lastSeenAt": null
     },
-    "pairingCode": "2K7XZBX8",
-    "pairingCodeExpiresAt": 1792436515264
+    "pairingCode": "9MZPYEW2",
+    "pairingCodeExpiresAt": 1792521359365
   },
   "meta": {
-    "correlationId": "1ZkO7ZFSbWVBzN4o9ofw-",
-    "timestamp": 1792435615275
+    "correlationId": "Bq_NmkZQtsiuq24Yc_KSN",
+    "timestamp": 1792520459387
   }
 }
 ```
 
-### GET /api/v1/orgs/{orgSlug}/terminals/settings
+### GET /api/v1/tenants/{tenantSlug}/terminals/settings
 
-Read the organization's POS terminal policy
+Read the tenant's POS terminal policy
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationTerminalsController_getSettings` · [source](../../../apps/api/src/contexts/pos/presentation/http/organization-terminals.controller.ts)
+- Operation id `TenantTerminalsController_getSettings` · [source](../../../apps/api/src/contexts/pos/presentation/http/tenant-terminals.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 
 **Response 200 OK** (`application/json`) — POS terminal settings
 
@@ -3867,7 +3824,7 @@ Read the organization's POS terminal policy
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/terminals/settings
+GET /api/v1/tenants/brew-bean-kl/terminals/settings
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -3881,28 +3838,27 @@ Response `200 OK` (application/json):
     "requireRegisteredTerminals": false
   },
   "meta": {
-    "correlationId": "QiUSae3k3b4_b9SsLVS8p",
-    "timestamp": 1792435614802
+    "correlationId": "g6pTuBPkbjKq_ORbCi2jz",
+    "timestamp": 1792520458592
   }
 }
 ```
 
-### PATCH /api/v1/orgs/{orgSlug}/terminals/settings
+### PATCH /api/v1/tenants/{tenantSlug}/terminals/settings
 
 Turn 'only allow registered terminals' on or off
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationTerminalsController_updateSettings` · [source](../../../apps/api/src/contexts/pos/presentation/http/organization-terminals.controller.ts)
+- Operation id `TenantTerminalsController_updateSettings` · [source](../../../apps/api/src/contexts/pos/presentation/http/tenant-terminals.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 
 **Request body** (`application/json`, required)
 
@@ -3927,7 +3883,7 @@ Turn 'only allow registered terminals' on or off
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-PATCH /api/v1/orgs/brew-bean-kl/terminals/settings
+PATCH /api/v1/tenants/brew-bean-kl/terminals/settings
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -3947,26 +3903,25 @@ Response `200 OK` (application/json):
     "requireRegisteredTerminals": false
   },
   "meta": {
-    "correlationId": "9GF1Uo5_k9ER2R-9vi3Ug",
-    "timestamp": 1792435614934
+    "correlationId": "ERq9BcEuwUYCaTSHo0YBT",
+    "timestamp": 1792520458773
   }
 }
 ```
 
-### GET /api/v1/orgs/{orgSlug}/terminals/summary
+### GET /api/v1/tenants/{tenantSlug}/terminals/summary
 
-Count the organization's live POS terminals per status, within the caller's stores
+Count the tenant's live POS terminals per status, within the caller's stores
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationTerminalsController_summary` · [source](../../../apps/api/src/contexts/pos/presentation/http/organization-terminals.controller.ts)
+- Operation id `TenantTerminalsController_summary` · [source](../../../apps/api/src/contexts/pos/presentation/http/tenant-terminals.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `locationId` | query | string (uuid) | no |  |
 
 **Response 200 OK** (`application/json`) — Terminal counts per status and stores covered
@@ -3991,7 +3946,7 @@ Count the organization's live POS terminals per status, within the caller's stor
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/terminals/summary
+GET /api/v1/tenants/brew-bean-kl/terminals/summary
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -4011,28 +3966,27 @@ Response `200 OK` (application/json):
     "storesWithTerminals": 1
   },
   "meta": {
-    "correlationId": "t64QkLQtUtrnIkGSUtcMK",
-    "timestamp": 1792435614703
+    "correlationId": "G9bDdAEAnoMnnwMavf1Gb",
+    "timestamp": 1792520458397
   }
 }
 ```
 
-## Organization API Keys
+## Tenant API Keys
 
-### GET /api/v1/orgs/{orgSlug}/api-keys
+### GET /api/v1/tenants/{tenantSlug}/api-keys
 
-List organization API keys
+List tenant API keys
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationApiKeysController_listKeys` · [source](../../../apps/api/src/contexts/pos/presentation/http/organization-api-keys.controller.ts)
+- Operation id `TenantApiKeysController_listKeys` · [source](../../../apps/api/src/contexts/pos/presentation/http/tenant-api-keys.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `page` | query | integer | no | Page number (1-indexed) for offset pagination |
 | `limit` | query | integer | no | Page size (default 100, max 100) |
 | `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
@@ -4074,7 +4028,7 @@ List organization API keys
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/api-keys?limit=2
+GET /api/v1/tenants/brew-bean-kl/api-keys?limit=2
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -4086,11 +4040,11 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792435615315,
-      "updatedAt": 1792435615315,
+      "createdAt": 1792520459462,
+      "updatedAt": 1792520459462,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a1557c-f665-741b-9743-c4b5b1570359",
+      "id": "01a15a8b-94f2-7794-8c66-50e75e4a29e1",
       "name": "Bangsar front counter",
       "locationId": "019b76da-a800-701a-abbd-a9a411b6958b",
       "locationName": "Brew & Bean KL — Bukit Bintang",
@@ -4098,8 +4052,8 @@ Response `200 OK` (application/json):
       "revokedAt": null
     },
     {
-      "createdAt": 1792435551064,
-      "updatedAt": 1792435551064,
+      "createdAt": 1792520395140,
+      "updatedAt": 1792520395140,
       "isDeleted": false,
       "deletedAt": null,
       "id": "019b76da-a800-7bd5-a5dd-45b76d6c72dc",
@@ -4107,7 +4061,7 @@ Response `200 OK` (application/json):
       "locationId": "019b76da-a800-701a-abbd-a9a411b6958b",
       "locationName": "Brew & Bean KL — Bukit Bintang",
       "scope": "POS",
-      "revokedAt": 1790707514222
+      "revokedAt": 1790792365388
     }
   ],
   "meta": {
@@ -4115,31 +4069,30 @@ Response `200 OK` (application/json):
     "total": 5,
     "page": 1,
     "totalPages": 3,
-    "nextCursor": "eyJhdCI6MTc5MjQzNTU1MTA2NCwiaWQiOiIwMTliNzZkYS1hODAwLTdiZDUtYTVkZC00NWI3NmQ2YzcyZGMifQ",
+    "nextCursor": "eyJhdCI6MTc5MjUyMDM5NTE0MCwiaWQiOiIwMTliNzZkYS1hODAwLTdiZDUtYTVkZC00NWI3NmQ2YzcyZGMifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "MAOTNqkCf9sD1gMqnsAO1",
-    "timestamp": 1792435616293
+    "correlationId": "VBZVuMwQx0nH2mxpjX7_m",
+    "timestamp": 1792520461182
   }
 }
 ```
 
-### POST /api/v1/orgs/{orgSlug}/api-keys
+### POST /api/v1/tenants/{tenantSlug}/api-keys
 
 Create a POS API key
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationApiKeysController_createKey` · [source](../../../apps/api/src/contexts/pos/presentation/http/organization-api-keys.controller.ts)
+- Operation id `TenantApiKeysController_createKey` · [source](../../../apps/api/src/contexts/pos/presentation/http/tenant-api-keys.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 
 **Request body** (`application/json`, required)
 
@@ -4170,7 +4123,7 @@ Create a POS API key
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/api-keys
+POST /api/v1/tenants/brew-bean-kl/api-keys
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -4188,35 +4141,34 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a1557c-fab2-7c26-8c53-6c7f11a8c7d6",
+    "id": "01a15a8b-9c2f-74fc-b4f9-5f177992d39d",
     "apiKey": "<redacted: one-time secret>",
     "name": "Back-office sync",
     "scope": "INTEGRATION",
     "locationId": null
   },
   "meta": {
-    "correlationId": "Z-9GQZSeff5H_yUT2oJNA",
-    "timestamp": 1792435616451
+    "correlationId": "sfya0Mx7Vs1H2HtBAWZ8t",
+    "timestamp": 1792520461371
   }
 }
 ```
 
-### POST /api/v1/orgs/{orgSlug}/api-keys/{keyId}/revoke
+### POST /api/v1/tenants/{tenantSlug}/api-keys/{keyId}/revoke
 
 Revoke a POS API key (no body required)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationApiKeysController_revokeKey` · [source](../../../apps/api/src/contexts/pos/presentation/http/organization-api-keys.controller.ts)
+- Operation id `TenantApiKeysController_revokeKey` · [source](../../../apps/api/src/contexts/pos/presentation/http/tenant-api-keys.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `keyId` | path | string (uuid) | yes |  |
 
 **Request body** (`application/json`)
@@ -4240,7 +4192,7 @@ _No fields._
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/orgs/brew-bean-kl/api-keys/01a1557c-fab2-7c26-8c53-6c7f11a8c7d6/revoke
+POST /api/v1/tenants/brew-bean-kl/api-keys/01a15a8b-9c2f-74fc-b4f9-5f177992d39d/revoke
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -4258,29 +4210,27 @@ Response `201 Created` (application/json):
     "ok": true
   },
   "meta": {
-    "correlationId": "2iVKFugDYR1MJIp4PdQxQ",
-    "timestamp": 1792435616563
+    "correlationId": "8pkVjGDQcr2s7Zw_7rknM",
+    "timestamp": 1792520464794
   }
 }
 ```
 
-## Organization Redemptions
+## Tenant Redemptions
 
-### GET /api/v1/orgs/{orgSlug}/redemptions
+### GET /api/v1/tenants/{tenantSlug}/redemptions
 
-List organization redemptions
+List tenant redemptions
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
-- Also accepts an **INTEGRATION-scope merchant API key**.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationRedemptionsController_listRedemptions` · [source](../../../apps/api/src/contexts/pos/presentation/http/organization-redemptions.controller.ts)
+- Operation id `TenantRedemptionsController_listRedemptions` · [source](../../../apps/api/src/contexts/pos/presentation/http/tenant-redemptions.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `page` | query | integer | no | Page number (1-indexed) for offset pagination |
 | `limit` | query | integer | no | Page size (default 10, max 100) |
 | `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
@@ -4317,7 +4267,7 @@ List organization redemptions
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/redemptions?limit=2
+GET /api/v1/tenants/brew-bean-kl/redemptions?limit=2
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -4329,51 +4279,49 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "redemptionId": "01a1557c-f754-72cb-98f8-580ee7da3f2d",
+      "redemptionId": "01a15a8b-96a0-702a-9d20-5246f4efee9b",
       "rewardTitle": "Free coffee — Grand Opening",
-      "redeemedAt": 1792435615507,
+      "redeemedAt": 1792520459811,
       "terminalId": "KL-REGISTER-01",
       "redemptionMethod": "MANUAL"
     },
     {
       "redemptionId": "019b76da-a800-704e-9593-80d298dad1b4",
       "rewardTitle": "Free coffee — Grand Opening",
-      "redeemedAt": 1792435550926,
+      "redeemedAt": 1792520394738,
       "terminalId": "KL-REGISTER-01",
       "redemptionMethod": "SCAN"
     }
   ],
   "meta": {
     "limit": 2,
-    "total": 920,
+    "total": 918,
     "page": 1,
-    "totalPages": 460,
-    "nextCursor": "eyJhdCI6MTc5MjQzNTU1MDkyNiwiaWQiOiIwMTliNzZkYS1hODAwLTcwNGUtOTU5My04MGQyOThkYWQxYjQifQ",
+    "totalPages": 459,
+    "nextCursor": "eyJhdCI6MTc5MjUyMDM5NDczOCwiaWQiOiIwMTliNzZkYS1hODAwLTcwNGUtOTU5My04MGQyOThkYWQxYjQifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "fYaL47Cit4QifAISTx349",
-    "timestamp": 1792435615758
+    "correlationId": "qKwFV--XWenWanwkDOs_x",
+    "timestamp": 1792520460319
   }
 }
 ```
 
-## Organization Analytics
+## Tenant Analytics
 
-### GET /api/v1/orgs/{orgSlug}/analytics
+### GET /api/v1/tenants/{tenantSlug}/analytics
 
-Organization reward performance analytics
+Tenant reward performance analytics
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
-- Also accepts an **INTEGRATION-scope merchant API key**.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationAnalyticsController_getAnalytics` · [source](../../../apps/api/src/contexts/reporting/presentation/http/organization-analytics.controller.ts)
+- Operation id `TenantAnalyticsController_getAnalytics` · [source](../../../apps/api/src/contexts/reporting/presentation/http/tenant-analytics.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `from` | query | integer | no |  |
 | `to` | query | integer | no |  |
 | `locationId` | query | string (uuid) | no |  |
@@ -4441,7 +4389,7 @@ Organization reward performance analytics
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/analytics
+GET /api/v1/tenants/brew-bean-kl/analytics
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -4454,7 +4402,7 @@ Response `200 OK` (application/json):
   "data": {
     "period": {
       "from": 1788105600000,
-      "to": 1792435615874,
+      "to": 1792520460549,
       "timeZone": "Asia/Kuala_Lumpur"
     },
     "totalRewards": {
@@ -4466,16 +4414,16 @@ Response `200 OK` (application/json):
       "changePercent": 100
     },
     "totalClaims": {
-      "value": 190,
-      "changePercent": 2
+      "value": 191,
+      "changePercent": 3
     },
     "totalRedemptions": {
-      "value": 164,
+      "value": 167,
       "changePercent": 5
     },
     "conversionRate": {
-      "value": 86.3,
-      "changePercent": 3
+      "value": 87.4,
+      "changePercent": 2
     },
     "referralCount": {
       "value": 0,
@@ -4484,82 +4432,80 @@ Response `200 OK` (application/json):
     "claimsOverTime": [
       {
         "date": 1788105600000,
-        "claims": 23,
+        "claims": 21,
         "redemptions": 22
       },
       {
         "date": 1788710400000,
         "claims": 28,
-        "redemptions": 23
+        "redemptions": 22
       }
     ],
     "topRewards": [
       {
         "rewardId": "019b76da-a800-7a5e-8873-45fa5124324b",
         "title": "Morning brew club — free refill",
-        "claims": 96,
-        "redemptions": 86
+        "claims": 94,
+        "redemptions": 89
       },
       {
         "rewardId": "019b76da-a800-791e-b43c-eb37c9f12ab4",
         "title": "Istimewa latte seni hujung minggu",
-        "claims": 83,
+        "claims": 86,
         "redemptions": 74
       }
     ],
     "sales": {
       "currency": "MYR",
       "totalSalesMinor": {
-        "value": 478447,
-        "changePercent": 4
+        "value": 472309,
+        "changePercent": 1
       },
       "bills": {
-        "value": 164,
+        "value": 167,
         "changePercent": 5
       },
       "averageBillMinor": {
-        "value": 2917,
-        "changePercent": -1
+        "value": 2828,
+        "changePercent": -4
       },
       "overTime": [
         {
           "date": 1788105600000,
-          "salesMinor": 55869,
+          "salesMinor": 52410,
           "bills": 22
         },
         {
           "date": 1788710400000,
-          "salesMinor": 63561,
-          "bills": 23
+          "salesMinor": 61748,
+          "bills": 22
         }
       ],
-      "firstBillAt": 1760921940000
+      "firstBillAt": 1761008340000
     }
   },
   "meta": {
-    "correlationId": "1KQ5AU0v4rt_HDME5qmeq",
-    "timestamp": 1792435615916
+    "correlationId": "FLI_iV5TJ6VmjSKD-EmX7",
+    "timestamp": 1792520460626
   }
 }
 ```
 
-### GET /api/v1/orgs/{orgSlug}/analytics/dashboard
+### GET /api/v1/tenants/{tenantSlug}/analytics/dashboard
 
 Merchant analytics dashboard: custom range + interval, compared totals, series, store / reward / redemption-method breakdowns
 
 Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 400 VALIDATION_ERROR); `interval` (day | week | month) defaults from the range length. Every number is computed in Postgres; buckets are cut in `range.timeZone`. A report query over its time budget answers 503 ANALYTICS_QUERY_TIMEOUT.
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
-- Also accepts an **INTEGRATION-scope merchant API key**.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `OrganizationAnalyticsController_getDashboard` · [source](../../../apps/api/src/contexts/reporting/presentation/http/organization-analytics.controller.ts)
+- Operation id `TenantAnalyticsController_getDashboard` · [source](../../../apps/api/src/contexts/reporting/presentation/http/tenant-analytics.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `from` | query | integer | no | Range start, epoch ms, inclusive. Default: 30 days before `to`. |
 | `to` | query | integer | no | Range end, epoch ms, EXCLUSIVE. Default: now. At most 366 days after `from`. |
 | `interval` | query | "day" \| "week" \| "month" | no | Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length. |
@@ -4654,7 +4600,7 @@ Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 40
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/analytics/dashboard?interval=week
+GET /api/v1/tenants/brew-bean-kl/analytics/dashboard?interval=week
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -4666,79 +4612,79 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "range": {
-      "from": 1789843616018,
-      "to": 1792435616018,
+      "from": 1789928460810,
+      "to": 1792520460810,
       "timeZone": "Asia/Kuala_Lumpur",
       "interval": "week",
-      "previousFrom": 1787251616018,
-      "previousTo": 1789843616018
+      "previousFrom": 1787336460810,
+      "previousTo": 1789928460810
     },
     "currency": "MYR",
-    "firstBillAt": 1760921940000,
+    "firstBillAt": 1761008340000,
     "totals": {
       "salesMinor": {
-        "value": 300009,
-        "previous": 278480,
-        "change": 21529,
-        "changePercent": 7.7
+        "value": 286851,
+        "previous": 267951,
+        "change": 18900,
+        "changePercent": 7.1
       },
       "bills": {
-        "value": 102,
-        "previous": 96,
+        "value": 101,
+        "previous": 95,
         "change": 6,
         "changePercent": 6.3
       },
       "averageBillMinor": {
-        "value": 2941,
-        "previous": 2901,
-        "change": 40,
-        "changePercent": 1.4
+        "value": 2840,
+        "previous": 2821,
+        "change": 19,
+        "changePercent": 0.7
       },
       "claims": {
-        "value": 120,
-        "previous": 111,
+        "value": 114,
+        "previous": 105,
         "change": 9,
-        "changePercent": 8.1
+        "changePercent": 8.6
       },
       "redemptions": {
-        "value": 102,
-        "previous": 96,
+        "value": 101,
+        "previous": 95,
         "change": 6,
         "changePercent": 6.3
       },
       "conversionRate": {
-        "value": 85,
-        "previous": 86.5,
-        "change": -1.5,
-        "changePercent": -1.7
+        "value": 88.6,
+        "previous": 90.5,
+        "change": -1.9,
+        "changePercent": -2.1
       },
       "customers": {
-        "value": 30,
-        "previous": 28,
+        "value": 31,
+        "previous": 29,
         "change": 2,
-        "changePercent": 7.1
+        "changePercent": 6.9
       }
     },
     "series": [
       {
-        "start": 1789843616018,
-        "end": 1789920000000,
+        "start": 1789928460810,
+        "end": 1790524800000,
         "isPartial": true,
-        "salesMinor": 16330,
-        "bills": 4,
-        "averageBillMinor": 4083,
-        "claims": 6,
-        "redemptions": 4
+        "salesMinor": 69394,
+        "bills": 23,
+        "averageBillMinor": 3017,
+        "claims": 31,
+        "redemptions": 23
       },
       {
-        "start": 1789920000000,
-        "end": 1790524800000,
+        "start": 1790524800000,
+        "end": 1791129600000,
         "isPartial": false,
-        "salesMinor": 66971,
-        "bills": 21,
-        "averageBillMinor": 3189,
-        "claims": 27,
-        "redemptions": 21
+        "salesMinor": 64001,
+        "bills": 22,
+        "averageBillMinor": 2909,
+        "claims": 24,
+        "redemptions": 22
       }
     ],
     "byStore": [
@@ -4746,13 +4692,13 @@ Response `200 OK` (application/json):
         "locationId": "019b76da-a800-701a-abbd-a9a411b6958b",
         "name": "Brew & Bean KL — Bukit Bintang",
         "city": "KUALA_LUMPUR",
-        "salesMinor": 300009,
-        "bills": 102,
-        "averageBillMinor": 2941,
-        "redemptions": 102
+        "salesMinor": 286851,
+        "bills": 101,
+        "averageBillMinor": 2840,
+        "redemptions": 101
       },
       {
-        "locationId": "01a1557c-d78b-7fd2-944c-6be971eedf85",
+        "locationId": "01a15a8b-6906-7f9a-ac09-e9f7dea0f458",
         "name": "Brew & Bean KL — Bangsar",
         "city": "KUALA_LUMPUR",
         "salesMinor": 0,
@@ -4765,53 +4711,51 @@ Response `200 OK` (application/json):
       {
         "rewardId": "019b76da-a800-791e-b43c-eb37c9f12ab4",
         "title": "Istimewa latte seni hujung minggu",
-        "claims": 61,
-        "redemptions": 54,
-        "conversionRate": 88.5
+        "claims": 56,
+        "redemptions": 50,
+        "conversionRate": 89.3
       },
       {
         "rewardId": "019b76da-a800-7a5e-8873-45fa5124324b",
         "title": "Morning brew club — free refill",
-        "claims": 48,
-        "redemptions": 44,
-        "conversionRate": 91.7
+        "claims": 47,
+        "redemptions": 47,
+        "conversionRate": 100
       }
     ],
     "byRedemptionMethod": [
       {
         "method": "SCAN",
-        "redemptions": 71
+        "redemptions": 67
       },
       {
         "method": "MANUAL",
-        "redemptions": 31
+        "redemptions": 34
       }
     ]
   },
   "meta": {
-    "correlationId": "fmRXFo5gHmwBmdPOQyUwE",
-    "timestamp": 1792435616047
+    "correlationId": "2987cdwmgzMTjMV81cy--",
+    "timestamp": 1792520460841
   }
 }
 ```
 
-### GET /api/v1/orgs/{orgSlug}/analytics/export
+### GET /api/v1/tenants/{tenantSlug}/analytics/export
 
 Download the merchant analytics report (csv | xlsx | pdf) for a date range
 
 The body is the file (Content-Disposition: attachment). Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 400 VALIDATION_ERROR); both bounds are required. Each export writes an audit row and is limited to 10 per caller per 10 minutes: 429 ANALYTICS_EXPORT_RATE_LIMITED with `Retry-After`. A report query over its time budget answers 503 ANALYTICS_QUERY_TIMEOUT.
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Organization member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
-- Also accepts an **INTEGRATION-scope merchant API key**.
 - Content type: no request body; returns `application/pdf` · `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` · `text/csv; charset=utf-8` (errors are always `application/json`)
-- Operation id `OrganizationAnalyticsController_exportReport` · [source](../../../apps/api/src/contexts/reporting/presentation/http/organization-analytics.controller.ts)
+- Operation id `TenantAnalyticsController_exportReport` · [source](../../../apps/api/src/contexts/reporting/presentation/http/tenant-analytics.controller.ts)
 
 **Parameters**
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `orgSlug` | path | string \| string (uuid) | yes |  |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
 | `from` | query | integer | yes | Range start, epoch ms, inclusive. |
 | `to` | query | integer | yes | Range end, epoch ms, EXCLUSIVE. At most 366 days after `from`. |
 | `interval` | query | "day" \| "week" \| "month" | no | Bucket width of the time series: `day`, `week` (Monday 00:00) or `month` (the 1st), cut in the report's time zone. Default: derived from the range length. |
@@ -4834,7 +4778,7 @@ The body is the file (Content-Disposition: attachment). Range: `from` (inclusive
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal). The body is the file itself (Content-Type of the format, Content-Disposition: attachment; filename=…); errors keep the JSON error envelope. See docs/technical/api/analytics.md.
 
 ```http
-GET /api/v1/orgs/brew-bean-kl/analytics/export?from=1789843616057&to=1792435616057&format=xlsx
+GET /api/v1/tenants/brew-bean-kl/analytics/export?from=1789928460854&to=1792520460854&format=xlsx
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -4842,5 +4786,5 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Response `200 OK` (application/vnd.openxmlformats-officedocument.spreadsheetml.sheet):
 
 ```text
-<8680 bytes of application/vnd.openxmlformats-officedocument.spreadsheetml.sheet>
+<8677 bytes of application/vnd.openxmlformats-officedocument.spreadsheetml.sheet>
 ```

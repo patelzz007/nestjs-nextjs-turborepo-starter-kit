@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { APP_LINKS } from "../app-links";
 
 describe("APP_LINKS", () => {
-	it("builds the org-scoped merchant API-keys path, encoding the slug", () => {
-		expect(APP_LINKS.merchant.apiKeys("brew-bean-kl")).toBe("/orgs/brew-bean-kl/api-keys");
-		expect(APP_LINKS.merchant.apiKeys("a b/c")).toBe("/orgs/a%20b%2Fc/api-keys");
-		expect(APP_LINKS.merchant.terminals("a b/c")).toBe("/orgs/a%20b%2Fc/terminals");
+	it("builds the tenant-scoped merchant API-keys path (`/t/:tenantSlug`, MT-07), encoding the slug", () => {
+		expect(APP_LINKS.merchant.apiKeys("brew-bean-kl")).toBe("/t/brew-bean-kl/api-keys");
+		expect(APP_LINKS.merchant.apiKeys("a b/c")).toBe("/t/a%20b%2Fc/api-keys");
+		expect(APP_LINKS.merchant.terminals("a b/c")).toBe("/t/a%20b%2Fc/terminals");
 	});
 
 	it("links review emails to the MFA-recovery queue filtered to PENDING, in the list-query grammar", () => {

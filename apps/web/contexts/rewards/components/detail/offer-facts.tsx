@@ -60,7 +60,7 @@ export function RewardOfferFacts({ reward }: RewardOfferFactsProps): React.JSX.E
 				</Fact>
 				<Fact icon={Store} term="Where to use it">
 					{reward.locationScopeType === "ALL_LOCATIONS" || stores.length === 0 ? (
-						`Any ${reward.organizationName ?? "participating"} store`
+						`Any ${reward.tenantName ?? "participating"} store`
 					) : (
 						<ul className="space-y-0.5">
 							{stores.map((store) => (

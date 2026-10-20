@@ -5,8 +5,8 @@ import { z } from "zod";
 
 import { defineContract, defineFileContract } from "../../contracts/define-contract";
 import { fileResponse, singleResponse } from "../../contracts/response";
-import { OrganizationSlugParamSchema } from "../organizations/schemas/organization";
-import { claimsAnalyticsRoutes, organizationAnalyticsRoutes, rewardsAdminAnalyticsRoutes } from "./routes";
+import { TenantSlugParamSchema } from "../tenancy/schemas/tenant";
+import { claimsAnalyticsRoutes, integrationAnalyticsRoutes, tenantAnalyticsRoutes, rewardsAdminAnalyticsRoutes } from "./routes";
 import {
 	AdminSalesAnalyticsQuerySchema,
 	AdminSalesAnalyticsResponseSchema,
@@ -65,26 +65,48 @@ export const claimsAnalyticsContract = {
 	}),
 };
 
-/** Contract leaves composed into `apiContract.organizations` (analytics, analyticsDashboard, analyticsExport). */
-export const organizationAnalyticsContract = {
+/** Contract leaves composed into `apiContract.tenants` (analytics, analyticsDashboard, analyticsExport). */
+/** Contract leaves composed into `apiContract.integration`: `tenants.analytics*` for an integration API key (tenant from the key). */
+export const integrationAnalyticsContract = {
 	analytics: defineContract({
 		method: "GET",
-		path: organizationAnalyticsRoutes.analytics,
-		input: z.intersection(OrganizationSlugParamSchema, RewardsAnalyticsQuerySchema),
+		path: integrationAnalyticsRoutes.analytics,
+		input: RewardsAnalyticsQuerySchema,
+		response: singleResponse(MerchantAnalyticsResponseSchema),
+	}),
+	analyticsDashboard: defineContract({
+		method: "GET",
+		path: integrationAnalyticsRoutes.analyticsDashboard,
+		input: MerchantAnalyticsDashboardQuerySchema,
+		response: singleResponse(MerchantAnalyticsDashboardSchema),
+	}),
+	analyticsExport: defineFileContract({
+		method: "GET",
+		path: integrationAnalyticsRoutes.analyticsExport,
+		input: MerchantAnalyticsExportQuerySchema,
+		response: fileResponse(Object.values(ANALYTICS_EXPORT_CONTENT_TYPES)),
+	}),
+};
+
+export const tenantAnalyticsContract = {
+	analytics: defineContract({
+		method: "GET",
+		path: tenantAnalyticsRoutes.analytics,
+		input: z.intersection(TenantSlugParamSchema, RewardsAnalyticsQuerySchema),
 		response: singleResponse(MerchantAnalyticsResponseSchema),
 	}),
 	/** The merchant dashboard: custom range + interval, series, store / reward / redemption-method breakdowns. */
 	analyticsDashboard: defineContract({
 		method: "GET",
-		path: organizationAnalyticsRoutes.analyticsDashboard,
-		input: z.intersection(OrganizationSlugParamSchema, MerchantAnalyticsDashboardQuerySchema),
+		path: tenantAnalyticsRoutes.analyticsDashboard,
+		input: z.intersection(TenantSlugParamSchema, MerchantAnalyticsDashboardQuerySchema),
 		response: singleResponse(MerchantAnalyticsDashboardSchema),
 	}),
 	/** The merchant report as a file (`format`: csv | xlsx | pdf) — fetch it with `fetchDownload`. */
 	analyticsExport: defineFileContract({
 		method: "GET",
-		path: organizationAnalyticsRoutes.analyticsExport,
-		input: z.intersection(OrganizationSlugParamSchema, MerchantAnalyticsExportQuerySchema),
+		path: tenantAnalyticsRoutes.analyticsExport,
+		input: z.intersection(TenantSlugParamSchema, MerchantAnalyticsExportQuerySchema),
 		response: fileResponse(Object.values(ANALYTICS_EXPORT_CONTENT_TYPES)),
 	}),
 };

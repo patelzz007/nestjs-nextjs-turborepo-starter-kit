@@ -53,7 +53,7 @@ dropdb authz_e2e
 | File | Covers |
 |---|---|
 | `src/contexts/authorization/infrastructure/kernel/__tests__/authorization-kernel.service.spec.ts` | precedence, DENY overrides, ACL, MANAGE, scopes (ORG / STORE / LOCATION / OWN / RESOURCE), cross-tenant CRUD, forged tenants, membership-grants-nothing, policies, conditions, `filter()` shapes, `resourceCapabilities`, `hasRoles`, audit on `authorize()` |
-| `kernel/__tests__/tenant-membership.service.spec.ts` | organization / store / location verification, forged ids, scope rows |
+| `kernel/__tests__/tenant-membership.service.spec.ts` | tenant / store / location verification, forged ids, scope rows |
 | `kernel/__tests__/policy-engine.service.spec.ts` | every operator, DENY-only abstain, conditional ALLOW, malformed rules fail closed, strict schema |
 | `kernel/__tests__/acl.service.spec.ts` | query shape (user + role subjects, MANAGE, type-wide, tenant), conditions |
 | `guards/__tests__/authorization.guard.spec.ts` | 401 / 403, `@Authorize` with params and `self()`, fail-closed resource ids, tenant attributes, any / all, roles, SuperAdmin audit, `hasAdminAccess` |
@@ -61,22 +61,22 @@ dropdb authz_e2e
 | `services/privilege-escalation.service.spec.ts` | self-escalation, subset rule, inherited roles, SuperAdmin exemption |
 | `repositories/role-assignment.repository.spec.ts` | sync revives soft-deleted rows (regression) |
 | `src/infrastructure/outbox/platform-outbox.service.spec.ts` | outbox writes under `outbox.enqueue` (regression) |
-| `src/contexts/files/domain/__tests__/file-upload.policy.spec.ts`, `src/contexts/organizations/application/__tests__/organization-file-access.rule.spec.ts` | per-category upload / complete / read / delete rules, Cedar consulted |
-| `src/contexts/organizations/infrastructure/adapters/__tests__/organization-reward-auth.service.spec.ts` | merchant role table (cashier read-only, policy admin), owner-only KYB, POS keys never manage team / locations / verification |
-| `src/contexts/organizations/infrastructure/adapters/__tests__/organization-reward-auth.service.spec.ts` | `requireMembershipCapability`: every role × team / locations / verification allowed exactly as before the capability migration, role table and default Cedar policy agree, Cedar narrowing, fail closed on capabilities without an API action |
+| `src/contexts/files/domain/__tests__/file-upload.policy.spec.ts`, `src/contexts/tenants/application/__tests__/tenant-file-access.rule.spec.ts` | per-category upload / complete / read / delete rules, Cedar consulted |
+| `src/contexts/tenants/infrastructure/adapters/__tests__/tenant-reward-auth.service.spec.ts` | merchant role table (cashier read-only, policy admin), owner-only KYB, POS keys never manage team / locations / verification |
+| `src/contexts/tenants/infrastructure/adapters/__tests__/tenant-reward-auth.service.spec.ts` | `requireMembershipCapability`: every role × team / locations / verification allowed exactly as before the capability migration, role table and default Cedar policy agree, Cedar narrowing, fail closed on capabilities without an API action |
 | `prisma/seed/merchant-capability-catalog.spec.ts` | one seeded `CapabilityDefinition` row per merchant capability |
-| `src/common/interceptors/rls.interceptor.spec.ts` | RLS scope per caller type; verified organization only |
-| `src/common/middleware/rls-pre-handler.middleware.spec.ts` | a real Fastify app proves guards run inside `request.pre_handler` |
+| `src/common/interceptors/rls.interceptor.spec.ts` | RLS scope per caller type; verified tenant only |
+| `src/prisma/__tests__/system-operation.registry.spec.ts` | `request.pre_handler` is not an allowlisted scope; guards open named lookups |
 | `src/prisma/__tests__/rls-context.spec.ts` | fail-closed unscoped context, allowlist |
 
 ### API e2e tests (`apps/api/test`, need a database)
 
 | File | Covers |
 |---|---|
-| `authorization-hardening.e2e-spec.ts` | forged `x-organization-id` / `x-store-id` → 403, store-scoped decisions, decisions endpoint, explain restricted to admins, `@Authorize(self())` routes, self-escalation and subset rule, refresh / logout under user-scoped RLS |
+| `authorization-hardening.e2e-spec.ts` | `x-tenant-id` / `x-location-id` select nothing, forged `x-store-id` → 403, store-scoped decisions, decisions endpoint, explain restricted to admins, `@Authorize(self())` routes, self-escalation and subset rule, refresh / logout under user-scoped RLS |
 | `authorization-kernel.e2e-spec.ts` | kernel against seeded data: admin dashboard, default deny, self grants, DENY override, ACL DENY, forged org, membership ≠ permission, filters |
-| `access-hardening.e2e-spec.ts`, `rls-hardening.e2e-spec.ts`, `organization-isolation.e2e-spec.ts` | cross-org reads / writes over HTTP, RLS at the database level |
-| `merchant-capabilities.e2e-spec.ts` | seeded owner vs cashier on team, KYB and store-location endpoints (`ORGANIZATION_ROLE_CAPABILITY_REQUIRED`), cashier still reads locations |
+| `access-hardening.e2e-spec.ts`, `rls-hardening.e2e-spec.ts`, `tenant-isolation.e2e-spec.ts` | cross-org reads / writes over HTTP, RLS at the database level |
+| `merchant-capabilities.e2e-spec.ts` | seeded owner vs cashier on team, KYB and store-location endpoints (`TENANT_ROLE_CAPABILITY_REQUIRED`), cashier still reads locations |
 
 ### Shared and frontend
 

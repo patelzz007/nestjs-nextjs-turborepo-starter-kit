@@ -11,7 +11,7 @@ import * as filesEntry from "../contexts/files/index";
 import * as identityEntry from "../contexts/identity/index";
 import * as integrationsGithubEntry from "../contexts/integrations-github/index";
 import * as notificationsEntry from "../contexts/notifications/index";
-import * as organizationsEntry from "../contexts/organizations/index";
+import * as tenancyEntry from "../contexts/tenancy/index";
 import * as posEntry from "../contexts/pos/index";
 import * as referenceDataEntry from "../contexts/reference-data/index";
 import * as referralsEntry from "../contexts/referrals/index";
@@ -36,7 +36,7 @@ const ENTRIES: Readonly<Record<string, Readonly<Record<string, ExportedValue>>>>
 	identity: identityEntry,
 	"integrations-github": integrationsGithubEntry,
 	notifications: notificationsEntry,
-	organizations: organizationsEntry,
+	tenancy: tenancyEntry,
 	pos: posEntry,
 	"reference-data": referenceDataEntry,
 	referrals: referralsEntry,

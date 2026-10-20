@@ -6,7 +6,7 @@ import * as React from "react";
 
 import { resolveMerchantTrail } from "@/lib/navigation/breadcrumb";
 import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
-import { useOrganizationSlug } from "@/contexts/organizations/lib/org/use-organization-slug";
+import { useTenantSlug } from "@/contexts/tenancy/lib/org/use-tenant-slug";
 
 const { provider: BreadcrumbProvider, useBreadcrumb } = createBreadcrumbContext(resolveMerchantTrail);
 
@@ -16,8 +16,8 @@ interface MerchantBreadcrumbProviderProps {
 
 function MerchantBreadcrumbProvider({ children }: MerchantBreadcrumbProviderProps): React.JSX.Element {
 	const pathname = usePathname();
-	const organizationSlug = useOrganizationSlug();
-	const resolveHref = React.useMemo(() => createMerchantNavHrefResolver(organizationSlug), [organizationSlug]);
+	const tenantSlug = useTenantSlug();
+	const resolveHref = React.useMemo(() => createMerchantNavHrefResolver(tenantSlug), [tenantSlug]);
 	const resolveTrail = React.useCallback((currentPathname: string) => resolveMerchantTrail(currentPathname, resolveHref), [resolveHref]);
 
 	return (

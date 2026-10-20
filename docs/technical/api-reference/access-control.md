@@ -3,7 +3,7 @@ title: "API reference — Roles, permissions, policies and audit"
 description: "Platform RBAC administration, authorization decisions, Cedar policy drafts, the capability catalog and the HTTP audit log."
 order: 3
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792368000000
+lastUpdated: 1792454400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -78,14 +78,14 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "01a1557a-bbc0-71af-8439-eb45562b8985",
+      "id": "01a15a89-6ad1-7113-96cd-976eb40ab187",
       "name": "Admin",
       "description": "Admin panel — manage users, settings, and platform data",
       "isActive": true,
       "parentId": null
     },
     {
-      "id": "01a1557a-bbc1-768c-a89b-d51094ce2c1f",
+      "id": "01a15a89-6ad2-74db-81c9-f881b1e6d66c",
       "name": "Manager",
       "description": "Admin panel — read/update users and reports (no RBAC or system settings)",
       "isActive": true,
@@ -100,8 +100,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "_4BARaeEx2DRcD6UY2pyb",
-    "timestamp": 1792435594343
+    "correlationId": "EzeTFTmtiODmX4FzbHIne",
+    "timestamp": 1792520433941
   }
 }
 ```
@@ -182,7 +182,7 @@ Content-Type: application/json
 {
   "name": "Store Auditor",
   "description": "Reads geography and audit data for store reviews",
-  "parentId": "01a1557a-bbc2-7672-b075-9f725142745f"
+  "parentId": "01a15a89-6ad6-72cd-8e42-f9e9bfec3693"
 }
 ```
 
@@ -192,20 +192,20 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792435594452,
-    "updatedAt": 1792435594452,
+    "createdAt": 1792520434083,
+    "updatedAt": 1792520434083,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a1557c-a4d6-7521-8cba-b101b3fcc8e7",
+    "id": "01a15a8b-31a6-7def-b26b-228d8e661457",
     "name": "Store Auditor",
     "description": "Reads geography and audit data for store reviews",
     "isActive": true,
     "isSystem": false,
-    "parentId": "01a1557a-bbc2-7672-b075-9f725142745f"
+    "parentId": "01a15a89-6ad6-72cd-8e42-f9e9bfec3693"
   },
   "meta": {
-    "correlationId": "WPiKcIj6GKqkY9nsJq_fx",
-    "timestamp": 1792435594477
+    "correlationId": "AlCH12HuO5nZ6ORpYVqZ7",
+    "timestamp": 1792520434119
   }
 }
 ```
@@ -272,7 +272,7 @@ Response `201 Created` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/admin/roles/01a1557a-bbc1-768c-a89b-d51094ce2c1f
+GET /api/v1/admin/roles/01a15a89-6ad2-74db-81c9-f881b1e6d66c
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -283,11 +283,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792435469238,
-    "updatedAt": 1792435469238,
+    "createdAt": 1792520317639,
+    "updatedAt": 1792520317639,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a1557a-bbc1-768c-a89b-d51094ce2c1f",
+    "id": "01a15a89-6ad2-74db-81c9-f881b1e6d66c",
     "name": "Manager",
     "description": "Admin panel — read/update users and reports (no RBAC or system settings)",
     "isActive": true,
@@ -295,8 +295,8 @@ Response `200 OK` (application/json):
     "parentId": null
   },
   "meta": {
-    "correlationId": "Ss3e1rrQtUt-rpcfafD_0",
-    "timestamp": 1792435594423
+    "correlationId": "tnodvqN0FN5uIq_mmnpE7",
+    "timestamp": 1792520434037
   }
 }
 ```
@@ -373,7 +373,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/admin/roles/01a1557c-a4d6-7521-8cba-b101b3fcc8e7
+PATCH /api/v1/admin/roles/01a15a8b-31a6-7def-b26b-228d8e661457
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -390,20 +390,20 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792435594452,
-    "updatedAt": 1792435594524,
+    "createdAt": 1792520434083,
+    "updatedAt": 1792520434166,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a1557c-a4d6-7521-8cba-b101b3fcc8e7",
+    "id": "01a15a8b-31a6-7def-b26b-228d8e661457",
     "name": "Store Auditor",
     "description": "Reads geography, audit and analytics data for store reviews",
     "isActive": true,
     "isSystem": false,
-    "parentId": "01a1557a-bbc2-7672-b075-9f725142745f"
+    "parentId": "01a15a89-6ad6-72cd-8e42-f9e9bfec3693"
   },
   "meta": {
-    "correlationId": "r3Klun4qNmDlc4Wq3oakZ",
-    "timestamp": 1792435594532
+    "correlationId": "sE531RG7cebx8lK1hLoKu",
+    "timestamp": 1792520434182
   }
 }
 ```
@@ -441,7 +441,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-DELETE /api/v1/admin/roles/01a1557c-a4d6-7521-8cba-b101b3fcc8e7
+DELETE /api/v1/admin/roles/01a15a8b-31a6-7def-b26b-228d8e661457
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -456,8 +456,8 @@ Response `200 OK` (application/json):
     "message": "Role deleted successfully"
   },
   "meta": {
-    "correlationId": "2xnRF_IgcnjEIXkVEhaw3",
-    "timestamp": 1792435595038
+    "correlationId": "3nfIJPx4ymjaMMYEtc2Gh",
+    "timestamp": 1792520434778
   }
 }
 ```
@@ -532,14 +532,14 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/admin/roles/01a1557c-a4d6-7521-8cba-b101b3fcc8e7/parent
+PATCH /api/v1/admin/roles/01a15a8b-31a6-7def-b26b-228d8e661457/parent
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "parentId": "01a1557a-bbc1-768c-a89b-d51094ce2c1f"
+  "parentId": "01a15a89-6ad2-74db-81c9-f881b1e6d66c"
 }
 ```
 
@@ -549,20 +549,20 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792435594452,
-    "updatedAt": 1792435594581,
+    "createdAt": 1792520434083,
+    "updatedAt": 1792520434226,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a1557c-a4d6-7521-8cba-b101b3fcc8e7",
+    "id": "01a15a8b-31a6-7def-b26b-228d8e661457",
     "name": "Store Auditor",
     "description": "Reads geography, audit and analytics data for store reviews",
     "isActive": true,
     "isSystem": false,
-    "parentId": "01a1557a-bbc1-768c-a89b-d51094ce2c1f"
+    "parentId": "01a15a89-6ad2-74db-81c9-f881b1e6d66c"
   },
   "meta": {
-    "correlationId": "PRmRNfmu7103aaXEbfh6_",
-    "timestamp": 1792435594589
+    "correlationId": "jtvrkSPgvjP37y4lijeoB",
+    "timestamp": 1792520434245
   }
 }
 ```
@@ -606,7 +606,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/roles/01a1557c-a4d6-7521-8cba-b101b3fcc8e7/permissions
+POST /api/v1/admin/roles/01a15a8b-31a6-7def-b26b-228d8e661457/permissions
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -614,7 +614,7 @@ Content-Type: application/json
 
 {
   "permissionIds": [
-    "01a1557a-bb84-7668-aceb-78e7bba0bae4"
+    "01a15a89-6a9b-736d-96cc-f840d067ccf7"
   ]
 }
 ```
@@ -628,8 +628,8 @@ Response `201 Created` (application/json):
     "message": "Role permissions synced successfully"
   },
   "meta": {
-    "correlationId": "yB7ho9BHzIEqGYukHB2oO",
-    "timestamp": 1792435594650
+    "correlationId": "2CVkPLVTiIjWL_MpcsCYm",
+    "timestamp": 1792520434313
   }
 }
 ```
@@ -698,7 +698,7 @@ Response `201 Created` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/roles/01a1557c-a4d6-7521-8cba-b101b3fcc8e7/restore
+POST /api/v1/admin/roles/01a15a8b-31a6-7def-b26b-228d8e661457/restore
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -710,20 +710,20 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792435594452,
-    "updatedAt": 1792435595063,
+    "createdAt": 1792520434083,
+    "updatedAt": 1792520434827,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a1557c-a4d6-7521-8cba-b101b3fcc8e7",
+    "id": "01a15a8b-31a6-7def-b26b-228d8e661457",
     "name": "Store Auditor",
     "description": "Reads geography, audit and analytics data for store reviews",
     "isActive": true,
     "isSystem": false,
-    "parentId": "01a1557a-bbc1-768c-a89b-d51094ce2c1f"
+    "parentId": "01a15a89-6ad2-74db-81c9-f881b1e6d66c"
   },
   "meta": {
-    "correlationId": "ZOABV0ARPN2PTNy7uqluy",
-    "timestamp": 1792435595073
+    "correlationId": "BBUyLfizkvrGDe5kByjeg",
+    "timestamp": 1792520434843
   }
 }
 ```
@@ -769,16 +769,16 @@ Response `201 Created` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/roles/01a1557c-a4d6-7521-8cba-b101b3fcc8e7/validate-assignment
+POST /api/v1/admin/roles/01a15a8b-31a6-7def-b26b-228d8e661457/validate-assignment
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a1557a-c0d3-74b5-863f-5c482fd90d58",
+  "userId": "01a15a89-7039-7528-be2d-f1389ef5d2ef",
   "roleIds": [
-    "01a1557c-a4d6-7521-8cba-b101b3fcc8e7"
+    "01a15a8b-31a6-7def-b26b-228d8e661457"
   ]
 }
 ```
@@ -793,8 +793,8 @@ Response `201 Created` (application/json):
     "message": "No conflicts detected"
   },
   "meta": {
-    "correlationId": "h01MXhDom-KkWahANqIA8",
-    "timestamp": 1792435594692
+    "correlationId": "HXBNZqQRd97AueeifLrvK",
+    "timestamp": 1792520434351
   }
 }
 ```
@@ -845,10 +845,10 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a1557a-c0d3-74b5-863f-5c482fd90d58",
+  "userId": "01a15a89-7039-7528-be2d-f1389ef5d2ef",
   "roleIds": [
-    "01a1557a-bbc2-7672-b075-9f725142745f",
-    "01a1557c-a4d6-7521-8cba-b101b3fcc8e7"
+    "01a15a89-6ad6-72cd-8e42-f9e9bfec3693",
+    "01a15a8b-31a6-7def-b26b-228d8e661457"
   ]
 }
 ```
@@ -877,8 +877,8 @@ Response `201 Created` (application/json):
     "permissionsLost": []
   },
   "meta": {
-    "correlationId": "B_MjeU8wvTbMmS2ldUTGz",
-    "timestamp": 1792435594755
+    "correlationId": "B__4WvZumtv7_aTZNeK9c",
+    "timestamp": 1792520434399
   }
 }
 ```
@@ -925,8 +925,8 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a1557a-c0d3-74b5-863f-5c482fd90d58",
-  "roleId": "01a1557c-a4d6-7521-8cba-b101b3fcc8e7"
+  "userId": "01a15a89-7039-7528-be2d-f1389ef5d2ef",
+  "roleId": "01a15a8b-31a6-7def-b26b-228d8e661457"
 }
 ```
 
@@ -939,8 +939,8 @@ Response `201 Created` (application/json):
     "message": "Role assigned to user successfully"
   },
   "meta": {
-    "correlationId": "SSZcve9ur_yUCKy9ATLGa",
-    "timestamp": 1792435594808
+    "correlationId": "ZJbyvhrMRa4KyjqF3zynM",
+    "timestamp": 1792520434479
   }
 }
 ```
@@ -986,8 +986,8 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a1557a-c0d3-74b5-863f-5c482fd90d58",
-  "roleId": "01a1557c-a4d6-7521-8cba-b101b3fcc8e7"
+  "userId": "01a15a89-7039-7528-be2d-f1389ef5d2ef",
+  "roleId": "01a15a8b-31a6-7def-b26b-228d8e661457"
 }
 ```
 
@@ -1000,8 +1000,8 @@ Response `201 Created` (application/json):
     "message": "Role removed from user successfully"
   },
   "meta": {
-    "correlationId": "XUGvSTMNkeJlpAx8bg2ou",
-    "timestamp": 1792435594883
+    "correlationId": "EbKIA7DoloMUTrxf2Twqb",
+    "timestamp": 1792520434568
   }
 }
 ```
@@ -1047,9 +1047,9 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a1557a-c0d3-74b5-863f-5c482fd90d58",
+  "userId": "01a15a89-7039-7528-be2d-f1389ef5d2ef",
   "roleIds": [
-    "01a1557a-bbc2-7672-b075-9f725142745f"
+    "01a15a89-6ad6-72cd-8e42-f9e9bfec3693"
   ]
 }
 ```
@@ -1063,8 +1063,8 @@ Response `201 Created` (application/json):
     "message": "User roles synced successfully"
   },
   "meta": {
-    "correlationId": "32APKKNAFmNl63YX7DFgf",
-    "timestamp": 1792435594979
+    "correlationId": "u-lI085V2FjqHiorfXS7x",
+    "timestamp": 1792520434693
   }
 }
 ```
@@ -1132,7 +1132,7 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "01a1557a-bb84-7668-aceb-326aac99d1b4",
+      "id": "01a15a89-6a9a-75d3-a976-b8a6f9c313cd",
       "action": "READ",
       "resource": "ADMIN_DASHBOARD",
       "description": "Access admin dashboard",
@@ -1140,7 +1140,7 @@ Response `200 OK` (application/json):
       "isSystem": false
     },
     {
-      "id": "01a1557a-bb84-7668-aceb-3552468cec85",
+      "id": "01a15a89-6a9a-75d3-a976-bf7aadd18471",
       "action": "MANAGE",
       "resource": "ADMIN_DASHBOARD",
       "description": "Full admin dashboard access",
@@ -1156,8 +1156,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "xUls3P3uN2LQe3dWekA1A",
-    "timestamp": 1792435593545
+    "correlationId": "kTjvd4ALWiwWjE7EzHESL",
+    "timestamp": 1792520433193
   }
 }
 ```
@@ -1195,7 +1195,7 @@ Response `200 OK` (application/json):
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
 | `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
-| `data.scope` | "GLOBAL" \| "ORGANIZATION" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
+| `data.scope` | "GLOBAL" \| "TENANT" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1230,11 +1230,11 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792435593854,
-    "updatedAt": 1792435593854,
+    "createdAt": 1792520433388,
+    "updatedAt": 1792520433388,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a1557c-a280-7e3f-9884-6ff9491e541d",
+    "id": "01a15a8b-2eef-78cf-8581-eba28029e25d",
     "action": "MANAGE",
     "resource": "INVENTORY",
     "description": "Manage inventory records",
@@ -1244,8 +1244,8 @@ Response `201 Created` (application/json):
     "conditions": null
   },
   "meta": {
-    "correlationId": "2f_CGMR2vq1TKeWbNk4X9",
-    "timestamp": 1792435593884
+    "correlationId": "_ApbveAX9kEDTsbjBcpeD",
+    "timestamp": 1792520433401
   }
 }
 ```
@@ -1277,7 +1277,7 @@ Response `201 Created` (application/json):
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
 | `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
-| `data.scope` | "GLOBAL" \| "ORGANIZATION" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
+| `data.scope` | "GLOBAL" \| "TENANT" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1292,7 +1292,7 @@ Response `201 Created` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/admin/permissions/01a1557a-bb84-7668-aceb-78e7bba0bae4
+GET /api/v1/admin/permissions/01a15a89-6a9b-736d-96cc-f840d067ccf7
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -1303,11 +1303,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792435469139,
-    "updatedAt": 1792435469139,
+    "createdAt": 1792520317552,
+    "updatedAt": 1792520317552,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a1557a-bb84-7668-aceb-78e7bba0bae4",
+    "id": "01a15a89-6a9b-736d-96cc-f840d067ccf7",
     "action": "READ",
     "resource": "GEO",
     "description": "View geographic data (regions, countries, states, cities)",
@@ -1317,8 +1317,8 @@ Response `200 OK` (application/json):
     "conditions": null
   },
   "meta": {
-    "correlationId": "3ZF2SHsCShLiFWpzeY4ab",
-    "timestamp": 1792435593688
+    "correlationId": "khMhBt5NE_0PorVzvzZhQ",
+    "timestamp": 1792520433273
   }
 }
 ```
@@ -1360,7 +1360,7 @@ Response `200 OK` (application/json):
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
 | `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
-| `data.scope` | "GLOBAL" \| "ORGANIZATION" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
+| `data.scope` | "GLOBAL" \| "TENANT" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1375,7 +1375,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/admin/permissions/01a1557c-a280-7e3f-9884-6ff9491e541d
+PATCH /api/v1/admin/permissions/01a15a8b-2eef-78cf-8581-eba28029e25d
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1392,11 +1392,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792435593854,
-    "updatedAt": 1792435593933,
+    "createdAt": 1792520433388,
+    "updatedAt": 1792520433440,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a1557c-a280-7e3f-9884-6ff9491e541d",
+    "id": "01a15a8b-2eef-78cf-8581-eba28029e25d",
     "action": "MANAGE",
     "resource": "INVENTORY",
     "description": "Manage every inventory record",
@@ -1406,8 +1406,8 @@ Response `200 OK` (application/json):
     "conditions": null
   },
   "meta": {
-    "correlationId": "xejNCJbGOEDFE8neZzyBJ",
-    "timestamp": 1792435593940
+    "correlationId": "m7EM4GgMBXAg3_N-Bkh-L",
+    "timestamp": 1792520433453
   }
 }
 ```
@@ -1445,7 +1445,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-DELETE /api/v1/admin/permissions/01a1557c-a280-7e3f-9884-6ff9491e541d
+DELETE /api/v1/admin/permissions/01a15a8b-2eef-78cf-8581-eba28029e25d
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1460,8 +1460,8 @@ Response `200 OK` (application/json):
     "message": "Permission deleted successfully"
   },
   "meta": {
-    "correlationId": "4epKqTpYiBKd1yMWx66Ov",
-    "timestamp": 1792435593978
+    "correlationId": "A_dwf4kaEWFfMtv3JHYHR",
+    "timestamp": 1792520433507
   }
 }
 ```
@@ -1495,7 +1495,7 @@ Response `200 OK` (application/json):
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
 | `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
-| `data.scope` | "GLOBAL" \| "ORGANIZATION" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
+| `data.scope` | "GLOBAL" \| "TENANT" \| "STORE" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1510,7 +1510,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/permissions/01a1557c-a280-7e3f-9884-6ff9491e541d/restore
+POST /api/v1/admin/permissions/01a15a8b-2eef-78cf-8581-eba28029e25d/restore
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1522,11 +1522,11 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792435593854,
-    "updatedAt": 1792435594021,
+    "createdAt": 1792520433388,
+    "updatedAt": 1792520433551,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a1557c-a280-7e3f-9884-6ff9491e541d",
+    "id": "01a15a8b-2eef-78cf-8581-eba28029e25d",
     "action": "MANAGE",
     "resource": "INVENTORY",
     "description": "Manage every inventory record",
@@ -1536,8 +1536,8 @@ Response `201 Created` (application/json):
     "conditions": null
   },
   "meta": {
-    "correlationId": "B6woK6clSPcHARgtweUyO",
-    "timestamp": 1792435594030
+    "correlationId": "qD5KGkBtC-Q-W-HQk9j5q",
+    "timestamp": 1792520433579
   }
 }
 ```
@@ -1587,7 +1587,7 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a1557a-c0c1-774a-9b27-c03bb47349a0",
+  "userId": "01a15a89-7005-7762-9f2f-9abce72a4081",
   "action": "READ",
   "resource": "GEO"
 }
@@ -1603,8 +1603,8 @@ Response `201 Created` (application/json):
     "grants": []
   },
   "meta": {
-    "correlationId": "K2-Vf9XvKMlUBNWG7ggaZ",
-    "timestamp": 1792435593795
+    "correlationId": "6Hu7omBkCl5quLANG_Ikd",
+    "timestamp": 1792520433352
   }
 }
 ```
@@ -1650,8 +1650,8 @@ Response `200 OK` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "5UGom2urM5U8agg4LJGy0",
-    "timestamp": 1792435593716
+    "correlationId": "blTRtT-5shfBjI0U-8HYp",
+    "timestamp": 1792520433301
   }
 }
 ```
@@ -1699,8 +1699,8 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a1557a-c0c1-774a-9b27-c03bb47349a0",
-  "permissionId": "01a1557a-bb84-7668-aceb-78e7bba0bae4",
+  "userId": "01a15a89-7005-7762-9f2f-9abce72a4081",
+  "permissionId": "01a15a89-6a9b-736d-96cc-f840d067ccf7",
   "effect": "ALLOW"
 }
 ```
@@ -1714,8 +1714,8 @@ Response `201 Created` (application/json):
     "message": "Permission granted to user successfully"
   },
   "meta": {
-    "correlationId": "8yOlS7JcUuHZZIRhVbB3U",
-    "timestamp": 1792435594083
+    "correlationId": "FZFc3JoDyhcIjwXMVGpfe",
+    "timestamp": 1792520433654
   }
 }
 ```
@@ -1763,8 +1763,8 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a1557a-c0c1-774a-9b27-c03bb47349a0",
-  "permissionId": "01a1557a-bb84-7668-aceb-78e7bba0bae4"
+  "userId": "01a15a89-7005-7762-9f2f-9abce72a4081",
+  "permissionId": "01a15a89-6a9b-736d-96cc-f840d067ccf7"
 }
 ```
 
@@ -1777,8 +1777,8 @@ Response `201 Created` (application/json):
     "message": "Permission revoked from user"
   },
   "meta": {
-    "correlationId": "wkrrAeD-fWUPDwOuttPTx",
-    "timestamp": 1792435594176
+    "correlationId": "SHAzUSmvy-htWR7OB-J4i",
+    "timestamp": 1792520433745
   }
 }
 ```
@@ -1824,9 +1824,9 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a1557a-c0c1-774a-9b27-c03bb47349a0",
+  "userId": "01a15a89-7005-7762-9f2f-9abce72a4081",
   "permissionIds": [
-    "01a1557a-bb84-7668-aceb-78e7bba0bae4"
+    "01a15a89-6a9b-736d-96cc-f840d067ccf7"
   ]
 }
 ```
@@ -1840,8 +1840,8 @@ Response `201 Created` (application/json):
     "message": "User permissions synced successfully"
   },
   "meta": {
-    "correlationId": "-rNbGrl1FjeeN3qocQTOp",
-    "timestamp": 1792435594295
+    "correlationId": "5LxliEAhFirIMT6erVb_z",
+    "timestamp": 1792520433898
   }
 }
 ```
@@ -1928,8 +1928,8 @@ Response `200 OK` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "0Q285w9uVoUITdo1LV4KG",
-    "timestamp": 1792435595096
+    "correlationId": "UcX_iMiUC_sqrrNTkxuaB",
+    "timestamp": 1792520434877
   }
 }
 ```
@@ -1951,7 +1951,7 @@ Admin: step-by-step explanation of an authorization decision
 | `resource` | query | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
 | `resourceId` | query | string | no |  |
 | `userId` | query | string | no |  |
-| `organizationId` | query | string | no |  |
+| `tenantId` | query | string | no |  |
 | `storeId` | query | string | no |  |
 | `locationId` | query | string | no |  |
 
@@ -1975,9 +1975,9 @@ Admin: step-by-step explanation of an authorization decision
 | `data.request.subject.attributes` | object | no |  |
 | `data.request.subject.isSuperAdmin` | boolean | no |  |
 | `data.request.subject.locationId` | string | no |  |
-| `data.request.subject.organizationId` | string | no |  |
 | `data.request.subject.roles` | string[] | no |  |
 | `data.request.subject.storeId` | string | no |  |
+| `data.request.subject.tenantId` | string | no |  |
 | `data.request.subject.userId` | string | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1992,7 +1992,7 @@ Admin: step-by-step explanation of an authorization decision
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/authorization/decisions/explain?action=READ&resource=GEO&userId=01a1557a-c0c1-774a-9b27-c03bb47349a0
+GET /api/v1/authorization/decisions/explain?action=READ&resource=GEO&userId=01a15a89-7005-7762-9f2f-9abce72a4081
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -2006,7 +2006,7 @@ Response `200 OK` (application/json):
     "decision": "ALLOW",
     "request": {
       "subject": {
-        "userId": "01a1557a-c0c1-774a-9b27-c03bb47349a0",
+        "userId": "01a15a89-7005-7762-9f2f-9abce72a4081",
         "isSuperAdmin": false
       },
       "action": "READ",
@@ -2028,11 +2028,11 @@ Response `200 OK` (application/json):
         }
       }
     ],
-    "durationMs": 31
+    "durationMs": 36
   },
   "meta": {
-    "correlationId": "X-W7ASBXNSA6n7ajMgATR",
-    "timestamp": 1792435595152
+    "correlationId": "PeZpWrqrwrVhL9l9Uf-BS",
+    "timestamp": 1792520434948
   }
 }
 ```
@@ -2058,8 +2058,8 @@ Response `200 OK` (application/json):
 | `builderPayload.templateId` | string | yes |  |
 | `description` | string | no | at most 2000 characters |
 | `name` | string | yes | length 1–120 |
-| `organizationId` | string (uuid) | no |  |
 | `scope` | "PLATFORM_GUARDRAIL" \| "PLATFORM" \| "TENANT" | yes |  |
+| `tenantId` | string (uuid) | no |  |
 
 **Response 201 Created** (`application/json`) — Policy draft created
 
@@ -2089,7 +2089,7 @@ Content-Type: application/json
   "name": "Brew & Bean KL — owners and admins manage rewards",
   "description": "Tenant role-capability policy for Brew & Bean KL",
   "scope": "TENANT",
-  "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+  "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
   "builderPayload": {
     "templateId": "tenant.role_capability",
     "parameters": {
@@ -2108,11 +2108,11 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "draftId": "01a1557c-a80e-754c-8896-79f2974d0ace"
+    "draftId": "01a15a8b-35be-787d-8e88-0fd6f7918dbf"
   },
   "meta": {
-    "correlationId": "H9bX0gW_8r6FAYw09P1bl",
-    "timestamp": 1792435595291
+    "correlationId": "AvGK_flpV_mhB-7rVFV1w",
+    "timestamp": 1792520435153
   }
 }
 ```
@@ -2143,7 +2143,7 @@ Response `201 Created` (application/json):
 | `data.decisionChanges[].after` | "Allow" \| "Deny" | yes |  |
 | `data.decisionChanges[].before` | "Allow" \| "Deny" | yes |  |
 | `data.decisionChanges[].membershipRole` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
-| `data.decisionChanges[].organizationId` | string (uuid) | yes |  |
+| `data.decisionChanges[].tenantId` | string (uuid) | yes |  |
 | `data.decisionChanges[].userId` | string (uuid) | yes |  |
 | `data.decisionChangesTruncated` | boolean | yes |  |
 | `data.errors` | string[] | yes |  |
@@ -2165,7 +2165,7 @@ Response `201 Created` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/policies/drafts/01a1557c-a80e-754c-8896-79f2974d0ace/simulate
+POST /api/v1/policies/drafts/01a15a8b-35be-787d-8e88-0fd6f7918dbf/simulate
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -2177,7 +2177,7 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "simulationId": "01a1557c-a85a-7165-9b15-4b698cd35a3a",
+    "simulationId": "01a15a8b-3616-7ee2-a058-a38eb2a8f181",
     "passed": true,
     "warnings": [
       "2 principal(s) would get at least one different decision"
@@ -2188,7 +2188,7 @@ Response `201 Created` (application/json):
     "wouldLockOutOwners": false,
     "decisionChanges": [
       {
-        "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+        "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
         "userId": "019b76da-a800-7965-b8a4-624b6c755c16",
         "membershipRole": "CASHIER",
         "action": "tenant:view_rewards",
@@ -2196,7 +2196,7 @@ Response `201 Created` (application/json):
         "after": "Deny"
       },
       {
-        "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+        "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
         "userId": "019b76da-a800-7965-b8a4-624b6c755c16",
         "membershipRole": "CASHIER",
         "action": "tenant:manage_rewards",
@@ -2207,8 +2207,8 @@ Response `201 Created` (application/json):
     "decisionChangesTruncated": false
   },
   "meta": {
-    "correlationId": "n95BzEYmJkQTyn7I4vG80",
-    "timestamp": 1792435595393
+    "correlationId": "sJQWbDdn6f6tvzOAdG3fB",
+    "timestamp": 1792520435234
   }
 }
 ```
@@ -2255,7 +2255,7 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "draftId": "01a1557c-a80e-754c-8896-79f2974d0ace",
+  "draftId": "01a15a8b-35be-787d-8e88-0fd6f7918dbf",
   "approvalNote": "Reviewed against the tenant guardrails"
 }
 ```
@@ -2270,8 +2270,8 @@ Response `403 Forbidden` (application/json):
     "message": "A policy draft must be approved by a SuperAdmin other than its author"
   },
   "meta": {
-    "correlationId": "hFT692gINbCJeYoc1KJ81",
-    "timestamp": 1792435595433
+    "correlationId": "xc-BD-M4gPEa2LZjfDO5o",
+    "timestamp": 1792520435272
   }
 }
 ```
@@ -2283,7 +2283,6 @@ Response `403 Forbidden` (application/json):
 List capability catalog entries (optionally filtered by scope)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `CapabilitiesCatalogController_listCatalog` · [source](../../../apps/api/src/contexts/authorization/presentation/http/capabilities-catalog.controller.ts)
 
@@ -2330,7 +2329,7 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "01a1557a-bc73-7571-9b6a-ad028ba5f9e0",
+      "id": "01a15a89-6bb6-76bf-bc44-b95bb58b4fc4",
       "slug": "merchant:view_dashboard",
       "scope": "MERCHANT",
       "label": "View dashboard",
@@ -2340,7 +2339,7 @@ Response `200 OK` (application/json):
       "isSystem": true
     },
     {
-      "id": "01a1557a-bc48-716e-b845-c6fcf514d034",
+      "id": "01a15a89-6b49-7732-9645-0e0079486864",
       "slug": "platform:admin_dashboard.manage",
       "scope": "PLATFORM",
       "label": "Full admin dashboard access",
@@ -2351,8 +2350,8 @@ Response `200 OK` (application/json):
     }
   ],
   "meta": {
-    "correlationId": "3zO9Ik2mg-m-v5er9UwpL",
-    "timestamp": 1792435595177
+    "correlationId": "3i2VeEyUrZibmTBFsArTz",
+    "timestamp": 1792520434996
   }
 }
 ```
@@ -2427,12 +2426,12 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792435595218,
-      "updatedAt": 1792435595218,
-      "id": "01a1557c-a7d0-73cb-a4e4-eb1c60a94ff6",
+      "createdAt": 1792520435061,
+      "updatedAt": 1792520435061,
+      "id": "01a15a8b-3576-77b9-8491-a4dab3c6e217",
       "actor": {
         "kind": "USER",
-        "userId": "01a1557a-c0b2-72f9-ab17-46cd05f66ace",
+        "userId": "01a15a89-6fe5-753f-8ef2-a28d8210e0e0",
         "impersonatorId": null
       },
       "targetUserId": null,
@@ -2442,19 +2441,19 @@ Response `200 OK` (application/json):
       "detail": "Bypassed authorization for list at GET /api/v1/admin/audit?limit=2"
     },
     {
-      "createdAt": 1792435595115,
-      "updatedAt": 1792435595115,
-      "id": "01a1557c-a769-77ff-aea6-9584fb4a7176",
+      "createdAt": 1792520434901,
+      "updatedAt": 1792520434901,
+      "id": "01a15a8b-34d6-768e-af09-39fdf215cea7",
       "actor": {
         "kind": "USER",
-        "userId": "01a1557a-c0b2-72f9-ab17-46cd05f66ace",
+        "userId": "01a15a89-6fe5-753f-8ef2-a28d8210e0e0",
         "impersonatorId": null
       },
       "targetUserId": null,
       "targetRoleId": null,
       "permissionId": null,
       "action": "SUPER_ADMIN_BYPASS",
-      "detail": "Bypassed authorization for explain at GET /api/v1/authorization/decisions/explain?action=READ&resource=GEO&userId=01a1557a-c0c1-774a-9b27-c03bb47349a0"
+      "detail": "Bypassed authorization for explain at GET /api/v1/authorization/decisions/explain?action=READ&resource=GEO&userId=01a15a89-7005-7762-9f2f-9abce72a4081"
     }
   ],
   "meta": {
@@ -2462,11 +2461,11 @@ Response `200 OK` (application/json):
     "total": 110,
     "page": 1,
     "totalPages": 55,
-    "nextCursor": "eyJhdCI6MTc5MjQzNTU5NTExNSwiaWQiOiIwMWExNTU3Yy1hNzY5LTc3ZmYtYWVhNi05NTg0ZmI0YTcxNzYifQ",
+    "nextCursor": "eyJhdCI6MTc5MjUyMDQzNDkwMSwiaWQiOiIwMWExNWE4Yi0zNGQ2LTc2OGUtYWYwOS0zOWZkZjIxNWNlYTcifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "EWcA4n1OFxMuuQwBVu6tO",
-    "timestamp": 1792435595236
+    "correlationId": "gWRj83ml4-vzF1rurGBiI",
+    "timestamp": 1792520435077
   }
 }
 ```
@@ -2491,7 +2490,7 @@ Request metadata only — open one record for its redacted payloads.
 | `limit` | query | integer | no | Page size (default 20, max 100) |
 | `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
 | `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: occurredAt, responseStatus, method, endpoint. Default: -occurredAt |
-| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: outcome, method, authMethod, responseStatus, endpoint, errorCode, actorUserId, impersonatorUserId, organizationId, apiKeyId, ipAddress, ipScope, deviceType, browserName, osName, geoCountry, correlationId, occurredAt |
+| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: outcome, method, authMethod, responseStatus, endpoint, errorCode, actorUserId, impersonatorUserId, tenantId, apiKeyId, ipAddress, ipScope, deviceType, browserName, osName, geoCountry, correlationId, occurredAt |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 
 **Response 200 OK** (`application/json`) — Paginated audit records; pagination is in `meta`
@@ -2530,15 +2529,15 @@ Request metadata only — open one record for its redacted payloads.
 | `data[].locationId` | string \| null | yes | length 1–64 |
 | `data[].method` | string | yes | length 1–10 |
 | `data[].occurredAt` | integer | yes |  |
-| `data[].organization` | object \| null | yes |  |
-| `data[].organization.id` | string | yes | length 1–64 |
-| `data[].organization.name` | string \| null | yes |  |
 | `data[].osName` | string \| null | yes | at most 64 characters |
 | `data[].osVersion` | string \| null | yes | at most 32 characters |
 | `data[].outcome` | "SUCCEEDED" \| "FAILED" | yes |  |
 | `data[].path` | string | yes | length 1–2048 |
 | `data[].responseStatus` | integer | yes | range 100–599 |
 | `data[].storeId` | string \| null | yes | length 1–64 |
+| `data[].tenant` | object \| null | yes |  |
+| `data[].tenant.id` | string | yes | length 1–64 |
+| `data[].tenant.name` | string \| null | yes |  |
 | `data[].terminalId` | string \| null | yes | length 1–64 |
 | `data[].userAgent` | string \| null | yes | at most 512 characters |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
@@ -2620,9 +2619,6 @@ Includes the redacted request params, request body and response body.
 | `data.locationId` | string \| null | yes | length 1–64 |
 | `data.method` | string | yes | length 1–10 |
 | `data.occurredAt` | integer | yes |  |
-| `data.organization` | object \| null | yes |  |
-| `data.organization.id` | string | yes | length 1–64 |
-| `data.organization.name` | string \| null | yes |  |
 | `data.origin` | string \| null | yes | at most 512 characters |
 | `data.osName` | string \| null | yes | at most 64 characters |
 | `data.osVersion` | string \| null | yes | at most 32 characters |
@@ -2636,7 +2632,11 @@ Includes the redacted request params, request body and response body.
 | `data.responseBody` | any JSON \| null | yes |  |
 | `data.responseStatus` | integer | yes | range 100–599 |
 | `data.storeId` | string \| null | yes | length 1–64 |
+| `data.supportAccessGrantId` | string \| null | yes | length 1–64 |
 | `data.systemOperations` | string[] | yes |  |
+| `data.tenant` | object \| null | yes |  |
+| `data.tenant.id` | string | yes | length 1–64 |
+| `data.tenant.name` | string \| null | yes |  |
 | `data.terminalId` | string \| null | yes | length 1–64 |
 | `data.traceId` | string \| null | yes | length 1–64 |
 | `data.userAgent` | string \| null | yes | at most 512 characters |
@@ -2673,7 +2673,7 @@ HTTP requests (with how many rows each changed) and background database writes a
 | `limit` | query | integer | no | Page size (default 20, max 100) |
 | `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
 | `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: occurredAt. Default: -occurredAt |
-| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: kind, actorUserId, organizationId, correlationId, tableName, rowId, occurredAt, outcome, method, authMethod, deviceType, ipScope, actorKind |
+| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: kind, actorUserId, tenantId, correlationId, tableName, rowId, occurredAt, outcome, method, authMethod, deviceType, ipScope, actorKind |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 
 **Response 200 OK** (`application/json`) — Paginated timeline entries; pagination is in `meta`
@@ -2715,15 +2715,15 @@ HTTP requests (with how many rows each changed) and background database writes a
 | `data[].⟨shape 1⟩ locationId` | string \| null | yes | length 1–64 |
 | `data[].⟨shape 1⟩ method` | string | yes | length 1–10 |
 | `data[].⟨shape 1⟩ occurredAt` | integer | yes |  |
-| `data[].⟨shape 1⟩ organization` | object \| null | yes |  |
-| `data[].⟨shape 1⟩ organization.id` | string | yes | length 1–64 |
-| `data[].⟨shape 1⟩ organization.name` | string \| null | yes |  |
 | `data[].⟨shape 1⟩ osName` | string \| null | yes | at most 64 characters |
 | `data[].⟨shape 1⟩ osVersion` | string \| null | yes | at most 32 characters |
 | `data[].⟨shape 1⟩ outcome` | "SUCCEEDED" \| "FAILED" | yes |  |
 | `data[].⟨shape 1⟩ path` | string | yes | length 1–2048 |
 | `data[].⟨shape 1⟩ responseStatus` | integer | yes | range 100–599 |
 | `data[].⟨shape 1⟩ storeId` | string \| null | yes | length 1–64 |
+| `data[].⟨shape 1⟩ tenant` | object \| null | yes |  |
+| `data[].⟨shape 1⟩ tenant.id` | string | yes | length 1–64 |
+| `data[].⟨shape 1⟩ tenant.name` | string \| null | yes |  |
 | `data[].⟨shape 1⟩ terminalId` | string \| null | yes | length 1–64 |
 | `data[].⟨shape 1⟩ userAgent` | string \| null | yes | at most 512 characters |
 | `data[].⟨shape 2⟩ actor` | object \| null | yes |  |
@@ -2740,11 +2740,11 @@ HTTP requests (with how many rows each changed) and background database writes a
 | `data[].⟨shape 2⟩ kind` | "BACKGROUND" | yes |  |
 | `data[].⟨shape 2⟩ occurredAt` | integer | yes |  |
 | `data[].⟨shape 2⟩ operation` | "INSERT" \| "UPDATE" \| "DELETE" \| "TRUNCATE" | yes |  |
-| `data[].⟨shape 2⟩ organization` | object \| null | yes |  |
-| `data[].⟨shape 2⟩ organization.id` | string | yes | length 1–64 |
-| `data[].⟨shape 2⟩ organization.name` | string \| null | yes |  |
 | `data[].⟨shape 2⟩ rowId` | string \| null | yes | at most 512 characters |
 | `data[].⟨shape 2⟩ systemOperation` | string \| null | yes | length 1–100 |
+| `data[].⟨shape 2⟩ tenant` | object \| null | yes |  |
+| `data[].⟨shape 2⟩ tenant.id` | string | yes | length 1–64 |
+| `data[].⟨shape 2⟩ tenant.name` | string \| null | yes |  |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
 | `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
 | `meta.limit` | integer | yes | Items per page; range 1–100 |
@@ -2808,7 +2808,7 @@ Change metadata only — open one record for the redacted row before and after.
 | `limit` | query | integer | no | Page size (default 20, max 100) |
 | `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
 | `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: occurredAt. Default: -occurredAt |
-| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: tableName, operation, actorKind, actorUserId, organizationId, apiKeyId, systemOperation, correlationId, rowId, transactionId, occurredAt |
+| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: tableName, operation, actorKind, actorUserId, tenantId, apiKeyId, systemOperation, correlationId, rowId, transactionId, occurredAt |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 
 **Response 200 OK** (`application/json`) — Paginated row-change records; pagination is in `meta`
@@ -2829,12 +2829,12 @@ Change metadata only — open one record for the redacted row before and after.
 | `data[].id` | string (uuid) | yes |  |
 | `data[].occurredAt` | integer | yes |  |
 | `data[].operation` | "INSERT" \| "UPDATE" \| "DELETE" \| "TRUNCATE" | yes |  |
-| `data[].organization` | object \| null | yes |  |
-| `data[].organization.id` | string | yes | length 1–64 |
-| `data[].organization.name` | string \| null | yes |  |
 | `data[].rowId` | string \| null | yes | at most 512 characters |
 | `data[].systemOperation` | string \| null | yes | length 1–100 |
 | `data[].tableName` | string | yes | length 1–63 |
+| `data[].tenant` | object \| null | yes |  |
+| `data[].tenant.id` | string | yes | length 1–64 |
+| `data[].tenant.name` | string \| null | yes |  |
 | `data[].transactionId` | integer | yes |  |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
 | `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
@@ -2898,12 +2898,12 @@ Includes the redacted row images before and after the change.
 | `data.occurredAt` | integer | yes |  |
 | `data.oldData` | any JSON \| null | yes |  |
 | `data.operation` | "INSERT" \| "UPDATE" \| "DELETE" \| "TRUNCATE" | yes |  |
-| `data.organization` | object \| null | yes |  |
-| `data.organization.id` | string | yes | length 1–64 |
-| `data.organization.name` | string \| null | yes |  |
 | `data.rowId` | string \| null | yes | at most 512 characters |
 | `data.systemOperation` | string \| null | yes | length 1–100 |
 | `data.tableName` | string | yes | length 1–63 |
+| `data.tenant` | object \| null | yes |  |
+| `data.tenant.id` | string | yes | length 1–64 |
+| `data.tenant.name` | string \| null | yes |  |
 | `data.transactionId` | integer | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)

@@ -35,11 +35,11 @@ describe("getEnrollmentRedirectPath", () => {
 		expect(getEnrollmentRedirectPath("web", "mfa_enrollment")).toBe("/dashboard/account");
 	});
 
-	it("sends merchant to the org-scoped account page when the organization slug is known", () => {
-		expect(getEnrollmentRedirectPath("merchant", "email_verification", "brew-bean-kl")).toBe("/orgs/brew-bean-kl/account");
+	it("sends merchant to the org-scoped account page when the tenant slug is known", () => {
+		expect(getEnrollmentRedirectPath("merchant", "email_verification", "brew-bean-kl")).toBe("/t/brew-bean-kl/account");
 	});
 
-	it("sends merchant without a slug to /account, which resolves the organization server-side", () => {
+	it("sends merchant without a slug to /account, which resolves the tenant server-side", () => {
 		expect(getEnrollmentRedirectPath("merchant", "email_verification")).toBe("/account");
 	});
 
@@ -58,13 +58,13 @@ describe("isEnrollmentAllowedPath", () => {
 		expect(isEnrollmentAllowedPath("/account/security")).toBe(true);
 	});
 
-	it("allows the organization-scoped merchant account page", () => {
-		expect(isEnrollmentAllowedPath("/orgs/brew-bean-kl/account")).toBe(true);
-		expect(isEnrollmentAllowedPath("/orgs/brew-bean-kl/account/security")).toBe(true);
+	it("allows the tenant-scoped merchant account page", () => {
+		expect(isEnrollmentAllowedPath("/t/brew-bean-kl/account")).toBe(true);
+		expect(isEnrollmentAllowedPath("/t/brew-bean-kl/account/security")).toBe(true);
 	});
 
 	it("blocks org / platform settings and protected app routes (only the personal account is reachable)", () => {
-		expect(isEnrollmentAllowedPath("/orgs/brew-bean-kl/settings/team")).toBe(false);
+		expect(isEnrollmentAllowedPath("/t/brew-bean-kl/settings/team")).toBe(false);
 		expect(isEnrollmentAllowedPath("/settings/access")).toBe(false);
 		expect(isEnrollmentAllowedPath("/dashboard")).toBe(false);
 		expect(isEnrollmentAllowedPath("/accounts")).toBe(false);

@@ -32,6 +32,8 @@ export interface ClientAuthWrapperProps {
 	readonly sessionHint?: boolean | undefined;
 	/** The session the server rendered the page for (`loadServerRenderedSession`): the auth store starts from it. */
 	readonly serverSession?: ServerRenderedSession | undefined;
+	/** Headers added to every API call, read as each request is sent (see `AuthProviderProps.requestHeaders`). */
+	readonly requestHeaders?: (() => Readonly<Record<string, string>>) | undefined;
 }
 
 /** The pathname part of an app-relative URL (`/auth/login?redirect=…` → `/auth/login`). */
@@ -48,6 +50,7 @@ export function ClientAuthWrapper({
 	revalidateSessionEnabled,
 	sessionHint,
 	serverSession,
+	requestHeaders,
 }: ClientAuthWrapperProps): JSX.Element {
 	const router = useRouter();
 	const pathname = usePathname();
@@ -85,7 +88,8 @@ export function ClientAuthWrapper({
 			shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized}
 			revalidateSessionEnabled={revalidateSessionEnabled}
 			sessionHint={sessionHint}
-			serverSession={serverSession}>
+			serverSession={serverSession}
+			requestHeaders={requestHeaders}>
 			{children}
 		</AuthProvider>
 	);

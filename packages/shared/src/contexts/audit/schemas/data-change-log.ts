@@ -3,7 +3,7 @@ import { z } from "zod";
 import { EpochMsSchema } from "../../../schemas/api/common";
 import { defineListQuery, listFilter, ListSearchSchema } from "../../../schemas/api/list-query";
 import { JsonValueSchema } from "../../../schemas/runtime/json";
-import { AuditLogOrganizationSchema, AuditLogUserSchema } from "./http-audit-log";
+import { AuditLogTenantSchema, AuditLogUserSchema } from "./http-audit-log";
 
 /**
  * Row-level data-change trail — the admin viewer's contract
@@ -67,7 +67,7 @@ export const DataChangeLogSummarySchema = z.object({
 	changedColumns: z.array(z.string().min(1).max(COLUMN_NAME_MAX_LENGTH)).max(MAX_COLUMNS_PER_TABLE),
 	actorKind: DataChangeActorKindSchema,
 	actor: AuditLogUserSchema.nullable(),
-	organization: AuditLogOrganizationSchema.nullable(),
+	tenant: AuditLogTenantSchema.nullable(),
 	apiKeyId: ChangeReferenceIdSchema.nullable(),
 	/** The allowlisted system operation (RLS bypass) the change ran under. */
 	systemOperation: z.string().min(1).max(SYSTEM_OPERATION_MAX_LENGTH).nullable(),
@@ -117,7 +117,7 @@ export const dataChangeLogListQuery = defineListQuery({
 		operation: listFilter.enumeration(DataChangeOperationSchema, { eq: true, in: true }),
 		actorKind: listFilter.enumeration(DataChangeActorKindSchema, { eq: true, in: true }),
 		actorUserId: listFilter.uuid({ eq: true, isNull: true }),
-		organizationId: listFilter.uuid({ eq: true, isNull: true }),
+		tenantId: listFilter.uuid({ eq: true, isNull: true }),
 		apiKeyId: listFilter.uuid({ eq: true }),
 		systemOperation: listFilter.string({ eq: true, in: true, isNull: true }),
 		correlationId: listFilter.string({ eq: true }),

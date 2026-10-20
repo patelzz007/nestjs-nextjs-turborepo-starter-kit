@@ -27,7 +27,7 @@ function curl(url: string, body: string): string {
 
 /** Step 2 — the request a terminal sends when the customer shows their QR code. */
 export function buildValidateRedemptionSnippet(apiBaseUrl: string): string {
-	return curl(posEndpointUrl(apiBaseUrl, apiRoutes.redemptions.validate), `{"token": "<QR token shown by the customer>"}`);
+	return curl(posEndpointUrl(apiBaseUrl, apiRoutes.integration.validateRedemption), `{"token": "<QR token shown by the customer>"}`);
 }
 
 /** Step 3 — after payment: the bill total plus every reward redeemed on it. */
@@ -42,7 +42,7 @@ export function buildCheckoutSnippet(apiBaseUrl: string): string {
 		null,
 		2,
 	);
-	return curl(posEndpointUrl(apiBaseUrl, apiRoutes.redemptions.checkout), body);
+	return curl(posEndpointUrl(apiBaseUrl, apiRoutes.integration.checkoutRedemption), body);
 }
 
 interface Step {
@@ -52,7 +52,7 @@ interface Step {
 	readonly body: React.ReactNode;
 }
 
-/** Steps 2 and 3 — the same for every organization. */
+/** Steps 2 and 3 — the same for every tenant. */
 const REQUEST_STEPS: readonly Step[] = [
 	{
 		id: "validate",
@@ -68,7 +68,7 @@ const REQUEST_STEPS: readonly Step[] = [
 	},
 ];
 
-/** Step 1 links to the POS terminals page, so the steps are built per organization. */
+/** Step 1 links to the POS terminals page, so the steps are built per tenant. */
 function buildSteps(terminalsHref: string): readonly Step[] {
 	return [
 		{
@@ -100,7 +100,7 @@ const TIPS: readonly { readonly icon: React.ReactNode; readonly text: string }[]
 export interface ApiKeyIntegrationGuideProps {
 	/** The API's public origin (e.g. `https://api.example.com`). */
 	readonly apiBaseUrl: string;
-	/** This organization's POS terminals page (`orgRoutes(slug).terminals`), where tills are paired. */
+	/** This tenant's POS terminals page (`tenantRoutes(slug).terminals`), where tills are paired. */
 	readonly terminalsHref: string;
 }
 
@@ -149,10 +149,10 @@ export function ApiKeyIntegrationGuide({ apiBaseUrl, terminalsHref }: ApiKeyInte
 						<TabsTrigger value="checkout">3 · Check out</TabsTrigger>
 					</TabsList>
 					<TabsContent value="validate">
-						<GuideSnippet code={snippets.validate} title="POST /redemptions/validate" />
+						<GuideSnippet code={snippets.validate} title="POST /integration/redemptions/validate" />
 					</TabsContent>
 					<TabsContent value="checkout">
-						<GuideSnippet code={snippets.checkout} title="POST /redemptions/checkout" />
+						<GuideSnippet code={snippets.checkout} title="POST /integration/redemptions/checkout" />
 					</TabsContent>
 				</Tabs>
 			</div>

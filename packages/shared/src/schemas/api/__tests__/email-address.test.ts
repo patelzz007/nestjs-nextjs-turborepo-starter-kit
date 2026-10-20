@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { LoginSchema, SignupSchema } from "../../../contexts/identity/schemas/auth";
-import { AdminCreateOrganizationInviteSchema, OrganizationMemberInviteSchema } from "../../../contexts/organizations/schemas/organization";
-import { MerchantCreateMemberSchema } from "../../../contexts/organizations/schemas/merchant-kyb";
-import { AdminCreateMerchantInviteSchema } from "../../../contexts/organizations/schemas/merchant";
+import { AdminCreateTenantInviteSchema, TenantMemberInviteSchema } from "../../../contexts/tenancy/schemas/tenant";
+import { MerchantCreateMemberSchema } from "../../../contexts/tenancy/schemas/merchant-kyb";
+import { AdminCreateMerchantInviteSchema } from "../../../contexts/tenancy/schemas/merchant";
 import { CanonicalEmailSchema, EMAIL_ADDRESS_MAX_LENGTH } from "../email-address";
 
 describe("CanonicalEmailSchema", () => {
@@ -23,8 +23,8 @@ describe("CanonicalEmailSchema", () => {
 		for (const email of variants) {
 			expect(LoginSchema.parse({ email, password: "x" }).email).toBe(canonical);
 			expect(SignupSchema.parse({ email, password: "Str0ng!Passw0rd", fullName: "Alice" }).email).toBe(canonical);
-			expect(OrganizationMemberInviteSchema.parse({ email, role: "CASHIER", locationScopeType: "ALL_LOCATIONS", locationIds: [] }).email).toBe(canonical);
-			expect(AdminCreateOrganizationInviteSchema.parse({ email, displayName: "Brew", slug: "brew-bean", city: "KUALA_LUMPUR", category: "cafe" }).email).toBe(canonical);
+			expect(TenantMemberInviteSchema.parse({ email, role: "CASHIER", locationScopeType: "ALL_LOCATIONS", locationIds: [] }).email).toBe(canonical);
+			expect(AdminCreateTenantInviteSchema.parse({ email, displayName: "Brew", slug: "brew-bean", city: "KUALA_LUMPUR", category: "cafe" }).email).toBe(canonical);
 			expect(AdminCreateMerchantInviteSchema.parse({ email, businessName: "Brew", city: "KUALA_LUMPUR" }).email).toBe(canonical);
 			expect(MerchantCreateMemberSchema.parse({ email, password: "Str0ng!Passw0rd", fullName: "Alice", role: "CASHIER" }).email).toBe(canonical);
 		}

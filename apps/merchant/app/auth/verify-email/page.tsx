@@ -1,8 +1,8 @@
 "use client";
 
 import { VerifyEmailStatusSkeleton } from "@/components/loading/auth-skeletons";
-import { useOrganizationPath } from "@/contexts/organizations/lib/org/use-organization-path";
-import { ORG_ROUTES, ROUTES } from "@/lib/routes";
+import { useTenantPath } from "@/contexts/tenancy/lib/org/use-tenant-path";
+import { TENANT_ROUTES, ROUTES } from "@/lib/routes";
 import { VerifyEmailView } from "@workspace/client/lib/contexts/identity/email/verify-email-view";
 import { AuthLayout } from "@workspace/ui/components/auth-layout";
 import { useSearchParams } from "next/navigation";
@@ -11,7 +11,7 @@ import { BRAND_NAME } from "@workspace/tokens";
 
 function VerifyEmailContent(): JSX.Element {
 	const searchParams = useSearchParams();
-	const accountPath = useOrganizationPath(ORG_ROUTES.account);
+	const accountPath = useTenantPath(TENANT_ROUTES.account);
 	const token = searchParams.get("token");
 
 	if (token === null || token.length === 0) {

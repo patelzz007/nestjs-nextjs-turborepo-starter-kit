@@ -13,6 +13,15 @@ inputs:
   database-url:
     description: Connection string of the job's throwaway Postgres database.
     required: true
+  tenancy-mode:
+    description: >-
+      "multi" (TENANCY_ENABLED=true, no default tenant — RewardHub's mode) or "single"
+      (TENANCY_ENABLED=false, DEFAULT_TENANT_ID = default-tenant-id). Multi-tenancy plan MT-70.
+    required: true
+  default-tenant-id:
+    description: The tenant a single-tenant job serves (must exist when the API boots). Ignored in multi mode.
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -21,6 +30,8 @@ runs:
       shell: bash
       env:
         DATABASE_URL: ${{ inputs.database-url }}
+        TENANCY_MODE: ${{ inputs.tenancy-mode }}
+        DEFAULT_TENANT_ID_INPUT: ${{ inputs.default-tenant-id }}
       run: |
         random_secret() { openssl rand -hex 32; }
         jwt_access="$(random_secret)"; jwt_refresh="$(random_secret)"
@@ -55,6 +66,12 @@ runs:
         MERCHANT_APP_URL=http://localhost:3003
         CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:3003
         COOKIE_DOMAIN=localhost
-        # Single-tenant mode serves the organization `pnpm db:seed` creates (verified at API boot).
-        DEFAULT_ORGANIZATION_ID=a178a4d1-6915-4eb3-bf84-6fb14e1feb6c
         EOF
+        # Tenancy mode of this job (multi-tenancy plan D12, MT-70): multi has no default tenant.
+        case "$TENANCY_MODE" in
+          multi) echo "TENANCY_ENABLED=true" >> apps/api/.env ;;
+          single)
+            if [ -z "$DEFAULT_TENANT_ID_INPUT" ]; then echo "::error::single tenancy-mode needs default-tenant-id"; exit 1; fi
+            printf 'TENANCY_ENABLED=false\nDEFAULT_TENANT_ID=%s\n' "$DEFAULT_TENANT_ID_INPUT" >> apps/api/.env ;;
+          *) echo "::error::tenancy-mode must be multi or single, got '$TENANCY_MODE'"; exit 1 ;;
+        esac

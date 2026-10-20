@@ -77,11 +77,11 @@ const BRANCH_SEPARATOR = /^[\s–—:|-]+/u;
  * merchant's own console the business is a given, the branch is what tells
  * stores apart. Names that do not start with the business name are kept whole.
  */
-export function shortStoreName(storeName: string, organizationName: string | undefined): string {
-	if (organizationName === undefined || organizationName.length === 0 || !storeName.startsWith(organizationName)) {
+export function shortStoreName(storeName: string, tenantName: string | undefined): string {
+	if (tenantName === undefined || tenantName.length === 0 || !storeName.startsWith(tenantName)) {
 		return storeName;
 	}
-	const branch = storeName.slice(organizationName.length).replace(BRANCH_SEPARATOR, "").trim();
+	const branch = storeName.slice(tenantName.length).replace(BRANCH_SEPARATOR, "").trim();
 	return branch.length > 0 ? branch : storeName;
 }
 
@@ -93,7 +93,7 @@ export interface RewardStores {
 }
 
 /** Where the reward can be redeemed. */
-export function describeRewardStores(reward: Pick<RewardResponse, "locationScopeType" | "locationNames" | "locationIds" | "organizationName">): RewardStores {
+export function describeRewardStores(reward: Pick<RewardResponse, "locationScopeType" | "locationNames" | "locationIds" | "tenantName">): RewardStores {
 	if (reward.locationScopeType === "ALL_LOCATIONS") {
 		return { label: "All stores", fullLabel: "All stores" };
 	}
@@ -103,7 +103,7 @@ export function describeRewardStores(reward: Pick<RewardResponse, "locationScope
 		const label = count === SINGLE_ITEM ? "1 store" : `${formatCount(count, PLATFORM_DISPLAY_REGION.locale)} stores`;
 		return { label, fullLabel: label };
 	}
-	return { label: names.map((name) => shortStoreName(name, reward.organizationName)).join(", "), fullLabel: names.join(", ") };
+	return { label: names.map((name) => shortStoreName(name, reward.tenantName)).join(", "), fullLabel: names.join(", ") };
 }
 
 /** At or below this share of the original stock, a live reward is running low. */

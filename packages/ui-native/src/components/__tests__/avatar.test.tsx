@@ -35,7 +35,7 @@ describe("Avatar", () => {
 		expect(picture).toHaveProp("height", AVATAR_POINTS[size]);
 	});
 
-	it("is round for a person and a rounded square for an organization", async () => {
+	it("is round for a person and a rounded square for a tenant", async () => {
 		const view = await render(<Avatar name="Alex" imageUrl={null} testID="avatar" />);
 		expect(classNameOf("avatar")).toContain("rounded-full");
 

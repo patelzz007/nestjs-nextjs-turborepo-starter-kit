@@ -1,8 +1,8 @@
-import { MERCHANT_ROLE_CAPABILITIES, type CapabilitySlug, type OrganizationMembershipRole } from "@workspace/shared";
+import { MERCHANT_ROLE_CAPABILITIES, type CapabilitySlug, type MembershipRole } from "@workspace/shared";
 
-/** Anything that carries a member's role in one organization (a membership, the organization context's membership). */
+/** Anything that carries a member's role in one tenant (a membership, the tenant context's membership). */
 export interface MerchantRoleHolder {
-	readonly role: OrganizationMembershipRole;
+	readonly role: MembershipRole;
 }
 
 /**

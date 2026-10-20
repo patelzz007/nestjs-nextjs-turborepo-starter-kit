@@ -21,22 +21,22 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 | --- | --- |
 | Put a decorator (`@RequirePermission`, `@Authorize`, `@SuperAdminOnly`) or a `kernel.authorize()` call on **every** mutation and privileged read | The frontend can be bypassed with `curl`. |
 | Use `@Authorize({ …, resourceId })` or `kernel.authorize()` with the record when the answer depends on **which** record | A permission is a capability "somewhere", not "on every record". |
-| Pass the record's `organizationId` / `storeId` / `locationId` as resource attributes | Tenant-scoped grants fail closed without them ([kernel §5.2](./backend.md#52-what-each-scope-means)). |
+| Pass the record's `tenantId` / `storeId` / `locationId` as resource attributes | Tenant-scoped grants fail closed without them ([kernel §5.2](./backend.md#52-what-each-scope-means)). |
 | Read the tenant from the request context (`requestContext.current()?.tenant`) | It is verified; headers and bodies are not ([tenancy §2](./tenancy-and-rls.md#2-client-tenant-ids-are-requests-not-facts)). |
 | Use `kernel.filter()` for list endpoints | One query, no data leak, no N+1. |
 | Keep business validation separate from authorization | "May they?" and "is this state change valid?" are different questions with different errors. |
 | Use `self()` for self-service routes | Implicit own-account grants apply only to the caller's own record. |
 | Parse policy and ACL conditions with `PolicyConditionsSchema` before saving | A malformed rule must never reach the database. |
 | Add a new, specific system-operation name for new background work | Every RLS bypass stays explicit and auditable ([ADR 012](../../adr/012-system-operations.md)). |
-| Change stores only through `OrganizationLocationRepository` | A store mirrors its location in the same transaction. |
+| Change stores only through `TenantLocationRepository` | A store mirrors its location in the same transaction. |
 | Return the generic 403 (`AuthorizationException`) | Never tell an attacker which rule failed; use `explain()` to debug. |
 | Change roles and permissions only through `RoleService` / `PermissionService` with the real actor | One audited transaction, escalation checks, token revocation and cache invalidation come with it ([mutation contract](./backend.md#111-the-rbac-mutation-contract)). |
 
 | ❌ Don't | Why |
 | --- | --- |
 | `if (user.role === "ADMIN")` in business code (merchant: `role === "OWNER"`, role lists) | Roles are data; permissions are the vocabulary. Use the kernel; merchant code uses `MERCHANT_CAPABILITY.*` (`requireMembershipCapability`). |
-| Treat organization membership as permission | Membership only lets **scoped** permissions apply; it grants nothing by itself. |
-| Trust `organizationId` / `storeId` / `ownerId` from the body or headers | Forged tenant ids and ownership claims are the classic multi-tenant bug. |
+| Treat tenant membership as permission | Membership only lets **scoped** permissions apply; it grants nothing by itself. |
+| Trust `tenantId` / `storeId` / `ownerId` from the body or headers | Forged tenant ids and ownership claims are the classic multi-tenant bug. |
 | Load all rows and filter in JavaScript | Leaks data into memory and logs, and is slow. |
 | Store JavaScript or SQL as policies, or `eval` anything | Remote code execution. Conditions use the validated JSON rule language. |
 | Create an RLS policy per role | Roles are dynamic; RLS protects stable tenant concepts. |

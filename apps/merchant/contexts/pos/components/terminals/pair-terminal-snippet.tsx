@@ -9,12 +9,12 @@ import * as React from "react";
 export const PAIRING_CODE_PLACEHOLDER = "<pairing code>";
 
 /** Snippet header: the route the till calls (no `X-API-Key` — pairing is how the till gets one). */
-export const PAIR_TERMINAL_SNIPPET_TITLE = `POST ${apiRoutes.pos.pairTerminal}`;
+export const PAIR_TERMINAL_SNIPPET_TITLE = `POST ${apiRoutes.integration.pairTerminal}`;
 
-/** The till's one pairing call: `POST /pos/terminals/pair` with the code — the answer carries the till's own API key. */
+/** The till's one pairing call: `POST /integration/terminals/pair` with the code — the answer carries the till's own API key. */
 export function buildPairTerminalSnippet(apiBaseUrl: string, pairingCode: string = PAIRING_CODE_PLACEHOLDER): string {
 	return [
-		`curl -X POST ${posEndpointUrl(apiBaseUrl, apiRoutes.pos.pairTerminal)} \\`,
+		`curl -X POST ${posEndpointUrl(apiBaseUrl, apiRoutes.integration.pairTerminal)} \\`,
 		`  -H "Content-Type: application/json" \\`,
 		`  -d '${JSON.stringify({ pairingCode })}'`,
 	].join("\n");

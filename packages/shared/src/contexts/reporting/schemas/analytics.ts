@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 import { EpochMsSchema } from "../../../schemas/api/common";
-import { OrganizationLocationFilterSchema } from "../../organizations/schemas/location-filter";
+import { LocationFilterSchema } from "../../tenancy/schemas/location-filter";
 import { RewardClaimStatusSchema } from "../../claims/schemas/claim-enums";
 import { SaleCurrencySchema } from "../../pos/schemas/redemption";
-import { MerchantBusinessCategorySchema, PLATFORM_DISPLAY_REGION, type DisplayRegion } from "../../organizations/schemas/organization-enums";
+import { MerchantBusinessCategorySchema, PLATFORM_DISPLAY_REGION, type DisplayRegion } from "../../tenancy/schemas/tenant-enums";
 import { IanaTimeZoneSchema, startOfWeekInTimeZone, UTC_TIME_ZONE } from "./analytics-time-zone";
 
 /** An optional epoch-ms window shared by the analytics queries. */
@@ -81,7 +81,7 @@ function validateAnalyticsPeriod(value: { readonly from?: number | undefined; re
 /**
  * The period an analytics response covers. `from` is a week start in
  * `timeZone`, the zone every weekly point (`date`) was bucketed in: the
- * merchant's own zone (`Organization.timeZone`) for merchant analytics, UTC
+ * merchant's own zone (`Tenant.timeZone`) for merchant analytics, UTC
  * for the admin platform view and the customer's cross-merchant view. Label a
  * point in `timeZone` so "Mon 6 Oct" is the bucket's own Monday.
  */
@@ -105,7 +105,7 @@ export function analyticsBucketRegion(period: AnalyticsPeriod): DisplayRegion {
 	return { locale: PLATFORM_DISPLAY_REGION.locale, timeZone: period.timeZone };
 }
 
-export const RewardsAnalyticsQuerySchema = AnalyticsQuerySchema.extend(OrganizationLocationFilterSchema.shape).strict().superRefine(validateAnalyticsPeriod);
+export const RewardsAnalyticsQuerySchema = AnalyticsQuerySchema.extend(LocationFilterSchema.shape).strict().superRefine(validateAnalyticsPeriod);
 
 export type RewardsAnalyticsQuery = z.output<typeof RewardsAnalyticsQuerySchema>;
 
@@ -182,7 +182,7 @@ export type UserAnalyticsStatusBreakdown = z.output<typeof UserAnalyticsStatusBr
 
 /** Where the user spent: one merchant's paid bills in the period. */
 export const UserSpendByMerchantSchema = z.object({
-	organizationId: z.uuid(),
+	tenantId: z.uuid(),
 	merchantName: z.string(),
 	category: MerchantBusinessCategorySchema.nullable(),
 	totalMinor: z.number().int().nonnegative(),
@@ -234,7 +234,7 @@ export const AdminSalesAnalyticsQuerySchema = AnalyticsQuerySchema.superRefine(v
 export type AdminSalesAnalyticsQuery = z.output<typeof AdminSalesAnalyticsQuerySchema>;
 
 export const AdminSalesTopMerchantSchema = z.object({
-	organizationId: z.uuid(),
+	tenantId: z.uuid(),
 	name: z.string(),
 	category: MerchantBusinessCategorySchema.nullable(),
 	salesMinor: z.number().int().nonnegative(),

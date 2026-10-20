@@ -53,7 +53,7 @@ describe("isRouteActive", () => {
 	});
 
 	it("does not match a sibling prefix", () => {
-		expect(isRouteActive("/organization", "/organizations")).toBe(false);
+		expect(isRouteActive("/tenant", "/tenants")).toBe(false);
 	});
 
 	it("treats # as never active", () => {

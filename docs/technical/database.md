@@ -101,7 +101,7 @@ production, no teammate database you cannot wipe) — see [Migration baseline](#
   new table.
 - **Unique values on soft-deletable models.** Decide whether a soft-deleted row should still hold
   its unique value. Usually it should not: use a partial unique index,
-  `@@unique([organizationId, terminalId], where: { isDeleted: false })` (the `partialIndexes`
+  `@@unique([tenantId, terminalId], where: { isDeleted: false })` (the `partialIndexes`
   preview feature is enabled). A partial unique cannot be used with `findUnique`; query it with
   `findFirst` + `isDeleted: false`.
 
@@ -128,17 +128,17 @@ migrations**. The procedure is in [CI → Migration baseline](./operations/ci.md
 | --- | --- |
 | `development` (default) | Reference data (126 permissions, 6 roles), platform accounts, demo customers, two demo merchants (Brew & Bean KL, Jonker Street Kitchen) with stores, staff, invites, rewards in every lifecycle state, claims, referrals, POS keys and terminals, sales plus a year of POS history for the analytics dashboards and exports (`prisma/seed/analytics-history.ts`: ~2,000 bills across the three stores, six campaign rewards, QR and backup-code redemptions, expired claims, customers joining month by month, campaign titles in Chinese, Tamil, Hindi and Malay — through the same invariants as checkout), KYB files, geography, sample catalog, email log, audit trail, account-security history |
 | `empty` | Reference data only (permissions and roles); no users or tenants. Deployments use `db:sync-reference-data` instead (same loader, no seed guard needed) |
-| `enterprise --seed <n>` | One large tenant, **Northwind Retail Group** (`/orgs/northwind-enterprise/dashboard`): 25 stores, 250 members, 500 products; deterministic for a given seed and additive (other tenants are left alone) |
+| `enterprise --seed <n>` | One large tenant, **Northwind Retail Group** (`/tenants/northwind-enterprise/dashboard`): 25 stores, 250 members, 500 products; deterministic for a given seed and additive (other tenants are left alone) |
 
 Enterprise accounts (in addition to the development platform accounts):
 
-| Email | Password | Organization role |
+| Email | Password | Tenant role |
 | --- | --- | --- |
 | `owner@enterprise.example.com` | `EnterpriseOwner@123` | OWNER (all locations) |
 | `member.0001@enterprise.example.com` … `member.0249@enterprise.example.com` | `EnterpriseMember@123` | `0001` POLICY_ADMIN; every 25th ADMIN (all locations); every 4th MEMBER; the rest CASHIER at one location |
 
 - **Deterministic:** demo data comes from a seeded PRNG (`--seed`), and fixed ids live in
-  `apps/api/prisma/seed/organization-seed-ids.ts` (`DEFAULT_ORGANIZATION_ID` in `.env.example` is
+  `apps/api/prisma/seed/tenant-seed-ids.ts` (the commented `DEFAULT_TENANT_ID` in `.env.example`, for single-tenant mode, is
   Brew & Bean KL). A few values are random per run (for example the MFA demo user's TOTP secret);
   the seed prints them.
 - **Converges:** re-running upserts reference data and replaces only the demo tenants'
@@ -148,9 +148,9 @@ Enterprise accounts (in addition to the development platform accounts):
 - The seed imports the **built** `@workspace/shared`; on a fresh clone run `pnpm setup` first.
 - **Same invariants as the app:** seeders write through the rules the API enforces — passwords and
   tokens hashed, values parsed by the shared zod schemas (e.g. member display names through
-  `OrganizationMemberDisplayNameSchema`), soft deletes instead of hard deletes, and the audit row
+  `TenantMemberDisplayNameSchema`), soft deletes instead of hard deletes, and the audit row
   the real endpoint would write (e.g. `membership.display_name_updated` for each seeded display
-  name). Seeded organization lifecycle events carry a deterministic correlation id
+  name). Seeded tenant lifecycle events carry a deterministic correlation id
   (`prisma/seed/lifecycle-correlation.ts`), like the request id the app stamps.
 - **Adding a scenario:** add its name to `SeedScenarioSchema` (`prisma/seed/seed-options.ts`), write
   `prisma/seed/scenarios/<name>.ts` and register it in `SEED_SCENARIO_RUNNERS`

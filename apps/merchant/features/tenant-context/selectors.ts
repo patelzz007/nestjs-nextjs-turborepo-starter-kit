@@ -1,5 +1,5 @@
-import { canSelectAllLocations, type MemberLocationAccess } from "@/contexts/organizations/lib/org/location-access";
-import type { OrganizationLocationResponse } from "@workspace/shared";
+import { canSelectAllLocations, type MemberLocationAccess } from "@/contexts/tenancy/lib/org/location-access";
+import type { LocationResponse } from "@workspace/shared";
 
 import type { TenantContextState } from "./state";
 
@@ -26,7 +26,7 @@ export function withoutRejectedLocations(access: MemberLocationAccess, rejectedL
  * prefetches with exactly the filter the client's first render asks for.
  *
  * - Access not loaded: the choice as made — provisional, re-derived once the
- *   organization context arrives (the org layout seeds it, so a member's first
+ *   tenant context arrives (the org layout seeds it, so a member's first
  *   render already has it).
  * - A choice the member can still access wins.
  * - Otherwise "all stores" when the member may see org-wide rollups, else
@@ -46,10 +46,7 @@ export function resolveEffectiveLocationId(selectedLocationId: string | null, ac
 }
 
 /** The accessible location record for the effective filter (`undefined` for all stores or before the locations load). */
-export function resolveActiveLocation(
-	effectiveLocationId: string | null,
-	accessibleLocations: readonly OrganizationLocationResponse[] | undefined,
-): OrganizationLocationResponse | undefined {
+export function resolveActiveLocation(effectiveLocationId: string | null, accessibleLocations: readonly LocationResponse[] | undefined): LocationResponse | undefined {
 	if (effectiveLocationId === null || accessibleLocations === undefined) {
 		return undefined;
 	}

@@ -1,10 +1,10 @@
-// An avatar: a person's picture (or an organization's logo) when there is one,
+// An avatar: a person's picture (or a tenant's logo) when there is one,
 // otherwise the initials of the name. Presentational: the caller passes the
 // name and the image URL it got from the API.
 //
 // One component covers both of the web kit's avatars: `shape="circle"` (the
 // default) is the web's UserAvatar — a person; `shape="rounded"` is the web's
-// EntityAvatar — a shop, organization or team.
+// EntityAvatar — a shop, tenant or team.
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
@@ -16,7 +16,7 @@ export const avatarVariants = cva("shrink-0 items-center justify-center overflow
 	variants: {
 		/** `lg` heads an account (profile, drawer); `md` leads a list row (a contributor); `sm` sits inline with text (a commit's author). */
 		size: { sm: "size-6", md: "size-8", lg: "size-14" },
-		/** `circle`: a person. `rounded`: an organization, a shop, a team (its logo). */
+		/** `circle`: a person. `rounded`: a tenant, a shop, a team (its logo). */
 		shape: { circle: "rounded-full", rounded: "" },
 	},
 	compoundVariants: [

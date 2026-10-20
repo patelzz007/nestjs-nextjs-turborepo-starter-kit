@@ -57,7 +57,7 @@ const [source, setSource] = React.useState<PdfViewerSource | null>(null);
 <PdfViewer source={source} onSourceChange={setSource} className="h-[70vh]" />;
 ```
 
-- **Sources.** `{ kind: "url" }` is a URL **the app's own API signed** (`downloadOrganizationDocument`
+- **Sources.** `{ kind: "url" }` is a URL **the app's own API signed** (`downloadTenantDocument`
   and friends). The page never fetches it: the browser's engine loads it in a frame, so the storage
   bucket needs no CORS rule for reads. `{ kind: "file" }` is a picked `File`; `usePdfDocument`
   reads its first KiB, runs `checkPdfFile`, and shows it from a `blob:` URL that is revoked when the
@@ -84,12 +84,12 @@ const [source, setSource] = React.useState<PdfViewerSource | null>(null);
 
 | Where | Source |
 | --- | --- |
-| Admin, merchant verification review (`apps/admin/contexts/organizations/components/kyb-review-panel.tsx`) | The KYB document's signed `inline` and `attachment` URLs |
-| Merchant, verification settings (`packages/client/src/lib/contexts/organizations/kyb/verification-view.tsx`) | The same, for the merchant's own documents |
+| Admin, merchant verification review (`apps/admin/contexts/tenants/components/kyb-review-panel.tsx`) | The KYB document's signed `inline` and `attachment` URLs |
+| Merchant, verification settings (`packages/client/src/lib/contexts/tenants/kyb/verification-view.tsx`) | The same, for the merchant's own documents |
 | Admin component gallery (`/components/pdf-viewer`) | An in-memory sample (`buildTextPdf`), plus any PDF picked from the device |
 
 Both KYB previews go through `MerchantKybDocumentPreviewDialog`
-(`packages/client/src/lib/contexts/organizations/kyb/document-preview-dialog.tsx`): a PDF opens in `PdfViewer`,
+(`packages/client/src/lib/contexts/tenants/kyb/document-preview-dialog.tsx`): a PDF opens in `PdfViewer`,
 an image keeps the `<img>` preview with the dialog's own view-source and download buttons.
 
 ### Security
@@ -151,7 +151,7 @@ description is [the mobile app guide, §10.18](../mobile/mobile-app.md#1018-pdf-
 | `usePdfDocument` (URL, picked file, rejected files, blob URL revoked on change and unmount) | `packages/ui/src/hooks/__tests__/use-pdf-document.test.tsx` |
 | `useFullscreen`, inline support | `packages/ui/src/hooks/__tests__/use-fullscreen.test.tsx`, `packages/ui/src/lib/media/__tests__/pdf-inline-support.test.tsx` |
 | `PdfViewer` (toolbar, states, file picker, unsupported browsers, fullscreen, label overrides) | `packages/ui/src/components/__tests__/pdf-viewer.test.tsx` |
-| KYB preview dialog (PDF vs image) | `packages/client/src/lib/contexts/organizations/kyb/__tests__/document-preview-dialog.test.tsx` |
+| KYB preview dialog (PDF vs image) | `packages/client/src/lib/contexts/tenants/kyb/__tests__/document-preview-dialog.test.tsx` |
 | Admin gallery demo | `apps/admin/components/component-gallery/__tests__/family-demos.test.tsx` |
 | Native kit viewer and its layout maths | `packages/ui-native/src/components/__tests__/pdf-viewer.test.tsx`, `packages/ui-native/src/lib/__tests__/pdf-viewer-layout.test.ts` |
 | Mobile engine mapping, sources, files, screen, gallery (with fake native, picker, sharing and file-system modules) | `apps/mobile/src/features/pdf-viewer/__tests__/`, `apps/mobile/src/__tests__/app/(app)/settings/pdf-viewer.test.tsx` |

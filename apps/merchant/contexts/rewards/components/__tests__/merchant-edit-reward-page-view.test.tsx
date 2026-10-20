@@ -13,7 +13,7 @@ import { ApiError } from "@workspace/client/lib/api/use-api";
 import { epochMs, type MerchantRewardFormValues, type RewardResponse } from "@workspace/shared";
 import { optionalNumberInput } from "@/lib/forms/optional-number-input";
 import { rewardFixture } from "@/test/rewards";
-import { orgRoutes } from "@/lib/routes";
+import { tenantRoutes } from "@/lib/routes";
 
 const REWARD_ID = "0b6e2c1a-3d4f-4a5b-8c9d-1e2f3a4b5c6d";
 
@@ -39,7 +39,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
 		api: {
-			organizations: {
+			tenants: {
 				rewards: { get: { useQuery: rewardQuery }, update: { useMutation: rewardsMutation } },
 				context: { useQuery: (): object => contextQueryState(TWO_STORE_CONTEXT) },
 			},
@@ -95,12 +95,12 @@ afterEach((): void => {
 
 describe("MerchantEditRewardPageView form", () => {
 	it("fills the form from the reward, and a refetch keeps unsaved edits while updating untouched fields", () => {
-		const view = renderWithAuthorization(<MerchantEditRewardPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
+		const view = renderWithAuthorization(<MerchantEditRewardPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
 		expect(screen.getByLabelText("Title")).toHaveProperty("value", "Free latte");
 
 		fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Two free lattes" } });
 		rewardReturns("Updated elsewhere");
-		view.rerender(<MerchantEditRewardPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />);
+		view.rerender(<MerchantEditRewardPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />);
 
 		expect(screen.getByLabelText("Title")).toHaveProperty("value", "Two free lattes");
 		expect(screen.getByLabelText("Description")).toHaveProperty("value", "Updated elsewhere");
@@ -116,13 +116,13 @@ describe("MerchantEditRewardPageView form", () => {
 			error: null,
 			refetch: vi.fn(),
 		});
-		renderWithAuthorization(<MerchantEditRewardPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
+		renderWithAuthorization(<MerchantEditRewardPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
 
 		expect(screen.getByLabelText("Minimum purchase")).toHaveProperty("value", "30");
 	});
 
 	it("uses the cache instead of refetching on every mount", () => {
-		renderWithAuthorization(<MerchantEditRewardPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
+		renderWithAuthorization(<MerchantEditRewardPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
 
 		const [, options] = rewardQuery.mock.calls.at(0) ?? [];
 		expect(options).not.toHaveProperty("refetchOnMount");
@@ -132,7 +132,7 @@ describe("MerchantEditRewardPageView form", () => {
 
 	it("draws the editor's shape — not 'reward not found' — while the reward resolves", () => {
 		rewardQuery.mockReturnValue({ data: undefined, isSuccess: false, isError: false, error: null, refetch: vi.fn() });
-		renderWithAuthorization(<MerchantEditRewardPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
+		renderWithAuthorization(<MerchantEditRewardPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
 
 		expect(busyRegionAnnouncements()).toEqual([MERCHANT_REWARD_EDITOR_LOADING_LABELS.loading]);
 		expect(document.querySelector('[data-slot="reward-preview-skeleton"]')).not.toBeNull();
@@ -150,7 +150,7 @@ describe("MerchantEditRewardPageView form", () => {
 			error: new ApiError({ message: "upstream timeout", statusCode: 504 }),
 			refetch,
 		});
-		renderWithAuthorization(<MerchantEditRewardPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
+		renderWithAuthorization(<MerchantEditRewardPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
 
 		expect(screen.getByText("Could not load this reward")).toBeTruthy();
 		expect(screen.queryByText("upstream timeout")).toBeNull();
@@ -159,7 +159,7 @@ describe("MerchantEditRewardPageView form", () => {
 	});
 
 	it("draws the live preview beside the form, with the reward's own voucher", () => {
-		renderWithAuthorization(<MerchantEditRewardPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
+		renderWithAuthorization(<MerchantEditRewardPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
 
 		const preview = document.querySelector('[data-slot="reward-preview"]');
 		expect(preview?.querySelector('[data-slot="reward-voucher"]')).not.toBeNull();
@@ -167,22 +167,22 @@ describe("MerchantEditRewardPageView form", () => {
 	});
 
 	it("returns to the reward page once the changes are saved", () => {
-		renderWithAuthorization(<MerchantEditRewardPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
+		renderWithAuthorization(<MerchantEditRewardPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
 		const [options] = rewardsMutation.mock.calls.at(0) ?? [];
 
 		act((): void => {
 			options?.onSuccess({ data: draftReward("One free latte") });
 		});
 
-		expect(routerPush).toHaveBeenCalledWith(orgRoutes(TEST_ORG_SLUG).rewards.detail(REWARD_ID), { scroll: false });
+		expect(routerPush).toHaveBeenCalledWith(tenantRoutes(TEST_ORG_SLUG).rewards.detail(REWARD_ID), { scroll: false });
 	});
 
 	it("explains that a live reward can't be edited, and links back to it instead of showing the form", () => {
 		rewardReturns("One free latte", "PUBLISHED");
-		renderWithAuthorization(<MerchantEditRewardPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
+		renderWithAuthorization(<MerchantEditRewardPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
 
 		expect(screen.getByRole("heading", { name: "This reward can't be edited" })).toBeTruthy();
-		expect(screen.getByRole("link", { name: "View reward" }).getAttribute("href")).toBe(orgRoutes(TEST_ORG_SLUG).rewards.detail(REWARD_ID));
+		expect(screen.getByRole("link", { name: "View reward" }).getAttribute("href")).toBe(tenantRoutes(TEST_ORG_SLUG).rewards.detail(REWARD_ID));
 		expect(screen.queryByLabelText("Title")).toBeNull();
 	});
 });

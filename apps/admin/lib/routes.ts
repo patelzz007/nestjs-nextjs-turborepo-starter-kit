@@ -165,8 +165,8 @@ export const LOGIN_REDIRECT_PARAM = "redirect";
 export const AUTH_LINK_TOKEN_PARAM = "token";
 
 // In-page selection params (lib/url-state declares how each is parsed).
-/** The merchant selected in the KYB verification queue (`/merchants/verification?organizationId=`). */
-export const MERCHANT_VERIFICATION_ORGANIZATION_PARAM = "organizationId";
+/** The merchant selected in the KYB verification queue (`/merchants/verification?tenantId=`). */
+export const MERCHANT_VERIFICATION_TENANT_PARAM = "tenantId";
 /** The template selected in the template browser (`/emails/templates?key=`). */
 export const EMAIL_TEMPLATE_KEY_PARAM = "key";
 /** The request selected in a review queue (MFA recovery, store location requests). */
@@ -214,7 +214,7 @@ export const ROUTES: AdminRoutes = {
 		list: MERCHANTS,
 		invites: `${MERCHANTS}/invites`,
 		verification: MERCHANT_VERIFICATION,
-		verificationFor: (organizationId: string): string => withQuery(MERCHANT_VERIFICATION, MERCHANT_VERIFICATION_ORGANIZATION_PARAM, organizationId),
+		verificationFor: (tenantId: string): string => withQuery(MERCHANT_VERIFICATION, MERCHANT_VERIFICATION_TENANT_PARAM, tenantId),
 		storeRequests: `${MERCHANTS}/store-requests`,
 	},
 	rewards: {

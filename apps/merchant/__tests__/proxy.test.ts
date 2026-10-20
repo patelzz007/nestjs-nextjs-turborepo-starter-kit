@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import type { NextResponse } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ORGANIZATION_SLUG_COOKIE_NAME } from "@/contexts/organizations/lib/org/slug";
+import { TENANT_SLUG_COOKIE_NAME } from "@/contexts/tenancy/lib/org/slug";
 
 import { proxy, resetMerchantProxyRefreshCooldownForTests } from "../proxy";
 
@@ -21,7 +21,7 @@ interface RequestOptions {
 	readonly pathname?: string;
 	readonly accessToken?: string;
 	readonly refreshToken?: string;
-	readonly organizationSlug?: string;
+	readonly tenantSlug?: string;
 	readonly isDocumentNavigation?: boolean;
 	readonly query?: Readonly<Record<string, string>>;
 }
@@ -32,7 +32,7 @@ function makeRequest(options: RequestOptions): NextRequest {
 	const cookies: string[] = [];
 	if (options.accessToken !== undefined) cookies.push(`${ACCESS_COOKIE}=${options.accessToken}`);
 	if (options.refreshToken !== undefined) cookies.push(`${REFRESH_COOKIE}=${options.refreshToken}`);
-	if (options.organizationSlug !== undefined) cookies.push(`${ORGANIZATION_SLUG_COOKIE_NAME}=${encodeURIComponent(options.organizationSlug)}`);
+	if (options.tenantSlug !== undefined) cookies.push(`${TENANT_SLUG_COOKIE_NAME}=${encodeURIComponent(options.tenantSlug)}`);
 	if (cookies.length > 0) headers.set("cookie", cookies.join("; "));
 	const url = new URL(`${ORIGIN}${options.pathname ?? "/"}`);
 	for (const [name, value] of Object.entries(options.query ?? {})) url.searchParams.set(name, value);
@@ -82,7 +82,7 @@ afterEach((): void => {
 });
 
 describe("merchant proxy route protection", () => {
-	it.each(["/", "/account", "/orgs/acme-coffee/dashboard"])("sends a guest on %s to login, returning there afterwards", async (pathname: string) => {
+	it.each(["/", "/account", "/t/acme-coffee/dashboard"])("sends a guest on %s to login, returning there afterwards", async (pathname: string) => {
 		const response = await runProxy({ pathname });
 
 		expect(response.status).toBe(307);
@@ -97,14 +97,14 @@ describe("merchant proxy route protection", () => {
 	});
 
 	it("lets a signed-in merchant through to org pages", async () => {
-		const response = await runProxy({ pathname: "/orgs/acme-coffee/dashboard", accessToken: token(), refreshToken: "rt" });
+		const response = await runProxy({ pathname: "/t/acme-coffee/dashboard", accessToken: token(), refreshToken: "rt" });
 
 		expect(response.status).toBe(200);
 		expect(location(response)).toBeUndefined();
 	});
 
 	it("clears an orphaned access cookie and sends the visitor to login", async () => {
-		const response = await runProxy({ pathname: "/orgs/acme-coffee/dashboard", accessToken: token() });
+		const response = await runProxy({ pathname: "/t/acme-coffee/dashboard", accessToken: token() });
 
 		expect(response.status).toBe(307);
 		expect(response.cookies.get(ACCESS_COOKIE)?.value).toBe("");
@@ -131,15 +131,15 @@ describe("merchant proxy route protection", () => {
 describe("merchant proxy enrollment redirect", () => {
 	const restricted = (): string => token({ sessionScope: "restricted", isEmailVerified: false });
 
-	it("sends a restricted session to the preferred organization's account page", async () => {
-		const response = await runProxy({ pathname: "/orgs/acme-coffee/rewards", accessToken: restricted(), refreshToken: "rt", organizationSlug: "acme-coffee" });
+	it("sends a restricted session to the preferred tenant's account page", async () => {
+		const response = await runProxy({ pathname: "/t/acme-coffee/rewards", accessToken: restricted(), refreshToken: "rt", tenantSlug: "acme-coffee" });
 
 		expect(response.status).toBe(307);
-		expect(location(response)).toBe(`${ORIGIN}/orgs/acme-coffee/account`);
+		expect(location(response)).toBe(`${ORIGIN}/t/acme-coffee/account`);
 	});
 
-	it("never builds a redirect path from a tampered organization cookie", async () => {
-		const response = await runProxy({ pathname: "/orgs/acme-coffee/rewards", accessToken: restricted(), refreshToken: "rt", organizationSlug: "../../evil" });
+	it("never builds a redirect path from a tampered tenant cookie", async () => {
+		const response = await runProxy({ pathname: "/t/acme-coffee/rewards", accessToken: restricted(), refreshToken: "rt", tenantSlug: "../../evil" });
 
 		expect(response.status).toBe(307);
 		expect(location(response)).toBe(`${ORIGIN}/account`);
@@ -150,7 +150,7 @@ describe("merchant proxy session refresh", () => {
 	it("refreshes an expired session on a document navigation and forwards the rotated cookies", async () => {
 		stubRefresh(200, [`${ACCESS_COOKIE}=new-at; Path=/; HttpOnly`, `${REFRESH_COOKIE}=new-rt; Path=/; HttpOnly`]);
 
-		const response = await runProxy({ pathname: "/orgs/acme-coffee/dashboard", accessToken: expiredToken(), refreshToken: "rt-old", isDocumentNavigation: true });
+		const response = await runProxy({ pathname: "/t/acme-coffee/dashboard", accessToken: expiredToken(), refreshToken: "rt-old", isDocumentNavigation: true });
 
 		expect(response.status).toBe(200);
 		expect(response.cookies.get(ACCESS_COOKIE)?.value).toBe("new-at");
@@ -160,10 +160,10 @@ describe("merchant proxy session refresh", () => {
 	it("clears the cookies and sends the merchant to login when the refresh token is dead", async () => {
 		stubRefresh(401, []);
 
-		const response = await runProxy({ pathname: "/orgs/acme-coffee/dashboard", accessToken: expiredToken(), refreshToken: "rt-dead", isDocumentNavigation: true });
+		const response = await runProxy({ pathname: "/t/acme-coffee/dashboard", accessToken: expiredToken(), refreshToken: "rt-dead", isDocumentNavigation: true });
 
 		expect(response.status).toBe(307);
-		expect(location(response)).toBe(`${ORIGIN}/auth/login?redirect=${encodeURIComponent("/orgs/acme-coffee/dashboard")}`);
+		expect(location(response)).toBe(`${ORIGIN}/auth/login?redirect=${encodeURIComponent("/t/acme-coffee/dashboard")}`);
 		expect(response.cookies.get(ACCESS_COOKIE)?.value).toBe("");
 	});
 });

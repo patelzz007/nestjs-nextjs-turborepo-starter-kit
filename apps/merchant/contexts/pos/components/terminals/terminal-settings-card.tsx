@@ -42,7 +42,7 @@ export interface TerminalSettingsCardProps {
 	readonly onRequireRegisteredTerminalsChange: (requireRegisteredTerminals: boolean) => void;
 }
 
-/** Organization-wide "only registered terminals" policy. Presentational — the parent owns the query and mutation. */
+/** Tenant-wide "only registered terminals" policy. Presentational — the parent owns the query and mutation. */
 export function TerminalSettingsCard({
 	settings,
 	isLoading,
@@ -76,7 +76,7 @@ export function TerminalSettingsCard({
 				<h2 id="terminal-settings-heading" className="text-base font-semibold text-foreground">
 					Terminal security
 				</h2>
-				<p className="text-sm text-muted-foreground">Applies to every store in this organization.</p>
+				<p className="text-sm text-muted-foreground">Applies to every store in this tenant.</p>
 			</div>
 
 			<div className="px-5 py-4">

@@ -139,7 +139,7 @@ function CheckboxDemo(): React.JSX.Element {
 			<Checkbox label="I accept the terms" description="Required to continue" checked={terms} onChange={setTerms} invalid={!terms} />
 			<Checkbox label="Weekly digest" description="Every Monday morning" variant="card" size="sm" checked={digest} onChange={setDigest} />
 			<Checkbox label="Saving…" checked={newsletter} onChange={setNewsletter} loading />
-			<Checkbox label="Managed by your organisation" checked onChange={setNewsletter} disabled />
+			<Checkbox label="Managed by your tenant" checked onChange={setNewsletter} disabled />
 		</DemoBlock>
 	);
 }
@@ -219,9 +219,9 @@ function SwitchDemo(): React.JSX.Element {
 		<DemoBlock title="Switch" description="An on / off setting that applies at once.">
 			<Switch label="Notifications" checked={notifications} onChange={setNotifications} />
 			<Switch label="Share location" description="Only while the app is open" variant="card" checked={location} onChange={setLocation} />
-			<Switch label="Analytics consent" description="Required by your organisation" size="sm" checked={consent} onChange={setConsent} invalid={!consent} />
+			<Switch label="Analytics consent" description="Required by your tenant" size="sm" checked={consent} onChange={setConsent} invalid={!consent} />
 			<Switch label="Saving…" checked={notifications} onChange={setNotifications} loading />
-			<Switch label="Managed by your organisation" checked onChange={setNotifications} disabled />
+			<Switch label="Managed by your tenant" checked onChange={setNotifications} disabled />
 		</DemoBlock>
 	);
 }

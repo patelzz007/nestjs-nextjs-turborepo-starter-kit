@@ -201,6 +201,26 @@ describe("base config: cast and zod escape-hatch bans still apply", () => {
 	});
 });
 
+describe("base config: tenancy naming ban (MT-08)", () => {
+	it.each([
+		["a type name", "export interface OrganizationMember { readonly id: string }"],
+		["a variable", "const organizationId = load();"],
+		["a property key", "export const row = { organisationSlug: slug };"],
+		["a function name", "export function loadOrganization(): void {}"],
+		["a member access", "export const id = context.organizationId;"],
+	])("flags %s that says organization", (_position, code) => {
+		expect(restrictedSyntaxMessages(code)).toEqual([expect.stringContaining("Name the isolation boundary a tenant")]);
+	});
+
+	it.each([
+		["UI copy", 'export const heading = "Your organization";'],
+		["a web-platform autocomplete token", 'export const field = { autoComplete: "organization" };'],
+		["a tenant identifier", "export interface TenantMember { readonly tenantId: string }"],
+	])("allows %s", (_what, code) => {
+		expect(restrictedSyntaxMessages(code)).toEqual([]);
+	});
+});
+
 describe("base config: query-cache keys and unchecked z.custom", () => {
 	it.each([
 		["a literal invalidation key", 'queryClient.invalidateQueries({ queryKey: ["merchant", "kyb"] });'],

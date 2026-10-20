@@ -12,7 +12,7 @@ import * as React from "react";
 const REWARD_LOAD_FAILED_MESSAGE = "This reward could not be loaded. Try again.";
 
 export interface MerchantRewardUnavailableProps {
-	/** Why there is no reward to show: the read failed, or the organization has no such reward. */
+	/** Why there is no reward to show: the read failed, or the tenant has no such reward. */
 	readonly state: Extract<MerchantRewardState, { readonly kind: "failed" | "missing" }>;
 	readonly rewardsHref: AppPath;
 }

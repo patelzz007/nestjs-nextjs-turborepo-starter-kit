@@ -6,7 +6,7 @@ import { CreateApiKeyCard } from "@/contexts/pos/components/api-keys/create-api-
 import { CreatedApiKeyNotice } from "@/contexts/pos/components/api-keys/created-api-key-notice";
 import { FLEET_STAT_CARDS, MerchantApiKeysPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantStatCardsSkeleton } from "@/components/loading/merchant-skeleton-parts";
-import { MerchantAccessDenied, MerchantCapabilityGate } from "@/contexts/organizations";
+import { MerchantAccessDenied, MerchantCapabilityGate } from "@/contexts/tenancy";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { StatCard } from "@workspace/ui/components/stat-card";
@@ -31,8 +31,8 @@ import { userSafeErrorMessage } from "@/lib/query/query-policy";
 import { API_KEYS_URL_STATE } from "@/contexts/pos/url-state/api-keys";
 import { clientEnv } from "@/lib/env/env.client";
 import { useActiveLocationFilter, useMerchantLocation } from "@/features/tenant-context/facade";
-import { prefetchForLocation, type LocationScopedPrefetch } from "@/contexts/organizations";
-import { orgRoutes } from "@/lib/routes";
+import { prefetchForLocation, type LocationScopedPrefetch } from "@/contexts/tenancy";
+import { tenantRoutes } from "@/lib/routes";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { initialDataOption, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
@@ -61,7 +61,7 @@ export interface ApiKeysPagePrefetch {
 }
 
 export interface MerchantApiKeysPageViewProps {
-	readonly orgSlug: string;
+	readonly tenantSlug: string;
 	/** Server prefetch with the store filter it was fetched for. */
 	readonly initialKeys?: LocationScopedPrefetch<ApiKeysPagePrefetch> | undefined;
 }
@@ -105,14 +105,14 @@ function storesCoveredCard(stats: ApiKeyStats | undefined): { readonly value: st
 	if (stats.coverage.kind === "unavailable") {
 		return { value: "—", hint: "Too many active keys to count here — see the list" };
 	}
-	return { value: String(stats.coverage.stores), hint: stats.coverage.hasOrganizationWideKey ? "Plus an organization-wide key" : "With at least one active key" };
+	return { value: String(stats.coverage.stores), hint: stats.coverage.hasTenantWideKey ? "Plus a tenant-wide key" : "With at least one active key" };
 }
 
-function MerchantApiKeysPageContent({ orgSlug, initialKeys }: MerchantApiKeysPageViewProps): React.JSX.Element {
+function MerchantApiKeysPageContent({ tenantSlug, initialKeys }: MerchantApiKeysPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const { locationId } = useActiveLocationFilter();
-	const { activeLocation, accessibleLocations, hasOrganizationWideAccess } = useMerchantLocation();
+	const { activeLocation, accessibleLocations, hasTenantWideAccess } = useMerchantLocation();
 
 	// The filter is URL state (`?status=`): Back undoes a filter change and a shared link opens on it.
 	const [urlState, updateUrlState] = useUrlState(API_KEYS_URL_STATE);
@@ -122,10 +122,10 @@ function MerchantApiKeysPageContent({ orgSlug, initialKeys }: MerchantApiKeysPag
 	const prefetched = prefetchForLocation(initialKeys, locationId);
 	const prefetchedList = prefetchedDataFor(prefetched?.list, API_KEYS_URL_STATE.serialize(urlState));
 
-	const listQuery = api.organizations.apiKeys.list.useQuery(toApiKeyListQuery(orgSlug, locationId, filter), initialDataOption(prefetchedList));
-	const activeQuery = api.organizations.apiKeys.list.useQuery(toApiKeyListQuery(orgSlug, locationId, "active"), initialDataOption(prefetched?.active));
-	const revokedCountQuery = api.organizations.apiKeys.list.useQuery(
-		toApiKeyListQuery(orgSlug, locationId, "revoked", API_KEY_COUNT_PAGE_SIZE),
+	const listQuery = api.tenants.apiKeys.list.useQuery(toApiKeyListQuery(tenantSlug, locationId, filter), initialDataOption(prefetchedList));
+	const activeQuery = api.tenants.apiKeys.list.useQuery(toApiKeyListQuery(tenantSlug, locationId, "active"), initialDataOption(prefetched?.active));
+	const revokedCountQuery = api.tenants.apiKeys.list.useQuery(
+		toApiKeyListQuery(tenantSlug, locationId, "revoked", API_KEY_COUNT_PAGE_SIZE),
 		initialDataOption(prefetched?.revokedCount),
 	);
 
@@ -145,9 +145,9 @@ function MerchantApiKeysPageContent({ orgSlug, initialKeys }: MerchantApiKeysPag
 	const storeChoices = React.useMemo(
 		(): ApiKeyStoreChoices => ({
 			stores: accessibleLocations.map((location) => ({ id: location.id, name: location.name })),
-			allowOrganizationWide: hasOrganizationWideAccess,
+			allowTenantWide: hasTenantWideAccess,
 		}),
-		[accessibleLocations, hasOrganizationWideAccess],
+		[accessibleLocations, hasTenantWideAccess],
 	);
 
 	const [name, setName] = React.useState<string>(DEFAULT_TERMINAL_NAME);
@@ -160,11 +160,11 @@ function MerchantApiKeysPageContent({ orgSlug, initialKeys }: MerchantApiKeysPag
 	const [keyToRevoke, setKeyToRevoke] = React.useState<MerchantApiKeySummary | null>(null);
 
 	const invalidateKeys = React.useCallback((): void => {
-		// Every list view and count of this organization (any store, any status) is stale after a change.
-		void queryClient.invalidateQueries({ queryKey: apiRouter.organizations.apiKeys.list.scopeKey({ orgSlug }) });
-	}, [orgSlug, queryClient]);
+		// Every list view and count of this tenant (any store, any status) is stale after a change.
+		void queryClient.invalidateQueries({ queryKey: apiRouter.tenants.apiKeys.list.scopeKey({ tenantSlug }) });
+	}, [tenantSlug, queryClient]);
 
-	const createMutation = api.organizations.apiKeys.create.useMutation({
+	const createMutation = api.tenants.apiKeys.create.useMutation({
 		onSuccess: (response): void => {
 			setCreatedKey({ name: response.data.name, secret: response.data.apiKey });
 			setName(DEFAULT_TERMINAL_NAME);
@@ -176,7 +176,7 @@ function MerchantApiKeysPageContent({ orgSlug, initialKeys }: MerchantApiKeysPag
 		},
 	});
 
-	const revokeMutation = api.organizations.apiKeys.revoke.useMutation({
+	const revokeMutation = api.tenants.apiKeys.revoke.useMutation({
 		onSuccess: (): void => {
 			setKeyToRevoke(null);
 			invalidateKeys();
@@ -202,9 +202,9 @@ function MerchantApiKeysPageContent({ orgSlug, initialKeys }: MerchantApiKeysPag
 				return;
 			}
 			// The mutation's error state renders inline (the form keeps its values).
-			createMutation.mutate({ orgSlug, ...createInput });
+			createMutation.mutate({ tenantSlug, ...createInput });
 		},
-		[createInput, createMutation, orgSlug],
+		[createInput, createMutation, tenantSlug],
 	);
 
 	const handleFilterChange = React.useCallback(
@@ -247,8 +247,8 @@ function MerchantApiKeysPageContent({ orgSlug, initialKeys }: MerchantApiKeysPag
 			return;
 		}
 		// On failure the dialog stays open with the error, so the merchant can retry.
-		revokeMutation.mutate({ orgSlug, keyId: keyToRevoke.id });
-	}, [keyToRevoke, orgSlug, revokeMutation]);
+		revokeMutation.mutate({ tenantSlug, keyId: keyToRevoke.id });
+	}, [keyToRevoke, tenantSlug, revokeMutation]);
 
 	const truncationNote = totalKeys > keys.length ? `Showing the newest ${String(keys.length)} of ${String(totalKeys)} keys.` : null;
 	const storesCard = storesCoveredCard(stats);
@@ -261,7 +261,7 @@ function MerchantApiKeysPageContent({ orgSlug, initialKeys }: MerchantApiKeysPag
 			/>
 			<MerchantLocationScopeBanner
 				filteredNote="Only this store's keys are listed and counted."
-				allStoresNote="Listing the keys of every store you can access, including organization-wide keys."
+				allStoresNote="Listing the keys of every store you can access, including tenant-wide keys."
 			/>
 
 			{createdKey === null ? null : <CreatedApiKeyNotice keyName={createdKey.name} secret={createdKey.secret} onDismiss={handleDismissCreated} />}
@@ -316,7 +316,7 @@ function MerchantApiKeysPageContent({ orgSlug, initialKeys }: MerchantApiKeysPag
 				truncationNote={truncationNote}
 			/>
 
-			<ApiKeyIntegrationGuide apiBaseUrl={clientEnv.NEXT_PUBLIC_API_URL} terminalsHref={orgRoutes(orgSlug).terminals} />
+			<ApiKeyIntegrationGuide apiBaseUrl={clientEnv.NEXT_PUBLIC_API_URL} terminalsHref={tenantRoutes(tenantSlug).terminals} />
 
 			<AlertDialog open={keyToRevoke !== null} onOpenChange={handleRevokeDialogChange}>
 				<AlertDialogContent

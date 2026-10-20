@@ -25,7 +25,7 @@ const RECORD: DataChangeLogDetail = DataChangeLogDetailSchema.parse({
 	changedColumns: [],
 	actorKind: "USER",
 	actor: null,
-	organization: null,
+	tenant: null,
 	apiKeyId: null,
 	systemOperation: null,
 	correlationId: "corr-1",

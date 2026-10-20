@@ -11,9 +11,9 @@ export interface MerchantRootErrorProps {
 
 /**
  * Error boundary below the root layout: catches failures of the entry pages
- * (`/`, `/account`) and of the `/orgs/[orgSlug]` layout itself — e.g. the
+ * (`/`, `/account`) and of the `/t/[tenantSlug]` layout itself — e.g. the
  * memberships read failing during an API outage, which must never be mistaken
- * for "no organization". Server failures arrive here from `settleServerQuery`,
+ * for "no tenant". Server failures arrive here from `settleServerQuery`,
  * which already logged them on the server.
  */
 export default function MerchantRootError({ error, retry }: MerchantRootErrorProps): React.JSX.Element {

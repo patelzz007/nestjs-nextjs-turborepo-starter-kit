@@ -17,10 +17,10 @@ import {
 import type { CapabilitySlug } from "@workspace/shared";
 
 import { canOpenOrgPath } from "@/lib/navigation/org-route-authorization";
-import { ORG_ROUTES, type AppPath } from "@/lib/routes";
+import { TENANT_ROUTES, type AppPath } from "@/lib/routes";
 
 /**
- * Command-palette / pinned entry. `url` is org-relative (`ORG_ROUTES.*`),
+ * Command-palette / pinned entry. `url` is org-relative (`TENANT_ROUTES.*`),
  * resolved like sidebar URLs. Visibility comes from the page's rule in
  * `ORG_PAGE_RULES` — an entry is listed exactly when its page would render.
  */
@@ -38,7 +38,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 	{
 		id: "dashboard",
 		title: "Dashboard",
-		url: ORG_ROUTES.dashboard,
+		url: TENANT_ROUTES.dashboard,
 		section: "Overview",
 		description: "Store performance snapshot",
 		icon: LayoutDashboard,
@@ -47,7 +47,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 	{
 		id: "analytics",
 		title: "Analytics",
-		url: ORG_ROUTES.analytics,
+		url: TENANT_ROUTES.analytics,
 		section: "Insights",
 		description: "Performance and trends",
 		icon: BarChart3,
@@ -56,7 +56,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 	{
 		id: "rewards",
 		title: "Rewards",
-		url: ORG_ROUTES.rewards.list,
+		url: TENANT_ROUTES.rewards.list,
 		section: "Rewards",
 		description: "Offers and inventory",
 		icon: Ticket,
@@ -65,7 +65,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 	{
 		id: "rewards-new",
 		title: "Create reward",
-		url: ORG_ROUTES.rewards.new,
+		url: TENANT_ROUTES.rewards.new,
 		section: "Rewards",
 		description: "Launch a new campaign",
 		icon: Ticket,
@@ -74,7 +74,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 	{
 		id: "redemptions",
 		title: "Redemptions",
-		url: ORG_ROUTES.redemptions,
+		url: TENANT_ROUTES.redemptions,
 		section: "Operations",
 		description: "POS activity",
 		icon: ScanLine,
@@ -83,7 +83,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 	{
 		id: "terminals",
 		title: "POS terminals",
-		url: ORG_ROUTES.terminals,
+		url: TENANT_ROUTES.terminals,
 		section: "Operations",
 		description: "Pair and manage tills",
 		icon: MonitorSmartphone,
@@ -92,7 +92,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 	{
 		id: "api-keys",
 		title: "API keys",
-		url: ORG_ROUTES.apiKeys,
+		url: TENANT_ROUTES.apiKeys,
 		section: "Operations",
 		description: "Terminal access",
 		icon: KeyRound,
@@ -100,17 +100,17 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 	},
 	{
 		id: "settings",
-		title: "Organization settings",
-		url: ORG_ROUTES.settings.index,
+		title: "Tenant settings",
+		url: TENANT_ROUTES.settings.index,
 		section: "Settings",
 		description: "Team, locations, branding, and verification",
 		icon: Settings,
-		keywords: ["settings", "organization", "team", "locations", "branding", "logo", "verification", "kyb"],
+		keywords: ["settings", "tenant", "team", "locations", "branding", "logo", "verification", "kyb"],
 	},
 	{
 		id: "settings-team",
 		title: "Team & access",
-		url: ORG_ROUTES.settings.team,
+		url: TENANT_ROUTES.settings.team,
 		section: "Settings",
 		description: "Members, invitations, and roles",
 		icon: Users,
@@ -119,16 +119,16 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 	{
 		id: "settings-locations",
 		title: "Store locations",
-		url: ORG_ROUTES.settings.locations,
+		url: TENANT_ROUTES.settings.locations,
 		section: "Settings",
-		description: "Stores under this organization",
+		description: "Stores under this tenant",
 		icon: MapPin,
 		keywords: ["locations", "stores", "branches", "address"],
 	},
 	{
 		id: "settings-branding",
 		title: "Store branding",
-		url: ORG_ROUTES.settings.branding,
+		url: TENANT_ROUTES.settings.branding,
 		section: "Settings",
 		description: "Your store's logo",
 		icon: Palette,
@@ -137,7 +137,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 	{
 		id: "settings-verification",
 		title: "Business verification",
-		url: ORG_ROUTES.settings.verification,
+		url: TENANT_ROUTES.settings.verification,
 		section: "Settings",
 		description: "KYB details and documents",
 		icon: ShieldCheck,
@@ -146,7 +146,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 	{
 		id: "account",
 		title: "Account",
-		url: ORG_ROUTES.account,
+		url: TENANT_ROUTES.account,
 		section: "Settings",
 		description: "Profile, password, and two-factor authentication",
 		icon: CircleUser,

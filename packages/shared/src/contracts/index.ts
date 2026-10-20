@@ -25,12 +25,12 @@ import { emailContract, merchantInviteEmailPreviewContract } from "../contexts/n
 import { auditLogsContract, auditTrailContract, dataChangesContract } from "../contexts/audit/contract";
 import { githubContract, githubPullRequestsContract } from "../contexts/integrations-github/contract";
 import { geoContract } from "../contexts/reference-data/contract";
-import { legalContract, organizationRewardsContract, rewardsAdminRewardContract, rewardsContract } from "../contexts/rewards/contract";
+import { integrationRewardsContract, legalContract, tenantRewardsContract, rewardsAdminRewardContract, rewardsContract } from "../contexts/rewards/contract";
 import { claimsContract, rewardNotificationsContract } from "../contexts/claims/contract";
-import { claimsAnalyticsContract, organizationAnalyticsContract, rewardsAdminAnalyticsContract } from "../contexts/reporting/contract";
-import { organizationApiKeysContract, organizationRedemptionsContract, organizationTerminalsContract, posContract, redemptionsContract } from "../contexts/pos/contract";
+import { claimsAnalyticsContract, integrationAnalyticsContract, tenantAnalyticsContract, rewardsAdminAnalyticsContract } from "../contexts/reporting/contract";
+import { integrationRedemptionsContract, tenantApiKeysContract, tenantRedemptionsContract, tenantTerminalsContract } from "../contexts/pos/contract";
 import { filesContract } from "../contexts/files/contract";
-import { adminOrganizationsContract, organizationsContract, rewardsAdminOrganizationContract } from "../contexts/organizations/contract";
+import { adminTenantsContract, tenantsContract, rewardsAdminTenantContract } from "../contexts/tenancy/contract";
 import { productContract, sampleCategoryContract } from "../contexts/catalog/contract";
 
 // ── JSON-safe value types (shared by the contract and the client pipeline) ─
@@ -51,13 +51,14 @@ export { ApiAccessSchema, defineContract, defineFileContract } from "./define-co
 export * from "./versioning";
 export * from "./idempotency";
 export * from "./mutation-intent";
+export * from "./request-context-headers";
 export * from "./client-session";
 export { contractPathParam } from "./path-param";
 export { fileResponse, paginatedResponse, singleResponse, type ApiFileResponseContract, type ApiResponseContract, type ApiResponseKind } from "./response";
 
 // ── The contract ───────────────────────────────────────────────────────────
 // Composed from each bounded context's `contexts/<context>/contract.ts` (plan §14.1).
-// Groups mirror the client router; nested groups (`organizations.rewards`, …) are
+// Groups mirror the client router; nested groups (`tenants.rewards`, …) are
 // composed here so keys, methods and paths stay identical.
 //
 // To add a new feature: see docs/technical/adding-a-feature.md
@@ -89,20 +90,23 @@ export const apiContract = {
 		...claimsAnalyticsContract,
 	},
 	rewardNotifications: rewardNotificationsContract,
-	pos: posContract,
-	redemptions: redemptionsContract,
 	files: filesContract,
-	organizations: {
-		...organizationsContract,
-		...organizationAnalyticsContract,
-		...organizationRedemptionsContract,
-		rewards: organizationRewardsContract,
-		terminals: organizationTerminalsContract,
-		apiKeys: organizationApiKeysContract,
+	tenants: {
+		...tenantsContract,
+		...tenantAnalyticsContract,
+		...tenantRedemptionsContract,
+		rewards: tenantRewardsContract,
+		terminals: tenantTerminalsContract,
+		apiKeys: tenantApiKeysContract,
 	},
-	adminOrganizations: adminOrganizationsContract,
+	integration: {
+		...integrationAnalyticsContract,
+		...integrationRedemptionsContract,
+		rewards: integrationRewardsContract,
+	},
+	adminTenants: adminTenantsContract,
 	rewardsAdmin: {
-		...rewardsAdminOrganizationContract,
+		...rewardsAdminTenantContract,
 		...merchantInviteEmailPreviewContract,
 		...rewardsAdminRewardContract,
 		...rewardsAdminAnalyticsContract,

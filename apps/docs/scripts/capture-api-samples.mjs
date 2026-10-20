@@ -83,8 +83,8 @@ const MS_PER_SECOND = 1000;
 const SEED = {
 	klSlug: "brew-bean-kl",
 	mlkSlug: "jonker-street-kitchen",
-	klOrganizationId: "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-	mlkOrganizationId: "019b76da-a800-72b9-80b8-91bd729eddbe",
+	klTenantId: "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+	mlkTenantId: "019b76da-a800-72b9-80b8-91bd729eddbe",
 	klLocationId: "019b76da-a800-701a-abbd-a9a411b6958b",
 	mlkLocationKatilId: "019b76da-a800-7123-957b-191cb8255776",
 	mlkLocationBeruangId: "019b76da-a800-7685-9734-84f5f07eb21f",
@@ -251,7 +251,11 @@ function shownHeaders(session, request) {
 		headers[name] = redactString(value);
 	}
 	if (request.headers?.["X-API-Key"] !== undefined && request.headers["X-API-Key"] !== SEED.klPosKey) {
-		headers["X-API-Key"] = "mk_live_<the key returned by POST /api/v1/pos/terminals/pair>";
+		// A till's key comes from pairing; an integration key from the tenant's API-key page.
+		headers["X-API-Key"] =
+			request.headers["X-Terminal-Id"] === undefined
+				? "mk_live_<the INTEGRATION key returned by POST /api/v1/tenants/{tenantSlug}/api-keys>"
+				: "mk_live_<the key returned by POST /api/v1/integration/terminals/pair>";
 	}
 	if (request.headers?.["x-storage-callback-secret"] !== undefined) headers["x-storage-callback-secret"] = "<STORAGE_PROCESSING_CALLBACK_SECRET>";
 	if (request.headers?.["svix-signature"] !== undefined) headers["svix-signature"] = "v1,<redacted: HMAC of the body with RESEND_WEBHOOK_SECRET>";
@@ -689,7 +693,7 @@ async function captureRbac(context) {
 			name: "Brew & Bean KL — owners and admins manage rewards",
 			description: "Tenant role-capability policy for Brew & Bean KL",
 			scope: "TENANT",
-			organizationId: SEED.klOrganizationId,
+			tenantId: SEED.klTenantId,
 			builderPayload: { templateId: "tenant.role_capability", parameters: { allowedRoles: ["OWNER", "ADMIN"] } },
 		},
 	});
@@ -964,11 +968,11 @@ async function captureMerchantAdmin(context) {
 	const { admin } = context;
 	const merchants = await capture("RewardsAdminMerchantsController_listMerchants", admin, { method: "GET", path: api("/admin/merchants"), query: { limit: "2" } });
 	void merchants;
-	const merchant = await capture("RewardsAdminMerchantsController_getMerchant", admin, { method: "GET", path: api(`/admin/merchants/${SEED.klOrganizationId}`) });
+	const merchant = await capture("RewardsAdminMerchantsController_getMerchant", admin, { method: "GET", path: api(`/admin/merchants/${SEED.klTenantId}`) });
 	const documentId = merchant?.kyb?.documents?.[0]?.id ?? merchant?.kybDocuments?.[0]?.id ?? merchant?.documents?.[0]?.id;
 	await capture("RewardsAdminMerchantsController_downloadDocument", admin, {
 		method: "GET",
-		path: api(`/admin/merchants/${SEED.klOrganizationId}/documents/${documentId}/download`),
+		path: api(`/admin/merchants/${SEED.klTenantId}/documents/${documentId}/download`),
 	});
 	context.klDocumentId = documentId;
 	await capture("RewardsAdminLocationRequestsController_listLocationRequests", admin, { method: "GET", path: api("/admin/location-requests") });
@@ -982,6 +986,7 @@ async function captureMerchantAdmin(context) {
 	);
 
 	const inviteBody = { email: "nyonya.house@melaka-rewards.demo", businessName: "Nyonya House Melaka", city: "MELAKA" };
+	await capture("RewardsAdminInvitesController_getInviteAvailability", admin, { method: "GET", path: api("/admin/invites/availability") });
 	await capture("RewardsAdminInvitesController_previewInviteEmail", admin, {
 		method: "GET",
 		path: api("/admin/invites/preview-email"),
@@ -990,20 +995,20 @@ async function captureMerchantAdmin(context) {
 	const offset = logOffset();
 	await capture("RewardsAdminInvitesController_createInvite", admin, { method: "POST", path: api("/admin/invites"), body: inviteBody });
 	context.onboardingToken = await nextFromLog(/onboarding\?token=([\w.-]+)/g, offset);
-	await capture("OrganizationAdminController_createInvite", admin, {
+	await capture("TenantAdminController_createInvite", admin, {
 		method: "POST",
-		path: api("/admin/organizations/invites"),
+		path: api("/admin/tenants/invites"),
 		body: { email: "kopi.corner@kl-rewards.demo", displayName: "Kopi Corner KL", slug: "kopi-corner-kl", category: "cafe", city: "KUALA_LUMPUR", intendedRole: "OWNER" },
 	});
 }
 
 async function captureOnboarding(context) {
 	const token = context.onboardingToken;
-	await capture("MerchantOnboardingController_validateInvite", anonymous, { method: "POST", path: api("/orgs/onboarding/validate"), body: { token } });
+	await capture("MerchantOnboardingController_validateInvite", anonymous, { method: "POST", path: api("/tenants/onboarding/validate"), body: { token } });
 	const onboarding = newSession("nyonya", { email: "nyonya.house@melaka-rewards.demo", client: "merchant", ip: "203.0.113.31" });
 	await capture("MerchantOnboardingController_completeOnboarding", onboarding, {
 		method: "POST",
-		path: api("/orgs/onboarding/complete"),
+		path: api("/tenants/onboarding/complete"),
 		body: {
 			token,
 			category: "restaurant",
@@ -1018,7 +1023,7 @@ async function captureOnboarding(context) {
 	});
 	const single = await capture("MerchantOnboardingController_createDocumentUploadUrl", anonymous, {
 		method: "POST",
-		path: api("/orgs/onboarding/documents/upload-url"),
+		path: api("/tenants/onboarding/documents/upload-url"),
 		body: { token, ...sampleFileInfo },
 	});
 	const singleUpload = await uploadToTicket(single?.upload ?? single);
@@ -1026,12 +1031,12 @@ async function captureOnboarding(context) {
 	const singleFileId = single?.fileId ?? single?.file?.id ?? single?.id;
 	await capture("MerchantOnboardingController_completeDocumentUpload", anonymous, {
 		method: "POST",
-		path: api("/orgs/onboarding/documents/upload-complete"),
+		path: api("/tenants/onboarding/documents/upload-complete"),
 		body: { token, fileId: singleFileId, checksumSha256: sampleChecksum },
 	});
 	const batch = await capture("MerchantOnboardingController_createDocumentUploadUrls", anonymous, {
 		method: "POST",
-		path: api("/orgs/onboarding/documents/upload-urls"),
+		path: api("/tenants/onboarding/documents/upload-urls"),
 		body: { token, files: [sampleFileInfo] },
 	});
 	const batchTickets = Array.isArray(batch) ? batch : (batch?.uploads ?? batch?.files ?? []);
@@ -1043,46 +1048,92 @@ async function captureOnboarding(context) {
 	}
 	await capture("MerchantOnboardingController_completeDocumentUploads", anonymous, {
 		method: "POST",
-		path: api("/orgs/onboarding/documents/upload-complete-batch"),
+		path: api("/tenants/onboarding/documents/upload-complete-batch"),
 		body: { token, completions: batchFileIds.map((fileId) => ({ fileId, checksumSha256: sampleChecksum })) },
 	});
 	await sleep(SETTLE_DELAY_MS);
 	const fileIds = [singleFileId, ...batchFileIds];
-	await capture("MerchantOnboardingController_documentStatus", anonymous, { method: "POST", path: api("/orgs/onboarding/documents/status"), body: { token, fileIds } });
+	await capture("MerchantOnboardingController_documentStatus", anonymous, { method: "POST", path: api("/tenants/onboarding/documents/status"), body: { token, fileIds } });
 	await capture("MerchantOnboardingController_submitDocuments", anonymous, {
 		method: "POST",
-		path: api("/orgs/onboarding/documents/submit"),
+		path: api("/tenants/onboarding/documents/submit"),
 		body: { token, documentFileIds: fileIds },
 	});
 }
 
-async function captureOrganization(context) {
+/**
+ * The integration API (`/integration/*`): the same reward, analytics and redemption reads and reward
+ * writes a member has, called with the integration key the owner just created. The key names its own
+ * tenant, so no path carries a slug.
+ */
+async function captureIntegration(owner, apiKey) {
+	const viaKey = { as: "an integration API key (the key names its tenant)" };
+	const headers = { "X-API-Key": apiKey };
+	const rewards = await capture(
+		"IntegrationRewardsController_listRewards",
+		null,
+		{ method: "GET", path: api("/integration/rewards"), query: { limit: "2" }, headers },
+		viaKey,
+	);
+	const seededReward = Array.isArray(rewards) ? rewards[0] : rewards?.items?.[0];
+	await capture("IntegrationRewardsController_summarizeRewards", null, { method: "GET", path: api("/integration/rewards/summary"), headers }, viaKey);
+	await capture("IntegrationRewardsController_getReward", null, { method: "GET", path: api(`/integration/rewards/${seededReward?.id}`), headers }, viaKey);
+	const draft = await capture(
+		"IntegrationRewardsController_createReward",
+		null,
+		{ method: "POST", path: api("/integration/rewards"), headers, body: { ...rewardDraftBody(await uploadRewardImage(owner)), title: "Synced from the back office" } },
+		viaKey,
+	);
+	await capture(
+		"IntegrationRewardsController_updateReward",
+		null,
+		{ method: "PATCH", path: api(`/integration/rewards/${draft?.id}`), headers, body: { quantityTotal: 120 } },
+		viaKey,
+	);
+	await capture("IntegrationRewardsController_publishReward", null, { method: "POST", path: api(`/integration/rewards/${draft?.id}/publish`), headers, body: {} }, viaKey);
+	await capture("IntegrationAnalyticsController_getAnalytics", null, { method: "GET", path: api("/integration/analytics"), headers }, viaKey);
+	await capture(
+		"IntegrationAnalyticsController_getDashboard",
+		null,
+		{ method: "GET", path: api("/integration/analytics/dashboard"), query: { interval: "week" }, headers },
+		viaKey,
+	);
+	await capture(
+		"IntegrationAnalyticsController_exportReport",
+		null,
+		{ method: "GET", path: api("/integration/analytics/export"), query: { ...analyticsExportRange(), format: "csv" }, headers },
+		{ ...viaKey, note: EXPORT_SAMPLE_NOTE },
+	);
+	await capture("IntegrationRedemptionsController_listRedemptions", null, { method: "GET", path: api("/integration/redemptions"), query: { limit: "2" }, headers }, viaKey);
+}
+
+async function captureTenant(context) {
 	const { admin } = context;
 	const owner = await login("brewOwner");
 	context.brewOwner = owner;
 	const slug = SEED.klSlug;
-	await capture("OrganizationMembershipsBootstrapController_listMemberships", owner, { method: "GET", path: api("/orgs/memberships") });
-	await capture("OrganizationController_getContext", owner, { method: "GET", path: api(`/orgs/${slug}/context`) });
-	await capture("OrganizationController_listMembers", owner, { method: "GET", path: api(`/orgs/${slug}/members`) });
-	await capture("OrganizationController_listMemberInvites", owner, { method: "GET", path: api(`/orgs/${slug}/members/invites`) });
+	await capture("MembershipsBootstrapController_listMemberships", owner, { method: "GET", path: api("/tenants/memberships") });
+	await capture("TenantController_getContext", owner, { method: "GET", path: api(`/tenants/${slug}/context`) });
+	await capture("TenantController_listMembers", owner, { method: "GET", path: api(`/tenants/${slug}/members`) });
+	await capture("TenantController_listMemberInvites", owner, { method: "GET", path: api(`/tenants/${slug}/members/invites`) });
 
 	// KYB: Brew & Bean's owner downloads their evidence; Nyonya House (onboarded earlier in this run,
 	// review PENDING) resubmits its details and the admin approves the merchant.
-	const brewKyb = await send(owner, { method: "GET", path: api(`/orgs/${slug}/kyb`) });
+	const brewKyb = await send(owner, { method: "GET", path: api(`/tenants/${slug}/kyb`) });
 	const kybDocumentId = brewKyb.json?.data?.documents?.[0]?.id ?? context.klDocumentId;
-	await capture("OrganizationKybController_downloadDocument", owner, { method: "GET", path: api(`/orgs/${slug}/kyb/documents/${kybDocumentId}/download`) });
+	await capture("TenantKybController_downloadDocument", owner, { method: "GET", path: api(`/tenants/${slug}/kyb/documents/${kybDocumentId}/download`) });
 	const jonker = await login("jonkerOwner");
 	context.jonkerOwner = jonker;
 	await verifyEmailOf(ACCOUNTS.nyonya.email);
 	const nyonya = await login("nyonya");
-	const memberships = await send(nyonya, { method: "GET", path: api("/orgs/memberships") });
+	const memberships = await send(nyonya, { method: "GET", path: api("/tenants/memberships") });
 	const nyonyaMembership = firstArray(memberships.json?.data)[0];
-	const nyonyaSlug = nyonyaMembership?.organizationSlug ?? nyonyaMembership?.slug ?? nyonyaMembership?.organization?.slug;
-	const nyonyaOrganizationId = nyonyaMembership?.organizationId ?? nyonyaMembership?.organization?.id;
-	const kyb = await capture("OrganizationKybController_getProfile", nyonya, { method: "GET", path: api(`/orgs/${nyonyaSlug}/kyb`) });
-	await capture("OrganizationKybController_submitKyb", nyonya, {
+	const nyonyaSlug = nyonyaMembership?.tenantSlug ?? nyonyaMembership?.slug ?? nyonyaMembership?.tenant?.slug;
+	const nyonyaTenantId = nyonyaMembership?.tenantId ?? nyonyaMembership?.tenant?.id;
+	const kyb = await capture("TenantKybController_getProfile", nyonya, { method: "GET", path: api(`/tenants/${nyonyaSlug}/kyb`) });
+	await capture("TenantKybController_submitKyb", nyonya, {
 		method: "PATCH",
-		path: api(`/orgs/${nyonyaSlug}/kyb`),
+		path: api(`/tenants/${nyonyaSlug}/kyb`),
 		body: {
 			businessName: kyb?.businessName,
 			legalName: kyb?.legalName,
@@ -1096,135 +1147,138 @@ async function captureOrganization(context) {
 	});
 	await capture("RewardsAdminMerchantsController_updateKyb", admin, {
 		method: "PATCH",
-		path: api(`/admin/merchants/${nyonyaOrganizationId ?? kyb?.organizationId}/kyb`),
+		path: api(`/admin/merchants/${nyonyaTenantId ?? kyb?.tenantId}/kyb`),
 		body: { kybStatus: "APPROVED", kybFields: { reviewNotes: "SSM certificate matches the registered name" } },
 	});
 
 	// Stores: the owner requests one; the admin rejects it with a reason; the owner edits and resubmits;
 	// the admin approves. The admin also opens a store directly, which the owner later closes.
 	const bangsar = { name: "Brew & Bean KL — Bangsar", addressText: "21 Jalan Telawi 3, Bangsar Baru, 59100 Kuala Lumpur", contactPhone: "+60 3-2283 1234" };
-	const requested = await capture("OrganizationController_createLocation", owner, { method: "POST", path: api(`/orgs/${slug}/locations`), body: bangsar });
+	const requested = await capture("TenantController_createLocation", owner, { method: "POST", path: api(`/tenants/${slug}/locations`), body: bangsar });
 	let requestedId = requested?.id ?? requested?.location?.id;
 	if (requestedId === undefined) {
 		// Fallback when the owner's request failed: the admin records the same store as pending.
 		const pendingStore = await send(admin, {
 			method: "POST",
-			path: api(`/admin/merchants/${SEED.klOrganizationId}/locations`),
+			path: api(`/admin/merchants/${SEED.klTenantId}/locations`),
 			body: { name: bangsar.name, addressText: bangsar.addressText, contactPhone: bangsar.contactPhone, city: "KUALA_LUMPUR", approveImmediately: false },
 		});
 		requestedId = pendingStore.json?.data?.id ?? pendingStore.json?.data?.location?.id;
 	}
 	await capture("RewardsAdminMerchantsController_reviewLocation", admin, {
 		method: "PATCH",
-		path: api(`/admin/merchants/${SEED.klOrganizationId}/locations/${requestedId}/review`),
+		path: api(`/admin/merchants/${SEED.klTenantId}/locations/${requestedId}/review`),
 		body: { approve: false, rejectionReason: "Add the unit number to the address" },
 	});
-	await capture("OrganizationController_updateLocation", owner, {
+	await capture("TenantController_updateLocation", owner, {
 		method: "PATCH",
-		path: api(`/orgs/${slug}/locations/${requestedId}`),
+		path: api(`/tenants/${slug}/locations/${requestedId}`),
 		body: { ...bangsar, addressText: "Lot G-21, 21 Jalan Telawi 3, Bangsar Baru, 59100 Kuala Lumpur" },
 	});
-	await send(admin, { method: "PATCH", path: api(`/admin/merchants/${SEED.klOrganizationId}/locations/${requestedId}/review`), body: { approve: true } });
+	await send(admin, { method: "PATCH", path: api(`/admin/merchants/${SEED.klTenantId}/locations/${requestedId}/review`), body: { approve: true } });
 	const adminCreated = await capture("RewardsAdminMerchantsController_createLocation", admin, {
 		method: "POST",
-		path: api(`/admin/merchants/${SEED.klOrganizationId}/locations`),
+		path: api(`/admin/merchants/${SEED.klTenantId}/locations`),
 		body: { name: "Brew & Bean KL — Mid Valley", addressText: "Lingkaran Syed Putra, Mid Valley City, 59200 Kuala Lumpur", city: "KUALA_LUMPUR", approveImmediately: true },
 	});
 	const adminCreatedId = adminCreated?.id ?? adminCreated?.location?.id;
-	await capture("OrganizationController_closeLocation", owner, {
+	await capture("TenantController_closeLocation", owner, {
 		method: "POST",
-		path: api(`/orgs/${slug}/locations/${adminCreatedId}/close`),
+		path: api(`/tenants/${slug}/locations/${adminCreatedId}/close`),
 		body: { reason: "Mall lease not renewed" },
 	});
 
 	// Team: invite a member by email, revoke a pending invite, remove a member from one store.
 	// Invites name an APPROVED store: the seeded primary store (Bukit Bintang).
 	const storeId = SEED.klLocationId;
-	const invited = await capture("OrganizationController_inviteMember", owner, {
+	const invited = await capture("TenantController_inviteMember", owner, {
 		method: "POST",
-		path: api(`/orgs/${slug}/members/invite`),
+		path: api(`/tenants/${slug}/members/invite`),
 		body: { email: "barista.bangsar@kl-rewards.demo", role: "CASHIER", locationScopeType: "SELECTED", locationIds: [storeId] },
 	});
-	await capture("OrganizationController_revokeMemberInvite", owner, { method: "POST", path: api(`/orgs/${slug}/members/invites/${invited?.inviteId}/revoke`) });
+	await capture("TenantController_revokeMemberInvite", owner, { method: "POST", path: api(`/tenants/${slug}/members/invites/${invited?.inviteId}/revoke`) });
 	await capture(
-		"OrganizationController_removeMemberFromStore",
+		"TenantController_removeMemberFromStore",
 		jonker,
 		{
 			method: "POST",
-			path: api(`/orgs/${SEED.mlkSlug}/members/${SEED.mlkCashierMembershipId}/stores/${SEED.mlkLocationBeruangId}/remove`),
+			path: api(`/tenants/${SEED.mlkSlug}/members/${SEED.mlkCashierMembershipId}/stores/${SEED.mlkLocationBeruangId}/remove`),
 			body: { allowNoStores: true },
 		},
 		{ note: "Jonker Street Kitchen removes its cashier from the Bukit Beruang store (the cashier's only store, hence allowNoStores)." },
 	);
 
-	// A member's own display name in one organization (set, then cleared again so the seed state is kept).
+	// A member's own display name in one tenant (set, then cleared again so the seed state is kept).
 	await capture(
-		"OrganizationController_updateOwnMembership",
+		"TenantController_updateOwnMembership",
 		jonker,
-		{ method: "PATCH", path: api(`/orgs/${SEED.mlkSlug}/members/me`), body: { displayName: "  Siti (Owner)  " } },
+		{ method: "PATCH", path: api(`/tenants/${SEED.mlkSlug}/members/me`), body: { displayName: "  Siti (Owner)  " } },
 		{ note: 'Jonker Street Kitchen\'s owner sets her display name; it is trimmed. `{ "displayName": null }` clears it.' },
 	);
-	await send(jonker, { method: "PATCH", path: api(`/orgs/${SEED.mlkSlug}/members/me`), body: { displayName: null } });
+	await send(jonker, { method: "PATCH", path: api(`/tenants/${SEED.mlkSlug}/members/me`), body: { displayName: null } });
 
 	// Team invite links (public validate, accept as an existing account, register-and-accept as a new one).
-	await capture("OrganizationTeamInviteController_validateTeamInvite", anonymous, {
+	await capture("TenantTeamInviteController_validateTeamInvite", anonymous, {
 		method: "POST",
-		path: api("/orgs/invites/validate"),
+		path: api("/tenants/invites/validate"),
 		body: { token: SEED.teamInviteToken },
 	});
 	const aliceKl = await login("aliceKl");
-	await capture("OrganizationTeamInviteController_acceptTeamInvite", aliceKl, { method: "POST", path: api("/orgs/invites/accept"), body: { token: SEED.teamInviteToken } });
+	await capture("TenantTeamInviteController_acceptTeamInvite", aliceKl, { method: "POST", path: api("/tenants/invites/accept"), body: { token: SEED.teamInviteToken } });
 	const offset = logOffset();
 	await send(owner, {
 		method: "POST",
-		path: api(`/orgs/${slug}/members/invite`),
+		path: api(`/tenants/${slug}/members/invite`),
 		body: { email: "barista.bangsar@kl-rewards.demo", role: "CASHIER", locationScopeType: "SELECTED", locationIds: [storeId] },
 	});
 	const freshToken = await nextFromLog(/team-invite\?token=([\w.-]+)/g, offset);
-	await capture("OrganizationTeamInviteController_registerAndAcceptTeamInvite", newSession("barista", { email: "barista", client: "merchant", ip: "203.0.113.32" }), {
+	await capture("TenantTeamInviteController_registerAndAcceptTeamInvite", newSession("barista", { email: "barista", client: "merchant", ip: "203.0.113.32" }), {
 		method: "POST",
-		path: api("/orgs/invites/register-and-accept"),
+		path: api("/tenants/invites/register-and-accept"),
 		body: { token: freshToken, fullName: "Bangsar Barista", password: "Barista@123" },
 	});
 
 	// Access request: an existing user asks to join, the owner approves.
 	await verifyEmailOf(ACCOUNTS.bob.email);
 	const bob = await login("bob");
-	const request = await capture("OrganizationController_requestAccess", bob, {
+	const request = await capture("TenantController_requestAccess", bob, {
 		method: "POST",
-		path: api(`/orgs/${slug}/access-requests`),
+		path: api(`/tenants/${slug}/access-requests`),
 		body: { message: "I run the Bangsar morning shift" },
 	});
-	await capture("OrganizationController_reviewAccessRequest", owner, {
+	await capture("TenantController_reviewAccessRequest", owner, {
 		method: "POST",
-		path: api(`/orgs/${slug}/access-requests/${request?.id ?? request?.requestId}/review`),
+		path: api(`/tenants/${slug}/access-requests/${request?.id ?? request?.requestId}/review`),
 		body: { approve: true, role: "CASHIER", locationScopeType: "SELECTED", locationIds: [storeId] },
 	});
 	context.bangsarLocationId = storeId;
 }
 
-async function captureRewards(context) {
-	const { admin, brewOwner: owner } = context;
-	const slug = SEED.klSlug;
-	const rewards = await capture("OrganizationRewardsController_listRewards", owner, { method: "GET", path: api(`/orgs/${slug}/rewards`) });
-	const seededReward = Array.isArray(rewards) ? rewards[0] : rewards?.items?.[0];
-	await capture("OrganizationRewardsController_getReward", owner, { method: "GET", path: api(`/orgs/${slug}/rewards/${seededReward?.id}`) });
-	// A reward needs at least one 16:9 Full HD image, uploaded by the merchant before the draft names it.
-	const imageTicket = await send(owner, {
+/**
+ * Uploads one 16:9 Full HD reward image as `session` (a merchant member) and returns its file id: a reward
+ * needs at least one, uploaded before the draft names it.
+ */
+async function uploadRewardImage(session) {
+	const imageTicket = await send(session, {
 		method: "POST",
 		path: api("/files/upload-url"),
-		body: { category: "REWARD_IMAGE", organizationId: SEED.klOrganizationId, ...rewardImageInfo },
+		body: { category: "REWARD_IMAGE", tenantId: SEED.klTenantId, ...rewardImageInfo },
 	});
 	const imageTicketData = imageTicket.json?.data;
 	const imageUpload = await uploadToTicket(imageTicketData?.upload ?? imageTicketData, rewardImageBytes, rewardImageInfo.fileName);
 	const rewardImageFileId = imageTicketData?.fileId ?? imageTicketData?.file?.id ?? imageTicketData?.id;
 	await send(null, { method: "POST", path: imageUpload.path, form: imageUpload.form });
-	await send(owner, { method: "POST", path: api(`/files/${rewardImageFileId}/complete`), body: { checksumSha256: rewardImageInfo.checksumSha256 } });
+	await send(session, { method: "POST", path: api(`/files/${rewardImageFileId}/complete`), body: { checksumSha256: rewardImageInfo.checksumSha256 } });
 	await sleep(SETTLE_DELAY_MS);
+	return rewardImageFileId;
+}
+
+/** The draft reward body the samples create, naming one uploaded image. */
+function rewardDraftBody(imageFileId) {
 	const DAY_MS = 86_400_000;
 	const now = Date.now();
-	const draftBody = {
-		imageFileIds: [rewardImageFileId],
+	return {
+		imageFileIds: [imageFileId],
 		title: "Free Kopi O with any breakfast set",
 		description: "One free Kopi O when you order any breakfast set at Brew & Bean KL.",
 		category: "cafe",
@@ -1240,14 +1294,23 @@ async function captureRewards(context) {
 		referrerRewardTitle: "RM5 off your next order",
 		saveAsDraft: true,
 	};
-	const draft = await capture("OrganizationRewardsController_createReward", owner, { method: "POST", path: api(`/orgs/${slug}/rewards`), body: draftBody });
-	await capture("OrganizationRewardsController_updateReward", owner, { method: "PATCH", path: api(`/orgs/${slug}/rewards/${draft?.id}`), body: { quantityTotal: 250 } });
-	await capture("OrganizationRewardsController_publishReward", owner, { method: "POST", path: api(`/orgs/${slug}/rewards/${draft?.id}/publish`), body: {} });
+}
+
+async function captureRewards(context) {
+	const { admin, brewOwner: owner } = context;
+	const slug = SEED.klSlug;
+	const rewards = await capture("TenantRewardsController_listRewards", owner, { method: "GET", path: api(`/tenants/${slug}/rewards`) });
+	const seededReward = Array.isArray(rewards) ? rewards[0] : rewards?.items?.[0];
+	await capture("TenantRewardsController_getReward", owner, { method: "GET", path: api(`/tenants/${slug}/rewards/${seededReward?.id}`) });
+	const draftBody = rewardDraftBody(await uploadRewardImage(owner));
+	const draft = await capture("TenantRewardsController_createReward", owner, { method: "POST", path: api(`/tenants/${slug}/rewards`), body: draftBody });
+	await capture("TenantRewardsController_updateReward", owner, { method: "PATCH", path: api(`/tenants/${slug}/rewards/${draft?.id}`), body: { quantityTotal: 250 } });
+	await capture("TenantRewardsController_publishReward", owner, { method: "POST", path: api(`/tenants/${slug}/rewards/${draft?.id}/publish`), body: {} });
 	await capture("RewardsAdminRewardsController_listPendingRewards", admin, { method: "GET", path: api("/admin/rewards/pending") });
 	await capture("RewardsAdminRewardsController_approveReward", admin, { method: "POST", path: api(`/admin/rewards/${draft?.id}/approve`), body: {} });
 	const second = await send(owner, {
 		method: "POST",
-		path: api(`/orgs/${slug}/rewards`),
+		path: api(`/tenants/${slug}/rewards`),
 		body: {
 			...draftBody,
 			title: "Buy one get one Iced Latte",
@@ -1301,31 +1364,31 @@ async function captureCustomer(context) {
 async function capturePos(context) {
 	const { brewOwner: owner } = context;
 	const slug = SEED.klSlug;
-	await capture("OrganizationTerminalsController_list", owner, { method: "GET", path: api(`/orgs/${slug}/terminals`) });
-	await capture("OrganizationTerminalsController_summary", owner, { method: "GET", path: api(`/orgs/${slug}/terminals/summary`) });
-	await capture("OrganizationTerminalsController_getSettings", owner, { method: "GET", path: api(`/orgs/${slug}/terminals/settings`) });
-	await capture("OrganizationTerminalsController_updateSettings", owner, {
+	await capture("TenantTerminalsController_list", owner, { method: "GET", path: api(`/tenants/${slug}/terminals`) });
+	await capture("TenantTerminalsController_summary", owner, { method: "GET", path: api(`/tenants/${slug}/terminals/summary`) });
+	await capture("TenantTerminalsController_getSettings", owner, { method: "GET", path: api(`/tenants/${slug}/terminals/settings`) });
+	await capture("TenantTerminalsController_updateSettings", owner, {
 		method: "PATCH",
-		path: api(`/orgs/${slug}/terminals/settings`),
+		path: api(`/tenants/${slug}/terminals/settings`),
 		body: { requireRegisteredTerminals: false },
 	});
-	const terminal = await capture("OrganizationTerminalsController_create", owner, {
+	const terminal = await capture("TenantTerminalsController_create", owner, {
 		method: "POST",
-		path: api(`/orgs/${slug}/terminals`),
+		path: api(`/tenants/${slug}/terminals`),
 		body: { locationId: context.bangsarLocationId ?? SEED.klLocationId, name: "Bangsar front counter", terminalId: "KL-BANGSAR-01" },
 	});
 	const terminalRowId = terminal?.terminal?.id ?? terminal?.id;
-	await capture("OrganizationTerminalsController_get", owner, { method: "GET", path: api(`/orgs/${slug}/terminals/${terminalRowId}`) });
-	const pairing = await capture("OrganizationTerminalsController_issuePairingCode", owner, {
+	await capture("TenantTerminalsController_get", owner, { method: "GET", path: api(`/tenants/${slug}/terminals/${terminalRowId}`) });
+	const pairing = await capture("TenantTerminalsController_issuePairingCode", owner, {
 		method: "POST",
-		path: api(`/orgs/${slug}/terminals/${terminalRowId}/pairing-code`),
+		path: api(`/tenants/${slug}/terminals/${terminalRowId}/pairing-code`),
 		body: {},
 	});
 	const pairingCode = pairing?.pairingCode ?? pairing?.code ?? terminal?.pairingCode;
 	await capture(
 		"PosTerminalsController_pair",
 		null,
-		{ method: "POST", path: api("/pos/terminals/pair"), body: { pairingCode } },
+		{ method: "POST", path: api("/integration/terminals/pair"), body: { pairingCode } },
 		{ as: "a new till (pairing code only, no credential yet)" },
 	);
 
@@ -1335,7 +1398,7 @@ async function capturePos(context) {
 	await capture(
 		"RedemptionsController_validate",
 		null,
-		{ method: "POST", path: api("/redemptions/validate"), headers: posHeaders, body: { token: SEED.pendingQrToken } },
+		{ method: "POST", path: api("/integration/redemptions/validate"), headers: posHeaders, body: { token: SEED.pendingQrToken } },
 		register,
 	);
 	await capture(
@@ -1343,30 +1406,31 @@ async function capturePos(context) {
 		null,
 		{
 			method: "POST",
-			path: api("/redemptions/checkout"),
+			path: api("/integration/redemptions/checkout"),
 			headers: posHeaders,
 			body: { idempotencyKey: randomUUID(), billTotalMinor: 2500, currency: "MYR", codes: [{ backupCode: SEED.pendingBackupCode }] },
 		},
 		register,
 	);
 
-	await capture("OrganizationRedemptionsController_listRedemptions", owner, { method: "GET", path: api(`/orgs/${slug}/redemptions`), query: { limit: "2" } });
-	await capture("OrganizationAnalyticsController_getAnalytics", owner, { method: "GET", path: api(`/orgs/${slug}/analytics`) });
-	await capture("OrganizationAnalyticsController_getDashboard", owner, { method: "GET", path: api(`/orgs/${slug}/analytics/dashboard`), query: { interval: "week" } });
+	await capture("TenantRedemptionsController_listRedemptions", owner, { method: "GET", path: api(`/tenants/${slug}/redemptions`), query: { limit: "2" } });
+	await capture("TenantAnalyticsController_getAnalytics", owner, { method: "GET", path: api(`/tenants/${slug}/analytics`) });
+	await capture("TenantAnalyticsController_getDashboard", owner, { method: "GET", path: api(`/tenants/${slug}/analytics/dashboard`), query: { interval: "week" } });
 	await capture(
-		"OrganizationAnalyticsController_exportReport",
+		"TenantAnalyticsController_exportReport",
 		owner,
-		{ method: "GET", path: api(`/orgs/${slug}/analytics/export`), query: { ...analyticsExportRange(), format: "xlsx" } },
+		{ method: "GET", path: api(`/tenants/${slug}/analytics/export`), query: { ...analyticsExportRange(), format: "xlsx" } },
 		{ note: EXPORT_SAMPLE_NOTE },
 	);
-	await capture("OrganizationApiKeysController_listKeys", owner, { method: "GET", path: api(`/orgs/${slug}/api-keys`), query: { limit: "2" } });
-	const key = await capture("OrganizationApiKeysController_createKey", owner, {
+	await capture("TenantApiKeysController_listKeys", owner, { method: "GET", path: api(`/tenants/${slug}/api-keys`), query: { limit: "2" } });
+	const key = await capture("TenantApiKeysController_createKey", owner, {
 		method: "POST",
-		path: api(`/orgs/${slug}/api-keys`),
+		path: api(`/tenants/${slug}/api-keys`),
 		body: { name: "Back-office sync", scope: "INTEGRATION" },
 	});
-	await capture("OrganizationApiKeysController_revokeKey", owner, { method: "POST", path: api(`/orgs/${slug}/api-keys/${key?.id ?? key?.key?.id}/revoke`), body: {} });
-	await capture("OrganizationTerminalsController_remove", owner, { method: "DELETE", path: api(`/orgs/${slug}/terminals/${terminalRowId}`) });
+	await captureIntegration(owner, key?.apiKey ?? key?.key?.apiKey);
+	await capture("TenantApiKeysController_revokeKey", owner, { method: "POST", path: api(`/tenants/${slug}/api-keys/${key?.id ?? key?.key?.id}/revoke`), body: {} });
+	await capture("TenantTerminalsController_remove", owner, { method: "DELETE", path: api(`/tenants/${slug}/terminals/${terminalRowId}`) });
 
 	const { customer } = context;
 	await capture("ConsumerAnalyticsController_getAnalytics", customer, { method: "GET", path: api("/claims/analytics") });
@@ -1380,7 +1444,7 @@ async function captureSupportAccess(context) {
 	const grant = await capture("SupportAccessController_requestGrant", admin, {
 		method: "POST",
 		path: api("/support-access/request"),
-		body: { organizationId: SEED.klOrganizationId, reason: "Investigate a missing POS checkout", ticketRef: "SUP-1042", mode: "READ_ONLY", durationMinutes: 60 },
+		body: { tenantId: SEED.klTenantId, reason: "Investigate a missing POS checkout", ticketRef: "SUP-1042", mode: "READ_ONLY", durationMinutes: 60 },
 	});
 	const grantId = grant?.id ?? grant?.grantId;
 	await capture("SupportAccessController_approve", owner, { method: "POST", path: api(`/support-access/${grantId}/approve`) });
@@ -1414,7 +1478,7 @@ async function main() {
 		["files", captureFiles],
 		["merchant admin", captureMerchantAdmin],
 		["onboarding", captureOnboarding],
-		["organization", captureOrganization],
+		["tenant", captureTenant],
 		["rewards", captureRewards],
 		["customer", captureCustomer],
 		["pos", capturePos],

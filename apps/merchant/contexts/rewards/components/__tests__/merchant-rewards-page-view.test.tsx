@@ -17,7 +17,7 @@ import { busyRegionAnnouncements } from "@/test/skeleton";
 import { REWARD_CATALOG_PAGE_SIZE } from "@/contexts/rewards/url-state/rewards";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 
-type RewardsListInput = Parameters<typeof apiRouter.organizations.rewards.list.queryKey>[0];
+type RewardsListInput = Parameters<typeof apiRouter.tenants.rewards.list.queryKey>[0];
 
 interface RewardsListOptions {
 	readonly enabled?: boolean;
@@ -25,7 +25,7 @@ interface RewardsListOptions {
 	readonly gcTime?: number;
 }
 
-type RewardsSummaryInput = Parameters<typeof apiRouter.organizations.rewards.summary.queryKey>[0];
+type RewardsSummaryInput = Parameters<typeof apiRouter.tenants.rewards.summary.queryKey>[0];
 
 const { rewardsListQuery, rewardsSummaryQuery, contextQuery } = vi.hoisted(() => ({
 	rewardsListQuery: vi.fn<(input: RewardsListInput, options?: RewardsListOptions) => object>(),
@@ -44,7 +44,7 @@ vi.mock("next/navigation", async (importOriginal) => {
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
-		api: { organizations: { rewards: { list: { useQuery: rewardsListQuery }, summary: { useQuery: rewardsSummaryQuery } }, context: { useQuery: contextQuery } } },
+		api: { tenants: { rewards: { list: { useQuery: rewardsListQuery }, summary: { useQuery: rewardsSummaryQuery } }, context: { useQuery: contextQuery } } },
 	}),
 }));
 
@@ -72,7 +72,7 @@ afterEach((): void => {
 
 describe("MerchantRewardsPageView authorization", () => {
 	it("shows create actions to roles with merchant:manage_rewards", () => {
-		renderWithAuthorization(<MerchantRewardsPageView orgSlug={TEST_ORG_SLUG} />, { role: "OWNER" });
+		renderWithAuthorization(<MerchantRewardsPageView tenantSlug={TEST_ORG_SLUG} />, { role: "OWNER" });
 
 		expect(screen.getByRole("link", { name: "New reward" })).toBeTruthy();
 		expect(screen.getByRole("link", { name: "Create first reward" })).toBeTruthy();
@@ -80,7 +80,7 @@ describe("MerchantRewardsPageView authorization", () => {
 	});
 
 	it("hides create actions and shows a read-only notice for view-only roles", () => {
-		renderWithAuthorization(<MerchantRewardsPageView orgSlug={TEST_ORG_SLUG} />, { role: "CASHIER" });
+		renderWithAuthorization(<MerchantRewardsPageView tenantSlug={TEST_ORG_SLUG} />, { role: "CASHIER" });
 
 		expect(screen.queryByRole("link", { name: "New reward" })).toBeNull();
 		expect(screen.queryByRole("link", { name: "Create first reward" })).toBeNull();
@@ -88,7 +88,7 @@ describe("MerchantRewardsPageView authorization", () => {
 	});
 
 	it("denies the page (and skips the list query) without merchant:view_rewards", () => {
-		renderWithAuthorization(<MerchantRewardsPageView orgSlug={TEST_ORG_SLUG} />, { role: "MEMBER" });
+		renderWithAuthorization(<MerchantRewardsPageView tenantSlug={TEST_ORG_SLUG} />, { role: "MEMBER" });
 
 		expect(screen.getByText("You don't have access to this page")).toBeTruthy();
 		expect(rewardsListQuery).not.toHaveBeenCalled();
@@ -96,7 +96,7 @@ describe("MerchantRewardsPageView authorization", () => {
 	});
 
 	it("renders the loading state rather than a denial while the membership resolves", () => {
-		renderWithAuthorization(<MerchantRewardsPageView orgSlug={TEST_ORG_SLUG} />, { isLoading: true });
+		renderWithAuthorization(<MerchantRewardsPageView tenantSlug={TEST_ORG_SLUG} />, { isLoading: true });
 
 		expect(busyRegionAnnouncements()).toEqual([MERCHANT_REWARDS_LOADING_LABELS.loading]);
 		expect(screen.queryByText("You don't have access to this page")).toBeNull();
@@ -110,7 +110,7 @@ describe("MerchantRewardsPageView loading", () => {
 		rewardsListQuery.mockReturnValue({ isSuccess: false, isPending: true, isFetching: true, isError: false, error: null, data: undefined, refetch: vi.fn() });
 		renderWithAuthorization(
 			<UiPreferencesStoreProvider storageKey={MERCHANT_UI_PREFERENCES_STORAGE_KEY} devtoolsName={MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME}>
-				<MerchantRewardsPageView orgSlug={TEST_ORG_SLUG} />
+				<MerchantRewardsPageView tenantSlug={TEST_ORG_SLUG} />
 			</UiPreferencesStoreProvider>,
 			{ role: "OWNER", tenantContext: twoStoreSeed(STORE_A.id) },
 		);
@@ -126,21 +126,21 @@ describe("MerchantRewardsPageView loading", () => {
 function renderCatalogPage(): void {
 	renderWithAuthorization(
 		<UiPreferencesStoreProvider storageKey={MERCHANT_UI_PREFERENCES_STORAGE_KEY} devtoolsName={MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME}>
-			<MerchantRewardsPageView orgSlug={TEST_ORG_SLUG} />
+			<MerchantRewardsPageView tenantSlug={TEST_ORG_SLUG} />
 		</UiPreferencesStoreProvider>,
 		{ role: "OWNER", tenantContext: twoStoreSeed(STORE_A.id) },
 	);
 }
 
 describe("MerchantRewardsPageView store filter", () => {
-	it("asks for the figures and the open tab's first page of the chosen store once the server seeded the organization context", () => {
-		renderWithAuthorization(<MerchantRewardsPageView orgSlug={TEST_ORG_SLUG} />, { role: "OWNER", tenantContext: twoStoreSeed(STORE_A.id) });
+	it("asks for the figures and the open tab's first page of the chosen store once the server seeded the tenant context", () => {
+		renderWithAuthorization(<MerchantRewardsPageView tenantSlug={TEST_ORG_SLUG} />, { role: "OWNER", tenantContext: twoStoreSeed(STORE_A.id) });
 
 		const [summaryInput, summaryOptions] = rewardsSummaryQuery.mock.calls.at(0) ?? [];
-		expect(summaryInput).toEqual({ orgSlug: TEST_ORG_SLUG, locationId: STORE_A.id });
+		expect(summaryInput).toEqual({ tenantSlug: TEST_ORG_SLUG, locationId: STORE_A.id });
 		expect(summaryOptions?.enabled).toBe(true);
 		const [input, options] = rewardsListQuery.mock.calls.at(0) ?? [];
-		expect(input).toEqual({ orgSlug: TEST_ORG_SLUG, page: 1, limit: REWARD_CATALOG_PAGE_SIZE, locationId: STORE_A.id, filter: { status: { in: ["PUBLISHED"] } } });
+		expect(input).toEqual({ tenantSlug: TEST_ORG_SLUG, page: 1, limit: REWARD_CATALOG_PAGE_SIZE, locationId: STORE_A.id, filter: { status: { in: ["PUBLISHED"] } } });
 		expect(options?.enabled).toBe(true);
 	});
 
@@ -181,7 +181,7 @@ describe("MerchantRewardsPageView store filter", () => {
 
 	it("waits for the accessible locations before querying when they are still loading", () => {
 		contextQuery.mockReturnValue(contextQueryState(undefined));
-		renderWithAuthorization(<MerchantRewardsPageView orgSlug={TEST_ORG_SLUG} />, { role: "OWNER", tenantContext: { initialLocationId: STORE_A.id } });
+		renderWithAuthorization(<MerchantRewardsPageView tenantSlug={TEST_ORG_SLUG} />, { role: "OWNER", tenantContext: { initialLocationId: STORE_A.id } });
 
 		const [, options] = rewardsListQuery.mock.calls.at(0) ?? [];
 		expect(options?.enabled).toBe(false);
@@ -192,7 +192,7 @@ describe("MerchantRewardsPageView store filter", () => {
 
 describe("MerchantRewardsPageView caching and errors", () => {
 	it("keeps the catalog cached between navigations instead of bypassing the cache", () => {
-		renderWithAuthorization(<MerchantRewardsPageView orgSlug={TEST_ORG_SLUG} />, { role: "OWNER", tenantContext: twoStoreSeed(STORE_A.id) });
+		renderWithAuthorization(<MerchantRewardsPageView tenantSlug={TEST_ORG_SLUG} />, { role: "OWNER", tenantContext: twoStoreSeed(STORE_A.id) });
 
 		const [, options] = rewardsListQuery.mock.calls.at(0) ?? [];
 		expect(options?.staleTime).toBeGreaterThan(0);
@@ -200,7 +200,7 @@ describe("MerchantRewardsPageView caching and errors", () => {
 	});
 
 	it("shows a user-safe message, never the raw transport error", () => {
-		const rawMessage = "Request failed: GET http://api.internal/orgs/acme/rewards ECONNRESET";
+		const rawMessage = "Request failed: GET http://api.internal/t/acme/rewards ECONNRESET";
 		rewardsListQuery.mockReturnValue({
 			isSuccess: false,
 			isPending: false,
@@ -210,7 +210,7 @@ describe("MerchantRewardsPageView caching and errors", () => {
 			data: undefined,
 			refetch: vi.fn(),
 		});
-		renderWithAuthorization(<MerchantRewardsPageView orgSlug={TEST_ORG_SLUG} />, { role: "OWNER", tenantContext: twoStoreSeed(STORE_A.id) });
+		renderWithAuthorization(<MerchantRewardsPageView tenantSlug={TEST_ORG_SLUG} />, { role: "OWNER", tenantContext: twoStoreSeed(STORE_A.id) });
 
 		expect(screen.getByText("Could not load rewards")).toBeTruthy();
 		expect(screen.queryByText(rawMessage)).toBeNull();

@@ -3,7 +3,7 @@ title: "API reference — Geography reference data"
 description: "Regions, subregions, countries, states and cities: CRUD, autocomplete, import and export."
 order: 10
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792368000000
+lastUpdated: 1792454400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -73,8 +73,8 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [],
   "meta": {
-    "correlationId": "u3fkv3hieHHtSVQPktGqj",
-    "timestamp": 1792435596085
+    "correlationId": "-mMjPz0MrOkzTxVsGubFt",
+    "timestamp": 1792520435855
   }
 }
 ```
@@ -139,8 +139,8 @@ Response `200 OK` (application/json):
     }
   },
   "meta": {
-    "correlationId": "xUgWjtyQov4dh6py_I1qz",
-    "timestamp": 1792435596111
+    "correlationId": "z5LR8AADJ5Xo5-tSsfhX2",
+    "timestamp": 1792520435886
   }
 }
 ```
@@ -281,8 +281,8 @@ Response `200 OK` (application/json):
       "flag": true,
       "stateId": 2490,
       "countryId": 130,
-      "createdAt": 1792435498050,
-      "updatedAt": 1792435498050
+      "createdAt": 1792520347633,
+      "updatedAt": 1792520347633
     },
     {
       "id": 70891,
@@ -298,8 +298,8 @@ Response `200 OK` (application/json):
       "flag": true,
       "stateId": 2486,
       "countryId": 130,
-      "createdAt": 1792435498050,
-      "updatedAt": 1792435498050
+      "createdAt": 1792520347633,
+      "updatedAt": 1792520347633
     }
   ],
   "meta": {
@@ -310,8 +310,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "MRq56ti8pF5wjrYo_585C",
-    "timestamp": 1792435596001
+    "correlationId": "jUq_2LlwL1GxqV9k2rIN6",
+    "timestamp": 1792520435768
   }
 }
 ```
@@ -413,12 +413,12 @@ Response `201 Created` (application/json):
     "flag": true,
     "stateId": 5270,
     "countryId": 252,
-    "createdAt": 1792435596576,
-    "updatedAt": 1792435596576
+    "createdAt": 1792520436401,
+    "updatedAt": 1792520436401
   },
   "meta": {
-    "correlationId": "qcw3kCQ9OjiD4yMyVxa0i",
-    "timestamp": 1792435596586
+    "correlationId": "LgokkhsaIlQXYU82z-49G",
+    "timestamp": 1792520436417
   }
 }
 ```
@@ -494,12 +494,12 @@ Response `200 OK` (application/json):
     "flag": true,
     "stateId": 2490,
     "countryId": 130,
-    "createdAt": 1792435498050,
-    "updatedAt": 1792435498050
+    "createdAt": 1792520347633,
+    "updatedAt": 1792520347633
   },
   "meta": {
-    "correlationId": "9X_jzywQhSNCsl1tRgfI-",
-    "timestamp": 1792435596059
+    "correlationId": "RRXDXBUIsBwu3854dquzL",
+    "timestamp": 1792520435820
   }
 }
 ```
@@ -601,12 +601,12 @@ Response `200 OK` (application/json):
     "flag": true,
     "stateId": 5270,
     "countryId": 252,
-    "createdAt": 1792435596576,
-    "updatedAt": 1792435596611
+    "createdAt": 1792520436401,
+    "updatedAt": 1792520436460
   },
   "meta": {
-    "correlationId": "dlIUzih-scGkwbp5qLjqZ",
-    "timestamp": 1792435596622
+    "correlationId": "s3827pGZ62pyZjhRufNw8",
+    "timestamp": 1792520436481
   }
 }
 ```
@@ -662,8 +662,8 @@ Response `200 OK` (application/json):
     "message": "City #152373 deleted"
   },
   "meta": {
-    "correlationId": "7pylWXdiixwLk2dVuoQt0",
-    "timestamp": 1792435596654
+    "correlationId": "tY19nP66xo7smDIcJn2pf",
+    "timestamp": 1792520436526
   }
 }
 ```
@@ -870,8 +870,8 @@ Response `200 OK` (application/json):
       "flag": true,
       "regionId": 3,
       "subregionId": 16,
-      "createdAt": 1792435478494,
-      "updatedAt": 1792435478494
+      "createdAt": 1792520327395,
+      "updatedAt": 1792520327395
     }
   ],
   "meta": {
@@ -882,8 +882,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "fwbcmHLLKzuX87iXS0AeT",
-    "timestamp": 1792435595672
+    "correlationId": "cjdfv9RsfRhpYSgorjOhd",
+    "timestamp": 1792520435502
   }
 }
 ```
@@ -1023,12 +1023,12 @@ Response `201 Created` (application/json):
     "flag": true,
     "regionId": 8,
     "subregionId": 24,
-    "createdAt": 1792435596393,
-    "updatedAt": 1792435596393
+    "createdAt": 1792520436228,
+    "updatedAt": 1792520436228
   },
   "meta": {
-    "correlationId": "ZULj-2KOCEv7q4uMI-o48",
-    "timestamp": 1792435596414
+    "correlationId": "ZLN3KNiSVHTux9vd6Jsvi",
+    "timestamp": 1792520436241
   }
 }
 ```
@@ -1167,12 +1167,12 @@ Response `200 OK` (application/json):
     "flag": true,
     "regionId": 3,
     "subregionId": 16,
-    "createdAt": 1792435478494,
-    "updatedAt": 1792435478494
+    "createdAt": 1792520327395,
+    "updatedAt": 1792520327395
   },
   "meta": {
-    "correlationId": "wRH12niKPnlwGfESnRtXe",
-    "timestamp": 1792435595705
+    "correlationId": "ZgLuVasINGXrc2WhCXT99",
+    "timestamp": 1792520435537
   }
 }
 ```
@@ -1316,12 +1316,12 @@ Response `200 OK` (application/json):
     "flag": true,
     "regionId": 8,
     "subregionId": 24,
-    "createdAt": 1792435596393,
-    "updatedAt": 1792435596456
+    "createdAt": 1792520436228,
+    "updatedAt": 1792520436278
   },
   "meta": {
-    "correlationId": "q3m3UX5Sm4bMbbQm6Ce3h",
-    "timestamp": 1792435596472
+    "correlationId": "pJCR5jipeq0KY0i4z9fDp",
+    "timestamp": 1792520436291
   }
 }
 ```
@@ -1377,8 +1377,8 @@ Response `200 OK` (application/json):
     "message": "Country #252 deleted"
   },
   "meta": {
-    "correlationId": "4ahnMP-MgtQyQJDceOAcy",
-    "timestamp": 1792435596727
+    "correlationId": "Njex-ohoCQKveta9_peZq",
+    "timestamp": 1792520436638
   }
 }
 ```
@@ -1458,8 +1458,8 @@ Response `200 OK` (application/json):
       "flag": true,
       "stateId": 2490,
       "countryId": 130,
-      "createdAt": 1792435498050,
-      "updatedAt": 1792435498050
+      "createdAt": 1792520347633,
+      "updatedAt": 1792520347633
     },
     {
       "id": 70891,
@@ -1475,13 +1475,13 @@ Response `200 OK` (application/json):
       "flag": true,
       "stateId": 2486,
       "countryId": 130,
-      "createdAt": 1792435498050,
-      "updatedAt": 1792435498050
+      "createdAt": 1792520347633,
+      "updatedAt": 1792520347633
     }
   ],
   "meta": {
-    "correlationId": "_iTCHn_Qkmf2aUOOsXQHH",
-    "timestamp": 1792435596138
+    "correlationId": "7J8kNpmp6VaU-tK7kD6r9",
+    "timestamp": 1792520435937
   }
 }
 ```
@@ -1560,8 +1560,8 @@ Response `201 Created` (application/json):
     "errors": []
   },
   "meta": {
-    "correlationId": "YUuuj8d-7JQs5RC6C0o_2",
-    "timestamp": 1792435596884
+    "correlationId": "rG8VdO6DTHqxHoJ4pS8lX",
+    "timestamp": 1792520436924
   }
 }
 ```
@@ -1637,8 +1637,8 @@ Response `201 Created` (application/json):
     "errors": []
   },
   "meta": {
-    "correlationId": "hCY1Ep0NbZRndmWuyOlN2",
-    "timestamp": 1792435596841
+    "correlationId": "ZNYBuk9CCu47F3BnWNcxY",
+    "timestamp": 1792520436849
   }
 }
 ```
@@ -1770,8 +1770,8 @@ Response `200 OK` (application/json):
       },
       "wikiDataId": "Q15",
       "flag": true,
-      "createdAt": 1792435477464,
-      "updatedAt": 1792435477464
+      "createdAt": 1792520326497,
+      "updatedAt": 1792520326497
     },
     {
       "id": 2,
@@ -1797,8 +1797,8 @@ Response `200 OK` (application/json):
       },
       "wikiDataId": "Q828",
       "flag": true,
-      "createdAt": 1792435477464,
-      "updatedAt": 1792435477464
+      "createdAt": 1792520326497,
+      "updatedAt": 1792520326497
     }
   ],
   "meta": {
@@ -1809,8 +1809,8 @@ Response `200 OK` (application/json):
     "nextCursor": "eyJpZCI6Mn0",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "Sb0cWhoQvk4ClTknxRMG3",
-    "timestamp": 1792435595542
+    "correlationId": "DDKFNXg_pa28lfksd9-nx",
+    "timestamp": 1792520435368
   }
 }
 ```
@@ -1882,12 +1882,12 @@ Response `201 Created` (application/json):
     "translations": null,
     "wikiDataId": null,
     "flag": true,
-    "createdAt": 1792435596248,
-    "updatedAt": 1792435596248
+    "createdAt": 1792520436068,
+    "updatedAt": 1792520436068
   },
   "meta": {
-    "correlationId": "hY94khb1QDLWl1Zm3YhYH",
-    "timestamp": 1792435596260
+    "correlationId": "6krrAy2z8ezUcXxAzxrH6",
+    "timestamp": 1792520436079
   }
 }
 ```
@@ -1965,12 +1965,12 @@ Response `200 OK` (application/json):
     },
     "wikiDataId": "Q15",
     "flag": true,
-    "createdAt": 1792435477464,
-    "updatedAt": 1792435477464
+    "createdAt": 1792520326497,
+    "updatedAt": 1792520326497
   },
   "meta": {
-    "correlationId": "4gwY2jmEhjZqfWG5_pclm",
-    "timestamp": 1792435595570
+    "correlationId": "mWxM_1a-uKhAiSG5lFcn1",
+    "timestamp": 1792520435407
   }
 }
 ```
@@ -2048,12 +2048,12 @@ Response `200 OK` (application/json):
     "translations": null,
     "wikiDataId": null,
     "flag": true,
-    "createdAt": 1792435596248,
-    "updatedAt": 1792435596285
+    "createdAt": 1792520436068,
+    "updatedAt": 1792520436107
   },
   "meta": {
-    "correlationId": "VQixGnxBcQlAY04M74vt1",
-    "timestamp": 1792435596296
+    "correlationId": "2wIlDZ_S2tA0-cqDzQ_ht",
+    "timestamp": 1792520436123
   }
 }
 ```
@@ -2109,8 +2109,8 @@ Response `200 OK` (application/json):
     "message": "Region #8 deleted"
   },
   "meta": {
-    "correlationId": "LbWyTqL_milC5zkpR3nqf",
-    "timestamp": 1792435596822
+    "correlationId": "GETVhrIDONESPelztSUEB",
+    "timestamp": 1792520436796
   }
 }
 ```
@@ -2275,8 +2275,8 @@ Response `200 OK` (application/json):
       "wikiDataId": "Q183032",
       "flag": true,
       "countryId": 130,
-      "createdAt": 1792435480207,
-      "updatedAt": 1792435480207
+      "createdAt": 1792520329151,
+      "updatedAt": 1792520329151
     },
     {
       "id": 2486,
@@ -2316,8 +2316,8 @@ Response `200 OK` (application/json):
       "wikiDataId": "Q188947",
       "flag": true,
       "countryId": 130,
-      "createdAt": 1792435480207,
-      "updatedAt": 1792435480207
+      "createdAt": 1792520329151,
+      "updatedAt": 1792520329151
     }
   ],
   "meta": {
@@ -2328,8 +2328,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "k443j31SPvGETBhVkLpvn",
-    "timestamp": 1792435595755
+    "correlationId": "MPsIgT2AgTCeOJYW2FhZ0",
+    "timestamp": 1792520435579
   }
 }
 ```
@@ -2439,12 +2439,12 @@ Response `201 Created` (application/json):
     "wikiDataId": null,
     "flag": true,
     "countryId": 252,
-    "createdAt": 1792435596497,
-    "updatedAt": 1792435596497
+    "createdAt": 1792520436318,
+    "updatedAt": 1792520436318
   },
   "meta": {
-    "correlationId": "BG_Z8XKcR32micBwbJu6n",
-    "timestamp": 1792435596508
+    "correlationId": "QedbQ2kjOmQxRxrNxlpEA",
+    "timestamp": 1792520436329
   }
 }
 ```
@@ -2548,12 +2548,12 @@ Response `200 OK` (application/json):
     "wikiDataId": "Q183032",
     "flag": true,
     "countryId": 130,
-    "createdAt": 1792435480207,
-    "updatedAt": 1792435480207
+    "createdAt": 1792520329151,
+    "updatedAt": 1792520329151
   },
   "meta": {
-    "correlationId": "sFGJ7DhiNe-d478bhmgw1",
-    "timestamp": 1792435595788
+    "correlationId": "0hu2plHqjFgYLf586O8TF",
+    "timestamp": 1792520435620
   }
 }
 ```
@@ -2667,12 +2667,12 @@ Response `200 OK` (application/json):
     "wikiDataId": null,
     "flag": true,
     "countryId": 252,
-    "createdAt": 1792435596497,
-    "updatedAt": 1792435596546
+    "createdAt": 1792520436318,
+    "updatedAt": 1792520436361
   },
   "meta": {
-    "correlationId": "I5qA7dF9LTXE0hL99Xlxb",
-    "timestamp": 1792435596554
+    "correlationId": "HOLXKr3iBhpRjXjfmGHhS",
+    "timestamp": 1792520436373
   }
 }
 ```
@@ -2728,8 +2728,8 @@ Response `200 OK` (application/json):
     "message": "State #5270 deleted"
   },
   "meta": {
-    "correlationId": "rCGqesIUUgM7V2sBD2lVA",
-    "timestamp": 1792435596687
+    "correlationId": "hX-7ZpWsQi_AC98oj_ZZb",
+    "timestamp": 1792520436569
   }
 }
 ```
@@ -2782,8 +2782,8 @@ Response `200 OK` (application/json):
     "cities": 152370
   },
   "meta": {
-    "correlationId": "uzTqNVFHm2qa1fnfTO3Q6",
-    "timestamp": 1792435595518
+    "correlationId": "PcUJzeLTpZud4YaL8qSip",
+    "timestamp": 1792520435342
   }
 }
 ```
@@ -2914,8 +2914,8 @@ Response `200 OK` (application/json):
       "wikiDataId": "Q45256",
       "flag": true,
       "regionId": 5,
-      "createdAt": 1792435477837,
-      "updatedAt": 1792435477837
+      "createdAt": 1792520326909,
+      "updatedAt": 1792520326909
     },
     {
       "id": 2,
@@ -2940,8 +2940,8 @@ Response `200 OK` (application/json):
       "wikiDataId": "Q664609",
       "flag": true,
       "regionId": 2,
-      "createdAt": 1792435477837,
-      "updatedAt": 1792435477837
+      "createdAt": 1792520326909,
+      "updatedAt": 1792520326909
     }
   ],
   "meta": {
@@ -2952,8 +2952,8 @@ Response `200 OK` (application/json):
     "nextCursor": "eyJpZCI6Mn0",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "9ZSwthSXeEKv4dOaxTGvp",
-    "timestamp": 1792435595596
+    "correlationId": "d3j_33fGfqogeiUUEoHMV",
+    "timestamp": 1792520435434
   }
 }
 ```
@@ -3029,12 +3029,12 @@ Response `201 Created` (application/json):
     "wikiDataId": null,
     "flag": true,
     "regionId": 8,
-    "createdAt": 1792435596320,
-    "updatedAt": 1792435596320
+    "createdAt": 1792520436150,
+    "updatedAt": 1792520436150
   },
   "meta": {
-    "correlationId": "h53TNMQYa-N2hIjXwK3gd",
-    "timestamp": 1792435596329
+    "correlationId": "8s_VIGrF4Sx3P8560CJqt",
+    "timestamp": 1792520436161
   }
 }
 ```
@@ -3112,12 +3112,12 @@ Response `200 OK` (application/json):
     "wikiDataId": "Q45256",
     "flag": true,
     "regionId": 5,
-    "createdAt": 1792435477837,
-    "updatedAt": 1792435477837
+    "createdAt": 1792520326909,
+    "updatedAt": 1792520326909
   },
   "meta": {
-    "correlationId": "o_bCipV67tOMaoTpJZClZ",
-    "timestamp": 1792435595636
+    "correlationId": "X7O754PpjDq4Vv1f7ILWH",
+    "timestamp": 1792520435467
   }
 }
 ```
@@ -3198,12 +3198,12 @@ Response `200 OK` (application/json):
     "wikiDataId": null,
     "flag": true,
     "regionId": 8,
-    "createdAt": 1792435596320,
-    "updatedAt": 1792435596356
+    "createdAt": 1792520436150,
+    "updatedAt": 1792520436188
   },
   "meta": {
-    "correlationId": "Nzbk1BdEpFU_P9MiS205h",
-    "timestamp": 1792435596366
+    "correlationId": "IVXcgDtQpP9tf7p6LRwD3",
+    "timestamp": 1792520436201
   }
 }
 ```
@@ -3259,8 +3259,8 @@ Response `200 OK` (application/json):
     "message": "Subregion #24 deleted"
   },
   "meta": {
-    "correlationId": "4rILd7wXuKtEb2i4WTCPg",
-    "timestamp": 1792435596777
+    "correlationId": "JqH0cDCz0pT88GSREHRIB",
+    "timestamp": 1792520436719
   }
 }
 ```

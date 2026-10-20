@@ -15,7 +15,7 @@ export type CreateTerminalField = "name" | "store" | "terminalId";
 /** The API's refusals that belong to one field of the form. */
 export const CREATE_TERMINAL_FIELD_ERRORS: FieldErrorMap<CreateTerminalField> = {
 	[MerchantErrorCodes.TERMINAL_ID_TAKEN]: { field: "terminalId", message: "Another terminal already uses this terminal ID — choose a different one." },
-	[MerchantErrorCodes.ORGANIZATION_LOCATION_FORBIDDEN]: { field: "store", message: "You can't register a till at this store." },
+	[MerchantErrorCodes.TENANT_LOCATION_FORBIDDEN]: { field: "store", message: "You can't register a till at this store." },
 };
 
 /**

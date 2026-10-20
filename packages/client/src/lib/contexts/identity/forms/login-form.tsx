@@ -148,7 +148,7 @@ export function LoginForm({
 			}
 
 			markEnrollmentMessage(response.message);
-			navigateAfterLogin(getEnrollmentRedirectPath(mode, response.enrollmentReason, response.organizationSlug));
+			navigateAfterLogin(getEnrollmentRedirectPath(mode, response.enrollmentReason, response.tenantSlug));
 		},
 		[authLogin, mode, navigateAfterLogin],
 	);

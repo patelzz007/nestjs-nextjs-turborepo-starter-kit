@@ -10,7 +10,7 @@ order: 4
 
 # Multi-Tenancy Plan
 
-> **Status:** approved for implementation (2026-10-20). Decisions D1–D31 came out of a design review and are binding.
+> **Status:** implemented (2026-10-20), P1–P7. Decisions D1–D31 came out of a design review and are binding. The completion report is §11; open items needing a human decision are listed there.
 > **ADR:** [ADR 062](../adr/062-tenancy-modes-and-isolation.md) records them. It supersedes [ADR 007](../adr/007-tenancy-and-rls-bypass.md).
 > **Implementer:** Cursor Composer (or any agent). **Every decision has already been made in this file.** Implement it exactly, verify it and report. Do not redesign.
 > **Priority:** security-critical. A task that weakens tenant isolation is a failed task, even if the gate is green.
@@ -94,7 +94,7 @@ A phase is finished only when its **last** task passes `+e2e +ci`. Never start p
 | D15     | P1 is the rename only, mechanical, with zero behaviour change, and its full gate is green before P2.                                                                                                                                                                                                                                                                         |
 | D16     | The model and route rename is exactly the §5 mapping.                                                                                                                                                                                                                                                                                                                        |
 | D17     | `Store` and `StoreMembership` stay as they are, apart from renaming `organizationId` to `tenantId`. Merging them is a follow-up (§12).                                                                                                                                                                                                                                       |
-| Q5      | API routes move from `/orgs/:orgSlug/…` to `/tenants/:tenantSlug/…`. Merchant URLs move from `/orgs/[orgSlug]` to `/t/[tenantSlug]`, with old URLs redirected (301). On-screen copy keeps "Store" and "Business". The word "organization" is banned in code, data, env and docs, **not** in UI text.                                                                         |
+| Q5      | API routes move from `/orgs/:tenantSlug/…` to `/tenants/:tenantSlug/…`. Merchant URLs move from `/orgs/[orgSlug]` to `/t/[tenantSlug]`, with old URLs redirected (301). On-screen copy keeps "Store" and "Business". The word "organization" is banned in code, data, env and docs, **not** in UI text.                                                                      |
 | D20     | Every platform (admin-app) route declares `@PlatformOperation("<op>")`, and a coverage test fails if one is missing. Identity alone never widens scope.                                                                                                                                                                                                                      |
 | D21     | Impersonating a member of tenant X requires an approved, unexpired `SupportAccessGrant` for X. The grant id goes into the audit entry.                                                                                                                                                                                                                                       |
 | D22     | Context is set transaction-locally only, with `set_config('app.current_tenant_id', …, true)`. The session-level stamp at pool checkout is removed. DB-005 proves no leak.                                                                                                                                                                                                    |
@@ -155,7 +155,7 @@ If one of these is wrong, stop and report (§0.2).
 About 9,700 case-insensitive occurrences of "organization" across about 1,100 files in `apps/`, `packages/`, `docs/` and `rules/`. That includes:
 
 - 15 `Organization*` models and 116 `organizationId` columns
-- 43 API controllers under `orgs/:orgSlug`
+- 43 API controllers under `orgs/:tenantSlug`
 - the context `apps/api/src/contexts/organizations`
 - `packages/messaging/src/inbox/*`
 
@@ -271,7 +271,7 @@ The machine-credential path is the same in both modes. **No other code branches 
 | `DEFAULT_ORGANIZATION_ID`                                                                                                                              | `DEFAULT_TENANT_ID`                                                                     |
 | `apps/api/src/contexts/organizations`                                                                                                                  | `apps/api/src/contexts/tenancy`                                                         |
 | `apps/*/contexts/organizations` (frontend)                                                                                                             | `apps/*/contexts/tenancy`                                                               |
-| API `/orgs/:orgSlug/…`                                                                                                                                 | `/tenants/:tenantSlug/…`                                                                |
+| API `/orgs/:tenantSlug/…`                                                                                                                              | `/tenants/:tenantSlug/…`                                                                |
 | Merchant `app/orgs/[orgSlug]/…`                                                                                                                        | `app/t/[tenantSlug]/…`, plus a 301 from `/orgs/:slug/*`                                 |
 | `organizationSlug` (contract fields)                                                                                                                   | `tenantSlug`                                                                            |
 | Seed ids (`prisma/seed/organization-seed-ids.ts`)                                                                                                      | `tenant-seed-ids.ts`, with **the same uuid values**                                     |
@@ -487,7 +487,7 @@ Every ID below is a real automated test against Postgres as `app_runtime`, in `a
 
 - **Do:**
   - `git mv apps/api/src/contexts/organizations apps/api/src/contexts/tenancy`, then rename the symbols, files and DTO fields per §5.
-  - Controllers move from `apiPath("/orgs/:orgSlug/…")` to `apiPath("/tenants/:tenantSlug/…")`, and route params from `orgSlug` to `tenantSlug`.
+  - Controllers move from `apiPath("/orgs/:tenantSlug/…")` to `apiPath("/tenants/:tenantSlug/…")`, and route params from `orgSlug` to `tenantSlug`.
   - Rename `DEFAULT_ORGANIZATION_ID` to `DEFAULT_TENANT_ID` in the env schema, `.env.example`, CI (`.github/actions/write-api-ci-env/action.yml`) and docs.
   - `docs/technical/` gets a "Renamed variables" note: deployments must set the new name, and the old name fails boot with a message naming the new one. That error is the documented migration path.
 - **Tests:** rename the existing specs. They must pass unchanged in behaviour.
@@ -554,7 +554,7 @@ Every ID below is a real automated test against Postgres as `app_runtime`, in `a
 - **Do:**
   - Rewrite `authorization-context.resolver.ts`: the tenant comes from `TenantSource` for user principals and from the credential for machine principals.
   - Delete the reads of `x-organization-id` (resolver and `authorization.guard.ts`), `params.organizationId/orgId` and query or body ids.
-  - A machine principal whose request has `params.tenantSlug`, or a `tenantId` anywhere, gets 400 `TENANT_SELECTOR_NOT_ALLOWED`.
+  - A machine principal whose request has `params.tenantSlug`, or a `tenantId` anywhere, gets 400 `TENANT_SELECTOR_NOT_ALLOWED`. (Since §11.10 the `x-tenant-id` header is information only and is not refused.)
   - Delete `boundOrganizationId`.
 - **Tests:** resolver specs for each source, the machine rejection and the absence of the header (sending it changes nothing).
 
@@ -750,56 +750,148 @@ Every ID below is a real automated test against Postgres as `app_runtime`, in `a
 
 ## 10. Definition of done
 
-- [ ] No "organization" in code, data, env or docs (UI copy excepted). The ESLint rule has been proposed to the human.
-- [ ] `TenancyMode` is parsed once, and the boundary test passes.
-- [ ] `.env.example` defaults to multi (MT-72).
-- [ ] The slug (users) and the credential (machines) are the only tenant sources. The header is gone.
-- [ ] Tenant ids in requests return 400, and cross-tenant resources return 404.
-- [ ] Multi mode never uses `DEFAULT_TENANT_ID` (MT-003). Single mode is fixed (ST-002).
-- [ ] Lifecycle is checked on every request, and the allowlist is decorator-marked.
-- [ ] `staffBypassesRls`, `platform.staff_single_tenant`, `platform.superadmin`, `route.rls_bypass`, `request.pre_handler` and `allTables` are all gone.
-- [ ] All operations are narrowed. `@PlatformOperation` has its coverage test, and impersonation needs a grant.
-- [ ] FORCE RLS is on every RLS table, and the runtime-role proof runs at boot and in CI.
-- [ ] The 16 composite FKs (§7) exist after a clean data check.
-- [ ] CI has full multi e2e, the single-mode suite and the RLS suite. The fixture is shared.
-- [ ] The ADR, runbooks and RLS coverage matrix are written.
-- [ ] The superadmin's GitHub link survived the reset (MT-09).
+- [x] No "organization" in code, data, env or docs (UI copy excepted). The ESLint identifier ban is in place (MT-08, approved by the human on 2026-10-20).
+- [x] `TenancyMode` is parsed once, and the boundary test passes.
+- [x] `.env.example` defaults to multi (MT-72).
+- [x] The slug (users) and the credential (machines) are the only tenant sources. The header is gone.
+- [x] Tenant ids in requests return 400, and cross-tenant resources return 404.
+- [x] Multi mode never uses `DEFAULT_TENANT_ID` (MT-003). Single mode is fixed (ST-002).
+- [x] Lifecycle is checked on every request, and the allowlist is decorator-marked.
+- [x] `staffBypassesRls`, `platform.staff_single_tenant`, `platform.superadmin`, `route.rls_bypass`, `request.pre_handler` and `allTables` are all gone.
+- [x] All operations are narrowed. `@PlatformOperation` has its coverage test, and impersonation needs a grant.
+- [x] FORCE RLS is on every RLS table, and the runtime-role proof runs at boot and in CI.
+- [x] The 16 composite FKs (§7) exist after a clean data check.
+- [x] CI has full multi e2e, the single-mode suite and the RLS suite. The fixture is shared.
+- [x] The ADR, runbooks and RLS coverage matrix are written.
+- [x] The superadmin's GitHub link (MT-09). It could not be carried across the reset (it was already absent and no carry file existed), so the owner relinked it on 2026-10-20. Verified the same day: the superadmin's `GithubAccountLink` exists in the dev DB, and `GET /github/account` returns 200 with the linked login (shown masked).
 
-## 11. Completion report (fill in at MT-72)
+## 11. Completion report (filled in at MT-72, 2026-10-20)
 
-1. **Summary:** single and multi behaviour, resolution, authorization and RLS.
-2. **Files changed:** path, purpose and tests.
-3. **Env behaviour:** each row of §4.2 with the test ID that proves it.
-4. **RLS:** the `app_runtime` attributes, the forced tables, the bypasses removed, transaction-local context verified, and pooling tested.
-5. **Verification:** fill in this table.
+### 11.1 Summary
 
-   | Check             | Command                                 | Result |
-   | ----------------- | --------------------------------------- | ------ |
-   | format            | `pnpm run format`                       |        |
-   | lint              | `pnpm run lint`                         |        |
-   | typecheck         | `pnpm run typecheck`                    |        |
-   | unit              | `pnpm run test`                         |        |
-   | e2e (multi)       | `pnpm --filter @workspace/api test:e2e` |        |
-   | tenancy multi     | `… test:e2e:tenancy`                    |        |
-   | tenancy single    | `… test:e2e:tenancy:single`             |        |
-   | RLS runtime role  | `… test:e2e:rls`                        |        |
-   | data check        | `pnpm db:check-tenant-integrity`        |        |
-   | migration history | `pnpm --filter @workspace/tooling test` |        |
-   | ci:local          | `pnpm run ci:local`                     |        |
+- **One codebase, two modes.** `TENANCY_ENABLED` picks the tenant source and nothing else: `RouteTenantSource` reads `:tenantSlug` (multi); `FixedTenantSource` pins `DEFAULT_TENANT_ID` (single). No service, policy, RLS policy, Cedar bundle or ReBAC check reads the mode; `tenancy-mode-boundary.spec.ts` fails the build if one starts to.
+- **Resolution.** A tenant route resolves its tenant from the slug (multi) or the fixed tenant (single), then proves membership. A missing, unknown or foreign tenant answers 404, never 403, so tenant existence is not disclosed. Single mode has no fallback in multi mode: `DEFAULT_TENANT_ID` is ignored there and the e2e setup deletes it.
+- **Authorization.** Superadmins are authorized like anyone else (the resolver shortcut is gone). Platform staff reach tenant data only through an approved, unexpired `SupportAccessGrant`; the grant id is written into the audit row and into each impersonation session (`supportAccessGrantIds`).
+- **RLS.** The API connects as the owner and immediately `SET ROLE app_runtime` (no BYPASSRLS, not owner); every application table has RLS **and** FORCE. Context (`app.current_tenant_id`, `app.current_user_id`, `app.system_operation`) is transaction-local. Every system operation names its tables; `allTables` no longer exists. Routes carry either `@PlatformOperation` or `@PublicOperation`, never both, and discovery tests prove every route is classified.
+- **Integrity.** 16 composite `(tenantId, id)` foreign keys make a cross-tenant reference impossible even for the table owner; `pnpm db:check-tenant-integrity` re-checks live data.
 
-6. **Outstanding issues:** severity, component, consequence and next action.
-7. **Confirmation:**
-   - There is no multi-mode default-tenant fallback.
-   - There is no staff or superadmin bypass on tenant data.
-   - All operations are narrowed.
-   - Both modes are tested.
-8. **Checks not run, and why.** Anything not run is **NOT VERIFIED**.
+### 11.2 Files changed (by area)
 
-Do not mark the work complete while any tenant-isolation test fails.
+| Area                                | Main files                                                                                                                                                    | Tests                                                                                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Tenant source and request principal | `fixed-tenant.source.ts`, `route-tenant.source.ts`, `request-principal.ts`, `actor-context.factory.ts` (deleted `actor-tenancy.policy.ts`)                    | `tenant-source.spec.ts`, `rls.interceptor.spec.ts`, `tenancy-mode-boundary.spec.ts`, `test/tenancy/**`                             |
+| Route operations                    | `public-operation.decorator.ts`, `rls.interceptor.ts`, every public controller                                                                                | `platform-operation-coverage.spec.ts` (PLAT-005), `public-operation-coverage.spec.ts` (MT-43), `test/support/controller-routes.ts` |
+| System operations                   | `system-operation.registry.ts`, `prisma/rls/system-operation-scopes.ts`, generated `00-system-operation-scopes.sql`, `seed-demo-dataset.operation.ts`         | registry specs, `test/system-operations.e2e-spec.ts`                                                                               |
+| RLS SQL                             | `prisma/rls.sql` (FORCE everywhere, geo writes), `01-acl-location-access.sql` (membership confined to the bound tenant), `90-analytics-consumer.sql`          | `test/rls/runtime-role.e2e-spec.ts` (DB-001…008)                                                                                   |
+| Runtime role proof                  | `runtime-role-proof.ts`, `database-safety.module.ts` — the `tenant-isolation` readiness check                                                                 | `runtime-role-proof.spec.ts`                                                                                                       |
+| Schema                              | `schema.prisma` — composite uniques and 16 composite FKs, `ImpersonationSession.supportAccessGrantIds`; baseline `20261020173417_init` (regenerated by the owner's 2026-10-21 reset)                        | `composite-foreign-keys.e2e-spec.ts` (MT-006), `db:check-tenant-integrity`                                                         |
+| Authorization                       | `authorization-context.resolver.ts`, `impersonation-start.policy.ts` and the impersonation aggregate/repository                                               | PLAT-002/003/004 unit and `test/tenancy/multi/platform-staff.e2e-spec.ts`                                                          |
+| Merchant onboarding                 | `complete-merchant-onboarding.handler.ts`, `account-provisioning.port.ts/.service.ts` — atomic: no account and no email unless the whole onboarding commits   | `test/merchant-onboarding.e2e-spec.ts`                                                                                             |
+| Admin KYB review                    | `tenant.merchant.admin_read` now scopes `StoredFile`                                                                                                          | `test/admin-merchant-kyb.e2e-spec.ts`                                                                                              |
+| Integration API                     | `Integration{Rewards,Analytics,Redemptions}Controller` (`/integration/*`, API key only); `/tenants/:tenantSlug/*` serve members only                          | `merchant-location-scope.e2e-spec.ts` (MACH-002), `pos-terminals.e2e-spec.ts`, controller metadata specs                           |
+| Seeds                               | `client.ts` (seeds run as `app_runtime` under `seed.demo_dataset`), `tenants.ts`, `rewards.ts`, `http-audit.ts`, `account-security.ts`, `analytics-ingest.ts` | `db:check-seed-coverage`                                                                                                           |
+| CI                                  | `ci.yml` (multi e2e + new single-tenant job), `write-api-ci-env` action, `ci-local-plan.mjs`, `turbo.json`                                                    | `ci-workflow-env.spec.ts`, `ci-local-plan` test                                                                                    |
+| Web                                 | merchant `use-tenant-slug.ts` (param fix), `legacy-tenant-redirects.ts` (`/orgs/*` → `/t/*`)                                                                  | their `__tests__`                                                                                                                  |
+| Docs                                | ADR 062 notes, `rls-coverage.md`, four operations runbooks, `rules/08`, `rules/10`, `GLOSSARY.md`, API reference (regenerated from 219 live samples)          | `@workspace/docs` tests                                                                                                            |
+
+### 11.3 Env behaviour (§4.2)
+
+| Request kind                     | Single                                  | Multi                      | Proven by                                              |
+| -------------------------------- | --------------------------------------- | -------------------------- | ------------------------------------------------------ |
+| Tenant route (user)              | fixed tenant; another slug is not found | `:tenantSlug` + membership | ST-001…005; `test/tenancy/multi/isolation.e2e-spec.ts` |
+| Customer route                   | no tenant, user-owned context           | same                       | CU-003                                                 |
+| Machine route (POS)              | the key's tenant                        | same                       | MACH-002                                               |
+| Platform route (admin app)       | `@PlatformOperation`, no tenant         | same                       | PLAT-005; live check below                             |
+| Marketplace read                 | `marketplace.published_rewards.read`    | same                       | `test/tenancy/multi/isolation.e2e-spec.ts`             |
+| Public pre-auth                  | its own `@PublicOperation`              | same                       | MT-43 coverage spec                                    |
+| Tenant route by a platform admin | only with an active grant, else 404     | same                       | PLAT-002, PLAT-003, PLAT-004                           |
+
+A live run against a built API confirmed the role split the admin panel relies on: the platform superadmin signs in to the admin app and reads its seven data sources (200); merchant owners and cashiers are refused at the admin sign-in (401) and on platform routes (403); the superadmin is refused on a merchant's tenant route without a grant (404).
+
+### 11.4 RLS
+
+- `app_runtime` is not a superuser, has no BYPASSRLS and owns no table (DB-006, and the `RuntimeRoleProof` boot check); readiness reports `tenant-isolation: up, role app_runtime, 80 tables, 0 failures`.
+- Forced tables: all 80 application tables (DB-006); FORCE binds the owner too (scratch-database test). Isolation under the role: no context sees nothing (DB-001), another tenant's rows are invisible (DB-002), cross-tenant insert and move are denied (DB-003, DB-004), aggregates stay in-tenant (DB-007), and a member of two tenants reaches only the routed one (DB-008).
+- Bypasses removed: `allTables`, `NOT_YET_NARROWED`, `routeRlsBypass`, the superadmin resolver shortcut, `auth.account.provision`/`auth.account.rename`. The only all-table operation is `seed.demo_dataset`, used solely by `pnpm db:seed`.
+- Transaction-local context and pooling: DB-005 (`tenant-transaction-session.e2e-spec.ts`) — after commit and after rollback the pooled connection carries no tenant and sees no tenant rows.
+
+### 11.5 Verification
+
+| Check             | Command                                 | Result                                                                                                     |
+| ----------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| format            | `pnpm run format`                       | pass                                                                                                       |
+| lint              | `pnpm run lint`                         | pass (18/18 packages)                                                                                      |
+| typecheck         | `pnpm run typecheck`                    | pass (18/18)                                                                                               |
+| unit              | `pnpm run test`                         | pass (20/20 packages)                                                                                      |
+| e2e (multi)       | `pnpm --filter @workspace/api test:e2e` | pass (565/565)                                                                                             |
+| tenancy multi     | `… test:e2e:tenancy`                    | pass (37/37)                                                                                               |
+| tenancy single    | `… test:e2e:tenancy:single`             | pass (5/5)                                                                                                 |
+| RLS runtime role  | `… test:e2e:rls`                        | pass — multi 19/19, single 19/19                                                                           |
+| data check        | `pnpm db:check-tenant-integrity`        | pass (16/16 relations, 0 cross-tenant rows)                                                                |
+| migration history | `pnpm --filter @workspace/tooling test` | pass (338/338)                                                                                             |
+| ci:local          | `pnpm run ci:local`                     | pass — 31/31 steps, exit 0, on 2026-10-20 after the review follow-up (§11.9), including the browser suites |
+
+All e2e suites ran against a fresh throwaway database (`mt_e2e`), never the developer database.
+
+### 11.6 Outstanding issues
+
+| Severity | Component                                  | Consequence                                                                            | Next action                                                                                                                       |
+| -------- | ------------------------------------------ | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Medium   | Single mode, API keys                      | A key of a tenant other than `DEFAULT_TENANT_ID` still works on machine routes         | Decide: refuse non-default tenants' keys in single mode, or treat single mode as "one tenant exists" and stop provisioning others |
+| Medium   | Single mode, provisioning                  | Admin merchant invites create tenants no user route can reach                          | Same decision as above                                                                                                            |
+| Low      | Single mode, membership list / marketplace | Lists include tenants the app cannot open                                              | Follows from the decision above                                                                                                   |
+| Low      | Files upload                               | Takes `tenantId` in the body instead of `/tenants/:tenantSlug/files`                   | Move under the tenant route                                                                                                       |
+| Low      | Admin app                                  | No UI to request or approve a `SupportAccessGrant`; there is no ban/unban user feature | Product decision                                                                                                                  |
+
+### 11.7 Confirmation
+
+- There is no multi-mode default-tenant fallback (`DEFAULT_TENANT_ID` is never read in multi mode; ST/MT suites).
+- There is no staff or superadmin bypass on tenant data (PLAT-002/003/004; live check).
+- All operations are narrowed (no `allTables`; `seed.demo_dataset` lists its tables explicitly and is seed-only).
+- Both modes are tested, in CI (`e2e` multi and `e2e-single-tenant`) and above.
+
+### 11.8 Deviations from the plan
+
+- Public operations keep their domain names (e.g. `auth.login.verify`) instead of a `public.<flow>` prefix; `@PublicOperation` marks them.
+- Refusals on tenant routes answer 404, not 403 (no tenant-existence disclosure).
+- The legacy `/orgs/*` redirect is 308 (Next.js `permanent: true`), not 301; both are permanent and 308 keeps the method.
+- Store and TenantTerminal needed extra composite uniques (`(tenantId, locationId)`, `(tenantId, apiKeyId)`) for Prisma's 1:1 relations.
+- §7 listed six SetNull relations; there were seven. All became RESTRICT.
+
+### 11.9 Review follow-up (2026-10-20)
+
+A code review of the finished work raised ten issues; all are fixed, each with tests. One more surfaced while regenerating the API reference and is fixed too (last row).
+
+| #   | Issue                                                                                                                                                                       | Fix                                                                                                                                                                        | Tests                                                                                                            |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 1   | A tenant reached through a store or location (no `:tenantSlug`) skipped the lifecycle check, so a suspended tenant was served                                               | Membership verification reports the targeted tenant (`TargetTenant`: id, lifecycle, the caller's real access status) however it was reached; the guard applies C1 to it    | `authorization.guard.spec.ts`, `tenant-membership.service.spec.ts`, `authorization-context.resolver.spec.ts`     |
+| 2   | API-key access on `/tenants/:tenantSlug/{rewards,analytics,redemptions}` could never succeed (D6 refuses the slug)                                                          | Integration API `/integration/*` (all ten key-accessible operations); tenant routes are members-only; `/redemptions` (machine history) moved to `/integration/redemptions` | `merchant-location-scope.e2e-spec.ts`, `pos-terminals.e2e-spec.ts`, controller metadata specs, contract snapshot |
+| 3   | Single-mode boot accepted a tenant whose lifecycle is `DELETED`, then 404ed every request                                                                                   | Boot reads through `TenantRouteLookup` and applies C1; `DefaultTenantRepository` removed                                                                                   | `default-tenant.service.spec.ts`, ST-003 (DELETED) in `fixed-tenant.e2e-spec.ts`                                 |
+| 4   | The machine selector check missed `?tenantSlug=` and `body.tenantSlug`                                                                                                      | One selector schema checked the same way in path, query and body, plus `x-tenant-id`                                                                                       | `machine-tenant-selector.spec.ts`, MACH-002                                                                      |
+| 5   | A route operation reached by an API key took the verified request tenant, not the key's                                                                                     | The interceptor uses `scopeTenantId` and `principalUserId`; inline `actingUserId` copies replaced by the shared helper                                                     | `rls.interceptor.spec.ts`                                                                                        |
+| 6   | Operation names were declared in 2–4 places each                                                                                                                            | One named constant per name (34 names); the route and its adapters import it                                                                                               | `system-operation-single-source.spec.ts` (every name)                                                            |
+| 7   | Single mode ran 1–2 tenant lookups per request for a tenant verified at boot                                                                                                | One route-key lookup, compared with `DEFAULT_TENANT_ID`                                                                                                                    | `tenant-source.spec.ts`                                                                                          |
+| 8   | The outbox dispatcher opened a transaction per published row and logged every idle poll at info                                                                             | One mark per sweep; `outbox.publish` is a `routine` operation (debug-level audit line)                                                                                     | `outbox-dispatcher.spec.ts`, `tenant-transaction-session.e2e-spec.ts`                                            |
+| 9   | `tenantIdForRouteKey` was dead and filtered lifecycle differently                                                                                                           | Deleted                                                                                                                                                                    | —                                                                                                                |
+| 10  | The guard's lifecycle check hardcoded `membershipStatus: "ACTIVE"`, leaving dead branches                                                                                   | The real access status flows from verification into C1                                                                                                                     | `authorization.guard.spec.ts`                                                                                    |
+| —   | Found while capturing the integration samples: key-authenticated writes required a browser `Origin` and `X-Mutation-Intent`, so no server-to-server integration could write | `MutationIntentGuard` exempts an `X-API-Key` request, as it already exempted Bearer (an explicit credential a cross-site page cannot attach)                               | `mutation-intent.guard.spec.ts`, `merchant-location-scope.e2e-spec.ts`                                           |
+
+### 11.10 Owner decisions (2026-10-21)
+
+The human made four calls after the review. Each is implemented and tested.
+
+| Decision | What changed | Tests |
+| --- | --- | --- |
+| Every machine call lives under `/integration/*` | Till pairing `POST /pos/terminals/pair` → `POST /integration/terminals/pair`; `POST /redemptions/validate` and `/checkout` → `POST /integration/redemptions/validate` and `/checkout`. Contracts are `apiContract.integration.{pairTerminal, validateRedemption, checkoutRedemption}`; the old `apiContract.pos` / `.redemptions` groups are gone. | contract snapshot, POS controller metadata spec, `pos-checkout`, `pos-terminals`, `pos-terminals-race`, `rate-limit-policies` e2e, mobile till test |
+| Single-tenant mode creates no tenant | `TenantProvisioningGate` (bound by mode in the tenancy infrastructure, so the mode boundary holds) refuses `POST /admin/invites` and `POST /admin/tenants/invites` with 403 `TENANT_PROVISIONING_DISABLED` before any token or row exists. `GET /admin/invites/availability` reports it; the admin panel hides **Merchants → Invites** (feature flag `merchant-invites`) and its page answers 404. | `tenant-provisioning.gate.spec`, `tenant-provisioning.handlers.spec`, admin feature-flag, availability and invite-page tests |
+| `X-Tenant-Id` / `X-Location-Id` on every call, meaning to be decided later | The merchant console sends both from its open tenant and chosen store (no `X-Location-Id` for "All locations"); the till sends its pairing's tenant and store (the pairing answer now carries `tenant.id`). The API reads neither: `x-location-id` stopped being a location selector (it would otherwise have narrowed every merchant call to the chosen store), and a key's `x-tenant-id` is no longer refused — D6's refusal still covers a slug or `tenantId` in the path, query or body. CORS allows both. | resolver spec, machine-selector spec, `authorization-hardening` and `merchant-location-scope` e2e, CORS spec, api-client and merchant request-scope tests |
+| Ban / unban stays for later | No change. | — |
+
+A till paired before this change has no stored tenant or store id, so it reads as unpaired and must be paired again.
 
 ## 12. Risks and follow-ups
 
 - **Store / StoreMembership merge** (D17): merge them into Location + MembershipLocationScope. This is a separate domain redesign.
 - **Read-transaction overhead** (MT-31): every read becomes BEGIN, then the query, then COMMIT. Measure the p95 on the N+1 list e2e tests before and after, and record it in `rules/19`.
 - **The baseline reset** (D14) is valid only while no shared or deployed database exists. Once one does, any further rename must use expand/contract.
-- **The ESLint identifier ban** (MT-08) needs human approval before it lands.
+- **The ESLint identifier ban** (MT-08) landed with the human's approval. It applies to every TypeScript file through the shared `restricted-syntax-rules.js` (stricter than the four directories MT-08 named, with no hits outside them). The §5 exit check's remaining matches are all deliberate: the rule's own message and tests, the boot guard that rejects the retired `DEFAULT_ORGANIZATION_ID`, the HTML `autoComplete="organization"` token in `packages/client/src/lib/contexts/tenancy/kyb/fields.tsx`, links to historical ADR file names, and this plan's own rename tables.

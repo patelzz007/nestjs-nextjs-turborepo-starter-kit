@@ -64,12 +64,12 @@ for review; the merchant cannot make it live alone.
 
 | Step | API |
 | --- | --- |
-| List / read / create / edit | `GET|POST /api/v1/orgs/{orgSlug}/rewards`, `GET|PATCH …/rewards/{rewardId}` |
+| List / read / create / edit | `GET|POST /api/v1/tenants/{tenantSlug}/rewards`, `GET|PATCH …/rewards/{rewardId}` |
 | Submit for review | `POST …/rewards/{rewardId}/publish` |
 | Admin queue / reward / decision | `GET /api/v1/admin/rewards/pending`, `GET /api/v1/admin/rewards/{rewardId}`, `POST /api/v1/admin/rewards/{rewardId}/approve`, `…/reject` |
 | Admin downloads a photo | `GET /api/v1/admin/rewards/{rewardId}/images/{fileId}/download` (a short-lived signed URL of the original upload) |
 | Admin downloads all photos | `GET /api/v1/admin/rewards/{rewardId}/images/archive` (one ZIP of the original uploads, streamed) |
 | Customers see it | `GET /api/v1/rewards`, `GET /api/v1/rewards/{rewardId}` |
 
-Examples: [Merchant organizations API](../technical/api-reference/merchant-organizations.md#organization-rewards),
+Examples: [Merchant tenants API](../technical/api-reference/merchant-tenants.md#tenant-rewards),
 [Platform administration API](../technical/api-reference/platform-admin.md).

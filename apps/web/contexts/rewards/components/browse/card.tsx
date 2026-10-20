@@ -58,7 +58,7 @@ export function RewardCard({ reward, detailPathPrefix = ROUTE_PREFIXES.dashboard
 			<div className="flex items-start gap-3 p-4 pb-0">
 				<RewardMerchantAvatar reward={reward} size="lg" />
 				<div className="min-w-0 flex-1 space-y-1.5">
-					{reward.organizationName !== undefined ? <p className="truncate text-sm font-semibold text-foreground">{reward.organizationName}</p> : null}
+					{reward.tenantName !== undefined ? <p className="truncate text-sm font-semibold text-foreground">{reward.tenantName}</p> : null}
 					<div className="flex flex-wrap items-center gap-2">
 						<Badge variant="secondary" className="capitalize">
 							{reward.category}

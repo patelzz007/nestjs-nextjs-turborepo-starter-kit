@@ -52,7 +52,7 @@ describe("PgInboxStore as the analytics_consumer role (integration)", () => {
 			type: "reward.platform",
 			correlationId: "inbox-e2e",
 			occurredAt: 1_790_812_800_000,
-			payload: { event: "reward.auto_published", actorUserId: null, organizationId: null, metadata: {} },
+			payload: { event: "reward.auto_published", actorUserId: null, tenantId: null, metadata: {} },
 		});
 		return { topic: "platform.rewards", partition: 0, offset, value: Buffer.from(value, "utf8") };
 	}

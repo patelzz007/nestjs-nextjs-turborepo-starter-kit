@@ -69,12 +69,12 @@ export const AuditLogUserSchema = z.object({
 });
 export type AuditLogUser = z.output<typeof AuditLogUserSchema>;
 
-/** The organization (tenant) a record is scoped to; `name` is `null` when the id no longer resolves. */
-export const AuditLogOrganizationSchema = z.object({
+/** The tenant (tenant) a record is scoped to; `name` is `null` when the id no longer resolves. */
+export const AuditLogTenantSchema = z.object({
 	id: AuditIdSchema,
 	name: z.string().nullable(),
 });
-export type AuditLogOrganization = z.output<typeof AuditLogOrganizationSchema>;
+export type AuditLogTenant = z.output<typeof AuditLogTenantSchema>;
 
 // ── Records ─────────────────────────────────────────────────────────────────
 
@@ -103,7 +103,7 @@ export const HttpAuditLogSummarySchema = z.object({
 	impersonator: AuditLogUserSchema.nullable(),
 	apiKeyId: AuditIdSchema.nullable(),
 	terminalId: AuditIdSchema.nullable(),
-	organization: AuditLogOrganizationSchema.nullable(),
+	tenant: AuditLogTenantSchema.nullable(),
 	storeId: AuditIdSchema.nullable(),
 	locationId: AuditIdSchema.nullable(),
 	ipAddress: z.string().max(AUDIT_ID_MAX_LENGTH).nullable(),
@@ -132,6 +132,8 @@ export type HttpAuditLogSummary = z.output<typeof HttpAuditLogSummarySchema>;
 export const HttpAuditLogDetailSchema = HttpAuditLogSummarySchema.extend({
 	traceId: AuditIdSchema.nullable(),
 	impersonationSessionId: AuditIdSchema.nullable(),
+	/** The approved support grant that stood in for a membership on this request. */
+	supportAccessGrantId: AuditIdSchema.nullable(),
 	httpVersion: z.string().max(AUDIT_HTTP_VERSION_MAX_LENGTH).nullable(),
 	host: z.string().max(AUDIT_HOST_MAX_LENGTH).nullable(),
 	origin: z.string().max(AUDIT_ORIGIN_MAX_LENGTH).nullable(),
@@ -175,7 +177,7 @@ export const httpAuditLogListQuery = defineListQuery({
 		errorCode: listFilter.string({ eq: true, in: true }),
 		actorUserId: listFilter.uuid({ eq: true, isNull: true }),
 		impersonatorUserId: listFilter.uuid({ eq: true, isNull: true }),
-		organizationId: listFilter.uuid({ eq: true }),
+		tenantId: listFilter.uuid({ eq: true }),
 		apiKeyId: listFilter.uuid({ eq: true }),
 		ipAddress: listFilter.string({ eq: true, startsWith: true }),
 		ipScope: listFilter.enumeration(IpAddressScopeSchema, { eq: true, in: true }),

@@ -30,8 +30,8 @@ describe("ROUTES", () => {
 	});
 
 	it("keeps in-page selection in an encoded query string", () => {
-		expect(ROUTES.merchants.verificationFor("org_1")).toBe("/merchants/verification?organizationId=org_1");
-		expect(ROUTES.merchants.verificationFor("a&b=c")).toBe("/merchants/verification?organizationId=a%26b%3Dc");
+		expect(ROUTES.merchants.verificationFor("org_1")).toBe("/merchants/verification?tenantId=org_1");
+		expect(ROUTES.merchants.verificationFor("a&b=c")).toBe("/merchants/verification?tenantId=a%26b%3Dc");
 		expect(ROUTES.emails.template("merchant-invite")).toBe("/emails/templates?key=merchant-invite");
 	});
 

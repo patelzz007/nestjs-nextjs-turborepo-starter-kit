@@ -80,7 +80,7 @@ function merchantsLabel(merchants: number, formatters: AnalyticsFormatters): str
 export function toTopMerchantItems(dashboard: AdminAnalyticsDashboard, formatters: AnalyticsFormatters): readonly RankedBarItem[] {
 	const total = dashboard.totals.salesMinor.value;
 	return dashboard.topMerchants.map((merchant): RankedBarItem => ({
-		key: merchant.organizationId,
+		key: merchant.tenantId,
 		label: merchant.name,
 		value: merchant.salesMinor,
 		valueLabel: formatters.money(merchant.salesMinor),

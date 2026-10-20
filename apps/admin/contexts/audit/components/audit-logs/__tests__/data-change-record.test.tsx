@@ -8,7 +8,7 @@ import { DataChangeRecord } from "../data-change-record";
 
 const CHANGE_ID = "88888888-8888-4888-8888-888888888888";
 const ACTOR_ID = "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b";
-const ORGANIZATION_ID = "7a2d3b63-0b4f-4e49-8b66-1e2f3a4b5c6d";
+const TENANT_ID = "7a2d3b63-0b4f-4e49-8b66-1e2f3a4b5c6d";
 
 function change(overrides: Partial<DataChangeLogDetail> = {}): DataChangeLogDetail {
 	return DataChangeLogDetailSchema.parse({
@@ -22,7 +22,7 @@ function change(overrides: Partial<DataChangeLogDetail> = {}): DataChangeLogDeta
 		changedColumns: ["passwordHash", "status"],
 		actorKind: "USER",
 		actor: { id: ACTOR_ID, email: "u***@example.com", fullName: "Demo Customer" },
-		organization: { id: ORGANIZATION_ID, name: "Kopi Corner" },
+		tenant: { id: TENANT_ID, name: "Kopi Corner" },
 		apiKeyId: null,
 		systemOperation: "auth.profile.update",
 		correlationId: "corr-1",
@@ -67,13 +67,13 @@ describe("DataChangeRecord", () => {
 		expect(screen.getByText("10.0.0.12")).toBeTruthy();
 	});
 
-	it("links into the audit log: the request / job behind the change, the actor, the organization and the row's history", () => {
+	it("links into the audit log: the request / job behind the change, the actor, the tenant and the row's history", () => {
 		render(<DataChangeRecord record={change()} layout="drawer" />);
 
 		expect(screen.getByRole("link", { name: "corr-1" }).getAttribute("href")).toBe("/audit-logs?filter[correlationId]=corr-1");
 		expect(screen.getByRole("link", { name: "Every change to this row" }).getAttribute("href")).toBe(`/audit-logs?filter[tableName]=User&filter[rowId]=${ACTOR_ID}`);
 		expect(screen.getByRole("link", { name: ACTOR_ID }).getAttribute("href")).toBe(`/audit-logs?filter[actorUserId]=${ACTOR_ID}`);
-		expect(screen.getByRole("link", { name: "Kopi Corner" }).getAttribute("href")).toBe(`/audit-logs?filter[organizationId]=${ORGANIZATION_ID}`);
+		expect(screen.getByRole("link", { name: "Kopi Corner" }).getAttribute("href")).toBe(`/audit-logs?filter[tenantId]=${TENANT_ID}`);
 	});
 
 	it("explains a TRUNCATE, which has no single row", () => {

@@ -121,12 +121,12 @@ export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = R
 
 				<div className="space-y-6 @4xl:sticky @4xl:top-24">
 					<Card className="gap-0 p-5 sm:p-6">
-						{reward.organizationName === undefined ? null : (
+						{reward.tenantName === undefined ? null : (
 							<div className="flex items-center gap-3">
 								<RewardMerchantAvatar reward={reward} size="lg" />
 								<div className="min-w-0">
 									<p className="text-xs text-muted-foreground">Offered by</p>
-									<p className="truncate text-sm font-semibold text-foreground">{reward.organizationName}</p>
+									<p className="truncate text-sm font-semibold text-foreground">{reward.tenantName}</p>
 								</div>
 							</div>
 						)}

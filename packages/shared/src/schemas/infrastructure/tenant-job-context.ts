@@ -3,7 +3,7 @@ import { z } from "zod";
 /** Signed tenant job context for background workers. */
 export const TenantJobContextSchema = z
 	.object({
-		organizationId: z.uuid(),
+		tenantId: z.uuid(),
 		initiatingActorId: z.uuid().nullable(),
 		purpose: z.string().min(1).max(120),
 		policyVersion: z.number().int().nonnegative(),

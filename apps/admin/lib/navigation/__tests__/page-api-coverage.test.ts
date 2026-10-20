@@ -83,11 +83,11 @@ const PAGE_API_CALLS: ReadonlyMap<string, readonly PageApiCall[]> = new Map<stri
 		],
 	],
 	[ROUTES.geography.index, [{ endpoint: "GET /geo/stats + the active tab's list", permission: PERMISSION.GEO.READ }]],
-	[ROUTES.merchants.list, [{ endpoint: "GET /admin/organizations", permission: PERMISSION.MERCHANT_ORG.LIST }]],
+	[ROUTES.merchants.list, [{ endpoint: "GET /admin/tenants", permission: PERMISSION.MERCHANT_ORG.LIST }]],
 	// The live email preview renders on load; the send (POST /admin/invites) needs the same MANAGE.
 	[ROUTES.merchants.invites, [{ endpoint: "GET /admin/invites/preview-email", permission: PERMISSION.MERCHANT_ORG.MANAGE }]],
-	[ROUTES.merchants.verification, [{ endpoint: "GET /admin/organizations", permission: PERMISSION.MERCHANT_ORG.LIST }]],
-	[ROUTES.merchants.storeRequests, [{ endpoint: "GET /admin/organizations/location-requests", permission: PERMISSION.MERCHANT_ORG.LIST }]],
+	[ROUTES.merchants.verification, [{ endpoint: "GET /admin/tenants", permission: PERMISSION.MERCHANT_ORG.LIST }]],
+	[ROUTES.merchants.storeRequests, [{ endpoint: "GET /admin/tenants/location-requests", permission: PERMISSION.MERCHANT_ORG.LIST }]],
 	[ROUTES.rewards.review, [{ endpoint: "GET /admin/rewards/pending", permission: PERMISSION.REWARD.MANAGE }]],
 	[ROUTE_PATTERNS.rewards.reviewDetail, [{ endpoint: "GET /admin/rewards/:rewardId", permission: PERMISSION.REWARD.MANAGE }]],
 	// Each tab (roles list, permissions list, checker) is shown and queried only with its own permission.

@@ -16,7 +16,9 @@ describe("the Secure Store registry", () => {
 			"till.terminalId",
 			"till.terminalName",
 			"till.locationName",
-			"till.organizationName",
+			"till.tenantName",
+			"till.tenantId",
+			"till.locationId",
 		]);
 		expect(new Set(keys).size).toBe(keys.length);
 		for (const key of keys) {

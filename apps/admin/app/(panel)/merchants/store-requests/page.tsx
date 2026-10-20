@@ -1,8 +1,8 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
-import { PENDING_LOCATION_REQUESTS_QUERY } from "@/contexts/organizations/lib/location-requests";
+import { PENDING_LOCATION_REQUESTS_QUERY } from "@/contexts/tenancy/lib/location-requests";
 import { prefetch, resolvePrefetchedData } from "@/lib/server/prefetch";
 
-import LocationRequestsPanel from "../../../../contexts/organizations/components/location-requests-panel";
+import LocationRequestsPanel from "../../../../contexts/tenancy/components/location-requests-panel";
 
 export const dynamic = "force-dynamic";
 

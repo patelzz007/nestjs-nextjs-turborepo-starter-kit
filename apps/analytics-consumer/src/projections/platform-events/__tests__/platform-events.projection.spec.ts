@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { projectPlatformEvent, type PlatformEventDelivery } from "../platform-events.projection";
 
-const ORGANIZATION_ID = "5c1f7a9e-2b4d-4e8f-a1b2-c3d4e5f60718";
+const TENANT_ID = "5c1f7a9e-2b4d-4e8f-a1b2-c3d4e5f60718";
 const REVIEWER_ID = "8d0f3b0e-1f7a-4c55-9d1e-2f1a6b7c8d90";
 const OCCURRED_AT_MS = 1_790_812_800_000;
 const REWARD_TOPIC = "platform.rewards";
@@ -69,7 +69,7 @@ function rewardDelivery(eventId: string, event: string, offset: string): Platfor
 		type: "reward.platform",
 		correlationId: "corr-review",
 		occurredAt: OCCURRED_AT_MS,
-		payload: { event, actorUserId: REVIEWER_ID, organizationId: ORGANIZATION_ID, metadata: { rewardId: "reward-1" } },
+		payload: { event, actorUserId: REVIEWER_ID, tenantId: TENANT_ID, metadata: { rewardId: "reward-1" } },
 	});
 	return { topic: REWARD_TOPIC, partition: 0, message: { offset, value: Buffer.from(value, "utf8") } };
 }
@@ -101,7 +101,7 @@ describe("projectPlatformEvent", () => {
 		const outcome = await projectPlatformEvent(rewardDelivery(eventId, event, "7"), deps);
 
 		expect(outcome).toEqual({ kind: "processed", eventId, attempts: 1 });
-		expect(inbox.analytics.map((row) => [row.eventId, row.eventType, row.partitionKey])).toEqual([[eventId, "reward.platform", ORGANIZATION_ID]]);
+		expect(inbox.analytics.map((row) => [row.eventId, row.eventType, row.partitionKey])).toEqual([[eventId, "reward.platform", TENANT_ID]]);
 		expect(inbox.deadLetters).toHaveLength(0);
 	});
 

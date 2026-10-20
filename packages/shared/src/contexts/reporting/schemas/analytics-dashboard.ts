@@ -1,7 +1,7 @@
 // ============================================
 // analytics-dashboard.ts — the analytics dashboards of the customer, the merchant and the admin
 // ============================================
-// `GET /claims/analytics/dashboard`, `GET /orgs/:orgSlug/analytics/dashboard`,
+// `GET /claims/analytics/dashboard`, `GET /tenants/:tenantSlug/analytics/dashboard`,
 // `GET /admin/analytics/dashboard` (docs/technical/api/analytics.md). Every
 // number is computed in Postgres for the request's range ([from, to), see
 // analytics-range.ts); every series has one point per bucket of the range,
@@ -13,10 +13,10 @@
 import { z } from "zod";
 
 import { EpochMsSchema } from "../../../schemas/api/common";
-import { OrganizationLocationFilterSchema } from "../../organizations/schemas/location-filter";
+import { LocationFilterSchema } from "../../tenancy/schemas/location-filter";
 import { analyticsRangeQueryShape, AnalyticsReportRangeSchema, validateAnalyticsRange } from "./analytics-range";
 import { SaleCurrencySchema } from "../../pos/schemas/redemption";
-import { MerchantBusinessCategorySchema, PilotCitySchema } from "../../organizations/schemas/organization-enums";
+import { MerchantBusinessCategorySchema, PilotCitySchema } from "../../tenancy/schemas/tenant-enums";
 import { RewardClaimStatusSchema } from "../../claims/schemas/claim-enums";
 import { RewardRedemptionMethodSchema } from "../../pos/schemas/pos-enums";
 
@@ -28,11 +28,11 @@ export const CustomerAnalyticsDashboardQuerySchema = z.object(analyticsRangeQuer
 export type CustomerAnalyticsDashboardQuery = z.output<typeof CustomerAnalyticsDashboardQuerySchema>;
 
 /**
- * `GET /orgs/:orgSlug/analytics/dashboard`. `locationId` narrows to one store;
+ * `GET /tenants/:tenantSlug/analytics/dashboard`. `locationId` narrows to one store;
  * without it a store-limited member still sees only their own stores.
  */
 export const MerchantAnalyticsDashboardQuerySchema = z
-	.object({ ...analyticsRangeQueryShape, ...OrganizationLocationFilterSchema.shape })
+	.object({ ...analyticsRangeQueryShape, ...LocationFilterSchema.shape })
 	.strict()
 	.superRefine(validateAnalyticsRange);
 
@@ -89,7 +89,7 @@ export const MerchantDashboardTotalsSchema = z.object({
 	salesMinor: AnalyticsComparisonSchema,
 	bills: AnalyticsComparisonSchema,
 	averageBillMinor: AnalyticsComparisonSchema,
-	/** Claims of the organization's rewards available at the caller's stores. */
+	/** Claims of the tenant's rewards available at the caller's stores. */
 	claims: AnalyticsComparisonSchema,
 	redemptions: AnalyticsComparisonSchema,
 	/** Redemptions ÷ claims of the range, in percent (one decimal). */
@@ -197,7 +197,7 @@ export const AdminDashboardPointSchema = AnalyticsBucketSchema.extend({
 export type AdminDashboardPoint = z.output<typeof AdminDashboardPointSchema>;
 
 export const AdminTopMerchantSchema = z.object({
-	organizationId: z.uuid(),
+	tenantId: z.uuid(),
 	name: z.string(),
 	category: MerchantBusinessCategorySchema.nullable(),
 	salesMinor: MinorUnitsSchema,
@@ -289,7 +289,7 @@ export type CustomerCategorySpend = z.output<typeof CustomerCategorySpendSchema>
 
 /** Spending at one merchant, with its own series (one value per bucket of `series`). */
 export const CustomerMerchantSpendSchema = z.object({
-	organizationId: z.uuid(),
+	tenantId: z.uuid(),
 	merchantName: z.string(),
 	category: MerchantBusinessCategorySchema.nullable(),
 	totalMinor: MinorUnitsSchema,

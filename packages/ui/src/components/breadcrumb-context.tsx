@@ -158,7 +158,7 @@ export interface BreadcrumbProviderProps {
 	/**
 	 * Optional per-mount resolver override (e.g. tenant-scoped href mapping).
 	 * The trail is re-resolved whenever this function's identity changes, so
-	 * memoize it on whatever it closes over (e.g. the organization slug).
+	 * memoize it on whatever it closes over (e.g. the tenant slug).
 	 */
 	readonly resolve?: (pathname: string) => readonly BreadcrumbItem[];
 	readonly children: React.ReactNode;

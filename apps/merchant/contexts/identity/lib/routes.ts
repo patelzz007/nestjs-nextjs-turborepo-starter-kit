@@ -3,7 +3,7 @@
  * the single source for which merchant paths are protected, auth, or token
  * links. Every check is segment-aware (`/account` never matches `/accounts`).
  */
-import { isPathWithin, ORG_SCOPE_PREFIX, ROUTES, stripQueryAndHash, type AppPath } from "@/lib/routes";
+import { isPathWithin, TENANT_SCOPE_PREFIX, ROUTES, stripQueryAndHash, type AppPath } from "@/lib/routes";
 
 /**
  * Pages rendered outside the authenticated shell (sign-in, invite and
@@ -28,9 +28,9 @@ export const MERCHANT_TOKEN_AUTH_ROUTE_PREFIXES: readonly AppPath[] = [ROUTES.au
 
 /**
  * The signed-in surface: the post-login entry `/`, the personal-account entry
- * `/account`, and everything organization-scoped under `/orgs`.
+ * `/account`, and everything tenant-scoped under `/t`.
  */
-export const MERCHANT_PROTECTED_ROUTE_PREFIXES: readonly AppPath[] = [ROUTES.home, ROUTES.account, ORG_SCOPE_PREFIX];
+export const MERCHANT_PROTECTED_ROUTE_PREFIXES: readonly AppPath[] = [ROUTES.home, ROUTES.account, TENANT_SCOPE_PREFIX];
 
 function matchesAnyPrefix(pathname: string, prefixes: readonly AppPath[]): boolean {
 	return prefixes.some((prefix) => isPathWithin(pathname, prefix));

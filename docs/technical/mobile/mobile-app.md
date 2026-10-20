@@ -1327,21 +1327,22 @@ till for a merchant's store. The code is in `src/features/till`; the scanner is 
 
 - **Pairing.** In the merchant console, Terminals → add a terminal shows a one-time pairing code
   and its QR code (`pos-pair:v1:<code>`, `buildPosPairingQrPayload` in `@workspace/shared`). The
-  till scans the QR, or the cashier types the 8 characters, and `POST /pos/terminals/pair`
-  returns the terminal's own API key. The key, the terminal id and the names shown on the screen
-  are kept in Secure Store (`till.*` entries, `src/lib/secure-store.ts`). The till belongs to the
+  till scans the QR, or the cashier types the 8 characters, and `POST /integration/terminals/pair`
+  returns the terminal's own API key. The key, the terminal id, its tenant and store ids, and the
+  names shown on the screen are kept in Secure Store (`till.*` entries, `src/lib/secure-store.ts`). The till belongs to the
   merchant, not to the signed-in person: signing out leaves it paired. **Unpair this phone**
   forgets it on the device (the merchant revokes the key in the console).
 - **Redeeming.** **Scan customer QR** reads the claim's `qrPayload` (the redemption token);
-  **Check code** takes the 8-character backup code instead. `POST /redemptions/validate` shows the
+  **Check code** takes the 8-character backup code instead. `POST /integration/redemptions/validate` shows the
   reward, when it expires, its minimum bill and whether it can be redeemed here (the reasons are
   `RedemptionInvalidReasonSchema`'s, in the till's words). The cashier enters the bill, and
-  `POST /redemptions/checkout` redeems it. One Idempotency-Key per (code, bill), reused on a retry
+  `POST /integration/redemptions/checkout` redeems it. One Idempotency-Key per (code, bill), reused on a retry
   and spent on success, so a lost answer never redeems twice (rules/09). The minimum-bill check on
   the phone only spares a round trip: the API decides.
 - **Credentials.** Every till call goes through `createPosCaller` (`@workspace/api-client`): the
-  terminal's `X-API-Key` and `X-Terminal-Id`, no `Authorization` header, no cookies and no 401
-  refresh. The person's session must never reach these routes, because the API would read their
+  terminal's `X-API-Key` and `X-Terminal-Id` (plus `X-Tenant-Id` and `X-Location-Id`, information
+  only), no `Authorization` header, no cookies and no 401 refresh. A till paired before it kept its
+  tenant and store ids reads as unpaired and is paired again. The person's session must never reach these routes, because the API would read their
   access token as the API key.
 - **Scanner.** In an Android build with Google Play services, Google's code scanner opens. It is
   ML Kit's full-screen scanner and needs no camera permission, because Play services owns the
@@ -1512,7 +1513,7 @@ zod schemas for user experience only; the API validates everything again.
 
 ### 12.3 Audit
 
-Every state-changing mobile request lands in the global HTTP audit log with organization, user,
+Every state-changing mobile request lands in the global HTTP audit log with tenant, user,
 timestamp, endpoint, request, response (secrets redacted), IP, device and client type, exactly
 like web ([ADR 025](../../adr/025-global-http-audit-log.md)). Session revocations additionally
 record `deletedBy` on the session row.

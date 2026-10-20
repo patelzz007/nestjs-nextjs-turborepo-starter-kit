@@ -3,7 +3,7 @@ title: "API reference — GitHub contributions"
 description: "Read-only summary, commit history with line counts and contributor totals of the GitHub repositories the API is configured with."
 order: 11
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792368000000
+lastUpdated: 1792454400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -36,7 +36,7 @@ List the GitHub repositories the API may read
 | `data.account` | string \| null | yes | GitHub account login; length 1–44; pattern `^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:\[bot\])?$` |
 | `data.repositories` | object[] | yes | 0–100 items |
 | `data.repositories[].fullName` | string | yes | at most 140 characters |
-| `data.repositories[].owner` | string | yes | GitHub user or organization; length 1–39; pattern `^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$` |
+| `data.repositories[].owner` | string | yes | GitHub user or tenant; length 1–39; pattern `^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$` |
 | `data.repositories[].pushedAt` | integer \| null | yes |  |
 | `data.repositories[].relationship` | "configured" \| "owned" \| "contributed" | yes |  |
 | `data.repositories[].repository` | string | yes | GitHub repository name; length 1–100; pattern `^[A-Za-z0-9._-]+$` |
@@ -71,8 +71,8 @@ Response `200 OK` (application/json):
     "repositories": []
   },
   "meta": {
-    "correlationId": "dTuW-sljFc97VgSndhoYh",
-    "timestamp": 1792435596900
+    "correlationId": "1-hQfkONimtQ8fctyxp_D",
+    "timestamp": 1792520436944
   }
 }
 ```
@@ -92,7 +92,7 @@ Summary of a configured repository: stars, forks, languages, commit count, last 
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 
 **Response 200 OK** (`application/json`) — Repository summary
@@ -110,7 +110,7 @@ Summary of a configured repository: stars, forks, languages, commit count, last 
 | `data.languages[].name` | string | yes | length 1–100 |
 | `data.languages[].percent` | number | yes | range 0–100 |
 | `data.openIssues` | integer | yes |  |
-| `data.owner` | string | yes | GitHub user or organization; length 1–39; pattern `^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$` |
+| `data.owner` | string | yes | GitHub user or tenant; length 1–39; pattern `^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$` |
 | `data.primaryLanguage` | string \| null | yes |  |
 | `data.pushedAt` | integer \| null | yes |  |
 | `data.repository` | string | yes | GitHub repository name; length 1–100; pattern `^[A-Za-z0-9._-]+$` |
@@ -148,7 +148,7 @@ Newest first; pass `nextCursor` back as `cursor` for the next (older) page. 404 
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 | `cursor` | query | string | no | `nextCursor` of the previous page; omit for the newest commits |
 | `limit` | query | integer | no | Commits per page (1-50) |
@@ -203,7 +203,7 @@ Diffs are unified patches (hunks only). A file's diff is `too-large` past 20,000
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 | `sha` | path | string | yes | Full commit SHA (40 lowercase hex characters) |
 
@@ -271,7 +271,7 @@ From GitHub's contributor statistics (`basis.kind: "statistics"`, the whole defa
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `owner` | path | string | yes | GitHub user or organization |
+| `owner` | path | string | yes | GitHub user or tenant |
 | `repository` | path | string | yes | GitHub repository name |
 
 **Response 200 OK** (`application/json`) — Contributor totals, most commits first, and what they were counted from

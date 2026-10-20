@@ -1,17 +1,17 @@
 "use client";
 
 import { MerchantRewardEditorPageSkeleton } from "@/components/loading/merchant-page-skeletons";
-import { MerchantCapabilityGate } from "@/contexts/organizations";
+import { MerchantCapabilityGate } from "@/contexts/tenancy";
 import { MerchantRewardEditorLayout } from "@/contexts/rewards/components/merchant-reward-editor-layout";
 import { MerchantRewardFormFields } from "@/contexts/rewards/components/merchant-reward-form-fields";
 import type { SavedRewardImage } from "@/contexts/rewards/components/merchant-reward-images-field";
 import { MerchantRewardLocationFields } from "@/contexts/rewards/components/merchant-reward-location-fields";
 import { MerchantRewardPreview } from "@/contexts/rewards/components/merchant-reward-preview";
 import type { RewardVoucherCover } from "@/contexts/rewards/components/reward-voucher";
-import { useActiveOrganizationId, useActiveOrganizationName, useMerchantLocation } from "@/features/tenant-context/facade";
+import { useActiveTenantId, useActiveTenantName, useMerchantLocation } from "@/features/tenant-context/facade";
 import { describeDraftRewardStores } from "@/contexts/rewards/lib/reward-draft";
 import { applyMerchantRewardChange } from "@/contexts/rewards/lib/query-cache";
-import { orgRoutes } from "@/lib/routes";
+import { tenantRoutes } from "@/lib/routes";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -78,7 +78,7 @@ const NO_ACTIVITY = { claimCount: 0, redemptionCount: 0 };
 const NO_IMAGES: readonly SavedRewardImage[] = [];
 
 export interface MerchantCreateRewardPageViewProps {
-	readonly orgSlug: string;
+	readonly tenantSlug: string;
 	readonly defaultCategory: RewardCategory;
 }
 
@@ -91,15 +91,15 @@ export function MerchantCreateRewardPageView(props: MerchantCreateRewardPageView
 	);
 }
 
-function MerchantCreateRewardPageContent({ orgSlug, defaultCategory }: MerchantCreateRewardPageViewProps): React.JSX.Element {
+function MerchantCreateRewardPageContent({ tenantSlug, defaultCategory }: MerchantCreateRewardPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const router = useRouter();
 	const { locationId: activeLocationId, accessibleLocations } = useMerchantLocation();
-	const organizationId = useActiveOrganizationId();
-	const organizationName = useActiveOrganizationName();
+	const tenantId = useActiveTenantId();
+	const tenantName = useActiveTenantName();
 	const hasMultipleLocations = accessibleLocations.length > 1;
-	const routes = orgRoutes(orgSlug);
+	const routes = tenantRoutes(tenantSlug);
 	const [cover, setCover] = React.useState<RewardVoucherCover | undefined>(undefined);
 
 	const {
@@ -116,13 +116,13 @@ function MerchantCreateRewardPageContent({ orgSlug, defaultCategory }: MerchantC
 	const locationScopeType = useWatch({ control, name: "locationScopeType" });
 	const locationIds = useWatch({ control, name: "locationIds" });
 	const stores = React.useMemo(
-		() => describeDraftRewardStores({ locationScopeType, locationIds }, accessibleLocations, organizationName),
-		[accessibleLocations, locationIds, locationScopeType, organizationName],
+		() => describeDraftRewardStores({ locationScopeType, locationIds }, accessibleLocations, tenantName),
+		[accessibleLocations, locationIds, locationScopeType, tenantName],
 	);
 
-	const createMutation = api.organizations.rewards.create.useMutation({
+	const createMutation = api.tenants.rewards.create.useMutation({
 		onSuccess: (response, input): void => {
-			void applyMerchantRewardChange(queryClient, orgSlug, response);
+			void applyMerchantRewardChange(queryClient, tenantSlug, response);
 			toastMessage.success(
 				input.saveAsDraft
 					? { title: "Draft saved", description: "Only your team can see it until you submit it for review." }
@@ -153,10 +153,10 @@ function MerchantCreateRewardPageContent({ orgSlug, defaultCategory }: MerchantC
 		(event: React.SubmitEvent<HTMLFormElement>): void => {
 			const saveAsDraft = resolveSaveIntent(event.submitter) === "draft";
 			void handleSubmit((form): void => {
-				mutate({ orgSlug, ...mapMerchantCreateRewardFormToInput({ ...form, saveAsDraft }, defaultCategory) });
+				mutate({ tenantSlug, ...mapMerchantCreateRewardFormToInput({ ...form, saveAsDraft }, defaultCategory) });
 			})(event);
 		},
-		[defaultCategory, handleSubmit, mutate, orgSlug],
+		[defaultCategory, handleSubmit, mutate, tenantSlug],
 	);
 
 	const isSaving = createMutation.isPending;
@@ -174,7 +174,7 @@ function MerchantCreateRewardPageContent({ orgSlug, defaultCategory }: MerchantC
 					control={control}
 					errors={errors}
 					setValue={setValue}
-					organizationId={organizationId}
+					tenantId={tenantId}
 					initialImages={NO_IMAGES}
 					onImagesChange={handleImagesChange}
 					stores={hasMultipleLocations ? <MerchantRewardLocationFields control={control} errors={errors} setValue={setValue} disabled={isSaving} /> : null}

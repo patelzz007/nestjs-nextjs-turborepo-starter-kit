@@ -93,7 +93,7 @@ interface PeriodSums {
 }
 
 function sumsOf(days: readonly SampleDay[]): PeriodSums {
-	const merchants = new Set(days.flatMap((day: SampleDay): readonly string[] => day.visits.map((visit: SampleVisit): string => visit.merchant.organizationId)));
+	const merchants = new Set(days.flatMap((day: SampleDay): readonly string[] => day.visits.map((visit: SampleVisit): string => visit.merchant.tenantId)));
 	return {
 		spentMinor: sumOf(days, spentOf),
 		visits: sumOf(days, (day: SampleDay): number => day.visits.length),
@@ -156,10 +156,10 @@ function totalOf(visits: readonly SampleVisit[]): number {
 
 function merchantSpendOf(days: readonly SampleDay[], buckets: readonly Bucket[]): CustomerMerchantSpend[] {
 	return SAMPLE_MERCHANTS.map((merchant: SampleMerchant): CustomerMerchantSpend => {
-		const matches = (visit: SampleVisit): boolean => visit.merchant.organizationId === merchant.organizationId;
+		const matches = (visit: SampleVisit): boolean => visit.merchant.tenantId === merchant.tenantId;
 		const visits = visitsMatching(days, matches);
 		return {
-			organizationId: merchant.organizationId,
+			tenantId: merchant.tenantId,
 			merchantName: merchant.merchantName,
 			category: merchant.category,
 			totalMinor: totalOf(visits),

@@ -305,7 +305,7 @@ export function stampItemsOf(cards: readonly StampCard[], formatters: ActivityFo
 	return cards.map((card: StampCard): ProgressItem => {
 		const toGo = card.stampsPerReward - card.stamps;
 		return {
-			key: card.organizationId,
+			key: card.tenantId,
 			label: card.merchantName,
 			detail: `${card.rewardName} · ${toGo === 1 ? "1 more visit" : `${formatters.count(toGo)} more visits`}`,
 			value: card.stamps,

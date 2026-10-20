@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { epochMs } from "../../../../schemas/api/common";
 
-import { MerchantKybDocumentRecordSchema, MerchantKybProfileResponseSchema, type MerchantKybProfileResponse } from "../../../organizations/schemas/merchant-kyb";
+import { MerchantKybDocumentRecordSchema, MerchantKybProfileResponseSchema, type MerchantKybProfileResponse } from "../../../tenancy/schemas/merchant-kyb";
 import { MAX_REWARD_IMAGES, MerchantCreateRewardSchema, RewardResponseSchema, type RewardImageResponse, type RewardResponse } from "../reward";
-import { KybDocumentScanStatusSchema } from "../../../organizations/schemas/organization-enums";
+import { KybDocumentScanStatusSchema } from "../../../tenancy/schemas/tenant-enums";
 import { RewardRulesResponseSchema, RewardRulesSchema, type RewardRules } from "../reward-enums";
 
 // Response schemas are OPEN (ADR 022): the API strips unknown keys and clients
@@ -31,7 +31,7 @@ const QUANTITY_TOTAL = 100;
 const DOCUMENT_SIZE_BYTES = 2048;
 
 const REWARD_ID = "7f1c1b9e-8a43-4c2e-9d1a-3b7e6f2a9c01";
-const ORGANIZATION_ID = "0b6a3c55-2f1d-4e8a-a7b9-5c4d3e2f1a10";
+const TENANT_ID = "0b6a3c55-2f1d-4e8a-a7b9-5c4d3e2f1a10";
 const DOCUMENT_ID = "a3e9d2c1-6b5f-4a7e-8d9c-1f2e3d4c5b6a";
 
 const rules: RewardRules = { minSpendMyr: MIN_SPEND_MYR, maxUsePerUser: MAX_USE_PER_USER };
@@ -42,9 +42,9 @@ const reward: RewardResponse = {
 	isDeleted: false,
 	deletedAt: null,
 	id: REWARD_ID,
-	organizationId: ORGANIZATION_ID,
-	organizationLogoUrl: null,
-	organizationLogoSources: [],
+	tenantId: TENANT_ID,
+	tenantLogoUrl: null,
+	tenantLogoSources: [],
 	title: "Free coffee",
 	description: "One free coffee",
 	rewardType: "FREE_ITEM",
@@ -71,7 +71,7 @@ const reward: RewardResponse = {
 };
 
 const kybProfile: MerchantKybProfileResponse = {
-	organizationId: ORGANIZATION_ID,
+	tenantId: TENANT_ID,
 	businessName: "Kopi Co",
 	legalName: null,
 	addressText: null,
@@ -137,12 +137,12 @@ describe("RewardResponseSchema", () => {
 	});
 
 	it("accepts an http(s) merchant logo URL", () => {
-		expect(RewardResponseSchema.safeParse({ ...reward, organizationLogoUrl: "https://cdn.example.com/logos/kopi-co.png" }).success).toBe(true);
-		expect(RewardResponseSchema.safeParse({ ...reward, organizationLogoUrl: "http://localhost:3001/api/v1/files/local-download?path=logo.png" }).success).toBe(true);
+		expect(RewardResponseSchema.safeParse({ ...reward, tenantLogoUrl: "https://cdn.example.com/logos/kopi-co.png" }).success).toBe(true);
+		expect(RewardResponseSchema.safeParse({ ...reward, tenantLogoUrl: "http://localhost:3001/api/v1/files/local-download?path=logo.png" }).success).toBe(true);
 	});
 
 	it("requires the logo key — null means no logo, absence is a contract break", () => {
-		const { organizationLogoUrl, ...withoutLogo } = reward;
+		const { tenantLogoUrl, ...withoutLogo } = reward;
 		expect(RewardResponseSchema.safeParse(withoutLogo).success).toBe(false);
 	});
 
@@ -156,9 +156,9 @@ describe("RewardResponseSchema", () => {
 	});
 
 	it("rejects a non-http(s) or relative logo URL", () => {
-		expect(RewardResponseSchema.safeParse({ ...reward, organizationLogoUrl: "javascript:alert(1)" }).success).toBe(false);
-		expect(RewardResponseSchema.safeParse({ ...reward, organizationLogoUrl: "data:image/png;base64,AAAA" }).success).toBe(false);
-		expect(RewardResponseSchema.safeParse({ ...reward, organizationLogoUrl: "/logos/kopi-co.png" }).success).toBe(false);
+		expect(RewardResponseSchema.safeParse({ ...reward, tenantLogoUrl: "javascript:alert(1)" }).success).toBe(false);
+		expect(RewardResponseSchema.safeParse({ ...reward, tenantLogoUrl: "data:image/png;base64,AAAA" }).success).toBe(false);
+		expect(RewardResponseSchema.safeParse({ ...reward, tenantLogoUrl: "/logos/kopi-co.png" }).success).toBe(false);
 	});
 });
 

@@ -39,8 +39,8 @@ describe("API architecture import boundaries (§12.1)", () => {
 
 	it("rejects another context's internals and allows its public-api", () => {
 		const file = "src/contexts/rewards/application/checkout.handler.ts";
-		expect(boundaryMessages('import { Org } from "../../organizations/domain/organization";', file).length).toBeGreaterThan(0);
-		expect(boundaryMessages('import { OrganizationReadPort } from "../../organizations/public-api";', file)).toEqual([]);
+		expect(boundaryMessages('import { Org } from "../../tenants/domain/tenant";', file).length).toBeGreaterThan(0);
+		expect(boundaryMessages('import { TenantReadPort } from "../../tenants/public-api";', file)).toEqual([]);
 	});
 
 	it("rejects PrismaBaseRepository outside infrastructure and allows it there", () => {

@@ -2,6 +2,7 @@ import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/clien
 import { LIST_SLOT_INDEX, PERMISSION, type CapabilitySlug } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
+import { MERCHANT_INVITES_FEATURE } from "@/lib/feature-flags";
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
 import { ADMIN_MENU_AUTHORIZATION, applyMenuAuthorization } from "@/lib/navigation/menu-authorization";
 import { ADMIN_ROUTE_AUTHORIZATION, filterMenuByRouteAccess, type RouteAccessSession } from "@/lib/navigation/route-authorization";
@@ -9,19 +10,30 @@ import type { SidebarMenuData } from "@/lib/navigation/sidebar";
 import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { buildSearchableItems } from "@/lib/palette/search";
 
-function routeSession(capabilities: readonly CapabilitySlug[], isSuperAdmin: boolean): RouteAccessSession {
+/** A multi-tenant deployment: the API offers merchant invites, so only permissions decide what shows. */
+const MULTI_TENANT_FLAGS: readonly string[] = [MERCHANT_INVITES_FEATURE];
+
+function routeSession(capabilities: readonly CapabilitySlug[], isSuperAdmin: boolean, enabledFeatureFlags: readonly string[]): RouteAccessSession {
 	const granted = createGrantedCapabilities(capabilities);
-	return { isGranted: (permission: CapabilitySlug): boolean => isCapabilityGranted(granted, permission), enabledFeatureFlags: [], isSuperAdmin };
+	return { isGranted: (permission: CapabilitySlug): boolean => isCapabilityGranted(granted, permission), enabledFeatureFlags, isSuperAdmin };
 }
 
-function visibleItems(capabilities: readonly CapabilitySlug[], isSuperAdmin: boolean): ReturnType<typeof buildSearchableItems> {
+function visibleItems(
+	capabilities: readonly CapabilitySlug[],
+	isSuperAdmin: boolean,
+	enabledFeatureFlags: readonly string[] = MULTI_TENANT_FLAGS,
+): ReturnType<typeof buildSearchableItems> {
 	return buildSearchableItems(
-		filterMenuByRouteAccess(filterCompiledSidebarMenu(SIDEBAR_MENU, capabilities), ADMIN_ROUTE_AUTHORIZATION, routeSession(capabilities, isSuperAdmin)),
+		filterMenuByRouteAccess(
+			filterCompiledSidebarMenu(SIDEBAR_MENU, capabilities, { enabledFeatureFlags }),
+			ADMIN_ROUTE_AUTHORIZATION,
+			routeSession(capabilities, isSuperAdmin, enabledFeatureFlags),
+		),
 	);
 }
 
-function visibleUrls(capabilities: readonly CapabilitySlug[], isSuperAdmin = false): readonly string[] {
-	return visibleItems(capabilities, isSuperAdmin).map((item) => item.url);
+function visibleUrls(capabilities: readonly CapabilitySlug[], isSuperAdmin = false, enabledFeatureFlags: readonly string[] = MULTI_TENANT_FLAGS): readonly string[] {
+	return visibleItems(capabilities, isSuperAdmin, enabledFeatureFlags).map((item) => item.url);
 }
 
 function visibleTitles(capabilities: readonly CapabilitySlug[]): readonly string[] {
@@ -92,6 +104,12 @@ describe("admin sidebar authorization", () => {
 		expect(urls).toContain("/catalog/products");
 		expect(urls).not.toContain("/catalog/categories");
 		expect(urls).not.toContain("/emails/templates");
+	});
+
+	it("hides merchant invites on a single-tenant deployment, even with MANAGE", () => {
+		const urls = visibleUrls([PERMISSION.MERCHANT_ORG.MANAGE], false, []);
+		expect(urls).not.toContain("/merchants/invites");
+		expect(urls).toContain("/merchants/verification");
 	});
 
 	it("keeps a structural section visible through one granted child", () => {

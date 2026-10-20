@@ -10,8 +10,8 @@ function labelsOf(access: MerchantProfileMenuAccess): readonly string[] {
 }
 
 describe("merchantProfileMenuItems", () => {
-	it("offers the account, the dashboard, API keys and the organization settings to a member with every capability", () => {
-		expect(labelsOf(FULL_ACCESS)).toStrictEqual(["Account", "Dashboard", "API keys", "Organization settings"]);
+	it("offers the account, the dashboard, API keys and the tenant settings to a member with every capability", () => {
+		expect(labelsOf(FULL_ACCESS)).toStrictEqual(["Account", "Dashboard", "API keys", "Tenant settings"]);
 	});
 
 	it("offers only the personal account while enrollment is locked", () => {
@@ -19,10 +19,10 @@ describe("merchantProfileMenuItems", () => {
 	});
 
 	it("leaves out the pages the member's capabilities do not allow", () => {
-		expect(labelsOf({ ...FULL_ACCESS, canViewDashboard: false, canManageApiKeys: false })).toStrictEqual(["Account", "Organization settings"]);
+		expect(labelsOf({ ...FULL_ACCESS, canViewDashboard: false, canManageApiKeys: false })).toStrictEqual(["Account", "Tenant settings"]);
 	});
 
-	it("takes each item to its organization-scoped page", () => {
+	it("takes each item to its tenant-scoped page", () => {
 		const navigate = vi.fn();
 		merchantProfileMenuItems(FULL_ACCESS, PATHS, navigate).forEach((item) => {
 			item.onClick();

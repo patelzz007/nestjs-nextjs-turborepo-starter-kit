@@ -40,9 +40,9 @@ interface RewardStub {
 	readonly title: string;
 	readonly description: string;
 	readonly termsConditions: string | null;
-	readonly organizationName: string;
-	readonly organizationLogoUrl: string | null;
-	readonly organizationLogoSources: readonly { readonly width: number; readonly url: string }[];
+	readonly tenantName: string;
+	readonly tenantLogoUrl: string | null;
+	readonly tenantLogoSources: readonly { readonly width: number; readonly url: string }[];
 	readonly rewardType: "FREE_ITEM" | "DISCOUNT";
 	readonly rewardValue: number;
 	readonly status: "PENDING_REVIEW" | "PUBLISHED";
@@ -140,9 +140,9 @@ const REWARD: RewardStub = {
 	title: "Free coffee",
 	description: "One free latte with any breakfast set.",
 	termsConditions: "Dine-in only.",
-	organizationName: "Sunrise Café",
-	organizationLogoUrl: null,
-	organizationLogoSources: [],
+	tenantName: "Sunrise Café",
+	tenantLogoUrl: null,
+	tenantLogoSources: [],
 	rewardType: "FREE_ITEM",
 	rewardValue: 1,
 	status: "PENDING_REVIEW",

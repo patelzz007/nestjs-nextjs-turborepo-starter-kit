@@ -20,27 +20,27 @@ a forbidden action. The full model (tenants, stores, policies per table) is in
 
 | Principal | Database role | Session settings | Used by |
 | --- | --- | --- | --- |
-| Signed-in user | `app_runtime` (NOLOGIN, NOBYPASSRLS) | `app.current_user_id`, `app.current_organization_id` | Every authenticated request |
+| Signed-in user | `app_runtime` (NOLOGIN, NOBYPASSRLS) | `app.current_user_id`, `app.current_tenant_id` | Every authenticated request |
 | Anonymous | `app_runtime` | none | Public routes |
-| **Merchant API key** | `app_runtime` | `app.current_organization_id`, `app.current_api_key_id`, `app.current_api_key_location_id` (`''` = organization-wide) | POS and integration routes ([Tenancy §4.1](../authorization/tenancy-and-rls.md#41-the-merchant-api-key-principal)) |
+| **Merchant API key** | `app_runtime` | `app.current_tenant_id`, `app.current_api_key_id`, `app.current_api_key_location_id` (`''` = tenant-wide) | POS and integration routes ([Tenancy §4.1](../authorization/tenancy-and-rls.md#41-the-merchant-api-key-principal)) |
 | System operation | `app_runtime` or `app_enumerator` | `app.rls_bypass` + `app.system_operation = <name>` | Allow-listed background / cross-tenant work |
 | Analytics consumer | `analytics_consumer` (own LOGIN) | — | `apps/analytics-consumer` only |
 
 The API-key principal gets **additional** permissive policies (`prisma/rls/40-api-key-principal.sql`):
-exactly its organization's rows, and for store-owned tables (redemptions, sales, terminals) only its
+exactly its tenant's rows, and for store-owned tables (redemptions, sales, terminals) only its
 store's rows when the key is store-scoped. It never deletes anything and has **no RLS bypass**.
 
 ## Session settings are transaction-local
 
 `TenantTransactionService` sets `app.*` with `set_config(..., true)` inside the same transaction as
 the queries ([ADR 010](../../adr/010-rls-transaction-contract.md)). Helpers
-(`app_current_user_id()`, `app_current_organization_id()`, …) return `NULL` when unset, and
+(`app_current_user_id()`, `app_current_tenant_id()`, …) return `NULL` when unset, and
 policies treat `NULL` as **no access** — missing context fails closed.
 
 ## Rows readable through something the user owns
 
 A row a user owns can keep another row readable to them after it stops being public. `rewards_read`
-lets anyone read a **published** consumer reward, the reward's organization members read all of its
+lets anyone read a **published** consumer reward, the reward's tenant members read all of its
 rewards, and — through `app_holds_reward_claim(reward_id)` — **a user who holds a claim reads the
 reward they claimed, whatever its state now** (expired, disabled, archived, soft-deleted), so the
 wallet and claim history can still name it. Nobody else gains access: a user with no claim, or a
@@ -56,7 +56,7 @@ Postgres rejects a policy cycle. The helper must stay fail-closed on a missing `
 RLS ([ADR 012](../../adr/012-system-operations.md)). Each name has one purpose and the narrowest role:
 
 - code obtains the bypass only through `withSystemOperation({ operation, reason, actorUserId })`
-  (or `@RlsBypass()` on a route, which uses the same machinery);
+  (a route cannot opt into every table);
 - `app_rls_bypass()` refuses a bypass that does not name its operation;
 - every use is logged (`rls.system_operation`) and recorded in the request's audit entry.
 
@@ -90,8 +90,8 @@ with `FORCE ROW LEVEL SECURITY`**. So the API never queries as that user:
   operation's narrower role) and sets every `app.*` variable from the current RLS context — so a
   pooled connection never carries the previous request's identity. Inside a transaction,
   `TenantTransactionService` then sets the same variables transaction-locally (above).
-- A user-scoped checkout in multi-tenant mode with no organization fails fast
-  (`Tenant database access requires organization context`) instead of running unscoped.
+- A user-scoped checkout in multi-tenant mode with no tenant fails fast
+  (`Tenant database access requires tenant context`) instead of running unscoped.
 - `schema.prisma` declares only the provider; the Prisma CLI reads the URL from
   `apps/api/prisma.config.ts`, which loads `apps/api/.env`.
 - `SystemPrismaService` and the seeder connect as the `DATABASE_URL` user **without** a role switch;
@@ -104,11 +104,11 @@ bare `prisma migrate reset` recreates the schema without them. Re-apply the secu
 
 ## Golden rules
 
-1. **No RLS policy per application role.** Policies use user id, organization id and store scope —
+1. **No RLS policy per application role.** Policies use user id, tenant id and store scope —
    never role names like `Cashier`. Creating or changing a role is data, not a migration.
 2. **Fail closed.** Missing session context never widens access.
 3. **Same transaction.** Settings and queries share one transaction.
-4. **Minimize bypass.** Every `@RlsBypass()` / system operation is an audited exception.
+4. **Minimize bypass.** Every system operation is an audited exception.
 5. **`FORCE ROW LEVEL SECURITY`** on tenant tables, so table owners cannot skip policies.
 6. **`SECURITY DEFINER` sparingly**, only for membership lookups that would recurse, with
    `search_path` pinned.
@@ -134,7 +134,7 @@ installed by `pnpm db:apply-security` (`prisma/rls/data-change-capture.ts`):
   row per change **in the same transaction** — a change and its record commit or roll back together.
 - The trigger function is `SECURITY INVOKER`: `databaseRole` is the role that really wrote the
   row (`app_runtime`, a system operation's role, the owner during a migration or a manual `psql`
-  session). The attribution — user, organization, API key, system operation, purpose, correlation
+  session). The attribution — user, tenant, API key, system operation, purpose, correlation
   id — is read from the same `app.*` session variables the RLS policies read.
 - `DataChangeLog` accepts an INSERT only while a trigger runs (`pg_trigger_depth() > 0`); the
   application role cannot create functions or triggers, so it can neither forge nor pre-write a

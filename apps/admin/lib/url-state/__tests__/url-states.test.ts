@@ -19,7 +19,7 @@ import { describe, expect, it } from "vitest";
 import { CATEGORIES_TABLE_URL_STATE, toCategoriesListQuery } from "../../../contexts/catalog/url-state/categories";
 import { EMAIL_LOG_PAGE_SIZE, EMAIL_LOG_URL_STATE, toEmailLogListQuery } from "../../../contexts/notifications/url-state/email-log";
 import { DEFAULT_GEO_TAB, GEO_URL_STATE, toCitiesListQuery, toCountriesListQuery, toStatesListQuery } from "../../../contexts/reference-data/url-state/geography";
-import { MERCHANTS_TABLE_URL_STATE, toMerchantsListQuery } from "../../../contexts/organizations/url-state/merchants";
+import { MERCHANTS_TABLE_URL_STATE, toMerchantsListQuery } from "../../../contexts/tenancy/url-state/merchants";
 import { MFA_RECOVERY_PENDING_QUEUE_HREF, MFA_RECOVERY_URL_STATE, toMfaRecoveryListQuery } from "../../../contexts/identity/url-state/mfa-recovery";
 import { PRODUCTS_TABLE_URL_STATE, toProductsListQuery } from "../../../contexts/catalog/url-state/products";
 import { EMAIL_TEMPLATES_URL_STATE, KYB_REVIEW_URL_STATE, STORE_REQUESTS_URL_STATE } from "../selection";
@@ -146,10 +146,10 @@ describe("mfa recovery", () => {
 });
 
 describe("in-page selection", () => {
-	it("KYB review: ?organizationId= must be a merchant id (UUID)", () => {
-		expect(KYB_REVIEW_URL_STATE.parse({ organizationId: UUID })).toEqual({ organizationId: UUID });
-		expect(KYB_REVIEW_URL_STATE.parse({ organizationId: "org-1" })).toEqual({ organizationId: undefined });
-		expect(KYB_REVIEW_URL_STATE.href("/merchants/verification", { organizationId: UUID })).toBe(`/merchants/verification?organizationId=${UUID}`);
+	it("KYB review: ?tenantId= must be a merchant id (UUID)", () => {
+		expect(KYB_REVIEW_URL_STATE.parse({ tenantId: UUID })).toEqual({ tenantId: UUID });
+		expect(KYB_REVIEW_URL_STATE.parse({ tenantId: "org-1" })).toEqual({ tenantId: undefined });
+		expect(KYB_REVIEW_URL_STATE.href("/merchants/verification", { tenantId: UUID })).toBe(`/merchants/verification?tenantId=${UUID}`);
 	});
 
 	it("email templates: ?key= must be a known template key", () => {

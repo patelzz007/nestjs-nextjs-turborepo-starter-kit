@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
-import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
+import type { TenantRewardMembershipResponse } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,10 +14,10 @@ import {
 	storeSwitcherStores,
 	type SwitcherStore,
 } from "@/components/layout/merchant-context-switcher";
-import { clearOrganizationLocationCookie, organizationLocationCookieName } from "@/contexts/organizations/lib/org/location";
+import { clearLocationCookie, locationCookieName } from "@/contexts/tenancy/lib/org/location";
 import { membershipFixture, renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
 import { testEnvelope } from "@/test/envelope";
-import { contextQueryState, organizationContextFixture, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
+import { contextQueryState, tenantContextFixture, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
 import { STORE_A, STORE_B } from "@/test/terminals";
 import { SidebarProvider } from "@workspace/ui/components/sidebar";
 
@@ -27,23 +27,23 @@ const { contextQuery, push } = vi.hoisted(() => ({
 }));
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
-	useAuth: (): object => ({ api: { organizations: { context: { useQuery: contextQuery } } } }),
+	useAuth: (): object => ({ api: { tenants: { context: { useQuery: contextQuery } } } }),
 }));
 
 vi.mock("next/navigation", () => ({
 	useRouter: (): object => ({ push }),
-	useParams: (): object => ({ orgSlug: TEST_ORG_SLUG }),
+	useParams: (): object => ({ tenantSlug: TEST_ORG_SLUG }),
 }));
 
 /** A member scoped to one store location: nothing org-wide to roll up to. */
-const SINGLE_LOCATION_CONTEXT = organizationContextFixture({ locations: [STORE_A_LOCATION], locationScopeType: "SELECTED", locationIds: [STORE_A.id] });
+const SINGLE_LOCATION_CONTEXT = tenantContextFixture({ locations: [STORE_A_LOCATION], locationScopeType: "SELECTED", locationIds: [STORE_A.id] });
 
-const OWNER: OrganizationRewardMembershipResponse = membershipFixture("OWNER");
-const OTHER_STORE: OrganizationRewardMembershipResponse = {
+const OWNER: TenantRewardMembershipResponse = membershipFixture("OWNER");
+const OTHER_STORE: TenantRewardMembershipResponse = {
 	...membershipFixture("CASHIER"),
-	organizationSlug: "brew-bros",
+	tenantSlug: "brew-bros",
 	displayName: "Brew Bros",
-	organizationId: "1d3b6c4e-2f0a-4b8e-9c71-5a2d8e6f4b10",
+	tenantId: "1d3b6c4e-2f0a-4b8e-9c71-5a2d8e6f4b10",
 };
 
 beforeEach((): void => {
@@ -67,20 +67,20 @@ afterEach((): void => {
 	contextQuery.mockReset();
 	push.mockReset();
 	vi.unstubAllGlobals();
-	clearOrganizationLocationCookie(TEST_ORG_SLUG);
+	clearLocationCookie(TEST_ORG_SLUG);
 });
 
 function renderSwitcher(
-	memberships: readonly OrganizationRewardMembershipResponse[],
+	memberships: readonly TenantRewardMembershipResponse[],
 	initialLocationId: string | null,
 	onStoreChange = vi.fn<(slug: string) => void>(),
 	hasMoreStores = false,
 ): void {
 	renderWithAuthorization(
-		inSidebar(<MerchantContextSwitcher memberships={memberships} hasMoreStores={hasMoreStores} organizationSlug={TEST_ORG_SLUG} onStoreChange={onStoreChange} />),
+		inSidebar(<MerchantContextSwitcher memberships={memberships} hasMoreStores={hasMoreStores} tenantSlug={TEST_ORG_SLUG} onStoreChange={onStoreChange} />),
 		{
 			role: "OWNER",
-			tenantContext: { initialLocationId, initialOrganizationContext: testEnvelope(TWO_STORE_CONTEXT) },
+			tenantContext: { initialLocationId, initialTenantContext: testEnvelope(TWO_STORE_CONTEXT) },
 		},
 	);
 }
@@ -131,7 +131,7 @@ describe("MerchantContextSwitcher", () => {
 		const [all] = within(menu).getAllByRole("menuitemradio");
 		expect(all?.getAttribute("aria-checked")).toBe("true");
 		fireEvent.click(within(menu).getByRole("menuitemradio", { name: new RegExp(STORE_A.name, "u") }));
-		expect(document.cookie).toContain(`${organizationLocationCookieName(TEST_ORG_SLUG)}=${STORE_A.id}`);
+		expect(document.cookie).toContain(`${locationCookieName(TEST_ORG_SLUG)}=${STORE_A.id}`);
 	});
 
 	it("lists the member's other stores only when there is one to switch to", () => {
@@ -151,7 +151,7 @@ describe("MerchantContextSwitcher", () => {
 		const menu = openMenu();
 		expect(within(menu).getByText("Stores")).toBeTruthy();
 		fireEvent.click(within(menu).getByRole("menuitem", { name: "All stores" }));
-		expect(push).toHaveBeenCalledWith(`/orgs/${TEST_ORG_SLUG}/stores`);
+		expect(push).toHaveBeenCalledWith(`/t/${TEST_ORG_SLUG}/stores`);
 		cleanup();
 		renderSwitcher([OWNER, OTHER_STORE], null);
 		expect(within(openMenu()).queryByRole("menuitem", { name: "All stores" })).toBeNull();
@@ -160,18 +160,18 @@ describe("MerchantContextSwitcher", () => {
 	it("opens the locations settings from Manage locations", () => {
 		renderSwitcher([OWNER], null);
 		fireEvent.click(within(openMenu()).getByRole("menuitem", { name: "Manage locations" }));
-		expect(push).toHaveBeenCalledWith(`/orgs/${TEST_ORG_SLUG}/settings/locations`);
+		expect(push).toHaveBeenCalledWith(`/t/${TEST_ORG_SLUG}/settings/locations`);
 	});
 
 	it("shows a single-location member's only location, checked", () => {
 		contextQuery.mockReturnValue(contextQueryState(SINGLE_LOCATION_CONTEXT));
 		renderWithAuthorization(
-			inSidebar(<MerchantContextSwitcher memberships={[OWNER]} hasMoreStores={false} organizationSlug={TEST_ORG_SLUG} onStoreChange={vi.fn<(slug: string) => void>()} />),
+			inSidebar(<MerchantContextSwitcher memberships={[OWNER]} hasMoreStores={false} tenantSlug={TEST_ORG_SLUG} onStoreChange={vi.fn<(slug: string) => void>()} />),
 			{
 				role: "CASHIER",
 				tenantContext: {
 					initialLocationId: null,
-					initialOrganizationContext: testEnvelope(SINGLE_LOCATION_CONTEXT),
+					initialTenantContext: testEnvelope(SINGLE_LOCATION_CONTEXT),
 				},
 			},
 		);
@@ -182,8 +182,8 @@ describe("MerchantContextSwitcher", () => {
 });
 
 describe("storeSwitcherStores", () => {
-	const first: OrganizationRewardMembershipResponse = { ...membershipFixture("OWNER"), organizationSlug: "store-one", displayName: "Store One" };
-	const second: OrganizationRewardMembershipResponse = { ...membershipFixture("CASHIER"), organizationSlug: "store-two", displayName: "Store Two" };
+	const first: TenantRewardMembershipResponse = { ...membershipFixture("OWNER"), tenantSlug: "store-one", displayName: "Store One" };
+	const second: TenantRewardMembershipResponse = { ...membershipFixture("CASHIER"), tenantSlug: "store-two", displayName: "Store Two" };
 
 	it("lists the first page as it is when it holds the active store", () => {
 		expect(storeSwitcherStores([first, second], { slug: "store-two", displayName: "Store Two", role: "CASHIER" }).map((store) => store.slug)).toEqual([

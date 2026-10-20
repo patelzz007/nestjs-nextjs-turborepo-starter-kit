@@ -174,7 +174,7 @@ describe("RBAC response schemas (ADR 022 — open, strip unknown keys)", () => {
 	it("parses the policy control-plane payloads", () => {
 		expect(PolicyDraftCreatedResponseSchema.parse({ draftId: DRAFT_ID })).toEqual({ draftId: DRAFT_ID });
 		expect(PolicyPublishResponseSchema.parse({ version: PUBLISHED_VERSION })).toEqual({ version: PUBLISHED_VERSION });
-		const change = { organizationId: ROLE_ID, userId: PERMISSION_ID, membershipRole: "CASHIER", action: "tenant:manage_team", before: "Allow", after: "Deny" };
+		const change = { tenantId: ROLE_ID, userId: PERMISSION_ID, membershipRole: "CASHIER", action: "tenant:manage_team", before: "Allow", after: "Deny" };
 		const simulation = {
 			simulationId: DRAFT_ID,
 			passed: true,

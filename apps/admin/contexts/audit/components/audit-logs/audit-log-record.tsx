@@ -49,7 +49,7 @@ function describeLocation(record: Pick<HttpAuditLogDetail, "geoCountry" | "geoRe
  * One complete audit record — presentational: the caller fetched it. Who acted
  * (and who was really acting, under impersonation), when, from which device
  * and where, with which credential, what was sent and what came back. Ids link
- * back to the table filtered by that actor / organization / correlation id.
+ * back to the table filtered by that actor / tenant / correlation id.
  */
 export function AuditLogRecord({ record, layout }: { readonly record: HttpAuditLogDetail; readonly layout: AuditRecordLayout }): React.JSX.Element {
 	const software: string | null = describeClientSoftware(record);
@@ -71,6 +71,9 @@ export function AuditLogRecord({ record, layout }: { readonly record: HttpAuditL
 				<RecordField label="Impersonation session" mono>
 					{orDash(record.impersonationSessionId)}
 				</RecordField>
+				<RecordField label="Support grant" mono>
+					{orDash(record.supportAccessGrantId)}
+				</RecordField>
 				<RecordField label="Credential">
 					<AuditAuthMethodBadge authMethod={record.authMethod} />
 				</RecordField>
@@ -80,12 +83,12 @@ export function AuditLogRecord({ record, layout }: { readonly record: HttpAuditL
 				<RecordField label="POS terminal" mono>
 					{orDash(record.terminalId)}
 				</RecordField>
-				<RecordField label="Organization">
-					{record.organization === null ? (
+				<RecordField label="Tenant">
+					{record.tenant === null ? (
 						NOT_RECORDED
 					) : (
-						<Link href={auditLogListHref({ organizationId: record.organization.id })} className="text-primary hover:underline">
-							{record.organization.name ?? record.organization.id}
+						<Link href={auditLogListHref({ tenantId: record.tenant.id })} className="text-primary hover:underline">
+							{record.tenant.name ?? record.tenant.id}
 						</Link>
 					)}
 				</RecordField>

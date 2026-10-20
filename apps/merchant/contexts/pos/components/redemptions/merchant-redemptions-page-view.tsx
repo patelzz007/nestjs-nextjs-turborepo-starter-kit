@@ -1,6 +1,6 @@
 "use client";
 
-import { MerchantCapabilityGate } from "@/contexts/organizations";
+import { MerchantCapabilityGate } from "@/contexts/tenancy";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import {
 	MERCHANT_REDEMPTIONS_LOADING_LABELS,
@@ -14,7 +14,7 @@ import { StatCard } from "@workspace/ui/components/stat-card";
 import { RedemptionsPager } from "@/contexts/pos/components/redemptions/redemptions-pager";
 import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal, readPaginatedTotalPages } from "@workspace/client/lib/api/envelope";
 import { useActiveLocationFilter } from "@/features/tenant-context/facade";
-import { prefetchForLocation, type LocationScopedPrefetch } from "@/contexts/organizations";
+import { prefetchForLocation, type LocationScopedPrefetch } from "@/contexts/tenancy";
 import type { DayWindow } from "@/contexts/pos/lib/redemptions/today-window";
 import { REDEMPTIONS_URL_STATE, toRedemptionsDayCountQuery, toRedemptionsQuery } from "@/contexts/pos/url-state/redemptions";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
@@ -32,7 +32,7 @@ import { CalendarClock, Receipt, ScanLine } from "lucide-react";
 import * as React from "react";
 
 export interface MerchantRedemptionsPageViewProps {
-	readonly orgSlug: string;
+	readonly tenantSlug: string;
 	/** The page the server prefetched, bound to the store filter AND the URL state it was fetched for. */
 	readonly initialRedemptions?: LocationScopedPrefetch<PrefetchedQuery<Envelope<MerchantRedemptionListItem[]>>> | undefined;
 	/** "Today" in the stores' time zone, decided by the server (so server render and hydration agree). */
@@ -50,7 +50,7 @@ export function MerchantRedemptionsPageView(props: MerchantRedemptionsPageViewPr
 	);
 }
 
-function MerchantRedemptionsPageViewContent({ orgSlug, initialRedemptions, today, initialTodayCount }: MerchantRedemptionsPageViewProps): React.JSX.Element {
+function MerchantRedemptionsPageViewContent({ tenantSlug, initialRedemptions, today, initialTodayCount }: MerchantRedemptionsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const { locationId } = useActiveLocationFilter();
 
@@ -60,7 +60,7 @@ function MerchantRedemptionsPageViewContent({ orgSlug, initialRedemptions, today
 	// Seed only with the page the server fetched for this exact store AND URL state — never another store's
 	// rows, nor another page's, under this key.
 	const prefetchedPage = prefetchedDataFor(prefetchForLocation(initialRedemptions, locationId), REDEMPTIONS_URL_STATE.serialize(urlState));
-	const redemptionsQuery = api.organizations.redemptions.useQuery(toRedemptionsQuery(orgSlug, locationId, urlState), initialDataOption(prefetchedPage));
+	const redemptionsQuery = api.tenants.redemptions.useQuery(toRedemptionsQuery(tenantSlug, locationId, urlState), initialDataOption(prefetchedPage));
 	const rows: readonly MerchantRedemptionListItem[] = redemptionsQuery.data?.data ?? [];
 	const isLoading = redemptionsQuery.isLoading;
 	const meta = redemptionsQuery.data?.meta;
@@ -82,8 +82,8 @@ function MerchantRedemptionsPageViewContent({ orgSlug, initialRedemptions, today
 	}, [updateUrlState, urlState]);
 
 	// Counted by the API over the whole day (every page), never from the rows on screen.
-	const todayQuery = api.organizations.redemptions.useQuery(
-		toRedemptionsDayCountQuery(orgSlug, locationId, today),
+	const todayQuery = api.tenants.redemptions.useQuery(
+		toRedemptionsDayCountQuery(tenantSlug, locationId, today),
 		initialDataOption(prefetchForLocation(initialTodayCount, locationId)),
 	);
 	const todayData = todayQuery.data;

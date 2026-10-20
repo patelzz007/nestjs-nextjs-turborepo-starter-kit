@@ -1,6 +1,6 @@
 "use client";
 
-import { orgRoutes, ROUTES } from "@/lib/routes";
+import { tenantRoutes, ROUTES } from "@/lib/routes";
 import { resolveAuthErrorMessage } from "@workspace/client/lib/api/error-messages";
 import { getEnrollmentRedirectPath } from "@workspace/client/lib/contexts/identity/edge/restricted-session";
 import { markEnrollmentMessage } from "@workspace/client/lib/contexts/identity/session/enrollment-message";
@@ -9,13 +9,13 @@ import { passwordStrength } from "@workspace/client/lib/contexts/identity/passwo
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import {
 	LIST_SLOT_INDEX,
-	OrganizationTeamInviteRegisterAcceptSchema,
+	TenantTeamInviteRegisterAcceptSchema,
 	PLATFORM_DISPLAY_REGION,
 	type ApiResponseMeta,
 	type LoginClientResponse,
 	type LoginResponse,
-	type OrganizationMembershipRole,
-	type OrganizationTeamInvitePreview,
+	type MembershipRole,
+	type TenantTeamInvitePreview,
 } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { cn } from "@workspace/ui/lib/core/utils";
@@ -33,8 +33,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Suspense, useCallback, useMemo, useState, type ChangeEvent, type JSX, type SyntheticEvent } from "react";
 
-import { TeamInvitePageFrame } from "@/contexts/organizations/components/team-invite/team-invite-page-frame";
-import { TEAM_INVITE_LOADING_LABELS, TeamInviteCardSkeleton, TeamInvitePreviewSkeleton } from "@/contexts/organizations/components/team-invite/team-invite-skeletons";
+import { TeamInvitePageFrame } from "@/contexts/tenancy/components/team-invite/team-invite-page-frame";
+import { TEAM_INVITE_LOADING_LABELS, TeamInviteCardSkeleton, TeamInvitePreviewSkeleton } from "@/contexts/tenancy/components/team-invite/team-invite-skeletons";
 import { TEAM_INVITE_PREVIEW_STALE_TIME_MS, retryTransientFailures } from "@/lib/query/query-policy";
 import {
 	isCompleteVerificationCode,
@@ -42,9 +42,9 @@ import {
 	sanitizeVerificationCode,
 	TEAM_INVITE_PREVIEW_QUERY_SCOPE,
 	VERIFICATION_CODE_LENGTH,
-} from "@/contexts/organizations/lib/team-invite/invite-form";
+} from "@/contexts/tenancy/lib/team-invite/invite-form";
 
-const ROLE_LABELS: Readonly<Record<OrganizationMembershipRole, string>> = {
+const ROLE_LABELS: Readonly<Record<MembershipRole, string>> = {
 	OWNER: "Owner",
 	ADMIN: "Admin",
 	MEMBER: "Member",
@@ -52,7 +52,7 @@ const ROLE_LABELS: Readonly<Record<OrganizationMembershipRole, string>> = {
 	CASHIER: "Cashier",
 };
 
-function formatLocationSummary(preview: OrganizationTeamInvitePreview): string {
+function formatLocationSummary(preview: TenantTeamInvitePreview): string {
 	if (preview.locationScopeType === "ALL_LOCATIONS") {
 		return "All locations";
 	}
@@ -68,7 +68,7 @@ function formatExpiryDate(expiresAt: number): string {
 	return formatEpochMs(expiresAt, "date", PLATFORM_DISPLAY_REGION);
 }
 
-function organizationInitials(displayName: string): string {
+function tenantInitials(displayName: string): string {
 	const words = displayName
 		.trim()
 		.split(/\s+/)
@@ -119,7 +119,7 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 	const [loginVerificationId, setLoginVerificationId] = useState<string | null>(null);
 	const [loginVerificationMessage, setLoginVerificationMessage] = useState<string | null>(null);
 	const [verificationCode, setVerificationCode] = useState("");
-	const [joinedOrganizationSlug, setJoinedOrganizationSlug] = useState<string | null>(null);
+	const [joinedTenantSlug, setJoinedTenantSlug] = useState<string | null>(null);
 
 	const strength = useMemo(() => passwordStrength(password), [password]);
 
@@ -127,26 +127,26 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 	// sent as POST by the API so the token stays out of URLs and logs.
 	const previewQuery = useQuery({
 		queryKey: [...TEAM_INVITE_PREVIEW_QUERY_SCOPE, previewInstanceId],
-		queryFn: async (): Promise<OrganizationTeamInvitePreview> => (await api.organizations.validateTeamInvite.mutate({ token })).data,
+		queryFn: async (): Promise<TenantTeamInvitePreview> => (await api.tenants.validateTeamInvite.mutate({ token })).data,
 		staleTime: TEAM_INVITE_PREVIEW_STALE_TIME_MS,
 		gcTime: 0,
 		retry: retryTransientFailures,
 	});
-	const preview: OrganizationTeamInvitePreview | null = previewQuery.data ?? null;
+	const preview: TenantTeamInvitePreview | null = previewQuery.data ?? null;
 	const loadError: string | null = previewQuery.error === null ? null : resolveTeamInviteFormError(previewQuery.error);
 
 	const navigateAfterJoin = useCallback(
-		(organizationSlug: string): void => {
+		(tenantSlug: string): void => {
 			toastMessage.success({ title: "Welcome to the team" });
-			router.replace(orgRoutes(organizationSlug).dashboard);
+			router.replace(tenantRoutes(tenantSlug).dashboard);
 			router.refresh();
 		},
 		[router],
 	);
 
-	const acceptMutation = api.organizations.acceptTeamInvite.useMutation({
+	const acceptMutation = api.tenants.acceptTeamInvite.useMutation({
 		onSuccess: (response): void => {
-			navigateAfterJoin(response.data.organizationSlug);
+			navigateAfterJoin(response.data.tenantSlug);
 		},
 		onError: (error): void => {
 			toastMessage.error({ title: resolveAuthErrorMessage(error) });
@@ -157,12 +157,12 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 		(loginResponse: LoginResponse, answeredBy: ApiResponseMeta): void => {
 			authLogin(loginResponse.user, answeredBy);
 
-			const organizationSlug = joinedOrganizationSlug ?? preview?.organizationSlug;
-			if (organizationSlug !== undefined && organizationSlug.length > 0) {
-				navigateAfterJoin(organizationSlug);
+			const tenantSlug = joinedTenantSlug ?? preview?.tenantSlug;
+			if (tenantSlug !== undefined && tenantSlug.length > 0) {
+				navigateAfterJoin(tenantSlug);
 			}
 		},
-		[authLogin, joinedOrganizationSlug, navigateAfterJoin, preview?.organizationSlug],
+		[authLogin, joinedTenantSlug, navigateAfterJoin, preview?.tenantSlug],
 	);
 
 	const handleAuthLoginResponse = useCallback(
@@ -173,7 +173,7 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 				setVerificationCode("");
 				setFormError(null);
 				if (preview !== null) {
-					setJoinedOrganizationSlug(preview.organizationSlug);
+					setJoinedTenantSlug(preview.tenantSlug);
 				}
 				return;
 			}
@@ -183,8 +183,8 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 					authLogin(loginResponse.user, answeredBy);
 				}
 				markEnrollmentMessage(loginResponse.message);
-				const organizationSlug = joinedOrganizationSlug ?? loginResponse.organizationSlug ?? preview?.organizationSlug;
-				router.replace(getEnrollmentRedirectPath("merchant", loginResponse.enrollmentReason, organizationSlug));
+				const tenantSlug = joinedTenantSlug ?? loginResponse.tenantSlug ?? preview?.tenantSlug;
+				router.replace(getEnrollmentRedirectPath("merchant", loginResponse.enrollmentReason, tenantSlug));
 				router.refresh();
 				return;
 			}
@@ -196,10 +196,10 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 
 			completeAuthenticatedLogin(loginResponse, answeredBy);
 		},
-		[authLogin, completeAuthenticatedLogin, joinedOrganizationSlug, preview, router],
+		[authLogin, completeAuthenticatedLogin, joinedTenantSlug, preview, router],
 	);
 
-	const registerMutation = api.organizations.registerAndAcceptTeamInvite.useMutation({
+	const registerMutation = api.tenants.registerAndAcceptTeamInvite.useMutation({
 		onSuccess: (response): void => {
 			handleAuthLoginResponse(response.data, response.meta);
 		},
@@ -230,7 +230,7 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 			event.preventDefault();
 			setFormError(null);
 
-			const parsed = OrganizationTeamInviteRegisterAcceptSchema.safeParse({
+			const parsed = TenantTeamInviteRegisterAcceptSchema.safeParse({
 				token,
 				fullName,
 				password,
@@ -321,11 +321,11 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 								<div
 									className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-lg font-semibold text-primary ring-1 ring-primary/15"
 									aria-hidden="true">
-									{organizationInitials(preview.organizationDisplayName)}
+									{tenantInitials(preview.tenantDisplayName)}
 								</div>
 								<div className="space-y-1">
-									<h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">Join {preview.organizationDisplayName}</h1>
-									<p className="text-sm text-muted-foreground">You&apos;ve been invited to collaborate on this organization.</p>
+									<h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">Join {preview.tenantDisplayName}</h1>
+									<p className="text-sm text-muted-foreground">You&apos;ve been invited to collaborate on this tenant.</p>
 								</div>
 							</div>
 
@@ -447,7 +447,7 @@ function InvalidInviteCard(): JSX.Element {
 			<div className="space-y-4 p-6 sm:p-8">
 				<div className="space-y-2">
 					<h1 className="text-xl font-semibold tracking-tight text-foreground">Invalid invitation link</h1>
-					<p className="text-sm text-muted-foreground">This link is missing a token or has already been used. Ask your organization admin to send a new team invitation.</p>
+					<p className="text-sm text-muted-foreground">This link is missing a token or has already been used. Ask your tenant admin to send a new team invitation.</p>
 				</div>
 				<Link href={ROUTES.home} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
 					Back home

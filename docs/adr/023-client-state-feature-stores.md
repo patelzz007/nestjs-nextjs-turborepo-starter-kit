@@ -121,7 +121,7 @@ React.
   - The merchant's store filter is the `tenant-context` feature store. Its state is only the
     member's choice. The accessible stores come from the organization-context query, the URL
     owns the organization, and a cookie effect mirrors the choice so server pages prefetch the
-    same store ([Frontend routing](../technical/frontend/routing.md#organization-and-store-context-merchant)).
+    same store ([Frontend routing](../technical/frontend/routing.md#tenant-and-store-context-merchant)).
   - The client auth singleton (`useAuthStore`, `lib/auth/session/store.ts`) became the
     shared `auth` feature (`packages/client/src/lib/features/auth`). The store holds only
     the session status (`unknown` / `authenticated` with subject id and scope / `signed-out`

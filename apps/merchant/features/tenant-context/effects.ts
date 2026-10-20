@@ -4,7 +4,7 @@ import type { FeatureEffect, FeatureEffectContext } from "@workspace/client/lib/
 import type { TenantContextAction } from "./actions";
 import type { TenantContextState } from "./state";
 
-/** Writes the organization's store-choice cookie (`organizationLocationId.<orgSlug>`) — the browser implementation lives in `lib/org/location.ts`. */
+/** Writes the tenant's store-choice cookie (`tenantLocationId.<orgSlug>`) — the browser implementation lives in `lib/org/location.ts`. */
 export interface LocationCookieWriter {
 	readonly write: (locationId: string) => void;
 	readonly clear: () => void;
@@ -48,13 +48,13 @@ export function createLocationCookieEffect(cookie: LocationCookieWriter): Featur
 
 /**
  * After the API refused a store, the member's scope has changed since the
- * organization context loaded: re-read it (`refreshOrganizationContext`), so
+ * tenant context loaded: re-read it (`refreshTenantContext`), so
  * the switcher and the selectors work from the current accessible stores.
  */
-export function createScopeRefreshEffect(refreshOrganizationContext: () => void): FeatureEffect<TenantContextState, TenantContextAction> {
+export function createScopeRefreshEffect(refreshTenantContext: () => void): FeatureEffect<TenantContextState, TenantContextAction> {
 	return (action: TenantContextAction): void => {
 		if (action.type === "[ Tenant Context ] Location Rejected") {
-			refreshOrganizationContext();
+			refreshTenantContext();
 		}
 	};
 }

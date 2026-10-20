@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * Longest email address the platform stores — matches the `VARCHAR(100)`
- * email columns (`users.email`, `organization_invitations.email`), so an
+ * email columns (`users.email`, `tenant_invitations.email`), so an
  * over-long address is a 400 at the boundary, never a database error.
  */
 export const EMAIL_ADDRESS_MAX_LENGTH = 100;

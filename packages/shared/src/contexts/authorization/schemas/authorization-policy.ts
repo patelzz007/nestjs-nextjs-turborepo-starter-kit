@@ -1,11 +1,6 @@
 import { z } from "zod";
 
-import {
-	AuthorizationPolicyScopeSchema,
-	AuthorizationPolicyStatusSchema,
-	OrganizationMembershipRoleSchema,
-	PolicyBuilderPayloadSchema,
-} from "../../organizations/schemas/organization";
+import { AuthorizationPolicyScopeSchema, AuthorizationPolicyStatusSchema, MembershipRoleSchema, PolicyBuilderPayloadSchema } from "../../tenancy/schemas/tenant";
 
 /** Cedar authorization request entity bundle. */
 export const CedarAuthorizationRequestSchema = z
@@ -31,14 +26,14 @@ export const CedarAuthorizationDecisionSchema = z
 export type CedarAuthorizationDecision = z.output<typeof CedarAuthorizationDecisionSchema>;
 
 /**
- * `POST /policies/drafts` body. A `TENANT` draft names the organization it
+ * `POST /policies/drafts` body. A `TENANT` draft names the tenant it
  * governs; platform scopes (`PLATFORM_GUARDRAIL`, `PLATFORM`) apply to every
- * organization and must not name one.
+ * tenant and must not name one.
  */
 export const CreatePolicyDraftSchema = z
 	.object({
 		scope: AuthorizationPolicyScopeSchema,
-		organizationId: z.uuid().optional(),
+		tenantId: z.uuid().optional(),
 		name: z.string().min(1).max(120),
 		description: z.string().max(2000).optional(),
 		builderPayload: PolicyBuilderPayloadSchema,
@@ -46,11 +41,11 @@ export const CreatePolicyDraftSchema = z
 	.strict()
 	.superRefine((draft, context): void => {
 		const isTenantScope = draft.scope === AuthorizationPolicyScopeSchema.enum.TENANT;
-		if (isTenantScope && draft.organizationId === undefined) {
-			context.addIssue({ code: "custom", path: ["organizationId"], message: "is required for a TENANT policy draft" });
+		if (isTenantScope && draft.tenantId === undefined) {
+			context.addIssue({ code: "custom", path: ["tenantId"], message: "is required for a TENANT policy draft" });
 		}
-		if (!isTenantScope && draft.organizationId !== undefined) {
-			context.addIssue({ code: "custom", path: ["organizationId"], message: "must be omitted for a platform-scope policy draft" });
+		if (!isTenantScope && draft.tenantId !== undefined) {
+			context.addIssue({ code: "custom", path: ["tenantId"], message: "must be omitted for a platform-scope policy draft" });
 		}
 	});
 
@@ -62,9 +57,9 @@ export type CedarDecision = z.output<typeof CedarDecisionSchema>;
 
 /** One (principal, action) whose decision differs between the published policy set and the draft. */
 export const PolicyDecisionChangeSchema = z.object({
-	organizationId: z.uuid(),
+	tenantId: z.uuid(),
 	userId: z.uuid(),
-	membershipRole: OrganizationMembershipRoleSchema,
+	membershipRole: MembershipRoleSchema,
 	action: z.string(),
 	before: CedarDecisionSchema,
 	after: CedarDecisionSchema,
@@ -95,7 +90,7 @@ export type PolicySimulationResult = z.output<typeof PolicySimulationResultSchem
 
 export const PublishedPolicyBundleSchema = z
 	.object({
-		organizationId: z.uuid().nullable(),
+		tenantId: z.uuid().nullable(),
 		scope: AuthorizationPolicyScopeSchema,
 		version: z.number().int().positive(),
 		cedarSource: z.string(),

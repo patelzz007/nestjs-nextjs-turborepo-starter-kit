@@ -11,6 +11,9 @@ import {
 	browserJob,
 	CI_BUILD_ENV,
 	databaseSteps,
+	MULTI_TENANT_E2E_ENV,
+	SINGLE_TENANT_E2E_ENV,
+	BROWSER_TENANCY_ENV,
 	staticSteps,
 	THROWAWAY_DATABASE_SUFFIX,
 	throwawayDatabaseUrl,
@@ -73,6 +76,10 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 			"pnpm --filter @workspace/api db:check-drift",
 			"pnpm --filter @workspace/api db:check-seed-coverage",
 			"pnpm --filter @workspace/api test:e2e",
+			"pnpm --filter @workspace/api db:check-tenant-integrity",
+			"pnpm --filter @workspace/api test:e2e:tenancy",
+			"pnpm --filter @workspace/api test:e2e:tenancy:single",
+			"pnpm --filter @workspace/api test:e2e:rls",
 			"pnpm --filter @workspace/analytics-consumer test:e2e",
 		]) {
 			expect(commands).toContain(expected);
@@ -120,6 +127,21 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 		expect(ids.indexOf("e2e:seed-coverage")).toBeLessThan(ids.indexOf("e2e:api"));
 		expect(WORKFLOW.indexOf("db:check-seed-coverage")).toBeGreaterThan(WORKFLOW.indexOf("pnpm db:seed -- --scenario development"));
 		expect(WORKFLOW.indexOf("db:check-seed-coverage")).toBeLessThan(WORKFLOW.indexOf("pnpm --filter @workspace/api test:e2e"));
+	});
+
+	it("runs the full suite multi-tenant and the single-tenant suite on the fixture's Tenant A, as the workflow does (MT-70)", () => {
+		const steps = databaseSteps({ databaseUrl: "postgresql://u:p@h/d", shadowDatabaseUrl: "s", consumerLoginUrl: undefined, runId: "1" });
+		const envOf = (id) => steps.find((step) => step.id === id)?.env ?? {};
+		for (const id of ["e2e:api", "e2e:tenancy", "e2e:rls"]) {
+			expect(envOf(id)).toMatchObject(MULTI_TENANT_E2E_ENV);
+			expect(envOf(id).DEFAULT_TENANT_ID).toBeUndefined();
+		}
+		for (const id of ["e2e:single-tenancy", "e2e:single-rls"]) {
+			expect(envOf(id)).toMatchObject(SINGLE_TENANT_E2E_ENV);
+		}
+		expect(WORKFLOW).toContain("tenancy-mode: multi");
+		expect(WORKFLOW).toContain(`default-tenant-id: ${SINGLE_TENANT_E2E_ENV.DEFAULT_TENANT_ID}`);
+		expect(WORKFLOW).toContain(`default-tenant-id: ${BROWSER_TENANCY_ENV.DEFAULT_TENANT_ID}`);
 	});
 
 	it("omits the consumer suite when no consumer login is configured", () => {

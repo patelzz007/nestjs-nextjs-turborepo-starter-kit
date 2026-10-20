@@ -52,7 +52,7 @@ every endpoint with a real request/response is in the
   | App | Who may sign in | Otherwise |
   | --- | --- | --- |
   | Admin | SuperAdmins and users holding an `ADMIN_DASHBOARD` permission | `401 INVALID_CREDENTIALS` — the same answer as a wrong password, so the admin login reveals nothing |
-  | Merchant | users with an ACTIVE membership in an organization that has a merchant profile, holders of `MANAGE:MERCHANT_ORG`, or anyone with a **pending, unexpired team invite** for their email (so they can sign in and accept it) | `403 MERCHANT_ACCESS_REQUIRED` |
+  | Merchant | users with an ACTIVE membership in a tenant that has a merchant profile, holders of `MANAGE:MERCHANT_ORG`, or anyone with a **pending, unexpired team invite** for their email (so they can sign in and accept it) | `403 MERCHANT_ACCESS_REQUIRED` |
   | Web | any active account | — |
 
   Signing in to one app never signs you in to another: each has its own cookie pair.
@@ -172,9 +172,9 @@ instant "reset MFA" button. Every transition writes `MfaRecoveryAuditLog` (appen
 
 ## Support access
 
-Just-in-time access for support staff to one organization: a SuperAdmin requests a grant (reason,
-ticket, `READ_ONLY` or `WRITE_ELEVATED`, 15–480 minutes); only an active OWNER of that organization
-approves; a SuperAdmin revokes. Each transition is a compare-and-set plus an organization audit row,
+Just-in-time access for support staff to one tenant: a SuperAdmin requests a grant (reason,
+ticket, `READ_ONLY` or `WRITE_ELEVATED`, 15–480 minutes); only an active OWNER of that tenant
+approves; a SuperAdmin revokes. Each transition is a compare-and-set plus a tenant audit row,
 under its own allow-listed system operation (`support_access.*`).
 
 ## Dos and don'ts
@@ -182,7 +182,7 @@ under its own allow-listed system operation (`support_access.*`).
 - ✅ Read the current user with `@GetUser()`; never trust ids from the body for "who am I".
 - ✅ Bump `tokenVersion` (via the existing services) whenever you change what a user may do.
 - ✅ Put new auth routes behind the strict throttler and keep responses enumeration-safe.
-- ❌ Never put permissions, roles or organization lists in a JWT.
+- ❌ Never put permissions, roles or tenant lists in a JWT.
 - ❌ Never add a bypass of the restricted-session rule or of the MFA step-up for convenience.
 - ❌ Never log tokens, codes, secrets or full emails (the logger masks addresses).
 - ❌ Never let a client flag pick the token transport, and never read a cookie for client type

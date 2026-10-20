@@ -18,7 +18,7 @@ A request for payment sent to a customer after delivery.
 _Avoid_: Bill, payment request
 
 **Customer**:
-A person or organization that places orders.
+A person or tenant that places orders.
 _Avoid_: Client, buyer, account
 ```
 

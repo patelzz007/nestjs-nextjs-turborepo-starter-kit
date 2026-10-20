@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { CreateFileUploadUrlSchema } from "../storage";
 
-const ORGANIZATION_ID = "0b6a3c55-2f1d-4e8a-a7b9-5c4d3e2f1a10";
+const TENANT_ID = "0b6a3c55-2f1d-4e8a-a7b9-5c4d3e2f1a10";
 const CHECKSUM = "a".repeat(64);
 
 function ticket(category: "STORE_LOGO" | "STORE_BANNER" | "REWARD_IMAGE", assetType?: "LOGO" | "BANNER"): object {
 	return {
 		category,
-		organizationId: ORGANIZATION_ID,
+		tenantId: TENANT_ID,
 		fileName: "logo.png",
 		mimeType: "image/png",
 		sizeBytes: 2048,

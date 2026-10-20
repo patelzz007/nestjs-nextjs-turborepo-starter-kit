@@ -394,11 +394,11 @@ describe("LoginForm restricted enrollment", () => {
 		expect(window.sessionStorage.getItem("auth:enrollment-message")).toBe("Verify your email to continue");
 	});
 
-	it("routes a merchant to the organization's account page and refreshes the router", async () => {
+	it("routes a merchant to the tenant's account page and refreshes the router", async () => {
 		const user = userFixture();
 		mocks.merchantLogin.mockResolvedValue(
 			envelopeFixture<LoginClientResponse>(
-				{ requiresEnrollment: true, enrollmentReason: "mfa_enrollment", message: "Set up two-factor authentication", user, organizationSlug: "acme-store" },
+				{ requiresEnrollment: true, enrollmentReason: "mfa_enrollment", message: "Set up two-factor authentication", user, tenantSlug: "acme-store" },
 				LOGIN_META,
 			),
 		);
@@ -407,7 +407,7 @@ describe("LoginForm restricted enrollment", () => {
 		submitCredentials();
 
 		await waitFor((): void => {
-			expect(mocks.push).toHaveBeenCalledWith("/orgs/acme-store/account");
+			expect(mocks.push).toHaveBeenCalledWith("/t/acme-store/account");
 		});
 		expect(mocks.refresh).toHaveBeenCalledTimes(1);
 		expect(mocks.merchantLogin).toHaveBeenCalledWith({ email: EMAIL, password: PASSWORD });

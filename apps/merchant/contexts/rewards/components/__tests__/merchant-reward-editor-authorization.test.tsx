@@ -12,8 +12,8 @@ import { contextQueryState, TWO_STORE_CONTEXT } from "@/test/tenant-context";
 import { MERCHANT_REWARD_EDITOR_LOADING_LABELS, MERCHANT_REWARD_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
 import { busyRegionAnnouncements } from "@/test/skeleton";
 import { rewardFixture } from "@/test/rewards";
-import { orgRoutes } from "@/lib/routes";
-import { epochMs, type OrganizationMembershipRole, type RewardResponse } from "@workspace/shared";
+import { tenantRoutes } from "@/lib/routes";
+import { epochMs, type MembershipRole, type RewardResponse } from "@workspace/shared";
 
 const REWARD_ID = "0b6e2c1a-3d4f-4a5b-8c9d-1e2f3a4b5c6d";
 
@@ -25,7 +25,7 @@ const { rewardQuery, rewardsMutation } = vi.hoisted(() => ({
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
 		api: {
-			organizations: {
+			tenants: {
 				rewards: {
 					get: { useQuery: rewardQuery },
 					create: { useMutation: rewardsMutation },
@@ -80,7 +80,7 @@ function rewardReturns(reward: RewardResponse): void {
 	rewardQuery.mockReturnValue({ data: { data: reward }, isSuccess: true, isError: false, error: null, refetch: vi.fn() });
 }
 
-function renderWithQueryClient(ui: React.ReactElement, role: OrganizationMembershipRole | undefined, isLoading = false): void {
+function renderWithQueryClient(ui: React.ReactElement, role: MembershipRole | undefined, isLoading = false): void {
 	renderWithAuthorization(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>, { role, isLoading });
 }
 
@@ -99,7 +99,7 @@ afterEach((): void => {
 
 describe("MerchantCreateRewardPageView authorization", () => {
 	it("renders the editor with merchant:manage_rewards, offering a private draft and a review submission", () => {
-		renderWithQueryClient(<MerchantCreateRewardPageView orgSlug={TEST_ORG_SLUG} defaultCategory="cafe" />, "OWNER");
+		renderWithQueryClient(<MerchantCreateRewardPageView tenantSlug={TEST_ORG_SLUG} defaultCategory="cafe" />, "OWNER");
 
 		expect(screen.getByRole("heading", { name: "New reward" })).toBeTruthy();
 		expect(screen.getByRole("button", { name: "Save as draft" })).toBeTruthy();
@@ -108,7 +108,7 @@ describe("MerchantCreateRewardPageView authorization", () => {
 	});
 
 	it("renders the access-denied page and never mounts the create mutation without it", () => {
-		renderWithQueryClient(<MerchantCreateRewardPageView orgSlug={TEST_ORG_SLUG} defaultCategory="cafe" />, "CASHIER");
+		renderWithQueryClient(<MerchantCreateRewardPageView tenantSlug={TEST_ORG_SLUG} defaultCategory="cafe" />, "CASHIER");
 
 		expect(screen.getByText("You don't have access to this page")).toBeTruthy();
 		expect(screen.queryByRole("heading", { name: "New reward" })).toBeNull();
@@ -116,7 +116,7 @@ describe("MerchantCreateRewardPageView authorization", () => {
 	});
 
 	it("renders the editor's skeleton while the membership resolves", () => {
-		renderWithQueryClient(<MerchantCreateRewardPageView orgSlug={TEST_ORG_SLUG} defaultCategory="cafe" />, undefined, true);
+		renderWithQueryClient(<MerchantCreateRewardPageView tenantSlug={TEST_ORG_SLUG} defaultCategory="cafe" />, undefined, true);
 
 		expect(busyRegionAnnouncements()).toEqual([MERCHANT_REWARD_EDITOR_LOADING_LABELS.loading]);
 	});
@@ -124,7 +124,7 @@ describe("MerchantCreateRewardPageView authorization", () => {
 
 describe("MerchantEditRewardPageView authorization", () => {
 	it("lets managers edit a draft", () => {
-		renderWithQueryClient(<MerchantEditRewardPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, "OWNER");
+		renderWithQueryClient(<MerchantEditRewardPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, "OWNER");
 
 		expect(screen.getByRole("heading", { name: "Edit reward" })).toBeTruthy();
 		expect(screen.getByText("reward fields")).toBeTruthy();
@@ -132,7 +132,7 @@ describe("MerchantEditRewardPageView authorization", () => {
 	});
 
 	it("denies the editor without merchant:manage_rewards — viewing a reward is its own page", () => {
-		renderWithQueryClient(<MerchantEditRewardPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, "CASHIER");
+		renderWithQueryClient(<MerchantEditRewardPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, "CASHIER");
 
 		expect(screen.getByText("You don't have access to this page")).toBeTruthy();
 		expect(screen.queryByText("reward fields")).toBeNull();
@@ -142,16 +142,16 @@ describe("MerchantEditRewardPageView authorization", () => {
 
 describe("MerchantRewardDetailPageView authorization", () => {
 	it("offers a manager the draft's review submission and its editor", () => {
-		renderWithQueryClient(<MerchantRewardDetailPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, "OWNER");
+		renderWithQueryClient(<MerchantRewardDetailPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, "OWNER");
 
 		expect(screen.getByRole("heading", { level: 1, name: "Free latte" })).toBeTruthy();
 		expect(screen.getByRole("button", { name: "Submit for review" })).toBeTruthy();
-		expect(screen.getByRole("link", { name: "Edit reward" }).getAttribute("href")).toBe(orgRoutes(TEST_ORG_SLUG).rewards.edit(REWARD_ID));
+		expect(screen.getByRole("link", { name: "Edit reward" }).getAttribute("href")).toBe(tenantRoutes(TEST_ORG_SLUG).rewards.edit(REWARD_ID));
 	});
 
 	it("keeps a reward in review editable but not submittable again", () => {
 		rewardReturns(rewardWithStatus("PENDING_REVIEW"));
-		renderWithQueryClient(<MerchantRewardDetailPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, "OWNER");
+		renderWithQueryClient(<MerchantRewardDetailPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, "OWNER");
 
 		expect(screen.getByRole("link", { name: "Edit reward" })).toBeTruthy();
 		expect(screen.queryByRole("button", { name: "Submit for review" })).toBeNull();
@@ -159,14 +159,14 @@ describe("MerchantRewardDetailPageView authorization", () => {
 
 	it("offers no edit or submission for a live reward", () => {
 		rewardReturns(rewardWithStatus("PUBLISHED"));
-		renderWithQueryClient(<MerchantRewardDetailPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, "OWNER");
+		renderWithQueryClient(<MerchantRewardDetailPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, "OWNER");
 
 		expect(screen.queryByRole("link", { name: "Edit reward" })).toBeNull();
 		expect(screen.queryByRole("button", { name: "Submit for review" })).toBeNull();
 	});
 
 	it("shows the reward without its actions to a role that can only view rewards", () => {
-		renderWithQueryClient(<MerchantRewardDetailPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, "CASHIER");
+		renderWithQueryClient(<MerchantRewardDetailPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, "CASHIER");
 
 		expect(screen.getByRole("heading", { level: 1, name: "Free latte" })).toBeTruthy();
 		expect(screen.queryByRole("link", { name: "Edit reward" })).toBeNull();
@@ -174,14 +174,14 @@ describe("MerchantRewardDetailPageView authorization", () => {
 	});
 
 	it("denies the page without merchant:view_rewards", () => {
-		renderWithQueryClient(<MerchantRewardDetailPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, "MEMBER");
+		renderWithQueryClient(<MerchantRewardDetailPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, "MEMBER");
 
 		expect(screen.getByText("You don't have access to this page")).toBeTruthy();
 		expect(rewardQuery).not.toHaveBeenCalled();
 	});
 
 	it("renders the reward page's skeleton while the membership resolves", () => {
-		renderWithQueryClient(<MerchantRewardDetailPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, undefined, true);
+		renderWithQueryClient(<MerchantRewardDetailPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, undefined, true);
 
 		expect(busyRegionAnnouncements()).toEqual([MERCHANT_REWARD_LOADING_LABELS.loading]);
 	});

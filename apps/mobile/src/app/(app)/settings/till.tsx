@@ -75,6 +75,6 @@ function terminalDetails(terminal: PairedTerminal): DetailItem[] {
 	return [
 		{ label: TILL_COPY.terminalLabel, value: terminal.terminalName },
 		{ label: TILL_COPY.storeLabel, value: terminal.locationName },
-		{ label: TILL_COPY.businessLabel, value: terminal.organizationName },
+		{ label: TILL_COPY.businessLabel, value: terminal.tenantName },
 	];
 }

@@ -19,13 +19,13 @@ const RECORD: DataChangeLogDetail = DataChangeLogDetailSchema.parse({
 	changeSequence: 1,
 	occurredAt: 1_790_000_000_000,
 	transactionId: 5,
-	tableName: "OrganizationTerminal",
+	tableName: "TenantTerminal",
 	operation: "UPDATE",
 	rowId: "term-1",
 	changedColumns: ["last_seen_at"],
 	actorKind: "API_KEY",
 	actor: null,
-	organization: null,
+	tenant: null,
 	apiKeyId: "key-1",
 	systemOperation: null,
 	correlationId: "corr-pos",
@@ -61,7 +61,7 @@ describe("DataChangeDrawer", () => {
 		render(<DataChangeDrawer changeId={CHANGE_ID} onClose={vi.fn()} />, { wrapper: UiKitTestProviders });
 
 		expect(detailQuery).toHaveBeenLastCalledWith({ id: CHANGE_ID }, { enabled: true });
-		expect(screen.getByRole("heading", { name: "OrganizationTerminal" })).toBeTruthy();
+		expect(screen.getByRole("heading", { name: "TenantTerminal" })).toBeTruthy();
 		expect(screen.getAllByText("API key").length).toBeGreaterThan(0);
 		// The job's other changes, joined by its correlation id.
 		expect(changesQuery).toHaveBeenLastCalledWith(expect.objectContaining({ filter: { correlationId: { eq: "corr-pos" } } }), expect.anything());

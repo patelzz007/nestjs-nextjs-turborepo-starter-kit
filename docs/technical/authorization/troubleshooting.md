@@ -19,17 +19,17 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| 403 on **every** request with an `x-organization-id` / `x-store-id` header | The user is not an active member of that organization / store (or the store is inactive / belongs to another org) | Check `OrganizationMembership` / `StoreMembership`. The header is only accepted when proven. |
+| 403 on **every** request with an `x-store-id` header | The user is not an active member of that tenant / store (or the store is inactive / belongs to another org) | Check `TenantMembership` / `StoreMembership`. The header is only accepted when proven. |
 | 403 on a self-service route (change password, 2FA) | `@Authorize` with `resourceId` but no `self()`, or the caller is anonymous | Use `resourceId: self()` |
 | 403 although the role has the permission | a `DENY` override or ACL `DENY` exists | `explain()` shows `source: "override"` or `"acl"` |
-| 403 with an `ORGANIZATION` / `STORE` scoped role | no verified tenant, or the record's tenant attributes were not passed | send the tenant header; pass `resourceAttributes: { organizationId, storeId }` |
+| 403 with an `TENANT` / `STORE` scoped role | no verified tenant, or the record's tenant attributes were not passed | send the tenant header; pass `resourceAttributes: { tenantId, storeId }` |
 | 403 with an `OWN` scoped role on a list | `OWN` grants never satisfy collection-level checks | use `kernel.filter()` for lists; `OWN` applies per record |
-| 403 on an organization member with no roles | membership is not permission | assign a role / store membership role |
+| 403 on a tenant member with no roles | membership is not permission | assign a role / store membership role |
 | 403 from a policy | a DENY policy matched, or ALLOW policies exist and none matched | `explain()` shows `source: "policy"` with the policy id |
 | Merchant cashier gets 403 creating a reward | expected: cashiers are read-only (`MERCHANT_ROLE_CAPABILITIES`) | use an `OWNER` / `ADMIN` account |
-| Merchant `403 ORGANIZATION_ROLE_CAPABILITY_REQUIRED` on team / locations / KYB | the role lacks `merchant:manage_team` / `manage_locations` / `manage_verification` (KYB is owner-only, admins included) | use an account whose role holds it |
-| Merchant `403 ORGANIZATION_ACTION_FORBIDDEN` although the role holds the capability | a tenant Cedar policy narrows it (or the organization has no published tenant policy) | check the organization's published policy versions |
-| Merchant page shows "You don't have access to this page" | `guardOrgPage` denied it on the server: the role lacks the capability in `ORG_PAGE_RULES`, or the URL names an organization you do not belong to | expected; the sidebar hides such pages |
+| Merchant `403 TENANT_ROLE_CAPABILITY_REQUIRED` on team / locations / KYB | the role lacks `merchant:manage_team` / `manage_locations` / `manage_verification` (KYB is owner-only, admins included) | use an account whose role holds it |
+| Merchant `403 TENANT_ACTION_FORBIDDEN` although the role holds the capability | a tenant Cedar policy narrows it (or the tenant has no published tenant policy) | check the tenant's published policy versions |
+| Merchant page shows "You don't have access to this page" | `guardOrgPage` denied it on the server: the role lacks the capability in `ORG_PAGE_RULES`, or the URL names a tenant you do not belong to | expected; the sidebar hides such pages |
 | Admin gets 403 assigning a role | subset rule: the admin does not hold every permission of that role, or they are editing themselves | ask a SuperAdmin, or grant the admin those permissions first |
 | 403 uploading a store logo / KYB document | needs `merchant:manage_locations` (logo, banner — `OWNER` / `ADMIN`) or `merchant:manage_verification` (KYB — `OWNER`) | check the membership role in `MERCHANT_ROLE_CAPABILITIES` |
 
@@ -50,7 +50,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 | `new row violates row-level security policy for table "X"` | the code runs under a user scope but the table needs bypass (e.g. `OutboxEvent`), or the row's tenant does not match | run the write inside a named system operation, or pass the right tenant |
 | A query returns nothing in a background job | no RLS scope → the fail-closed anonymous context | wrap the job in `runWithSystemRlsContext("queue.<your-job>", …)` after registering that name |
 | `System operation not allowlisted: …` | new system-operation name not registered | add it to `src/prisma/system-operation.registry.ts` |
-| `Tenant database access requires organization context` | a scoped user query with no organization in multi-tenant mode | send `x-organization-id`, or use `TenantTransactionService.withTenantTransaction` |
+| `Tenant database access requires tenant context` | a scoped user query with no tenant in multi-tenant mode | call the route under `/tenants/:tenantSlug`, or use `TenantTransactionService.withTenantTransaction` |
 
 ## 4. Reset / seed problems
 
@@ -65,7 +65,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 
 ## 5. FAQ
 
-**Why is there both `Store` and `OrganizationLocation`?**
+**Why is there both `Store` and `TenantLocation`?**
 Locations already carried terminals, rewards and API keys. Each location got a `Store` twin
 (kept in sync automatically) so staff authorization could follow the spec without a risky
 rename. See [tenancy](./tenancy-and-rls.md#1-the-tenant-model).

@@ -3,7 +3,7 @@ title: "API reference — Customer rewards and claims"
 description: "The consumer app's API: browse rewards, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics."
 order: 6
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792368000000
+lastUpdated: 1792454400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -23,7 +23,6 @@ How these endpoints fit together: [Customer claims guide](../../user-guide/05-cu
 Browse published consumer rewards
 
 - **Public** — no session required.
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ConsumerRewardsController_listRewards` · [source](../../../apps/api/src/contexts/rewards/presentation/http/consumer-rewards.controller.ts)
 
@@ -35,7 +34,7 @@ Browse published consumer rewards
 | `limit` | query | integer | no | Page size (default 10, max 100) |
 | `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
 | `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt, expiryDate, title. Default: -createdAt |
-| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: category, city, organizationId |
+| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: category, city, tenantId |
 | `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
 
 **Response 200 OK** (`application/json`) — Paginated marketplace rewards
@@ -62,12 +61,6 @@ Browse published consumer rewards
 | `data[].locationIds` | string (uuid)[] | yes |  |
 | `data[].locationNames` | string[] | no |  |
 | `data[].locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
-| `data[].organizationId` | string (uuid) | yes |  |
-| `data[].organizationLogoSources` | object[] | yes |  |
-| `data[].organizationLogoSources[].url` | string (uri) | yes |  |
-| `data[].organizationLogoSources[].width` | integer | yes |  |
-| `data[].organizationLogoUrl` | string (uri) \| null | yes |  |
-| `data[].organizationName` | string | no |  |
 | `data[].quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data[].quantityReserved` | integer | yes | min -9007199254740991 |
 | `data[].quantityTotal` | integer | yes | min -9007199254740991 |
@@ -85,6 +78,12 @@ Browse published consumer rewards
 | `data[].shareUrl` | string (uri) | no |  |
 | `data[].startDate` | integer \| null | yes |  |
 | `data[].status` | "DRAFT" \| "PENDING_REVIEW" \| "PUBLISHED" \| "EXPIRED" \| "DISABLED" | yes |  |
+| `data[].tenantId` | string (uuid) | yes |  |
+| `data[].tenantLogoSources` | object[] | yes |  |
+| `data[].tenantLogoSources[].url` | string (uri) | yes |  |
+| `data[].tenantLogoSources[].width` | integer | yes |  |
+| `data[].tenantLogoUrl` | string (uri) \| null | yes |  |
+| `data[].tenantName` | string | no |  |
 | `data[].termsConditions` | string \| null | yes |  |
 | `data[].title` | string | yes |  |
 | `data[].updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
@@ -117,15 +116,15 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792435612778,
-      "updatedAt": 1792435613233,
+      "createdAt": 1792520454844,
+      "updatedAt": 1792520455786,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a1557c-ec6c-7c5c-983d-6cd525177f31",
-      "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-      "organizationName": "Brew & Bean KL",
-      "organizationLogoUrl": null,
-      "organizationLogoSources": [],
+      "id": "01a15a8b-82c6-7486-a020-2dc6156d2593",
+      "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+      "tenantName": "Brew & Bean KL",
+      "tenantLogoUrl": null,
+      "tenantLogoSources": [],
       "title": "Free Kopi O with any breakfast set",
       "description": "One free Kopi O when you order any breakfast set at Brew & Bean KL.",
       "rewardType": "FREE_ITEM",
@@ -135,18 +134,18 @@ Response `200 OK` (application/json):
       "category": "cafe",
       "images": [
         {
-          "fileId": "01a1557c-e595-73bc-9e96-5c157329d77c",
-          "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/LARGE/local-public",
+          "fileId": "01a15a8b-7b4f-7637-b0d1-a42f040b6e31",
+          "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/LARGE/local-public",
           "width": 1920,
           "height": 1080,
           "sources": [
             {
               "width": 640,
-              "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/THUMBNAIL/local-public"
+              "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/THUMBNAIL/local-public"
             },
             {
               "width": 1280,
-              "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/MEDIUM/local-public"
+              "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/MEDIUM/local-public"
             }
           ]
         }
@@ -154,15 +153,15 @@ Response `200 OK` (application/json):
       "quantityTotal": 250,
       "quantityRemaining": 250,
       "quantityReserved": 0,
-      "startDate": 1792435612648,
-      "expiryDate": 1797619612648,
+      "startDate": 1792520454635,
+      "expiryDate": 1797704454635,
       "status": "PUBLISHED",
       "claimCount": 0,
       "redemptionCount": 0,
       "referralsEnabled": true,
       "referralPoolTotal": 50,
       "referralPoolRemaining": 50,
-      "referrerRewardId": "01a1557c-ec6d-755c-8669-5f451d8efaac",
+      "referrerRewardId": "01a15a8b-82c6-7d80-9792-bf78bab3e1d2",
       "rules": {
         "minSpendMyr": 15,
         "maxUsePerUser": 1
@@ -171,15 +170,15 @@ Response `200 OK` (application/json):
       "locationIds": []
     },
     {
-      "createdAt": 1792435550911,
-      "updatedAt": 1792435551075,
+      "createdAt": 1792520394718,
+      "updatedAt": 1792520395154,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a1557b-fabe-75c9-927c-ad43c9a2f2ac",
-      "organizationId": "019b76da-a800-72b9-80b8-91bd729eddbe",
-      "organizationName": "Jonker Street Kitchen",
-      "organizationLogoUrl": null,
-      "organizationLogoSources": [],
+      "id": "01a15a8a-97dd-740a-8955-1d4ab2274453",
+      "tenantId": "019b76da-a800-72b9-80b8-91bd729eddbe",
+      "tenantName": "Jonker Street Kitchen",
+      "tenantLogoUrl": null,
+      "tenantLogoSources": [],
       "title": "15% off Friday live-music dinner",
       "description": "15% off your dinner bill on live-music Friday nights. Bukit Beruang only.",
       "rewardType": "DISCOUNT",
@@ -190,33 +189,33 @@ Response `200 OK` (application/json):
       "images": [
         {
           "fileId": "019b76da-a800-70dc-9177-0760966cda25",
-          "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-70dc-9177-0760966cda25/variants/UHD/local-public",
+          "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-70dc-9177-0760966cda25/variants/UHD/local-public",
           "width": 3840,
           "height": 2160,
           "sources": [
             {
               "width": 640,
-              "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-70dc-9177-0760966cda25/variants/THUMBNAIL/local-public"
+              "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-70dc-9177-0760966cda25/variants/THUMBNAIL/local-public"
             },
             {
               "width": 1280,
-              "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-70dc-9177-0760966cda25/variants/MEDIUM/local-public"
+              "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-70dc-9177-0760966cda25/variants/MEDIUM/local-public"
             }
           ]
         },
         {
           "fileId": "019b76da-a800-7633-a97f-40ecb63158b4",
-          "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7633-a97f-40ecb63158b4/variants/UHD/local-public",
+          "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7633-a97f-40ecb63158b4/variants/UHD/local-public",
           "width": 3840,
           "height": 2160,
           "sources": [
             {
               "width": 640,
-              "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7633-a97f-40ecb63158b4/variants/THUMBNAIL/local-public"
+              "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7633-a97f-40ecb63158b4/variants/THUMBNAIL/local-public"
             },
             {
               "width": 1280,
-              "url": "http://10.155.3.236:8097/api/v1/files/019b76da-a800-7633-a97f-40ecb63158b4/variants/MEDIUM/local-public"
+              "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7633-a97f-40ecb63158b4/variants/MEDIUM/local-public"
             }
           ]
         }
@@ -225,7 +224,7 @@ Response `200 OK` (application/json):
       "quantityRemaining": 28,
       "quantityReserved": 2,
       "startDate": null,
-      "expiryDate": 1795459550909,
+      "expiryDate": 1795544394714,
       "status": "PUBLISHED",
       "claimCount": 0,
       "redemptionCount": 0,
@@ -248,11 +247,11 @@ Response `200 OK` (application/json):
     "total": 17,
     "page": 1,
     "totalPages": 9,
-    "nextCursor": "eyJhdCI6MTc5MjQzNTU1MDkxMSwiaWQiOiIwMWExNTU3Yi1mYWJlLTc1YzktOTI3Yy1hZDQzYzlhMmYyYWMifQ",
+    "nextCursor": "eyJhdCI6MTc5MjUyMDM5NDcxOCwiaWQiOiIwMWExNWE4YS05N2RkLTc0MGEtODk1NS0xZDRhYjIyNzQ0NTMifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "dkK-gfgE-dUf01b9dJxxR",
-    "timestamp": 1792435613562
+    "correlationId": "8LyKtWO-UMx6kkAat91r3",
+    "timestamp": 1792520456467
   }
 }
 ```
@@ -262,7 +261,6 @@ Response `200 OK` (application/json):
 Get published reward detail
 
 - **Public** — no session required.
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ConsumerRewardsController_getReward` · [source](../../../apps/api/src/contexts/rewards/presentation/http/consumer-rewards.controller.ts)
 
@@ -295,12 +293,6 @@ Get published reward detail
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationNames` | string[] | no |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
-| `data.organizationId` | string (uuid) | yes |  |
-| `data.organizationLogoSources` | object[] | yes |  |
-| `data.organizationLogoSources[].url` | string (uri) | yes |  |
-| `data.organizationLogoSources[].width` | integer | yes |  |
-| `data.organizationLogoUrl` | string (uri) \| null | yes |  |
-| `data.organizationName` | string | no |  |
 | `data.quantityRemaining` | integer | yes | min -9007199254740991 |
 | `data.quantityReserved` | integer | yes | min -9007199254740991 |
 | `data.quantityTotal` | integer | yes | min -9007199254740991 |
@@ -318,6 +310,12 @@ Get published reward detail
 | `data.shareUrl` | string (uri) | no |  |
 | `data.startDate` | integer \| null | yes |  |
 | `data.status` | "DRAFT" \| "PENDING_REVIEW" \| "PUBLISHED" \| "EXPIRED" \| "DISABLED" | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
+| `data.tenantLogoSources` | object[] | yes |  |
+| `data.tenantLogoSources[].url` | string (uri) | yes |  |
+| `data.tenantLogoSources[].width` | integer | yes |  |
+| `data.tenantLogoUrl` | string (uri) \| null | yes |  |
+| `data.tenantName` | string | no |  |
 | `data.termsConditions` | string \| null | yes |  |
 | `data.title` | string | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
@@ -332,7 +330,7 @@ Get published reward detail
 **Example** — called as no session.
 
 ```http
-GET /api/v1/rewards/01a1557c-ec6c-7c5c-983d-6cd525177f31
+GET /api/v1/rewards/01a15a8b-82c6-7486-a020-2dc6156d2593
 X-Client-Type: web
 ```
 
@@ -342,15 +340,15 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792435612778,
-    "updatedAt": 1792435613233,
+    "createdAt": 1792520454844,
+    "updatedAt": 1792520455786,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a1557c-ec6c-7c5c-983d-6cd525177f31",
-    "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-    "organizationName": "Brew & Bean KL",
-    "organizationLogoUrl": null,
-    "organizationLogoSources": [],
+    "id": "01a15a8b-82c6-7486-a020-2dc6156d2593",
+    "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+    "tenantName": "Brew & Bean KL",
+    "tenantLogoUrl": null,
+    "tenantLogoSources": [],
     "title": "Free Kopi O with any breakfast set",
     "description": "One free Kopi O when you order any breakfast set at Brew & Bean KL.",
     "rewardType": "FREE_ITEM",
@@ -360,18 +358,18 @@ Response `200 OK` (application/json):
     "category": "cafe",
     "images": [
       {
-        "fileId": "01a1557c-e595-73bc-9e96-5c157329d77c",
-        "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/LARGE/local-public",
+        "fileId": "01a15a8b-7b4f-7637-b0d1-a42f040b6e31",
+        "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/LARGE/local-public",
         "width": 1920,
         "height": 1080,
         "sources": [
           {
             "width": 640,
-            "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/THUMBNAIL/local-public"
+            "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/THUMBNAIL/local-public"
           },
           {
             "width": 1280,
-            "url": "http://10.155.3.236:8097/api/v1/files/01a1557c-e595-73bc-9e96-5c157329d77c/variants/MEDIUM/local-public"
+            "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/MEDIUM/local-public"
           }
         ]
       }
@@ -379,15 +377,15 @@ Response `200 OK` (application/json):
     "quantityTotal": 250,
     "quantityRemaining": 250,
     "quantityReserved": 0,
-    "startDate": 1792435612648,
-    "expiryDate": 1797619612648,
+    "startDate": 1792520454635,
+    "expiryDate": 1797704454635,
     "status": "PUBLISHED",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "01a1557c-ec6d-755c-8669-5f451d8efaac",
+    "referrerRewardId": "01a15a8b-82c6-7d80-9792-bf78bab3e1d2",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -396,8 +394,8 @@ Response `200 OK` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "_AZ8SeNelWPbhlcgwlEL3",
-    "timestamp": 1792435613624
+    "correlationId": "2BtPRC_hrkXaNM_Y8Hf8V",
+    "timestamp": 1792520456602
   }
 }
 ```
@@ -470,44 +468,44 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792435614339,
-      "updatedAt": 1792435614339,
+      "createdAt": 1792520457455,
+      "updatedAt": 1792520457455,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a1557c-f2a1-7b80-bb06-d2230db56a01",
-      "rewardId": "01a1557c-ec6c-7c5c-983d-6cd525177f31",
+      "id": "01a15a8b-8d71-7b6b-9beb-dc66e8bd7d13",
+      "rewardId": "01a15a8b-82c6-7486-a020-2dc6156d2593",
       "rewardTitle": "Free Kopi O with any breakfast set",
       "status": "PENDING",
-      "claimedAt": 1792435614340,
-      "claimExpiresAt": 1793040414340,
+      "claimedAt": 1792520457455,
+      "claimExpiresAt": 1793125257455,
       "redeemedAt": null,
       "isReferrerCredit": false
     },
     {
-      "createdAt": 1792435550927,
-      "updatedAt": 1792435550927,
+      "createdAt": 1792520394741,
+      "updatedAt": 1792520394741,
       "isDeleted": false,
       "deletedAt": null,
       "id": "019b76da-a800-7c1a-9069-f2e16d4af0a3",
       "rewardId": "019b76da-a800-7abc-a318-2ac9fe8ee4ca",
       "rewardTitle": "Free coffee — Grand Opening",
       "status": "PENDING",
-      "claimedAt": 1792349150926,
-      "claimExpiresAt": 1793040350926,
+      "claimedAt": 1792433994737,
+      "claimExpiresAt": 1793125194737,
       "redeemedAt": null,
       "isReferrerCredit": false
     }
   ],
   "meta": {
     "limit": 2,
-    "total": 209,
+    "total": 203,
     "page": 1,
-    "totalPages": 105,
-    "nextCursor": "eyJhdCI6MTc5MjM0OTE1MDkyNiwiaWQiOiIwMTliNzZkYS1hODAwLTdjMWEtOTA2OS1mMmUxNmQ0YWYwYTMifQ",
+    "totalPages": 102,
+    "nextCursor": "eyJhdCI6MTc5MjQzMzk5NDczNywiaWQiOiIwMTliNzZkYS1hODAwLTdjMWEtOTA2OS1mMmUxNmQ0YWYwYTMifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "coETBXEDk7W-8v38s8Ayp",
-    "timestamp": 1792435614430
+    "correlationId": "EPRTfPXHgkGJmOWIqX4Nk",
+    "timestamp": 1792520457749
   }
 }
 ```
@@ -518,7 +516,6 @@ Claim a reward after OTP verification
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `ConsumerClaimsController_createClaim` · [source](../../../apps/api/src/contexts/claims/presentation/http/consumer-claims.controller.ts)
@@ -570,9 +567,9 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "rewardId": "01a1557c-ec6c-7c5c-983d-6cd525177f31",
+  "rewardId": "01a15a8b-82c6-7486-a020-2dc6156d2593",
   "phone": "+60123456789",
-  "otp": "575105"
+  "otp": "274251"
 }
 ```
 
@@ -583,25 +580,25 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "claim": {
-      "createdAt": 1792435614339,
-      "updatedAt": 1792435614339,
+      "createdAt": 1792520457455,
+      "updatedAt": 1792520457455,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a1557c-f2a1-7b80-bb06-d2230db56a01",
-      "rewardId": "01a1557c-ec6c-7c5c-983d-6cd525177f31",
+      "id": "01a15a8b-8d71-7b6b-9beb-dc66e8bd7d13",
+      "rewardId": "01a15a8b-82c6-7486-a020-2dc6156d2593",
       "rewardTitle": "Free Kopi O with any breakfast set",
       "status": "PENDING",
-      "claimedAt": 1792435614340,
-      "claimExpiresAt": 1793040414340,
+      "claimedAt": 1792520457455,
+      "claimExpiresAt": 1793125257455,
       "redeemedAt": null,
       "isReferrerCredit": false
     },
-    "qrDeepLink": "/rewards/claims/01a1557c-f2a1-7b80-bb06-d2230db56a01/qr",
-    "backupCode": "JQETFN7X"
+    "qrDeepLink": "/rewards/claims/01a15a8b-8d71-7b6b-9beb-dc66e8bd7d13/qr",
+    "backupCode": "2E9XGYTF"
   },
   "meta": {
-    "correlationId": "HyD8KwvkJoVjKsmbMbR7y",
-    "timestamp": 1792435614384
+    "correlationId": "PWmZ1R6gLxzYRak7ue4VL",
+    "timestamp": 1792520457627
   }
 }
 ```
@@ -684,7 +681,7 @@ Issue fresh QR and backup codes for an active claim (the previous codes stop wor
 **Example** — called as alice.johnson@example.com (web app).
 
 ```http
-POST /api/v1/claims/01a1557c-f2a1-7b80-bb06-d2230db56a01/qr
+POST /api/v1/claims/01a15a8b-8d71-7b6b-9beb-dc66e8bd7d13/qr
 X-Client-Type: web
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -696,14 +693,14 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "claimId": "01a1557c-f2a1-7b80-bb06-d2230db56a01",
-    "qrPayload": "hqxkwQMmVJOLicoCpbGSLBHChH7yFaQbczkFtagLTpI",
-    "backupCode": "JBDNUHXN",
-    "claimExpiresAt": 1793040414340
+    "claimId": "01a15a8b-8d71-7b6b-9beb-dc66e8bd7d13",
+    "qrPayload": "KcSFR59OJEj1d09TSC_Ow8WENIvR6kkWB0VHULD828U",
+    "backupCode": "GZTKXWZ6",
+    "claimExpiresAt": 1793125257455
   },
   "meta": {
-    "correlationId": "KfLxlGSIXKaP7yYK8Hn7b",
-    "timestamp": 1792435614479
+    "correlationId": "ZCyrPyd7mLS3jzJiba4tb",
+    "timestamp": 1792520457846
   }
 }
 ```
@@ -765,7 +762,7 @@ Reward activity analytics for the signed-in user
 | `data.spending.byMerchant` | object[] | yes |  |
 | `data.spending.byMerchant[].category` | "cafe" \| "restaurant" \| "retail" \| "wellness" \| "entertainment" \| "food" \| "beverage" \| null | yes |  |
 | `data.spending.byMerchant[].merchantName` | string | yes |  |
-| `data.spending.byMerchant[].organizationId` | string (uuid) | yes |  |
+| `data.spending.byMerchant[].tenantId` | string (uuid) | yes |  |
 | `data.spending.byMerchant[].totalMinor` | integer | yes |  |
 | `data.spending.byMerchant[].visits` | integer | yes |  |
 | `data.spending.currency` | "MYR" | yes |  |
@@ -803,24 +800,24 @@ Response `200 OK` (application/json):
   "data": {
     "period": {
       "from": 1788134400000,
-      "to": 1792435616704,
+      "to": 1792520464964,
       "timeZone": "UTC"
     },
     "totalClaims": {
-      "value": 17,
-      "changePercent": 0
+      "value": 20,
+      "changePercent": 11
     },
     "pendingClaims": {
       "value": 2,
       "changePercent": 100
     },
     "redeemedClaims": {
-      "value": 14,
-      "changePercent": 8
+      "value": 17,
+      "changePercent": 6
     },
     "expiredClaims": {
       "value": 1,
-      "changePercent": -75
+      "changePercent": -50
     },
     "referralsSent": {
       "value": 1,
@@ -831,19 +828,19 @@ Response `200 OK` (application/json):
       "changePercent": null
     },
     "conversionRate": {
-      "value": 82.4,
-      "changePercent": 8
+      "value": 85,
+      "changePercent": -4
     },
     "claimsOverTime": [
       {
         "date": 1788134400000,
-        "claims": 2,
-        "redemptions": 2
+        "claims": 3,
+        "redemptions": 3
       },
       {
         "date": 1788739200000,
-        "claims": 1,
-        "redemptions": 0
+        "claims": 3,
+        "redemptions": 2
       }
     ],
     "byStatus": [
@@ -853,52 +850,52 @@ Response `200 OK` (application/json):
       },
       {
         "status": "REDEEMED",
-        "count": 14
+        "count": 17
       }
     ],
     "spending": {
       "currency": "MYR",
       "totalSpentMinor": {
-        "value": 81908,
-        "changePercent": 23
+        "value": 99046,
+        "changePercent": -6
       },
       "visits": {
-        "value": 15,
-        "changePercent": 25
+        "value": 17,
+        "changePercent": 6
       },
       "byMerchant": [
         {
-          "organizationId": "019b76da-a800-72b9-80b8-91bd729eddbe",
+          "tenantId": "019b76da-a800-72b9-80b8-91bd729eddbe",
           "merchantName": "Jonker Street Kitchen",
           "category": "restaurant",
-          "totalMinor": 56933,
-          "visits": 5
+          "totalMinor": 80392,
+          "visits": 9
         },
         {
-          "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+          "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
           "merchantName": "Brew & Bean KL",
           "category": "cafe",
-          "totalMinor": 24975,
-          "visits": 10
+          "totalMinor": 18654,
+          "visits": 8
         }
       ],
       "byCategory": [
         {
           "category": "restaurant",
-          "totalMinor": 56933,
-          "visits": 5
+          "totalMinor": 80392,
+          "visits": 9
         },
         {
           "category": "cafe",
-          "totalMinor": 24975,
-          "visits": 10
+          "totalMinor": 18654,
+          "visits": 8
         }
       ]
     }
   },
   "meta": {
-    "correlationId": "T06r3jrFBx6dZEY7Ze6lk",
-    "timestamp": 1792435616718
+    "correlationId": "gwPvg7hfemjMHa5dxCPk7",
+    "timestamp": 1792520464984
   }
 }
 ```
@@ -954,10 +951,10 @@ Range: `from` (inclusive) / `to` (exclusive) epoch ms, at most 366 days (else 40
 | `data.spendingByMerchant` | object[] | yes |  |
 | `data.spendingByMerchant[].category` | "cafe" \| "restaurant" \| "retail" \| "wellness" \| "entertainment" \| "food" \| "beverage" \| null | yes |  |
 | `data.spendingByMerchant[].merchantName` | string | yes |  |
-| `data.spendingByMerchant[].organizationId` | string (uuid) | yes |  |
 | `data.spendingByMerchant[].series` | object[] | yes |  |
 | `data.spendingByMerchant[].series[].start` | integer | yes |  |
 | `data.spendingByMerchant[].series[].totalMinor` | integer | yes |  |
+| `data.spendingByMerchant[].tenantId` | string (uuid) | yes |  |
 | `data.spendingByMerchant[].totalMinor` | integer | yes |  |
 | `data.spendingByMerchant[].visits` | integer | yes |  |
 | `data.totals` | object | yes |  |
@@ -1037,50 +1034,50 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "range": {
-      "from": 1789843616764,
-      "to": 1792435616764,
+      "from": 1789928465028,
+      "to": 1792520465028,
       "timeZone": "UTC",
       "interval": "month",
-      "previousFrom": 1787251616764,
-      "previousTo": 1789843616764
+      "previousFrom": 1787336465028,
+      "previousTo": 1789928465028
     },
     "currency": "MYR",
     "totals": {
       "spentMinor": {
-        "value": 56602,
-        "previous": 25306,
-        "change": 31296,
-        "changePercent": 123.7
+        "value": 59135,
+        "previous": 47389,
+        "change": 11746,
+        "changePercent": 24.8
       },
       "visits": {
         "value": 10,
-        "previous": 5,
-        "change": 5,
-        "changePercent": 100
+        "previous": 8,
+        "change": 2,
+        "changePercent": 25
       },
       "averageBillMinor": {
-        "value": 5660,
-        "previous": 5061,
-        "change": 599,
-        "changePercent": 11.8
+        "value": 5914,
+        "previous": 5924,
+        "change": -10,
+        "changePercent": -0.2
       },
       "claims": {
-        "value": 13,
-        "previous": 5,
-        "change": 8,
-        "changePercent": 160
+        "value": 11,
+        "previous": 9,
+        "change": 2,
+        "changePercent": 22.2
       },
       "redemptions": {
         "value": 10,
-        "previous": 5,
-        "change": 5,
-        "changePercent": 100
+        "previous": 8,
+        "change": 2,
+        "changePercent": 25
       },
       "conversionRate": {
-        "value": 76.9,
-        "previous": 100,
-        "change": -23.1,
-        "changePercent": -23.1
+        "value": 90.9,
+        "previous": 88.9,
+        "change": 2,
+        "changePercent": 2.2
       },
       "merchants": {
         "value": 2,
@@ -1109,88 +1106,88 @@ Response `200 OK` (application/json):
     },
     "series": [
       {
-        "start": 1789843616764,
+        "start": 1789928465028,
         "end": 1790812800000,
         "isPartial": true,
-        "spentMinor": 23487,
-        "visits": 2,
+        "spentMinor": 11237,
+        "visits": 4,
         "claims": 3,
-        "redemptions": 2
+        "redemptions": 4
       },
       {
         "start": 1790812800000,
-        "end": 1792435616764,
+        "end": 1792520465028,
         "isPartial": true,
-        "spentMinor": 33115,
-        "visits": 8,
-        "claims": 10,
-        "redemptions": 8
+        "spentMinor": 47898,
+        "visits": 6,
+        "claims": 8,
+        "redemptions": 6
       }
     ],
     "spendingByCategory": [
       {
         "category": "restaurant",
-        "totalMinor": 42581,
-        "visits": 4,
+        "totalMinor": 50851,
+        "visits": 6,
         "series": [
           {
-            "start": 1789843616764,
-            "totalMinor": 23487
+            "start": 1789928465028,
+            "totalMinor": 5453
           },
           {
             "start": 1790812800000,
-            "totalMinor": 19094
+            "totalMinor": 45398
           }
         ]
       },
       {
         "category": "cafe",
-        "totalMinor": 14021,
-        "visits": 6,
+        "totalMinor": 8284,
+        "visits": 4,
         "series": [
           {
-            "start": 1789843616764,
-            "totalMinor": 0
+            "start": 1789928465028,
+            "totalMinor": 5784
           },
           {
             "start": 1790812800000,
-            "totalMinor": 14021
+            "totalMinor": 2500
           }
         ]
       }
     ],
     "spendingByMerchant": [
       {
-        "organizationId": "019b76da-a800-72b9-80b8-91bd729eddbe",
+        "tenantId": "019b76da-a800-72b9-80b8-91bd729eddbe",
         "merchantName": "Jonker Street Kitchen",
         "category": "restaurant",
-        "totalMinor": 42581,
-        "visits": 4,
+        "totalMinor": 50851,
+        "visits": 6,
         "series": [
           {
-            "start": 1789843616764,
-            "totalMinor": 23487
+            "start": 1789928465028,
+            "totalMinor": 5453
           },
           {
             "start": 1790812800000,
-            "totalMinor": 19094
+            "totalMinor": 45398
           }
         ]
       },
       {
-        "organizationId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
+        "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
         "merchantName": "Brew & Bean KL",
         "category": "cafe",
-        "totalMinor": 14021,
-        "visits": 6,
+        "totalMinor": 8284,
+        "visits": 4,
         "series": [
           {
-            "start": 1789843616764,
-            "totalMinor": 0
+            "start": 1789928465028,
+            "totalMinor": 5784
           },
           {
             "start": 1790812800000,
-            "totalMinor": 14021
+            "totalMinor": 2500
           }
         ]
       }
@@ -1202,13 +1199,13 @@ Response `200 OK` (application/json):
       },
       {
         "status": "REDEEMED",
-        "claims": 10
+        "claims": 8
       }
     ]
   },
   "meta": {
-    "correlationId": "Ydjt-LlsawfmmuB-aLHq_",
-    "timestamp": 1792435616781
+    "correlationId": "hKdgBGLrd6TBJEgBOJBQJ",
+    "timestamp": 1792520465054
   }
 }
 ```
@@ -1219,7 +1216,6 @@ Request claim OTP (emailed to your account — no SMS in dev)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `ConsumerClaimsController_requestOtp` · [source](../../../apps/api/src/contexts/claims/presentation/http/consumer-claims.controller.ts)
@@ -1255,7 +1251,7 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "rewardId": "01a1557c-ec6c-7c5c-983d-6cd525177f31",
+  "rewardId": "01a15a8b-82c6-7486-a020-2dc6156d2593",
   "phone": "+60123456789"
 }
 ```
@@ -1269,8 +1265,8 @@ Response `201 Created` (application/json):
     "ok": true
   },
   "meta": {
-    "correlationId": "XKJZ24l7bUNTptu2rxnVn",
-    "timestamp": 1792435614294
+    "correlationId": "XQg52tUFNlfacypp8ZQxN",
+    "timestamp": 1792520457366
   }
 }
 ```
@@ -1332,8 +1328,8 @@ Response `201 Created` (application/json):
     "ok": true
   },
   "meta": {
-    "correlationId": "ypl2G4g3o4c_6lFTGnpD9",
-    "timestamp": 1792435614214
+    "correlationId": "wwYUVbUK3E3Us1s3oA-Yi",
+    "timestamp": 1792520457245
   }
 }
 ```
@@ -1384,8 +1380,8 @@ Response `200 OK` (application/json):
     "phoneVerified": false
   },
   "meta": {
-    "correlationId": "P29KQa90BZPIGsMa000sp",
-    "timestamp": 1792435614124
+    "correlationId": "I58kKZFfsr-l4h4ksQdma",
+    "timestamp": 1792520457136
   }
 }
 ```
@@ -1456,11 +1452,11 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792349151014,
-      "updatedAt": 1792435551015,
+      "createdAt": 1792433994917,
+      "updatedAt": 1792520394920,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a1557b-fb27-7096-a994-60e3ff7778dc",
+      "id": "01a15a8a-98a7-71cf-82b2-e627bd7f9677",
       "type": "claim_confirmed",
       "title": "Claim confirmed",
       "body": "Your free coffee reward is ready. Show QR at Brew & Bean KL.",
@@ -1478,8 +1474,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "DA8K5n5MX1XftZPWsybmw",
-    "timestamp": 1792435616821
+    "correlationId": "r1VMb4eF4zE5bkb9uAJhd",
+    "timestamp": 1792520465108
   }
 }
 ```
@@ -1538,8 +1534,8 @@ Response `201 Created` (application/json):
     "ok": true
   },
   "meta": {
-    "correlationId": "PjsuamMMtjeitKjQT-okw",
-    "timestamp": 1792435616871
+    "correlationId": "w6ksG5fDA6KSmV8kgM9QU",
+    "timestamp": 1792520465159
   }
 }
 ```

@@ -154,7 +154,7 @@ function KybDetailGroupSkeleton({ fields }: { readonly fields: number }): React.
 	);
 }
 
-/** The selected merchant's KYB card: name + badges, organization id, summary row, business and contact groups. */
+/** The selected merchant's KYB card: name + badges, tenant id, summary row, business and contact groups. */
 export function KybMerchantCardSkeleton(): React.JSX.Element {
 	return (
 		<Card data-skeleton="kyb-merchant-card">

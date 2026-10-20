@@ -40,7 +40,7 @@ const RowIdUrlSchema = RowIdShape.unwrap().min(1);
 /**
  * `/audit-logs` state — the keys of `GET /admin/audit-trail`: ONE timeline of
  * HTTP requests and background database writes (ADR 051). Besides the select
- * filters, links land here pre-filtered: by actor, organization, correlation
+ * filters, links land here pre-filtered: by actor, tenant, correlation
  * id ("everything in this request / job"), or by table + row ("this row's
  * history").
  */
@@ -56,7 +56,7 @@ export const AUDIT_LOG_URL_STATE = defineUrlState(
 		ipScope: optionalUrlParam(IpAddressScopeSchema),
 		actorKind: optionalUrlParam(DataChangeActorKindSchema),
 		actorUserId: optionalUrlParam(UuidUrlSchema),
-		organizationId: optionalUrlParam(UuidUrlSchema),
+		tenantId: optionalUrlParam(UuidUrlSchema),
 		correlationId: optionalUrlParam(CorrelationIdUrlSchema),
 		tableName: optionalUrlParam(TableNameUrlSchema),
 		rowId: optionalUrlParam(RowIdUrlSchema),
@@ -71,7 +71,7 @@ export const AUDIT_LOG_URL_STATE = defineUrlState(
 			ipScope: listFilterKey("ipScope"),
 			actorKind: listFilterKey("actorKind"),
 			actorUserId: listFilterKey("actorUserId"),
-			organizationId: listFilterKey("organizationId"),
+			tenantId: listFilterKey("tenantId"),
 			correlationId: listFilterKey("correlationId"),
 			tableName: listFilterKey("tableName"),
 			rowId: listFilterKey("rowId"),
@@ -90,7 +90,7 @@ export type AuditLogListFilter = Readonly<{
 	ipScope: { eq: IpAddressScope } | undefined;
 	actorKind: { eq: DataChangeActorKind } | undefined;
 	actorUserId: { eq: string } | undefined;
-	organizationId: { eq: string } | undefined;
+	tenantId: { eq: string } | undefined;
 	correlationId: { eq: string } | undefined;
 	tableName: { eq: string } | undefined;
 	rowId: { eq: string } | undefined;
@@ -106,7 +106,7 @@ export const AUDIT_LOG_FILTER_KEYS: readonly (keyof AuditLogListFilter)[] = [
 	"ipScope",
 	"actorKind",
 	"actorUserId",
-	"organizationId",
+	"tenantId",
 	"correlationId",
 	"tableName",
 	"rowId",
@@ -132,7 +132,7 @@ export function toAuditLogListQuery(state: AuditLogUrlState): TableListQueryInpu
 			ipScope: eqFilter(state.ipScope),
 			actorKind: eqFilter(state.actorKind),
 			actorUserId: eqFilter(state.actorUserId),
-			organizationId: eqFilter(state.organizationId),
+			tenantId: eqFilter(state.tenantId),
 			correlationId: eqFilter(state.correlationId),
 			tableName: eqFilter(state.tableName),
 			rowId: eqFilter(state.rowId),
@@ -141,9 +141,9 @@ export function toAuditLogListQuery(state: AuditLogUrlState): TableListQueryInpu
 }
 
 /** The id filters other pages link to the audit log with. */
-export type AuditLogIdFilter = Partial<Pick<AuditLogUrlState, "actorUserId" | "organizationId" | "correlationId" | "tableName" | "rowId">>;
+export type AuditLogIdFilter = Partial<Pick<AuditLogUrlState, "actorUserId" | "tenantId" | "correlationId" | "tableName" | "rowId">>;
 
-/** `/audit-logs` filtered by one actor / organization / request or job / row ("everything this person did"). */
+/** `/audit-logs` filtered by one actor / tenant / request or job / row ("everything this person did"). */
 export function auditLogListHref(filter: AuditLogIdFilter): string {
 	return AUDIT_LOG_URL_STATE.href(ROUTES.auditLogs.list, { ...AUDIT_LOG_URL_STATE.defaults, ...filter });
 }

@@ -50,7 +50,7 @@ export const AuditTrailBackgroundEntrySchema = DataChangeLogSummarySchema.pick({
 	occurredAt: true,
 	actorKind: true,
 	actor: true,
-	organization: true,
+	tenant: true,
 	apiKeyId: true,
 	systemOperation: true,
 	correlationId: true,
@@ -70,7 +70,7 @@ export type AuditTrailEntry = z.output<typeof AuditTrailEntrySchema>;
 /**
  * `GET /admin/audit-trail` list query (newest first) — see docs/technical/api/list-queries.md.
  *
- * - Shared filters (`actorUserId`, `organizationId`, `correlationId`, `occurredAt`) narrow both kinds.
+ * - Shared filters (`actorUserId`, `tenantId`, `correlationId`, `occurredAt`) narrow both kinds.
  * - `tableName` / `rowId` keep the requests and jobs that changed that table / row — a row's history.
  * - Request-only filters (`outcome`, `method`, `authMethod`, `deviceType`, `ipScope`) leave only
  *   requests; `actorKind` (who a background write is attributed to) leaves only background entries.
@@ -84,7 +84,7 @@ export const auditTrailListQuery = defineListQuery({
 	filter: {
 		kind: listFilter.enumeration(AuditTrailEntryKindSchema, { eq: true }),
 		actorUserId: listFilter.uuid({ eq: true }),
-		organizationId: listFilter.uuid({ eq: true }),
+		tenantId: listFilter.uuid({ eq: true }),
 		correlationId: listFilter.string({ eq: true }),
 		tableName: listFilter.string({ eq: true }),
 		rowId: listFilter.string({ eq: true }),

@@ -53,7 +53,7 @@ Every authorization decision answers these questions **in this order** (spec §1
 ```text
 1. WHO are you?                  → Authentication (JWT / session)
 2. WHAT may you do in general?   → Permissions from roles (RBAC) + per-user overrides
-3. WHERE may you do it?          → Scope: GLOBAL / ORGANIZATION / STORE / LOCATION / OWN / RESOURCE
+3. WHERE may you do it?          → Scope: GLOBAL / TENANT / STORE / LOCATION / OWN / RESOURCE
 4. WHICH record?                 → Ownership, ACL entries, relationships (membership)
 5. UNDER WHAT CONDITIONS?        → Policies (ABAC) written in a safe JSON rule language
 6. SHOULD THE UI SHOW IT?        → Frontend can() / <Can>
@@ -77,7 +77,7 @@ A permission such as `ORDER:DELETE` is a **capability**, not a blank cheque. It 
 |---|---|---|
 | **Kernel** | `src/contexts/authorization/infrastructure/kernel/authorization-kernel.service.ts` | `can()`, `authorize()`, `explain()`, `filter()`, `resourceCapabilities()`, `hasRoles()` |
 | Grants loader | `kernel/subject-grants.loader.ts` | Loads roles (+ parents), role permissions, store-membership roles, user overrides |
-| Tenant verification | `kernel/tenant-membership.service.ts` | Proves a claimed organization / store / location belongs to the user |
+| Tenant verification | `kernel/tenant-membership.service.ts` | Proves a claimed tenant / store / location belongs to the user |
 | Ownership | `kernel/resource-ownership.resolver.ts` | Reads the owner of a USER / PROFILE from the DB |
 | ACL | `kernel/acl.service.ts` | Explicit ALLOW / DENY entries per user or role |
 | Policies (ABAC) | `kernel/policy-engine.service.ts` | Evaluates the JSON rule language — never `eval` |
@@ -85,10 +85,10 @@ A permission such as `ORDER:DELETE` is a **capability**, not a blank cheque. It 
 | Decisions API | `kernel/authorization-decisions.controller.ts` | `POST /authorization/decisions`, `GET /authorization/decisions/explain` |
 | **Global guard** | `guards/authorization.guard.ts` | Runs on every request; enforces all authorization decorators |
 | Decorators | `decorators/authorize.decorator.ts`, `modules/auth/decorators/require-permission.decorator.ts`, `decorators/require-*.decorator.ts` | Declare what a route needs |
-| Request tenant context | `services/authorization-context.resolver.ts` | Reads `x-organization-id` / `x-store-id` / `x-location-id` and verifies them |
+| Request tenant context | `services/authorization-context.resolver.ts` | Takes the tenant from `:tenantSlug`, reads `x-store-id` and the route/query/body store and location, and verifies them (`x-tenant-id` / `x-location-id` are information only) |
 | Privilege escalation | `services/privilege-escalation.service.ts` | Stops admins granting what they do not hold or editing themselves |
 | File authorization | `modules/files/services/file-authorization.service.ts` | Per-category rules for every `/files` operation (upload, complete, read, download, delete) |
-| Merchant capability gate | `modules/organization/services/organization-reward-auth.service.ts` (`requireMembershipCapability`), via `modules/rewards/services/merchant-context.service.ts` | Every `merchant:*` check — role table → tenant Cedar policy (team, locations, KYB, rewards, API keys, analytics) |
+| Merchant capability gate | `modules/tenant/services/tenant-reward-auth.service.ts` (`requireMembershipCapability`), via `modules/rewards/services/merchant-context.service.ts` | Every `merchant:*` check — role table → tenant Cedar policy (team, locations, KYB, rewards, API keys, analytics) |
 | RLS context | `src/prisma/rls-context.ts`, `rls-pool.ts`, `common/interceptors/rls.interceptor.ts`, `common/middleware/rls-pre-handler.middleware.ts` | Tells Postgres who is asking |
 
 ### Shared vocabulary (`packages/shared`)
@@ -117,7 +117,7 @@ A permission such as `ORDER:DELETE` is a **capability**, not a blank cheque. It 
 |---|---|
 | Understand how the backend decides allow / deny | [Backend: the Authorization Kernel](./backend.md) |
 | Understand where roles and permissions come from, how they inherit, and how caches are invalidated | [RBAC internals](./rbac.md) |
-| Understand organizations, stores, locations and RLS | [Tenancy, stores and RLS](./tenancy-and-rls.md) |
+| Understand tenants, stores, locations and RLS | [Tenancy, stores and RLS](./tenancy-and-rls.md) |
 | Show / hide things in the UI | [Frontend authorization](./frontend.md) |
 | Do a concrete task ("add a permission", "protect an endpoint") | [Recipes](./recipes.md) |
 | Know the rules before opening a PR | [Authorization dos and don'ts](./dos-and-donts.md) (repo-wide: [Dos and don'ts](../dos-and-donts.md)) |
@@ -131,9 +131,9 @@ A permission such as `ORDER:DELETE` is a **capability**, not a blank cheque. It 
 
 1. **Deny by default.** If no rule says "yes", the answer is "no" (spec §66).
 2. **The frontend is never security.** Always protect the endpoint too (spec §2, §11).
-3. **Never trust tenant ids from the browser.** `organizationId`, `storeId` and `locationId` are *requests*; the server verifies them against memberships (spec §55, §92, §93).
+3. **Never trust tenant ids from the browser.** `tenantId`, `storeId` and `locationId` are *requests*; the server verifies them against memberships (spec §55, §92, §93).
 4. **Use `PERMISSION.*` / `MERCHANT_CAPABILITY.*` constants**, never raw strings like `"platform:user.delete"` (spec §7).
-5. **Membership is not permission.** Being in an organization does not grant anything by itself; it only lets permissions scoped to that organization apply.
+5. **Membership is not permission.** Being in a tenant does not grant anything by itself; it only lets permissions scoped to that tenant apply.
 6. **Explicit DENY wins** over every ALLOW (spec §39, §88).
 7. **Never write executable policies.** Conditions use the validated JSON rule language (spec §43).
 8. **List endpoints filter in the database** with `kernel.filter()`, never by loading everything and filtering in JavaScript (spec §32).
@@ -153,13 +153,13 @@ A permission such as `ORDER:DELETE` is a **capability**, not a blank cheque. It 
 | **Role** | A named bundle of permissions (`Admin`, `Manager`, `User`, `Store Manager`, …). Roles are **data**; admins create them at runtime. Roles may have a parent and inherit its permissions. |
 | **Grant** | A permission the subject holds, from a role, a store membership role, a user ALLOW override, or an implicit self grant. |
 | **Override** | A `UserPermission` row with `effect` `ALLOW` (extra permission) or `DENY` (takes a permission away, even if a role grants it). |
-| **Scope** | Where a grant applies: `GLOBAL`, `ORGANIZATION`, `STORE`, `LOCATION`, `OWN`, `RESOURCE`. |
+| **Scope** | Where a grant applies: `GLOBAL`, `TENANT`, `STORE`, `LOCATION`, `OWN`, `RESOURCE`. |
 | **ACL** | `ResourceAcl` rows: explicit ALLOW / DENY for one user or role on one resource (or every resource of a type). |
 | **Ownership** | "This record belongs to you", read from the database (never from the request body). |
 | **Policy (ABAC)** | A `PolicyDefinition` row with JSON conditions such as "status is not COMPLETED". |
-| **ReBAC** | Relationship checks: user → member of organization → store → location. |
-| **Tenant** | An organization. Stores and locations belong to one. |
-| **Store** | A shop of an organization, linked 1:1 to an `OrganizationLocation`. Staff join a store through a **store membership** with a role. |
+| **ReBAC** | Relationship checks: user → member of tenant → store → location. |
+| **Tenant** | A tenant. Stores and locations belong to one. |
+| **Store** | A shop of a tenant, linked 1:1 to an `TenantLocation`. Staff join a store through a **store membership** with a role. |
 | **RLS** | PostgreSQL Row-Level Security — database rules that hide rows from a session. |
 | **System operation** | A named, allowlisted reason to bypass RLS (e.g. `queue.job`, `outbox.enqueue`). |
 | **SuperAdmin** | The platform operator flag on `User.isSuperAdmin`. Bypasses permission checks, audited. |

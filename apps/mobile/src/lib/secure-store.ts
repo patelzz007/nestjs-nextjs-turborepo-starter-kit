@@ -68,7 +68,9 @@ export const SECURE_STORE_ENTRIES = {
 	tillTerminalId: { key: "till.terminalId", schema: PosTerminalIdSchema },
 	tillTerminalName: { key: "till.terminalName", schema: TillDisplayNameSchema },
 	tillLocationName: { key: "till.locationName", schema: TillDisplayNameSchema },
-	tillOrganizationName: { key: "till.organizationName", schema: TillDisplayNameSchema },
+	tillTenantName: { key: "till.tenantName", schema: TillDisplayNameSchema },
+	tillTenantId: { key: "till.tenantId", schema: z.uuid() },
+	tillLocationId: { key: "till.locationId", schema: z.uuid() },
 } satisfies Record<string, SecureStoreEntry<string | number | boolean>>;
 
 /** JSON as stored: any value a registry schema can describe. */

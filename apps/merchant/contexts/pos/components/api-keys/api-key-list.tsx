@@ -178,7 +178,7 @@ function ApiKeyRow({ apiKey, isRevoking, onRevokeRequest }: ApiKeyRowProps): Rea
 			<p className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
 				<MapPin className="size-3.5 shrink-0" aria-hidden="true" />
 				<span className="md:sr-only">Store: </span>
-				<span className="truncate">{apiKey.locationName ?? "All stores (organization-wide)"}</span>
+				<span className="truncate">{apiKey.locationName ?? "All stores (tenant-wide)"}</span>
 			</p>
 			<div className="text-sm text-muted-foreground">
 				<p className="flex items-center gap-1.5">

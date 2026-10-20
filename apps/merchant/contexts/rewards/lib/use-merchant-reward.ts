@@ -15,14 +15,14 @@ export type MerchantRewardState =
 	| { readonly kind: "ready"; readonly reward: RewardResponse };
 
 /**
- * One of the organization's rewards, for the reward page and its editor (`GET /orgs/:orgSlug/rewards/:rewardId`),
+ * One of the tenant's rewards, for the reward page and its editor (`GET /t/:orgSlug/rewards/:rewardId`),
  * seeded by the server's read (`initialReward`). A reward not offered at any of the member's stores answers 404:
  * that is "missing", not a failure to retry.
  */
-export function useMerchantReward(orgSlug: string, rewardId: string, initialReward: Envelope<RewardResponse> | undefined): MerchantRewardState {
+export function useMerchantReward(tenantSlug: string, rewardId: string, initialReward: Envelope<RewardResponse> | undefined): MerchantRewardState {
 	const { api } = useAuth();
-	const rewardQuery = api.organizations.rewards.get.useQuery(
-		{ orgSlug, rewardId },
+	const rewardQuery = api.tenants.rewards.get.useQuery(
+		{ tenantSlug, rewardId },
 		{
 			...initialDataOption(initialReward),
 			staleTime: REWARDS_STALE_TIME_MS,

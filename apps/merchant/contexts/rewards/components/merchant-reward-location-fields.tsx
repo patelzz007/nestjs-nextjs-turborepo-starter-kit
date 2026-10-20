@@ -1,7 +1,7 @@
 "use client";
 
 import { useMerchantLocation } from "@/features/tenant-context/facade";
-import { OrganizationLocationScopeTypeSchema, type MerchantRewardFormValues, type OrganizationLocationScopeType } from "@workspace/shared";
+import { LocationScopeTypeSchema, type MerchantRewardFormValues, type LocationScopeType } from "@workspace/shared";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Label } from "@workspace/ui/components/label";
 import { RadioGroup, RadioGroupItem } from "@workspace/ui/components/radio-group";
@@ -10,7 +10,7 @@ import type { Control, FieldErrors, UseFormSetValue } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
 interface LocationScopeOption {
-	readonly value: OrganizationLocationScopeType;
+	readonly value: LocationScopeType;
 	readonly label: string;
 	readonly hint: string;
 }
@@ -63,7 +63,7 @@ export interface MerchantRewardLocationFieldsProps {
 /**
  * Which stores accept the reward: all of them, or the ones ticked. Renders
  * only the field's body (the editor's "Where" section carries the heading) and
- * nothing at all for a single-store organization — there is nothing to choose.
+ * nothing at all for a single-store tenant — there is nothing to choose.
  */
 export function MerchantRewardLocationFields({ control, errors, setValue, disabled = false }: MerchantRewardLocationFieldsProps): React.JSX.Element | null {
 	const { accessibleLocations } = useMerchantLocation();
@@ -73,7 +73,7 @@ export function MerchantRewardLocationFields({ control, errors, setValue, disabl
 
 	const handleScopeChange = React.useCallback(
 		(value: string): void => {
-			const parsed = OrganizationLocationScopeTypeSchema.safeParse(value);
+			const parsed = LocationScopeTypeSchema.safeParse(value);
 			if (!parsed.success) {
 				return;
 			}

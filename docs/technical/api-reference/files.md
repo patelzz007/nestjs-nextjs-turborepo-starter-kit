@@ -3,7 +3,7 @@ title: "API reference — Files and object storage"
 description: "Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback."
 order: 8
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792368000000
+lastUpdated: 1792454400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -59,7 +59,7 @@ Get file metadata
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/files/01a1557c-b1b2-7f90-b9ec-09eb52cc022d
+GET /api/v1/files/01a15a8b-4023-78d9-9c8a-4221acf5c5f4
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -71,7 +71,7 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "file": {
-      "id": "01a1557c-b1b2-7f90-b9ec-09eb52cc022d",
+      "id": "01a15a8b-4023-78d9-9c8a-4221acf5c5f4",
       "category": "USER_AVATAR",
       "visibility": "PUBLIC",
       "originalName": "sample.png",
@@ -79,13 +79,13 @@ Response `200 OK` (application/json):
       "sizeBytes": 2004,
       "status": "READY",
       "scanStatus": "NOT_SCANNED",
-      "publicUrl": "http://10.155.3.236:8097/api/v1/files/01a1557c-b1b2-7f90-b9ec-09eb52cc022d/local-public",
-      "uploadedAt": 1792435597748
+      "publicUrl": "http://192.168.100.23:8097/api/v1/files/01a15a8b-4023-78d9-9c8a-4221acf5c5f4/local-public",
+      "uploadedAt": 1792520437797
     }
   },
   "meta": {
-    "correlationId": "SOpCqqiFwGEm0CKFEUvdf",
-    "timestamp": 1792435599401
+    "correlationId": "AX3Sg4PzvMXfpbZ984Nee",
+    "timestamp": 1792520439564
   }
 }
 ```
@@ -123,7 +123,7 @@ Soft-delete a file and queue physical deletion
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-DELETE /api/v1/files/01a1557c-b895-72eb-a1a0-9ba99d496942
+DELETE /api/v1/files/01a15a8b-47ce-797d-9138-fcc610491818
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -138,8 +138,8 @@ Response `200 OK` (application/json):
     "success": true
   },
   "meta": {
-    "correlationId": "70oOK82b2OgfAhk9aHHCo",
-    "timestamp": 1792435601297
+    "correlationId": "pgr6YlJDkzU7maHhH9Kly",
+    "timestamp": 1792520441724
   }
 }
 ```
@@ -193,7 +193,7 @@ Complete a direct upload after browser upload
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/files/01a1557c-b1b2-7f90-b9ec-09eb52cc022d/complete
+POST /api/v1/files/01a15a8b-4023-78d9-9c8a-4221acf5c5f4/complete
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -211,7 +211,7 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "file": {
-      "id": "01a1557c-b1b2-7f90-b9ec-09eb52cc022d",
+      "id": "01a15a8b-4023-78d9-9c8a-4221acf5c5f4",
       "category": "USER_AVATAR",
       "visibility": "PUBLIC",
       "originalName": "sample.png",
@@ -220,12 +220,12 @@ Response `201 Created` (application/json):
       "status": "SCANNING",
       "scanStatus": "SCANNING",
       "publicUrl": null,
-      "uploadedAt": 1792435597748
+      "uploadedAt": 1792520437797
     }
   },
   "meta": {
-    "correlationId": "jtpTxa2tfoW1sZ7exiTmS",
-    "timestamp": 1792435597870
+    "correlationId": "hI3eW2SFU4enUvVr7Lc3n",
+    "timestamp": 1792520437982
   }
 }
 ```
@@ -264,7 +264,7 @@ Get a short-lived download URL for a private file
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/files/01a1557c-b1b2-7f90-b9ec-09eb52cc022d/download-url
+GET /api/v1/files/01a15a8b-4023-78d9-9c8a-4221acf5c5f4/download-url
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -275,14 +275,14 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "fileId": "01a1557c-b1b2-7f90-b9ec-09eb52cc022d",
+    "fileId": "01a15a8b-4023-78d9-9c8a-4221acf5c5f4",
     "status": "READY",
-    "downloadUrl": "http://10.155.3.236:8097/api/v1/files/local-download?token=<redacted>",
-    "expiresAt": 1792435899433
+    "downloadUrl": "http://192.168.100.23:8097/api/v1/files/local-download?token=<redacted>",
+    "expiresAt": 1792520739642
   },
   "meta": {
-    "correlationId": "ktC_j51m4C6IVxPPUgvRM",
-    "timestamp": 1792435599434
+    "correlationId": "2AXAau3nnIItBQG8finfc",
+    "timestamp": 1792520439643
   }
 }
 ```
@@ -292,7 +292,6 @@ Response `200 OK` (application/json):
 Serve a READY public asset from local storage (development only)
 
 - **Public** — no session required.
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `LocalStorageTransferController_localPublic` · [source](../../../apps/api/src/contexts/files/presentation/http/local-storage-transfer.controller.ts)
 
@@ -314,7 +313,7 @@ Serve a READY public asset from local storage (development only)
 **Example** — called as no session.
 
 ```http
-GET /api/v1/files/01a1557c-b895-72eb-a1a0-9ba99d496942/local-public
+GET /api/v1/files/01a15a8b-47ce-797d-9138-fcc610491818/local-public
 X-Client-Type: web
 ```
 
@@ -330,7 +329,6 @@ Receive a browser multipart upload for a signed local-storage ticket (developmen
 
 - **Public** — no session required.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `LocalStorageTransferController_localUpload` · [source](../../../apps/api/src/contexts/files/presentation/http/local-storage-transfer.controller.ts)
 
@@ -356,12 +354,12 @@ Receive a browser multipart upload for a signed local-storage ticket (developmen
 **Example** — called as the browser, posting to the upload ticket (no session needed).
 
 ```http
-POST /api/v1/files/01a1557c-b1b2-7f90-b9ec-09eb52cc022d/local-upload
+POST /api/v1/files/01a15a8b-4023-78d9-9c8a-4221acf5c5f4/local-upload
 Content-Type: multipart/form-data
 
 {
   "multipart/form-data": {
-    "key": "staging/users/01a1557a-c0b2-72f9-ab17-46cd05f66ace/avatar/01a1557c-b1b2-7f90-b9ec-09eb52cc022d-sample.png",
+    "key": "staging/users/01a15a89-6fe5-753f-8ef2-a28d8210e0e0/avatar/01a15a8b-4023-78d9-9c8a-4221acf5c5f4-sample.png",
     "token": "<redacted: one-time secret>",
     "file": "<the image bytes: sample.png, image/png>"
   }
@@ -377,8 +375,8 @@ Response `201 Created` (application/json):
     "success": true
   },
   "meta": {
-    "correlationId": "qHyCU58CC_7n3mYcItj48",
-    "timestamp": 1792435597794
+    "correlationId": "eN8oD7JeAnYVmG4TQ8bS1",
+    "timestamp": 1792520437853
   }
 }
 ```
@@ -388,7 +386,6 @@ Response `201 Created` (application/json):
 Serve a rendition of a READY public image from local storage (development only)
 
 - **Public** — no session required.
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `LocalStorageTransferController_localPublicVariant` · [source](../../../apps/api/src/contexts/files/presentation/http/local-storage-transfer.controller.ts)
 
@@ -416,7 +413,6 @@ Serve a rendition of a READY public image from local storage (development only)
 Download a private object through a signed, expiring local-storage link (development only)
 
 - **Public** — no session required.
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `LocalStorageTransferController_localDownload` · [source](../../../apps/api/src/contexts/files/presentation/http/local-storage-transfer.controller.ts)
 
@@ -455,7 +451,6 @@ Applies an out-of-process scanner/processing result. Accepted only while the fil
 
 - **Public** — no session required.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
-- Runs as an allow-listed **system operation** (row-level security bypass, audited) — see [database security](../security/database-security.md).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
 - Operation id `FilesController_processingCallback` · [source](../../../apps/api/src/contexts/files/presentation/http/files.controller.ts)
 
@@ -495,7 +490,7 @@ POST /api/v1/files/processing-callback
 Content-Type: application/json
 
 {
-  "fileId": "01a1557c-b895-72eb-a1a0-9ba99d496942",
+  "fileId": "01a15a8b-47ce-797d-9138-fcc610491818",
   "status": "READY",
   "scanStatus": "CLEAN"
 }
@@ -511,8 +506,8 @@ Response `401 Unauthorized` (application/json):
     "message": "Invalid processing callback secret"
   },
   "meta": {
-    "correlationId": "CJcuFRajxcPg3CPLaO9tV",
-    "timestamp": 1792435601183
+    "correlationId": "isE-9XVU2J6FIPKIDUp44",
+    "timestamp": 1792520441481
   }
 }
 ```
@@ -536,9 +531,9 @@ Create a browser upload ticket
 | `checksumSha256` | string | yes | exactly 64 characters |
 | `fileName` | string | yes | length 1–255 |
 | `mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
-| `organizationId` | string (uuid) | no |  |
 | `productId` | string (uuid) | no |  |
 | `sizeBytes` | integer | yes |  |
+| `tenantId` | string (uuid) | no |  |
 | `userId` | string (uuid) | no |  |
 
 **Response 201 Created** (`application/json`) — Browser upload ticket created
@@ -576,7 +571,7 @@ Content-Type: application/json
   "mimeType": "image/png",
   "sizeBytes": 2004,
   "checksumSha256": "79dc184da4077faf9a1025d14d8cc30faceea511c4fee4ba4deb4de2d486a8a2",
-  "userId": "01a1557a-c0b2-72f9-ab17-46cd05f66ace"
+  "userId": "01a15a89-6fe5-753f-8ef2-a28d8210e0e0"
 }
 ```
 
@@ -586,19 +581,19 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "fileId": "01a1557c-b1b2-7f90-b9ec-09eb52cc022d",
-    "objectPath": "staging/users/01a1557a-c0b2-72f9-ab17-46cd05f66ace/avatar/01a1557c-b1b2-7f90-b9ec-09eb52cc022d-sample.png",
+    "fileId": "01a15a8b-4023-78d9-9c8a-4221acf5c5f4",
+    "objectPath": "staging/users/01a15a89-6fe5-753f-8ef2-a28d8210e0e0/avatar/01a15a8b-4023-78d9-9c8a-4221acf5c5f4-sample.png",
     "expiresIn": 300,
     "method": "POST_MULTIPART",
-    "uploadUrl": "http://10.155.3.236:8097/api/v1/files/01a1557c-b1b2-7f90-b9ec-09eb52cc022d/local-upload",
+    "uploadUrl": "http://192.168.100.23:8097/api/v1/files/01a15a8b-4023-78d9-9c8a-4221acf5c5f4/local-upload",
     "fields": {
-      "key": "staging/users/01a1557a-c0b2-72f9-ab17-46cd05f66ace/avatar/01a1557c-b1b2-7f90-b9ec-09eb52cc022d-sample.png",
+      "key": "staging/users/01a15a89-6fe5-753f-8ef2-a28d8210e0e0/avatar/01a15a8b-4023-78d9-9c8a-4221acf5c5f4-sample.png",
       "token": "<redacted: one-time secret>"
     }
   },
   "meta": {
-    "correlationId": "B4kEPN_Xu4uMbPLj_Bo7N",
-    "timestamp": 1792435597755
+    "correlationId": "dGzWUxLreA717cbd9Hyf2",
+    "timestamp": 1792520437805
   }
 }
 ```

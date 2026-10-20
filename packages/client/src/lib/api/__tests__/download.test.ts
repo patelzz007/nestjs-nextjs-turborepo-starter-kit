@@ -42,8 +42,8 @@ describe("fileNameFromContentDisposition", () => {
 
 describe("apiDownloads", () => {
 	it("derives each download from its shared file contract", () => {
-		expect(apiDownloads.organizations.analyticsExport).toEqual(defineDownload(apiContract.organizations.analyticsExport));
-		expect(apiDownloads.organizations.analyticsExport.contentTypes).toEqual(Object.values(ANALYTICS_EXPORT_CONTENT_TYPES));
+		expect(apiDownloads.tenants.analyticsExport).toEqual(defineDownload(apiContract.tenants.analyticsExport));
+		expect(apiDownloads.tenants.analyticsExport.contentTypes).toEqual(Object.values(ANALYTICS_EXPORT_CONTENT_TYPES));
 		expect(apiDownloads.rewardsAdmin.analyticsExport.path).toBe("/admin/analytics/export");
 		expect(apiDownloads.rewardsAdmin.rewardImagesArchive).toEqual(defineDownload(apiContract.rewardsAdmin.downloadRewardImagesArchive));
 		expect(apiDownloads.rewardsAdmin.rewardImagesArchive.contentTypes).toEqual(["application/zip"]);
@@ -57,10 +57,10 @@ describe("fetchDownload", () => {
 		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(fileResponse("\uFEFFSales,1\r\n"));
 		vi.stubGlobal("fetch", fetchMock);
 
-		const file = await fetchDownload(context, apiDownloads.organizations.analyticsExport, { orgSlug: ORG_SLUG, from: FROM, to: TO, format: "csv" });
+		const file = await fetchDownload(context, apiDownloads.tenants.analyticsExport, { tenantSlug: ORG_SLUG, from: FROM, to: TO, format: "csv" });
 
 		const { input, init } = firstFetchCall(fetchMock);
-		expect(inputUrl(input)).toBe(`${BASE_URL}/api/v1/orgs/${ORG_SLUG}/analytics/export?from=${String(FROM)}&to=${String(TO)}&format=csv`);
+		expect(inputUrl(input)).toBe(`${BASE_URL}/api/v1/tenants/${ORG_SLUG}/analytics/export?from=${String(FROM)}&to=${String(TO)}&format=csv`);
 		expect(init.credentials).toBe("include");
 		expect(headersOf(init)["X-Client-Type"] ?? headersOf(init)["x-client-type"]).toBe("merchant");
 		expect(file.fileName).toBe(FILE_NAME);
@@ -100,8 +100,8 @@ describe("fetchDownload", () => {
 		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("ok");
 		const onUnauthorized = vi.fn<() => void>();
 
-		const file = await fetchDownload(createApiRequestContext(BASE_URL, "merchant", onUnauthorized, onRefresh), apiDownloads.organizations.analyticsExport, {
-			orgSlug: ORG_SLUG,
+		const file = await fetchDownload(createApiRequestContext(BASE_URL, "merchant", onUnauthorized, onRefresh), apiDownloads.tenants.analyticsExport, {
+			tenantSlug: ORG_SLUG,
 			from: FROM,
 			to: TO,
 			format: "csv",

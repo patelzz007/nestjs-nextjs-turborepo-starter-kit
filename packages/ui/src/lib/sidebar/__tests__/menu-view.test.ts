@@ -32,7 +32,7 @@ describe("isRouteActive", () => {
 		expect(isRouteActive("/", "/")).toBe(true);
 		expect(isRouteActive("/", "/users")).toBe(false);
 		expect(isRouteActive("/settings", "/settings/general")).toBe(true);
-		expect(isRouteActive("/organization", "/organizations")).toBe(false);
+		expect(isRouteActive("/tenant", "/tenants")).toBe(false);
 		expect(isRouteActive("#", "/")).toBe(false);
 	});
 });

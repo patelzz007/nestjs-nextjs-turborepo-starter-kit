@@ -2,9 +2,9 @@
 
 import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/contexts/identity/lib/enrollment";
 import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
-import { useOrganizationSlug } from "@/contexts/organizations/lib/org/use-organization-slug";
-import { useOrganizationPath } from "@/contexts/organizations/lib/org/use-organization-path";
-import { ORG_ROUTES } from "@/lib/routes";
+import { useTenantSlug } from "@/contexts/tenancy/lib/org/use-tenant-slug";
+import { useTenantPath } from "@/contexts/tenancy/lib/org/use-tenant-path";
+import { TENANT_ROUTES } from "@/lib/routes";
 import { buildMerchantPaletteItems, renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
@@ -26,10 +26,10 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 	const { toggleTheme } = useThemeToggle();
 	const { can } = useAuthorization();
 	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip } = useMerchantEnrollmentLock();
-	const organizationSlug = useOrganizationSlug();
-	const accountPath = useOrganizationPath(ORG_ROUTES.account);
-	const rewardsPath = useOrganizationPath(ORG_ROUTES.rewards.list);
-	const resolveNavHref = React.useMemo(() => createMerchantNavHrefResolver(organizationSlug), [organizationSlug]);
+	const tenantSlug = useTenantSlug();
+	const accountPath = useTenantPath(TENANT_ROUTES.account);
+	const rewardsPath = useTenantPath(TENANT_ROUTES.rewards.list);
+	const resolveNavHref = React.useMemo(() => createMerchantNavHrefResolver(tenantSlug), [tenantSlug]);
 
 	const recentSearches = useCommandPaletteRecentSearches();
 	const pinnedUrls = useCommandPalettePinnedUrls();

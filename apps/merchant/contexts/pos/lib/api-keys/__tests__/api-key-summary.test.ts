@@ -30,11 +30,11 @@ describe("summarizeApiKeys", () => {
 	it("takes the active and revoked totals from the API, and counts stores across a complete set of active keys", () => {
 		const active = [key("A1", STORE_A, null), key("A2", STORE_A, null), key("B", STORE_B, null)];
 
-		expect(summarizeApiKeys({ keys: active, total: 3 }, 7)).toEqual({ active: 3, revoked: 7, coverage: { kind: "exact", stores: 2, hasOrganizationWideKey: false } });
+		expect(summarizeApiKeys({ keys: active, total: 3 }, 7)).toEqual({ active: 3, revoked: 7, coverage: { kind: "exact", stores: 2, hasTenantWideKey: false } });
 	});
 
-	it("notes an active organization-wide key", () => {
-		expect(summarizeApiKeys({ keys: [key("Everywhere", null, null)], total: 1 }, 0).coverage).toEqual({ kind: "exact", stores: 0, hasOrganizationWideKey: true });
+	it("notes an active tenant-wide key", () => {
+		expect(summarizeApiKeys({ keys: [key("Everywhere", null, null)], total: 1 }, 0).coverage).toEqual({ kind: "exact", stores: 0, hasTenantWideKey: true });
 	});
 
 	it("reports store coverage as unavailable instead of undercounting when more active keys exist than one page holds", () => {
@@ -44,26 +44,26 @@ describe("summarizeApiKeys", () => {
 	});
 
 	it("is all zero for no keys", () => {
-		expect(summarizeApiKeys({ keys: [], total: 0 }, 0)).toEqual({ active: 0, revoked: 0, coverage: { kind: "exact", stores: 0, hasOrganizationWideKey: false } });
+		expect(summarizeApiKeys({ keys: [], total: 0 }, 0)).toEqual({ active: 0, revoked: 0, coverage: { kind: "exact", stores: 0, hasTenantWideKey: false } });
 	});
 });
 
 describe("toApiKeyListQuery", () => {
 	it("asks the API for exactly the keys a status view shows", () => {
 		expect(toApiKeyListQuery("acme", STORE_A, "active")).toEqual({
-			orgSlug: "acme",
+			tenantSlug: "acme",
 			page: 1,
 			limit: MERCHANT_API_KEYS_PAGE_SIZE,
 			locationId: STORE_A,
 			filter: { revokedAt: { isNull: true } },
 		});
 		expect(toApiKeyListQuery("acme", undefined, "revoked", API_KEY_COUNT_PAGE_SIZE)).toEqual({
-			orgSlug: "acme",
+			tenantSlug: "acme",
 			page: 1,
 			limit: API_KEY_COUNT_PAGE_SIZE,
 			locationId: undefined,
 			filter: { revokedAt: { isNull: false } },
 		});
-		expect(toApiKeyListQuery("acme", undefined, "all")).toEqual({ orgSlug: "acme", page: 1, limit: MERCHANT_API_KEYS_PAGE_SIZE, locationId: undefined });
+		expect(toApiKeyListQuery("acme", undefined, "all")).toEqual({ tenantSlug: "acme", page: 1, limit: MERCHANT_API_KEYS_PAGE_SIZE, locationId: undefined });
 	});
 });

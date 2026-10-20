@@ -100,7 +100,7 @@ export function toCategoryItems(dashboard: CustomerAnalyticsDashboard, formatter
 export function toShopItems(dashboard: CustomerAnalyticsDashboard, formatters: AnalyticsFormatters): readonly RankedBarItem[] {
 	const total = dashboard.totals.spentMinor.value;
 	return dashboard.spendingByMerchant.map((shop): RankedBarItem => ({
-		key: shop.organizationId,
+		key: shop.tenantId,
 		label: shop.merchantName,
 		value: shop.totalMinor,
 		valueLabel: formatters.money(shop.totalMinor),
@@ -112,7 +112,7 @@ export function toShopItems(dashboard: CustomerAnalyticsDashboard, formatters: A
 	}));
 }
 
-/** One line per top shop (by its organization id) for the "top shops over time" chart. */
+/** One line per top shop (by its tenant id) for the "top shops over time" chart. */
 export interface ShopTrend {
 	readonly series: readonly TimeSeriesDefinition<string>[];
 	readonly points: readonly TimeSeriesPoint<string>[];
@@ -127,13 +127,13 @@ export interface ShopTrend {
  */
 export function toShopTrend(dashboard: CustomerAnalyticsDashboard): ShopTrend {
 	const shops = dashboard.spendingByMerchant.slice(0, MAX_SHOP_TREND_SERIES);
-	const series = shops.map((shop, index): TimeSeriesDefinition<string> => ({ key: shop.organizationId, label: shop.merchantName, color: categoricalChartSlot(index) }));
-	const totalsByShop = new Map(shops.map((shop) => [shop.organizationId, new Map(shop.series.map((value) => [value.start, value.totalMinor]))]));
+	const series = shops.map((shop, index): TimeSeriesDefinition<string> => ({ key: shop.tenantId, label: shop.merchantName, color: categoricalChartSlot(index) }));
+	const totalsByShop = new Map(shops.map((shop) => [shop.tenantId, new Map(shop.series.map((value) => [value.start, value.totalMinor]))]));
 	const points = dashboard.series.map((bucket): TimeSeriesPoint<string> => ({
 		start: bucket.start,
 		end: bucket.end,
 		isPartial: bucket.isPartial,
-		values: Object.fromEntries(shops.map((shop) => [shop.organizationId, totalsByShop.get(shop.organizationId)?.get(bucket.start) ?? 0])),
+		values: Object.fromEntries(shops.map((shop) => [shop.tenantId, totalsByShop.get(shop.tenantId)?.get(bucket.start) ?? 0])),
 	}));
 	return { series, points, isEmpty: shops.every((shop) => shop.totalMinor === 0) };
 }

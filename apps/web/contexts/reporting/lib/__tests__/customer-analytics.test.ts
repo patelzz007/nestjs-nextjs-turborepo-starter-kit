@@ -57,7 +57,7 @@ describe("toShopTrend", () => {
 		const many = buildCustomerDashboard({
 			spendingByMerchant: ["a", "b", "c", "d", "e"].map((suffix, index) => ({
 				...shop,
-				organizationId: `${TEH_TARIK_ID.slice(0, -1)}${String(index)}`,
+				tenantId: `${TEH_TARIK_ID.slice(0, -1)}${String(index)}`,
 				merchantName: suffix,
 			})),
 		});

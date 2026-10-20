@@ -1,13 +1,6 @@
 import { z } from "zod";
 
-import {
-	JsonValueSchema,
-	PLATFORM_EVENT_TOPICS,
-	PlatformEventMessageSchema,
-	readPlatformEventOrganizationId,
-	type JsonValue,
-	type PlatformEventMessage,
-} from "@workspace/shared";
+import { JsonValueSchema, PLATFORM_EVENT_TOPICS, PlatformEventMessageSchema, readPlatformEventTenantId, type JsonValue, type PlatformEventMessage } from "@workspace/shared";
 
 import { boundErrorText, captureDeadLetterPayload } from "./dead-letter";
 import type { ProcessingRetrySettings } from "./inbox-settings";
@@ -186,14 +179,14 @@ function applyMessage(record: KafkaRecord, message: PlatformEventMessage, deps: 
 		if (!isFirstDelivery) {
 			return false;
 		}
-		const organizationId = readPlatformEventOrganizationId(message.payload);
+		const tenantId = readPlatformEventTenantId(message.payload);
 		await tx.insertAnalyticsEvent({
 			eventId: message.eventId,
 			topic: record.topic,
 			eventType: message.type,
 			correlationId: message.correlationId,
-			partitionKey: organizationId ?? message.type,
-			payload: { eventId: message.eventId, type: message.type, correlationId: message.correlationId, organizationId, occurredAt: message.occurredAt },
+			partitionKey: tenantId ?? message.type,
+			payload: { eventId: message.eventId, type: message.type, correlationId: message.correlationId, tenantId, occurredAt: message.occurredAt },
 			occurredAt: message.occurredAt,
 		});
 		return true;

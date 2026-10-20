@@ -2,7 +2,7 @@
 
 import { FLEET_STAT_CARDS, MerchantTerminalsPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantStatCardsSkeleton } from "@/components/loading/merchant-skeleton-parts";
-import { MerchantAccessDenied, MerchantCapabilityGate } from "@/contexts/organizations";
+import { MerchantAccessDenied, MerchantCapabilityGate } from "@/contexts/tenancy";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { StatCard } from "@workspace/ui/components/stat-card";
@@ -14,7 +14,7 @@ import { TerminalPairingGuide } from "@/contexts/pos/components/terminals/termin
 import { TerminalSettingsCard } from "@/contexts/pos/components/terminals/terminal-settings-card";
 import { clientEnv } from "@/lib/env/env.client";
 import { useActiveLocationFilter, useMerchantLocation } from "@/features/tenant-context/facade";
-import { prefetchForLocation, type LocationScopedPrefetch } from "@/contexts/organizations";
+import { prefetchForLocation, type LocationScopedPrefetch } from "@/contexts/tenancy";
 import { toFormSubmissionError } from "@/lib/forms/api-field-errors";
 import { CREATE_TERMINAL_FIELD_ERRORS } from "@/contexts/pos/lib/terminals/create-terminal-form";
 import {
@@ -69,7 +69,7 @@ function statHint(state: TerminalStatsState | undefined, hint: string): string {
 }
 
 export interface TerminalsPageViewProps {
-	readonly orgSlug: string;
+	readonly tenantSlug: string;
 	/** Server-prefetched first page — the API's own envelope (real pagination meta) — with the store filter it was fetched for. */
 	readonly initialTerminals?: LocationScopedPrefetch<Envelope<MerchantTerminalSummary[]>> | undefined;
 	readonly initialSettings?: Envelope<MerchantTerminalSettings> | undefined;
@@ -95,7 +95,7 @@ export function TerminalsPageView(props: TerminalsPageViewProps): React.JSX.Elem
 	);
 }
 
-function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: TerminalsPageViewProps): React.JSX.Element {
+function TerminalsPageContent({ tenantSlug, initialTerminals, initialSettings }: TerminalsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const { locationId } = useActiveLocationFilter();
@@ -111,18 +111,15 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 	// Seed only with terminals the server fetched for this exact filter — never another store's under this key.
 	const prefetchedTerminals = prefetchForLocation(initialTerminals, locationId);
 
-	const terminalsQuery = api.organizations.terminals.list.useQuery(
-		{ orgSlug, page: 1, limit: MERCHANT_TERMINALS_PAGE_SIZE, locationId },
-		initialDataOption(prefetchedTerminals),
-	);
+	const terminalsQuery = api.tenants.terminals.list.useQuery({ tenantSlug, page: 1, limit: MERCHANT_TERMINALS_PAGE_SIZE, locationId }, initialDataOption(prefetchedTerminals));
 	const terminals: readonly MerchantTerminalSummary[] = terminalsQuery.data?.data ?? [];
 	const totalTerminals: number = readPaginatedTotal(terminalsQuery.data?.meta, terminals.length);
 	const statsState: TerminalStatsState | undefined = terminalsQuery.data === undefined ? undefined : summarizeTerminalPage(terminals, totalTerminals);
 
 	// While a code is on screen, watch the terminal's own store — and stop as soon as the till paired, the code
 	// expired, or the terminal cannot be observed on the page (there is no per-terminal status endpoint).
-	const pairingStatusQuery = api.organizations.terminals.list.useQuery(
-		{ orgSlug, page: 1, limit: MERCHANT_TERMINALS_PAGE_SIZE, locationId: pairing?.terminal.locationId },
+	const pairingStatusQuery = api.tenants.terminals.list.useQuery(
+		{ tenantSlug, page: 1, limit: MERCHANT_TERMINALS_PAGE_SIZE, locationId: pairing?.terminal.locationId },
 		{
 			enabled: pairing !== null,
 			refetchInterval: (query): number | false =>
@@ -132,14 +129,14 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 	const polledTerminal = pairing === null ? undefined : pairingStatusQuery.data?.data.find((terminal) => terminal.id === pairing.terminal.id);
 	const isPaired = pairing !== null && isPairingComplete(pairing.terminal, polledTerminal);
 
-	const settingsQuery = api.organizations.terminals.settings.useQuery({ orgSlug }, initialDataOption(initialSettings));
+	const settingsQuery = api.tenants.terminals.settings.useQuery({ tenantSlug }, initialDataOption(initialSettings));
 
-	/** Every terminal list of this organization (any store, the pairing poll included) is stale after a change. */
+	/** Every terminal list of this tenant (any store, the pairing poll included) is stale after a change. */
 	const invalidateTerminals = React.useCallback((): void => {
-		void queryClient.invalidateQueries({ queryKey: apiRouter.organizations.terminals.list.scopeKey({ orgSlug }) });
-	}, [orgSlug, queryClient]);
+		void queryClient.invalidateQueries({ queryKey: apiRouter.tenants.terminals.list.scopeKey({ tenantSlug }) });
+	}, [tenantSlug, queryClient]);
 
-	const createMutation = api.organizations.terminals.create.useMutation({
+	const createMutation = api.tenants.terminals.create.useMutation({
 		onSuccess: (response): void => {
 			setIsAddOpen(false);
 			setPairing(response.data);
@@ -147,7 +144,7 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 		},
 	});
 
-	const pairingCodeMutation = api.organizations.terminals.pairingCode.useMutation({
+	const pairingCodeMutation = api.tenants.terminals.pairingCode.useMutation({
 		onSuccess: (response): void => {
 			setPairing(response.data);
 			invalidateTerminals();
@@ -160,9 +157,9 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 		},
 	});
 
-	const removeMutation = api.organizations.terminals.remove.useMutation();
+	const removeMutation = api.tenants.terminals.remove.useMutation();
 
-	const updateSettingsMutation = api.organizations.terminals.updateSettings.useMutation({
+	const updateSettingsMutation = api.tenants.terminals.updateSettings.useMutation({
 		onSuccess: (): void => {
 			void settingsQuery.refetch();
 		},
@@ -191,17 +188,17 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 
 	const handleCreate = React.useCallback(
 		(input: MerchantCreateTerminalInput): void => {
-			createMutation.mutate({ orgSlug, ...input });
+			createMutation.mutate({ tenantSlug, ...input });
 		},
-		[createMutation, orgSlug],
+		[createMutation, tenantSlug],
 	);
 
 	const issuePairingCode = React.useCallback(
 		(terminal: MerchantTerminalSummary): void => {
 			setPairingTerminalId(terminal.id);
-			pairingCodeMutation.mutate({ orgSlug, id: terminal.id });
+			pairingCodeMutation.mutate({ tenantSlug, id: terminal.id });
 		},
-		[orgSlug, pairingCodeMutation],
+		[tenantSlug, pairingCodeMutation],
 	);
 
 	const handlePairRequest = React.useCallback(
@@ -262,7 +259,7 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 		const removed = terminalToRemove;
 		setRemovingTerminalId(removed.id);
 		removeMutation.mutate(
-			{ orgSlug, id: removed.id },
+			{ tenantSlug, id: removed.id },
 			{
 				onSuccess: (): void => {
 					setTerminalToRemove(null);
@@ -278,7 +275,7 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 				},
 			},
 		);
-	}, [invalidateTerminals, orgSlug, removeMutation, terminalToRemove]);
+	}, [invalidateTerminals, tenantSlug, removeMutation, terminalToRemove]);
 
 	const refetchTerminals = terminalsQuery.refetch;
 	const handleRetryTerminals = React.useCallback((): void => {
@@ -291,9 +288,9 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 
 	const handleRequireRegisteredTerminalsChange = React.useCallback(
 		(requireRegisteredTerminals: boolean): void => {
-			updateSettingsMutation.mutate({ orgSlug, requireRegisteredTerminals });
+			updateSettingsMutation.mutate({ tenantSlug, requireRegisteredTerminals });
 		},
-		[orgSlug, updateSettingsMutation],
+		[tenantSlug, updateSettingsMutation],
 	);
 
 	const truncationNote = totalTerminals > terminals.length ? `Showing the newest ${String(terminals.length)} of ${String(totalTerminals)} terminals.` : null;

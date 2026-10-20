@@ -8,19 +8,24 @@ const PAIRED: PosPairedTerminal = {
 	apiKey: "mk_live_abc123",
 	terminalId: "TERM-7F3K9QX2",
 	terminalName: "Front counter",
-	organization: { slug: "kopi-co", displayName: "Kopi & Co" },
+	tenant: { id: "2c7e9a14-5b3d-4f8e-a1c6-9d0b3e7f2a58", slug: "kopi-co", displayName: "Kopi & Co" },
 	location: { id: "5b1f2c4e-8a3d-4e6f-9b7a-1c2d3e4f5a6b", name: "KLCC" },
 };
 
 const TERMINAL: PairedTerminal = pairedTerminalOf(PAIRED);
 
 describe("pairedTerminalOf", () => {
-	it("keeps the key, the terminal id and the names the till screen shows", () => {
+	it("keeps the key, the terminal id, the tenant and store ids, and the names the till screen shows", () => {
 		expect(TERMINAL).toEqual({
-			credentials: { apiKey: "mk_live_abc123", terminalId: "TERM-7F3K9QX2" },
+			credentials: {
+				apiKey: "mk_live_abc123",
+				terminalId: "TERM-7F3K9QX2",
+				tenantId: "2c7e9a14-5b3d-4f8e-a1c6-9d0b3e7f2a58",
+				locationId: "5b1f2c4e-8a3d-4e6f-9b7a-1c2d3e4f5a6b",
+			},
 			terminalName: "Front counter",
 			locationName: "KLCC",
-			organizationName: "Kopi & Co",
+			tenantName: "Kopi & Co",
 		});
 	});
 });
@@ -53,12 +58,23 @@ describe("the paired terminal in Secure Store", () => {
 		expect(memorySecureStore.peek(SECURE_STORE_ENTRIES.tillTerminalName.key)).toBeNull();
 	});
 
+	it("forgets a pairing saved before the till kept its tenant and store ids, so the phone pairs again", async () => {
+		await savePairedTerminal(TERMINAL);
+		await memorySecureStore.deleteItemAsync(SECURE_STORE_ENTRIES.tillTenantId.key);
+		await memorySecureStore.deleteItemAsync(SECURE_STORE_ENTRIES.tillLocationId.key);
+
+		await expect(readPairedTerminal()).resolves.toBeNull();
+		expect(memorySecureStore.peek(SECURE_STORE_ENTRIES.tillApiKey.key)).toBeNull();
+	});
+
 	it("forgets every field on unpair", async () => {
 		await savePairedTerminal(TERMINAL);
 
 		await forgetPairedTerminal();
 
 		await expect(readPairedTerminal()).resolves.toBeNull();
-		expect(memorySecureStore.peek(SECURE_STORE_ENTRIES.tillOrganizationName.key)).toBeNull();
+		expect(memorySecureStore.peek(SECURE_STORE_ENTRIES.tillTenantName.key)).toBeNull();
+		expect(memorySecureStore.peek(SECURE_STORE_ENTRIES.tillTenantId.key)).toBeNull();
+		expect(memorySecureStore.peek(SECURE_STORE_ENTRIES.tillLocationId.key)).toBeNull();
 	});
 });

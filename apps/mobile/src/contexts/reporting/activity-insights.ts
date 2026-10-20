@@ -39,7 +39,7 @@ export interface ActivityVisit {
 	/** Stable per visit. */
 	readonly id: string;
 	readonly at: EpochMs;
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly merchantName: string;
 	readonly category: MerchantBusinessCategory;
 	readonly billMinor: number;
@@ -48,7 +48,7 @@ export interface ActivityVisit {
 
 /** A shop's stamp card: visits since the last free reward there. */
 export interface StampCard {
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly merchantName: string;
 	/** What a full card earns ("Free kopi"). */
 	readonly rewardName: string;

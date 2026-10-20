@@ -6,7 +6,7 @@ import { identitySidebarResolveHref, type SidebarResolveHref } from "@workspace/
 
 import { MERCHANT_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
 import { resolveOrgPageRoute, type OrgPageRoute } from "@/lib/navigation/org-route-authorization";
-import { toOrgRelativePath } from "@/lib/routes";
+import { toTenantRelativePath } from "@/lib/routes";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 
 function resolveIcon(iconName: string | undefined): LucideIcon {
@@ -43,14 +43,14 @@ function resolveMerchantTrailPage(orgRelativePath: string): SidebarTrailPage | n
  * Builds the breadcrumb trail for a merchant portal path from the sidebar menu.
  *
  * Menu URLs are org-relative, so the trail is matched in that space (the
- * `/orgs/{slug}` prefix is stripped first — otherwise every menu item would
- * share the `/orgs` root segment and the first section would win), then each
+ * `/t/{slug}` prefix is stripped first — otherwise every menu item would
+ * share the `/t` root segment and the first section would win), then each
  * crumb's href is mapped back to a browser href with `resolveHref`.
  */
 export function resolveMerchantTrail(pathname: string, resolveHref: SidebarResolveHref = identitySidebarResolveHref): readonly BreadcrumbItem[] {
 	const trail = resolveSidebarMenuTrail({
 		menu: MERCHANT_SIDEBAR_MENU,
-		pathname: toOrgRelativePath(pathname) ?? pathname,
+		pathname: toTenantRelativePath(pathname) ?? pathname,
 		resolveIcon,
 		rootCurrentLabel: "Dashboard",
 		rootIcon: LayoutDashboard,

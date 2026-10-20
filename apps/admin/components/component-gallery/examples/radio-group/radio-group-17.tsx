@@ -19,7 +19,7 @@ const plans = [
 		value: "enterprise",
 		title: "Enterprise",
 		price: "$49",
-		description: "For organizations with advanced needs.",
+		description: "For tenants with advanced needs.",
 	},
 ];
 

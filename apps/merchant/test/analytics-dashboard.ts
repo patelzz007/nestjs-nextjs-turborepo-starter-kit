@@ -14,7 +14,7 @@ function compared(value: number, previous: number): AnalyticsComparison {
 }
 
 /**
- * `GET /orgs/:orgSlug/analytics/dashboard` in Kuala Lumpur days: RM 2,500.00
+ * `GET /t/:orgSlug/analytics/dashboard` in Kuala Lumpur days: RM 2,500.00
  * over 10 bills, two stores, two rewards and both redemption methods.
  * Overrides are merged BEFORE parsing, so a fixture can never break the contract.
  */

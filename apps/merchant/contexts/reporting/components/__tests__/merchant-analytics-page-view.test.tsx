@@ -7,7 +7,7 @@ import { toastMessage } from "@workspace/ui/components/toast";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MerchantAnalyticsPageView, type MerchantAnalyticsPageViewProps } from "@/contexts/reporting/components/merchant-analytics-page-view";
-import { orgRoutes } from "@/lib/routes";
+import { tenantRoutes } from "@/lib/routes";
 import { buildMerchantDashboard } from "@/test/analytics-dashboard";
 import { renderWithAuthorization, TEST_ORG_SLUG, type AuthorizationFixture } from "@/test/authorization";
 import { testEnvelope } from "@/test/envelope";
@@ -35,7 +35,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
-		api: { organizations: { analyticsDashboard: { useQuery: mocks.dashboardQuery }, context: { useQuery: mocks.contextQuery } }, download: mocks.download },
+		api: { tenants: { analyticsDashboard: { useQuery: mocks.dashboardQuery }, context: { useQuery: mocks.contextQuery } }, download: mocks.download },
 	}),
 }));
 
@@ -59,10 +59,10 @@ function spaced(value: string | null | undefined): string {
 }
 
 function renderView(props: Partial<MerchantAnalyticsPageViewProps> = {}, fixture: AuthorizationFixture = { role: "CASHIER" }): () => void {
-	const { rerender } = renderWithAuthorization(<MerchantAnalyticsPageView orgSlug={TEST_ORG_SLUG} nowMs={NOW_MS} timeZone={KUALA_LUMPUR} {...props} />, fixture);
+	const { rerender } = renderWithAuthorization(<MerchantAnalyticsPageView tenantSlug={TEST_ORG_SLUG} nowMs={NOW_MS} timeZone={KUALA_LUMPUR} {...props} />, fixture);
 	// The URL changed through the History API; re-render so `useSearchParams` reads it (Next does this itself).
 	return (): void => {
-		rerender(<MerchantAnalyticsPageView orgSlug={TEST_ORG_SLUG} nowMs={NOW_MS} timeZone={KUALA_LUMPUR} {...props} />);
+		rerender(<MerchantAnalyticsPageView tenantSlug={TEST_ORG_SLUG} nowMs={NOW_MS} timeZone={KUALA_LUMPUR} {...props} />);
 	};
 }
 
@@ -91,7 +91,7 @@ async function chooseFilter(label: string, option: string): Promise<void> {
 }
 
 beforeEach((): void => {
-	window.history.replaceState(null, "", `/orgs/${TEST_ORG_SLUG}/analytics`);
+	window.history.replaceState(null, "", `/t/${TEST_ORG_SLUG}/analytics`);
 	vi.stubGlobal("matchMedia", (query: string): Pick<MediaQueryList, "matches" | "media" | "addEventListener" | "removeEventListener"> => ({
 		matches: true,
 		media: query,
@@ -132,7 +132,7 @@ describe("MerchantAnalyticsPageView data", () => {
 		mocks.dashboardQuery.mockReturnValue(ready());
 		renderView();
 
-		expect(lastInput()).toEqual({ orgSlug: TEST_ORG_SLUG, from: DEFAULT_FROM, to: DEFAULT_TO, interval: "day", locationId: undefined });
+		expect(lastInput()).toEqual({ tenantSlug: TEST_ORG_SLUG, from: DEFAULT_FROM, to: DEFAULT_TO, interval: "day", locationId: undefined });
 		// The range and the zone its days are cut in.
 		expect(screen.getAllByRole("status").map((status) => spaced(status.textContent))).toContain("6 Sept – 5 Oct 2026 · Asia/Kuala_Lumpur");
 
@@ -165,8 +165,8 @@ describe("MerchantAnalyticsPageView data", () => {
 		fireEvent.click(await screen.findByRole("menuitem", { name: "CSV" }));
 
 		await waitFor((): void => {
-			expect(mocks.download).toHaveBeenCalledWith(apiDownloads.organizations.analyticsExport, {
-				orgSlug: TEST_ORG_SLUG,
+			expect(mocks.download).toHaveBeenCalledWith(apiDownloads.tenants.analyticsExport, {
+				tenantSlug: TEST_ORG_SLUG,
 				from: DEFAULT_FROM,
 				to: DEFAULT_TO,
 				interval: "day",
@@ -229,7 +229,7 @@ describe("MerchantAnalyticsPageView empty and failure states", () => {
 		renderView({}, { role: "OWNER" });
 
 		expect(screen.getByText("No sales yet")).toBeTruthy();
-		expect(screen.getByRole("link", { name: "Set up API keys" }).getAttribute("href")).toBe(orgRoutes(TEST_ORG_SLUG).apiKeys);
+		expect(screen.getByRole("link", { name: "Set up API keys" }).getAttribute("href")).toBe(tenantRoutes(TEST_ORG_SLUG).apiKeys);
 	});
 
 	it("does not offer the API keys link to a cashier", () => {

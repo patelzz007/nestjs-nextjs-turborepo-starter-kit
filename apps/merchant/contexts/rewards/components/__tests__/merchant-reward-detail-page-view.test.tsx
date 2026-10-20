@@ -9,7 +9,7 @@ import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
 import { busyRegionAnnouncements } from "@/test/skeleton";
 import { contextQueryState, TWO_STORE_CONTEXT } from "@/test/tenant-context";
 import { rewardFixture } from "@/test/rewards";
-import { orgRoutes } from "@/lib/routes";
+import { tenantRoutes } from "@/lib/routes";
 import { ApiError } from "@workspace/client/lib/api/use-api";
 import { epochMs, type RewardResponse } from "@workspace/shared";
 
@@ -24,7 +24,7 @@ const { rewardQuery, publishMutation, publish } = vi.hoisted(() => ({
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
 		api: {
-			organizations: {
+			tenants: {
 				rewards: { get: { useQuery: rewardQuery }, publish: { useMutation: publishMutation } },
 				context: { useQuery: (): object => contextQueryState(TWO_STORE_CONTEXT) },
 			},
@@ -67,7 +67,7 @@ function rewardReturns(state: object): void {
 }
 
 function renderPage(): void {
-	renderWithAuthorization(<MerchantRewardDetailPageView orgSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
+	renderWithAuthorization(<MerchantRewardDetailPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
 }
 
 beforeEach((): void => {
@@ -119,13 +119,13 @@ describe("MerchantRewardDetailPageView", () => {
 			fireEvent.click(screen.getByRole("button", { name: "Submit for review" }));
 		});
 
-		expect(publish).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, rewardId: REWARD_ID });
+		expect(publish).toHaveBeenCalledWith({ tenantSlug: TEST_ORG_SLUG, rewardId: REWARD_ID });
 	});
 
 	it("leads back to the catalog", () => {
 		renderPage();
 
-		expect(screen.getByRole("link", { name: "Rewards" }).getAttribute("href")).toBe(orgRoutes(TEST_ORG_SLUG).rewards.list);
+		expect(screen.getByRole("link", { name: "Rewards" }).getAttribute("href")).toBe(tenantRoutes(TEST_ORG_SLUG).rewards.list);
 	});
 
 	it("draws the page's own skeleton — not 'reward not found' — while the reward resolves", () => {
@@ -141,7 +141,7 @@ describe("MerchantRewardDetailPageView", () => {
 		renderPage();
 
 		expect(screen.getByRole("heading", { name: "Reward not found" })).toBeTruthy();
-		expect(screen.getByRole("link", { name: "Back to rewards" }).getAttribute("href")).toBe(orgRoutes(TEST_ORG_SLUG).rewards.list);
+		expect(screen.getByRole("link", { name: "Back to rewards" }).getAttribute("href")).toBe(tenantRoutes(TEST_ORG_SLUG).rewards.list);
 	});
 
 	it("shows a load failure as an error with a retry, without leaking the server's message", () => {

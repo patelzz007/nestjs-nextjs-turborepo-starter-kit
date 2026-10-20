@@ -1,6 +1,7 @@
 /**
  * `no-restricted-syntax` selectors for type safety (rules/00), runtime validation
- * (rules/28) and array-index readability (rules/27). Applied to every TypeScript file.
+ * (rules/28), array-index readability (rules/27) and tenancy naming (ADR 062).
+ * Applied to every TypeScript file.
  */
 
 const TYPE_SAFETY_SELECTORS = [
@@ -85,5 +86,16 @@ const ARRAY_INDEX_SELECTORS = [
 	},
 ];
 
+// The isolation boundary is a "tenant" in code (ADR 062, multi-tenancy plan D16 and MT-08); the
+// "organization" names it replaced must not come back. Identifiers only: a string literal stays
+// allowed, so UI copy and web-platform tokens (`autoComplete="organization"`) are unaffected.
+const TENANCY_NAMING_SELECTORS = [
+	{
+		selector: "Identifier[name=/[Oo]rgani[sz]ation/]",
+		message:
+			'Name the isolation boundary a tenant (ADR 062): `Tenant`, `tenantId`, `TenantMembership`, not `Organization`. Only UI copy (a string literal) may say "organization".',
+	},
+];
+
 /** Every restricted-syntax selector, as one `no-restricted-syntax` rule entry. */
-export const restrictedSyntaxRules = ["error", ...TYPE_SAFETY_SELECTORS, ...RUNTIME_VALIDATION_SELECTORS, ...ARRAY_INDEX_SELECTORS];
+export const restrictedSyntaxRules = ["error", ...TYPE_SAFETY_SELECTORS, ...RUNTIME_VALIDATION_SELECTORS, ...ARRAY_INDEX_SELECTORS, ...TENANCY_NAMING_SELECTORS];

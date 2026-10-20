@@ -68,7 +68,7 @@ as custom roles or permissions). Put it in every deploy, right after `pnpm db:de
 - **Same source as the seed.** `pnpm db:seed` calls this loader (`prisma/seed/reference-data.ts`); only the
   ABAC demo condition is seed-only. The definitions live in
   `apps/api/src/contexts/authorization/infrastructure/reference-data/` (role catalog and matrix, capability catalog,
-  sections). Per-tenant policy rows (the default role policy) are created by organization provisioning, not
+  sections). Per-tenant policy rows (the default role policy) are created by tenant provisioning, not
   here.
 - Changing the catalog in code and re-running the command converges existing databases: new grants are
   added, withdrawn ones soft-deleted.

@@ -50,7 +50,7 @@ explicitly revised.
 
 | # | Question | Decision | Implications (short) |
 | --- | --- | --- | --- |
-| 1 | Per client: one DO project vs multi-tenant in one deployment? | **Both.** Some clients want multi-tenancy; some want single-tenancy. | Use `TENANCY_ENABLED` + `DEFAULT_ORGANIZATION_ID` per deployment; document two DO runbook variants. |
+| 1 | Per client: one DO project vs multi-tenant in one deployment? | **Both.** Some clients want multi-tenancy; some want single-tenancy. | Use `TENANCY_ENABLED` + `DEFAULT_TENANT_ID` per deployment; document two DO runbook variants. |
 | 2 | Merchant app after strip? | **Keep app shell; placeholder page only** (remove reward content). | Merchant port stays in monorepo; CI may smoke placeholder route; Cedar/capability docs trimmed of reward-specific flows. |
 | 3 | Kafka + analytics-consumer? | **Keep in default template** (not profile-only, not deleted). | `compose.yml` stays full-featured; CI keeps consumer e2e; agencies accept Docker footprint. |
 | 4 | Cedar for agency forks? | **Keep for all forks** (not “RBAC-only narrative”). | Onboarding must teach Cedar + capabilities; reward-specific Cedar actions removed with vertical. |
@@ -126,14 +126,14 @@ Agencies will run **both** models across their portfolio:
 Model A — Single-tenant per client (common for B2B “dedicated instance”)
   One DO App / one database / one “logical customer”
   TENANCY_ENABLED=false
-  DEFAULT_ORGANIZATION_ID=<uuid of the one org row>
-  Staff admins may bypass RLS (see ADR 007)
+  DEFAULT_TENANT_ID=<uuid of the one tenant row>
+  No bypass: staff are ordinary users of that tenant (ADR 062)
 
 Model B — Multi-tenant SaaS for one client’s product
-  One DO App / one database / many organizations
+  One DO App / one database / many tenants
   TENANCY_ENABLED=true
-  DEFAULT_ORGANIZATION_ID unset (not used)
-  Only SuperAdmin bypasses RLS globally; staff are org-scoped
+  DEFAULT_TENANT_ID unset (setting it fails boot)
+  No bypass: platform staff need an approved support grant on tenant data (ADR 062)
 ```
 
 **Same codebase, different env.** This is a major selling point — do not fork the repo per model.
@@ -154,9 +154,9 @@ Document all three; recommend **managed Postgres + managed Redis** for every pro
 
 ### Source of truth in code
 
-- **ADR:** [ADR 007: Tenancy mode and RLS bypass](../adr/007-tenancy-and-rls-bypass.md)
+- **ADR:** [ADR 062: Tenancy modes without bypasses](../adr/062-tenancy-modes-and-isolation.md) (supersedes ADR 007)
 - **Config:** `apps/api/src/config/api-config.schema.ts`, `tenancy.config.ts`
-- **Boot verification:** `DefaultOrganizationService` — single-tenant mode refuses to start if `DEFAULT_ORGANIZATION_ID` is not a live organization row.
+- **Boot verification:** `DefaultTenantService` — single-tenant mode refuses to start if `DEFAULT_TENANT_ID` is not a live tenant row; `RuntimeRoleProof` refuses to start if `app_runtime` can bypass RLS or a table does not force it.
 - **Runtime:** `RlsInterceptor`, `RlsPool`, `TenancyConfigService`
 
 ### Environment variables
@@ -164,26 +164,28 @@ Document all three; recommend **managed Postgres + managed Redis** for every pro
 | Variable | Single-tenant | Multi-tenant |
 | --- | --- | --- |
 | `TENANCY_ENABLED` | `false` (default) | `true` |
-| `DEFAULT_ORGANIZATION_ID` | **Required** — UUID of real org | **Unused** — must not be relied upon |
+| `DEFAULT_TENANT_ID` | **Required** — UUID of a real tenant | **Must be unset** — setting it fails boot |
 
 Full reference: [API configuration — Tenancy](./configuration/api.md).
 
-### RLS bypass matrix (memorize for incidents)
+### RLS scope matrix (memorize for incidents)
+
+There is no RLS bypass in either mode (ADR 062). Every privileged access is one named system operation that reaches only the tables its registry entry lists.
 
 | Condition | Single-tenant | Multi-tenant |
 | --- | --- | --- |
-| `@RlsBypass()` on handler | Bypass | Bypass |
-| No authenticated user (pre-auth routes) | Bypass | Bypass |
-| `isSuperAdmin` on JWT | Bypass | Bypass |
-| Staff with `hasAdminAccess` | **Bypass** | **No bypass** — scoped RLS |
-| Normal end user | Scoped to user | Scoped to user + verified org |
+| Public / pre-auth route (`@PublicOperation`) | Its one operation's tables | Same |
+| Admin-console route (`@PlatformOperation`) | Its one operation's tables | Same |
+| `isSuperAdmin` or `hasAdminAccess` on a tenant route | Ordinary user; tenant data only with an approved support grant | Same |
+| Machine credential (POS, API key) | The key's own tenant (and store) | Same; a slug or `tenantId` is 400 |
+| Normal end user | User + the default tenant | User + the tenant of `:tenantSlug` (verified membership) |
 
 **Incident rule:** never disable RLS globally. See [Multi-tenancy operations runbook](./operations/multi-tenancy-runbook.md).
 
-### `DEFAULT_ORGANIZATION_ID` — what it is NOT
+### `DEFAULT_TENANT_ID` — what it is NOT
 
-- It is **not** a fake placeholder string — boot verifies the organization exists.
-- It is **not** used in multi-tenant mode for “default tenant when header missing” — multi-tenant fails closed without verified org context.
+- It is **not** a fake placeholder string — boot verifies the tenant exists.
+- It is **not** a multi-tenant fallback — setting it in multi-tenant mode fails boot, and a request with no `:tenantSlug` resolves no tenant.
 - It is **not** a substitute for authorization — kernel checks still apply; RLS is an additional layer.
 
 ### Agency checklist: choosing tenancy for a new client
@@ -196,9 +198,9 @@ Full reference: [API configuration — Tenancy](./configuration/api.md).
 
 **Choose multi-tenant when:**
 
-- Client’s product is SaaS with many organizations on one deployment.
+- Client’s product is SaaS with many tenants on one deployment.
 - Compromise of one staff admin account must not expose all tenants’ rows.
-- You will invest in org-switching UX (`x-organization-id` discipline).
+- You will invest in org-switching UX (`x-tenant-id` discipline).
 
 ### Migration between modes (dangerous — plan explicitly)
 
@@ -257,7 +259,7 @@ Prune menus and permissions that only existed for rewards, KYB, POS, merchant an
 Reasons aligned with your decision:
 
 1. **Proves multi-app cookie isolation** (`merchant` vs `admin` vs `web`) in one repo.
-2. **Proves org-slug routing** (`/orgs/[orgSlug]/…`) for future B2B portals.
+2. **Proves org-slug routing** (`/tenants/[orgSlug]/…`) for future B2B portals.
 3. **Avoids another “how to add a Next app” doc** — agencies duplicate merchant shell for client portals.
 
 Placeholder content should state clearly: “Implement your org-scoped portal here.”
@@ -335,14 +337,14 @@ Kernel JSON policies (ABAC) are a **fourth** concept — do not conflate with Ce
 Remove or rewrite:
 
 - Cedar actions tied to `manage_rewards`, KYB, POS, analytics exports (as product features).
-- `organization-reward-auth` naming — rename to org capability gate without “reward” in the name if service survives.
+- `tenant-reward-auth` naming — rename to org capability gate without “reward” in the name if service survives.
 - Merchant docs that walk reward-specific Cedar examples.
 
 Keep:
 
 - Cedar control plane, policy publish, audit, default tenant policy seed.
 - File authorization paths that used Cedar (still valid for org file categories).
-- Testing patterns in `organization-reward-auth.service.spec.ts` → migrate to generic org capability tests.
+- Testing patterns in `tenant-reward-auth.service.spec.ts` → migrate to generic org capability tests.
 
 ### Agency onboarding requirement
 
@@ -350,7 +352,7 @@ Every fork engineer should read:
 
 1. [Authorization overview](./authorization/overview.md)
 2. [Backend kernel](./authorization/backend.md) — Cedar section
-3. [Troubleshooting](./authorization/troubleshooting.md) — `ORGANIZATION_ACTION_FORBIDDEN`
+3. [Troubleshooting](./authorization/troubleshooting.md) — `TENANT_ACTION_FORBIDDEN`
 
 Provide **authorization ladder** appendix (see §10) mapping “I only build admin CRUD” vs “I build org portal with Cedar.”
 
@@ -423,7 +425,7 @@ Consider [Changesets](https://github.com/changesets/changesets) only if you publ
 #### WS-A — Database and Prisma
 
 - Inventory models: rewards, claims, redemptions, POS, referrals, merchant KYB, terminals, etc.
-- Design target schema: kernel + organization + sample catalog + files + auth + audit.
+- Design target schema: kernel + tenant + sample catalog + files + auth + audit.
 - Migration strategy:
   - **Option 1:** New baseline migration (update `migrations-baseline.json`) — clean for agencies, painful for existing forks.
   - **Option 2:** Forward migrations dropping tables — better for ongoing forks; more SQL review.
@@ -433,7 +435,7 @@ Consider [Changesets](https://github.com/changesets/changesets) only if you publ
 #### WS-B — API modules
 
 - Remove `apps/api/src/contexts/rewards**` (~124 files today).
-- Remove reward-specific controllers from organization module if any.
+- Remove reward-specific controllers from tenant module if any.
 - Prune `apiRoutes` and `contracts/index.ts` leaves.
 - Update `app.module` imports and queue modules.
 - Remove POS rate limit guards if only used by rewards.
@@ -443,7 +445,7 @@ Consider [Changesets](https://github.com/changesets/changesets) only if you publ
 
 - Delete `packages/shared/src/schemas/domain/rewards/**` (and related exports).
 - Prune `permission.ts` — remove `REWARD_*`, merchant capabilities tied to rewards.
-- Prune Cedar action maps in organization constants.
+- Prune Cedar action maps in tenant constants.
 - Keep list-query helpers, api-error, auth schemas intact.
 
 #### WS-D — Frontends
@@ -460,8 +462,8 @@ Consider [Changesets](https://github.com/changesets/changesets) only if you publ
 
 - Introduce `minimal` scenario: one org, superadmin path, sample categories, one web user optional.
 - Trim `enterprise` scenario or repurpose for load testing only.
-- Update `organization-seed-ids.ts` if default org UUID changes.
-- Update `DEFAULT_ORGANIZATION_ID` in `.env.example` to match minimal seed org.
+- Update `tenant-seed-ids.ts` if default org UUID changes.
+- Update `DEFAULT_TENANT_ID` in `.env.example` to match minimal seed org.
 
 #### WS-F — Documentation and marketing
 
@@ -552,7 +554,7 @@ Document in [Recipes](./authorization/recipes.md) (expand):
 - Add admin menu gated with `can()`.
 - RLS policies for new tables with org/platform scope as appropriate.
 
-**Level 2 — Organization portal (merchant placeholder future)**
+**Level 2 — Tenant portal (merchant placeholder future)**
 
 - `MERCHANT_CAPABILITY` (renamed/generic capabilities).
 - `requireMembershipCapability` pattern.
@@ -686,7 +688,7 @@ Copy from [API configuration](./configuration/api.md). Minimum production set:
 - `COOKIE_DOMAIN` if sharing cookies across subdomains
 - `STORAGE_PROVIDER` + Spaces credentials
 - `EMAIL_MODE=send` + Resend + webhook secret
-- `TENANCY_ENABLED` / `DEFAULT_ORGANIZATION_ID` per client model
+- `TENANCY_ENABLED` / `DEFAULT_TENANT_ID` per client model
 - `KAFKA_BROKERS` if outbox/analytics path active
 
 ### Environment variable checklist (each Next app)
@@ -724,13 +726,13 @@ pnpm db:sync-reference-data # permissions catalog
 ### Single-tenant DO deployment variant
 
 - `TENANCY_ENABLED=false`
-- Seed **locally** to create org; note UUID in `DEFAULT_ORGANIZATION_ID` for prod env.
+- Seed **locally** to create org; note UUID in `DEFAULT_TENANT_ID` for prod env.
 - Document that prod does not run seed — create org via migration SQL or one-time admin script if needed.
 
 ### Multi-tenant DO deployment variant
 
 - `TENANCY_ENABLED=true`
-- No `DEFAULT_ORGANIZATION_ID`
+- No `DEFAULT_TENANT_ID`
 - Test org creation invite flow and RLS denial paths before go-live.
 
 ---
@@ -886,7 +888,7 @@ pnpm ci:local
 
 **Web home:** “Customer-facing application placeholder. Implement your product routes in `apps/web`.”
 
-**Merchant home:** “Organization portal placeholder. Implement B2B features under `apps/merchant/app/orgs/[orgSlug]`.”
+**Merchant home:** “Tenant portal placeholder. Implement B2B features under `apps/merchant/app/tenants/[orgSlug]`.”
 
 ### Appendix D — Semver release template (CHANGELOG snippet)
 
@@ -924,7 +926,7 @@ Use `git grep` / ripgrep before merge; this list is representative not exhaustiv
 9. `apps/docs api-reference samples for reward endpoints`
 10. `prisma seed enterprise reward graphs`
 11. `permission.ts REWARD_* and merchant reward capabilities`
-12. `organization-reward-auth (rename/refactor)`
+12. `tenant-reward-auth (rename/refactor)`
 
 ### Appendix F — Per-endpoint authorization mapping template
 
@@ -934,7 +936,7 @@ Copy into each feature's module README or PR description:
 | --- | --- |
 | Endpoint | `METHOD /path` |
 | Permission(s) | `PERMISSION....` |
-| Scope | GLOBAL / ORGANIZATION / ... |
+| Scope | GLOBAL / TENANT / ... |
 | Ownership check | yes/no — rule |
 | RLS table policies | `tableName` |
 | Cedar | action or n/a |
@@ -951,20 +953,20 @@ Copy into each feature's module README or PR description:
 
 ### Appendix H — `TENANCY_ENABLED` FAQ lines for support
 
-**Q:** Why does admin see all rows in dev but not staging?
-**A:** Staging may be multi-tenant; dev may be single-tenant with staff RLS bypass.
+**Q:** Why does admin not see a tenant's rows?
+**A:** No mode bypasses RLS (ADR 062): platform staff need an approved support grant for that tenant.
 
-**Q:** Why is DEFAULT_ORGANIZATION_ID required?
-**A:** Single-tenant mode fixes org context to one verified row.
+**Q:** Why is DEFAULT_TENANT_ID required?
+**A:** Single-tenant mode fixes the tenant to one row, verified at boot.
 
-**Q:** Can I set DEFAULT_ORGANIZATION_ID in multi-tenant?
-**A:** Ignored; use org headers and membership guards.
+**Q:** Can I set DEFAULT_TENANT_ID in multi-tenant?
+**A:** No — boot fails. The tenant comes from `/tenants/:tenantSlug` (users) or the credential (machines); no header selects one.
 
 **Q:** Does Public() bypass RLS?
-**A:** No — add @RlsBypass() only when intentional.
+**A:** No. A public flow that needs privileged reads names its operation with `@PublicOperation`; `@RlsBypass()` no longer exists.
 
 **Q:** Where is tenancy configured?
-**A:** apps/api/.env TENANCY_ENABLED and ADR 007.
+**A:** apps/api/.env TENANCY_ENABLED and ADR 062.
 
 #### WS-A Database — task list
 
@@ -1021,10 +1023,10 @@ Copy into each feature's module README or PR description:
 #### WS-E Seed — task list
 
 - [ ] 1. Define minimal scenario flags
-- [ ] 2. Reduce organization-seed graph
+- [ ] 2. Reduce tenant-seed graph
 - [ ] 3. Keep superadmin bootstrap path testable
 - [ ] 4. Update enterprise scenario or gate behind CI only
-- [ ] 5. Fix DEFAULT_ORGANIZATION_ID constant
+- [ ] 5. Fix DEFAULT_TENANT_ID constant
 - [ ] 6. db:check-seed-coverage green
 - [ ] 7. Document minimal in getting-started
 - [ ] 8. Remove Brew & Bean narrative
@@ -1111,9 +1113,9 @@ Read GitHub Release notes; `pnpm install`; `pnpm build:shared`; `pnpm db:deploy`
 
 #### How do we test multi-tenant locally?
 
-Set `TENANCY_ENABLED=true` in `apps/api/.env`, seed multiple orgs, verify staff admin **does not** bypass RLS; test `x-organization-id` flows.
+Set `TENANCY_ENABLED=true` in `apps/api/.env`, seed multiple orgs, verify staff admin **does not** bypass RLS; test `x-tenant-id` flows.
 
-#### How do we create the first organization in production?
+#### How do we create the first tenant in production?
 
 Production does not run seed. Use platform APIs after bootstrap superadmin, or a one-time migration/script documented in runbook — never `pnpm db:seed` on prod.
 
@@ -1127,7 +1129,7 @@ Add to `permission.ts` + permissions registry seed source → `db:sync-reference
 
 #### How do we debug RLS denials?
 
-Check `TenancyConfigService` mode; verify `app.current_organization_id` context; read RLS policies for table; never disable RLS globally.
+Check `TenancyConfigService` mode; verify `app.current_tenant_id` context; read RLS policies for table; never disable RLS globally.
 
 #### How do we use Cedar without rewards?
 

@@ -21,18 +21,18 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 | # | Problem (before) | Fix (now) |
 |---|---|---|
 | 1 | `@Authorize(...)` was declared on routes but **no guard read it** — those routes only required login | `AuthorizationGuard` enforces `@Authorize`, failing closed when a declared resource id cannot be resolved |
-| 2 | Any active organization member was **allowed every action** in that org (relationship check returned ALLOW); owners could `DELETE` anything they owned | Membership only satisfies ORGANIZATION / STORE / LOCATION **scopes**; ownership only satisfies **OWN-scoped** grants for the actions they list |
-| 3 | `organizationId` / `locationId` came from headers, body or query **without checking membership**; RLS used the raw `x-organization-id` header | `AuthorizationContextResolver` + `TenantMembershipService` verify every claim; forged headers → 403; RLS uses only the verified organization |
+| 2 | Any active tenant member was **allowed every action** in that org (relationship check returned ALLOW); owners could `DELETE` anything they owned | Membership only satisfies TENANT / STORE / LOCATION **scopes**; ownership only satisfies **OWN-scoped** grants for the actions they list |
+| 3 | `tenantId` / `locationId` came from headers, body or query **without checking membership**; RLS used the raw `x-tenant-id` header | `AuthorizationContextResolver` + `TenantMembershipService` verify every claim; forged headers → 403; RLS uses only the verified tenant |
 | 4 | With no request scope, the RLS pool **fell back to bypass**; unauthenticated requests were bypassed | No scope → anonymous, non-bypass session; guards run in a named `request.pre_handler` scope; background work declares named system operations |
 | 5 | Admins could assign themselves roles / permissions and grant permissions they did not hold | `PrivilegeEscalationService`: no self-escalation, subset rule, real actor in audits |
-| 6 | `/authorization-kernel/examples` was live in production, leaked ACL ids / policy names, and trusted a query-string organization | Removed. Replaced by `POST /authorization/decisions` (caller only) and admin-only `GET /authorization/decisions/explain` |
+| 6 | `/authorization-kernel/examples` was live in production, leaked ACL ids / policy names, and trusted a query-string tenant | Removed. Replaced by `POST /authorization/decisions` (caller only) and admin-only `GET /authorization/decisions/explain` |
 | 7 | Role decorators used a fake `ASSUME` action and always denied non-superadmins | Native role checks (`kernel.hasRoles`) |
-| 8 | `POST /files/upload-url` only checked avatars — anyone could get upload tickets for other organizations' KYB documents, store logos, or any product image | `FileUploadAuthorizationService` per-category rules |
+| 8 | `POST /files/upload-url` only checked avatars — anyone could get upload tickets for other tenants' KYB documents, store logos, or any product image | `FileUploadAuthorizationService` per-category rules |
 | 9 | The default tenant policy let **cashiers do every merchant action** (manage rewards, API keys) | Shared `MERCHANT_ROLE_CAPABILITIES` enforced **before** Cedar; cashiers are read-only |
-| 10 | Any organization member could read the KYB profile and download KYB documents | KYB read, download and submit are **owner-only** |
+| 10 | Any tenant member could read the KYB profile and download KYB documents | KYB read, download and submit are **owner-only** |
 | 11 | Team, store-location and KYB endpoints checked **hard-coded role lists** inside services, mirrored by a client role table "kept in lockstep"; the merchant sidebar showed Team / Verification to every role (e.g. cashiers) and led to denied pages | New capabilities `merchant:manage_team`, `merchant:view_locations`, `merchant:manage_locations`, `merchant:manage_verification` in the shared role table, enforced by `requireMembershipCapability` (role table → Cedar) with the **same allowed roles**; the client role table is deleted; every org page is guarded on the server by `guardOrgPage` + `ORG_PAGE_RULES`; sidebar / palette hide what the role cannot open |
-| 12 | `GET /files/:id/download-url` handed **any signed-in user** a signed URL for any organization file (including KYB documents) whose id they knew; completing an upload re-bound store branding without re-checking; delete was uploader-only (a removed member could still delete branding, an admin could not); organization uploads skipped Cedar | `FileAuthorizationService` authorizes upload, complete, read, download and delete per category through `requireMembershipCapability` (role table → Cedar, audited) |
-| 13 | `Store` accepted writes only under bypass, but a merchant's store request / resubmission writes the location AND its store mirror in the member's tenant transaction — both answered `500`; `OrganizationAccessRequest` had no UPDATE policy, so every review claim matched no row and answered `409` | `stores_select` / `stores_mirror_insert` / `stores_mirror_update` / `stores_delete` (tenant member, only for the mirror of one of that tenant's locations; DELETE bypass-only) and `organization_access_requests_review` (UPDATE, bypass-only) — `test/merchant-location-requests.e2e-spec.ts`, `test/organization-access-request-review.e2e-spec.ts` |
+| 12 | `GET /files/:id/download-url` handed **any signed-in user** a signed URL for any tenant file (including KYB documents) whose id they knew; completing an upload re-bound store branding without re-checking; delete was uploader-only (a removed member could still delete branding, an admin could not); tenant uploads skipped Cedar | `FileAuthorizationService` authorizes upload, complete, read, download and delete per category through `requireMembershipCapability` (role table → Cedar, audited) |
+| 13 | `Store` accepted writes only under bypass, but a merchant's store request / resubmission writes the location AND its store mirror in the member's tenant transaction — both answered `500`; `TenantAccessRequest` had no UPDATE policy, so every review claim matched no row and answered `409` | `stores_select` / `stores_mirror_insert` / `stores_mirror_update` / `stores_delete` (tenant member, only for the mirror of one of that tenant's locations; DELETE bypass-only) and `tenant_access_requests_review` (UPDATE, bypass-only) — `test/merchant-location-requests.e2e-spec.ts`, `test/tenant-access-request-review.e2e-spec.ts` |
 
 ---
 
@@ -41,7 +41,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 - **Precedence** rewritten and documented ([backend §4](./backend.md#4-decision-precedence-the-most-important-section)).
 - **Per-user overrides** with `effect` `ALLOW` / `DENY` (new column `UserPermission.effect`).
 - **Role hierarchy** (parent roles) is evaluated.
-- **Scopes** `GLOBAL`, `ORGANIZATION`, `STORE` (new), `LOCATION`, `OWN`, `RESOURCE`.
+- **Scopes** `GLOBAL`, `TENANT`, `STORE` (new), `LOCATION`, `OWN`, `RESOURCE`.
 - **Implicit self grants**: read / update your own `USER` and `PROFILE`.
 - **ACL**: user and role subjects, type-wide entries (`resourceId = null`), tenant binding, conditions, `MANAGE`.
 - **Policies (ABAC)**: strict rule schema; DENY-only sets no longer block everyone; conditional ALLOW semantics; malformed rules fail closed.
@@ -53,10 +53,10 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 
 ## 3. Stores and tenancy
 
-- New tables `Store` (1:1 with `OrganizationLocation`) and `StoreMembership` (user, store, dynamic role).
+- New tables `Store` (1:1 with `TenantLocation`) and `StoreMembership` (user, store, dynamic role).
 - `STORE` added to `PermissionScope` and `PermissionResource`; `x-store-id` header.
 - Store roles' permissions are always bound to their store.
-- Stores are synced by `OrganizationLocationRepository` via `syncStoreForLocation()`.
+- Stores are synced by `TenantLocationRepository` via `syncStoreForLocation()`.
 - New seeded roles `Store Manager` and `Store Staff`; seed creates stores and memberships.
 - Migration `20261001090000_stores_and_store_scope`; RLS policies `stores_member`, `store_memberships_member`.
 
@@ -121,19 +121,19 @@ Products and sample categories are ordinary code now:
 | Change | What to do |
 |---|---|
 | `@Authorize` options: `scope` and `context` removed; use `resourceId` (param name or `self()` / `fromParam()`) and `attributes` (object or `attributesFromBody`) | update decorators |
-| `TenantMembershipService.verify(userId, { organizationId, storeId, locationId })` (object argument) | update calls |
+| `TenantMembershipService.verify(userId, { tenantId, storeId, locationId })` (object argument) | update calls |
 | `AclService.checkAcl` → `findApplicable(lookup, request)` with `resourceScope` | update calls |
 | `kernel.filter()` is `async` | `await` it |
-| `AuthorizationContextMiddleware` and `request.authorizationContext.resourceId` removed | read the verified `request.authorizationContext` (organization / store / location only) |
+| `AuthorizationContextMiddleware` and `request.authorizationContext.resourceId` removed | read the verified `request.authorizationContext` (tenant / store / location only) |
 | `useSessionCapabilities`, `canDeletePlatformResource` (admin) removed | use `useAuthorization()` |
 | Sidebar `requiredCapabilities` removed | use `authorization.permissions` |
 | `PlatformOutboxService.enqueue(input, tx?)` takes an `OutboxWriter` | pass your transaction as before |
 | `useDebouncedCallback` (ui) takes one argument | — |
 | `@workspace/client` error helpers take `CaughtValue` | narrow caught errors first |
 | Role-service mutations accept an `actorId`; `RoleService.updateAs()` added | pass the actor |
-| Merchant team / location / KYB denials return `ORGANIZATION_ROLE_CAPABILITY_REQUIRED` instead of `ORGANIZATION_TEAM_FORBIDDEN` / `ORGANIZATION_LOCATION_FORBIDDEN` / `ORGANIZATION_OWNER_REQUIRED` (still `403`); they also pass the tenant Cedar policy now | match on the new code; make sure the organization has a published tenant policy |
+| Merchant team / location / KYB denials return `TENANT_ROLE_CAPABILITY_REQUIRED` instead of `TENANT_TEAM_FORBIDDEN` / `TENANT_LOCATION_FORBIDDEN` / `TENANT_OWNER_REQUIRED` (still `403`); they also pass the tenant Cedar policy now | match on the new code; make sure the tenant has a published tenant policy |
 | `MerchantContextService.requireOwnerRole`, `useMerchantRoleAccess`, `MerchantRoleGate`, `membershipRole` on `useMerchantAuthorizationStatus()` removed | use `MERCHANT_CAPABILITY.*` with `requireUserCapability` / `MerchantCapabilityGate` / `useAuthorization()` |
-| `OrganizationRewardAuthService.requireCedarAction` takes the membership **role** (not the whole membership) | pass `membership.role` |
+| `TenantRewardAuthService.requireCedarAction` takes the membership **role** (not the whole membership) | pass `membership.role` |
 
 ---
 

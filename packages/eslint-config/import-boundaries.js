@@ -370,7 +370,7 @@ export const backendImportBoundaryConfig = {
 export const DDD_CONTEXTS = [
 	"identity",
 	"authorization",
-	"organizations",
+	"tenants",
 	"rewards",
 	"claims",
 	"pos",

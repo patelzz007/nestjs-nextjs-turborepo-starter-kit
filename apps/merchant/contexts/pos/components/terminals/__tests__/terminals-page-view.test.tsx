@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PAIRING_STATUS_POLL_INTERVAL_MS, TERMINAL_STATS_LOADING_LABELS, TerminalsPageView } from "@/contexts/pos/components/terminals/terminals-page-view";
 import { renderWithAuthorization, TEST_ORG_SLUG, type TenantContextSeed } from "@/test/authorization";
 import { testEnvelope } from "@/test/envelope";
-import { contextQueryState, organizationContextFixture, type ContextQueryState } from "@/test/tenant-context";
+import { contextQueryState, tenantContextFixture, type ContextQueryState } from "@/test/tenant-context";
 import { buildPairing, buildTerminal, STORE_A, STORE_B, TERMINAL_FIXTURE_NOW } from "@/test/terminals";
 import {
 	LIST_SLOT_INDEX,
@@ -14,13 +14,13 @@ import {
 	MERCHANT_TERMINALS_PAGE_SIZE,
 	MerchantErrorCodes,
 	MerchantTerminalSettingsSchema,
-	OrganizationLocationResponseSchema,
+	LocationResponseSchema,
 	POS_PAIRING_CODE_TTL_MS,
 	type MerchantTerminalPairing,
 	type MerchantTerminalSettings,
 	type MerchantTerminalSummary,
-	type OrganizationContextResponse,
-	type OrganizationLocationResponse,
+	type TenantContextResponse,
+	type LocationResponse,
 	type Envelope,
 } from "@workspace/shared";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
@@ -62,7 +62,7 @@ const {
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
 		api: {
-			organizations: {
+			tenants: {
 				terminals: {
 					list: { useQuery: terminalsListQuery },
 					settings: { useQuery: settingsQuery },
@@ -79,10 +79,10 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 
 const FIVE_MINUTES_MS = 5 * 60_000;
 
-function store(id: string, name: string): OrganizationLocationResponse {
-	return OrganizationLocationResponseSchema.parse({
+function store(id: string, name: string): LocationResponse {
+	return LocationResponseSchema.parse({
 		id,
-		organizationId: "7f5f0f0e-7a53-4f5c-9d0a-0d6a6b8f2c11",
+		tenantId: "7f5f0f0e-7a53-4f5c-9d0a-0d6a6b8f2c11",
 		name,
 		code: name.toUpperCase(),
 		addressText: null,
@@ -99,14 +99,14 @@ function store(id: string, name: string): OrganizationLocationResponse {
 const BANGSAR = store(STORE_A.id, STORE_A.name);
 const MONT_KIARA = store(STORE_B.id, STORE_B.name);
 
-const TWO_STORES: OrganizationContextResponse = organizationContextFixture({ locations: [BANGSAR, MONT_KIARA] });
-const ONE_STORE: OrganizationContextResponse = organizationContextFixture({ locations: [BANGSAR] });
+const TWO_STORES: TenantContextResponse = tenantContextFixture({ locations: [BANGSAR, MONT_KIARA] });
+const ONE_STORE: TenantContextResponse = tenantContextFixture({ locations: [BANGSAR] });
 
-/** What the org layout seeds the tenant context with (the member's store choice + organization context). */
+/** What the org layout seeds the tenant context with (the member's store choice + tenant context). */
 let tenantSeed: TenantContextSeed = { initialLocationId: null };
 
-function seedTenant(context: OrganizationContextResponse, selectedLocationId: string | null): void {
-	tenantSeed = { initialLocationId: selectedLocationId, initialOrganizationContext: testEnvelope(context) };
+function seedTenant(context: TenantContextResponse, selectedLocationId: string | null): void {
+	tenantSeed = { initialLocationId: selectedLocationId, initialTenantContext: testEnvelope(context) };
 	contextQuery.mockReturnValue(contextQueryState(context));
 }
 
@@ -145,7 +145,7 @@ interface PollOptions {
 	readonly refetchInterval?: (query: PolledQuery) => number | false;
 }
 
-type TerminalsListInput = Parameters<typeof apiRouter.organizations.terminals.list.queryKey>[0];
+type TerminalsListInput = Parameters<typeof apiRouter.tenants.terminals.list.queryKey>[0];
 
 interface ListOptions extends PollOptions {
 	readonly initialData?: Envelope<MerchantTerminalSummary[]>;
@@ -200,7 +200,7 @@ interface MutationCallbacks<TData> {
 }
 
 function renderAsAdmin(): void {
-	renderWithAuthorization(<TerminalsPageView orgSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: tenantSeed });
+	renderWithAuthorization(<TerminalsPageView tenantSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: tenantSeed });
 }
 
 function openAddDialog(): HTMLElement {
@@ -279,7 +279,7 @@ afterEach((): void => {
 
 describe("TerminalsPageView authorization", () => {
 	it("renders the access-denied page and never lists terminals without merchant:manage_api_keys", () => {
-		renderWithAuthorization(<TerminalsPageView orgSlug={TEST_ORG_SLUG} />, { role: "CASHIER" });
+		renderWithAuthorization(<TerminalsPageView tenantSlug={TEST_ORG_SLUG} />, { role: "CASHIER" });
 
 		expect(screen.getByText("Owner or admin access required")).toBeTruthy();
 		expect(screen.queryByRole("button", { name: "Add terminal" })).toBeNull();
@@ -290,8 +290,8 @@ describe("TerminalsPageView authorization", () => {
 	it("requests one bounded page of terminals through the list grammar", () => {
 		renderAsAdmin();
 
-		expect(terminalsListQuery).toHaveBeenCalledWith(expect.objectContaining({ orgSlug: TEST_ORG_SLUG, page: 1, limit: MERCHANT_TERMINALS_PAGE_SIZE }), expect.anything());
-		expect(settingsQuery).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG }, expect.anything());
+		expect(terminalsListQuery).toHaveBeenCalledWith(expect.objectContaining({ tenantSlug: TEST_ORG_SLUG, page: 1, limit: MERCHANT_TERMINALS_PAGE_SIZE }), expect.anything());
+		expect(settingsQuery).toHaveBeenCalledWith({ tenantSlug: TEST_ORG_SLUG }, expect.anything());
 	});
 });
 
@@ -345,7 +345,7 @@ describe("TerminalsPageView list", () => {
 		expect(within(dialog).getByText(/stops working immediately and its key is revoked/u)).toBeTruthy();
 
 		fireEvent.click(within(dialog).getByRole("button", { name: "Remove terminal" }));
-		expect(removeMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, id: UNPAIRED_TILL.id }, expect.anything());
+		expect(removeMutate).toHaveBeenCalledWith({ tenantSlug: TEST_ORG_SLUG, id: UNPAIRED_TILL.id }, expect.anything());
 		await waitFor(() => {
 			expect(screen.queryByRole("alertdialog")).toBeNull();
 		});
@@ -359,13 +359,13 @@ describe("TerminalsPageView list", () => {
 		const dialog = await screen.findByRole("alertdialog");
 		expect(within(dialog).getByText(/current key stops working/u)).toBeTruthy();
 		fireEvent.click(within(dialog).getByRole("button", { name: "Issue new code" }));
-		expect(pairingCodeMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, id: ACTIVE_TILL.id });
+		expect(pairingCodeMutate).toHaveBeenCalledWith({ tenantSlug: TEST_ORG_SLUG, id: ACTIVE_TILL.id });
 		cleanup();
 		pairingCodeMutate.mockClear();
 
 		renderAsAdmin();
 		fireEvent.click(screen.getByRole("button", { name: "New pairing code for Front counter" }));
-		expect(pairingCodeMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, id: UNPAIRED_TILL.id });
+		expect(pairingCodeMutate).toHaveBeenCalledWith({ tenantSlug: TEST_ORG_SLUG, id: UNPAIRED_TILL.id });
 		expect(screen.queryByRole("alertdialog")).toBeNull();
 	});
 });
@@ -382,7 +382,7 @@ describe("TerminalsPageView add and pair", () => {
 
 		const pairingDialog = await addBackOffice();
 
-		expect(createMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, name: "Back office", locationId: STORE_A.id });
+		expect(createMutate).toHaveBeenCalledWith({ tenantSlug: TEST_ORG_SLUG, name: "Back office", locationId: STORE_A.id });
 		expect(within(pairingDialog).getByText("ABCD 2345")).toBeTruthy();
 		expect(within(pairingDialog).getByRole("button", { name: "Copy pairing code" })).toBeTruthy();
 		expect(liveRegionText(pairingDialog)).toContain("Waiting for the till to pair…");
@@ -398,7 +398,7 @@ describe("TerminalsPageView add and pair", () => {
 		fireEvent.click(within(dialog).getByRole("button", { name: "Add terminal" }));
 
 		await screen.findByRole("dialog", { name: "Pair “Back office”" });
-		expect(createMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, name: "Back office", locationId: STORE_A.id, terminalId: "KL-REGISTER-01" });
+		expect(createMutate).toHaveBeenCalledWith({ tenantSlug: TEST_ORG_SLUG, name: "Back office", locationId: STORE_A.id, terminalId: "KL-REGISTER-01" });
 	});
 
 	it("shows a taken terminal id on the Terminal ID field", () => {
@@ -449,7 +449,7 @@ describe("TerminalsPageView add and pair", () => {
 
 		const pairingDialog = await addBackOffice();
 		const pollCall = terminalsListQuery.mock.calls.find((call) => call[LIST_SLOT_INDEX.second]?.enabled === true);
-		expect(pollCall?.[LIST_SLOT_INDEX.first]).toEqual(expect.objectContaining({ orgSlug: TEST_ORG_SLUG, locationId: STORE_A.id }));
+		expect(pollCall?.[LIST_SLOT_INDEX.first]).toEqual(expect.objectContaining({ tenantSlug: TEST_ORG_SLUG, locationId: STORE_A.id }));
 		const pollOptions: PollOptions | undefined = pollCall?.[LIST_SLOT_INDEX.second];
 		expect(pollOptions?.refetchInterval?.({ state: { data: undefined } })).toBe(PAIRING_STATUS_POLL_INTERVAL_MS);
 		expect(liveRegionText(pairingDialog)).toContain("Waiting for the till to pair…");
@@ -465,10 +465,10 @@ describe("TerminalsPageView add and pair", () => {
 		// Polling stops once the till has paired.
 		expect(pollOptions?.refetchInterval?.({ state: { data: { data: polledTerminals } } })).toBe(false);
 
-		// Closing the dialog refreshes every terminal list of the organization (prefix invalidation, no effect).
+		// Closing the dialog refreshes every terminal list of the tenant (prefix invalidation, no effect).
 		invalidate.mockClear();
 		fireEvent.keyDown(pairingDialog, { key: "Escape" });
-		expect(invalidate).toHaveBeenCalledWith({ queryKey: apiRouter.organizations.terminals.list.scopeKey({ orgSlug: TEST_ORG_SLUG }) });
+		expect(invalidate).toHaveBeenCalledWith({ queryKey: apiRouter.tenants.terminals.list.scopeKey({ tenantSlug: TEST_ORG_SLUG }) });
 	});
 
 	it("stops polling once the code has expired, or when the terminal is not on the polled page", async () => {
@@ -493,7 +493,7 @@ describe("TerminalsPageView add and pair", () => {
 
 		expect(liveRegionText(pairingDialog)).toContain("Code expired");
 		fireEvent.click(within(pairingDialog).getByRole("button", { name: "New code" }));
-		expect(pairingCodeMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, id: NEW_TILL.id });
+		expect(pairingCodeMutate).toHaveBeenCalledWith({ tenantSlug: TEST_ORG_SLUG, id: NEW_TILL.id });
 	});
 });
 
@@ -507,7 +507,7 @@ describe("TerminalsPageView settings", () => {
 		expect(within(dialog).getByText(/manually created API key whose X-Terminal-Id isn’t a terminal registered here will be refused/u)).toBeTruthy();
 
 		fireEvent.click(within(dialog).getByRole("button", { name: "Turn on" }));
-		expect(updateSettingsMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, requireRegisteredTerminals: true });
+		expect(updateSettingsMutate).toHaveBeenCalledWith({ tenantSlug: TEST_ORG_SLUG, requireRegisteredTerminals: true });
 		expect(settingsRefetch).toHaveBeenCalled();
 	});
 
@@ -518,7 +518,7 @@ describe("TerminalsPageView settings", () => {
 		fireEvent.click(screen.getByRole("switch", { name: "Only allow registered terminals" }));
 
 		expect(screen.queryByRole("alertdialog")).toBeNull();
-		expect(updateSettingsMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, requireRegisteredTerminals: false });
+		expect(updateSettingsMutate).toHaveBeenCalledWith({ tenantSlug: TEST_ORG_SLUG, requireRegisteredTerminals: false });
 	});
 });
 
@@ -574,13 +574,13 @@ const SERVER_PAGE: Envelope<MerchantTerminalSummary[]> = {
 
 describe("TerminalsPageView server prefetch (no double fetch)", () => {
 	function renderWithPrefetch(prefetchedFor: string | undefined): ListOptions | undefined {
-		renderWithAuthorization(<TerminalsPageView orgSlug={TEST_ORG_SLUG} initialTerminals={{ locationId: prefetchedFor, data: SERVER_PAGE }} />, {
+		renderWithAuthorization(<TerminalsPageView tenantSlug={TEST_ORG_SLUG} initialTerminals={{ locationId: prefetchedFor, data: SERVER_PAGE }} />, {
 			role: "ADMIN",
 			tenantContext: tenantSeed,
 		});
 		const [input, options] = terminalsListQuery.mock.calls.at(0) ?? [];
-		expect(input === undefined ? [] : apiRouter.organizations.terminals.list.queryKey(input)).toEqual(
-			apiRouter.organizations.terminals.list.queryKey({ orgSlug: TEST_ORG_SLUG, page: 1, limit: MERCHANT_TERMINALS_PAGE_SIZE, locationId: STORE_B.id }),
+		expect(input === undefined ? [] : apiRouter.tenants.terminals.list.queryKey(input)).toEqual(
+			apiRouter.tenants.terminals.list.queryKey({ tenantSlug: TEST_ORG_SLUG, page: 1, limit: MERCHANT_TERMINALS_PAGE_SIZE, locationId: STORE_B.id }),
 		);
 		return options;
 	}
@@ -592,7 +592,7 @@ describe("TerminalsPageView server prefetch (no double fetch)", () => {
 	});
 
 	it("seeds the auto-selected store of a single-store member (the server prefetches that store too)", () => {
-		seedTenant(organizationContextFixture({ locations: [MONT_KIARA] }), null);
+		seedTenant(tenantContextFixture({ locations: [MONT_KIARA] }), null);
 
 		expect(renderWithPrefetch(STORE_B.id)?.initialData).toBe(SERVER_PAGE);
 	});

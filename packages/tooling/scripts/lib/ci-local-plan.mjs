@@ -135,6 +135,15 @@ export function staticSteps({ base, noCache }) {
 	];
 }
 
+/** ci.yml → jobs.e2e: RewardHub's multi-tenant mode, no default tenant (multi-tenancy plan MT-70). */
+export const MULTI_TENANT_E2E_ENV = { TENANCY_ENABLED: "true" };
+
+/** ci.yml → jobs.e2e-single-tenant: single mode serving the two-tenant fixture's Tenant A. */
+export const SINGLE_TENANT_E2E_ENV = { TENANCY_ENABLED: "false", DEFAULT_TENANT_ID: "019b76da-a810-7000-8000-0000000000a1" };
+
+/** ci.yml → jobs.browser-e2e: single mode serving the tenant `pnpm db:seed` creates. */
+export const BROWSER_TENANCY_ENV = { TENANCY_ENABLED: "false", DEFAULT_TENANT_ID: "019b76da-a800-7a94-a198-23ad1b4cfdd9" };
+
 /**
  * The database steps of the `e2e` and `analytics-consumer-e2e` jobs, run
  * against throwaway databases (never the developer's DATABASE_URL).
@@ -159,13 +168,24 @@ export function databaseSteps({ databaseUrl, shadowDatabaseUrl, consumerLoginUrl
 		},
 		{ id: "e2e:seed", job: "Database + API e2e", command: "pnpm", args: ["db:seed", "--", "--scenario", "development"], env: api },
 		{ id: "e2e:seed-coverage", job: "Database + API e2e", command: "pnpm", args: ["--filter", "@workspace/api", "db:check-seed-coverage"], env: api },
+		{ id: "e2e:integrity", job: "Database + API e2e", command: "pnpm", args: ["--filter", "@workspace/api", "db:check-tenant-integrity"], env: api },
 		{
 			id: "e2e:api",
 			job: "Database + API e2e",
 			command: "pnpm",
 			args: ["--filter", "@workspace/api", "test:e2e"],
-			env: { ...api, E2E_BULLMQ_PREFIX: `ci-local:${runId}` },
+			env: { ...api, ...MULTI_TENANT_E2E_ENV, E2E_BULLMQ_PREFIX: `ci-local:${runId}` },
 		},
+		{ id: "e2e:tenancy", job: "Database + API e2e", command: "pnpm", args: ["--filter", "@workspace/api", "test:e2e:tenancy"], env: { ...api, ...MULTI_TENANT_E2E_ENV } },
+		{ id: "e2e:rls", job: "Database + API e2e", command: "pnpm", args: ["--filter", "@workspace/api", "test:e2e:rls"], env: { ...api, ...MULTI_TENANT_E2E_ENV } },
+		{
+			id: "e2e:single-tenancy",
+			job: "Single-tenant e2e + RLS",
+			command: "pnpm",
+			args: ["--filter", "@workspace/api", "test:e2e:tenancy:single"],
+			env: { ...api, ...SINGLE_TENANT_E2E_ENV },
+		},
+		{ id: "e2e:single-rls", job: "Single-tenant e2e + RLS", command: "pnpm", args: ["--filter", "@workspace/api", "test:e2e:rls"], env: { ...api, ...SINGLE_TENANT_E2E_ENV } },
 		{ id: "e2e:seed-enterprise", job: "Database + API e2e", command: "pnpm", args: ["db:seed", "--", "--scenario", "enterprise", "--seed", "1"], env: api },
 	];
 	if (consumerLoginUrl !== undefined) {
@@ -211,7 +231,7 @@ export function browserJob({ databaseUrl }) {
 				job,
 				command: "pnpm",
 				args: ["--filter", "@workspace/api", "start"],
-				env: { ...api, ...BROWSER_API_ENV, PORT: String(LOCAL_APP_PORTS.api) },
+				env: { ...api, ...BROWSER_API_ENV, ...BROWSER_TENANCY_ENV, PORT: String(LOCAL_APP_PORTS.api) },
 				port: LOCAL_APP_PORTS.api,
 			},
 			{

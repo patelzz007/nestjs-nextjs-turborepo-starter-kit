@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
-import type { Envelope, OrganizationTeamInvitePreview } from "@workspace/shared";
+import type { Envelope, TenantTeamInvitePreview } from "@workspace/shared";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import TeamInvitePage from "@/app/team-invite/page";
-import { TEAM_INVITE_LOADING_LABELS } from "@/contexts/organizations/components/team-invite/team-invite-skeletons";
+import { TEAM_INVITE_LOADING_LABELS } from "@/contexts/tenancy/components/team-invite/team-invite-skeletons";
 import { TestQueryClientProvider } from "@/test/query-client";
 import { busyRegionAnnouncements } from "@/test/skeleton";
 
@@ -14,7 +14,7 @@ let token: string | null = null;
 
 const mocks = vi.hoisted(() => ({
 	/** The invitation preview request — left pending, so the page stays on its loading state. */
-	validateTeamInvite: vi.fn<() => Promise<Envelope<OrganizationTeamInvitePreview>>>(),
+	validateTeamInvite: vi.fn<() => Promise<Envelope<TenantTeamInvitePreview>>>(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -25,7 +25,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@workspace/client/lib/contexts/identity", () => {
 	const idleMutation = (): { readonly mutate: () => void; readonly isPending: boolean } => ({ mutate: vi.fn(), isPending: false });
 	const api = {
-		organizations: {
+		tenants: {
 			validateTeamInvite: { mutate: mocks.validateTeamInvite },
 			acceptTeamInvite: { useMutation: idleMutation },
 			registerAndAcceptTeamInvite: { useMutation: idleMutation },
@@ -46,7 +46,7 @@ function Providers({ children }: { readonly children: React.ReactNode }): React.
 }
 
 beforeEach((): void => {
-	mocks.validateTeamInvite.mockReturnValue(new Promise<Envelope<OrganizationTeamInvitePreview>>((): void => undefined));
+	mocks.validateTeamInvite.mockReturnValue(new Promise<Envelope<TenantTeamInvitePreview>>((): void => undefined));
 });
 
 afterEach((): void => {

@@ -1,7 +1,7 @@
 // ============================================
 // analytics-export.ts — downloadable analytics reports (CSV / XLSX / PDF) for merchants and admins
 // ============================================
-// `GET /orgs/:orgSlug/analytics/export` and `GET /admin/analytics/export`
+// `GET /tenants/:tenantSlug/analytics/export` and `GET /admin/analytics/export`
 // answer the FILE itself (not the JSON envelope): `Content-Type` from
 // {@link ANALYTICS_EXPORT_CONTENT_TYPES}, `Content-Disposition: attachment` with
 // the name from {@link analyticsExportFileName}, `Cache-Control: no-store`.
@@ -10,7 +10,7 @@
 import { z } from "zod";
 
 import { safeFileNameSegment } from "../../../lib/file-name";
-import { OrganizationLocationFilterSchema } from "../../organizations/schemas/location-filter";
+import { LocationFilterSchema } from "../../tenancy/schemas/location-filter";
 import { analyticsExportRangeShape, type AnalyticsInterval, validateAnalyticsRange } from "./analytics-range";
 import { localDateInTimeZone } from "./analytics-time-zone";
 
@@ -33,9 +33,9 @@ export const ANALYTICS_EXPORT_FILE_EXTENSIONS: Readonly<Record<AnalyticsExportFo
 	pdf: "pdf",
 };
 
-/** `GET /orgs/:orgSlug/analytics/export` — same range + store rules as the merchant dashboard; `from` and `to` are required. */
+/** `GET /tenants/:tenantSlug/analytics/export` — same range + store rules as the merchant dashboard; `from` and `to` are required. */
 export const MerchantAnalyticsExportQuerySchema = z
-	.object({ ...analyticsExportRangeShape, ...OrganizationLocationFilterSchema.shape, format: AnalyticsExportFormatSchema })
+	.object({ ...analyticsExportRangeShape, ...LocationFilterSchema.shape, format: AnalyticsExportFormatSchema })
 	.strict()
 	.superRefine(validateAnalyticsRange);
 
@@ -81,7 +81,7 @@ export const ADMIN_ANALYTICS_EXPORT_SUBJECT = "platform";
 
 /** What an export's file name is built from. */
 export interface AnalyticsExportFileNameInput {
-	/** The organization's slug, or {@link ADMIN_ANALYTICS_EXPORT_SUBJECT} for the admin report. */
+	/** The tenant's slug, or {@link ADMIN_ANALYTICS_EXPORT_SUBJECT} for the admin report. */
 	readonly subject: string;
 	readonly fromMs: number;
 	/** Exclusive end — the name shows the last day INCLUDED. */

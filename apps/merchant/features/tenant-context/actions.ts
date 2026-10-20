@@ -6,7 +6,7 @@ export type TenantContextAction =
 	| { readonly type: "[ Tenant Context ] Location Selected"; readonly locationId: string }
 	/** The member picked "All locations" (org-wide rollups). */
 	| { readonly type: "[ Tenant Context ] All Locations Selected" }
-	/** The API refused a store as outside the member's scope (403 `ORGANIZATION_LOCATION_FORBIDDEN`) — e.g. a stale choice. */
+	/** The API refused a store as outside the member's scope (403 `TENANT_LOCATION_FORBIDDEN`) — e.g. a stale choice. */
 	| { readonly type: "[ Tenant Context ] Location Rejected"; readonly locationId: string };
 
 /** Action creators — the only way components (through the facade) describe what happened. */

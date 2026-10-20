@@ -717,7 +717,7 @@ Types
 
 Boundaries
 - Does every place data enters the system parse it through a schema first?
-- Did I trust anything the client sent for identity, role, organization, price, or ownership?
+- Did I trust anything the client sent for identity, role, tenant, price, or ownership?
 - Are all strings/arrays/numbers in my schemas bounded (`max`, `positive`, `int`)?
 
 Structure

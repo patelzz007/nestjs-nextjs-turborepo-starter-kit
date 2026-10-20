@@ -41,7 +41,7 @@ export const PermissionResourceSchema = z.enum([
 	"ORDER",
 	"PAYMENT",
 	"INVENTORY",
-	"ORGANIZATION",
+	"TENANT",
 	"LOCATION",
 	"STORE",
 	"GITHUB",

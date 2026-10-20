@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { RewardListRow } from "@/contexts/rewards/components/browse/list-row";
 import { buildRewardResponse, FIXTURE_COVER_IMAGE_URL } from "@/test-support/reward";
 
-const LOGO_URL = "https://cdn.example.com/organizations/brew-bean/logo.png";
+const LOGO_URL = "https://cdn.example.com/tenants/brew-bean/logo.png";
 
 afterEach((): void => {
 	cleanup();
@@ -18,13 +18,13 @@ function merchantMark(container: HTMLElement): Element | null {
 
 describe("RewardListRow merchant identity", () => {
 	it("leads the row with the merchant's logo", () => {
-		const { container } = render(<RewardListRow reward={buildRewardResponse({ organizationLogoUrl: LOGO_URL })} />);
+		const { container } = render(<RewardListRow reward={buildRewardResponse({ tenantLogoUrl: LOGO_URL })} />);
 
 		expect(merchantMark(container)?.querySelector("img")?.getAttribute("src")).toBe(LOGO_URL);
 	});
 
 	it("leads the row with a monogram when the merchant has no logo, and names the shop under the title", () => {
-		const { container } = render(<RewardListRow reward={buildRewardResponse({ organizationLogoUrl: null })} />);
+		const { container } = render(<RewardListRow reward={buildRewardResponse({ tenantLogoUrl: null })} />);
 
 		expect(screen.getByText("BK")).toBeDefined();
 		expect(merchantMark(container)?.getAttribute("aria-hidden")).toBe("true");
@@ -36,7 +36,7 @@ describe("RewardListRow merchant identity", () => {
 
 describe("RewardListRow cover", () => {
 	it("starts the row with a lazy-loaded cover thumbnail carrying the merchant's mark", () => {
-		const { container } = render(<RewardListRow reward={buildRewardResponse({ organizationLogoUrl: LOGO_URL })} />);
+		const { container } = render(<RewardListRow reward={buildRewardResponse({ tenantLogoUrl: LOGO_URL })} />);
 
 		const thumbnail = container.querySelector("article")?.firstElementChild;
 		const cover = thumbnail?.querySelector<HTMLImageElement>("[data-slot=cover-image] img");

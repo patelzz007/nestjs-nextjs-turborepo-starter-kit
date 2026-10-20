@@ -19,11 +19,18 @@ export const claimsAnalyticsRoutes = {
 	analyticsDashboard: "/claims/analytics/dashboard",
 } satisfies Record<string, RouteTree>;
 
-/** Path templates composed into `apiRoutes.organizations` (analytics, analyticsDashboard, analyticsExport). */
-export const organizationAnalyticsRoutes = {
-	analytics: "/orgs/:orgSlug/analytics",
+/** Path templates composed into `apiRoutes.integration`: an integration API key's own analytics (tenant from the key, D6). */
+export const integrationAnalyticsRoutes = {
+	analytics: "/integration/analytics",
+	analyticsDashboard: "/integration/analytics/dashboard",
+	analyticsExport: "/integration/analytics/export",
+} satisfies Record<string, RouteTree>;
+
+/** Path templates composed into `apiRoutes.tenants` (analytics, analyticsDashboard, analyticsExport). */
+export const tenantAnalyticsRoutes = {
+	analytics: "/tenants/:tenantSlug/analytics",
 	/** The merchant analytics dashboard (custom range + interval, breakdowns). */
-	analyticsDashboard: "/orgs/:orgSlug/analytics/dashboard",
+	analyticsDashboard: "/tenants/:tenantSlug/analytics/dashboard",
 	/** The merchant analytics report as a CSV / XLSX / PDF file. */
-	analyticsExport: "/orgs/:orgSlug/analytics/export",
+	analyticsExport: "/tenants/:tenantSlug/analytics/export",
 } satisfies Record<string, RouteTree>;

@@ -12,20 +12,20 @@ import { readRejectedLocationId, subscribeToLocationRejections } from "../locati
 const HTTP_FORBIDDEN = 403;
 
 function locationForbidden(): ApiError {
-	return new ApiError({ message: "Location is outside your membership scope", error: MerchantErrorCodes.ORGANIZATION_LOCATION_FORBIDDEN, statusCode: HTTP_FORBIDDEN });
+	return new ApiError({ message: "Location is outside your membership scope", error: MerchantErrorCodes.TENANT_LOCATION_FORBIDDEN, statusCode: HTTP_FORBIDDEN });
 }
 
-const REDEMPTIONS_KEY = apiRouter.organizations.redemptions.queryKey({ orgSlug: TEST_ORG_SLUG, page: 1, limit: 20, locationId: STORE_A.id });
+const REDEMPTIONS_KEY = apiRouter.tenants.redemptions.queryKey({ tenantSlug: TEST_ORG_SLUG, page: 1, limit: 20, locationId: STORE_A.id });
 
 describe("readRejectedLocationId", () => {
-	it("reads the refused store from this organization's location-scoped query", () => {
+	it("reads the refused store from this tenant's location-scoped query", () => {
 		expect(readRejectedLocationId(REDEMPTIONS_KEY, locationForbidden(), TEST_ORG_SLUG)).toBe(STORE_A.id);
 	});
 
-	it("ignores other errors, other organizations and queries without a store", () => {
+	it("ignores other errors, other tenants and queries without a store", () => {
 		expect(readRejectedLocationId(REDEMPTIONS_KEY, new ApiError({ message: "Forbidden", error: "FORBIDDEN", statusCode: HTTP_FORBIDDEN }), TEST_ORG_SLUG)).toBeUndefined();
 		expect(readRejectedLocationId(REDEMPTIONS_KEY, locationForbidden(), "other-org")).toBeUndefined();
-		const allStores = apiRouter.organizations.redemptions.queryKey({ orgSlug: TEST_ORG_SLUG, page: 1, limit: 20, locationId: undefined });
+		const allStores = apiRouter.tenants.redemptions.queryKey({ tenantSlug: TEST_ORG_SLUG, page: 1, limit: 20, locationId: undefined });
 		expect(readRejectedLocationId(allStores, locationForbidden(), TEST_ORG_SLUG)).toBeUndefined();
 	});
 });

@@ -1,9 +1,9 @@
 ---
 title: "API reference"
-description: "Every endpoint of the API (260 operations), generated from the OpenAPI export with real seed-data samples."
+description: "Every endpoint of the API (271 operations), generated from the OpenAPI export with real seed-data samples."
 order: 1
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792368000000
+lastUpdated: 1792454400000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -12,7 +12,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference
 
-Every endpoint of `apps/api` — 260 operations, 214 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+Every endpoint of `apps/api` — 271 operations, 225 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
 
 **Content type.** Every endpoint takes and returns `application/json` unless its *Content type* line names another (a file upload, a download, a live stream). Errors are always `application/json`.
 
@@ -25,10 +25,10 @@ Every endpoint of `apps/api` — 260 operations, 214 with a sample captured from
 | --- | --- | --- |
 | [Auth, sessions and account security](./auth-and-sessions.md) | 40 | Login, signup, email verification, password reset, two-factor authentication, MFA recovery, sessions, impersonation and support access. |
 | [Roles, permissions, policies and audit](./access-control.md) | 37 | Platform RBAC administration, authorization decisions, Cedar policy drafts, the capability catalog and the HTTP audit log. |
-| [Platform administration (merchants, rewards review, analytics)](./platform-admin.md) | 18 | What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales. |
-| [Merchant organizations (portal API)](./merchant-organizations.md) | 49 | Everything the merchant portal calls under /orgs/{orgSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
+| [Platform administration (merchants, rewards review, analytics)](./platform-admin.md) | 19 | What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales. |
+| [Merchant tenants (portal API)](./merchant-tenants.md) | 49 | Everything the merchant portal calls under /orgs/{orgSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
 | [Customer rewards and claims](./customer-rewards.md) | 13 | The consumer app's API: browse rewards, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics. |
-| [Point of sale (machine-to-machine)](./pos.md) | 3 | Terminal pairing, validating a customer's QR / backup code and recording the paid bill. Authenticated with a merchant API key. |
+| [Point of sale and integrations (machine-to-machine)](./pos.md) | 13 | Terminal pairing, validating a customer's QR / backup code and recording the paid bill, plus the integration API (`/integration/*`: rewards, analytics, redemption history). Authenticated with a merchant API key, which names its own tenant. |
 | [Files and object storage](./files.md) | 10 | Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback. |
 | [Email log, templates and delivery webhooks](./email.md) | 7 | The outbound email log, template previews and test sends, and the Resend delivery webhook. |
 | [Geography reference data](./geography.md) | 31 | Regions, subregions, countries, states and cities: CRUD, autocomplete, import and export. |
@@ -122,69 +122,70 @@ Every endpoint of `apps/api` — 260 operations, 214 with a sample captured from
 | GET | [`/api/v1/admin/analytics/export`](./platform-admin.md#get-apiv1adminanalyticsexport) | Download the platform analytics report (csv \| xlsx \| pdf) for a date range |
 | GET | [`/api/v1/admin/analytics/sales`](./platform-admin.md#get-apiv1adminanalyticssales) | Platform-wide sales: paid POS bills, compared with the previous period, plus top merchants |
 | POST | [`/api/v1/admin/invites`](./platform-admin.md#post-apiv1admininvites) | Create merchant invite |
+| GET | [`/api/v1/admin/invites/availability`](./platform-admin.md#get-apiv1admininvitesavailability) | Whether a new merchant may be invited |
 | GET | [`/api/v1/admin/invites/preview-email`](./platform-admin.md#get-apiv1admininvitespreview-email) | Preview merchant invite email (does not send) |
-| GET | [`/api/v1/admin/location-requests`](./platform-admin.md#get-apiv1adminlocation-requests) | List pending organization store location requests |
-| GET | [`/api/v1/admin/merchants`](./platform-admin.md#get-apiv1adminmerchants) | List merchant organizations |
-| GET | [`/api/v1/admin/merchants/{organizationId}`](./platform-admin.md#get-apiv1adminmerchantsorganizationid) | Get merchant organization detail for KYB review |
-| GET | [`/api/v1/admin/merchants/{organizationId}/documents/{documentId}/download`](./platform-admin.md#get-apiv1adminmerchantsorganizationiddocumentsdocumentiddownload) | Get a short-lived signed download URL for a merchant KYB document |
-| PATCH | [`/api/v1/admin/merchants/{organizationId}/kyb`](./platform-admin.md#patch-apiv1adminmerchantsorganizationidkyb) | Update merchant KYB status (REJECTED / ACTION_REQUIRED require kybFields.rejectionReason) |
-| POST | [`/api/v1/admin/merchants/{organizationId}/locations`](./platform-admin.md#post-apiv1adminmerchantsorganizationidlocations) | Create an organization store location |
-| PATCH | [`/api/v1/admin/merchants/{organizationId}/locations/{locationId}/review`](./platform-admin.md#patch-apiv1adminmerchantsorganizationidlocationslocationidreview) | Approve or reject an organization store location request |
+| GET | [`/api/v1/admin/location-requests`](./platform-admin.md#get-apiv1adminlocation-requests) | List pending tenant store location requests |
+| GET | [`/api/v1/admin/merchants`](./platform-admin.md#get-apiv1adminmerchants) | List merchant tenants |
+| GET | [`/api/v1/admin/merchants/{tenantId}`](./platform-admin.md#get-apiv1adminmerchantstenantid) | Get merchant tenant detail for KYB review |
+| GET | [`/api/v1/admin/merchants/{tenantId}/documents/{documentId}/download`](./platform-admin.md#get-apiv1adminmerchantstenantiddocumentsdocumentiddownload) | Get a short-lived signed download URL for a merchant KYB document |
+| PATCH | [`/api/v1/admin/merchants/{tenantId}/kyb`](./platform-admin.md#patch-apiv1adminmerchantstenantidkyb) | Update merchant KYB status (REJECTED / ACTION_REQUIRED require kybFields.rejectionReason) |
+| POST | [`/api/v1/admin/merchants/{tenantId}/locations`](./platform-admin.md#post-apiv1adminmerchantstenantidlocations) | Create a tenant store location |
+| PATCH | [`/api/v1/admin/merchants/{tenantId}/locations/{locationId}/review`](./platform-admin.md#patch-apiv1adminmerchantstenantidlocationslocationidreview) | Approve or reject a tenant store location request |
 | GET | [`/api/v1/admin/rewards/{rewardId}`](./platform-admin.md#get-apiv1adminrewardsrewardid) | Get one reward in full, whatever its status (moderation detail) |
 | POST | [`/api/v1/admin/rewards/{rewardId}/approve`](./platform-admin.md#post-apiv1adminrewardsrewardidapprove) | Approve a pending reward (no body required) |
 | GET | [`/api/v1/admin/rewards/{rewardId}/images/{fileId}/download`](./platform-admin.md#get-apiv1adminrewardsrewardidimagesfileiddownload) | Get a short-lived signed URL that downloads one of a reward's images (the original upload) |
 | GET | [`/api/v1/admin/rewards/{rewardId}/images/archive`](./platform-admin.md#get-apiv1adminrewardsrewardidimagesarchive) | Download every image of a reward as one ZIP of the original uploads, in display order |
 | POST | [`/api/v1/admin/rewards/{rewardId}/reject`](./platform-admin.md#post-apiv1adminrewardsrewardidreject) | Reject a pending reward |
 | GET | [`/api/v1/admin/rewards/pending`](./platform-admin.md#get-apiv1adminrewardspending) | List rewards pending moderation (oldest first, paginated) |
-| POST | [`/api/v1/admin/organizations/invites`](./merchant-organizations.md#post-apiv1adminorganizationsinvites) |  |
-| POST | [`/api/v1/orgs/{orgSlug}/access-requests`](./merchant-organizations.md#post-apiv1orgsorgslugaccess-requests) |  |
-| POST | [`/api/v1/orgs/{orgSlug}/access-requests/{requestId}/review`](./merchant-organizations.md#post-apiv1orgsorgslugaccess-requestsrequestidreview) |  |
-| GET | [`/api/v1/orgs/{orgSlug}/analytics`](./merchant-organizations.md#get-apiv1orgsorgsluganalytics) | Organization reward performance analytics |
-| GET | [`/api/v1/orgs/{orgSlug}/analytics/dashboard`](./merchant-organizations.md#get-apiv1orgsorgsluganalyticsdashboard) | Merchant analytics dashboard: custom range + interval, compared totals, series, store / reward / redemption-method breakdowns |
-| GET | [`/api/v1/orgs/{orgSlug}/analytics/export`](./merchant-organizations.md#get-apiv1orgsorgsluganalyticsexport) | Download the merchant analytics report (csv \| xlsx \| pdf) for a date range |
-| GET | [`/api/v1/orgs/{orgSlug}/api-keys`](./merchant-organizations.md#get-apiv1orgsorgslugapi-keys) | List organization API keys |
-| POST | [`/api/v1/orgs/{orgSlug}/api-keys`](./merchant-organizations.md#post-apiv1orgsorgslugapi-keys) | Create a POS API key |
-| POST | [`/api/v1/orgs/{orgSlug}/api-keys/{keyId}/revoke`](./merchant-organizations.md#post-apiv1orgsorgslugapi-keyskeyidrevoke) | Revoke a POS API key (no body required) |
-| GET | [`/api/v1/orgs/{orgSlug}/context`](./merchant-organizations.md#get-apiv1orgsorgslugcontext) |  |
-| GET | [`/api/v1/orgs/{orgSlug}/kyb`](./merchant-organizations.md#get-apiv1orgsorgslugkyb) | Get the organization KYB profile (owner only) |
-| PATCH | [`/api/v1/orgs/{orgSlug}/kyb`](./merchant-organizations.md#patch-apiv1orgsorgslugkyb) | Submit or resubmit business verification details (owner only) |
-| GET | [`/api/v1/orgs/{orgSlug}/kyb/documents/{documentId}/download`](./merchant-organizations.md#get-apiv1orgsorgslugkybdocumentsdocumentiddownload) | Get a short-lived signed download URL for a CLEAN KYB document (owner only) |
-| POST | [`/api/v1/orgs/{orgSlug}/locations`](./merchant-organizations.md#post-apiv1orgsorgsluglocations) |  |
-| PATCH | [`/api/v1/orgs/{orgSlug}/locations/{locationId}`](./merchant-organizations.md#patch-apiv1orgsorgsluglocationslocationid) |  |
-| POST | [`/api/v1/orgs/{orgSlug}/locations/{locationId}/close`](./merchant-organizations.md#post-apiv1orgsorgsluglocationslocationidclose) |  |
-| GET | [`/api/v1/orgs/{orgSlug}/members`](./merchant-organizations.md#get-apiv1orgsorgslugmembers) |  |
-| POST | [`/api/v1/orgs/{orgSlug}/members/{membershipId}/stores/{locationId}/remove`](./merchant-organizations.md#post-apiv1orgsorgslugmembersmembershipidstoreslocationidremove) |  |
-| POST | [`/api/v1/orgs/{orgSlug}/members/invite`](./merchant-organizations.md#post-apiv1orgsorgslugmembersinvite) |  |
-| GET | [`/api/v1/orgs/{orgSlug}/members/invites`](./merchant-organizations.md#get-apiv1orgsorgslugmembersinvites) |  |
-| POST | [`/api/v1/orgs/{orgSlug}/members/invites/{inviteId}/revoke`](./merchant-organizations.md#post-apiv1orgsorgslugmembersinvitesinviteidrevoke) |  |
-| PATCH | [`/api/v1/orgs/{orgSlug}/members/me`](./merchant-organizations.md#patch-apiv1orgsorgslugmembersme) |  |
-| GET | [`/api/v1/orgs/{orgSlug}/redemptions`](./merchant-organizations.md#get-apiv1orgsorgslugredemptions) | List organization redemptions |
-| GET | [`/api/v1/orgs/{orgSlug}/rewards`](./merchant-organizations.md#get-apiv1orgsorgslugrewards) | List organization rewards |
-| POST | [`/api/v1/orgs/{orgSlug}/rewards`](./merchant-organizations.md#post-apiv1orgsorgslugrewards) | Create a draft reward |
-| GET | [`/api/v1/orgs/{orgSlug}/rewards/{rewardId}`](./merchant-organizations.md#get-apiv1orgsorgslugrewardsrewardid) | Read one organization reward (404 when not offered at any of the caller's stores) |
-| PATCH | [`/api/v1/orgs/{orgSlug}/rewards/{rewardId}`](./merchant-organizations.md#patch-apiv1orgsorgslugrewardsrewardid) | Update a draft or pending reward |
-| POST | [`/api/v1/orgs/{orgSlug}/rewards/{rewardId}/publish`](./merchant-organizations.md#post-apiv1orgsorgslugrewardsrewardidpublish) | Submit reward for moderation review (no body required) |
-| GET | [`/api/v1/orgs/{orgSlug}/rewards/summary`](./merchant-organizations.md#get-apiv1orgsorgslugrewardssummary) | Organization reward figures: the count in each status and the units still claimable, over every reward in the store scope |
-| GET | [`/api/v1/orgs/{orgSlug}/terminals`](./merchant-organizations.md#get-apiv1orgsorgslugterminals) | List the organization's POS terminals |
-| POST | [`/api/v1/orgs/{orgSlug}/terminals`](./merchant-organizations.md#post-apiv1orgsorgslugterminals) | Register a POS terminal at a store and get its one-time pairing code |
-| GET | [`/api/v1/orgs/{orgSlug}/terminals/{id}`](./merchant-organizations.md#get-apiv1orgsorgslugterminalsid) | Read one POS terminal (404 outside the caller's stores) |
-| DELETE | [`/api/v1/orgs/{orgSlug}/terminals/{id}`](./merchant-organizations.md#delete-apiv1orgsorgslugterminalsid) | Remove a POS terminal and revoke its API key |
-| POST | [`/api/v1/orgs/{orgSlug}/terminals/{id}/pairing-code`](./merchant-organizations.md#post-apiv1orgsorgslugterminalsidpairing-code) | Issue a new pairing code (first pairing, expired code, or re-pair — the old key stops working once the new code is used) |
-| GET | [`/api/v1/orgs/{orgSlug}/terminals/settings`](./merchant-organizations.md#get-apiv1orgsorgslugterminalssettings) | Read the organization's POS terminal policy |
-| PATCH | [`/api/v1/orgs/{orgSlug}/terminals/settings`](./merchant-organizations.md#patch-apiv1orgsorgslugterminalssettings) | Turn 'only allow registered terminals' on or off |
-| GET | [`/api/v1/orgs/{orgSlug}/terminals/summary`](./merchant-organizations.md#get-apiv1orgsorgslugterminalssummary) | Count the organization's live POS terminals per status, within the caller's stores |
-| POST | [`/api/v1/orgs/invites/accept`](./merchant-organizations.md#post-apiv1orgsinvitesaccept) |  |
-| POST | [`/api/v1/orgs/invites/register-and-accept`](./merchant-organizations.md#post-apiv1orgsinvitesregister-and-accept) |  |
-| POST | [`/api/v1/orgs/invites/validate`](./merchant-organizations.md#post-apiv1orgsinvitesvalidate) |  |
-| GET | [`/api/v1/orgs/memberships`](./merchant-organizations.md#get-apiv1orgsmemberships) | List the current user's organization memberships |
-| POST | [`/api/v1/orgs/onboarding/complete`](./merchant-organizations.md#post-apiv1orgsonboardingcomplete) | Complete merchant onboarding — links OWNER membership and platform User role |
-| POST | [`/api/v1/orgs/onboarding/documents/status`](./merchant-organizations.md#post-apiv1orgsonboardingdocumentsstatus) | Scan status of this onboarding's KYB uploads (same document window as the upload endpoints) |
-| POST | [`/api/v1/orgs/onboarding/documents/submit`](./merchant-organizations.md#post-apiv1orgsonboardingdocumentssubmit) | Attach onboarding KYB documents and submit the merchant for admin review |
-| POST | [`/api/v1/orgs/onboarding/documents/upload-complete`](./merchant-organizations.md#post-apiv1orgsonboardingdocumentsupload-complete) | Complete an invite-authorized KYB document upload |
-| POST | [`/api/v1/orgs/onboarding/documents/upload-complete-batch`](./merchant-organizations.md#post-apiv1orgsonboardingdocumentsupload-complete-batch) | Complete invite-authorized KYB document uploads in one request |
-| POST | [`/api/v1/orgs/onboarding/documents/upload-url`](./merchant-organizations.md#post-apiv1orgsonboardingdocumentsupload-url) | Create an invite-authorized KYB document upload ticket |
-| POST | [`/api/v1/orgs/onboarding/documents/upload-urls`](./merchant-organizations.md#post-apiv1orgsonboardingdocumentsupload-urls) | Create invite-authorized KYB document upload tickets in one request |
-| POST | [`/api/v1/orgs/onboarding/validate`](./merchant-organizations.md#post-apiv1orgsonboardingvalidate) | Validate a merchant onboarding invite token |
+| POST | [`/api/v1/admin/tenants/invites`](./merchant-tenants.md#post-apiv1admintenantsinvites) |  |
+| POST | [`/api/v1/tenants/{tenantSlug}/access-requests`](./merchant-tenants.md#post-apiv1tenantstenantslugaccess-requests) |  |
+| POST | [`/api/v1/tenants/{tenantSlug}/access-requests/{requestId}/review`](./merchant-tenants.md#post-apiv1tenantstenantslugaccess-requestsrequestidreview) |  |
+| GET | [`/api/v1/tenants/{tenantSlug}/analytics`](./merchant-tenants.md#get-apiv1tenantstenantsluganalytics) | Tenant reward performance analytics |
+| GET | [`/api/v1/tenants/{tenantSlug}/analytics/dashboard`](./merchant-tenants.md#get-apiv1tenantstenantsluganalyticsdashboard) | Merchant analytics dashboard: custom range + interval, compared totals, series, store / reward / redemption-method breakdowns |
+| GET | [`/api/v1/tenants/{tenantSlug}/analytics/export`](./merchant-tenants.md#get-apiv1tenantstenantsluganalyticsexport) | Download the merchant analytics report (csv \| xlsx \| pdf) for a date range |
+| GET | [`/api/v1/tenants/{tenantSlug}/api-keys`](./merchant-tenants.md#get-apiv1tenantstenantslugapi-keys) | List tenant API keys |
+| POST | [`/api/v1/tenants/{tenantSlug}/api-keys`](./merchant-tenants.md#post-apiv1tenantstenantslugapi-keys) | Create a POS API key |
+| POST | [`/api/v1/tenants/{tenantSlug}/api-keys/{keyId}/revoke`](./merchant-tenants.md#post-apiv1tenantstenantslugapi-keyskeyidrevoke) | Revoke a POS API key (no body required) |
+| GET | [`/api/v1/tenants/{tenantSlug}/context`](./merchant-tenants.md#get-apiv1tenantstenantslugcontext) |  |
+| GET | [`/api/v1/tenants/{tenantSlug}/kyb`](./merchant-tenants.md#get-apiv1tenantstenantslugkyb) | Get the tenant KYB profile (owner only) |
+| PATCH | [`/api/v1/tenants/{tenantSlug}/kyb`](./merchant-tenants.md#patch-apiv1tenantstenantslugkyb) | Submit or resubmit business verification details (owner only) |
+| GET | [`/api/v1/tenants/{tenantSlug}/kyb/documents/{documentId}/download`](./merchant-tenants.md#get-apiv1tenantstenantslugkybdocumentsdocumentiddownload) | Get a short-lived signed download URL for a CLEAN KYB document (owner only) |
+| POST | [`/api/v1/tenants/{tenantSlug}/locations`](./merchant-tenants.md#post-apiv1tenantstenantsluglocations) |  |
+| PATCH | [`/api/v1/tenants/{tenantSlug}/locations/{locationId}`](./merchant-tenants.md#patch-apiv1tenantstenantsluglocationslocationid) |  |
+| POST | [`/api/v1/tenants/{tenantSlug}/locations/{locationId}/close`](./merchant-tenants.md#post-apiv1tenantstenantsluglocationslocationidclose) |  |
+| GET | [`/api/v1/tenants/{tenantSlug}/members`](./merchant-tenants.md#get-apiv1tenantstenantslugmembers) |  |
+| POST | [`/api/v1/tenants/{tenantSlug}/members/{membershipId}/stores/{locationId}/remove`](./merchant-tenants.md#post-apiv1tenantstenantslugmembersmembershipidstoreslocationidremove) |  |
+| POST | [`/api/v1/tenants/{tenantSlug}/members/invite`](./merchant-tenants.md#post-apiv1tenantstenantslugmembersinvite) |  |
+| GET | [`/api/v1/tenants/{tenantSlug}/members/invites`](./merchant-tenants.md#get-apiv1tenantstenantslugmembersinvites) |  |
+| POST | [`/api/v1/tenants/{tenantSlug}/members/invites/{inviteId}/revoke`](./merchant-tenants.md#post-apiv1tenantstenantslugmembersinvitesinviteidrevoke) |  |
+| PATCH | [`/api/v1/tenants/{tenantSlug}/members/me`](./merchant-tenants.md#patch-apiv1tenantstenantslugmembersme) |  |
+| GET | [`/api/v1/tenants/{tenantSlug}/redemptions`](./merchant-tenants.md#get-apiv1tenantstenantslugredemptions) | List tenant redemptions |
+| GET | [`/api/v1/tenants/{tenantSlug}/rewards`](./merchant-tenants.md#get-apiv1tenantstenantslugrewards) | List tenant rewards |
+| POST | [`/api/v1/tenants/{tenantSlug}/rewards`](./merchant-tenants.md#post-apiv1tenantstenantslugrewards) | Create a draft reward |
+| GET | [`/api/v1/tenants/{tenantSlug}/rewards/{rewardId}`](./merchant-tenants.md#get-apiv1tenantstenantslugrewardsrewardid) | Read one tenant reward (404 when not offered at any of the caller's stores) |
+| PATCH | [`/api/v1/tenants/{tenantSlug}/rewards/{rewardId}`](./merchant-tenants.md#patch-apiv1tenantstenantslugrewardsrewardid) | Update a draft or pending reward |
+| POST | [`/api/v1/tenants/{tenantSlug}/rewards/{rewardId}/publish`](./merchant-tenants.md#post-apiv1tenantstenantslugrewardsrewardidpublish) | Submit reward for moderation review (no body required) |
+| GET | [`/api/v1/tenants/{tenantSlug}/rewards/summary`](./merchant-tenants.md#get-apiv1tenantstenantslugrewardssummary) | Tenant reward figures: the count in each status and the units still claimable, over every reward in the store scope |
+| GET | [`/api/v1/tenants/{tenantSlug}/terminals`](./merchant-tenants.md#get-apiv1tenantstenantslugterminals) | List the tenant's POS terminals |
+| POST | [`/api/v1/tenants/{tenantSlug}/terminals`](./merchant-tenants.md#post-apiv1tenantstenantslugterminals) | Register a POS terminal at a store and get its one-time pairing code |
+| GET | [`/api/v1/tenants/{tenantSlug}/terminals/{id}`](./merchant-tenants.md#get-apiv1tenantstenantslugterminalsid) | Read one POS terminal (404 outside the caller's stores) |
+| DELETE | [`/api/v1/tenants/{tenantSlug}/terminals/{id}`](./merchant-tenants.md#delete-apiv1tenantstenantslugterminalsid) | Remove a POS terminal and revoke its API key |
+| POST | [`/api/v1/tenants/{tenantSlug}/terminals/{id}/pairing-code`](./merchant-tenants.md#post-apiv1tenantstenantslugterminalsidpairing-code) | Issue a new pairing code (first pairing, expired code, or re-pair — the old key stops working once the new code is used) |
+| GET | [`/api/v1/tenants/{tenantSlug}/terminals/settings`](./merchant-tenants.md#get-apiv1tenantstenantslugterminalssettings) | Read the tenant's POS terminal policy |
+| PATCH | [`/api/v1/tenants/{tenantSlug}/terminals/settings`](./merchant-tenants.md#patch-apiv1tenantstenantslugterminalssettings) | Turn 'only allow registered terminals' on or off |
+| GET | [`/api/v1/tenants/{tenantSlug}/terminals/summary`](./merchant-tenants.md#get-apiv1tenantstenantslugterminalssummary) | Count the tenant's live POS terminals per status, within the caller's stores |
+| POST | [`/api/v1/tenants/invites/accept`](./merchant-tenants.md#post-apiv1tenantsinvitesaccept) |  |
+| POST | [`/api/v1/tenants/invites/register-and-accept`](./merchant-tenants.md#post-apiv1tenantsinvitesregister-and-accept) |  |
+| POST | [`/api/v1/tenants/invites/validate`](./merchant-tenants.md#post-apiv1tenantsinvitesvalidate) |  |
+| GET | [`/api/v1/tenants/memberships`](./merchant-tenants.md#get-apiv1tenantsmemberships) | List the current user's tenant memberships |
+| POST | [`/api/v1/tenants/onboarding/complete`](./merchant-tenants.md#post-apiv1tenantsonboardingcomplete) | Complete merchant onboarding — links OWNER membership and platform User role |
+| POST | [`/api/v1/tenants/onboarding/documents/status`](./merchant-tenants.md#post-apiv1tenantsonboardingdocumentsstatus) | Scan status of this onboarding's KYB uploads (same document window as the upload endpoints) |
+| POST | [`/api/v1/tenants/onboarding/documents/submit`](./merchant-tenants.md#post-apiv1tenantsonboardingdocumentssubmit) | Attach onboarding KYB documents and submit the merchant for admin review |
+| POST | [`/api/v1/tenants/onboarding/documents/upload-complete`](./merchant-tenants.md#post-apiv1tenantsonboardingdocumentsupload-complete) | Complete an invite-authorized KYB document upload |
+| POST | [`/api/v1/tenants/onboarding/documents/upload-complete-batch`](./merchant-tenants.md#post-apiv1tenantsonboardingdocumentsupload-complete-batch) | Complete invite-authorized KYB document uploads in one request |
+| POST | [`/api/v1/tenants/onboarding/documents/upload-url`](./merchant-tenants.md#post-apiv1tenantsonboardingdocumentsupload-url) | Create an invite-authorized KYB document upload ticket |
+| POST | [`/api/v1/tenants/onboarding/documents/upload-urls`](./merchant-tenants.md#post-apiv1tenantsonboardingdocumentsupload-urls) | Create invite-authorized KYB document upload tickets in one request |
+| POST | [`/api/v1/tenants/onboarding/validate`](./merchant-tenants.md#post-apiv1tenantsonboardingvalidate) | Validate a merchant onboarding invite token |
 | GET | [`/api/v1/claims`](./customer-rewards.md#get-apiv1claims) | List my reward claims |
 | POST | [`/api/v1/claims`](./customer-rewards.md#post-apiv1claims) | Claim a reward after OTP verification |
 | GET | [`/api/v1/claims/{claimId}`](./customer-rewards.md#get-apiv1claimsclaimid) | One of my claims (never carries the codes) |
@@ -198,9 +199,19 @@ Every endpoint of `apps/api` — 260 operations, 214 with a sample captured from
 | POST | [`/api/v1/reward-notifications/read`](./customer-rewards.md#post-apiv1reward-notificationsread) | Mark reward notifications as read |
 | GET | [`/api/v1/rewards`](./customer-rewards.md#get-apiv1rewards) | Browse published consumer rewards |
 | GET | [`/api/v1/rewards/{rewardId}`](./customer-rewards.md#get-apiv1rewardsrewardid) | Get published reward detail |
-| POST | [`/api/v1/pos/terminals/pair`](./pos.md#post-apiv1posterminalspair) | Pair a POS terminal with the one-time code from the merchant console |
-| POST | [`/api/v1/redemptions/checkout`](./pos.md#post-apiv1redemptionscheckout) | POS checkout: after payment, record the bill and redeem every presented reward (all-or-nothing, idempotent) |
-| POST | [`/api/v1/redemptions/validate`](./pos.md#post-apiv1redemptionsvalidate) | POS validate QR or backup code |
+| GET | [`/api/v1/integration/analytics`](./pos.md#get-apiv1integrationanalytics) | The API key's tenant reward performance analytics |
+| GET | [`/api/v1/integration/analytics/dashboard`](./pos.md#get-apiv1integrationanalyticsdashboard) | The API key's tenant analytics dashboard |
+| GET | [`/api/v1/integration/analytics/export`](./pos.md#get-apiv1integrationanalyticsexport) | Download the API key's tenant analytics report (csv \| xlsx \| pdf) |
+| GET | [`/api/v1/integration/redemptions`](./pos.md#get-apiv1integrationredemptions) | List the API key's own redemptions |
+| POST | [`/api/v1/integration/redemptions/checkout`](./pos.md#post-apiv1integrationredemptionscheckout) | POS checkout: after payment, record the bill and redeem every presented reward (all-or-nothing, idempotent) |
+| POST | [`/api/v1/integration/redemptions/validate`](./pos.md#post-apiv1integrationredemptionsvalidate) | POS validate QR or backup code |
+| GET | [`/api/v1/integration/rewards`](./pos.md#get-apiv1integrationrewards) | List the API key's tenant rewards |
+| POST | [`/api/v1/integration/rewards`](./pos.md#post-apiv1integrationrewards) | Create a draft reward for the API key's tenant |
+| GET | [`/api/v1/integration/rewards/{rewardId}`](./pos.md#get-apiv1integrationrewardsrewardid) | Read one of the API key's tenant rewards (404 when not offered at the key's store) |
+| PATCH | [`/api/v1/integration/rewards/{rewardId}`](./pos.md#patch-apiv1integrationrewardsrewardid) | Update a draft or pending reward of the API key's tenant |
+| POST | [`/api/v1/integration/rewards/{rewardId}/publish`](./pos.md#post-apiv1integrationrewardsrewardidpublish) | Submit one of the API key's tenant rewards for moderation review (no body required) |
+| GET | [`/api/v1/integration/rewards/summary`](./pos.md#get-apiv1integrationrewardssummary) | The API key's tenant reward figures: the count in each status and the units still claimable |
+| POST | [`/api/v1/integration/terminals/pair`](./pos.md#post-apiv1integrationterminalspair) | Pair a POS terminal with the one-time code from the merchant console |
 | GET | [`/api/v1/files/{fileId}`](./files.md#get-apiv1filesfileid) | Get file metadata |
 | DELETE | [`/api/v1/files/{fileId}`](./files.md#delete-apiv1filesfileid) | Soft-delete a file and queue physical deletion |
 | POST | [`/api/v1/files/{fileId}/complete`](./files.md#post-apiv1filesfileidcomplete) | Complete a direct upload after browser upload |

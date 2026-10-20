@@ -87,7 +87,7 @@ describe("describeDraftRewardStores", () => {
 		expect(stores).toEqual({ label: "Melaka Raya", fullLabel: STORE_B.name });
 	});
 
-	it("keeps full store names while the organization's name is still loading", () => {
+	it("keeps full store names while the tenant's name is still loading", () => {
 		expect(describeDraftRewardStores({ locationScopeType: "SELECTED", locationIds: [STORE_A.id] }, locations, undefined).label).toBe(STORE_A.name);
 	});
 });

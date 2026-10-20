@@ -29,12 +29,25 @@ export const legalRoutes = {
 	status: "/legal/status",
 } satisfies Record<string, RouteTree>;
 
-/** Path templates composed into `apiRoutes.organizations.rewards`. */
-export const organizationRewardsRoutes = {
-	list: "/orgs/:orgSlug/rewards",
-	summary: "/orgs/:orgSlug/rewards/summary",
-	create: "/orgs/:orgSlug/rewards",
-	get: "/orgs/:orgSlug/rewards/:rewardId",
-	update: "/orgs/:orgSlug/rewards/:rewardId",
-	publish: "/orgs/:orgSlug/rewards/:rewardId/publish",
+/** Path templates composed into `apiRoutes.tenants.rewards`. */
+/**
+ * Path templates composed into `apiRoutes.integration.rewards`: an integration API key's own catalog.
+ * The tenant (and store, for a store-scoped key) comes from the key, so the path names none (D6).
+ */
+export const integrationRewardsRoutes = {
+	list: "/integration/rewards",
+	summary: "/integration/rewards/summary",
+	create: "/integration/rewards",
+	get: "/integration/rewards/:rewardId",
+	update: "/integration/rewards/:rewardId",
+	publish: "/integration/rewards/:rewardId/publish",
+} satisfies Record<string, RouteTree>;
+
+export const tenantRewardsRoutes = {
+	list: "/tenants/:tenantSlug/rewards",
+	summary: "/tenants/:tenantSlug/rewards/summary",
+	create: "/tenants/:tenantSlug/rewards",
+	get: "/tenants/:tenantSlug/rewards/:rewardId",
+	update: "/tenants/:tenantSlug/rewards/:rewardId",
+	publish: "/tenants/:tenantSlug/rewards/:rewardId/publish",
 } satisfies Record<string, RouteTree>;

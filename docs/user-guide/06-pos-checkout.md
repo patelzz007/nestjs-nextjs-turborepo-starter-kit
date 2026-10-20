@@ -25,7 +25,7 @@ sequenceDiagram
     Portal->>API: create terminal
     API-->>Portal: one-time pairing code (8 characters, 15 minutes)
     Owner->>Till: type the pairing code
-    Till->>API: POST /pos/terminals/pair { pairingCode }
+    Till->>API: POST /integration/terminals/pair { pairingCode }
     API-->>Till: API key (shown once) + terminal id + store
     Note over Till: stores the key; sends it as X-API-Key from now on
 ```

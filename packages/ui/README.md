@@ -311,7 +311,7 @@ search states appear only when those features are loaded.
 
 ## Entity avatar (`entity-avatar.tsx`)
 
-A square (or `shape="circle"`) brand mark for a named entity — a shop, organization or team.
+A square (or `shape="circle"`) brand mark for a named entity — a shop, tenant or team.
 Composes `Avatar`; data-agnostic (`name` + optional `src`, nothing domain-specific).
 
 - **Logo** — `src` renders lazily in place (`loading="lazy"`), `object-contain` on the neutral

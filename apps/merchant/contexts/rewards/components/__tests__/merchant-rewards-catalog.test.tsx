@@ -10,14 +10,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MerchantRewardsCatalog, REWARDS_CATALOG_LOADING_LABELS } from "@/contexts/rewards/components/merchant-rewards-catalog";
 import { defaultRewardStatusGroupId, groupStatusCounts, REWARD_STATUS_GROUPS, statusesOfGroup, type RewardStatusGroupId } from "@/contexts/rewards/lib/presentation";
 import { REWARDS_URL_STATE, rewardsTabPatch } from "@/contexts/rewards/url-state/rewards";
-import { ORG_ROUTES, resolveOrgHref } from "@/lib/routes";
+import { TENANT_ROUTES, resolveTenantHref } from "@/lib/routes";
 import { MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME, MERCHANT_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
 import { REWARD_FIXTURE_COVER_URL, rewardFixture } from "@/test/rewards";
 import { busyRegionAnnouncements } from "@/test/skeleton";
 
 const ORG_SLUG = "jonker-street-kitchen";
-const REWARDS_PATH = resolveOrgHref(ORG_SLUG, ORG_ROUTES.rewards.list);
-const CREATE_REWARD_HREF = resolveOrgHref(ORG_SLUG, ORG_ROUTES.rewards.new);
+const REWARDS_PATH = resolveTenantHref(ORG_SLUG, TENANT_ROUTES.rewards.list);
+const CREATE_REWARD_HREF = resolveTenantHref(ORG_SLUG, TENANT_ROUTES.rewards.new);
 
 // The open tab is read from the address bar, as Next.js's `useSearchParams`
 // does once its History API integration has synced it.
@@ -25,7 +25,7 @@ vi.mock("next/navigation", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("next/navigation")>();
 	return {
 		...actual,
-		useParams: (): Record<string, string> => ({ orgSlug: ORG_SLUG }),
+		useParams: (): Record<string, string> => ({ tenantSlug: ORG_SLUG }),
 		useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 	};
 });
@@ -298,7 +298,9 @@ describe("MerchantRewardsCatalog status tabs", () => {
 		const live = within(panel());
 
 		expect(live.getByText("10% off")).toBeDefined();
-		expect(live.getByRole("link", { name: "Nyonya kuih sampler, manage reward" }).getAttribute("href")).toBe(resolveOrgHref(ORG_SLUG, ORG_ROUTES.rewards.detail(LIVE_ID)));
+		expect(live.getByRole("link", { name: "Nyonya kuih sampler, manage reward" }).getAttribute("href")).toBe(
+			resolveTenantHref(ORG_SLUG, TENANT_ROUTES.rewards.detail(LIVE_ID)),
+		);
 		expect(live.queryByRole("button")).toBeNull();
 	});
 

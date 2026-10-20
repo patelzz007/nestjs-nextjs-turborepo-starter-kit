@@ -36,7 +36,7 @@ export interface PanelSidebarSwitcherGroup {
 	readonly onValueChange: (value: string) => void;
 }
 
-/** A command at the foot of the menu ("Create new organization", "Manage locations"). */
+/** A command at the foot of the menu ("Create new tenant", "Manage locations"). */
 export interface PanelSidebarSwitcherAction {
 	readonly id: string;
 	readonly label: string;
@@ -112,7 +112,7 @@ function SwitcherGroup({ group }: SwitcherGroupProps): React.JSX.Element {
 
 /**
  * The panel sidebar's context switcher (app shell 3) — the header row that
- * names the current workspace (store, organization, team) and opens a menu to
+ * names the current workspace (store, tenant, team) and opens a menu to
  * change it: labelled groups of choices with the current one checked, then
  * commands such as "Create new …". It takes the place of `PanelSidebarHeader`
  * and keeps its collapse toggle. Stateless and controlled: each group's

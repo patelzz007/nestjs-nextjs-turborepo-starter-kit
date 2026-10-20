@@ -1,0 +1,342 @@
+"use client";
+
+import type { FileDownloadDisposition, MerchantKybDocumentRecord, MerchantKybProfileResponse } from "@workspace/shared";
+import {
+	LIST_SLOT_INDEX,
+	MERCHANT_KYB_MAX_DOCUMENT_COUNT,
+	MerchantKybBusinessFieldsSchema,
+	MerchantKybRegistrationFieldsSchema,
+	MerchantKybSubmissionFormSchema,
+} from "@workspace/shared";
+import { useQueryClient } from "@tanstack/react-query";
+import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
+import * as React from "react";
+
+import { resolveAuthErrorMessage, useAuth } from "../../identity/index";
+import { apiRouter } from "../../../api/endpoints";
+import { triggerBrowserDownload } from "../../../storage/browser-download";
+import { hasSubmittedMerchantKyb, openExternalDocument, readProfileKybDocuments } from "./document-utils";
+import type { MerchantKybDocumentPreviewState } from "./document-preview-dialog";
+import MerchantKybDocumentPreviewDialogClientOnly from "./document-preview-dialog.client-only";
+import { submitMerchantKyb } from "./multipart";
+import type { MerchantKybFieldValues } from "./fields";
+import { MerchantKybVerificationApprovedSection } from "./verification-approved-section";
+import { profileToFieldValues, readKybStringField } from "./verification-profile-utils";
+import { MERCHANT_KYB_VERIFICATION_LOADING_LABELS, MerchantKybVerificationSkeleton } from "./verification-skeleton";
+import { MerchantKybVerificationStatusBanners } from "./verification-status-banners";
+import { MerchantKybVerificationUpdateSection, type MerchantKybVerificationUpdateStep } from "./verification-update-section";
+import { catchCaught } from "../../../caught";
+import { FileProcessingError } from "../../../storage/direct-upload";
+import { describeDocumentProcessingFailure } from "../onboarding/onboarding-outcome";
+
+export interface MerchantKybVerificationViewProps {
+	readonly tenantSlug: string;
+}
+
+export function MerchantKybVerificationView({ tenantSlug }: MerchantKybVerificationViewProps): React.JSX.Element {
+	const { api } = useAuth();
+	const profileQuery = api.tenants.kyb.get.useQuery(
+		{ tenantSlug },
+		{
+			staleTime: 0,
+			refetchInterval: (query): number | false => {
+				const documents = query.state.data?.data.documents ?? [];
+				const hasPending = documents.some((document) => document.scanStatus === "SCANNING");
+				return hasPending ? 5_000 : false;
+			},
+		},
+	);
+	const profile = profileQuery.data?.data;
+
+	if (profileQuery.isLoading && profile === undefined) {
+		return (
+			<SkeletonRegion labels={MERCHANT_KYB_VERIFICATION_LOADING_LABELS}>
+				<MerchantKybVerificationSkeleton />
+			</SkeletonRegion>
+		);
+	}
+
+	if (profile === undefined) {
+		return <p className="text-sm text-destructive">Unable to load business verification details.</p>;
+	}
+
+	return <MerchantKybVerificationContent tenantSlug={tenantSlug} profile={profile} />;
+}
+
+interface MerchantKybVerificationContentProps {
+	readonly tenantSlug: string;
+	readonly profile: MerchantKybProfileResponse;
+}
+
+function MerchantKybVerificationContent({ tenantSlug, profile }: MerchantKybVerificationContentProps): React.JSX.Element {
+	const { api } = useAuth();
+	const queryClient = useQueryClient();
+	const hasSubmitted = hasSubmittedMerchantKyb(profile);
+	const isApproved = profile.kybStatus === "APPROVED";
+	const canUpdate = !isApproved;
+	const storedDocuments = readProfileKybDocuments(profile);
+
+	const [step, setStep] = React.useState<MerchantKybVerificationUpdateStep>("business");
+	const [values, setValues] = React.useState<MerchantKybFieldValues>(() => profileToFieldValues(profile));
+	const [error, setError] = React.useState<string | null>(null);
+	const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
+	const [isSubmitting, setIsSubmitting] = React.useState(false);
+	// The in-flight upload's scan wait — cancelled when the view unmounts.
+	const uploadAbortRef = React.useRef<AbortController | null>(null);
+	React.useEffect(
+		(): (() => void) => (): void => {
+			uploadAbortRef.current?.abort();
+		},
+		[],
+	);
+	const [documentPreview, setDocumentPreview] = React.useState<MerchantKybDocumentPreviewState | null>(null);
+
+	const completedStepIds = React.useMemo((): ReadonlySet<string> => {
+		const completed = new Set<string>();
+		if (step === "registration" || step === "documents") {
+			completed.add("business");
+		}
+		if (step === "documents") {
+			completed.add("registration");
+		}
+		return completed;
+	}, [step]);
+
+	const handleBusinessFieldChange = React.useCallback((field: "businessName" | "legalName" | "addressText" | "contactPhone", value: string): void => {
+		setValues((current) => ({ ...current, [field]: value }));
+	}, []);
+
+	const handleRegistrationFieldChange = React.useCallback((field: "registrationNo" | "taxId" | "documentType", value: string): void => {
+		setValues((current) => ({ ...current, [field]: value }));
+	}, []);
+
+	const handleDocumentsChange = React.useCallback((documents: MerchantKybFieldValues["documents"]): void => {
+		setValues((current) => ({ ...current, documents }));
+	}, []);
+
+	const fetchStoredDocumentUrl = React.useCallback(
+		async (document: MerchantKybDocumentRecord, disposition: FileDownloadDisposition): Promise<string | null> => {
+			const response = await api.tenants.kyb.downloadDocument.fetchOrThrow({ tenantSlug, documentId: document.id, disposition });
+			return response.data.downloadUrl;
+		},
+		[api, tenantSlug],
+	);
+
+	const handleCloseDocumentPreview = React.useCallback((): void => {
+		setDocumentPreview(null);
+	}, []);
+
+	const handleViewStoredDocument = React.useCallback(
+		(document: MerchantKybDocumentRecord): void => {
+			void catchCaught(
+				Promise.all([fetchStoredDocumentUrl(document, "inline"), fetchStoredDocumentUrl(document, "attachment")]).then(([viewUrl, downloadUrl]): void => {
+					if (viewUrl === null || downloadUrl === null) {
+						setError("This document is still scanning or was rejected.");
+						return;
+					}
+					setDocumentPreview({
+						fileName: document.fileName,
+						mimeType: document.mimeType,
+						viewUrl,
+						downloadUrl,
+					});
+				}),
+				(err): void => {
+					setError(resolveAuthErrorMessage(err));
+				},
+			);
+		},
+		[fetchStoredDocumentUrl],
+	);
+
+	const handleDownloadStoredDocument = React.useCallback(
+		(document: MerchantKybDocumentRecord): void => {
+			void catchCaught(
+				fetchStoredDocumentUrl(document, "attachment").then((downloadUrl): void => {
+					if (downloadUrl === null) {
+						setError("This document is still scanning or was rejected.");
+						return;
+					}
+					triggerBrowserDownload(downloadUrl, document.fileName);
+				}),
+				(err): void => {
+					setError(resolveAuthErrorMessage(err));
+				},
+			);
+		},
+		[fetchStoredDocumentUrl],
+	);
+
+	const handleViewStoredDocumentSource = React.useCallback(
+		(document: MerchantKybDocumentRecord): void => {
+			void catchCaught(
+				fetchStoredDocumentUrl(document, "inline").then((viewUrl): void => {
+					if (viewUrl === null) {
+						setError("This document is still scanning or was rejected.");
+						return;
+					}
+					openExternalDocument(viewUrl);
+				}),
+				(err): void => {
+					setError(resolveAuthErrorMessage(err));
+				},
+			);
+		},
+		[fetchStoredDocumentUrl],
+	);
+
+	const handleBusinessContinue = React.useCallback(
+		(event: React.SyntheticEvent<HTMLFormElement>): void => {
+			event.preventDefault();
+			setError(null);
+
+			const parsed = MerchantKybBusinessFieldsSchema.safeParse({
+				businessName: values.businessName,
+				legalName: values.legalName,
+				addressText: values.addressText,
+				contactPhone: values.contactPhone,
+			});
+			if (!parsed.success) {
+				setError(parsed.error.issues[LIST_SLOT_INDEX.first]?.message ?? "Check your business details and try again.");
+				return;
+			}
+
+			setStep("registration");
+		},
+		[values],
+	);
+
+	const handleRegistrationContinue = React.useCallback(
+		(event: React.SyntheticEvent<HTMLFormElement>): void => {
+			event.preventDefault();
+			setError(null);
+
+			const parsed = MerchantKybRegistrationFieldsSchema.safeParse({
+				registrationNo: values.registrationNo,
+				taxId: values.taxId,
+				documentType: values.documentType,
+			});
+			if (!parsed.success) {
+				setError(parsed.error.issues[LIST_SLOT_INDEX.first]?.message ?? "Check your registration details and try again.");
+				return;
+			}
+
+			setStep("documents");
+		},
+		[values],
+	);
+
+	const handleDocumentsSubmit = React.useCallback(
+		(event: React.SyntheticEvent<HTMLFormElement>): void => {
+			event.preventDefault();
+			setError(null);
+			setSuccessMessage(null);
+
+			if (values.documents.length === 0) {
+				setError("Upload at least one business registration document.");
+				return;
+			}
+			if (values.documents.length > MERCHANT_KYB_MAX_DOCUMENT_COUNT) {
+				setError(`You can upload up to ${String(MERCHANT_KYB_MAX_DOCUMENT_COUNT)} documents.`);
+				return;
+			}
+
+			const parsed = MerchantKybSubmissionFormSchema.safeParse({
+				businessName: values.businessName,
+				legalName: values.legalName,
+				addressText: values.addressText,
+				contactPhone: values.contactPhone,
+				registrationNo: values.registrationNo,
+				taxId: values.taxId,
+				documentType: values.documentType,
+			});
+			if (!parsed.success) {
+				setError(parsed.error.issues[LIST_SLOT_INDEX.first]?.message ?? "Check your business details and try again.");
+				return;
+			}
+
+			setIsSubmitting(true);
+			const uploadController = new AbortController();
+			uploadAbortRef.current = uploadController;
+			void catchCaught(
+				submitMerchantKyb(api, tenantSlug, parsed.data, values.documents, profile.tenantId, uploadController.signal).then((response): void => {
+					setValues(profileToFieldValues(response));
+					setStep("business");
+					setSuccessMessage(
+						profile.kybStatus === "PENDING" || profile.kybStatus === "ACTION_REQUIRED"
+							? "Your submission has been updated. Documents are being scanned before review."
+							: "Business verification updated. Our team will review your details.",
+					);
+					// This tenant's KYB profile (restarts the SCANNING poll) and the
+					// views that carry its KYB status: the org context and the memberships.
+					void queryClient.invalidateQueries({ queryKey: apiRouter.tenants.kyb.get.scopeKey({ tenantSlug }) });
+					void queryClient.invalidateQueries({ queryKey: apiRouter.tenants.context.scopeKey({ tenantSlug }) });
+					void queryClient.invalidateQueries({ queryKey: apiRouter.tenants.membershipsBootstrap.scopeKey(undefined) });
+				}),
+				(err): void => {
+					if (uploadController.signal.aborted) {
+						return;
+					}
+					setError(err instanceof FileProcessingError ? describeDocumentProcessingFailure(err) : resolveAuthErrorMessage(err));
+				},
+			).finally((): void => {
+				setIsSubmitting(false);
+			});
+		},
+		[api, tenantSlug, profile.kybStatus, profile.tenantId, queryClient, values],
+	);
+
+	const handleBack = React.useCallback((): void => {
+		setError(null);
+		if (step === "registration") {
+			setStep("business");
+			return;
+		}
+		if (step === "documents") {
+			setStep("registration");
+		}
+	}, [step]);
+
+	const rejectionReasonValue = readKybStringField(profile, "rejectionReason");
+	const rejectionReason = rejectionReasonValue.length > 0 ? rejectionReasonValue : null;
+
+	return (
+		<div className="space-y-6">
+			<MerchantKybVerificationStatusBanners profile={profile} rejectionReason={rejectionReason} successMessage={successMessage} />
+
+			{isApproved ? (
+				<MerchantKybVerificationApprovedSection
+					values={values}
+					storedDocuments={storedDocuments}
+					onViewStoredDocument={handleViewStoredDocument}
+					onDownloadStoredDocument={handleDownloadStoredDocument}
+					onViewStoredDocumentSource={handleViewStoredDocumentSource}
+				/>
+			) : null}
+
+			{canUpdate ? (
+				<MerchantKybVerificationUpdateSection
+					profile={profile}
+					hasSubmitted={hasSubmitted}
+					storedDocuments={storedDocuments}
+					step={step}
+					completedStepIds={completedStepIds}
+					values={values}
+					error={error}
+					isSubmitting={isSubmitting}
+					onBusinessFieldChange={handleBusinessFieldChange}
+					onRegistrationFieldChange={handleRegistrationFieldChange}
+					onDocumentsChange={handleDocumentsChange}
+					onViewStoredDocument={handleViewStoredDocument}
+					onDownloadStoredDocument={handleDownloadStoredDocument}
+					onViewStoredDocumentSource={handleViewStoredDocumentSource}
+					onBusinessContinue={handleBusinessContinue}
+					onRegistrationContinue={handleRegistrationContinue}
+					onDocumentsSubmit={handleDocumentsSubmit}
+					onBack={handleBack}
+				/>
+			) : null}
+			<MerchantKybDocumentPreviewDialogClientOnly preview={documentPreview} onClose={handleCloseDocumentPreview} />
+		</div>
+	);
+}

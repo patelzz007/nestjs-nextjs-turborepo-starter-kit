@@ -36,7 +36,7 @@ A merchant's till (the **POS**) is not an app: it talks to the API directly with
 | **Owner** | Merchant portal | Runs the business: everything, including business verification (KYB) |
 | **Admin** (merchant) | Merchant portal | Everything except business verification |
 | **Cashier** | Merchant portal | Views rewards, redemptions, analytics and stores — no management |
-| **Policy admin** | Merchant portal | Administers the organization's access policies |
+| **Policy admin** | Merchant portal | Administers the tenant's access policies |
 | **Member** | Merchant portal | Dashboard and store list only |
 | **Customer** | Web app | Claims and redeems rewards |
 

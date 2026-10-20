@@ -12,7 +12,7 @@ interface Plan {
 const plans: readonly Plan[] = [
 	{ value: "starter", label: "Starter", description: "Perfect for individuals getting started." },
 	{ value: "professional", label: "Professional", description: "Ideal for growing teams and businesses." },
-	{ value: "enterprise", label: "Enterprise", description: "Advanced features for large organizations." },
+	{ value: "enterprise", label: "Enterprise", description: "Advanced features for large tenants." },
 ];
 
 const DEFAULT_PLAN = "starter";

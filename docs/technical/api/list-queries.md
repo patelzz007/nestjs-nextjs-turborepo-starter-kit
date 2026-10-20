@@ -193,12 +193,12 @@ ONE transaction (all or nothing, duplicates in `deleteMany` count once). A casca
 Services return `toPaginatedServiceResult(mapListResult(result, toDto), query)` and the response
 interceptor turns it into `data` + `meta`.
 
-**Tenant / owner scope is never a filter.** `organizationId`, the signed-in `userId`, an
+**Tenant / owner scope is never a filter.** `tenantId`, the signed-in `userId`, an
 authorized `locationId` are passed to the `where` builder as separate arguments by the service —
 the client can narrow inside its scope, never widen it. For merchant lists the store scope is a
 `MerchantLocationScope` resolved by `MerchantContextService.resolveLocationScope` (rewards module):
 an omitted `locationId` is the member's own stores (every store only for an `ALL_LOCATIONS` member)
-or a store-scoped API key's store, and a store-limited scope also excludes organization-wide
+or a store-scoped API key's store, and a store-limited scope also excludes tenant-wide
 (`location_id IS NULL`) rows.
 
 ## 4. Client: typed calls and DataTable adapter
@@ -257,13 +257,13 @@ mean "no filter".
 | `GET /claims` (own claims) | claimedAt, createdAt | status | — | `-claimedAt` |
 | `GET /reward-notifications` | createdAt | readAt (`isNull` = unread; the bell counts `meta.total` of `filter[readAt][isNull]=true&limit=1`) | — | `-createdAt` |
 | `GET /auth/sessions` (own sessions) | lastActiveAt, createdAt | — | — | `-lastActiveAt` |
-| `GET /orgs/memberships` (own memberships) | createdAt, displayName | — | ✓ (store name or slug) | `createdAt` (join order) |
-| `GET /orgs/:orgSlug/members` | createdAt, role | role | — | `createdAt` (join order) |
-| `GET /orgs/:orgSlug/members/invites` | createdAt, expiresAt | — | — | `-createdAt` |
-| `GET /orgs/:orgSlug/rewards` | createdAt, expiryDate, title | status (a catalog tab) (`locationId` scope) | — | `-createdAt` |
-| `GET /orgs/:orgSlug/redemptions` | redeemedAt | — (`locationId` scope) | — | `-redeemedAt` |
-| `GET /orgs/:orgSlug/api-keys` | createdAt, name | revokedAt (`isNull` = active) (`locationId` scope) | — | `-createdAt` |
-| `GET /orgs/:orgSlug/terminals` | createdAt, name | — (`locationId` scope) | — | `-createdAt` |
+| `GET /tenants/memberships` (own memberships) | createdAt, displayName | — | ✓ (store name or slug) | `createdAt` (join order) |
+| `GET /tenants/:tenantSlug/members` | createdAt, role | role | — | `createdAt` (join order) |
+| `GET /tenants/:tenantSlug/members/invites` | createdAt, expiresAt | — | — | `-createdAt` |
+| `GET /tenants/:tenantSlug/rewards` | createdAt, expiryDate, title | status (a catalog tab) (`locationId` scope) | — | `-createdAt` |
+| `GET /tenants/:tenantSlug/redemptions` | redeemedAt | — (`locationId` scope) | — | `-redeemedAt` |
+| `GET /tenants/:tenantSlug/api-keys` | createdAt, name | revokedAt (`isNull` = active) (`locationId` scope) | — | `-createdAt` |
+| `GET /tenants/:tenantSlug/terminals` | createdAt, name | — (`locationId` scope) | — | `-createdAt` |
 | `GET /admin/merchants` | createdAt, displayName | city, kybStatus, status | ✓ | `-createdAt` |
 | `GET /admin/location-requests` | createdAt, name | status | — | `createdAt` (oldest first) |
 | `GET /admin/roles` | name, createdAt | isActive | ✓ (name) | `name` (offset pages only) |
@@ -271,7 +271,7 @@ mean "no filter".
 
 A figure over a whole list never comes from the rows on screen. A count is the list's own
 `meta.total` (the smallest page, `limit=1`, with the filter); anything more is a summary endpoint
-beside the list — `GET /orgs/:orgSlug/rewards/summary` (rewards per status and units left, in the
+beside the list — `GET /tenants/:tenantSlug/rewards/summary` (rewards per status and units left, in the
 same store scope) feeds the merchant catalog's tabs and figures.
 
 Not on the grammar — fixed catalogs that only the code defines and that are consumed whole: the
@@ -343,7 +343,7 @@ export function toUsersListQuery(state: UsersTableUrlState): TableListQueryInput
 | `defineUrlState(shape, { urlKeys })` | One zod schema per param. `parse(searchParams)` **never throws**: each missing or invalid param falls back to its own default, independently. `serialize(state, current)` omits defaults and keeps params it does not own. |
 | `listUrlParams(listQuery, { pageSizes, defaultLimit })` | `page` (1…10 000), `limit` (one of the table's page sizes), `cursor`, `sort` (the resource's whitelist, normalized; the default order is dropped). |
 | `listSearchParam()` / `listTextFilterParam()` | Trimmed, bounded text; blank is absent. |
-| `optionalUrlParam(schema)` / `urlParamWithDefault(schema, value)` / `optionalBooleanUrlParam()` | Filter values and selections (`?key=`, `?organizationId=`), validated by the domain schema. |
+| `optionalUrlParam(schema)` / `urlParamWithDefault(schema, value)` / `optionalBooleanUrlParam()` | Filter values and selections (`?key=`, `?tenantId=`), validated by the domain schema. |
 | `listFilterKey(field, op?)` | `filter[field]` (eq shorthand) or `filter[field][op]` — the API's own key. |
 | `listStateToListQuery(spec, state)` | URL state → list input (whitelist, default order, cursor rule re-applied). |
 | `useUrlState(codec)` | `[state, update(patch, { history })]` from `useSearchParams()`. |
@@ -418,7 +418,7 @@ Rules:
 ### Store-scoped lists (merchant)
 
 A merchant list is also filtered by the member's **store**, which is not URL state: it is owned
-by the `tenant-context` feature store and its cookie ([Frontend routing](../frontend/routing.md#organization-and-store-context-merchant)).
+by the `tenant-context` feature store and its cookie ([Frontend routing](../frontend/routing.md#tenant-and-store-context-merchant)).
 The request is the URL's list keys plus `locationId`, and the server prefetch is bound to
 **both**: `LocationScopedPrefetch<PrefetchedQuery<Envelope<…>>>`. The view seeds `initialData`
 only when the store and the serialized URL state both match:
@@ -426,7 +426,7 @@ only when the store and the serialized URL state both match:
 ```tsx
 const [urlState, updateUrlState] = useUrlState(REDEMPTIONS_URL_STATE);
 const prefetchedPage = prefetchedDataFor(prefetchForLocation(initialRedemptions, locationId), REDEMPTIONS_URL_STATE.serialize(urlState));
-const query = api.organizations.redemptions.useQuery(toRedemptionsQuery(orgSlug, locationId, urlState), initialDataOption(prefetchedPage));
+const query = api.tenants.redemptions.useQuery(toRedemptionsQuery(orgSlug, locationId, urlState), initialDataOption(prefetchedPage));
 ```
 
 ### Which pages keep their state in the URL
@@ -434,11 +434,11 @@ const query = api.organizations.redemptions.useQuery(toRedemptionsQuery(orgSlug,
 | App | Page | URL state |
 | --- | --- | --- |
 | admin | `/users`, `/merchants`, `/catalog/products`, `/catalog/categories`, `/emails/log`, `/geography` (+ `?tab=`), `/users/mfa-recovery` | page, limit, cursor, sort, search, `filter[…]` |
-| admin | `/merchants/verification`, `/emails/templates`, `/merchants/store-requests`, `/users/mfa-recovery` | the in-page selection (`?organizationId=`, `?key=`, `?requestId=`) |
+| admin | `/merchants/verification`, `/emails/templates`, `/merchants/store-requests`, `/users/mfa-recovery` | the in-page selection (`?tenantId=`, `?key=`, `?requestId=`) |
 | admin | `/analytics/sales` | `?weeks=` (written with `router.push`: the server computes the period) |
 | web | `/dashboard` and the public landing catalog `/` | page, cursor, `search` (committed on submit), `filter[city]`, `filter[category]` |
-| merchant | `/orgs/[orgSlug]/redemptions` | page, cursor (the store stays in `tenant-context`) |
-| merchant | `/orgs/[orgSlug]/api-keys` | `?status=revoked\|all` — a view filter over the loaded keys (the counts need every key), so not an API filter and not part of the prefetch |
+| merchant | `/tenants/[orgSlug]/redemptions` | page, cursor (the store stays in `tenant-context`) |
+| merchant | `/tenants/[orgSlug]/api-keys` | `?status=revoked\|all` — a view filter over the loaded keys (the counts need every key), so not an API filter and not part of the prefetch |
 
 Deliberately **not** URL state: the rewards grid/list layout (a per-device preference in the
 `ui-preferences` feature store), the merchant's store (`tenant-context` + cookie), open dialogs
@@ -451,7 +451,7 @@ A search box that commits on **submit** (the web catalog) keeps its unsubmitted 
 `useSubmittedUrlDraft` (`packages/client/src/lib/url-state`): local, and reset whenever the URL's value changes.
 A submitted search is a discrete change, so it **pushes**.
 
-In-page selection (`/merchants/verification?organizationId=`, `/emails/templates?key=`,
+In-page selection (`/merchants/verification?tenantId=`, `/emails/templates?key=`,
 `?requestId=` on the review queues) uses the same `defineUrlState` / `useUrlState`: the
 selected item is derived from the URL on every render, never mirrored into `useState`.
 

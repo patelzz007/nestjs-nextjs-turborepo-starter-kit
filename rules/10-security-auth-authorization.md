@@ -61,10 +61,10 @@ Every new (or modified) endpoint must have its authorization requirements explic
 |---|---|
 | Endpoint | `POST /rewards/:id/publish` |
 | Required permission(s) | `REWARD.PUBLISH` |
-| Ownership/relationship check | Reward must belong to the caller's organization |
+| Ownership/relationship check | Reward must belong to the caller's tenant |
 | Tenant/org boundary | Enforced via `tenantId` scoping in the query, not just the permission check |
 | ReBAC rule (if any) | Caller must be a `manager` of the `location` the reward belongs to |
-| RLS coverage (if enabled) | `Reward` table policy scopes by `organizationId` |
+| RLS coverage (if enabled) | `Reward` table policy scopes by `tenantId` |
 
 This mapping lives two places, kept in sync: as an explicit `@UseGuards(...)`/permission-decorator chain on the controller method (so it's enforced), and as a short entry in the feature's module documentation (so it's reviewable without reading every guard's implementation — see `14-documentation.md`). A PR adding an endpoint without this mapping is incomplete — see `16-code-review-checklist.md` and `18-definition-of-done.md`.
 
@@ -79,7 +79,7 @@ public async publish(@Param('id') id: string) {
 // ✅ DO — the full mapping, enforced at the point of definition, not deferred
 @Post(':id/publish')
 @RequirePermission(Permission.REWARD_PUBLISH)
-@RequireOwnership({ resource: 'reward', relation: 'organization' })
+@RequireOwnership({ resource: 'reward', relation: 'tenant' })
 public async publish(@Param('id') id: RewardId, @CurrentUser() user: AuthUser): Promise<RewardResponseDto> {
   return this.rewardsService.publish(id, user);
 }
@@ -90,7 +90,7 @@ public async publish(@Param('id') id: RewardId, @CurrentUser() user: AuthUser): 
 Relationship-based rules apply when access depends on a relationship rather than a flat role:
 
 ```text
-user → member_of → organization
+user → member_of → tenant
 user → owns → resource
 manager → manages → location
 ```
@@ -100,6 +100,13 @@ Keep relationship evaluation explicit and testable — a policy function that ta
 ## RLS
 
 If PostgreSQL RLS is adopted: define policies intentionally, test both allowed and denied access for each policy, ensure session/tenant context cannot be forged by a client, and understand the connection-pooling implications. RLS is defense-in-depth, not a substitute for application authorization — both layers must independently deny access for the same case, so a bug in one doesn't become a full breach.
+
+### Tenancy: no bypasses (ADR 062)
+
+- **The tenant comes from two places only.** A user request names it with `/tenants/:tenantSlug`; a machine request (POS terminal, API key) carries it in its credential. Never a header, a query parameter or a body field: a request schema that declares `tenantId` is a bug (strict contracts answer 400), and a machine request that sends a slug or `tenantId` gets 400 `TENANT_SELECTOR_NOT_ALLOWED`. A resource of another tenant is 404, never 403.
+- **Identity never widens the database scope.** A SuperAdmin or an admin is an ordinary user on a tenant route. Platform staff reach a tenant's data only with an approved, unexpired `SupportAccessGrant` for that tenant, and the grant id is on the request's audit entry; impersonating a tenant member needs a grant for every tenant the target belongs to.
+- **Every privileged database access names one system operation** with a declared table list (`src/prisma/system-operation.registry.ts`). There is no "all tables" scope. An admin-console route declares `@PlatformOperation`, a public flow `@PublicOperation`; the coverage specs fail on a missing or doubled declaration.
+- **The database enforces it.** Every table forces RLS; `app_runtime` is never a superuser and never `BYPASSRLS`, and the API refuses to boot otherwise. Never grant `BYPASSRLS`, disable RLS or drop FORCE to unblock anything.
 
 ## Impersonation
 
@@ -149,7 +156,7 @@ Every meaningful transaction — every create, update, delete, and every sensiti
 
 | Field | Why |
 |---|---|
-| `organizationId` / `orgId` | Which org's data was touched — critical for multi-tenant forensics |
+| `tenantId` / `orgId` | Which org's data was touched — critical for multi-tenant forensics |
 | `tenantId` | Same, if tenancy is modeled separately from org |
 | `userId` (and `actingAsUserId` if impersonating) | Who performed the action — the real actor, never just who they claimed to be |
 | `timestamp` (epoch, UTC) | Exactly when — epoch milliseconds, not a locale-formatted string, so it sorts and compares unambiguously |
@@ -168,7 +175,7 @@ Include as much additional metadata as is reasonably available and safe to store
 // hand-written per endpoint (hand-written invites the exact endpoint
 // that most needed logging to be the one someone forgot)
 interface AuditLogEntry {
-  organizationId: string;
+  tenantId: string;
   tenantId: string;
   userId: string;
   actingAsUserId?: string; // set only during impersonation
@@ -208,7 +215,7 @@ export class AuditLogInterceptor implements NestInterceptor {
 
   private async record(request: Request, status: number, responseBody: unknown, startedAt: number): Promise<void> {
     await this.auditLog.write({
-      organizationId: request.user?.organizationId,
+      tenantId: request.user?.tenantId,
       tenantId: request.user?.tenantId,
       userId: request.user?.id,
       timestampEpochMs: startedAt,
@@ -345,7 +352,7 @@ This project currently targets the Malaysian market, so the governing law is the
 | Data access and correction requests | An admin-usable, audited way to export and correct a person's data |
 | Data portability (added 2025) | A machine-readable export (e.g. JSON/CSV) of a person's data, built from the same zod schemas |
 | Mandatory breach notification (added 2025) | Detection, an incident runbook, and the ability to establish *what was accessed* — the audit log is what makes this answerable (`12`, `14`) |
-| Data Protection Officer (added 2025, for qualifying organisations) | A named contact; an organisational matter, but the runbook lists who to call |
+| Data Protection Officer (added 2025, for qualifying tenants) | A named contact; a tenancy matter, but the runbook lists who to call |
 | Sensitive data now includes biometric data | Extra care: separate storage/encryption decisions and an ADR before collecting fingerprints or face data |
 | Cross-border transfer rules | Know which regions your database, object storage, queues, logs, and third-party processors (email, analytics, payment) run in; record it in an ADR |
 
@@ -450,14 +457,14 @@ Tying together everything in this document into one concrete flow, for a single 
    JWT" guidance above).
 3. PermissionGuard checks the resolved user has REWARD.PUBLISH.
 4. OwnershipGuard checks the specific reward (looked up by :id) belongs
-   to the user's own organization — this is a SEPARATE check from #3;
+   to the user's own tenant — this is a SEPARATE check from #3;
    having the permission generally does not mean owning THIS specific resource.
 5. The controller calls RewardsService.publish(id, user) — which itself
    re-validates business eligibility (is this reward in a publishable
    state at all?) rather than assuming the guards already covered everything.
 6. On success, the AuditLogInterceptor (already running around the
    whole request per this document's audit-logging section) records:
-   organizationId, userId, timestampEpochMs, endpoint, the request body
+   tenantId, userId, timestampEpochMs, endpoint, the request body
    (redacted), 200 status, ipAddress, userAgent, requestId.
 7. Response returns the published reward.
 
@@ -472,13 +479,13 @@ successful ones.
 
 ```text
 ❌ Checking permission but not ownership: a user with REWARD.PUBLISH
-   generally can publish ANY organization's reward, not just their own,
+   generally can publish ANY tenant's reward, not just their own,
    because only the permission was checked, not the resource relationship.
 
-❌ Checking ownership but trusting a client-supplied organizationId to
+❌ Checking ownership but trusting a client-supplied tenantId to
    do it: the ownership check itself must use the SERVER's own record of
-   which organization the resource and the user belong to — never a
-   client-supplied field claiming which organization a request is "for."
+   which tenant the resource and the user belong to — never a
+   client-supplied field claiming which tenant a request is "for."
 
 ❌ Checking authorization in the frontend only, with the assumption the
    backend "probably" also checks it, without actually verifying that
@@ -524,7 +531,7 @@ E — Elevation of privilege: Can a low-privilege actor reach a high-privilege a
 ```ts
 // ❌ DON'T — spreading the request body straight into a database write.
 // A client adds `"role": "admin"` or `"isDeleted": false` or
-// `"organizationId": "<someone else's org>"` and it is persisted.
+// `"tenantId": "<someone else's org>"` and it is persisted.
 await prisma.user.update({ where: { id }, data: body });
 
 // ✅ DO — the zod schema is an ALLOWLIST; only parsed, known fields pass
@@ -543,7 +550,7 @@ Zod's default behavior of stripping unknown keys is your first line of defense h
 
 // ✅ DO — the query itself is scoped to what the caller may see
 @Get(':id') findOne(@Param('id') id: OrderId, @CurrentUser() u: AuthUser) {
-  return this.orders.findByIdForUser(id, u); // WHERE id = ? AND organizationId = ? [AND customerId = ?]
+  return this.orders.findByIdForUser(id, u); // WHERE id = ? AND tenantId = ? [AND customerId = ?]
 }
 ```
 

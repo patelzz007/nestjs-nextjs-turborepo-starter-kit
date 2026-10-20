@@ -53,9 +53,9 @@ export function defineDownload<Input extends SerializableInput>(contract: ApiFil
 
 /** Every file download of the API (the counterpart of `apiRouter` for files). */
 export const apiDownloads = {
-	organizations: {
-		/** `GET /orgs/:orgSlug/analytics/export` — the merchant report (`format`: csv | xlsx | pdf; `from` / `to` required). */
-		analyticsExport: defineDownload(apiContract.organizations.analyticsExport),
+	tenants: {
+		/** `GET /tenants/:orgSlug/analytics/export` — the merchant report (`format`: csv | xlsx | pdf; `from` / `to` required). */
+		analyticsExport: defineDownload(apiContract.tenants.analyticsExport),
 	},
 	rewardsAdmin: {
 		/** `GET /admin/analytics/export` — the platform report (`format`: csv | xlsx | pdf; `from` / `to` required). */
@@ -193,7 +193,7 @@ export async function fetchDownload<Input extends SerializableInput>(
 			const response = await fetch(url, {
 				method: def.method,
 				credentials: "include",
-				headers: { Accept: def.contentTypes.join(", "), ...mergeProcedureHeaders(context.clientType, undefined) },
+				headers: { Accept: def.contentTypes.join(", "), ...mergeProcedureHeaders(context.clientType, context.requestHeaders?.()) },
 				...(options.signal === undefined ? {} : { signal: options.signal }),
 			});
 			if (!response.ok) {

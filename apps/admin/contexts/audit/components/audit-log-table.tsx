@@ -87,15 +87,15 @@ const SELECT_FILTERS: Filter[] = [
 ];
 
 /** The id filters — each shown as a removable chip while set. */
-type IdFilterKey = "actorUserId" | "organizationId" | "correlationId" | "tableName" | "rowId";
+type IdFilterKey = "actorUserId" | "tenantId" | "correlationId" | "tableName" | "rowId";
 const ID_FILTER_LABELS: Readonly<Record<IdFilterKey, string>> = {
 	actorUserId: "Actor",
-	organizationId: "Organization",
+	tenantId: "Tenant",
 	correlationId: "Correlation",
 	tableName: "Table",
 	rowId: "Row",
 };
-const ID_FILTER_KEYS: readonly IdFilterKey[] = ["actorUserId", "organizationId", "correlationId", "tableName", "rowId"];
+const ID_FILTER_KEYS: readonly IdFilterKey[] = ["actorUserId", "tenantId", "correlationId", "tableName", "rowId"];
 
 /** The URL state with every filter, the search and the paging reset. */
 const CLEARED_FILTERS: Partial<AuditLogUrlState> = {
@@ -188,14 +188,14 @@ function BackgroundActivity({ entry }: { readonly entry: AuditTrailBackgroundEnt
 	);
 }
 
-/** Who acted, with the organization underneath. */
+/** Who acted, with the tenant underneath. */
 function ActorCell({ entry }: { readonly entry: AuditTrailEntry }): React.JSX.Element {
 	return (
 		<div className="max-w-56 min-w-0 space-y-0.5">
 			{entry.kind === "REQUEST" ? <AuditActorCell entry={entry} /> : <DataChangeActorCell entry={entry} />}
-			{entry.organization === null ? null : (
-				<p className="truncate text-xs text-muted-foreground" title={entry.organization.id}>
-					{entry.organization.name ?? entry.organization.id}
+			{entry.tenant === null ? null : (
+				<p className="truncate text-xs text-muted-foreground" title={entry.tenant.id}>
+					{entry.tenant.name ?? entry.tenant.id}
 				</p>
 			)}
 		</div>

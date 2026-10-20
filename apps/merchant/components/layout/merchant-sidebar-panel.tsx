@@ -1,6 +1,6 @@
 "use client";
 
-import { useMerchantAuthorizationStatus } from "@/contexts/organizations/components/access/merchant-authorization-provider";
+import { useMerchantAuthorizationStatus } from "@/contexts/tenancy/components/access/merchant-authorization-provider";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { useMerchantBreadcrumb } from "@/components/common/merchant-breadcrumb";
 import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/contexts/identity/lib/enrollment";
@@ -17,7 +17,7 @@ import { useCommandPalettePinnedUrls } from "@workspace/client/lib/features/comm
 import { useSidebarCommands, useSidebarExpandedItems, useSidebarSearchQuery, useSidebarSectionOrder } from "@workspace/client/lib/features/sidebar/facade";
 import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
 import { useOwnAvatar } from "@workspace/client/lib/contexts/identity/profile/use-own-avatar";
-import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
+import type { TenantRewardMembershipResponse } from "@workspace/shared";
 import { breadcrumbPageLabel } from "@workspace/ui/components/breadcrumb-context";
 import { PanelSidebarFooterNav, PanelSidebarNav, PanelSidebarRouteAnnouncer, type PanelSidebarPinnedItem } from "@workspace/ui/components/panel-sidebar-nav";
 import type { PanelSidebarLinkProps } from "@workspace/ui/components/panel-sidebar-nav-item";
@@ -26,8 +26,8 @@ import { buildSidebarView } from "@workspace/ui/lib/sidebar/menu-view";
 import { withResolvedSidebarMenuUrls } from "@workspace/ui/lib/sidebar/resolve-menu-hrefs";
 import { AppShellSidebarAccount } from "@workspace/ui/components/app-shell-sidebar-account";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
-import { useOrganizationPath } from "@/contexts/organizations/lib/org/use-organization-path";
-import { ORG_ROUTES } from "@/lib/routes";
+import { useTenantPath } from "@/contexts/tenancy/lib/org/use-tenant-path";
+import { TENANT_ROUTES } from "@/lib/routes";
 import { useMerchantLogout } from "@/lib/session/use-merchant-logout";
 import { AlertCircle } from "lucide-react";
 import { MerchantContextSwitcher } from "@/components/layout/merchant-context-switcher";
@@ -39,10 +39,10 @@ import * as React from "react";
 
 export interface MerchantSidebarPanelProps {
 	/** The first page of the member's stores (the switcher's list). */
-	readonly memberships: readonly OrganizationRewardMembershipResponse[];
+	readonly memberships: readonly TenantRewardMembershipResponse[];
 	/** Whether the member has more stores than that page — the switcher then links to the stores page. */
 	readonly hasMoreStores: boolean;
-	readonly organizationSlug: string | undefined;
+	readonly tenantSlug: string | undefined;
 	readonly onStoreChange: (slug: string) => void;
 	/** The identity the server decoded — shown on first paint, until the session profile has loaded. */
 	readonly initialUser?: ServerUser | null;
@@ -57,7 +57,7 @@ function renderMerchantMenuIcon(iconName: string | undefined, className: string)
 	return <Icon className={className} aria-hidden="true" />;
 }
 
-export function MerchantSidebarPanel({ memberships, hasMoreStores, organizationSlug, onStoreChange, initialUser = null }: MerchantSidebarPanelProps): React.JSX.Element {
+export function MerchantSidebarPanel({ memberships, hasMoreStores, tenantSlug, onStoreChange, initialUser = null }: MerchantSidebarPanelProps): React.JSX.Element {
 	const pathname = usePathname();
 	const sessionProfile = useMerchantSessionProfile();
 	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip, enrollmentReason } = useMerchantEnrollmentLock();
@@ -70,7 +70,7 @@ export function MerchantSidebarPanel({ memberships, hasMoreStores, organizationS
 
 	const sectionOrder = useSidebarSectionOrder();
 	const searchQuery = useSidebarSearchQuery();
-	const resolveNavHref = React.useMemo(() => createMerchantNavHrefResolver(organizationSlug), [organizationSlug]);
+	const resolveNavHref = React.useMemo(() => createMerchantNavHrefResolver(tenantSlug), [tenantSlug]);
 	const { setSearchQuery, setItemExpanded, followLink, moveSectionUp, moveSectionDown } = useSidebarCommands();
 	const pinnedUrls = useCommandPalettePinnedUrls();
 
@@ -108,10 +108,10 @@ export function MerchantSidebarPanel({ memberships, hasMoreStores, organizationS
 
 	const logout = useMerchantLogout();
 	const router = useRouter();
-	const settingsPath = useOrganizationPath(ORG_ROUTES.settings.index);
-	const accountPath = useOrganizationPath(ORG_ROUTES.account);
-	const dashboardPath = useOrganizationPath(ORG_ROUTES.dashboard);
-	const apiKeysPath = useOrganizationPath(ORG_ROUTES.apiKeys);
+	const settingsPath = useTenantPath(TENANT_ROUTES.settings.index);
+	const accountPath = useTenantPath(TENANT_ROUTES.account);
+	const dashboardPath = useTenantPath(TENANT_ROUTES.dashboard);
+	const apiKeysPath = useTenantPath(TENANT_ROUTES.apiKeys);
 
 	const profileName = sessionProfile.isLoading && initialUser !== null ? initialUser.name : sessionProfile.fullName;
 	const profileEmail = sessionProfile.isLoading && initialUser !== null ? initialUser.email : sessionProfile.email;
@@ -138,7 +138,7 @@ export function MerchantSidebarPanel({ memberships, hasMoreStores, organizationS
 	const showNoCapabilities = menuFilterCapabilities.length === 0 && activeMembership !== undefined && !view.isSearching && view.sections.length === 0;
 	return (
 		<div className="flex h-full min-h-0 flex-col overflow-hidden text-sidebar-foreground">
-			<MerchantContextSwitcher memberships={memberships} hasMoreStores={hasMoreStores} organizationSlug={organizationSlug} onStoreChange={onStoreChange} />
+			<MerchantContextSwitcher memberships={memberships} hasMoreStores={hasMoreStores} tenantSlug={tenantSlug} onStoreChange={onStoreChange} />
 
 			<PanelSidebarNav
 				view={view}

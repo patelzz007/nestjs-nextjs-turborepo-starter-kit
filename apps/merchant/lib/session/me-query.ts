@@ -7,8 +7,8 @@ interface MerchantMembershipsQueryOptions {
 }
 
 /**
- * Shared react-query options for the organization memberships bootstrap
- * (`GET /orgs/memberships`), observed by the shell and the capabilities hook:
+ * Shared react-query options for the tenant memberships bootstrap
+ * (`GET /t/memberships`), observed by the shell and the capabilities hook:
  * one freshness window for every observer (no refetch storms), and retries
  * only for transient failures — never for a 4xx such as a 429 rate limit.
  */
