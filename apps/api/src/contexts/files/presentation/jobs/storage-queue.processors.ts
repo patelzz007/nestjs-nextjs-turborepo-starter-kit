@@ -10,7 +10,7 @@ import { InvalidateFileCdnCommand } from "../../application/commands/invalidate-
 import { PurgeFileObjectCommand } from "../../application/commands/purge-file-object/purge-file-object.command";
 import { ScanFileCommand } from "../../application/commands/scan-file/scan-file.command";
 import type { VerdictOutcome } from "../../application/ports/file-processing.port";
-import { STORAGE_CLEANUP_OPERATION, STORAGE_DELETE_OPERATION, STORAGE_SCAN_OPERATION } from "../../application/ports/files.tokens";
+import { FILES_SCAN_VERDICT_OPERATION, STORAGE_CLEANUP_OPERATION, STORAGE_DELETE_OPERATION } from "../../application/ports/files.tokens";
 
 /** BullMQ's default when a job carries no `attempts` option: a single execution. */
 const DEFAULT_JOB_ATTEMPTS = 1;
@@ -83,7 +83,7 @@ export class StorageScanProcessor extends WorkerHost {
 	public async process(job: StorageJobExecution): Promise<VerdictOutcome> {
 		const payload = StorageScanJobSchema.parse(job.data);
 		const finalAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? DEFAULT_JOB_ATTEMPTS);
-		const actor = systemActor(STORAGE_SCAN_OPERATION, "job", null, `Malware-scan file ${payload.fileId} and apply its verdict`, null);
+		const actor = systemActor(FILES_SCAN_VERDICT_OPERATION, "job", null, `Malware-scan file ${payload.fileId} and apply its verdict`, null);
 		return this.commands.dispatch(new ScanFileCommand(actor, payload.fileId, finalAttempt), { kind: "job", name: QUEUE_NAMES.storageScan });
 	}
 }

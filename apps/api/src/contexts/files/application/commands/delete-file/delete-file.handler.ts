@@ -8,7 +8,7 @@ import type { StoredFileReadPort } from "../../ports/stored-file-read.port";
 import { DeleteFileCommand } from "./delete-file.command";
 import { FileDeletion } from "./file-deletion";
 
-/** Organization files are deleted by whoever holds the capability now — not by a former member who uploaded them. */
+/** Tenant files are deleted by whoever holds the capability now — not by a former member who uploaded them. */
 @CommandHandler(DeleteFileCommand)
 export class DeleteFileHandler implements ICommandHandler<DeleteFileCommand, void> {
 	public constructor(
@@ -24,6 +24,6 @@ export class DeleteFileHandler implements ICommandHandler<DeleteFileCommand, voi
 			throw fileNotFound();
 		}
 		await this.access.assertCanAct(actor, file, "delete");
-		await this.deletion.delete(actor, { fileId: file.id, category: file.category, organizationId: file.organizationId }, fileActorOf(actor, "delete").userId);
+		await this.deletion.delete(actor, { fileId: file.id, category: file.category, tenantId: file.tenantId }, fileActorOf(actor, "delete").userId);
 	}
 }

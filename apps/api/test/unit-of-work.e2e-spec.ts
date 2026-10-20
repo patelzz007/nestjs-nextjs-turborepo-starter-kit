@@ -5,7 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organization-seed-ids";
+import { TENANT_SEED_IDS } from "../prisma/seed/tenant-seed-ids";
 import { getApiConfig } from "../src/config/api-config";
 import { TypedConfigService } from "../src/config/typed-config.service";
 import { ActorContextSchema, systemActor, type ActorContext } from "../src/platform/application/actor-context";
@@ -49,7 +49,7 @@ function klOwner(): ActorContext {
 		kind: "user",
 		userId: KL_OWNER_USER_ID,
 		sessionId: "unit-of-work-e2e",
-		organizationId: ORGANIZATION_SEED_IDS.klOrganization,
+		tenantId: TENANT_SEED_IDS.klTenant,
 		isSuperAdmin: false,
 		accessScope: "tenant",
 		impersonatorUserId: null,
@@ -156,12 +156,12 @@ describe("Unit of work (e2e)", () => {
 		expect(published).toEqual([]);
 	});
 
-	it("does not return another tenant's organization", async () => {
+	it("does not return another tenant's tenant", async () => {
 		const reads = new PrismaReadExecutor(transactions);
-		const own = await reads.read(klOwner(), (db) => db.organization.findUnique({ where: { id: ORGANIZATION_SEED_IDS.klOrganization }, select: { id: true } }));
-		const other = await reads.read(klOwner(), (db) => db.organization.findUnique({ where: { id: ORGANIZATION_SEED_IDS.mlkOrganization }, select: { id: true } }));
+		const own = await reads.read(klOwner(), (db) => db.tenant.findUnique({ where: { id: TENANT_SEED_IDS.klTenant }, select: { id: true } }));
+		const other = await reads.read(klOwner(), (db) => db.tenant.findUnique({ where: { id: TENANT_SEED_IDS.mlkTenant }, select: { id: true } }));
 
-		expect(own?.id).toBe(ORGANIZATION_SEED_IDS.klOrganization);
+		expect(own?.id).toBe(TENANT_SEED_IDS.klTenant);
 		expect(other).toBeNull();
 	});
 });

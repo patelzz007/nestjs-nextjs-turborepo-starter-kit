@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import type { AnalyticsWindow } from "../src/contexts/reporting/domain/value-objects/analytics-scope.value-object";
 import { AnalyticsSqlRunner, bucketsCte } from "../src/contexts/reporting/infrastructure/persistence/analytics-sql";
+import { anonymousRlsContext, rlsStorage } from "../src/prisma/rls-context";
 import { createE2eApp } from "./e2e-helpers";
 
 const HOUR_MS = 3_600_000;
@@ -23,7 +24,10 @@ describe("Analytics buckets in Postgres (e2e)", () => {
 	let sql: AnalyticsSqlRunner;
 
 	async function buckets(window: AnalyticsWindow): Promise<[number, number, boolean][]> {
-		const rows = await sql.rows(BucketRowSchema, Prisma.sql`WITH ${bucketsCte(window)} SELECT start_ms, end_ms, is_partial FROM buckets ORDER BY local_start`);
+		// The bucket CTE reads no table; it still runs on a scoped session, as every database access must (D22).
+		const rows = await rlsStorage.run(anonymousRlsContext(null), () =>
+			sql.rows(BucketRowSchema, Prisma.sql`WITH ${bucketsCte(window)} SELECT start_ms, end_ms, is_partial FROM buckets ORDER BY local_start`),
+		);
 		return rows.map((row) => [Number(row.start_ms), Number(row.end_ms), row.is_partial]);
 	}
 

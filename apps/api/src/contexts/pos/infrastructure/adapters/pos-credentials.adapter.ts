@@ -10,7 +10,7 @@ import { API_KEY_PLAINTEXT_PREFIX, API_KEY_PREFIX_LENGTH } from "../../domain/va
 
 /** Characters of a pairing code, and of a generated terminal id after its prefix. */
 const CODE_LENGTH = 8;
-/** Prefix of every generated terminal id (`TERM-7F3K9QX2`, ≈ 1.1 × 10¹² values per organization). */
+/** Prefix of every generated terminal id (`TERM-7F3K9QX2`, ≈ 1.1 × 10¹² values per tenant). */
 const TERMINAL_ID_PREFIX = "TERM-";
 
 /**

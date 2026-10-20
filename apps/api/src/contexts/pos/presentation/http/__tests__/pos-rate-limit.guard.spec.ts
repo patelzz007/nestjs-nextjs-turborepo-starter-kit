@@ -23,7 +23,7 @@ class CountingStorage implements Pick<ThrottlerStorage, "increment"> {
 /** An HTTP context whose request the till guard already resolved to `apiKeyId`'s till. */
 function tillContext(apiKeyId: string): ExecutionContext {
 	const context = createHttpContext(testRequest({}));
-	setTillPointOnRequest(context.switchToHttp().getRequest<FastifyRequest>(), { organizationId: "org-1", locationId: null, terminalId: "TERM-AAAA2222", apiKeyId });
+	setTillPointOnRequest(context.switchToHttp().getRequest<FastifyRequest>(), { tenantId: "org-1", locationId: null, terminalId: "TERM-AAAA2222", apiKeyId });
 	return context;
 }
 

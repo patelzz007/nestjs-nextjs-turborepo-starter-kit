@@ -23,18 +23,18 @@ import {
 } from "../../domain/aggregates/authorization-policy-draft.aggregate";
 import { CorruptAuthorizationStateError, PolicyDraftNotPublishableError } from "../../domain/errors/authorization.errors";
 import type { PolicyDraftRepository } from "../../domain/repositories/policy-draft.repository";
-// Memberships belong to organizations: their location scope is read through its public mapper.
-import { mapMembershipLocationScope } from "../../../organizations/public-api";
+// Memberships belong to tenants: their location scope is read through its public mapper.
+import { mapMembershipLocationScope } from "../../../tenancy/public-api";
 
 /** Advisory-lock namespace shared by every policy publish (taken shared by tenant slots, exclusive by platform slots). */
 export const POLICY_PUBLISH_GLOBAL_LOCK_KEY = "authorization_policy_publish:all";
 
-/** Advisory-lock key of one (organization, scope) policy slot. */
-export function policySlotLockKey(organizationId: string | null, scope: string): string {
-	return `authorization_policy_publish:${scope}:${organizationId ?? "platform"}`;
+/** Advisory-lock key of one (tenant, scope) policy slot. */
+export function policySlotLockKey(tenantId: string | null, scope: string): string {
+	return `authorization_policy_publish:${scope}:${tenantId ?? "platform"}`;
 }
 
-const ACTIVE_VERSION_SELECT = { id: true, organizationId: true, scope: true, version: true, cedarSource: true } satisfies Prisma.AuthorizationPolicyVersionSelect;
+const ACTIVE_VERSION_SELECT = { id: true, tenantId: true, scope: true, version: true, cedarSource: true } satisfies Prisma.AuthorizationPolicyVersionSelect;
 
 function draftStateOf(row: AuthorizationPolicyDraft): PolicyDraftState {
 	const builderPayload = JsonValueSchema.safeParse(row.builderPayload);
@@ -43,7 +43,7 @@ function draftStateOf(row: AuthorizationPolicyDraft): PolicyDraftState {
 	}
 	return {
 		id: row.id,
-		organizationId: row.organizationId,
+		tenantId: row.tenantId,
 		scope: row.scope,
 		name: row.name,
 		description: row.description,
@@ -72,7 +72,7 @@ export class PrismaPolicyDraftRepository implements PolicyDraftRepository {
 		await this.db.authorizationPolicyDraft.create({
 			data: {
 				id: state.id,
-				organizationId: state.organizationId,
+				tenantId: state.tenantId,
 				scope: state.scope,
 				name: state.name,
 				description: state.description,
@@ -109,22 +109,22 @@ export class PrismaPolicyControlPlaneStore implements PolicyVersionStore, Policy
 	) {}
 
 	public async lockSlotForPublish(slot: PolicySlot): Promise<void> {
-		if (slot.organizationId === null) {
+		if (slot.tenantId === null) {
 			await this.db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${POLICY_PUBLISH_GLOBAL_LOCK_KEY}, 0))`;
 		} else {
 			await this.db.$executeRaw`SELECT pg_advisory_xact_lock_shared(hashtextextended(${POLICY_PUBLISH_GLOBAL_LOCK_KEY}, 0))`;
 		}
-		await this.db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${policySlotLockKey(slot.organizationId, slot.scope)}, 0))`;
+		await this.db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${policySlotLockKey(slot.tenantId, slot.scope)}, 0))`;
 	}
 
 	public async maxVersion(slot: PolicySlot): Promise<number> {
-		const aggregate = await this.db.authorizationPolicyVersion.aggregate({ where: { organizationId: slot.organizationId, scope: slot.scope }, _max: { version: true } });
+		const aggregate = await this.db.authorizationPolicyVersion.aggregate({ where: { tenantId: slot.tenantId, scope: slot.scope }, _max: { version: true } });
 		return aggregate._max.version ?? 0;
 	}
 
 	public async supersedeActive(slot: PolicySlot, now: EpochMs): Promise<void> {
 		await this.db.authorizationPolicyVersion.updateMany({
-			where: { organizationId: slot.organizationId, scope: slot.scope, supersededAt: null },
+			where: { tenantId: slot.tenantId, scope: slot.scope, supersededAt: null },
 			data: { supersededAt: now },
 		});
 	}
@@ -132,7 +132,7 @@ export class PrismaPolicyControlPlaneStore implements PolicyVersionStore, Policy
 	public async create(version: NewPolicyVersion): Promise<{ readonly id: string; readonly version: number }> {
 		return this.db.authorizationPolicyVersion.create({
 			data: {
-				organizationId: version.organizationId,
+				tenantId: version.tenantId,
 				draftId: version.draftId,
 				scope: version.scope,
 				version: version.version,
@@ -146,18 +146,18 @@ export class PrismaPolicyControlPlaneStore implements PolicyVersionStore, Policy
 		});
 	}
 
-	public async baselineVersionIds(organizationId: string | null): Promise<string[]> {
+	public async baselineVersionIds(tenantId: string | null): Promise<string[]> {
 		const rows = await this.db.authorizationPolicyVersion.findMany({
-			where: organizationId === null ? { supersededAt: null } : { supersededAt: null, OR: [{ organizationId }, { organizationId: null, scope: "PLATFORM_GUARDRAIL" }] },
+			where: tenantId === null ? { supersededAt: null } : { supersededAt: null, OR: [{ tenantId }, { tenantId: null, scope: "PLATFORM_GUARDRAIL" }] },
 			orderBy: { id: "asc" },
 			select: { id: true },
 		});
 		return rows.map((row: { id: string }): string => row.id);
 	}
 
-	public async activeVersionsForOrganizations(organizationIds: readonly string[]): Promise<ActivePolicyVersion[]> {
+	public async activeVersionsForTenants(tenantIds: readonly string[]): Promise<ActivePolicyVersion[]> {
 		return this.db.authorizationPolicyVersion.findMany({
-			where: { supersededAt: null, OR: [{ organizationId: { in: [...organizationIds] } }, { organizationId: null, scope: "PLATFORM_GUARDRAIL" }] },
+			where: { supersededAt: null, OR: [{ tenantId: { in: [...tenantIds] } }, { tenantId: null, scope: "PLATFORM_GUARDRAIL" }] },
 			orderBy: [{ version: "desc" }, { id: "asc" }],
 			select: ACTIVE_VERSION_SELECT,
 		});
@@ -181,16 +181,16 @@ export class PrismaPolicyControlPlaneStore implements PolicyVersionStore, Policy
 		return row === null ? null : { passed: row.passed, createdAt: epochMs(Number(row.createdAt)), baselineFingerprint: row.baselineFingerprint };
 	}
 
-	public async countActive(organizationId: string | null): Promise<number> {
-		return this.db.organizationMembership.count({ where: { status: "ACTIVE", isDeleted: false, ...(organizationId === null ? {} : { organizationId }) } });
+	public async countActive(tenantId: string | null): Promise<number> {
+		return this.db.membership.count({ where: { status: "ACTIVE", isDeleted: false, ...(tenantId === null ? {} : { tenantId }) } });
 	}
 
-	public async listActive(organizationId: string | null, afterMembershipId: string | null, take: number): Promise<SimulationPrincipal[]> {
-		const rows = await this.db.organizationMembership.findMany({
+	public async listActive(tenantId: string | null, afterMembershipId: string | null, take: number): Promise<SimulationPrincipal[]> {
+		const rows = await this.db.membership.findMany({
 			where: {
 				status: "ACTIVE",
 				isDeleted: false,
-				...(organizationId === null ? {} : { organizationId }),
+				...(tenantId === null ? {} : { tenantId }),
 				...(afterMembershipId === null ? {} : { id: { gt: afterMembershipId } }),
 			},
 			orderBy: { id: "asc" },
@@ -199,7 +199,7 @@ export class PrismaPolicyControlPlaneStore implements PolicyVersionStore, Policy
 		});
 		return rows.map((row): SimulationPrincipal => {
 			const scope = mapMembershipLocationScope(row);
-			return { id: row.id, organizationId: row.organizationId, userId: row.userId, role: row.role, locationScope: scope.locationScopeType, locationIds: scope.locationIds };
+			return { id: row.id, tenantId: row.tenantId, userId: row.userId, role: row.role, locationScope: scope.locationScopeType, locationIds: scope.locationIds };
 		});
 	}
 
@@ -208,7 +208,7 @@ export class PrismaPolicyControlPlaneStore implements PolicyVersionStore, Policy
 		await this.db.authorizationAudit.create({
 			data: {
 				actorId: record.actorUserId,
-				organizationId: record.organizationId,
+				tenantId: record.tenantId,
 				action: record.action,
 				resource: POLICY_DRAFT_AUDIT_RESOURCE,
 				resourceId: record.draftId,

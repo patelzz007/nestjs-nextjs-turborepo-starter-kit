@@ -120,7 +120,9 @@ describe("Global HTTP audit trail (e2e)", () => {
 		});
 		expect(row?.ipAddress).not.toBeNull();
 		expect(Number(row?.completedAt)).toBeGreaterThanOrEqual(Number(row?.occurredAt));
-		expect(row?.systemOperations).toEqual(expect.arrayContaining(["platform.superadmin", "geo.reference_data.write"]));
+		// The write's own named operation is recorded; a SuperAdmin has no request-wide bypass any more (D5).
+		expect(row?.systemOperations).toEqual(expect.arrayContaining(["geo.reference_data.write"]));
+		expect(row?.systemOperations).not.toContain("platform.superadmin");
 	});
 
 	it("records a failed login with the password redacted and the email masked", async () => {

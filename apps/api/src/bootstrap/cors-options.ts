@@ -1,6 +1,6 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 
-import { CLIENT_TYPE_HEADER, IDEMPOTENCY_KEY_HEADER, MUTATION_INTENT_HEADER } from "@workspace/shared";
+import { CLIENT_TYPE_HEADER, IDEMPOTENCY_KEY_HEADER, LOCATION_ID_HEADER, MUTATION_INTENT_HEADER, TENANT_ID_HEADER } from "@workspace/shared";
 
 import type { ApiConfig } from "../config/api-config.schema";
 
@@ -18,8 +18,19 @@ const CORS_METHODS: readonly string[] = ["GET", "HEAD", "POST", "PUT", "PATCH", 
  * - `X-Client-Type`: which app is calling (cookie vs bearer session handling).
  * - the mutation-intent header: CSRF defence on state-changing requests.
  * - `Idempotency-Key`: opt-in safe retries on @Idempotent() endpoints (not CORS-safelisted).
+ * - `X-Tenant-Id`, `X-Location-Id`: the merchant console names its tenant and store on every call.
+ *   Information only for now (nothing selects from them); without them here the browser would
+ *   refuse every merchant request at the preflight.
  */
-export const CORS_ALLOWED_HEADERS: readonly string[] = ["Content-Type", "Accept", CLIENT_TYPE_HEADER, MUTATION_INTENT_HEADER, IDEMPOTENCY_KEY_HEADER];
+export const CORS_ALLOWED_HEADERS: readonly string[] = [
+	"Content-Type",
+	"Accept",
+	CLIENT_TYPE_HEADER,
+	MUTATION_INTENT_HEADER,
+	IDEMPOTENCY_KEY_HEADER,
+	TENANT_ID_HEADER,
+	LOCATION_ID_HEADER,
+];
 
 /**
  * Response headers browser code may read cross-origin, beyond the CORS-safelisted

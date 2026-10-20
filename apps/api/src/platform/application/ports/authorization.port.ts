@@ -1,4 +1,4 @@
-import type { CapabilitySlug, OrganizationLocationScopeType, UserPermissions } from "@workspace/shared";
+import type { CapabilitySlug, LocationScopeType, UserPermissions } from "@workspace/shared";
 
 import type { ActorContext } from "../actor-context";
 
@@ -20,19 +20,19 @@ export interface AuthorizationPort {
 
 /** Merchant capability check. `locationId` narrows the check to one location when the capability is location-scoped. */
 export interface MerchantAccessRequest {
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly capability: CapabilitySlug;
 	readonly locationId?: string | null;
 }
 
-/** The caller's location scope inside the organization, as the membership already stores it. */
+/** The caller's location scope inside the tenant, as the membership already stores it. */
 export interface MerchantAccessGrant {
-	readonly organizationId: string;
-	readonly locationScope: OrganizationLocationScopeType;
+	readonly tenantId: string;
+	readonly locationScope: LocationScopeType;
 	readonly locationIds: readonly string[];
 }
 
-/** Merchant capability gate. Writes the same `authorize.*` organization audit rows as every merchant capability check. */
+/** Merchant capability gate. Writes the same `authorize.*` tenant audit rows as every merchant capability check. */
 export interface MerchantAccessPort {
 	assertCapability(actor: ActorContext, request: MerchantAccessRequest): Promise<MerchantAccessGrant>;
 }

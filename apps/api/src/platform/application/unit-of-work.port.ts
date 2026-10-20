@@ -5,6 +5,6 @@ export interface UnitOfWork<TScope> {
 	/** Runs `work` in one transaction under the actor's RLS context (tenant or system). */
 	run<TResult>(actor: ActorContext, work: (scope: TScope) => Promise<TResult>): Promise<TResult>;
 
-	/** Same, but as an allowlisted system operation (today's `withSystemOperation`). Used by RlsBypass flows. */
+	/** Same, but as an allowlisted system operation (`withSystemOperation`). */
 	runSystemOperation<TResult>(operation: SystemOperationName, actor: ActorContext, work: (scope: TScope) => Promise<TResult>): Promise<TResult>;
 }

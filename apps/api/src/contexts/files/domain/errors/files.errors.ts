@@ -61,7 +61,7 @@ export class FileMimeTypeNotAllowedError extends DomainError {
 	}
 }
 
-/** The resource an upload's object keys are namespaced under (product, organization, user) is missing. */
+/** The resource an upload's object keys are namespaced under (product, tenant, user) is missing. */
 export class FileOwnerUnresolvedError extends DomainError {
 	public readonly code: DomainErrorCode = "FILE_RESOURCE_REQUIRED";
 

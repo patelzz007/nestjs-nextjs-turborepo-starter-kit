@@ -32,8 +32,8 @@ GRANT app_runtime TO CURRENT_USER;
 
 -- ── app_enumerator role — the role of the `tenant.enumerate` system operation
 -- (apps/api/src/prisma/system-operation.registry.ts). Read-only and narrow:
--- 99-app-runtime-grants.sql grants it SELECT on `Organization` (plus the
--- `OrganizationMembership` table that policy reads) and nothing else, so a
+-- 99-app-runtime-grants.sql grants it SELECT on `Tenant` (plus the
+-- `Membership` table that policy reads) and nothing else, so a
 -- scheduler fan-out can list tenant ids but never read or write tenant data.
 -- Reached only via SET ROLE, like app_runtime.
 
@@ -71,9 +71,9 @@ LANGUAGE sql STABLE AS $$
   SELECT NULLIF(current_setting('app.current_user_id', true), '');
 $$;
 
-CREATE OR REPLACE FUNCTION app_current_organization_id() RETURNS text
+CREATE OR REPLACE FUNCTION app_current_tenant_id() RETURNS text
 LANGUAGE sql STABLE AS $$
-  SELECT NULLIF(current_setting('app.current_organization_id', true), '');
+  SELECT NULLIF(current_setting('app.current_tenant_id', true), '');
 $$;
 
 CREATE OR REPLACE FUNCTION app_owns(owner_id text) RETURNS boolean

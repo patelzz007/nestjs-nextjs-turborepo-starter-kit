@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { distinctReferenceIds, toAuditLogOrganization, toAuditLogReferences, toAuditLogUser } from "../audit-references";
+import { distinctReferenceIds, toAuditLogTenant, toAuditLogReferences, toAuditLogUser } from "../audit-references";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
-const ORGANIZATION_ID = "33333333-3333-4333-8333-333333333333";
+const TENANT_ID = "33333333-3333-4333-8333-333333333333";
 const GONE_ID = "44444444-4444-4444-8444-444444444444";
 
-const REFERENCES = toAuditLogReferences([{ id: USER_ID, email: "admin@example.com", fullName: "Admin" }], [{ id: ORGANIZATION_ID, displayName: "Kopi Corner" }]);
+const REFERENCES = toAuditLogReferences([{ id: USER_ID, email: "admin@example.com", fullName: "Admin" }], [{ id: TENANT_ID, displayName: "Kopi Corner" }]);
 
 describe("distinctReferenceIds", () => {
 	it("drops nulls and duplicates, keeping first-seen order", () => {
@@ -28,10 +28,10 @@ describe("toAuditLogUser", () => {
 	});
 });
 
-describe("toAuditLogOrganization", () => {
-	it("resolves a known organization and keeps an unknown one's id", () => {
-		expect(toAuditLogOrganization(ORGANIZATION_ID, REFERENCES)).toEqual({ id: ORGANIZATION_ID, name: "Kopi Corner" });
-		expect(toAuditLogOrganization(GONE_ID, REFERENCES)).toEqual({ id: GONE_ID, name: null });
-		expect(toAuditLogOrganization(null, REFERENCES)).toBeNull();
+describe("toAuditLogTenant", () => {
+	it("resolves a known tenant and keeps an unknown one's id", () => {
+		expect(toAuditLogTenant(TENANT_ID, REFERENCES)).toEqual({ id: TENANT_ID, name: "Kopi Corner" });
+		expect(toAuditLogTenant(GONE_ID, REFERENCES)).toEqual({ id: GONE_ID, name: null });
+		expect(toAuditLogTenant(null, REFERENCES)).toBeNull();
 	});
 });

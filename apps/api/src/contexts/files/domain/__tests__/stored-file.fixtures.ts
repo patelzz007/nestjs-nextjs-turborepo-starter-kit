@@ -23,7 +23,7 @@ export function state(overrides: Partial<StoredFileState> = {}): StoredFileState
 		status: "PENDING",
 		isDeleted: false,
 		uploadedById: UPLOADER_ID,
-		organizationId: ORG_ID,
+		tenantId: ORG_ID,
 		productId: null,
 		expectedChecksum: CHECKSUM,
 		original: { slot: "ORIGINAL", locator: locator(`staging/kyb/${ORG_ID}/${FILE_ID}-licence.pdf`), publicPath: null },

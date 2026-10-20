@@ -36,7 +36,7 @@ export class AuthorizationAuditKernelService implements AuthorizationDecisionAud
 			await this.systemDb.authorizationAudit.create({
 				data: {
 					actorId: request.actorId ?? null,
-					organizationId: request.organizationId ?? null,
+					tenantId: request.tenantId ?? null,
 					locationId: request.locationId ?? null,
 					action: request.action,
 					resource: request.resource,
@@ -85,7 +85,7 @@ export class AuthorizationAuditKernelService implements AuthorizationDecisionAud
 
 		await this.log({
 			actorId: result.request.subject.userId,
-			organizationId: result.request.subject.organizationId,
+			tenantId: result.request.subject.tenantId,
 			locationId: result.request.subject.locationId,
 			action: result.request.action,
 			resource: result.request.resource,

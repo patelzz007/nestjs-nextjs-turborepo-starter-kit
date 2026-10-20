@@ -22,7 +22,17 @@ import type { AuthFlowSubjectPort } from "../../ports/auth-flow.port";
 import type { CredentialCryptoPort } from "../../ports/credential-crypto.port";
 import type { IdGeneratorPort } from "../../ports/id-generator.port";
 import type { IdentityTokensPort } from "../../ports/identity-tokens.port";
-import { AUTH_FLOW_SUBJECT, CREDENTIAL_CRYPTO, ID_GENERATOR, IDENTITY_TOKENS, IDENTITY_UNIT_OF_WORK, PUBLIC_AUTH_FLOW_OPERATION } from "../../ports/identity.tokens";
+import {
+	AUTH_FLOW_SUBJECT,
+	CREDENTIAL_CRYPTO,
+	ID_GENERATOR,
+	IDENTITY_TOKENS,
+	IDENTITY_UNIT_OF_WORK,
+	ACCOUNT_LOOKUP_OPERATION,
+	LOGIN_CHALLENGE_OPERATION,
+	LOGIN_FAILURE_OPERATION,
+	LOGIN_LOCKOUT_RESET_OPERATION,
+} from "../../ports/identity.tokens";
 import { LoginVerificationGate } from "../../services/login-verification.gate";
 import { hasAdminAccess } from "../../services/user-response.assembler";
 import { LogInCommand } from "./log-in.command";
@@ -48,7 +58,7 @@ export class LogInHandler implements ICommandHandler<LogInCommand, LoginResult> 
 	public async execute(command: LogInCommand): Promise<LoginResult> {
 		const { actor, input } = command;
 		const email: EmailAddress = EmailAddress.of(input.body.email);
-		const account: UserAccount | null = await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, actor, (scope) => scope.accounts.findByEmail(email));
+		const account: UserAccount | null = await this.uow.runSystemOperation(ACCOUNT_LOOKUP_OPERATION, actor, (scope) => scope.accounts.findByEmail(email));
 		if (account !== null) {
 			this.flowSubject.identify(account.id);
 		}
@@ -78,7 +88,7 @@ export class LogInHandler implements ICommandHandler<LogInCommand, LoginResult> 
 		}
 
 		if (!account.twoFactorEnabled) {
-			await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, actor, (scope) => scope.accounts.resetLockout(account.id, now));
+			await this.uow.runSystemOperation(LOGIN_LOCKOUT_RESET_OPERATION, actor, (scope) => scope.accounts.resetLockout(account.id, now));
 			return this.verification.continueLogin(actor, {
 				userId: account.id,
 				clientType: input.clientType ?? null,
@@ -100,7 +110,7 @@ export class LogInHandler implements ICommandHandler<LogInCommand, LoginResult> 
 			},
 			now,
 		);
-		await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, actor, (scope) => scope.challenges.add(challenge));
+		await this.uow.runSystemOperation(LOGIN_CHALLENGE_OPERATION, actor, (scope) => scope.challenges.add(challenge));
 		const state = challenge.snapshot;
 		const tempToken: string = await this.tokens.signChallengeRef({
 			sub: state.userId,
@@ -115,7 +125,7 @@ export class LogInHandler implements ICommandHandler<LogInCommand, LoginResult> 
 
 	/** D19: one atomic statement counts the failure and takes the lock; the attempt that locked it sends the notice. */
 	private async countFailedAttempt(command: LogInCommand, account: UserAccount, now: EpochMs): Promise<void> {
-		await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, command.actor, async (scope: IdentityScope): Promise<void> => {
+		await this.uow.runSystemOperation(LOGIN_FAILURE_OPERATION, command.actor, async (scope: IdentityScope): Promise<void> => {
 			const outcome: FailedSignInOutcome | null = await scope.accounts.recordFailedSignIn(account.id, now);
 			if (outcome?.lockedNow === true && outcome.state.lockedUntil !== null) {
 				await scope.emails.sendAccountLockedEmail(account.email.value, outcome.state.lockedUntil);

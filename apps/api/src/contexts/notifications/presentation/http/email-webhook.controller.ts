@@ -23,13 +23,14 @@ import {
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { TypedConfigService } from "../../../../config/typed-config.service";
 import { Public } from "../../../../platform/presentation/http/security/decorators/public.decorator";
+import { PublicOperation } from "../../../../platform/presentation/http/security/decorators/public-operation.decorator";
 import { SkipMutationIntent } from "../../../../platform/presentation/http/security/decorators/skip-mutation-intent.decorator";
-import { RlsBypass } from "../../../../platform/presentation/http/security/decorators/rls-bypass.decorator";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { ApplyEmailDeliveryEventCommand } from "../../application/commands/apply-email-delivery-event/apply-email-delivery-event.command";
+import { EMAIL_LOG_WRITE_OPERATION } from "../../application/notifications-scope";
 import type { DeliveryEventRecordResult } from "../../domain/repositories/email-log.repository";
 import { EMAIL_LOG_ID_TAG } from "../../domain/value-objects/email-log-id-tag.value-object";
 import { ResendWebhookEventDto } from "./dtos/resend-webhook-event.dto";
@@ -74,8 +75,8 @@ function webhookStatusFor(eventType: string): EmailLogStatus | undefined {
  *
  * The route is PUBLIC (Resend cannot send cookies) but the signature is
  * verified via `resend.webhooks.verify()` — requests without a valid
- * `RESEND_WEBHOOK_SECRET` signature get a 403. `@RlsBypass()` is required on
- * POST because `EmailLog` SELECT/UPDATE are bypass-only policies.
+ * `RESEND_WEBHOOK_SECRET` signature get a 403. The POST runs as `email.log.write`
+ * because `EmailLog` SELECT/UPDATE are bypass-only policies.
  */
 /** The one CommandBus capability the webhook uses (the bus satisfies it). */
 export interface DeliveryEventDispatch {
@@ -119,7 +120,7 @@ export class EmailWebhookController {
 	}
 
 	@Public()
-	@RlsBypass()
+	@PublicOperation(EMAIL_LOG_WRITE_OPERATION)
 	@SkipMutationIntent()
 	@Post()
 	// Per-IP rate limiting on the delivery path only (defense-in-depth on top

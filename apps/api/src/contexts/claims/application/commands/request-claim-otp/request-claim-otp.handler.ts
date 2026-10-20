@@ -10,7 +10,7 @@ import { ClaimantNotFoundError } from "../../../domain/errors/claims.errors";
 import { OTP_EXPIRES_MINUTES } from "../../../domain/value-objects/claim-rules.value-object";
 import type { ClaimsScope } from "../../claims-scope";
 import type { ClaimCodesPort } from "../../ports/claim-codes.port";
-import { CLAIM_CODES, CLAIM_ID_GENERATOR, CLAIMS_UNIT_OF_WORK, ROUTE_RLS_BYPASS_OPERATION, type ClaimIdGenerator } from "../../ports/claims.tokens";
+import { CLAIM_CODES, CLAIM_ID_GENERATOR, CLAIMS_UNIT_OF_WORK, CLAIM_OTP_REQUEST_OPERATION, type ClaimIdGenerator } from "../../ports/claims.tokens";
 import { actingUserId } from "../acting-user";
 import { RequestClaimOtpCommand } from "./request-claim-otp.command";
 
@@ -32,7 +32,7 @@ export class RequestClaimOtpHandler implements ICommandHandler<RequestClaimOtpCo
 		const { actor, input } = command;
 		const userId = actingUserId(actor);
 
-		return this.uow.runSystemOperation(ROUTE_RLS_BYPASS_OPERATION, actor, async (scope: ClaimsScope): Promise<OkResponse> => {
+		return this.uow.runSystemOperation(CLAIM_OTP_REQUEST_OPERATION, actor, async (scope: ClaimsScope): Promise<OkResponse> => {
 			const now = this.clock.now();
 			const reward = await scope.rewards.assertClaimable(input.rewardId, now);
 			const claimant = await scope.claimants.profile(userId);

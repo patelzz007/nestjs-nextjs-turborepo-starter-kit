@@ -3,11 +3,11 @@ import { TeamMemberInviteEmailPropsSchema, type TeamMemberInviteEmailProps } fro
 import { BaseEmailTemplate, type CtaConfig, type EmailAccent } from "./base/base-email-template";
 import type { EmailRenderContext } from "./base/email-render-context";
 
-/** Sent when an organization owner/admin invites a colleague to join their team. */
+/** Sent when a tenant owner/admin invites a colleague to join their team. */
 export class TeamMemberInviteEmailTemplate extends BaseEmailTemplate<TeamMemberInviteEmailProps> {
 	public static readonly sampleProps: TeamMemberInviteEmailProps = {
 		to: "alice@cafe.demo",
-		organizationName: "Brew & Bean KL",
+		tenantName: "Brew & Bean KL",
 		roleLabel: "Cashier",
 		locationSummary: "Bukit Bintang",
 		inviteUrl: "https://merchant.example.com/team-invite?token=demo-team-invite-token",
@@ -19,10 +19,10 @@ export class TeamMemberInviteEmailTemplate extends BaseEmailTemplate<TeamMemberI
 	public readonly subject: string = "You've been invited to join a team";
 	protected readonly accent: EmailAccent = "sky";
 	protected readonly eyebrow: string = "Team invitation";
-	protected readonly heading: string = "Join your organization's team";
+	protected readonly heading: string = "Join your tenant's team";
 
 	public getPreviewText(_context: EmailRenderContext): string {
-		return `Accept your invite to join ${this.props.organizationName} as ${this.props.roleLabel}.`;
+		return `Accept your invite to join ${this.props.tenantName} as ${this.props.roleLabel}.`;
 	}
 
 	/** The button sits in the body, above the copy-link fallback. */
@@ -37,9 +37,9 @@ export class TeamMemberInviteEmailTemplate extends BaseEmailTemplate<TeamMemberI
 
 	public renderBodyHtml(context: EmailRenderContext): string {
 		return [
-			this.paragraph(`You've been invited to join ${this.strong(this.props.organizationName)}.`),
+			this.paragraph(`You've been invited to join ${this.strong(this.props.tenantName)}.`),
 			this.detailsCard([
-				{ label: "Organization", value: this.props.organizationName },
+				{ label: "Tenant", value: this.props.tenantName },
 				{ label: "Role", value: this.props.roleLabel },
 				{ label: "Location access", value: this.props.locationSummary },
 				{ label: "Invite expires", value: `In ${String(this.props.expiresInDays)} days` },
@@ -53,7 +53,7 @@ export class TeamMemberInviteEmailTemplate extends BaseEmailTemplate<TeamMemberI
 
 	public renderBodyText(_context: EmailRenderContext): string {
 		return [
-			`You've been invited to join ${this.props.organizationName} as ${this.props.roleLabel}.`,
+			`You've been invited to join ${this.props.tenantName} as ${this.props.roleLabel}.`,
 			`Location access: ${this.props.locationSummary}.`,
 			"",
 			"Open this link to accept the invitation:",

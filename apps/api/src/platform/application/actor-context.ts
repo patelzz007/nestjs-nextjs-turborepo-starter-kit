@@ -11,14 +11,6 @@ export const RequestMetadataSchema = z.object({
 	endpoint: z.string().nullable(),
 });
 
-/**
- * True on an `@RlsBypass()` route: the request runs under the `route.rls_bypass`
- * system operation, whoever the caller is — the same decision `RlsInterceptor`
- * makes, from the same resolver (`request-principal.ts`). Absent means false: an
- * actor built outside an HTTP request (a test fixture, a guard) never bypasses.
- */
-const RouteRlsBypassSchema = z.boolean().optional();
-
 /** Where a system actor's work was triggered from. */
 export const SystemOriginSchema = z.enum(["job", "cron", "cli", "bootstrap", "consumer"]);
 
@@ -27,31 +19,29 @@ export const ActorContextSchema = z.discriminatedUnion("kind", [
 		kind: z.literal("user"),
 		userId: z.string().min(1),
 		sessionId: z.string().min(1),
-		organizationId: z.string().min(1).nullable(),
+		tenantId: z.string().min(1).nullable(),
 		isSuperAdmin: z.boolean(),
 		/**
-		 * How this user is scoped in Postgres. Decided once, from the same rules as `RlsInterceptor`:
-		 * superadmin, single-tenant staff, or a normal tenant user.
+		 * How this user is scoped in Postgres. Identity never widens the session:
+		 * a superadmin is a tenant user until a route names its own operation.
 		 */
-		accessScope: z.enum(["tenant", "superadmin", "staff_single_tenant"]),
+		accessScope: z.enum(["tenant"]),
 		impersonatorUserId: z.string().min(1).nullable(),
 		request: RequestMetadataSchema,
-		routeRlsBypass: RouteRlsBypassSchema,
 	}),
 	z.object({
 		kind: z.literal("api_key"),
 		apiKeyId: z.string().min(1),
-		organizationId: z.string().min(1),
+		tenantId: z.string().min(1),
 		locationId: z.string().min(1).nullable(),
 		terminalId: z.string().min(1).nullable(),
 		request: RequestMetadataSchema,
-		routeRlsBypass: RouteRlsBypassSchema,
 	}),
 	z.object({
 		kind: z.literal("system"),
 		operation: SystemOperationNameSchema,
 		origin: SystemOriginSchema,
-		organizationId: z.string().min(1).nullable(),
+		tenantId: z.string().min(1).nullable(),
 		/** Human on whose behalf the operation runs; null for background work with no user. */
 		actorUserId: z.string().min(1).nullable(),
 		/** Audit line for the system-operation transaction (`SystemDatabaseContext.reason`). */
@@ -59,22 +49,20 @@ export const ActorContextSchema = z.discriminatedUnion("kind", [
 	}),
 	z.object({
 		kind: z.literal("anonymous"),
-		/** Server-resolved tenant, or null when the request has no organization. Never a client-supplied id. */
-		organizationId: z.string().min(1).nullable(),
+		/** Server-resolved tenant, or null when the request has no tenant. Never a client-supplied id. */
+		tenantId: z.string().min(1).nullable(),
 		request: RequestMetadataSchema,
-		routeRlsBypass: RouteRlsBypassSchema,
 	}),
 	z.object({
 		/**
 		 * The subject of a verified refresh token (refresh and logout routes): a user
 		 * whose access token is not on the request, so no session, role or scope is known.
-		 * Scoped to that user without requiring an organization, like `RlsInterceptor`.
+		 * Scoped to that user without requiring a tenant, like `RlsInterceptor`.
 		 */
 		kind: z.literal("token_subject"),
 		userId: z.string().min(1),
-		organizationId: z.string().min(1).nullable(),
+		tenantId: z.string().min(1).nullable(),
 		request: RequestMetadataSchema,
-		routeRlsBypass: RouteRlsBypassSchema,
 	}),
 ]);
 
@@ -97,21 +85,21 @@ export function actingUserId(actor: ActorContext): string | null {
 }
 
 /**
- * The actor bound to the organization its access was just verified for, so a unit of work's RLS session
+ * The actor bound to the tenant its access was just verified for, so a unit of work's RLS session
  * is that tenant's (as the tenant transaction of the same request always was). Only a signed-in user is
- * re-bound; every other actor (an API key is bound to its own organization) is returned unchanged.
+ * re-bound; every other actor (an API key is bound to its own tenant) is returned unchanged.
  */
-export function actingInOrganization<TActor extends ActorContext>(actor: TActor, organizationId: string): TActor {
-	return actor.kind === "user" ? { ...actor, organizationId } : actor;
+export function actingInTenant<TActor extends ActorContext>(actor: TActor, tenantId: string): TActor {
+	return actor.kind === "user" ? { ...actor, tenantId } : actor;
 }
 
 /** Builds a validated system actor for jobs, cron, CLI, bootstrap, and consumers. */
-export function systemActor(operation: SystemOperationName, origin: SystemOrigin, organizationId: string | null, reason: string, actorUserId: string | null): ActorContext {
+export function systemActor(operation: SystemOperationName, origin: SystemOrigin, tenantId: string | null, reason: string, actorUserId: string | null): ActorContext {
 	const parsed: ActorContext = ActorContextSchema.parse({
 		kind: "system",
 		operation: SystemOperationNameSchema.parse(operation),
 		origin: SystemOriginSchema.parse(origin),
-		organizationId,
+		tenantId,
 		actorUserId,
 		reason,
 	});

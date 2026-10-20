@@ -87,7 +87,7 @@ export const DATA_CHANGE_CAPTURE_EXEMPTIONS: Readonly<Record<string, string>> = 
 	MfaRecoveryAuditLog: AUDIT_TRAIL_REASON,
 	ImpersonationAuditLog: AUDIT_TRAIL_REASON,
 	AuthorizationAudit: `${AUDIT_TRAIL_REASON} One row per authorization decision (a read-path record).`,
-	OrganizationAuditLog: AUDIT_TRAIL_REASON,
+	TenantAuditLog: AUDIT_TRAIL_REASON,
 	RewardAuditLog: AUDIT_TRAIL_REASON,
 	EmailLog: LOG_REASON,
 	EmailDeliveryEvent: LOG_REASON,
@@ -107,9 +107,9 @@ export const DATA_CHANGE_SECRET_COLUMNS: Readonly<Record<string, readonly string
 	BackupCode: ["codeHash"],
 	TwoFactorPendingSetup: ["secretCiphertext", "secretIv", "backupCodesHashes"],
 	RefreshToken: ["token", "previousTokenHash"],
-	OrganizationApiKey: ["keyHash"],
-	OrganizationInvitation: ["tokenHash"],
-	OrganizationTerminal: ["pairingCodeHash"],
+	TenantApiKey: ["keyHash"],
+	TenantInvitation: ["tokenHash"],
+	TenantTerminal: ["pairingCodeHash"],
 	RewardClaim: ["redemptionTokenHash", "backupCodeHash"],
 	RewardOtpChallenge: ["codeHash"],
 	RewardReferral: ["attributionToken", "refereeDeviceHash"],
@@ -392,7 +392,7 @@ BEGIN
 
   INSERT INTO public."${DATA_CHANGE_LOG_TABLE}" (
     "occurredAt", "transactionId", "tableName", operation, "rowId", "changedColumns", "oldData", "newData",
-    "actorKind", "actorUserId", "organizationId", "apiKeyId", "systemOperation", "actorPurpose", "correlationId",
+    "actorKind", "actorUserId", "tenantId", "apiKeyId", "systemOperation", "actorPurpose", "correlationId",
     "databaseRole", "loginRole", "applicationName", "clientAddress"
   ) VALUES (
     (EXTRACT(epoch FROM clock_timestamp()) * 1000)::bigint,
@@ -410,7 +410,7 @@ BEGIN
       ELSE 'UNATTRIBUTED'
     END)::public."DataChangeActorKind",
     left("actorUserId", ${String(COLUMN_BUDGET.identifier)}),
-    left(${sessionValue("app.current_organization_id")}, ${String(COLUMN_BUDGET.identifier)}),
+    left(${sessionValue("app.current_tenant_id")}, ${String(COLUMN_BUDGET.identifier)}),
     left("apiKeyId", ${String(COLUMN_BUDGET.identifier)}),
     left("systemOperation", ${String(COLUMN_BUDGET.systemOperation)}),
     left(${sessionValue("app.actor_purpose")}, ${String(COLUMN_BUDGET.actorPurpose)}),

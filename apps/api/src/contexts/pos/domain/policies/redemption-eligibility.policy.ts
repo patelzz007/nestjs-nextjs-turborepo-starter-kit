@@ -1,4 +1,4 @@
-import type { EpochMs, OrganizationLocationScopeType, RedemptionInvalidReason } from "@workspace/shared";
+import type { EpochMs, LocationScopeType, RedemptionInvalidReason } from "@workspace/shared";
 
 /** Where a reward may be redeemed, given the store of the POS request. */
 export type StoreEligibility = "VALID" | "NOT_VALID_AT_STORE" | "STORE_REQUIRED";
@@ -11,7 +11,7 @@ export interface RedeemableClaim {
 	readonly claimExpiresAt: EpochMs;
 	readonly rewardId: string;
 	readonly rewardTitle: string;
-	readonly locationScopeType: OrganizationLocationScopeType;
+	readonly locationScopeType: LocationScopeType;
 	/** The stores a `SELECTED`-scope reward is valid at (empty for `ALL_LOCATIONS`). */
 	readonly locationIds: readonly string[];
 	/** Minimum bill in minor units; `null` = no minimum. */
@@ -20,7 +20,7 @@ export interface RedeemableClaim {
 
 /**
  * Whether a reward may be redeemed at the store a POS request comes from. `locationId === null` means
- * the store is unknown (an organization-wide key on a terminal never registered to a store): a
+ * the store is unknown (a tenant-wide key on a terminal never registered to a store): a
  * store-limited reward then FAILS CLOSED with `STORE_REQUIRED`, since nothing proves the redemption
  * happens at one of its stores.
  */

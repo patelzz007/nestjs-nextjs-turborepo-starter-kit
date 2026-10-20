@@ -9,7 +9,7 @@ import { InvalidTwoFactorCodeError } from "../../../domain/errors/identity.error
 import type { IdentityScope } from "../../identity-scope";
 import type { AuthenticatorPort, TotpSecretCipherPort } from "../../ports/authenticator.port";
 import type { VerifiedChallengeRef } from "../../ports/identity-tokens.port";
-import { AUTHENTICATOR, IDENTITY_UNIT_OF_WORK, PUBLIC_AUTH_FLOW_OPERATION, TOTP_SECRET_CIPHER } from "../../ports/identity.tokens";
+import { AUTHENTICATOR, IDENTITY_UNIT_OF_WORK, LOGIN_MFA_COMPLETE_OPERATION, TOTP_SECRET_CIPHER } from "../../ports/identity.tokens";
 import { MfaLoginCompletion } from "../../services/mfa-login-completion";
 import { CompleteTotpLoginCommand } from "./complete-totp-login.command";
 
@@ -33,7 +33,7 @@ export class CompleteTotpLoginHandler implements ICommandHandler<CompleteTotpLog
 	public async execute(command: CompleteTotpLoginCommand): Promise<MfaLoginResult> {
 		const { actor, input } = command;
 		const ref: VerifiedChallengeRef = await this.completion.verifyLoginRef(input.tempToken);
-		const passed: boolean = await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, actor, async (scope: IdentityScope): Promise<boolean> => {
+		const passed: boolean = await this.uow.runSystemOperation(LOGIN_MFA_COMPLETE_OPERATION, actor, async (scope: IdentityScope): Promise<boolean> => {
 			const now: EpochMs = this.clock.now();
 			const parts = await this.completion.loadParts(scope, ref, now);
 			const secret: string = this.cipher.decrypt(parts.enrollment.enabledSecretForLogin(), "totp-secret");

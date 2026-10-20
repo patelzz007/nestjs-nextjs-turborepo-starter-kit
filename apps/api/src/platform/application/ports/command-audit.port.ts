@@ -22,7 +22,7 @@ export const SystemCommandAuditEntrySchema = z.object({
 	commandName: z.string().min(1),
 	input: JsonValueSchema,
 	operation: z.string().min(1).nullable(),
-	organizationId: z.string().min(1).nullable(),
+	tenantId: z.string().min(1).nullable(),
 	/** The human the system actor runs on behalf of; null for background work with no user. */
 	actorUserId: z.string().min(1).nullable(),
 	/** The id every transaction of this command stamped as `app.correlation_id`. */

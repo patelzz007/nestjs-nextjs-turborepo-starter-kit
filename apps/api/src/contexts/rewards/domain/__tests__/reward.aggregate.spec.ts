@@ -25,7 +25,7 @@ import {
 	LOADED_UPDATED_AT,
 	newReward,
 	NOW,
-	ORGANIZATION_ID,
+	TENANT_ID,
 	referrerRow,
 	REFERRER_ID,
 	REVIEWER_ID,
@@ -157,7 +157,7 @@ describe("Reward lifecycle", () => {
 		expect(snapshot.referrer?.review.status).toBe("PUBLISHED");
 		const [event] = reward.pullEvents();
 		expect(event).toBeInstanceOf(RewardApproved);
-		expect(event).toMatchObject({ rewardId: REWARD_ID, organizationId: ORGANIZATION_ID, title: "Free coffee", reviewerUserId: REVIEWER_ID });
+		expect(event).toMatchObject({ rewardId: REWARD_ID, tenantId: TENANT_ID, title: "Free coffee", reviewerUserId: REVIEWER_ID });
 	});
 
 	it("rejects back to draft with a reason, clearing submission and window (D01)", () => {
@@ -208,7 +208,7 @@ describe("Reward lifecycle", () => {
 		expect(reward.currentStatus).toBe("PENDING_REVIEW");
 	});
 
-	it("never lets a store-limited merchant manage an organization-wide reward", () => {
+	it("never lets a store-limited merchant manage a tenant-wide reward", () => {
 		expect(() => {
 			Reward.rehydrate(rewardState("DRAFT")).submitForReview(storeManager([STORE_A]), NOW);
 		}).toThrow(RewardNotFoundError);
@@ -344,7 +344,7 @@ describe("Reward inventory", () => {
 		const reward = Reward.rehydrate(rewardState("PUBLISHED", { rules: RewardRulesValue.fromApi({ maxUsePerUser: 1 }) }));
 		expect(reward.assertClaimable(NOW)).toEqual({
 			rewardId: REWARD_ID,
-			organizationId: ORGANIZATION_ID,
+			tenantId: TENANT_ID,
 			title: "Free coffee",
 			expiryDate: NOW + WEEK_MS,
 			maxClaimsPerUser: 1,

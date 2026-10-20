@@ -151,7 +151,7 @@ class EmptyCatalog implements RbacCatalogReadPort {
 	}
 }
 
-const TENANT: RequestTenantPort = { current: (): VerifiedRequestTenant => ({ organizationId: "org-1" }) };
+const TENANT: RequestTenantPort = { current: (): VerifiedRequestTenant => ({ tenantId: "org-1" }) };
 let rbac: InMemoryRbacStore;
 
 beforeEach(() => {
@@ -182,8 +182,8 @@ describe("DecideAuthorizationHandler", () => {
 			{ action: "DELETE", resource: "USER", resourceId: "user-9", allowed: false },
 		]);
 		expect(kernel.asked.map((request) => request.subject)).toEqual([
-			{ userId: "user-1", isSuperAdmin: false, organizationId: "org-1" },
-			{ userId: "user-1", isSuperAdmin: false, organizationId: "org-1" },
+			{ userId: "user-1", isSuperAdmin: false, tenantId: "org-1" },
+			{ userId: "user-1", isSuperAdmin: false, tenantId: "org-1" },
 		]);
 	});
 
@@ -201,11 +201,11 @@ describe("ExplainAuthorizationHandler", () => {
 		const root = adminActor("root-1", { isSuperAdmin: true });
 
 		await handler.execute(new ExplainAuthorizationQuery(root, { action: "READ", resource: "USER" }));
-		await handler.execute(new ExplainAuthorizationQuery(root, { action: "READ", resource: "USER", userId: "user-1", organizationId: "org-1" }));
+		await handler.execute(new ExplainAuthorizationQuery(root, { action: "READ", resource: "USER", userId: "user-1", tenantId: "org-1" }));
 
 		expect(kernel.asked.map((request) => request.subject)).toEqual([
 			{ userId: "root-1", isSuperAdmin: true },
-			{ userId: "user-1", isSuperAdmin: false, organizationId: "org-1" },
+			{ userId: "user-1", isSuperAdmin: false, tenantId: "org-1" },
 		]);
 	});
 });

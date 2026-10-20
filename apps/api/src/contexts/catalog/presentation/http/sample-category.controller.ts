@@ -21,9 +21,11 @@ import {
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { Idempotent } from "../../../../platform/presentation/http/idempotency/idempotent.decorator";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
+import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import { ZodBody, ZodListQuery, ZodParams } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
+import { CATALOG_READ_OPERATION, CATALOG_WRITE_OPERATION } from "../../application/catalog.tokens";
 import { SampleCategoryApplicationService } from "../../application/services/sample-category.application-service";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
 
@@ -38,6 +40,7 @@ export class SampleCategoryController {
 	public constructor(private readonly service: SampleCategoryApplicationService) {}
 
 	@RequirePermission("LIST", "SAMPLE_CATEGORY")
+	@PlatformOperation(CATALOG_READ_OPERATION)
 	@Get()
 	@ApiOperation({ summary: "List SampleCategories" })
 	@ZodPaginatedResponse(SampleCategorySchema, { description: "Paginated list of samplecategories" })
@@ -50,6 +53,7 @@ export class SampleCategoryController {
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@RequirePermission("CREATE", "SAMPLE_CATEGORY")
+	@PlatformOperation(CATALOG_WRITE_OPERATION)
 	@Post("bulk")
 	@ApiOperation({ summary: "Bulk create samplecategories" })
 	@ZodResponse(BulkCreateSampleCategoryResponseSchema, { status: HttpStatus.CREATED, description: "Created samplecategories" })
@@ -62,6 +66,7 @@ export class SampleCategoryController {
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@RequirePermission("DELETE", "SAMPLE_CATEGORY")
+	@PlatformOperation(CATALOG_WRITE_OPERATION)
 	@Post("bulk-delete")
 	@ApiOperation({ summary: "Bulk soft delete samplecategories" })
 	@ZodResponse(BulkDeleteResultSchema, { status: HttpStatus.CREATED, description: "Bulk delete result" })
@@ -70,6 +75,7 @@ export class SampleCategoryController {
 	}
 
 	@RequirePermission("READ", "SAMPLE_CATEGORY")
+	@PlatformOperation(CATALOG_READ_OPERATION)
 	@Get(":id")
 	@ApiOperation({ summary: "Get SampleCategory by id" })
 	@ZodResponse(SampleCategorySchema, { description: "SampleCategory detail" })
@@ -79,6 +85,7 @@ export class SampleCategoryController {
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@RequirePermission("CREATE", "SAMPLE_CATEGORY")
+	@PlatformOperation(CATALOG_WRITE_OPERATION)
 	@Idempotent()
 	@Post()
 	@ApiOperation({ summary: "Create SampleCategory" })
@@ -92,6 +99,7 @@ export class SampleCategoryController {
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@RequirePermission("UPDATE", "SAMPLE_CATEGORY")
+	@PlatformOperation(CATALOG_WRITE_OPERATION)
 	@Patch(":id")
 	@ApiOperation({ summary: "Update SampleCategory" })
 	@ZodResponse(SampleCategorySchema, { description: "Updated samplecategory" })
@@ -105,6 +113,7 @@ export class SampleCategoryController {
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@RequirePermission("DELETE", "SAMPLE_CATEGORY")
+	@PlatformOperation(CATALOG_WRITE_OPERATION)
 	@Delete(":id")
 	@ApiOperation({ summary: "Soft delete SampleCategory" })
 	@ZodResponse(DeleteSuccessDataSchema, { description: "SampleCategory deleted" })
@@ -115,6 +124,7 @@ export class SampleCategoryController {
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@RequirePermission("UPDATE", "SAMPLE_CATEGORY")
+	@PlatformOperation(CATALOG_WRITE_OPERATION)
 	@Post(":id/restore")
 	@ApiOperation({ summary: "Restore SampleCategory" })
 	@ZodResponse(SampleCategorySchema, { status: HttpStatus.CREATED, description: "Restored samplecategory" })

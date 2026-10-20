@@ -11,7 +11,7 @@ import { deterministicUuid } from "./deterministic-uuid";
 // ---------------------------------------------------------------------------
 // A tenant policy revision published through the policy control plane.
 //
-// Every organization starts on the default role policy (version 1, template
+// Every tenant starts on the default role policy (version 1, template
 // `PLATFORM_DEFAULT_TEMPLATE`, no approver). A tenant narrows or extends it through the four-eyes
 // control plane (`PolicyControlPlaneService`): draft -> simulate -> approve-and-publish by a
 // DIFFERENT SuperAdmin. This seeds that revision for the Jonker Street Kitchen tenant, in the order
@@ -45,43 +45,43 @@ const id = (key: string): string => deterministicUuid(NAMESPACE, key);
 const correlation = (key: string): string => `seed-${id(`correlation:${key}`)}`;
 
 /**
- * Publishes the revision for `organizationId`: drafted by `author`, approved and published by
+ * Publishes the revision for `tenantId`: drafted by `author`, approved and published by
  * `approver` (two distinct SuperAdmins — the four-eyes rule). Returns true when it wrote the
- * revision, false when it was already there or the organization has no active version to supersede.
+ * revision, false when it was already there or the tenant has no active version to supersede.
  */
-export async function seedTenantPolicyRevision(organizationId: string, author: Pick<User, "id">, approver: Pick<User, "id">): Promise<boolean> {
+export async function seedTenantPolicyRevision(tenantId: string, author: Pick<User, "id">, approver: Pick<User, "id">): Promise<boolean> {
 	if (author.id === approver.id) {
 		throw new Error("Seed policy approval needs two distinct users (four-eyes)");
 	}
-	const draftId = id(`draft:${organizationId}`);
+	const draftId = id(`draft:${tenantId}`);
 	if ((await prisma.authorizationPolicyDraft.findUnique({ where: { id: draftId }, select: { id: true } })) !== null) {
 		return false;
 	}
 
 	const builderPayload = { templateId: POLICY_TEMPLATE_IDS.tenantRoleCapability, parameters: { allowedRoles: ["OWNER", "ADMIN", "CASHIER"] } };
-	const compiled = new PolicyTemplateCompiler().compile(builderPayload, organizationId);
+	const compiled = new PolicyTemplateCompiler().compile(builderPayload, tenantId);
 	const draftedAt = Date.now();
 	const simulatedAt = draftedAt + SIMULATION_AFTER_DRAFT_MINUTES * MS_PER_MINUTE;
 	const publishedAt = simulatedAt + PUBLISH_AFTER_SIMULATION_MINUTES * MS_PER_MINUTE;
-	const simulationId = id(`simulation:${organizationId}`);
-	const versionId = id(`version:${organizationId}`);
+	const simulationId = id(`simulation:${tenantId}`);
+	const versionId = id(`version:${tenantId}`);
 
 	return prisma.$transaction(async (tx: Prisma.TransactionClient): Promise<boolean> => {
 		const baseline = await tx.authorizationPolicyVersion.findMany({
-			where: { supersededAt: null, OR: [{ organizationId }, { organizationId: null, scope: "PLATFORM_GUARDRAIL" }] },
+			where: { supersededAt: null, OR: [{ tenantId }, { tenantId: null, scope: "PLATFORM_GUARDRAIL" }] },
 			orderBy: { id: "asc" },
 			select: { id: true },
 		});
-		const active = await tx.authorizationPolicyVersion.findFirst({ where: { organizationId, scope: "TENANT", supersededAt: null }, select: { version: true } });
+		const active = await tx.authorizationPolicyVersion.findFirst({ where: { tenantId, scope: "TENANT", supersededAt: null }, select: { version: true } });
 		if (active === null) {
 			return false;
 		}
-		const evaluatedPrincipalCount = await tx.organizationMembership.count({ where: { organizationId, status: "ACTIVE", isDeleted: false } });
+		const evaluatedPrincipalCount = await tx.membership.count({ where: { tenantId, status: "ACTIVE", isDeleted: false } });
 
 		await tx.authorizationPolicyDraft.create({
 			data: {
 				id: draftId,
-				organizationId,
+				tenantId,
 				scope: "TENANT",
 				name: REVISION_NAME,
 				description: REVISION_DESCRIPTION,
@@ -118,11 +118,11 @@ export async function seedTenantPolicyRevision(organizationId: string, author: P
 			},
 		});
 		// Same order as `publish`: supersede the active version in the slot, then insert the next one.
-		await tx.authorizationPolicyVersion.updateMany({ where: { organizationId, scope: "TENANT", supersededAt: null }, data: { supersededAt: publishedAt } });
+		await tx.authorizationPolicyVersion.updateMany({ where: { tenantId, scope: "TENANT", supersededAt: null }, data: { supersededAt: publishedAt } });
 		const version = await tx.authorizationPolicyVersion.create({
 			data: {
 				id: versionId,
-				organizationId,
+				tenantId,
 				draftId,
 				scope: "TENANT",
 				version: TENANT_POLICY_REVISION,
@@ -143,9 +143,9 @@ export async function seedTenantPolicyRevision(organizationId: string, author: P
 			policyIds: string[],
 			evaluation: Record<string, string | number | boolean | null>,
 		): Prisma.AuthorizationAuditUncheckedCreateInput & { readonly id: string } => ({
-			id: id(`audit:${organizationId}:${key}`),
+			id: id(`audit:${tenantId}:${key}`),
 			actorId,
-			organizationId,
+			tenantId,
 			action,
 			resource: POLICY_DRAFT_AUDIT_RESOURCE,
 			resourceId: draftId,
@@ -154,7 +154,7 @@ export async function seedTenantPolicyRevision(organizationId: string, author: P
 			evaluation: { ...evaluation, scope: "TENANT" },
 			ipAddress,
 			userAgent: SESSION_USER_AGENT,
-			requestId: correlation(`${organizationId}:${key}`),
+			requestId: correlation(`${tenantId}:${key}`),
 			createdAt,
 		});
 		const rows: readonly (Prisma.AuthorizationAuditUncheckedCreateInput & { readonly id: string })[] = [

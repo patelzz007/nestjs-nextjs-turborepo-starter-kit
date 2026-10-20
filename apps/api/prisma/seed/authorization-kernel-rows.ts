@@ -3,7 +3,7 @@ import { PolicyConditionsSchema, type PolicyConditions, DAY_MS } from "@workspac
 
 import { parsePrismaInputJson } from "../../src/platform/infrastructure/utils/prisma-json";
 import { deterministicUuid } from "./deterministic-uuid";
-import { ORGANIZATION_SEED_IDS } from "./organization-seed-ids";
+import { TENANT_SEED_IDS } from "./tenant-seed-ids";
 import { buildProductSeedId } from "./products";
 import { REWARD_SEED_IDS } from "./rewards";
 
@@ -46,7 +46,7 @@ function conditions(rule: PolicyConditions): Prisma.InputJsonValue {
 /**
  * Every `ResourceAcl` and `PolicyDefinition` seed row, deterministic ids so
  * the seed upserts (idempotent). Conditions use the validated policy DSL; the
- * tenant-bound rows use the Jonker Street Kitchen organization / Bukit Beruang
+ * tenant-bound rows use the Jonker Street Kitchen tenant / Bukit Beruang
  * location, so they only apply inside that server-verified tenant.
  */
 export function buildKernelSeedRows(actors: KernelSeedActors, now: number): KernelSeedRows {
@@ -66,7 +66,7 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 			{ condition: { field: "payment.amount", operator: "less_than_or_equals", value: 500 } },
 		],
 	};
-	const sameOrganizationInventory: PolicyConditions = { condition: { field: "inventory.organizationId", operator: "equals", valueRef: "$user.organizationId" } };
+	const sameTenantInventory: PolicyConditions = { condition: { field: "inventory.tenantId", operator: "equals", valueRef: "$user.tenantId" } };
 	const paymentCap = (limit: number): PolicyConditions => ({ condition: { field: "payment.amount", operator: "less_than_or_equals", value: limit } });
 	const publishedAt = now - 30 * DAY_MS;
 	const supersededPublishedAt = now - 90 * DAY_MS;
@@ -83,15 +83,15 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 			reason: "Admin explicitly allowed to delete users globally",
 			assignedBy: actors.adminUserId,
 		}),
-		acl("manager-create-organizations", {
+		acl("manager-create-tenants", {
 			subjectType: "USER",
 			subjectId: actors.managerUserId,
 			action: "CREATE",
-			resourceType: "ORGANIZATION",
+			resourceType: "TENANT",
 			resourceId: null,
-			scope: "ORGANIZATION",
+			scope: "TENANT",
 			effect: "DENY",
-			reason: "Manager explicitly denied from creating organizations",
+			reason: "Manager explicitly denied from creating tenants",
 			assignedBy: actors.adminUserId,
 		}),
 		acl("user-role-read-locations", {
@@ -111,7 +111,7 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 			action: "UPDATE",
 			resourceType: "PAYMENT",
 			resourceId: null,
-			scope: "ORGANIZATION",
+			scope: "TENANT",
 			effect: "DENY",
 			reason: "Manager role explicitly denied from updating payments",
 			assignedBy: actors.adminUserId,
@@ -125,8 +125,8 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 			resourceType: "PRODUCT",
 			resourceId: KERNEL_SEED_IDS.productTarget,
 			scope: "LOCATION",
-			organizationId: ORGANIZATION_SEED_IDS.mlkOrganization,
-			locationId: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+			tenantId: TENANT_SEED_IDS.mlkTenant,
+			locationId: TENANT_SEED_IDS.mlkLocationBeruang,
 			effect: "DENY",
 			conditions: conditions(archivedProduct),
 			reason: "The Bukit Beruang cashier may not edit this product (or its images) once it is archived",
@@ -140,8 +140,8 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 			action: "READ",
 			resourceType: "PAYMENT",
 			resourceId: null,
-			scope: "ORGANIZATION",
-			organizationId: ORGANIZATION_SEED_IDS.klOrganization,
+			scope: "TENANT",
+			tenantId: TENANT_SEED_IDS.klTenant,
 			effect: "ALLOW",
 			reason: "Retired exception: payment read access for the audit window that has ended",
 			assignedBy: actors.adminUserId,
@@ -165,7 +165,7 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 		policy("payment-update-limit", {
 			name: "payment-update-limit",
 			description: "Payments may only be updated while PAID and at most 500",
-			scope: "ORGANIZATION",
+			scope: "TENANT",
 			actions: ["UPDATE"],
 			resources: ["PAYMENT"],
 			effect: "ALLOW",
@@ -173,14 +173,14 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 			isActive: true,
 			version: 1,
 		}),
-		policy("inventory-same-organization", {
-			name: "inventory-same-organization",
-			description: "Inventory changes are limited to the caller's verified organization",
-			scope: "ORGANIZATION",
+		policy("inventory-same-tenant", {
+			name: "inventory-same-tenant",
+			description: "Inventory changes are limited to the caller's verified tenant",
+			scope: "TENANT",
 			actions: ["UPDATE", "DELETE"],
 			resources: ["INVENTORY"],
 			effect: "ALLOW",
-			conditions: conditions(sameOrganizationInventory),
+			conditions: conditions(sameTenantInventory),
 			isActive: true,
 			version: 1,
 		}),
@@ -192,8 +192,8 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 			actions: ["UPDATE"],
 			resources: ["PAYMENT"],
 			effect: "ALLOW",
-			organizationId: ORGANIZATION_SEED_IDS.mlkOrganization,
-			locationId: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+			tenantId: TENANT_SEED_IDS.mlkTenant,
+			locationId: TENANT_SEED_IDS.mlkLocationBeruang,
 			conditions: conditions(paymentCap(BERUANG_REFUND_CAP_V1)),
 			isActive: false,
 			version: 1,
@@ -209,8 +209,8 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 			actions: ["UPDATE"],
 			resources: ["PAYMENT"],
 			effect: "ALLOW",
-			organizationId: ORGANIZATION_SEED_IDS.mlkOrganization,
-			locationId: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+			tenantId: TENANT_SEED_IDS.mlkTenant,
+			locationId: TENANT_SEED_IDS.mlkLocationBeruang,
 			conditions: conditions(paymentCap(BERUANG_REFUND_CAP_V2)),
 			isActive: true,
 			version: 2,

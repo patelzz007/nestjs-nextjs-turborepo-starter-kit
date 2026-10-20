@@ -1,13 +1,23 @@
 import { CanActivate, ExecutionContext, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
+import type { Prisma } from "@prisma/client";
 import type { FastifyRequest } from "fastify";
 import type { AuthorizationAttributes, AuthorizationContext, AuthorizationRequest, AuthorizationResult, PermissionAction, PermissionResource } from "@workspace/shared";
 import { isFunctionValue, isStringPrimitive } from "@workspace/shared";
 
+import { NotFoundError } from "../../../../application/errors/app-error";
 import { readFirstHeader } from "../../../../infrastructure/utils/http-headers";
+import {
+	decideTenantLifecycle,
+	MembershipInactiveError,
+	TENANT_LIFECYCLE_ROUTE_KEY,
+	TenantRouteNotActiveError,
+	TenantSuspendedError,
+} from "../../../../../contexts/tenancy/public-api";
 import { RequestContextService } from "../../../../infrastructure/context/request-context";
 import { MAX_USER_AGENT_LENGTH } from "../../../../infrastructure/http/user-agent-header";
-import { PrismaService } from "../../../../../prisma/prisma.service";
+import type { SystemDatabaseContext } from "../../../../../prisma/tenant-context";
+import { TenantTransactionService } from "../../../../../prisma/tenant-transaction.service";
 import type { AuthenticatedUser } from "../../../../../types/authenticated-user";
 import { isAuthenticatedUser } from "../../../../../types/authenticated-user";
 import {
@@ -32,6 +42,7 @@ import {
 	type RequiredPermissionsMetadata,
 	type RequiredRolesMetadata,
 } from "../decorators/route-requirements.metadata";
+import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../application/shared-system-operations";
 
 interface RouteRequirements {
 	readonly permission?: RequiredPermission | undefined;
@@ -49,6 +60,11 @@ function hasRequirements(requirements: RouteRequirements): boolean {
 	return requirements.permission !== undefined || requirements.permissions !== undefined || requirements.roles !== undefined || requirements.authorize !== undefined;
 }
 
+/** Principal reads the guard makes before the handler's RLS scope exists. */
+interface GuardPrincipalLookup {
+	withSystemOperation<TResult>(context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult>;
+}
+
 /**
  * **Kernel-first Authorization Guard** (global `APP_GUARD`).
  *
@@ -62,7 +78,7 @@ function hasRequirements(requirements: RouteRequirements): boolean {
  *
  * Flow:
  * 1. Authenticated requests: validate token version, then resolve and verify the
- *    tenant context (a forged `x-organization-id` / `x-location-id` → 403). The
+ *    tenant context (a forged `x-store-id` → 403; `x-tenant-id` and `x-location-id` select nothing). The
  *    verified context is bound into the request context (ADR 017) for RLS.
  * 2. Routes without requirements only compute `hasAdminAccess`.
  * 3. SuperAdmin → explicit, audited platform bypass.
@@ -77,8 +93,8 @@ export class AuthorizationGuard implements CanActivate {
 		@Inject(AUTHORIZATION_DECISION_AUDIT) private readonly decisionAudit: AuthorizationDecisionAuditPort,
 		@Inject(SUPER_ADMIN_BYPASS_AUDIT) private readonly bypassAudit: SuperAdminBypassAuditPort,
 		@Inject(REQUEST_TENANT_RESOLVER) private readonly contextResolver: RequestTenantResolverPort,
-		private readonly prisma: PrismaService,
 		private readonly requestContext: RequestContextService,
+		@Inject(TenantTransactionService) private readonly principalLookup: GuardPrincipalLookup,
 	) {}
 
 	public async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -100,8 +116,9 @@ export class AuthorizationGuard implements CanActivate {
 
 		const tenant = await this.contextResolver.resolve(request, user);
 		this.requestContext.bindTenant(tenant.verified);
+		this.assertTenantLifecycle(context, tenant);
 
-		if (user.isSuperAdmin) {
+		if (user.isSuperAdmin && tenant.verified.tenantId === undefined) {
 			if (protectedRoute) {
 				await this.auditSuperAdminBypass(user.id, context, request);
 			}
@@ -115,6 +132,39 @@ export class AuthorizationGuard implements CanActivate {
 
 		this.setAdminAccess(user, await this.hasAdminDashboardAccess(user, tenant));
 		return true;
+	}
+
+	/**
+	 * C1 for the tenant the request targets, however it was reached (`:tenantSlug`, a store or a
+	 * location), with the caller's real access status. A caller without access is left to the
+	 * ordinary authorization answer (`no_membership`).
+	 */
+	private assertTenantLifecycle(context: ExecutionContext, tenant: RequestTenantContext): void {
+		const { target } = tenant;
+		if (target === null) {
+			return;
+		}
+		const lifecycleRoute = this.reflector.getAllAndOverride<boolean | undefined>(TENANT_LIFECYCLE_ROUTE_KEY, [context.getHandler(), context.getClass()]) === true;
+		const decision = decideTenantLifecycle({
+			lifecycleState: target.lifecycleState,
+			// A target is only ever a live tenant: membership verification skips soft-deleted rows.
+			isDeleted: false,
+			route: lifecycleRoute ? "lifecycle" : "ordinary",
+			membershipStatus: target.membershipStatus,
+		});
+		if (decision.kind === "allow" || decision.kind === "no_membership") {
+			return;
+		}
+		if (decision.kind === "not_found") {
+			throw new NotFoundError({ message: "Tenant not found" });
+		}
+		if (decision.kind === "tenant_suspended") {
+			throw new TenantSuspendedError();
+		}
+		if (decision.kind === "membership_inactive") {
+			throw new MembershipInactiveError();
+		}
+		throw new TenantRouteNotActiveError();
 	}
 
 	private readRequirements(context: ExecutionContext): RouteRequirements {
@@ -217,7 +267,7 @@ export class AuthorizationGuard implements CanActivate {
 		return {
 			userId: user.id,
 			isSuperAdmin: false,
-			...(tenant.verified.organizationId === undefined ? {} : { organizationId: tenant.verified.organizationId }),
+			...(tenant.verified.tenantId === undefined ? {} : { tenantId: tenant.verified.tenantId }),
 			...(tenant.verified.storeId === undefined ? {} : { storeId: tenant.verified.storeId }),
 			...(tenant.verified.locationId === undefined ? {} : { locationId: tenant.verified.locationId }),
 		};
@@ -226,8 +276,8 @@ export class AuthorizationGuard implements CanActivate {
 	/** Requested tenant ids become resource attributes so scoped grants can compare them. */
 	private tenantAttributes(tenant: RequestTenantContext): AuthorizationAttributes {
 		const attributes: AuthorizationAttributes = {};
-		if (tenant.requested.organizationId !== undefined) {
-			attributes.organizationId = tenant.requested.organizationId;
+		if (tenant.requested.tenantId !== undefined) {
+			attributes.tenantId = tenant.requested.tenantId;
 		}
 		if (tenant.requested.storeId !== undefined) {
 			attributes.storeId = tenant.requested.storeId;
@@ -267,7 +317,10 @@ export class AuthorizationGuard implements CanActivate {
 
 	/** Rejects tokens minted before the user's authorization state last changed. */
 	private async validateTokenVersion(userId: string, tokenVersion: number): Promise<void> {
-		const dbUser = await this.prisma.user.findUnique({ where: { id: userId }, select: { tokenVersion: true } });
+		const dbUser = await this.principalLookup.withSystemOperation(
+			{ operation: PRINCIPAL_LOOKUP_OPERATION, reason: "Compare an access token's version with the account", actorUserId: userId },
+			(tx) => tx.user.findUnique({ where: { id: userId }, select: { tokenVersion: true } }),
+		);
 		if (dbUser !== null && dbUser.tokenVersion !== tokenVersion) {
 			throw new UnauthorizedException({ message: "Token revoked — authorization state changed", error: "TOKEN_VERSION_MISMATCH" });
 		}
@@ -283,7 +336,6 @@ export class AuthorizationGuard implements CanActivate {
 	}
 
 	private async auditSuperAdminBypass(userId: string, context: ExecutionContext, request: FastifyRequest): Promise<void> {
-		// Guards run inside the `request.pre_handler` bypass scope, so the pool connection may append to the bypass-only audit table.
 		await this.bypassAudit.recordBypass(userId, `Bypassed authorization for ${context.getHandler().name} at ${request.method} ${request.url}`);
 	}
 }

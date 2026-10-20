@@ -4,8 +4,9 @@ import type { AnalyticsInterval } from "@workspace/shared";
 import { z } from "zod";
 
 import { DependencyUnavailableError } from "../../../../platform/application/errors/app-error";
-import { PrismaService } from "../../../../prisma/prisma.service";
-import type { AnalyticsWindow } from "../../domain/value-objects/analytics-scope.value-object";
+import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
+import type { AnalyticsScope, AnalyticsWindow } from "../../domain/value-objects/analytics-scope.value-object";
+import { PLATFORM_ANALYTICS_READ_OPERATION } from "../../application/ports/reporting.tokens";
 
 /**
  * Time budget of ONE analytics statement. A dashboard or export runs a handful
@@ -101,18 +102,27 @@ export function averageSql(sum: Prisma.Sql, count: Prisma.Sql): Prisma.Sql {
  * `statement_timeout` to {@link ANALYTICS_STATEMENT_TIMEOUT_MS} (`SET LOCAL`:
  * it ends with the transaction, the pooled connection is untouched), then
  * parses the rows with `schema`. A timeout becomes {@link AnalyticsQueryTimeoutError}.
- * The caller's RLS scope applies as for any other query (the pool stamps it on checkout).
+ * A tenant or customer scope reuses the session already bound to the call.
+ * A platform scope runs as `reporting.platform_analytics.read`.
  */
 @Injectable()
 export class AnalyticsSqlRunner {
-	public constructor(private readonly prisma: PrismaService) {}
+	public constructor(private readonly transactions: TenantTransactionService) {}
+
+	public rowsFor<TRow>(scope: AnalyticsScope, schema: z.ZodType<TRow>, sql: Prisma.Sql): Promise<TRow[]> {
+		return scope.kind === "platform" ? this.platformRows(schema, sql) : this.rows(schema, sql);
+	}
+
+	public rowFor<TRow>(scope: AnalyticsScope, schema: z.ZodType<TRow>, sql: Prisma.Sql): Promise<TRow> {
+		return scope.kind === "platform" ? this.platformRow(schema, sql) : this.row(schema, sql);
+	}
 
 	public async rows<TRow>(schema: z.ZodType<TRow>, sql: Prisma.Sql): Promise<TRow[]> {
 		try {
-			const [, rows] = await this.prisma.$transaction([
-				this.prisma.$queryRaw`SELECT set_config('statement_timeout', ${String(ANALYTICS_STATEMENT_TIMEOUT_MS)}, true)`,
-				this.prisma.$queryRaw(sql),
-			]);
+			const rows = await this.transactions.withBoundSession("Analytics aggregate", async (tx) => {
+				await tx.$queryRaw`SELECT set_config('statement_timeout', ${String(ANALYTICS_STATEMENT_TIMEOUT_MS)}, true)`;
+				return tx.$queryRaw(sql);
+			});
 			return schema.array().parse(rows);
 		} catch (error) {
 			if (error instanceof Error && isStatementTimeout(error)) {
@@ -125,6 +135,32 @@ export class AnalyticsSqlRunner {
 	/** {@link rows} for a statement that returns exactly one row (an aggregate without GROUP BY). */
 	public async row<TRow>(schema: z.ZodType<TRow>, sql: Prisma.Sql): Promise<TRow> {
 		const [row] = await this.rows(schema, sql);
+		if (row === undefined) {
+			throw new AnalyticsAggregateRowMissingError();
+		}
+		return row;
+	}
+
+	private async platformRows<TRow>(schema: z.ZodType<TRow>, sql: Prisma.Sql): Promise<TRow[]> {
+		try {
+			const rows = await this.transactions.withSystemOperation(
+				{ operation: PLATFORM_ANALYTICS_READ_OPERATION, reason: "Platform analytics aggregate", actorUserId: null },
+				async (tx) => {
+					await tx.$queryRaw`SELECT set_config('statement_timeout', ${String(ANALYTICS_STATEMENT_TIMEOUT_MS)}, true)`;
+					return tx.$queryRaw(sql);
+				},
+			);
+			return schema.array().parse(rows);
+		} catch (error) {
+			if (error instanceof Error && isStatementTimeout(error)) {
+				throw new AnalyticsQueryTimeoutError(error);
+			}
+			throw error;
+		}
+	}
+
+	private async platformRow<TRow>(schema: z.ZodType<TRow>, sql: Prisma.Sql): Promise<TRow> {
+		const [row] = await this.platformRows(schema, sql);
 		if (row === undefined) {
 			throw new AnalyticsAggregateRowMissingError();
 		}

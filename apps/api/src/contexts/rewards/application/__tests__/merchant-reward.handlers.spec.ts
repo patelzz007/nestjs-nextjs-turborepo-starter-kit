@@ -14,7 +14,7 @@ import {
 	RewardNotFoundError,
 } from "../../domain/errors/reward.errors";
 import { RewardLocationScope } from "../../domain/value-objects/reward-location-scope.value-object";
-import { NOW, ORGANIZATION_ID, REWARD_ID, referrerRow, rewardState, STORE_A, STORE_B } from "../../domain/__tests__/reward-state.fixture";
+import { NOW, TENANT_ID, REWARD_ID, referrerRow, rewardState, STORE_A, STORE_B } from "../../domain/__tests__/reward-state.fixture";
 import { CreateRewardCommand, type CreateRewardInput } from "../commands/create-reward/create-reward.command";
 import { CreateRewardHandler } from "../commands/create-reward/create-reward.handler";
 import { ReviseRewardCommand } from "../commands/revise-reward/revise-reward.command";
@@ -26,11 +26,11 @@ import { fakeRewardsScope, SequentialIds, type FakeRewardsScope } from "./fakes/
 import { apiKeyActor, API_KEY_ID, MERCHANT_USER_ID, userActor } from "./reward-test-actors";
 
 const IMAGE_ID = "66666666-6666-4666-8666-666666666666";
-const OTHER_ORGANIZATION_ID = "99999999-9999-4999-8999-999999999999";
+const OTHER_TENANT_ID = "99999999-9999-4999-8999-999999999999";
 
 function createInput(patch: Partial<CreateRewardInput> = {}): CreateRewardInput {
 	return {
-		organizationId: ORGANIZATION_ID,
+		tenantId: TENANT_ID,
 		title: "Free coffee",
 		description: "One free coffee",
 		rewardType: "FREE_ITEM",
@@ -70,8 +70,8 @@ describe("CreateRewardHandler (D02)", () => {
 
 		expect(h.scope.rewards.added).toHaveLength(1);
 		expect(response.title).toBe("Free coffee");
-		expect(h.scope.imageFiles.locks).toEqual([{ organizationId: ORGANIZATION_ID, fileIds: [IMAGE_ID] }]);
-		expect(h.access.requests.at(0)?.request).toEqual({ organizationId: ORGANIZATION_ID, capability: "merchant:manage_rewards" });
+		expect(h.scope.imageFiles.locks).toEqual([{ tenantId: TENANT_ID, fileIds: [IMAGE_ID] }]);
+		expect(h.access.requests.at(0)?.request).toEqual({ tenantId: TENANT_ID, capability: "merchant:manage_rewards" });
 		expect(h.uow.committed).toEqual([{ actor, operation: null }]);
 		expect(h.scope.events.recordedNames()).toEqual(["rewards.RewardCreated"]);
 	});
@@ -95,7 +95,7 @@ describe("CreateRewardHandler (D02)", () => {
 		expect(h.uow.committed).toEqual([]);
 	});
 
-	it("rolls back on an image that is not one of the organization's ready reward images", async () => {
+	it("rolls back on an image that is not one of the tenant's ready reward images", async () => {
 		const h = harness();
 		await expect(
 			new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock).execute(
@@ -106,7 +106,7 @@ describe("CreateRewardHandler (D02)", () => {
 		expect(h.uow.rolledBack).toHaveLength(1);
 	});
 
-	it("refuses a store-limited merchant an organization-wide reward, and an inactive store to anyone", async () => {
+	it("refuses a store-limited merchant a tenant-wide reward, and an inactive store to anyone", async () => {
 		const limited = harness([STORE_A, STORE_B]);
 		limited.access.grantLocations([STORE_A]);
 		await expect(
@@ -129,7 +129,7 @@ describe("ReviseRewardHandler (D03)", () => {
 		h.scope.rewards.seed(rewardState("DRAFT", { referrer: referrerRow("DRAFT") }));
 		await new ReviseRewardHandler(h.uow, h.access, h.clock).execute(
 			new ReviseRewardCommand(userActor(), {
-				organizationId: ORGANIZATION_ID,
+				tenantId: TENANT_ID,
 				rewardId: REWARD_ID,
 				title: "Two coffees",
 				referrerRewardTitle: "Bring a friend",
@@ -148,7 +148,7 @@ describe("ReviseRewardHandler (D03)", () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("DRAFT"));
 		await new ReviseRewardHandler(h.uow, h.access, h.clock).execute(
-			new ReviseRewardCommand(apiKeyActor(ORGANIZATION_ID), { organizationId: ORGANIZATION_ID, rewardId: REWARD_ID, imageFileIds: [IMAGE_ID] }),
+			new ReviseRewardCommand(apiKeyActor(TENANT_ID), { tenantId: TENANT_ID, rewardId: REWARD_ID, imageFileIds: [IMAGE_ID] }),
 		);
 		expect(h.scope.rewards.imageReplacements).toEqual([{ actorId: API_KEY_ID, at: NOW }]);
 	});
@@ -156,17 +156,15 @@ describe("ReviseRewardHandler (D03)", () => {
 	it("does not lock images when the edit leaves them alone", async () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("DRAFT"));
-		await new ReviseRewardHandler(h.uow, h.access, h.clock).execute(
-			new ReviseRewardCommand(userActor(), { organizationId: ORGANIZATION_ID, rewardId: REWARD_ID, title: "x" }),
-		);
+		await new ReviseRewardHandler(h.uow, h.access, h.clock).execute(new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" }));
 		expect(h.scope.imageFiles.locks).toEqual([]);
 	});
 
-	it("answers 404 for another organization's reward and for one outside the caller's stores", async () => {
+	it("answers 404 for another tenant's reward and for one outside the caller's stores", async () => {
 		const h = harness();
-		h.scope.rewards.seed(rewardState("DRAFT", { organizationId: OTHER_ORGANIZATION_ID }));
+		h.scope.rewards.seed(rewardState("DRAFT", { tenantId: OTHER_TENANT_ID }));
 		await expect(
-			new ReviseRewardHandler(h.uow, h.access, h.clock).execute(new ReviseRewardCommand(userActor(), { organizationId: ORGANIZATION_ID, rewardId: REWARD_ID, title: "x" })),
+			new ReviseRewardHandler(h.uow, h.access, h.clock).execute(new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" })),
 		).rejects.toThrow(RewardNotFoundError);
 
 		const limited = harness();
@@ -174,7 +172,7 @@ describe("ReviseRewardHandler (D03)", () => {
 		limited.scope.rewards.seed(rewardState("DRAFT", { locationScope: RewardLocationScope.selected([STORE_B]) }));
 		await expect(
 			new ReviseRewardHandler(limited.uow, limited.access, limited.clock).execute(
-				new ReviseRewardCommand(userActor(), { organizationId: ORGANIZATION_ID, rewardId: REWARD_ID, title: "x" }),
+				new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" }),
 			),
 		).rejects.toThrow(RewardNotFoundError);
 		expect(limited.scope.rewards.saved).toEqual([]);
@@ -184,7 +182,7 @@ describe("ReviseRewardHandler (D03)", () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("PUBLISHED"));
 		await expect(
-			new ReviseRewardHandler(h.uow, h.access, h.clock).execute(new ReviseRewardCommand(userActor(), { organizationId: ORGANIZATION_ID, rewardId: REWARD_ID, title: "x" })),
+			new ReviseRewardHandler(h.uow, h.access, h.clock).execute(new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" })),
 		).rejects.toThrow(RewardNotEditableError);
 		expect(h.uow.rolledBack).toHaveLength(1);
 	});
@@ -193,7 +191,7 @@ describe("ReviseRewardHandler (D03)", () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("PENDING_REVIEW")).forceConflictOnNextSave();
 		await expect(
-			new ReviseRewardHandler(h.uow, h.access, h.clock).execute(new ReviseRewardCommand(userActor(), { organizationId: ORGANIZATION_ID, rewardId: REWARD_ID, title: "x" })),
+			new ReviseRewardHandler(h.uow, h.access, h.clock).execute(new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, title: "x" })),
 		).rejects.toThrow(ConflictError);
 		expect(h.scope.rewards.rows.get(REWARD_ID)?.title).toBe("Free coffee");
 	});
@@ -204,7 +202,7 @@ describe("SubmitRewardForReviewHandler (D04)", () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("DRAFT", { referrer: referrerRow("DRAFT") }));
 		const response = await new SubmitRewardForReviewHandler(h.uow, h.access, h.clock).execute(
-			new SubmitRewardForReviewCommand(userActor(), { organizationId: ORGANIZATION_ID, rewardId: REWARD_ID }),
+			new SubmitRewardForReviewCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID }),
 		);
 		expect(response.status).toBe("PENDING_REVIEW");
 		expect(h.scope.rewards.rows.get(REWARD_ID)?.referrer?.status).toBe("PENDING_REVIEW");
@@ -214,9 +212,7 @@ describe("SubmitRewardForReviewHandler (D04)", () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("PENDING_REVIEW"));
 		await expect(
-			new SubmitRewardForReviewHandler(h.uow, h.access, h.clock).execute(
-				new SubmitRewardForReviewCommand(userActor(), { organizationId: ORGANIZATION_ID, rewardId: REWARD_ID }),
-			),
+			new SubmitRewardForReviewHandler(h.uow, h.access, h.clock).execute(new SubmitRewardForReviewCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID })),
 		).rejects.toThrow(RewardNotDraftError);
 	});
 
@@ -224,9 +220,7 @@ describe("SubmitRewardForReviewHandler (D04)", () => {
 		const h = harness();
 		h.scope.rewards.seed(rewardState("DRAFT")).forceConflictOnNextSave();
 		await expect(
-			new SubmitRewardForReviewHandler(h.uow, h.access, h.clock).execute(
-				new SubmitRewardForReviewCommand(userActor(), { organizationId: ORGANIZATION_ID, rewardId: REWARD_ID }),
-			),
+			new SubmitRewardForReviewHandler(h.uow, h.access, h.clock).execute(new SubmitRewardForReviewCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID })),
 		).rejects.toThrow(ConflictError);
 	});
 });

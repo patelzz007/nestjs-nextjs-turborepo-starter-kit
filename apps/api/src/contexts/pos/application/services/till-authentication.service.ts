@@ -33,14 +33,14 @@ export class TillAuthenticationService implements TillResolverPort {
 			return { kind: "refused", refusal: "TERMINAL_KEY_MISMATCH" };
 		}
 		await this.terminals.touchLastSeen(terminal.id, this.clock.now());
-		return { kind: "resolved", point: { organizationId: key.organizationId, terminalId: terminal.terminalId, apiKeyId: key.apiKeyId, locationId: terminal.locationId } };
+		return { kind: "resolved", point: { tenantId: key.tenantId, terminalId: terminal.terminalId, apiKeyId: key.apiKeyId, locationId: terminal.locationId } };
 	}
 
 	private async manualKey(key: MerchantApiKeyAuthContext, requestedTerminalId: string | undefined): Promise<TillResolution> {
 		if (requestedTerminalId === undefined) {
 			return { kind: "refused", refusal: "TERMINAL_ID_REQUIRED" };
 		}
-		const terminal = await this.terminals.findLive(key.organizationId, requestedTerminalId);
+		const terminal = await this.terminals.findLive(key.tenantId, requestedTerminalId);
 		if (terminal === null && key.requireRegisteredTerminals) {
 			return { kind: "refused", refusal: "TERMINAL_NOT_REGISTERED" };
 		}
@@ -52,7 +52,7 @@ export class TillAuthenticationService implements TillResolverPort {
 		}
 		return {
 			kind: "resolved",
-			point: { organizationId: key.organizationId, terminalId: requestedTerminalId, apiKeyId: key.apiKeyId, locationId: key.locationId ?? terminal?.locationId ?? null },
+			point: { tenantId: key.tenantId, terminalId: requestedTerminalId, apiKeyId: key.apiKeyId, locationId: key.locationId ?? terminal?.locationId ?? null },
 		};
 	}
 }

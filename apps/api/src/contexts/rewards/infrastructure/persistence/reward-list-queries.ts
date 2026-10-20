@@ -36,17 +36,59 @@ const REWARD_IMAGES_SELECT = {
 	},
 } satisfies Prisma.Reward$imagesArgs;
 
-/** A reward as a response needs it; the merchant's name and logo come from the organizations context, once per page. */
+const REWARD_LOCATION_SCOPES_SELECT = {
+	where: { location: { isDeleted: false } },
+	select: {
+		locationId: true,
+		location: { select: { name: true } },
+	},
+} satisfies Prisma.Reward$locationScopesArgs;
+
+/** A reward as a response needs it; the merchant's name and logo come from the tenants context, once per page. */
 export const REWARD_RESPONSE_INCLUDE = {
 	images: REWARD_IMAGES_SELECT,
-	locationScopes: {
-		where: { location: { isDeleted: false } },
-		select: {
-			locationId: true,
-			location: { select: { name: true } },
-		},
-	},
+	locationScopes: REWARD_LOCATION_SCOPES_SELECT,
 } satisfies Prisma.RewardInclude;
+
+/**
+ * Columns the marketplace response returns. Moderation and authorship columns
+ * (`rejectionReason`, `reviewedByUserId`, `metadata`, `createdBy`, …) stay off
+ * the select so a published-reward read never loads them.
+ */
+export const MARKETPLACE_REWARD_SELECT = {
+	id: true,
+	tenantId: true,
+	title: true,
+	description: true,
+	rewardType: true,
+	rewardValue: true,
+	termsConditions: true,
+	rewardKind: true,
+	category: true,
+	rules: true,
+	minSpendMinor: true,
+	quantityTotal: true,
+	quantityRemaining: true,
+	quantityReserved: true,
+	startDate: true,
+	expiryDate: true,
+	status: true,
+	claimCount: true,
+	redemptionCount: true,
+	referralsEnabled: true,
+	referralPoolTotal: true,
+	referralPoolRemaining: true,
+	referrerRewardId: true,
+	locationScopeType: true,
+	createdAt: true,
+	updatedAt: true,
+	isDeleted: true,
+	deletedAt: true,
+	images: REWARD_IMAGES_SELECT,
+	locationScopes: REWARD_LOCATION_SCOPES_SELECT,
+} satisfies Prisma.RewardSelect;
+
+export type MarketplaceRewardRow = Prisma.RewardGetPayload<{ select: typeof MARKETPLACE_REWARD_SELECT }>;
 
 export type RewardResponseRow = Prisma.RewardGetPayload<{ include: typeof REWARD_RESPONSE_INCLUDE }>;
 
@@ -73,8 +115,8 @@ export function buildMarketplaceWhere(query: RewardListQuery, now = BigInt(Date.
 		AND: [
 			{ isDeleted: false, status: "PUBLISHED", rewardKind: "CONSUMER", quantityRemaining: { gt: 0 }, expiryDate: { gte: now } },
 			...fieldWhere(toPrismaEqualityFilter(filter?.category), (category) => ({ category })),
-			...fieldWhere(toPrismaEqualityFilter(filter?.city), (city): Prisma.RewardWhereInput => ({ organization: { merchantProfile: { city } } })),
-			...fieldWhere(toPrismaEqualityFilter(filter?.organizationId), (organizationId) => ({ organizationId })),
+			...fieldWhere(toPrismaEqualityFilter(filter?.city), (city): Prisma.RewardWhereInput => ({ tenant: { merchantProfile: { city } } })),
+			...fieldWhere(toPrismaEqualityFilter(filter?.tenantId), (tenantId) => ({ tenantId })),
 			...(query.search !== undefined
 				? [
 						{
@@ -116,7 +158,7 @@ export function buildMarketplaceOrder(query: RewardListQuery): ListOrder<Prisma.
 	});
 }
 
-/** Rewards available at a store of `grant`: organization-wide rewards plus those offered at one of its stores. */
+/** Rewards available at a store of `grant`: tenant-wide rewards plus those offered at one of its stores. */
 export function rewardAvailabilityWhere(grant: MerchantAccessGrant): Prisma.RewardWhereInput {
 	if (grant.locationScope === "ALL_LOCATIONS") {
 		return {};
@@ -124,16 +166,16 @@ export function rewardAvailabilityWhere(grant: MerchantAccessGrant): Prisma.Rewa
 	return { OR: [{ locationScopeType: "ALL_LOCATIONS" }, { locationScopes: { some: { locationId: { in: [...grant.locationIds] } } } }] };
 }
 
-/** The organization's live consumer rewards available at a store of `grant` (the AUTHORIZED store scope). */
-export function organizationRewardWhere(grant: MerchantAccessGrant): Prisma.RewardWhereInput {
-	return { AND: [{ organizationId: grant.organizationId, isDeleted: false, rewardKind: "CONSUMER" }, rewardAvailabilityWhere(grant)] };
+/** The tenant's live consumer rewards available at a store of `grant` (the AUTHORIZED store scope). */
+export function tenantRewardWhere(grant: MerchantAccessGrant): Prisma.RewardWhereInput {
+	return { AND: [{ tenantId: grant.tenantId, isDeleted: false, rewardKind: "CONSUMER" }, rewardAvailabilityWhere(grant)] };
 }
 
-/** `GET /orgs/:orgSlug/rewards`: the rewards of `grant`, narrowed by the status filter. The grant is the scope, never a filter. */
-export function buildOrganizationRewardListWhere(grant: MerchantAccessGrant, query: MerchantRewardListQuery): Prisma.RewardWhereInput {
-	return { AND: [organizationRewardWhere(grant), ...fieldWhere(toPrismaEqualityFilter(query.filter?.status), (status) => ({ status }))] };
+/** `GET /tenants/:tenantSlug/rewards`: the rewards of `grant`, narrowed by the status filter. The grant is the scope, never a filter. */
+export function buildTenantRewardListWhere(grant: MerchantAccessGrant, query: MerchantRewardListQuery): Prisma.RewardWhereInput {
+	return { AND: [tenantRewardWhere(grant), ...fieldWhere(toPrismaEqualityFilter(query.filter?.status), (status) => ({ status }))] };
 }
 
-export function buildOrganizationRewardListOrder(query: MerchantRewardListQuery): ListOrder<Prisma.RewardOrderByWithRelationInput> {
+export function buildTenantRewardListOrder(query: MerchantRewardListQuery): ListOrder<Prisma.RewardOrderByWithRelationInput> {
 	return buildListOrder(merchantRewardListQuery.resolveSort(query.sort), { columns: REWARD_SORT_COLUMNS, tieBreaker: (direction) => ({ id: direction }) });
 }

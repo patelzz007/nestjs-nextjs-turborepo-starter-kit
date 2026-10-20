@@ -3,11 +3,11 @@ import type { MerchantApiKeyListQuery, MerchantApiKeySummary, PaginatedServiceRe
 
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 
-/** `GET /orgs/:orgSlug/api-keys`. */
+/** `GET /tenants/:tenantSlug/api-keys`. */
 export class ListApiKeysQuery extends Query<PaginatedServiceResult<MerchantApiKeySummary>> {
 	public constructor(
 		public readonly actor: ActorContext,
-		public readonly input: MerchantApiKeyListQuery & { readonly organizationId: string },
+		public readonly input: MerchantApiKeyListQuery & { readonly tenantId: string },
 	) {
 		super();
 	}

@@ -15,7 +15,7 @@ import type { ActorContext } from "../../../../../platform/application/actor-con
 
 export const VIEWER_ID = "99999999-9999-4999-8999-999999999999";
 export const ACTOR_ID = "11111111-1111-4111-8111-111111111111";
-export const ORGANIZATION_ID = "33333333-3333-4333-8333-333333333333";
+export const TENANT_ID = "33333333-3333-4333-8333-333333333333";
 export const OCCURRED_AT = 1_790_812_800_000;
 /** How long the fixture request took, in ms. */
 const REQUEST_DURATION_MS = 10;
@@ -25,12 +25,11 @@ export const VIEWER: ActorContext = {
 	kind: "user",
 	userId: VIEWER_ID,
 	sessionId: "session-1",
-	organizationId: null,
+	tenantId: null,
 	isSuperAdmin: false,
-	accessScope: "staff_single_tenant",
+	accessScope: "tenant",
 	impersonatorUserId: null,
 	request: { requestId: "corr-view", ip: "203.0.113.24", userAgent: "vitest-agent", deviceLabel: null, endpoint: "/api/v1/admin/audit-logs" },
-	routeRlsBypass: false,
 };
 
 /** Hex digits in a uuid's last group. */
@@ -61,7 +60,7 @@ export function httpAuditLogSummary(n: number): HttpAuditLogSummary {
 		impersonator: null,
 		apiKeyId: null,
 		terminalId: null,
-		organization: { id: ORGANIZATION_ID, name: "Kopi Corner" },
+		tenant: { id: TENANT_ID, name: "Kopi Corner" },
 		storeId: null,
 		locationId: null,
 		ipAddress: "203.0.113.24",
@@ -87,6 +86,7 @@ export function httpAuditLogDetail(n: number): HttpAuditLogDetail {
 		...httpAuditLogSummary(n),
 		traceId: `corr-${String(n)}`,
 		impersonationSessionId: null,
+		supportAccessGrantId: null,
 		httpVersion: "1.1",
 		host: "api.example.com",
 		origin: null,
@@ -115,7 +115,7 @@ export function dataChangeLogSummary(n: number): DataChangeLogSummary {
 		changedColumns: ["status"],
 		actorKind: "USER",
 		actor: { id: ACTOR_ID, email: "admin@example.com", fullName: "Admin" },
-		organization: { id: ORGANIZATION_ID, name: "Kopi Corner" },
+		tenant: { id: TENANT_ID, name: "Kopi Corner" },
 		apiKeyId: null,
 		systemOperation: null,
 		correlationId: `corr-${String(n)}`,
@@ -145,7 +145,7 @@ export function backgroundEntry(n: number): AuditTrailEntry {
 		occurredAt: change.occurredAt,
 		actorKind: change.actorKind,
 		actor: change.actor,
-		organization: change.organization,
+		tenant: change.tenant,
 		apiKeyId: change.apiKeyId,
 		systemOperation: change.systemOperation,
 		correlationId: change.correlationId,

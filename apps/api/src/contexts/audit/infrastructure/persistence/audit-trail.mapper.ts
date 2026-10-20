@@ -35,11 +35,11 @@ export function auditTrailChangeGroups(
 	};
 }
 
-/** Every distinct user / organization the page's rows name. */
+/** Every distinct user / tenant the page's rows name. */
 export function auditTrailReferenceIds(requests: readonly AuditLogSummaryRow[], changes: readonly DataChangeLogSummaryRow[]): AuditLogReferenceIds {
 	return {
 		userIds: distinctReferenceIds([...requests.flatMap((row) => [row.actorUserId, row.impersonatorUserId]), ...changes.map((row) => row.actorUserId)]),
-		organizationIds: distinctReferenceIds([...requests.map((row) => row.organizationId), ...changes.map((row) => row.organizationId)]),
+		tenantIds: distinctReferenceIds([...requests.map((row) => row.tenantId), ...changes.map((row) => row.tenantId)]),
 	};
 }
 
@@ -57,7 +57,7 @@ function toBackgroundEntry(change: DataChangeLogSummaryRow, page: AuditTrailPage
 		occurredAt: summary.occurredAt,
 		actorKind: summary.actorKind,
 		actor: summary.actor,
-		organization: summary.organization,
+		tenant: summary.tenant,
 		apiKeyId: summary.apiKeyId,
 		systemOperation: summary.systemOperation,
 		correlationId: summary.correlationId,

@@ -31,3 +31,6 @@ export const TERMINAL_PAIRING_OPERATION: SystemOperationName = "pos.terminal.pai
 export interface PosIdGenerator {
 	next(): string;
 }
+
+/** The `auth.api_key.lookup` system operation, named once for every route and adapter that runs under it. */
+export const AUTH_API_KEY_LOOKUP_OPERATION: SystemOperationName = "auth.api_key.lookup";

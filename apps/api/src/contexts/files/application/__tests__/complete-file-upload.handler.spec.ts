@@ -61,13 +61,13 @@ describe("CompleteFileUploadHandler", () => {
 		expect(uow.committed.map((entry) => entry.actor.kind)).toEqual(["user"]);
 	});
 
-	it("completes an organization's file acting within that organization, though the request named none", async () => {
+	it("completes a tenant's file acting within that tenant, though the request named none", async () => {
 		const { handler, uow } = setup();
 
 		await handler.execute(complete());
 
-		expect(complete().actor.organizationId).toBeNull();
-		expect(uow.committed.map((entry) => entry.actor.organizationId)).toEqual([ORG_ID]);
+		expect(complete().actor.tenantId).toBeNull();
+		expect(uow.committed.map((entry) => entry.actor.tenantId)).toEqual([ORG_ID]);
 	});
 
 	it("is not found for a file someone else uploaded — existence never leaks — and nothing is read or dispatched", async () => {

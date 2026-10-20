@@ -6,8 +6,8 @@
 export type RlsManifestProfile =
 	| "ownership"
 	| "rbac_catalog"
-	| "organization_tenant"
-	| "organization_location"
+	| "tenant"
+	| "location"
 	| "bypass_only"
 	| "geo_reference"
 	| "user_identity"
@@ -30,35 +30,35 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"GithubAccountLink",
 	],
 	rbac_catalog: ["Role", "Permission", "CapabilityDefinition", "RolePermission", "UserRole", "UserPermission", "PolicyDefinition"],
-	organization_tenant: [
-		"Organization",
-		"OrganizationSlugHistory",
-		"OrganizationLocation",
+	tenant: [
+		"Tenant",
+		"TenantSlugHistory",
+		"Location",
 		"Store",
 		"StoreMembership",
-		"OrganizationMembership",
-		"OrganizationMembershipLocationScope",
-		"OrganizationMerchantProfile",
-		"OrganizationInvitation",
-		"OrganizationInvitationLocationScope",
-		"OrganizationAccessRequest",
-		"OrganizationAuditLog",
-		"OrganizationLifecycleEvent",
+		"Membership",
+		"MembershipLocationScope",
+		"TenantMerchantProfile",
+		"TenantInvitation",
+		"TenantInvitationLocationScope",
+		"TenantAccessRequest",
+		"TenantAuditLog",
+		"TenantLifecycleEvent",
 		"TenantPlacement",
 		"AuthorizationPolicyDraft",
 		"AuthorizationPolicyVersion",
 		"SupportAccessGrant",
 		"TenantEncryptionKey",
 		"StoredFile",
-		"OrganizationAsset",
-		"OrganizationKybFile",
+		"TenantAsset",
+		"TenantKybFile",
 		"Reward",
 		"RewardLocationScope",
 		"RewardImage",
 		"RewardAuditLog",
 		"ResourceAcl",
 	],
-	organization_location: ["OrganizationTerminal", "OrganizationApiKey"],
+	location: ["TenantTerminal", "TenantApiKey"],
 	bypass_only: [
 		"EmailDeliveryEvent",
 		"OutboxEvent",
@@ -101,18 +101,18 @@ export const RLS_OWNERSHIP_TABLES: readonly string[] = RLS_MANIFEST_PROFILES.own
 /** @deprecated Use `RLS_MANIFEST_PROFILES.rbac_catalog`. */
 export const RLS_RBAC_CATALOG_TABLES: readonly string[] = RLS_MANIFEST_PROFILES.rbac_catalog;
 
-/** @deprecated Use `RLS_MANIFEST_PROFILES.organization_tenant`. */
-export const RLS_ORGANIZATION_TENANT_TABLES: readonly string[] = RLS_MANIFEST_PROFILES.organization_tenant;
+/** @deprecated Use `RLS_MANIFEST_PROFILES.tenant`. */
+export const RLS_TENANT_TABLES: readonly string[] = RLS_MANIFEST_PROFILES.tenant;
 
-/** @deprecated Use `RLS_MANIFEST_PROFILES.organization_location`. */
-export const RLS_ORGANIZATION_LOCATION_TABLES: readonly string[] = RLS_MANIFEST_PROFILES.organization_location;
+/** @deprecated Use `RLS_MANIFEST_PROFILES.location`. */
+export const RLS_LOCATION_TABLES: readonly string[] = RLS_MANIFEST_PROFILES.location;
 
 /** @deprecated Use `RLS_MANIFEST_PROFILES.bypass_only`. */
 export const RLS_BYPASS_ONLY_TABLES: readonly string[] = RLS_MANIFEST_PROFILES.bypass_only;
 
 export interface PrismaTableModel {
 	readonly tableName: string;
-	readonly hasOrganizationId: boolean;
+	readonly hasTenantId: boolean;
 	readonly hasRequiredLocationId: boolean;
 	readonly hasOptionalLocationId: boolean;
 }
@@ -169,13 +169,13 @@ export function parsePrismaSchemaModels(schemaContent: string): PrismaTableModel
 			continue;
 		}
 
-		const hasOrganizationId = /\n\s*organizationId\s+String/.test(body);
+		const hasTenantId = /\n\s*tenantId\s+String/.test(body);
 		const hasRequiredLocationId = /\n\s*locationId\s+String(?!\?)\b/.test(body);
 		const hasOptionalLocationId = /\n\s*locationId\s+String\?/.test(body);
 
 		models.push({
 			tableName,
-			hasOrganizationId,
+			hasTenantId,
 			hasRequiredLocationId,
 			hasOptionalLocationId,
 		});
@@ -237,16 +237,16 @@ export function computeRlsManifestDrift(input: {
 		if (!manifestSet.has(model.tableName)) {
 			missingFromManifest.push(model.tableName);
 		}
-		if (model.hasOrganizationId && !manifestSet.has(model.tableName)) {
+		if (model.hasTenantId && !manifestSet.has(model.tableName)) {
 			orgModelsMissingManifest.push(model.tableName);
 		}
 		const profile = profileMap.get(model.tableName);
-		const locationScopeJunctionTables: readonly string[] = ["RewardLocationScope", "OrganizationInvitationLocationScope", "OrganizationMembershipLocationScope"];
-		if (model.hasRequiredLocationId && profile !== "organization_location" && profile !== "organization_tenant" && !locationScopeJunctionTables.includes(model.tableName)) {
-			locationProfileMismatch.push(`${model.tableName} (expected organization_location or organization_tenant profile)`);
+		const locationScopeJunctionTables: readonly string[] = ["RewardLocationScope", "TenantInvitationLocationScope", "MembershipLocationScope"];
+		if (model.hasRequiredLocationId && profile !== "location" && profile !== "tenant" && !locationScopeJunctionTables.includes(model.tableName)) {
+			locationProfileMismatch.push(`${model.tableName} (expected location or tenant profile)`);
 		}
-		if (profile === "organization_location" && !model.hasRequiredLocationId && !model.hasOptionalLocationId) {
-			locationProfileMismatch.push(`${model.tableName} (manifest organization_location but schema has no "locationId")`);
+		if (profile === "location" && !model.hasRequiredLocationId && !model.hasOptionalLocationId) {
+			locationProfileMismatch.push(`${model.tableName} (manifest location but schema has no "locationId")`);
 		}
 	}
 

@@ -12,9 +12,9 @@ const KYB: CreateFileUploadUrlInput = {
 	mimeType: "application/pdf",
 	sizeBytes: 1,
 	checksumSha256: CHECKSUM,
-	organizationId: ORG_ID,
+	tenantId: ORG_ID,
 };
-const SUBJECT: FileReferenceSubject = { fileId: FILE_ID, category: "MERCHANT_KYB", organizationId: ORG_ID };
+const SUBJECT: FileReferenceSubject = { fileId: FILE_ID, category: "MERCHANT_KYB", tenantId: ORG_ID };
 
 /** A guard over a scope that is just the transaction marker it was bound to. */
 class MarkerGuard implements FileReferenceGuard<{ readonly db: string }> {
@@ -48,7 +48,7 @@ describe("FileCategoryAccessRegistry", () => {
 		const rule = new RecordingAccessRule(["MERCHANT_KYB"]);
 		registry.register(rule);
 
-		await registry.assertCanAct(userActor(UPLOADER_ID, true), { id: FILE_ID, category: "MERCHANT_KYB", uploadedById: "x", organizationId: ORG_ID, productId: null }, "delete");
+		await registry.assertCanAct(userActor(UPLOADER_ID, true), { id: FILE_ID, category: "MERCHANT_KYB", uploadedById: "x", tenantId: ORG_ID, productId: null }, "delete");
 
 		expect(rule.acts).toEqual([]);
 	});
@@ -58,7 +58,7 @@ describe("FileCategoryAccessRegistry", () => {
 
 		await expect(registry.assertCanUpload(cleanupActor(), KYB)).rejects.toMatchObject({ code: "FILE_UPLOAD_FORBIDDEN" });
 		await expect(
-			registry.assertCanAct(cleanupActor(), { id: FILE_ID, category: "MERCHANT_KYB", uploadedById: "x", organizationId: null, productId: null }, "read"),
+			registry.assertCanAct(cleanupActor(), { id: FILE_ID, category: "MERCHANT_KYB", uploadedById: "x", tenantId: null, productId: null }, "read"),
 		).rejects.toMatchObject({
 			code: "FILE_VIEW_FORBIDDEN",
 		});

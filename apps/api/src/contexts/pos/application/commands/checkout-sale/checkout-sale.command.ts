@@ -4,7 +4,7 @@ import type { RedemptionCheckoutInput, RedemptionCheckoutResponse } from "@works
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import type { CheckoutPoint } from "../../../domain/aggregates/reward-sale.aggregate";
 
-/** `POST /redemptions/checkout`: the customer has paid; record the bill and redeem every presented reward. */
+/** `POST /integration/redemptions/checkout`: the customer has paid; record the bill and redeem every presented reward. */
 export class CheckoutSaleCommand extends Command<RedemptionCheckoutResponse> {
 	public constructor(
 		/** The API key principal (its RLS scope). */

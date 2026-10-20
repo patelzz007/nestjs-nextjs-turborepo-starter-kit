@@ -38,7 +38,7 @@ export class SimulatePolicyDraftHandler implements ICommandHandler<SimulatePolic
 			await scope.policySimulations.record({ id: result.simulationId, draftId, actorUserId: policyActor.userId, result, baselineFingerprint: run.baselineFingerprint });
 			await scope.policyAudit.append({
 				draftId,
-				organizationId: state.organizationId,
+				tenantId: state.tenantId,
 				scope: state.scope,
 				action: POLICY_AUDIT_ACTIONS.draftSimulated,
 				actorUserId: policyActor.userId,

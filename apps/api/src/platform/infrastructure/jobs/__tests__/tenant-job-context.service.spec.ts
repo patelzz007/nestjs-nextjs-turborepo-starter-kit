@@ -14,7 +14,7 @@ function serviceWithSecret(secret: string = TEST_JOB_SECRET): TenantJobContextSe
 
 function unsignedContext(expiresAt: number): Omit<TenantJobContext, "signature"> {
 	return {
-		organizationId: "00000000-0000-4000-8000-000000000001",
+		tenantId: "00000000-0000-4000-8000-000000000001",
 		initiatingActorId: null,
 		purpose: "rewards.auto_publish",
 		policyVersion: 1,
@@ -49,7 +49,7 @@ describe("TenantJobContextService", () => {
 		const service = serviceWithSecret();
 		const signed = service.sign(unsignedContext(Date.now() + ONE_MINUTE_MS));
 
-		expect(service.verify({ ...signed, organizationId: "00000000-0000-4000-8000-000000000002" })).toBe(false);
+		expect(service.verify({ ...signed, tenantId: "00000000-0000-4000-8000-000000000002" })).toBe(false);
 	});
 
 	it("fails closed without TENANT_JOB_HMAC_SECRET: no default secret, signing throws, verification rejects", () => {

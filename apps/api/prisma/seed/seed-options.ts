@@ -25,8 +25,8 @@ export const DEFAULT_RANDOM_SEED = 1;
 /** Human-readable summary of each scenario — rendered by `--help` and the docs. */
 export const SEED_SCENARIO_DESCRIPTIONS: Readonly<Record<SeedScenario, string>> = {
 	empty: "Reference data only: permissions, roles, role grants, capability catalog, ABAC demo condition. No users or tenants.",
-	development: "Reference data + the full demo dataset (test accounts, organizations, rewards, stores, products, geo). Default.",
-	enterprise: "Reference data + test accounts + one large deterministic organization (many locations/stores/members/products). Honors --seed.",
+	development: "Reference data + the full demo dataset (test accounts, tenants, rewards, stores, products, geo). Default.",
+	enterprise: "Reference data + test accounts + one large deterministic tenant (many locations/stores/members/products). Honors --seed.",
 };
 
 const SCENARIO_FLAG = "--scenario";

@@ -2,14 +2,18 @@ import { Prisma } from "@prisma/client";
 import { DEFAULT_SALE_CURRENCY, MerchantBusinessCategorySchema } from "@workspace/shared";
 import { z } from "zod";
 
-import type { PrismaService } from "../../../../prisma/prisma.service";
 import type { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import type { InclusiveRange, SalesAggregate, SalesGroup, SalesMerchantSummary, SalesReadPort, SalesScope, SalesWeek } from "../../application/ports/sales-read.port";
 import { minorUnitsToNumber } from "../../../../platform/infrastructure/persistence/minor-units";
 import { weekStartMsSql } from "./analytics-sql-conditions";
+import { PLATFORM_ANALYTICS_READ_OPERATION } from "../../application/ports/reporting.tokens";
 
-/** System operation reading merchant names/categories for sales breakdowns (customers can't read `Organization` under RLS). */
+/** System operation reading merchant names/categories for sales breakdowns (customers can't read `Tenant` under RLS). */
 export const SALES_MERCHANT_SUMMARY_OPERATION = "rewards.sales.merchant_summary";
+
+function isCallerScoped(scope: SalesScope): boolean {
+	return scope.tenantId !== undefined || scope.userId !== undefined || scope.locationIds !== undefined;
+}
 
 /** One row of the weekly-totals query (Postgres `BIGINT` arrives as `bigint`, `INT` as `number`). */
 const SalesWeekRowSchema = z.object({
@@ -24,34 +28,43 @@ function salesWhere(scope: SalesScope, range: InclusiveRange | null): Prisma.Rew
 		// Totals are only meaningful within one currency; every sale is MYR today (see SaleCurrencySchema).
 		currency: DEFAULT_SALE_CURRENCY,
 		...(range !== null ? { paidAt: { gte: range.gte, lte: range.lte } } : {}),
-		...(scope.organizationId !== undefined ? { organizationId: scope.organizationId } : {}),
+		...(scope.tenantId !== undefined ? { tenantId: scope.tenantId } : {}),
 		...(scope.locationIds !== undefined ? { locationId: { in: [...scope.locationIds] } } : {}),
 		...(scope.userId !== undefined ? { userId: scope.userId } : {}),
 	};
 }
 
 /**
- * Paid-bill facts (`RewardSale`, owned by pos) for the weekly sales analytics. Reads run under the
- * caller's RLS session (the pool stamps it on checkout), except the merchant name lookup, which is an
- * allowlisted system read over ids the caller already saw.
+ * Paid-bill facts (`RewardSale`, owned by pos). A scope that names a tenant, store, or customer
+ * runs under that caller's RLS session. A scope that names none of those is the platform view and
+ * runs as `reporting.platform_analytics.read`. Merchant names are a separate allowlisted read.
  */
 export class PrismaSalesReadRepository implements SalesReadPort {
-	public constructor(
-		private readonly prisma: PrismaService,
-		private readonly tenantTx: TenantTransactionService,
-	) {}
+	public constructor(private readonly tenantTx: TenantTransactionService) {}
+
+	/** Caller-scoped reads reuse the bound session inside a transaction. Platform-wide reads open the analytics operation. */
+	private query<TResult>(scope: SalesScope, reason: string, work: (db: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> {
+		if (isCallerScoped(scope)) {
+			return this.tenantTx.withBoundSession(reason, work);
+		}
+		return this.tenantTx.withSystemOperation({ operation: PLATFORM_ANALYTICS_READ_OPERATION, reason, actorUserId: null }, work);
+	}
 
 	public async firstPaidAt(scope: SalesScope): Promise<number | null> {
-		const result = await this.prisma.rewardSale.aggregate({ where: salesWhere(scope, null), _min: { paidAt: true } });
+		const result = await this.query(scope, "Earliest paid sale in the requested scope", (db) =>
+			db.rewardSale.aggregate({ where: salesWhere(scope, null), _min: { paidAt: true } }),
+		);
 		return result._min.paidAt === null ? null : Number(result._min.paidAt);
 	}
 
 	public async aggregate(scope: SalesScope, range: InclusiveRange): Promise<SalesAggregate> {
-		const result = await this.prisma.rewardSale.aggregate({
-			where: salesWhere(scope, range),
-			_sum: { billTotalMinor: true },
-			_count: { _all: true },
-		});
+		const result = await this.query(scope, "Paid-sale totals in the requested scope", (db) =>
+			db.rewardSale.aggregate({
+				where: salesWhere(scope, range),
+				_sum: { billTotalMinor: true },
+				_count: { _all: true },
+			}),
+		);
 		return { totalMinor: minorUnitsToNumber(result._sum.billTotalMinor ?? 0n), bills: result._count._all };
 	}
 
@@ -67,37 +80,46 @@ export class PrismaSalesReadRepository implements SalesReadPort {
 			Prisma.sql`currency = ${DEFAULT_SALE_CURRENCY}`,
 			Prisma.sql`"paidAt" >= ${range.gte}`,
 			Prisma.sql`"paidAt" <= ${range.lte}`,
-			...(scope.organizationId !== undefined ? [Prisma.sql`"organizationId" = ${scope.organizationId}`] : []),
+			...(scope.tenantId !== undefined ? [Prisma.sql`"tenantId" = ${scope.tenantId}`] : []),
 			...(scope.locationIds !== undefined ? [Prisma.sql`"locationId" = ANY(${[...scope.locationIds]}::text[])`] : []),
 			...(scope.userId !== undefined ? [Prisma.sql`"userId" = ${scope.userId}`] : []),
 		];
-		const rows = await this.prisma.$queryRaw`
+		const rows = await this.query(
+			scope,
+			"Paid sales grouped by week",
+			(db) => db.$queryRaw`
 			SELECT ${weekStartMsSql(Prisma.sql`"paidAt"`, timeZone)} AS week_start_ms,
 			       SUM("billTotalMinor")::bigint AS total_minor,
 			       COUNT(*)::int AS bills
 			FROM "RewardSale"
 			WHERE ${Prisma.join(conditions, " AND ")}
 			GROUP BY 1
-			ORDER BY 1`;
+			ORDER BY 1`,
+		);
 		return SalesWeekRowSchema.array()
 			.parse(rows)
 			.map((row) => ({ weekStartMs: Number(row.week_start_ms), totalMinor: minorUnitsToNumber(row.total_minor), bills: row.bills }));
 	}
 
-	public async groupByOrganization(scope: SalesScope, range: InclusiveRange, take?: number): Promise<SalesGroup[]> {
-		const rows = await this.prisma.rewardSale.groupBy({
-			by: ["organizationId"],
-			where: salesWhere(scope, range),
-			_sum: { billTotalMinor: true },
-			_count: { _all: true },
-			orderBy: { _sum: { billTotalMinor: "desc" } },
-			...(take !== undefined ? { take } : {}),
-		});
-		return rows.map((row) => ({ organizationId: row.organizationId, totalMinor: minorUnitsToNumber(row._sum.billTotalMinor ?? 0n), bills: row._count._all }));
+	public async groupByTenant(scope: SalesScope, range: InclusiveRange, take?: number): Promise<SalesGroup[]> {
+		const rows = await this.query(scope, "Paid sales grouped by merchant", (db) =>
+			db.rewardSale.groupBy({
+				by: ["tenantId"],
+				where: salesWhere(scope, range),
+				_sum: { billTotalMinor: true },
+				_count: { _all: true },
+				orderBy: { _sum: { billTotalMinor: "desc" } },
+				...(take !== undefined ? { take } : {}),
+			}),
+		);
+		return rows.map((row) => ({ tenantId: row.tenantId, totalMinor: minorUnitsToNumber(row._sum.billTotalMinor ?? 0n), bills: row._count._all }));
 	}
 
-	public async countOrganizations(range: InclusiveRange): Promise<number> {
-		const rows = await this.prisma.rewardSale.groupBy({ by: ["organizationId"], where: salesWhere({}, range) });
+	public async countTenants(range: InclusiveRange): Promise<number> {
+		const rows = await this.tenantTx.withSystemOperation(
+			{ operation: PLATFORM_ANALYTICS_READ_OPERATION, reason: "Count merchants with a paid sale in the range", actorUserId: null },
+			(tx) => tx.rewardSale.groupBy({ by: ["tenantId"], where: salesWhere({}, range) }),
+		);
 		return rows.length;
 	}
 
@@ -106,15 +128,15 @@ export class PrismaSalesReadRepository implements SalesReadPort {
 	 * taken from sales the caller is already allowed to see (their own bills,
 	 * or the admin's platform view), so this reveals nothing new.
 	 */
-	public async listMerchantSummaries(organizationIds: readonly string[], actorUserId: string | null): Promise<Map<string, SalesMerchantSummary>> {
-		if (organizationIds.length === 0) {
+	public async listMerchantSummaries(tenantIds: readonly string[], actorUserId: string | null): Promise<Map<string, SalesMerchantSummary>> {
+		if (tenantIds.length === 0) {
 			return new Map();
 		}
 		const rows = await this.tenantTx.withSystemOperation(
 			{ operation: SALES_MERCHANT_SUMMARY_OPERATION, reason: "Merchant names for a sales breakdown", actorUserId },
 			async (tx) =>
-				tx.organization.findMany({
-					where: { id: { in: [...organizationIds] } },
+				tx.tenant.findMany({
+					where: { id: { in: [...tenantIds] } },
 					select: { id: true, displayName: true, merchantProfile: { select: { category: true } } },
 				}),
 		);

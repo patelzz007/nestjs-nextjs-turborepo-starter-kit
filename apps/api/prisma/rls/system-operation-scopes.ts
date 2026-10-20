@@ -13,9 +13,7 @@
  */
 
 /** The registry's view this module needs: each operation's table scope. */
-export type ScopedOperations = Readonly<
-	Record<string, { readonly scope: { readonly kind: "tables"; readonly tables: readonly string[] } | { readonly kind: "allTables"; readonly reason: string } }>
->;
+export type ScopedOperations = Readonly<Record<string, { readonly scope: { readonly kind: "tables"; readonly tables: readonly string[] } }>>;
 
 /** Where the rendered SQL lives (apps/api-relative), applied right after `00-app-helpers.sql`. */
 export const SYSTEM_OPERATION_SCOPES_SQL_PATH = "prisma/rls/00-system-operation-scopes.sql";
@@ -35,9 +33,7 @@ export class SystemOperationScopeError extends Error {
 /** Every `operation → table` the registry declares that is not a known table, as `op: table`. */
 export function findUnknownScopeTables(operations: ScopedOperations, knownTables: ReadonlySet<string>): string[] {
 	return Object.entries(operations).flatMap(([operation, definition]): string[] =>
-		definition.scope.kind === "tables"
-			? definition.scope.tables.filter((table: string): boolean => !knownTables.has(table)).map((table: string): string => `${operation}: ${table}`)
-			: [],
+		definition.scope.tables.filter((table: string): boolean => !knownTables.has(table)).map((table: string): string => `${operation}: ${table}`),
 	);
 }
 
@@ -45,8 +41,8 @@ function caseBranch(operation: string, scope: ScopedOperations[string]["scope"])
 	if (!SAFE_OPERATION.test(operation)) {
 		throw new SystemOperationScopeError(`Unsafe system operation name: ${operation}`);
 	}
-	if (scope.kind === "allTables") {
-		return `    WHEN '${operation}' THEN true -- every table: ${scope.reason}`;
+	if (scope.tables.length === 0) {
+		return `    WHEN '${operation}' THEN false -- no tables`;
 	}
 	const unsafe: string | undefined = scope.tables.find((table: string): boolean => !SAFE_TABLE.test(table));
 	if (unsafe !== undefined) {

@@ -9,12 +9,13 @@ import { z } from "zod";
 import { DeviceSessionsRevoked } from "../src/contexts/identity/domain/events/identity.events";
 import { createIdentityTransactionalPorts, type IdentityTransactionalPorts } from "../src/contexts/identity/infrastructure/persistence/identity-transactional-ports";
 import { TransactionalEventCollector } from "../src/platform/application/events/transactional-event-collector";
+import type { SystemOperationName } from "../src/platform/application/system-operation-names";
 import { systemRlsContext } from "../src/prisma/rls-context";
 import { TenantTransactionService } from "../src/prisma/tenant-transaction.service";
 import { createE2eApp } from "./e2e-helpers";
 
 /**
- * Identity's ports bound to ANOTHER context's transaction (authorization's RBAC writes, organizations'
+ * Identity's ports bound to ANOTHER context's transaction (authorization's RBAC writes, tenants'
  * invite registration): they write in the caller's transaction, against the real schema.
  */
 
@@ -46,14 +47,19 @@ describe("createIdentityTransactionalPorts (e2e)", () => {
 	});
 
 	/**
-	 * Runs `work` on identity's ports bound to one RLS-stamped transaction of the app, the way a calling
-	 * context's unit of work opens it (here a bypass-scoped system operation, as the routes that reach
-	 * these ports run).
+	 * Runs `work` on identity's ports bound to one RLS-stamped transaction of the app, under the
+	 * operation the real caller opens: RBAC mutation for session revocation, account provisioning
+	 * for registration, account lookup for a display name.
 	 */
-	async function inTransaction<Result>(events: TransactionalEventCollector | null, work: (ports: IdentityTransactionalPorts) => Promise<Result>): Promise<Result> {
+	async function inTransaction<Result>(
+		operation: SystemOperationName,
+		reason: string,
+		events: TransactionalEventCollector | null,
+		work: (ports: IdentityTransactionalPorts) => Promise<Result>,
+	): Promise<Result> {
 		return app
 			.get(TenantTransactionService)
-			.withRlsContext({ context: systemRlsContext("route.rls_bypass"), reason: "identity transactional ports e2e" }, async (tx: Prisma.TransactionClient): Promise<Result> =>
+			.withRlsContext({ context: systemRlsContext(operation), reason }, async (tx: Prisma.TransactionClient): Promise<Result> =>
 				work(createIdentityTransactionalPorts(tx, { newId: randomUUID }, events)),
 			);
 	}
@@ -85,7 +91,9 @@ describe("createIdentityTransactionalPorts (e2e)", () => {
 		const versionBefore = await tokenVersion();
 		const events = new TransactionalEventCollector();
 
-		await inTransaction(events, (ports) => ports.sessions.revokeAllSessions([userId, userId], { kind: "user", userId }));
+		await inTransaction("authorization.rbac.mutate", "Revoke sessions after an RBAC change", events, (ports) =>
+			ports.sessions.revokeAllSessions([userId, userId], { kind: "user", userId }),
+		);
 
 		expect(await sessionRow(first)).toEqual({ isDeleted: true, deletedBy: userId });
 		expect(await sessionRow(second)).toEqual({ isDeleted: true, deletedBy: userId });
@@ -98,7 +106,9 @@ describe("createIdentityTransactionalPorts (e2e)", () => {
 	it("marks a system revocation with its system marker", async () => {
 		const session = await openSession();
 
-		await inTransaction(null, (ports) => ports.sessions.revokeAllSessions([userId], { kind: "system", marker: "system:rbac-mutation" }));
+		await inTransaction("authorization.rbac.mutate", "Revoke sessions after an RBAC change", null, (ports) =>
+			ports.sessions.revokeAllSessions([userId], { kind: "system", marker: "system:rbac-mutation" }),
+		);
 
 		expect((await sessionRow(session)).deletedBy).toBe("system:rbac-mutation");
 	});
@@ -107,7 +117,9 @@ describe("createIdentityTransactionalPorts (e2e)", () => {
 		const versionBefore = await tokenVersion();
 		const events = new TransactionalEventCollector();
 
-		await inTransaction(events, (ports) => ports.sessions.revokeAllSessions([], { kind: "user", userId }));
+		await inTransaction("authorization.rbac.mutate", "Revoke sessions after an RBAC change", events, (ports) =>
+			ports.sessions.revokeAllSessions([], { kind: "user", userId }),
+		);
 
 		expect(await tokenVersion()).toBe(versionBefore);
 		expect(events.pendingCount()).toBe(0);
@@ -117,12 +129,12 @@ describe("createIdentityTransactionalPorts (e2e)", () => {
 		const email = `tx-ports-${randomUUID()}@example.com`;
 		const account = { email, fullName: "Tx Ports", passwordHash: "argon2-hash" };
 
-		const created = await inTransaction(null, (ports) => ports.accounts.createAccount(account));
-		const taken = await inTransaction(null, (ports) => ports.accounts.createAccount(account));
+		const created = await inTransaction("tenant.invitation.register_and_accept", "Create an invitee account", null, (ports) => ports.accounts.createAccount(account));
+		const taken = await inTransaction("tenant.invitation.register_and_accept", "Create an invitee account", null, (ports) => ports.accounts.createAccount(account));
 
 		expect(created.kind).toBe("created");
 		expect(taken).toEqual({ kind: "email_taken" });
-		const found = await inTransaction(null, (ports) => ports.accounts.findAccountIdByEmail(email));
+		const found = await inTransaction("tenant.invitation.register_and_accept", "Create an invitee account", null, (ports) => ports.accounts.findAccountIdByEmail(email));
 		expect(created).toEqual({ kind: "created", userId: found });
 		const codes = await pool.query(`SELECT count(*)::int AS count FROM public."SignupReferralCode" WHERE "userId" = $1`, [found]);
 		const roles = await pool.query(`SELECT count(*)::int AS count FROM public."UserRole" WHERE "userId" = $1`, [found]);
@@ -134,7 +146,7 @@ describe("createIdentityTransactionalPorts (e2e)", () => {
 		const stored = await pool.query(`SELECT "fullName" AS "fullName" FROM public."User" WHERE id = $1`, [userId]);
 		const fullName = z.object({ fullName: z.string() }).parse(stored.rows.at(0)).fullName;
 
-		await expect(inTransaction(null, (ports) => ports.consumerClaimants.displayName(userId))).resolves.toBe(fullName);
-		await expect(inTransaction(null, (ports) => ports.consumerClaimants.displayName(randomUUID()))).resolves.toBeNull();
+		await expect(inTransaction("auth.account.lookup", "Read an account display name", null, (ports) => ports.consumerClaimants.displayName(userId))).resolves.toBe(fullName);
+		await expect(inTransaction("auth.account.lookup", "Read an account display name", null, (ports) => ports.consumerClaimants.displayName(randomUUID()))).resolves.toBeNull();
 	});
 });

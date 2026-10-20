@@ -186,12 +186,10 @@ describe("resolvePartitionKey", () => {
 		).toBe("admin-1");
 	});
 
-	it("keys reward events by organization, falling back to the actor", () => {
-		const organizationId = "5c1f7a9e-2b4d-4e8f-a1b2-c3d4e5f60718";
-		expect(resolvePartitionKey({ type: "reward.platform", payload: { event: "reward.auto_published", actorUserId: null, organizationId, metadata: {} } })).toBe(
-			organizationId,
-		);
-		expect(resolvePartitionKey({ type: "reward.platform", payload: { event: "user.claim_reward", actorUserId: USER_ID, organizationId: null, metadata: {} } })).toBe(USER_ID);
+	it("keys reward events by tenant, falling back to the actor", () => {
+		const tenantId = "5c1f7a9e-2b4d-4e8f-a1b2-c3d4e5f60718";
+		expect(resolvePartitionKey({ type: "reward.platform", payload: { event: "reward.auto_published", actorUserId: null, tenantId, metadata: {} } })).toBe(tenantId);
+		expect(resolvePartitionKey({ type: "reward.platform", payload: { event: "user.claim_reward", actorUserId: USER_ID, tenantId: null, metadata: {} } })).toBe(USER_ID);
 	});
 
 	it("keys anonymous auth flows as null (broker falls back to correlation id)", () => {

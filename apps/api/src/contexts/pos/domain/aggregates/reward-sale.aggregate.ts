@@ -21,9 +21,9 @@ export interface PresentedClaim {
 	readonly method: RedemptionMethod;
 }
 
-/** Who rings the bill up: the organization, its store (when known), the till and its key. */
+/** Who rings the bill up: the tenant, its store (when known), the till and its key. */
 export interface CheckoutPoint {
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly locationId: string | null;
 	readonly terminalId: string;
 	readonly apiKeyId: string;
@@ -111,7 +111,7 @@ export class RewardSale extends AggregateRoot<PosEvent> {
 			new SaleCheckedOut(
 				now,
 				sale.id,
-				sale.point.organizationId,
+				sale.point.tenantId,
 				first.claim.customerUserId,
 				sale.point.locationId,
 				sale.point.terminalId,

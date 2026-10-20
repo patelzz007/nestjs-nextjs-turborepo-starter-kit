@@ -17,7 +17,6 @@ import { AppError } from "../../../../platform/application/errors/app-error";
 import type { ObjectStorage } from "../../../../platform/infrastructure/storage/domain/object-storage.port";
 import { readStreamFully } from "../../../../platform/infrastructure/storage/utils/object-stream.util";
 import { zipArchiveEntryName, zipArchiveStream } from "../../../../platform/infrastructure/storage/utils/zip-archive.util";
-import type { PrismaService } from "../../../../prisma/prisma.service";
 import { userRlsContext } from "../../../../prisma/rls-context";
 import type { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import type { VerifiedUpload } from "../../domain/aggregates/stored-file.aggregate";
@@ -36,7 +35,6 @@ import { storedLocatorOf, toStoredFileView, type StoredFileDbClient } from "../p
 /** The collaborators the access forwards to (wired by FilesModule). */
 export interface FileServiceDependencies {
 	readonly config: TypedConfigService;
-	readonly prisma: PrismaService;
 	readonly transactions: TenantTransactionService;
 	readonly storage: FileObjectStoragePort;
 	readonly objects: ObjectStorage;
@@ -54,13 +52,15 @@ export class StoredFileAccess {
 	public constructor(private readonly deps: FileServiceDependencies) {}
 
 	public async createUploadUrl(userId: string, input: CreateFileUploadUrlInput): Promise<CreateFileUploadUrlResponse> {
-		return requestFileUpload(this.deps.storage, userId, input, (file) => new PrismaStoredFileRepository(this.deps.prisma).add(file));
+		return requestFileUpload(this.deps.storage, userId, input, (file) =>
+			this.deps.transactions.withBoundSession("Insert a stored-file upload ticket", (tx) => new PrismaStoredFileRepository(tx).add(file)),
+		);
 	}
 
 	public async completeUpload(userId: string, fileId: string, input: CompleteFileUploadInput): Promise<CompleteFileUploadResponse> {
 		const file = await this.requireFile(fileId);
 		await completeFileUpload(this.deps.storage, this.deps.dispatcher, userId, this.view(file), input.checksumSha256, (verified: VerifiedUpload) =>
-			this.deps.transactions.withRlsContext({ context: userRlsContext(userId, file.organizationId, false), reason: null }, async (tx): Promise<StoredFileSaveOutcome> => {
+			this.deps.transactions.withRlsContext({ context: userRlsContext(userId, file.tenantId, false), reason: null }, async (tx): Promise<StoredFileSaveOutcome> => {
 				const repository = new PrismaStoredFileRepository(tx);
 				const live = await repository.findLive(fileId);
 				if (live === null) {
@@ -73,14 +73,17 @@ export class StoredFileAccess {
 		return { file: this.view(await this.requireFile(fileId)).record };
 	}
 
-	/** The live files among `ids` (unknown and deleted ids are absent), read on `db` — a caller's transaction, or the pool. */
-	public async findLiveFiles(ids: readonly string[], db: StoredFileDbClient = this.deps.prisma): Promise<StoredFile[]> {
-		return db.storedFile.findMany({ where: { id: { in: [...ids] }, isDeleted: false } });
+	/** The live files among `ids` (unknown and deleted ids are absent). Pass `db` to stay in the caller's transaction. */
+	public async findLiveFiles(ids: readonly string[], db?: StoredFileDbClient): Promise<StoredFile[]> {
+		if (db !== undefined) {
+			return db.storedFile.findMany({ where: { id: { in: [...ids] }, isDeleted: false } });
+		}
+		return this.deps.transactions.withBoundSession("Read live stored files", (tx) => tx.storedFile.findMany({ where: { id: { in: [...ids] }, isDeleted: false } }));
 	}
 
 	/** A live file, or `null` when there is none (never uploaded, or deleted). */
 	public async findFile(fileId: string): Promise<StoredFile | null> {
-		return this.deps.prisma.storedFile.findFirst({ where: { id: fileId, isDeleted: false } });
+		return this.deps.transactions.withBoundSession("Read a live stored file", (tx) => tx.storedFile.findFirst({ where: { id: fileId, isDeleted: false } }));
 	}
 
 	public async requireFile(fileId: string): Promise<StoredFile> {
@@ -126,8 +129,8 @@ export class StoredFileAccess {
 	 * `actorUserId`. `SystemOrigin` has no HTTP value, so "job" is recorded.
 	 */
 	public async deleteStoredFile(file: StoredFile, actorUserId: string): Promise<void> {
-		const actor = systemActor(FILES_DELETE_OPERATION, "job", file.organizationId, "Delete a stored file on behalf of its owning context", actorUserId);
-		await this.deps.deletion.delete(actor, { fileId: file.id, category: file.category, organizationId: file.organizationId }, actorUserId);
+		const actor = systemActor(FILES_DELETE_OPERATION, "job", file.tenantId, "Delete a stored file on behalf of its owning context", actorUserId);
+		await this.deps.deletion.delete(actor, { fileId: file.id, category: file.category, tenantId: file.tenantId }, actorUserId);
 	}
 
 	private view(file: StoredFile): ReturnType<typeof toStoredFileView> {

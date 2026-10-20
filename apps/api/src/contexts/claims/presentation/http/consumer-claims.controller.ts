@@ -18,7 +18,7 @@ import type { z } from "zod";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
-import { RlsBypass } from "../../../../platform/presentation/http/security/decorators/rls-bypass.decorator";
+import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
 import { ZodBody, ZodListQuery, ZodParams } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
@@ -27,6 +27,7 @@ import { IssueClaimQrCodesCommand } from "../../application/commands/issue-claim
 import { RequestClaimOtpCommand } from "../../application/commands/request-claim-otp/request-claim-otp.command";
 import { GetMyClaimQuery } from "../../application/queries/get-my-claim/get-my-claim.query";
 import { ListMyClaimsQuery } from "../../application/queries/list-my-claims/list-my-claims.query";
+import { CLAIM_OTP_REQUEST_OPERATION, CLAIM_REWARD_OPERATION } from "../../application/ports/claims.tokens";
 
 /** A customer's own reward claims: OTP, claim, wallet list and detail, and the QR codes. */
 @ApiTags("Claims")
@@ -40,7 +41,7 @@ export class ConsumerClaimsController {
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@Post("otp")
-	@RlsBypass()
+	@PlatformOperation(CLAIM_OTP_REQUEST_OPERATION)
 	@ApiOperation({ summary: "Request claim OTP (emailed to your account — no SMS in dev)" })
 	@ZodResponse(OkResponseSchema, { status: HttpStatus.CREATED, description: "OTP sent" })
 	public requestOtp(@CurrentActor() actor: ActorContext, @ZodBody(apiContract.claims.otp.input) body: z.output<typeof apiContract.claims.otp.input>): Promise<OkResponse> {
@@ -49,7 +50,7 @@ export class ConsumerClaimsController {
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@Post()
-	@RlsBypass()
+	@PlatformOperation(CLAIM_REWARD_OPERATION)
 	@ApiOperation({ summary: "Claim a reward after OTP verification" })
 	@ZodResponse(RewardClaimCreatedResponseSchema, { status: HttpStatus.CREATED, description: "Claim created with backup code" })
 	public createClaim(

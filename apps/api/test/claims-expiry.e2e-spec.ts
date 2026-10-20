@@ -5,14 +5,12 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
 import { ExpireOverdueClaimsCommand } from "../src/contexts/claims/application/commands/expire-overdue-claims/expire-overdue-claims.command";
 import { systemActor } from "../src/platform/application/actor-context";
 import { SystemCommandDispatcher } from "../src/platform/application/system-command-dispatcher";
-import { PrismaService } from "../src/prisma/prisma.service";
-import { runWithSystemRlsContext } from "../src/prisma/rls-context";
-import { createE2eApp } from "./e2e-helpers";
+import { createE2eApp, withTenantMember } from "./e2e-helpers";
 
 const DAY_MS = 86_400_000;
 
@@ -21,7 +19,7 @@ const OutboxRowSchema = z.object({
 	eventType: z.string(),
 	payload: z.object({
 		type: z.string(),
-		payload: z.object({ event: z.string(), organizationId: z.string(), metadata: z.object({ claimId: z.string(), isReferrerCredit: z.boolean() }) }),
+		payload: z.object({ event: z.string(), tenantId: z.string(), metadata: z.object({ claimId: z.string(), isReferrerCredit: z.boolean() }) }),
 	}),
 });
 
@@ -39,16 +37,17 @@ describe("Claim expiry (e2e)", () => {
 	beforeAll(async () => {
 		app = await createE2eApp();
 		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
-		await runWithSystemRlsContext("route.rls_bypass", async () =>
-			app.get(PrismaService).reward.create({
+		const ownerId = z.object({ id: z.string() }).parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'brew.owner@kl-rewards.demo'`)).rows.at(0)).id;
+		await withTenantMember(app, ownerId, TENANT_SEED_IDS.klTenant, (tx) =>
+			tx.reward.create({
 				data: {
 					id: rewardId,
-					organizationId: ORGANIZATION_SEED_IDS.klOrganization,
+					tenantId: TENANT_SEED_IDS.klTenant,
 					title: "E2E expiry reward",
 					description: "Created by claims-expiry.e2e-spec.ts",
 					rewardType: "FREE_ITEM",
 					category: "cafe",
-					images: { create: [{ organizationId: ORGANIZATION_SEED_IDS.klOrganization, fileId: rewardCoverImageSeedId("free-coffee"), position: 0 }] },
+					images: { create: [{ fileId: rewardCoverImageSeedId("free-coffee"), position: 0 }] },
 					quantityTotal: 5,
 					quantityRemaining: 3,
 					quantityReserved: 2,
@@ -117,7 +116,7 @@ describe("Claim expiry (e2e)", () => {
 			eventType: "reward.platform",
 			payload: {
 				type: "reward.platform",
-				payload: { event: "reward.claim_expired", organizationId: ORGANIZATION_SEED_IDS.klOrganization, metadata: { claimId: overdueClaimId, isReferrerCredit: false } },
+				payload: { event: "reward.claim_expired", tenantId: TENANT_SEED_IDS.klTenant, metadata: { claimId: overdueClaimId, isReferrerCredit: false } },
 			},
 		});
 	});

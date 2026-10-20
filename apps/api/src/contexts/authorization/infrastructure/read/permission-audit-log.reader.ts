@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import type { PermissionAuditLog, Prisma } from "@prisma/client";
 import { assertNever, AuditLogEntrySchema, epochMs, type AuditLogActor, type AuditLogEntry, type AuditLogQueryInput, type PaginatedServiceResult } from "@workspace/shared";
 
-import type { ActorContext } from "../../../../platform/application/actor-context";
+import { actingUserId, type ActorContext } from "../../../../platform/application/actor-context";
 import { mapListResult, toPaginatedServiceResult } from "../../../../platform/infrastructure/persistence/list-page";
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import { AUDIT_LOG_READ_OPERATION } from "../../application/ports/authorization.tokens";
@@ -44,7 +44,7 @@ export class PermissionAuditLogReader implements PermissionAuditLogReadPort {
 	public constructor(private readonly tenantTx: TenantTransactionService) {}
 
 	public async list(actor: ActorContext, query: AuditLogQueryInput): Promise<PaginatedServiceResult<AuditLogEntry>> {
-		const actorUserId: string | null = actor.kind === "user" ? actor.userId : null;
+		const actorUserId: string | null = actingUserId(actor);
 		const result = await this.tenantTx.withSystemOperation(
 			{ operation: AUDIT_LOG_READ_OPERATION, reason: "Admin audit viewer list", actorUserId },
 			async (tx: Prisma.TransactionClient) => this.repository.list(query, tx),

@@ -6,7 +6,7 @@ import { TypedConfigService } from "../../../config/typed-config.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { createCedarPolicyEvaluator } from "../../../contexts/authorization/public-api";
-import { createOrganizationAuditPort } from "../../../contexts/organizations/public-api";
+import { createTenantAuditPort } from "../../../contexts/tenancy/public-api";
 import { createTenantKeyManagement } from "./kms/tenant-key-management.factory";
 import { TenantEncryptionKeyRepository } from "./tenant-encryption-key.repository";
 import { TenantEncryptionService, type TenantKeyRewrapSummary } from "./tenant-encryption.service";
@@ -34,7 +34,7 @@ export function formatRewrapSummary(summary: TenantKeyRewrapSummary): string {
 		`Re-wrapped: ${String(summary.rewrapped)}`,
 		`Already updated concurrently: ${String(summary.concurrentlyUpdated)}`,
 		`Failed: ${String(summary.failures.length)}`,
-		...summary.failures.map((failure) => `  - key ${failure.tenantKeyId} (organization ${failure.organizationId}, ${failure.kmsKeyId}): ${failure.reason}`),
+		...summary.failures.map((failure) => `  - key ${failure.tenantKeyId} (tenant ${failure.tenantId}, ${failure.kmsKeyId}): ${failure.reason}`),
 	];
 	return lines.join("\n");
 }
@@ -65,7 +65,7 @@ export async function runTenantKeyRewrap(argv: readonly string[], log: (line: st
 		const service = new TenantEncryptionService(
 			tenantTx,
 			new TenantEncryptionKeyRepository(),
-			createOrganizationAuditPort(),
+			createTenantAuditPort(),
 			createCedarPolicyEvaluator(tenantTx),
 			requestContext,
 			createTenantKeyManagement(config),

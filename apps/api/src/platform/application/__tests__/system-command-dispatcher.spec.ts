@@ -131,7 +131,7 @@ describe("SystemCommandDispatcher", () => {
 			originName: "rewards.auto-publish",
 			commandName: "ResetPasswordCommand",
 			operation: "outbox.enqueue",
-			organizationId: "org-1",
+			tenantId: "org-1",
 			actorUserId: ACTING_USER_ID,
 			correlationId: CORRELATION_ID,
 			outcome: "success",
@@ -140,7 +140,7 @@ describe("SystemCommandDispatcher", () => {
 			occurredAt: FINISHED_AT,
 			input: {
 				password: "s3cret",
-				actor: { kind: "system", operation: "outbox.enqueue", organizationId: "org-1", origin: "job", actorUserId: ACTING_USER_ID, reason: "Auto publish" },
+				actor: { kind: "system", operation: "outbox.enqueue", tenantId: "org-1", origin: "job", actorUserId: ACTING_USER_ID, reason: "Auto publish" },
 			},
 		});
 	});

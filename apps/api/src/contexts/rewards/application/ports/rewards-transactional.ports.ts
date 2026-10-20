@@ -1,20 +1,20 @@
-import type { EpochMs, JsonObject, OrganizationLocationScopeType, RewardResponse, RewardType } from "@workspace/shared";
+import type { EpochMs, JsonObject, LocationScopeType, RewardResponse, RewardType } from "@workspace/shared";
 
-import type { OrganizationStoreFacts } from "../../domain/policies/reward-location-scope.policy";
+import type { TenantStoreFacts } from "../../domain/policies/reward-location-scope.policy";
 
 /** Locks the files a reward is about to show and checks each is usable (bound to one transaction). */
 export interface RewardImageFilesPort {
 	/**
-	 * Row-locks every file until commit and checks it is this organization's READY, published,
+	 * Row-locks every file until commit and checks it is this tenant's READY, published,
 	 * live reward image; throws `RewardImagesInvalidError` otherwise. No ids: nothing to do.
 	 * File deletion takes the same lock, so an image cannot be deleted while a save names it.
 	 */
-	lockUsable(organizationId: string, fileIds: readonly string[]): Promise<void>;
+	lockUsable(tenantId: string, fileIds: readonly string[]): Promise<void>;
 }
 
-/** The organization's stores, as a reward's store scope needs them (bound to one transaction). */
-export interface OrganizationStoresPort {
-	factsFor(organizationId: string, requestedLocationIds: readonly string[]): Promise<OrganizationStoreFacts>;
+/** The tenant's stores, as a reward's store scope needs them (bound to one transaction). */
+export interface TenantStoresPort {
+	factsFor(tenantId: string, requestedLocationIds: readonly string[]): Promise<TenantStoreFacts>;
 }
 
 /** A reward as the API returns it, read inside the command's own transaction. */
@@ -24,7 +24,7 @@ export interface RewardViewPort {
 
 /** One append to the rewards-family audit trail (`RewardAuditLog`). */
 export interface RewardAuditEntry {
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 	/** The human who caused it; null for machines (API keys, jobs). */
 	readonly actorUserId: string | null;
 	/** Stable action name, e.g. `reward.approved`, `merchant.checkout`. */
@@ -45,11 +45,11 @@ export interface LegalAcceptanceCheck {
 /** What a till needs to know about the reward behind a presented claim code. */
 export interface RewardRedemptionFacts {
 	readonly id: string;
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly title: string;
 	readonly rewardType: RewardType;
 	readonly expiryDate: EpochMs;
-	readonly locationScopeType: OrganizationLocationScopeType;
+	readonly locationScopeType: LocationScopeType;
 	/** The live stores a `SELECTED` reward is valid at (empty for `ALL_LOCATIONS`). */
 	readonly locationIds: readonly string[];
 	/** Minimum bill in minor units; null = no minimum. */

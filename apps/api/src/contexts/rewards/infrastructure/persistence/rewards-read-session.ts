@@ -1,23 +1,15 @@
 import type { Prisma } from "@prisma/client";
 
-import type { ActorContext } from "../../../../platform/application/actor-context";
+import { actingUserId, type ActorContext } from "../../../../platform/application/actor-context";
 import { toRlsTransactionScope, USER_OWNED_DATA_SCOPE } from "../../../../platform/infrastructure/unit-of-work/actor-to-rls-context";
 import type { RlsTransactionRunner } from "../../../../platform/infrastructure/unit-of-work/prisma-unit-of-work";
 import { systemRlsContext } from "../../../../prisma/rls-context";
-import { ROUTE_RLS_BYPASS_OPERATION } from "../../application/ports/rewards.tokens";
-
-/** The human behind a cross-tenant read, recorded on the system-operation audit line. */
-function actingUserId(actor: ActorContext): string | null {
-	if (actor.kind === "user") {
-		return actor.userId;
-	}
-	return actor.kind === "system" ? actor.actorUserId : null;
-}
+import { MARKETPLACE_REWARDS_READ_OPERATION, REWARDS_ADMIN_REVIEW_OPERATION } from "../../application/ports/rewards.tokens";
 
 /**
- * Read sessions for reward projections. A tenant read stamps the actor's own RLS session; a
- * cross-tenant read (the `@RlsBypass()` routes) runs as the allowlisted `route.rls_bypass`
- * operation, as those routes did before. Both bind the session to the query's connection with a
+ * Read sessions for reward projections. A tenant read stamps the actor's own RLS session. Admin
+ * moderation reads run as `rewards.admin_review`. Published marketplace reads run as
+ * `marketplace.published_rewards.read`. Both bind the session to the query's connection with a
  * short transaction (plan §5.4).
  */
 export class RewardsReadSession {
@@ -27,13 +19,20 @@ export class RewardsReadSession {
 		return this.transactions.withRlsContext(toRlsTransactionScope(actor), work);
 	}
 
-	/** A read of the actor's OWN rows (legal acceptance, profile fields), which need no organization. */
+	/** A read of the actor's OWN rows (legal acceptance, profile fields), which need no tenant. */
 	public readOwn<TResult>(actor: ActorContext, work: (db: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> {
 		return this.transactions.withRlsContext(toRlsTransactionScope(actor, USER_OWNED_DATA_SCOPE), work);
 	}
 
+	/** Admin moderation reads. Merchant names and logos are loaded afterwards under `tenant.display_data.read`. */
 	public readAcrossTenants<TResult>(actor: ActorContext, work: (db: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> {
-		const context = systemRlsContext(ROUTE_RLS_BYPASS_OPERATION, actingUserId(actor), actor.organizationId);
-		return this.transactions.withRlsContext({ context, reason: ROUTE_RLS_BYPASS_OPERATION }, work);
+		const context = systemRlsContext(REWARDS_ADMIN_REVIEW_OPERATION, actingUserId(actor), actor.tenantId);
+		return this.transactions.withRlsContext({ context, reason: REWARDS_ADMIN_REVIEW_OPERATION }, work);
+	}
+
+	/** Published marketplace rows. Merchant names and logos are loaded afterwards under `tenant.display_data.read`. */
+	public readPublished<TResult>(actor: ActorContext, work: (db: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> {
+		const context = systemRlsContext(MARKETPLACE_REWARDS_READ_OPERATION, actingUserId(actor), actor.tenantId);
+		return this.transactions.withRlsContext({ context, reason: MARKETPLACE_REWARDS_READ_OPERATION }, work);
 	}
 }

@@ -1,5 +1,5 @@
-import { Injectable, Logger } from "@nestjs/common";
-import type { PolicyDefinition } from "@prisma/client";
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import type { PolicyDefinition, Prisma } from "@prisma/client";
 import type {
 	AuthorizationAttributeValue,
 	AuthorizationContext,
@@ -12,7 +12,8 @@ import type {
 } from "@workspace/shared";
 import { isArrayValue, isNumberPrimitive, isStringPrimitive, PolicyConditionsSchema } from "@workspace/shared";
 
-import { PrismaService } from "../../../../prisma/prisma.service";
+import type { SystemDatabaseContext } from "../../../../prisma/tenant-context";
+import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 
 /**
  * Outcome of the ABAC layer for one request:
@@ -27,13 +28,18 @@ export interface PolicyEvaluation {
 	readonly evaluation: readonly AuthorizationEvaluationStep[];
 }
 
+/** Policy reads an authorization decision makes before the handler's RLS scope exists. */
+interface PolicyMatchTransactions {
+	withSystemOperation<TResult>(context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult>;
+}
+
 function readSubjectField(subject: AuthorizationContext, key: string): AuthorizationAttributeValue {
 	switch (key) {
 		case "userId":
 		case "id":
 			return subject.userId;
-		case "organizationId":
-			return subject.organizationId ?? null;
+		case "tenantId":
+			return subject.tenantId ?? null;
 		case "storeId":
 			return subject.storeId ?? null;
 		case "locationId":
@@ -167,7 +173,7 @@ export function matchesPolicyRule(rule: PolicyRule, request: AuthorizationReques
 export class PolicyEngineService {
 	private readonly logger = new Logger(PolicyEngineService.name);
 
-	public constructor(private readonly prisma: PrismaService) {}
+	public constructor(@Inject(TenantTransactionService) private readonly transactions: PolicyMatchTransactions) {}
 
 	public async evaluate(request: AuthorizationRequest): Promise<PolicyEvaluation> {
 		const policies = await this.findApplicablePolicies(request);
@@ -239,19 +245,23 @@ export class PolicyEngineService {
 
 	/** Active policies for the action/resource, bound to no tenant or to the verified tenant. */
 	private async findApplicablePolicies(request: AuthorizationRequest): Promise<PolicyDefinition[]> {
-		return this.prisma.policyDefinition.findMany({
-			where: {
-				isActive: true,
-				isDeleted: false,
-				actions: { has: request.action },
-				resources: { has: request.resource },
-				AND: [
-					{ OR: [{ organizationId: null }, ...(request.subject.organizationId === undefined ? [] : [{ organizationId: request.subject.organizationId }])] },
-					{ OR: [{ locationId: null }, ...(request.subject.locationId === undefined ? [] : [{ locationId: request.subject.locationId }])] },
-				],
-			},
-			orderBy: { createdAt: "asc" },
-		});
+		return this.transactions.withSystemOperation(
+			{ operation: "authorization.policy.match", reason: "Read active policies for an authorization decision", actorUserId: request.subject.userId },
+			(tx) =>
+				tx.policyDefinition.findMany({
+					where: {
+						isActive: true,
+						isDeleted: false,
+						actions: { has: request.action },
+						resources: { has: request.resource },
+						AND: [
+							{ OR: [{ tenantId: null }, ...(request.subject.tenantId === undefined ? [] : [{ tenantId: request.subject.tenantId }])] },
+							{ OR: [{ locationId: null }, ...(request.subject.locationId === undefined ? [] : [{ locationId: request.subject.locationId }])] },
+						],
+					},
+					orderBy: { createdAt: "asc" },
+				}),
+		);
 	}
 
 	private matches(policy: PolicyDefinition, request: AuthorizationRequest): boolean {

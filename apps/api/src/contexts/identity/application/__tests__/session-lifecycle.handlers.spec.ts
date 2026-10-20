@@ -6,6 +6,7 @@ import {
 	AccountInactiveError,
 	DeviceSessionNotFoundError,
 	ImpersonationAlreadyActiveError,
+	ImpersonationGrantRequiredError,
 	ImpersonationSessionInvalidError,
 	ImpersonatorNotEligibleError,
 	MfaStepUpRequiredError,
@@ -26,6 +27,8 @@ import { RefreshSessionHandler } from "../commands/refresh-session/refresh-sessi
 import { RevokeMySessionCommand } from "../commands/revoke-my-session/revoke-my-session.command";
 import { RevokeMySessionHandler } from "../commands/revoke-my-session/revoke-my-session.handler";
 import { StartImpersonationCommand } from "../commands/start-impersonation/start-impersonation.command";
+import type { ImpersonationTenantFacts } from "../ports/impersonation-tenant-facts.port";
+import type { ApprovedSupportGrant } from "../../domain/policies/impersonation-start.policy";
 import { StartImpersonationHandler } from "../commands/start-impersonation/start-impersonation.handler";
 import { StopImpersonationCommand } from "../commands/stop-impersonation/stop-impersonation.command";
 import { StopImpersonationHandler } from "../commands/stop-impersonation/stop-impersonation.handler";
@@ -184,6 +187,11 @@ describe("RevokeMySessionHandler", () => {
 	});
 });
 
+const noMemberships: ImpersonationTenantFacts = {
+	membershipTenantIds: (): Promise<readonly string[]> => Promise.resolve([]),
+	approvedGrants: (): Promise<readonly ApprovedSupportGrant[]> => Promise.resolve([]),
+};
+
 describe("Start and stop impersonation", () => {
 	const ADMIN_SESSION_ID = "admin-session";
 	const ADMIN_REFRESH = "admin-refresh-token";
@@ -195,7 +203,7 @@ describe("Start and stop impersonation", () => {
 	});
 
 	function start(mfaAssuredAt: number | null = NOW): Promise<ImpersonateServiceResponse> {
-		return new StartImpersonationHandler(store.uow, new FixedGrants(), tokens, new SequentialIds("imp"), TEST_SETTINGS, clock).execute(
+		return new StartImpersonationHandler(store.uow, noMemberships, new FixedGrants(), tokens, new SequentialIds("imp"), TEST_SETTINGS, clock).execute(
 			new StartImpersonationCommand(userActor(ADMIN_ID, { isSuperAdmin: true }), { targetUserId: USER_ID, mfaAssuredAt, ipAddress: null, userAgent: null }),
 		);
 	}
@@ -219,6 +227,33 @@ describe("Start and stop impersonation", () => {
 		expect(store.impersonations.audits).toEqual(["START"]);
 		expect(store.eventNames()).toEqual(["identity.ImpersonationStarted"]);
 		await expect(start(epochMs(NOW - TEST_SETTINGS.mfaStepUpTtlMs - 1))).rejects.toBeInstanceOf(MfaStepUpRequiredError);
+	});
+
+	it("refuses to impersonate a tenant member when that tenant has no approved grant", async () => {
+		const member: ImpersonationTenantFacts = {
+			membershipTenantIds: (): Promise<readonly string[]> => Promise.resolve(["tenant-a"]),
+			approvedGrants: (): Promise<readonly ApprovedSupportGrant[]> => Promise.resolve([{ grantId: "grant-b", tenantId: "tenant-b" }]),
+		};
+
+		await expect(
+			new StartImpersonationHandler(store.uow, member, new FixedGrants(), tokens, new SequentialIds("imp"), TEST_SETTINGS, clock).execute(
+				new StartImpersonationCommand(userActor(ADMIN_ID, { isSuperAdmin: true }), { targetUserId: USER_ID, mfaAssuredAt: NOW, ipAddress: null, userAgent: null }),
+			),
+		).rejects.toBeInstanceOf(ImpersonationGrantRequiredError);
+	});
+
+	it("PLAT-004: records the approved grant that authorized impersonating a tenant member on the session", async () => {
+		const member: ImpersonationTenantFacts = {
+			membershipTenantIds: (): Promise<readonly string[]> => Promise.resolve(["tenant-a"]),
+			approvedGrants: (): Promise<readonly ApprovedSupportGrant[]> => Promise.resolve([{ grantId: "grant-a", tenantId: "tenant-a" }]),
+		};
+
+		await new StartImpersonationHandler(store.uow, member, new FixedGrants(), tokens, new SequentialIds("imp"), TEST_SETTINGS, clock).execute(
+			new StartImpersonationCommand(userActor(ADMIN_ID, { isSuperAdmin: true }), { targetUserId: USER_ID, mfaAssuredAt: NOW, ipAddress: null, userAgent: null }),
+		);
+
+		expect(store.impersonations.rows.get("imp-1")?.supportAccessGrantIds).toEqual(["grant-a"]);
+		expect(store.impersonations.audits).toEqual(["START"]);
 	});
 
 	it("refuses a second live session for the same administrator (D36)", async () => {

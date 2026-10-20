@@ -1,25 +1,25 @@
-import type { OrganizationApiKeyScope } from "@workspace/shared";
+import type { TenantApiKeyScope } from "@workspace/shared";
 
-/** A signed-in organization member calling a merchant dashboard route. */
+/** A signed-in tenant member calling a merchant dashboard route. */
 export interface MerchantUserActor {
 	readonly kind: "user";
 	readonly userId: string;
-	readonly organizationId: string;
+	readonly tenantId: string;
 	/** The route key (slug or id) the member's membership was resolved through. */
-	readonly orgSlug: string;
+	readonly tenantSlug: string;
 }
 
-/** A merchant API key calling an organization route machine-to-machine. */
+/** A merchant API key calling a tenant route machine-to-machine. */
 export interface MerchantApiKeyActor {
 	readonly kind: "api_key";
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly apiKeyId: string;
-	readonly keyScope: OrganizationApiKeyScope;
-	/** The store the key is limited to; `null` for an organization-wide key. */
+	readonly keyScope: TenantApiKeyScope;
+	/** The store the key is limited to; `null` for a tenant-wide key. */
 	readonly keyLocationId: string | null;
 }
 
-/** Resolved organization actor for merchant dashboard and machine-to-machine routes. */
+/** Resolved tenant actor for merchant dashboard and machine-to-machine routes. */
 export type MerchantActor = MerchantUserActor | MerchantApiKeyActor;
 
 export const MERCHANT_ACTOR_KEY = "merchantActor";

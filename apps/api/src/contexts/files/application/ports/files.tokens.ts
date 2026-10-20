@@ -15,7 +15,6 @@ export const FILES_DELETE_OPERATION: SystemOperationName = "files.delete";
 export const FILES_SCAN_VERDICT_OPERATION: SystemOperationName = "files.scan_verdict.apply";
 
 /** Background jobs, one operation per queue. */
-export const STORAGE_SCAN_OPERATION: SystemOperationName = "queue.storage.scan";
 export const STORAGE_CLEANUP_OPERATION: SystemOperationName = "queue.storage.cleanup";
 export const STORAGE_DELETE_OPERATION: SystemOperationName = "queue.storage.delete";
 

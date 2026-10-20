@@ -11,7 +11,7 @@ import { revokedBySystem } from "../../../domain/value-objects/session-revoker.v
 import type { IdentityScope } from "../../identity-scope";
 import type { AuthFlowSubjectPort } from "../../ports/auth-flow.port";
 import type { CredentialCryptoPort } from "../../ports/credential-crypto.port";
-import { AUTH_FLOW_SUBJECT, CREDENTIAL_CRYPTO, IDENTITY_UNIT_OF_WORK, PUBLIC_AUTH_FLOW_OPERATION } from "../../ports/identity.tokens";
+import { AUTH_FLOW_SUBJECT, CREDENTIAL_CRYPTO, IDENTITY_UNIT_OF_WORK, PASSWORD_RESET_COMPLETE_OPERATION } from "../../ports/identity.tokens";
 import { matchesRecentPassword } from "../../services/password-reuse.checker";
 import { ResetPasswordCommand } from "./reset-password.command";
 
@@ -39,7 +39,7 @@ export class ResetPasswordHandler implements ICommandHandler<ResetPasswordComman
 		const tokenDigest: string = this.crypto.hashTokenDigest(input.token);
 		const newPasswordHash: string = await this.crypto.hash(input.password);
 
-		const userId: string = await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, actor, async (scope: IdentityScope): Promise<string> => {
+		const userId: string = await this.uow.runSystemOperation(PASSWORD_RESET_COMPLETE_OPERATION, actor, async (scope: IdentityScope): Promise<string> => {
 			const now: EpochMs = this.clock.now();
 			const token: PasswordResetToken | null = await scope.resetTokens.findUsableByDigest(tokenDigest, now);
 			if (token === null || !(await this.crypto.compare(input.token, token.snapshot.tokenHash))) {

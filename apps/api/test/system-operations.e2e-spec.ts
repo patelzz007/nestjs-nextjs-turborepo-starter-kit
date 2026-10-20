@@ -9,14 +9,14 @@ import { TenantEnumeratorService } from "../src/platform/infrastructure/jobs/ten
 import { TenantJobContextService } from "../src/platform/infrastructure/jobs/tenant-job-context.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { TenantTransactionService } from "../src/prisma/tenant-transaction.service";
-import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 
 /**
  * The system-operation allowlist is enforced by PostgreSQL, not only by the
  * TypeScript registry (ADR 012):
  * - `app.rls_bypass = true` WITHOUT a named operation is no bypass at all;
  * - an operation runs as its registry role (`SET ROLE`): `tenant.enumerate`
- *   is the read-only `app_enumerator`, which can list organizations and
+ *   is the read-only `app_enumerator`, which can list tenants and
  *   nothing else.
  */
 
@@ -77,7 +77,8 @@ describe("System operations are enforced by the database (integration)", () => {
 			expect(users.rows[LIST_SLOT_INDEX.first]?.count).toBe(0);
 			await expect(client.query('UPDATE public."User" SET "isActive" = "isActive" RETURNING id')).resolves.toMatchObject({ rowCount: 0 });
 		});
-		await inSession("app_runtime", { "app.rls_bypass": "true", "app.system_operation": "platform.superadmin" }, async (client) => {
+		// An operation whose registry scope lists User reaches it.
+		await inSession("app_runtime", { "app.rls_bypass": "true", "app.system_operation": "auth.account.lookup" }, async (client) => {
 			const users = await client.query<{ count: number }>('SELECT count(*)::int AS count FROM public."User"');
 			expect(users.rows[LIST_SLOT_INDEX.first]?.count).toBeGreaterThan(0);
 		});
@@ -92,14 +93,14 @@ describe("System operations are enforced by the database (integration)", () => {
 		});
 	});
 
-	it("gives the enumerator role organizations, and nothing else", async () => {
+	it("gives the enumerator role tenants, and nothing else", async () => {
 		await inSession("app_enumerator", { "app.rls_bypass": "true", "app.system_operation": "tenant.enumerate" }, async (client) => {
-			const orgs = await client.query<{ count: number }>('SELECT count(*)::int AS count FROM public."Organization"');
+			const orgs = await client.query<{ count: number }>('SELECT count(*)::int AS count FROM public."Tenant"');
 			expect(orgs.rows[LIST_SLOT_INDEX.first]?.count).toBeGreaterThan(0);
 			await expect(client.query('SELECT id FROM public."User" LIMIT 1')).rejects.toThrow(/permission denied/);
 		});
 		await inSession("app_enumerator", { "app.rls_bypass": "true", "app.system_operation": "tenant.enumerate" }, async (client) => {
-			await expect(client.query('UPDATE public."Organization" SET "isDeleted" = "isDeleted"')).rejects.toThrow(/permission denied/);
+			await expect(client.query('UPDATE public."Tenant" SET "isDeleted" = "isDeleted"')).rejects.toThrow(/permission denied/);
 		});
 	});
 
@@ -109,8 +110,8 @@ describe("System operations are enforced by the database (integration)", () => {
 			new TenantJobContextService(new TypedConfigService(getApiConfig())),
 		);
 
-		const ids: string[] = await enumerator.listActiveOrganizationIds();
+		const ids: string[] = await enumerator.listActiveTenantIds();
 
-		expect(ids).toEqual(expect.arrayContaining([ORGANIZATION_SEED_IDS.klOrganization]));
+		expect(ids).toEqual(expect.arrayContaining([TENANT_SEED_IDS.klTenant]));
 	});
 });

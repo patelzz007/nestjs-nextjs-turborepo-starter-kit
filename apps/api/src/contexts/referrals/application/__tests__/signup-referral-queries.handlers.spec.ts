@@ -24,13 +24,13 @@ const REFERRER: ActorContext = {
 	kind: "user",
 	userId: "referrer-1",
 	sessionId: "session-1",
-	organizationId: null,
+	tenantId: null,
 	isSuperAdmin: false,
 	accessScope: "tenant",
 	impersonatorUserId: null,
 	request: REQUEST,
 };
-const KEY: ActorContext = { kind: "api_key", apiKeyId: "key-1", organizationId: "org-1", locationId: null, terminalId: null, request: REQUEST };
+const KEY: ActorContext = { kind: "api_key", apiKeyId: "key-1", tenantId: "org-1", locationId: null, terminalId: null, request: REQUEST };
 
 const REFEREE: SignupReferralRefereeItem = { fullName: "Aisha Rahman", createdAt: NOW, status: "redeemed" };
 

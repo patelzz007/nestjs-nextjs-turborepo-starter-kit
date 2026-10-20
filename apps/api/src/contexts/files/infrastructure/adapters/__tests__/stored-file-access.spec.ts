@@ -28,7 +28,6 @@ function setup(): { service: StoredFileAccess; storage: InMemoryObjectStorage } 
 	const uow = new InMemoryUnitOfWork(filesScope(new InMemoryStoredFiles()));
 	const service = new StoredFileAccess({
 		config,
-		prisma,
 		transactions: new TenantTransactionService(prisma, new RequestContextService()),
 		storage: new StorageFileObjectAdapter(config, storage, storage, imageRenditionsFor(storage)),
 		objects: storage,

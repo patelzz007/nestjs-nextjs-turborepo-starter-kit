@@ -20,6 +20,7 @@ import {
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { GetUser } from "../../../../platform/presentation/http/security/decorators/get-user.decorator";
+import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import { SuperAdminOnly } from "../../../../platform/presentation/http/security/decorators/super-admin.decorator";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
@@ -28,6 +29,7 @@ import { ZodResponse } from "../../../../platform/presentation/http/validation/d
 import { CreatePolicyDraftCommand } from "../../application/commands/create-policy-draft/create-policy-draft.command";
 import { PublishPolicyCommand } from "../../application/commands/publish-policy/publish-policy.command";
 import { SimulatePolicyDraftCommand } from "../../application/commands/simulate-policy-draft/simulate-policy-draft.command";
+import { POLICY_DRAFT_CREATE_OPERATION, POLICY_DRAFT_SIMULATE_OPERATION, POLICY_PUBLISH_OPERATION } from "../../application/ports/authorization.tokens";
 import type { PolicyControlPlaneActor } from "../../domain/aggregates/authorization-policy-draft.aggregate";
 
 /** The control-plane actor of an access token; ANY impersonation marker counts as impersonating. */
@@ -48,6 +50,7 @@ export class PolicyControlPlaneController {
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
 	@SuperAdminOnly()
 	@RequirePermission("MANAGE", "SYSTEM_SETTINGS")
+	@PlatformOperation(POLICY_DRAFT_CREATE_OPERATION)
 	@ZodResponse(PolicyDraftCreatedResponseSchema, { status: HttpStatus.CREATED, description: "Policy draft created" })
 	public async createDraft(
 		@CurrentActor() actor: ActorContext,
@@ -61,6 +64,7 @@ export class PolicyControlPlaneController {
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
 	@SuperAdminOnly()
 	@RequirePermission("MANAGE", "SYSTEM_SETTINGS")
+	@PlatformOperation(POLICY_DRAFT_SIMULATE_OPERATION)
 	@ZodResponse(PolicySimulationResultSchema, { status: HttpStatus.CREATED, description: "Policy simulation result" })
 	public async simulate(
 		@CurrentActor() actor: ActorContext,
@@ -74,6 +78,7 @@ export class PolicyControlPlaneController {
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
 	@SuperAdminOnly()
 	@RequirePermission("MANAGE", "SYSTEM_SETTINGS")
+	@PlatformOperation(POLICY_PUBLISH_OPERATION)
 	@ZodResponse(PolicyPublishResponseSchema, { status: HttpStatus.CREATED, description: "Published policy version (approved by a second SuperAdmin)" })
 	public async publish(
 		@CurrentActor() actor: ActorContext,

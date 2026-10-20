@@ -1,9 +1,11 @@
-import { Injectable } from "@nestjs/common";
-import type { Permission } from "@prisma/client";
+import { Inject, Injectable } from "@nestjs/common";
+import type { Permission, Prisma } from "@prisma/client";
 import type { PermissionAction, PermissionPair, PermissionResource, PermissionScope } from "@workspace/shared";
 import { IMPLICIT_SELF_GRANTS, permissionSatisfies } from "@workspace/shared";
 
-import { PrismaService } from "../../../../prisma/prisma.service";
+import type { SystemDatabaseContext } from "../../../../prisma/tenant-context";
+import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
+import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../platform/application/shared-system-operations";
 
 /** Where a grant or denial came from — surfaced in explain() output. */
 export type GrantSource = "role" | "store" | "override" | "implicit";
@@ -11,7 +13,7 @@ export type GrantSource = "role" | "store" | "override" | "implicit";
 /** The store a store-membership grant is bound to — it applies nowhere else. */
 export interface GrantStoreBinding {
 	readonly storeId: string;
-	readonly organizationId: string;
+	readonly tenantId: string;
 }
 
 /** One `(action, resource, scope)` capability held (or explicitly denied) by a subject. */
@@ -53,7 +55,7 @@ export function grantsFor(grants: readonly SubjectGrant[], required: PermissionP
  * Walk parent links breadth-first from `start`, collecting every active role
  * id (the start roles included); each level is one query, cycles are ignored.
  */
-export async function collectRoleHierarchy(prisma: PrismaService, start: readonly RoleNode[]): Promise<string[]> {
+export async function collectRoleHierarchy(db: Prisma.TransactionClient, start: readonly RoleNode[]): Promise<string[]> {
 	const collected = new Set<string>();
 	let frontier: readonly RoleNode[] = start;
 
@@ -71,13 +73,18 @@ export async function collectRoleHierarchy(prisma: PrismaService, start: readonl
 		if (parentIds.length === 0) {
 			break;
 		}
-		frontier = await prisma.role.findMany({
+		frontier = await db.role.findMany({
 			where: { id: { in: parentIds }, isActive: true, isDeleted: false },
 			select: { id: true, parentId: true },
 		});
 	}
 
 	return Array.from(collected);
+}
+
+/** Principal grant reads the authorization decision makes before the handler's RLS scope exists. */
+interface PrincipalGrantLookup {
+	withSystemOperation<TResult>(context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult>;
 }
 
 /**
@@ -87,17 +94,24 @@ export async function collectRoleHierarchy(prisma: PrismaService, start: readonl
  */
 @Injectable()
 export class SubjectGrantsLoader {
-	public constructor(private readonly prisma: PrismaService) {}
+	public constructor(@Inject(TenantTransactionService) private readonly transactions: PrincipalGrantLookup) {}
 
 	public async load(userId: string): Promise<SubjectGrants> {
+		return this.transactions.withSystemOperation(
+			{ operation: PRINCIPAL_LOOKUP_OPERATION, reason: "Load the caller's roles, grants, and store-membership roles", actorUserId: userId },
+			(tx) => this.loadOn(tx, userId),
+		);
+	}
+
+	private async loadOn(db: Prisma.TransactionClient, userId: string): Promise<SubjectGrants> {
 		const now = Date.now();
 
 		const [userRoles, overrides] = await Promise.all([
-			this.prisma.userRole.findMany({
+			db.userRole.findMany({
 				where: { userId, isDeleted: false, role: { isActive: true, isDeleted: false } },
 				select: { role: { select: { id: true, name: true, parentId: true } } },
 			}),
-			this.prisma.userPermission.findMany({
+			db.userPermission.findMany({
 				where: {
 					userId,
 					isDeleted: false,
@@ -109,15 +123,15 @@ export class SubjectGrantsLoader {
 		]);
 
 		const roleIds = await collectRoleHierarchy(
-			this.prisma,
+			db,
 			userRoles.map((userRole) => userRole.role),
 		);
-		const storeGrants = await this.loadStoreGrants(userId);
+		const storeGrants = await this.loadStoreGrants(db, userId);
 
 		const rolePermissions =
 			roleIds.length === 0
 				? []
-				: await this.prisma.rolePermission.findMany({
+				: await db.rolePermission.findMany({
 						where: { roleId: { in: roleIds }, isDeleted: false, permission: { isDeleted: false } },
 						select: { roleId: true, permission: { select: { action: true, resource: true, scope: true, conditions: true } } },
 					});
@@ -167,10 +181,10 @@ export class SubjectGrantsLoader {
 	 * hierarchy) apply only inside that store, whatever scope the permission
 	 * row carries — a store role can never grant platform-wide access.
 	 */
-	private async loadStoreGrants(userId: string): Promise<SubjectGrant[]> {
-		const memberships = await this.prisma.storeMembership.findMany({
+	private async loadStoreGrants(db: Prisma.TransactionClient, userId: string): Promise<SubjectGrant[]> {
+		const memberships = await db.storeMembership.findMany({
 			where: { userId, status: "ACTIVE", isDeleted: false, store: { isDeleted: false, status: "ACTIVE" }, role: { isActive: true, isDeleted: false } },
-			select: { id: true, storeId: true, organizationId: true, role: { select: { id: true, parentId: true } } },
+			select: { id: true, storeId: true, tenantId: true, role: { select: { id: true, parentId: true } } },
 		});
 		if (memberships.length === 0) {
 			return [];
@@ -178,8 +192,8 @@ export class SubjectGrantsLoader {
 
 		const grants: SubjectGrant[] = [];
 		for (const membership of memberships) {
-			const roleIds = await collectRoleHierarchy(this.prisma, [membership.role]);
-			const rolePermissions = await this.prisma.rolePermission.findMany({
+			const roleIds = await collectRoleHierarchy(db, [membership.role]);
+			const rolePermissions = await db.rolePermission.findMany({
 				where: { roleId: { in: roleIds }, isDeleted: false, permission: { isDeleted: false } },
 				select: { permission: { select: { action: true, resource: true, conditions: true } } },
 			});
@@ -190,7 +204,7 @@ export class SubjectGrantsLoader {
 					scope: "STORE",
 					source: "store",
 					sourceId: membership.id,
-					store: { storeId: membership.storeId, organizationId: membership.organizationId },
+					store: { storeId: membership.storeId, tenantId: membership.tenantId },
 					conditions: rolePermission.permission.conditions,
 				});
 			}

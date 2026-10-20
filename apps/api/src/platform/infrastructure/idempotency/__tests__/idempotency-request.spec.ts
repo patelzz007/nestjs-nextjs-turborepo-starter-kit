@@ -117,9 +117,10 @@ function contextWith(overrides: Partial<RequestContext>): RequestContext {
 		edgeLocation: undefined,
 		principal: undefined,
 		apiKey: undefined,
-		tenant: { organizationId: undefined, storeId: undefined, locationId: undefined },
+		tenant: { tenantId: undefined, storeId: undefined, locationId: undefined },
 		systemOperations: [],
 		receivedAtEpochMs: 0,
+		supportAccessGrantId: undefined,
 		isAuditRecorded: false,
 		actor: undefined,
 		...overrides,
@@ -131,7 +132,7 @@ const USER_1: RequestPrincipal = { userId: "user-1", impersonatorId: undefined, 
 describe("buildIdempotencyScope", () => {
 	it("namespaces keys by principal, verified tenant, method and route template", () => {
 		const scope: string = buildIdempotencyScope(
-			contextWith({ principal: USER_1, tenant: { organizationId: "org-a", storeId: undefined, locationId: undefined } }),
+			contextWith({ principal: USER_1, tenant: { tenantId: "org-a", storeId: undefined, locationId: undefined } }),
 			"post",
 			"/api/v1/product",
 		);
@@ -146,17 +147,9 @@ describe("buildIdempotencyScope", () => {
 		).not.toBe(buildIdempotencyScope(contextWith({ principal: USER_1 }), "POST", "/api/v1/product"));
 	});
 
-	it("never lets the same user replay one organization's response in another organization", () => {
-		const orgA: string = buildIdempotencyScope(
-			contextWith({ principal: USER_1, tenant: { organizationId: "org-a", storeId: undefined, locationId: undefined } }),
-			"POST",
-			"/x",
-		);
-		const orgB: string = buildIdempotencyScope(
-			contextWith({ principal: USER_1, tenant: { organizationId: "org-b", storeId: undefined, locationId: undefined } }),
-			"POST",
-			"/x",
-		);
+	it("never lets the same user replay one tenant's response in another tenant", () => {
+		const orgA: string = buildIdempotencyScope(contextWith({ principal: USER_1, tenant: { tenantId: "org-a", storeId: undefined, locationId: undefined } }), "POST", "/x");
+		const orgB: string = buildIdempotencyScope(contextWith({ principal: USER_1, tenant: { tenantId: "org-b", storeId: undefined, locationId: undefined } }), "POST", "/x");
 
 		expect(orgA).not.toBe(orgB);
 	});
@@ -172,8 +165,8 @@ describe("buildIdempotencyScope", () => {
 		expect(impersonated).not.toBe(own);
 	});
 
-	it("scopes API-key callers (POS) by key and the key's organization", () => {
-		expect(buildIdempotencyScope(contextWith({ apiKey: { apiKeyId: "key-1", organizationId: "org-a", terminalId: "T-1", locationId: null } }), "POST", "/pos/checkout")).toBe(
+	it("scopes API-key callers (POS) by key and the key's tenant", () => {
+		expect(buildIdempotencyScope(contextWith({ apiKey: { apiKeyId: "key-1", tenantId: "org-a", terminalId: "T-1", locationId: null } }), "POST", "/pos/checkout")).toBe(
 			"http:key:key-1|org:org-a:store:-:loc:-|POST /pos/checkout",
 		);
 	});

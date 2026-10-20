@@ -9,7 +9,7 @@ export interface StoredFileView {
 	readonly visibility: FileVisibility;
 	readonly status: FileStatus;
 	readonly uploadedById: string;
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 	readonly productId: string | null;
 	readonly originalName: string;
 	readonly mimeType: string;
@@ -32,8 +32,8 @@ export interface StoredFileReadPort {
 	findLive(actor: ActorContext, fileId: string): Promise<StoredFileView | null>;
 
 	/**
-	 * The actor's OWN live upload with this id, whatever organization it belongs to — read to authorize
-	 * completing it (the request names no organization). Never another user's file: nothing leaks.
+	 * The actor's OWN live upload with this id, whatever tenant it belongs to — read to authorize
+	 * completing it (the request names no tenant). Never another user's file: nothing leaks.
 	 */
 	findOwnUpload(actor: ActorContext, fileId: string): Promise<StoredFileView | null>;
 

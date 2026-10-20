@@ -17,32 +17,32 @@ export class CodeFailuresNotRecordedError extends Error {
 	}
 }
 
-/** The backup-code lockout counters on `OrganizationApiKey`, on one unit-of-work transaction. */
+/** The backup-code lockout counters on `TenantApiKey`, on one unit-of-work transaction. */
 export class PrismaCodeLockoutRepository implements CodeLockoutRepository {
 	public constructor(private readonly db: Prisma.TransactionClient) {}
 
 	public async lockedUntil(apiKeyId: string): Promise<EpochMs | null> {
-		const row = await this.db.organizationApiKey.findUnique({ where: { id: apiKeyId }, select: { codeLockedUntil: true } });
+		const row = await this.db.tenantApiKey.findUnique({ where: { id: apiKeyId }, select: { codeLockedUntil: true } });
 		return row?.codeLockedUntil === null || row?.codeLockedUntil === undefined ? null : epochMs(Number(row.codeLockedUntil));
 	}
 
 	public async addFailures(apiKeyId: string, failures: number, now: EpochMs, windowMs: number): Promise<number> {
 		const windowOpenAfter = now - windowMs;
 		for (let attempt = 0; attempt < CODE_FAILURE_WINDOW_ATTEMPTS; attempt += 1) {
-			const incremented = await this.db.organizationApiKey.updateMany({
+			const incremented = await this.db.tenantApiKey.updateMany({
 				where: { id: apiKeyId, codeFailureWindowStartedAt: { gt: windowOpenAfter } },
 				data: { codeFailureCount: { increment: failures } },
 			});
 			const counted =
 				incremented.count === 1 ||
 				(
-					await this.db.organizationApiKey.updateMany({
+					await this.db.tenantApiKey.updateMany({
 						where: { id: apiKeyId, OR: [{ codeFailureWindowStartedAt: null }, { codeFailureWindowStartedAt: { lte: windowOpenAfter } }] },
 						data: { codeFailureCount: failures, codeFailureWindowStartedAt: now },
 					})
 				).count === 1;
 			if (counted) {
-				const row = await this.db.organizationApiKey.findUniqueOrThrow({ where: { id: apiKeyId }, select: { codeFailureCount: true } });
+				const row = await this.db.tenantApiKey.findUniqueOrThrow({ where: { id: apiKeyId }, select: { codeFailureCount: true } });
 				return row.codeFailureCount;
 			}
 			// Neither matched: a concurrent request opened the window between the two statements — count into it.
@@ -51,7 +51,7 @@ export class PrismaCodeLockoutRepository implements CodeLockoutRepository {
 	}
 
 	public async lock(apiKeyId: string, now: EpochMs, lockedUntil: EpochMs): Promise<boolean> {
-		const locked = await this.db.organizationApiKey.updateMany({
+		const locked = await this.db.tenantApiKey.updateMany({
 			where: { id: apiKeyId, OR: [{ codeLockedUntil: null }, { codeLockedUntil: { lte: now } }] },
 			data: { codeLockedUntil: lockedUntil, codeFailureCount: 0, codeFailureWindowStartedAt: null },
 		});

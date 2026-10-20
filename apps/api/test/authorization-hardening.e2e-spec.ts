@@ -1,9 +1,16 @@
 import { Pool } from "pg";
 import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { API_VERSION_PREFIX, ApiErrorResponseSchema, AuthorizationDecisionsResponseSchema, AuthorizationResultSchema } from "@workspace/shared";
+import {
+	API_VERSION_PREFIX,
+	ApiErrorResponseSchema,
+	AuthorizationDecisionsResponseSchema,
+	AuthorizationResultSchema,
+	TenantContextResponseSchema,
+	UserResponseSchema,
+} from "@workspace/shared";
 
-import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { createE2eApp, extractCookie, login, mutationHeaders, parseSuccessEnvelope, type LoginResult } from "./e2e-helpers";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
@@ -70,17 +77,16 @@ describe("Authorization hardening (e2e)", () => {
 	});
 
 	describe("tenant context", () => {
-		it("rejects a forged x-organization-id for a non-member", async () => {
+		it("ignores a forged x-tenant-id: a header never selects a tenant (D6), so the response is unchanged", async () => {
 			const session = await login(app, "user@example.com", "User@123");
+			const me = (headers: Readonly<Record<string, string>>): ReturnType<NestFastifyApplication["inject"]> =>
+				app.inject({ method: "GET", url: `${API_VERSION_PREFIX}/auth/me`, headers: { cookie: cookieHeader(session), ...headers } });
 
-			const response = await app.inject({
-				method: "GET",
-				url: `${API_VERSION_PREFIX}/auth/me`,
-				headers: { cookie: cookieHeader(session), "x-organization-id": ORGANIZATION_SEED_IDS.mlkOrganization },
-			});
+			const plain = await me({});
+			const forged = await me({ "x-tenant-id": TENANT_SEED_IDS.mlkTenant });
 
-			expect(response.statusCode, response.body).toBe(403);
-			expect(ApiErrorResponseSchema.parse(response.json()).error.code).toBe("PERMISSION_DENIED");
+			expect(forged.statusCode, forged.body).toBe(plain.statusCode);
+			expect(parseSuccessEnvelope(forged, UserResponseSchema).data).toEqual(parseSuccessEnvelope(plain, UserResponseSchema).data);
 		});
 
 		it("accepts the header for an active member", async () => {
@@ -89,10 +95,24 @@ describe("Authorization hardening (e2e)", () => {
 			const response = await app.inject({
 				method: "GET",
 				url: `${API_VERSION_PREFIX}/auth/me`,
-				headers: { cookie: cookieHeader(session), "x-organization-id": ORGANIZATION_SEED_IDS.mlkOrganization },
+				headers: { cookie: cookieHeader(session), "x-tenant-id": TENANT_SEED_IDS.mlkTenant },
 			});
 
 			expect(response.statusCode).toBe(200);
+		});
+	});
+
+	describe("informational headers", () => {
+		it("x-location-id narrows nothing: the owner's tenant context lists every store, header or not", async () => {
+			const session = await login(app, "jonker.owner@melaka-rewards.demo", "JonkerOwner@123");
+			const context = (headers: Readonly<Record<string, string>>): ReturnType<NestFastifyApplication["inject"]> =>
+				app.inject({ method: "GET", url: `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.mlk}/context`, headers: { cookie: cookieHeader(session), ...headers } });
+
+			const plain = await context({});
+			const informed = await context({ "x-tenant-id": TENANT_SEED_IDS.mlkTenant, "x-location-id": TENANT_SEED_IDS.mlkLocationKatil });
+
+			expect(informed.statusCode, informed.body).toBe(200);
+			expect(parseSuccessEnvelope(informed, TenantContextResponseSchema).data).toEqual(parseSuccessEnvelope(plain, TenantContextResponseSchema).data);
 		});
 	});
 
@@ -133,7 +153,7 @@ describe("Authorization hardening (e2e)", () => {
 			expect(parseSuccessEnvelope(response, AuthorizationDecisionsResponseSchema).data.results.map((result) => result.allowed)).toEqual([true, false]);
 		});
 
-		it("rejects a forged x-store-id for another organization's store", async () => {
+		it("rejects a forged x-store-id for another tenant's store", async () => {
 			const mlkStoreId = await storeIdForOwner("jonker.cashier@melaka-rewards.demo");
 			const cashier = await login(app, "brew.cashier@kl-rewards.demo", "BrewCashier@123");
 

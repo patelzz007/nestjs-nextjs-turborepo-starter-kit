@@ -3,9 +3,9 @@ import type { RewardResponse } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 
-/** `POST /orgs/:orgSlug/rewards/:rewardId/publish`. */
+/** `POST /tenants/:tenantSlug/rewards/:rewardId/publish`. */
 export interface SubmitRewardForReviewInput {
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly rewardId: string;
 }
 

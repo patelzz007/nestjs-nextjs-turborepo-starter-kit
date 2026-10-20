@@ -6,7 +6,7 @@ import { parsePrismaNullableJson } from "../../src/platform/infrastructure/utils
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
 import { KERNEL_SEED_IDS } from "./authorization-kernel-rows";
-import { ORGANIZATION_SEED_IDS } from "./organization-seed-ids";
+import { TENANT_SEED_IDS } from "./tenant-seed-ids";
 import { REWARD_SEED_IDS } from "./rewards";
 
 // ---------------------------------------------------------------------------
@@ -53,7 +53,7 @@ interface KernelDecisionRow {
 
 export async function seedKernelDecisionAudits(): Promise<number> {
 	const denyTrace: readonly AuthorizationEvaluationStep[] = [
-		{ source: "tenant", effect: "NO_MATCH", reason: "Caller verified for the organization and store" },
+		{ source: "tenant", effect: "NO_MATCH", reason: "Caller verified for the tenant and store" },
 		{
 			source: "acl",
 			effect: "DENY",
@@ -62,7 +62,7 @@ export async function seedKernelDecisionAudits(): Promise<number> {
 		},
 	];
 	const allowTrace: readonly AuthorizationEvaluationStep[] = [
-		{ source: "tenant", effect: "NO_MATCH", reason: "Caller verified for the organization and store" },
+		{ source: "tenant", effect: "NO_MATCH", reason: "Caller verified for the tenant and store" },
 		{ source: "acl", effect: "NO_MATCH", reason: "No explicit ACL entry" },
 		{ source: "policy", effect: "ALLOW", reason: "Payment is within the Bukit Beruang cap", details: { policyId: KERNEL_SEED_IDS.policyV2Published } },
 	];
@@ -99,8 +99,8 @@ export async function seedKernelDecisionAudits(): Promise<number> {
 			create: {
 				id: rowId,
 				actorId: REWARD_SEED_IDS.mlkCashierUser,
-				organizationId: ORGANIZATION_SEED_IDS.mlkOrganization,
-				locationId: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+				tenantId: TENANT_SEED_IDS.mlkTenant,
+				locationId: TENANT_SEED_IDS.mlkLocationBeruang,
 				action: row.action,
 				resource: row.resource,
 				resourceId: row.resourceId ?? null,

@@ -49,8 +49,8 @@ export class ClaimExpired extends ClaimDomainEvent {
 	public constructor(
 		occurredAt: EpochMs,
 		facts: ClaimEventFacts,
-		/** The reward's organization, for the analytics event. */
-		public readonly organizationId: string,
+		/** The reward's tenant, for the analytics event. */
+		public readonly tenantId: string,
 	) {
 		super(occurredAt, facts);
 	}

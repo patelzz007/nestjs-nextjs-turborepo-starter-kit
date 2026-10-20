@@ -15,9 +15,9 @@ const ADMIN: ActorContext = ActorContextSchema.parse({
 	kind: "user",
 	userId: "11111111-1111-4111-8111-111111111111",
 	sessionId: "session-1",
-	organizationId: null,
+	tenantId: null,
 	isSuperAdmin: true,
-	accessScope: "superadmin",
+	accessScope: "tenant",
 	impersonatorUserId: null,
 	request: { requestId: "request-1", ip: null, userAgent: null, deviceLabel: null, endpoint: null },
 });
@@ -94,7 +94,7 @@ describe("SendTestEmailHandler", () => {
 		expect(requests.requests).toEqual([
 			{ templateKey: "admin-alert", options: { audit: { trigger: "admin-test-send", actorUserId: ADMIN.kind === "user" ? ADMIN.userId : "" } } },
 		]);
-		expect(uow.committed).toEqual([{ actor: ADMIN, operation: null }]);
+		expect(uow.committed).toEqual([{ actor: ADMIN, operation: "email.log.write" }]);
 	});
 
 	it("refuses a caller that is not a signed-in user and requests nothing", async () => {

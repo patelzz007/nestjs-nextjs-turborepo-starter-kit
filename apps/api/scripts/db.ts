@@ -151,7 +151,7 @@ function checkRlsManifest(): number {
 	const body = [
 		formatSection("Tables in Prisma but missing from manifest", report.missingFromManifest),
 		formatSection("Manifest entries with no Prisma model", report.unknownManifestTables),
-		formatSection("Models with organization_id missing from manifest", report.orgModelsMissingManifest),
+		formatSection("Models with tenant_id missing from manifest", report.orgModelsMissingManifest),
 		formatSection("Location profile mismatches", report.locationProfileMismatch),
 		formatSection("Manifest tables not found in RLS SQL enable list", report.manifestNotInRlsSql),
 		formatSection("Withheld-privilege entries with no Prisma model (prisma/rls/withheld-privileges.ts)", unknownWithheldTables),

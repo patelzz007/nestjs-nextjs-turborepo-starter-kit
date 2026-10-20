@@ -16,7 +16,7 @@ Instead:
 
 | Path                                           | Purpose                                                                                                                                                                                                                                                                                                                                                                                                            |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `prisma/rls/00-app-helpers.sql`                | Base session helpers (`app_rls_bypass()`, `app_current_user_id()`, `app_current_organization_id()`, `app_owns()`). Applied **first** — `01` and `rls.sql` call them, so a fresh database needs them before anything else.                                                                                                                                                                                          |
+| `prisma/rls/00-app-helpers.sql`                | Base session helpers (`app_rls_bypass()`, `app_current_user_id()`, `app_current_tenant_id()`, `app_owns()`). Applied **first** — `01` and `rls.sql` call them, so a fresh database needs them before anything else.                                                                                                                                                                                          |
 | `prisma/rls/00-system-operation-scopes.sql`    | **Generated** from `src/prisma/system-operation.registry.ts` by `system-operation-scopes.ts` (`pnpm db:generate-system-operation-scopes`): `app_rls_bypass_on(table)`, true only for an operation whose registry scope lists the table. Every policy calls it as `(SELECT app_rls_bypass_on('<its table>'))`. Never edit by hand; a spec fails when it is stale.                                                   |
 | `prisma/rls/01-acl-location-access.sql`        | ReBAC + ACL helpers (relationship checks only — they never grant a bypass) and location-scoped policies. Applied after the scopes.                                                                                                                                                                                                                                                                                 |
 | `prisma/rls.sql`                               | Main idempotent bundle (role, grants, enable RLS, baseline policies). Applied **third**.                                                                                                                                                                                                                                                                                                                           |
@@ -36,7 +36,7 @@ Add new fragments as `prisma/rls/NN-name.sql` and register them in `RLS_APPLY_OR
 | Layer           | Question                            | Stored as                                                       |
 | --------------- | ----------------------------------- | --------------------------------------------------------------- |
 | **RBAC**        | Can this user perform this action?  | `Role`, `Permission`, `RolePermission`, `UserRole`              |
-| **ACL / scope** | Which org/locations may they touch? | `OrganizationMembership`, `OrganizationMembershipLocationScope` |
+| **ACL / scope** | Which org/locations may they touch? | `Membership`, `MembershipLocationScope` |
 | **RLS**         | Which rows may this DB session see? | PostgreSQL policies (this folder) — **not** per-role            |
 
 Creating a role like `Cashier` or assigning `ORDER.UPDATE` is **data only** — no migration, no RLS change.
@@ -50,12 +50,20 @@ Set **inside the same transaction** as tenant queries (`TenantTransactionService
 | Setting                       | Meaning                  |
 | ----------------------------- | ------------------------ |
 | `app.current_user_id`         | Authenticated user       |
-| `app.current_organization_id` | Active tenant            |
+| `app.current_tenant_id` | Active tenant            |
 | `app.rls_bypass`              | Trusted system path only |
 
-Helpers: `app_rls_bypass()` / `app_rls_bypass_on(table)` (the only way a policy admits a system operation), `app_current_user_id()`, `app_current_organization_id()`, `app_tenant_org_member(org_id)` (tenant context or legacy org membership), `app_tenant_organization_member_of(org_id)`, `app_tenant_has_location_access(location_id)`.
+Helpers: `app_rls_bypass()` / `app_rls_bypass_on(table)` (the only way a policy admits a system operation), `app_current_user_id()`, `app_current_tenant_id()`, `app_tenant_org_member(org_id)` (tenant context or legacy org membership), `app_tenant_member_of(org_id)`, `app_tenant_has_location_access(location_id)`.
 
 Missing context must **not** widen access.
+
+## FORCE ROW LEVEL SECURITY and the runtime role
+
+Every table that enables RLS also **forces** it (multi-tenancy plan D9, C3), so the table owner — the migration login — is filtered by the policies like everyone else. Requests, jobs and `pnpm db:seed` all reach the data as `app_runtime` (`NOLOGIN NOSUPERUSER NOINHERIT NOBYPASSRLS`, reached with `SET ROLE`); the seed writes under the `seed.demo_dataset` system operation, never through ownership.
+
+The API proves this at boot and on every readiness probe (`RuntimeRoleProof`, `src/platform/infrastructure/database/runtime-role-proof.ts`): `app_runtime` must be neither superuser nor `BYPASSRLS`, and every application table must enable and force RLS, or the API refuses to start. CI checks the same facts (DB-006, `test/rls/runtime-role.e2e-spec.ts`). Settings are stamped **transaction-locally only** (`set_config(…, true)`); a pooled connection carries none between transactions (DB-005).
+
+A table added without `ALTER TABLE … FORCE ROW LEVEL SECURITY` beside its `ENABLE` fails boot. See [the RLS coverage matrix](../../../../docs/technical/database/rls-coverage.md).
 
 ## Commands
 

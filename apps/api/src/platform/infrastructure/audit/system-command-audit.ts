@@ -13,7 +13,7 @@ const AUDIT_PATH_MAX_LENGTH = 2_048;
 /**
  * `AuditLog` is an HTTP row. A system command has no request, so the row uses:
  * method = origin kind, endpoint = command class, path = origin name, request body = redacted input.
- * The operation name is `systemOperations`. Organization id and actor user are the command actor's.
+ * The operation name is `systemOperations`. Tenant id and actor user are the command actor's.
  * The correlation id is the one the command's transactions stamped as `app.correlation_id`.
  */
 export function systemCommandAuditEntry(entry: SystemCommandAuditEntry): HttpAuditEntry {
@@ -34,10 +34,11 @@ export function systemCommandAuditEntry(entry: SystemCommandAuditEntry): HttpAud
 		actorUserId: entry.actorUserId,
 		impersonatorUserId: null,
 		impersonationSessionId: null,
+		supportAccessGrantId: null,
 		authMethod: null,
 		apiKeyId: null,
 		terminalId: null,
-		organizationId: entry.organizationId,
+		tenantId: entry.tenantId,
 		storeId: null,
 		locationId: null,
 		ipAddress: null,

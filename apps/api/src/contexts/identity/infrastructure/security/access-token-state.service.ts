@@ -1,10 +1,13 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { BoundedTtlCache } from "@workspace/shared";
+import type { Prisma } from "@prisma/client";
 
 import { parseExpiryToMilliseconds } from "../../../../platform/infrastructure/utils/expiry";
 import { TypedConfigService } from "../../../../config/typed-config.service";
-import { PrismaService } from "../../../../prisma/prisma.service";
 import type { AccessTokenStatePort } from "../../../../platform/application/ports/access-token.port";
+import type { SystemDatabaseContext } from "../../../../prisma/tenant-context";
+import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
+import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../platform/application/shared-system-operations";
 
 /** Cached account state used to reject stale or revoked access tokens. */
 export interface AccessTokenAccountState {
@@ -39,6 +42,11 @@ export const REVOKED_SESSION_LOOKBACK_MARGIN_MS = 60_000;
  * after commit by every revocation (on every API instance — see
  * `AuthorizationInvalidationService`), so the hot path adds no query.
  */
+/** Account revocation state the access-token guard reads before the handler's RLS scope exists. */
+interface AccessTokenStateLookup {
+	withSystemOperation<TResult>(context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult>;
+}
+
 @Injectable()
 export class AccessTokenStateService implements AccessTokenStatePort {
 	private readonly store: BoundedTtlCache<string, AccessTokenAccountState>;
@@ -47,7 +55,7 @@ export class AccessTokenStateService implements AccessTokenStatePort {
 	private readonly revokedSessionLookbackMs: number;
 
 	public constructor(
-		private readonly prisma: PrismaService,
+		@Inject(TenantTransactionService) private readonly transactions: AccessTokenStateLookup,
 		config: TypedConfigService,
 	) {
 		this.ttlMs = config.caches.accessTokenStateTtlMs;
@@ -108,15 +116,19 @@ export class AccessTokenStateService implements AccessTokenStatePort {
 		}
 
 		const revokedSince: number = Date.now() - this.revokedSessionLookbackMs;
-		const user = await this.prisma.user.findUnique({
-			where: { id: userId },
-			select: {
-				tokenVersion: true,
-				isActive: true,
-				isDeleted: true,
-				refreshTokens: { where: { isDeleted: true, deletedAt: { gte: revokedSince } }, select: { id: true } },
-			},
-		});
+		const user = await this.transactions.withSystemOperation(
+			{ operation: PRINCIPAL_LOOKUP_OPERATION, reason: "Read account revocation state for an access token", actorUserId: userId },
+			(tx) =>
+				tx.user.findUnique({
+					where: { id: userId },
+					select: {
+						tokenVersion: true,
+						isActive: true,
+						isDeleted: true,
+						refreshTokens: { where: { isDeleted: true, deletedAt: { gte: revokedSince } }, select: { id: true } },
+					},
+				}),
+		);
 
 		if (user === null) {
 			throw new UnauthorizedException({

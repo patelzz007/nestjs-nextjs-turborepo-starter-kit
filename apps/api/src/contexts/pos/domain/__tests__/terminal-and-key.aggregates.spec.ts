@@ -1,17 +1,17 @@
 import { epochMs } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { OrganizationApiKey } from "../aggregates/organization-api-key.aggregate";
-import { OrganizationTerminal, type IssuedPairingCode, type OrganizationTerminalState } from "../aggregates/organization-terminal.aggregate";
+import { TenantApiKey } from "../aggregates/tenant-api-key.aggregate";
+import { TenantTerminal, type IssuedPairingCode, type TenantTerminalState } from "../aggregates/tenant-terminal.aggregate";
 import { API_KEY_SCOPE_CAPABILITIES } from "../policies/api-key-scope.policy";
-import { NOW, ORGANIZATION_ID, STORE_A } from "./pos-domain.fixture";
+import { NOW, TENANT_ID, STORE_A } from "./pos-domain.fixture";
 
 const CODE: IssuedPairingCode = { hash: "code-hash", expiresAt: epochMs(NOW + 1), issuedByUserId: "member-1", issuedAt: NOW };
 
-function loaded(patch: Partial<OrganizationTerminalState> = {}): OrganizationTerminal {
-	return OrganizationTerminal.rehydrate({
+function loaded(patch: Partial<TenantTerminalState> = {}): TenantTerminal {
+	return TenantTerminal.rehydrate({
 		id: "terminal-1",
-		organizationId: ORGANIZATION_ID,
+		tenantId: TENANT_ID,
 		locationId: STORE_A,
 		terminalId: "TERM-AAAA2222",
 		label: "Front till",
@@ -22,11 +22,11 @@ function loaded(patch: Partial<OrganizationTerminalState> = {}): OrganizationTer
 	});
 }
 
-describe("OrganizationTerminal", () => {
+describe("TenantTerminal", () => {
 	it("registers with its first code, issued by the registering member", () => {
-		const terminal = OrganizationTerminal.register({
+		const terminal = TenantTerminal.register({
 			id: "terminal-1",
-			organizationId: ORGANIZATION_ID,
+			tenantId: TENANT_ID,
 			locationId: STORE_A,
 			terminalId: "TERM-AAAA2222",
 			name: "Front till",
@@ -77,9 +77,9 @@ describe("OrganizationTerminal", () => {
 	});
 });
 
-describe("OrganizationApiKey.revoke (D34)", () => {
+describe("TenantApiKey.revoke (D34)", () => {
 	it("revokes a live key once", () => {
-		const key = OrganizationApiKey.rehydrate({ id: "key-1", organizationId: ORGANIZATION_ID, locationId: null, revokedAt: null });
+		const key = TenantApiKey.rehydrate({ id: "key-1", tenantId: TENANT_ID, locationId: null, revokedAt: null });
 
 		expect(key.revoke(NOW)).toBe(true);
 		expect(key.revokedInThisUnitOfWork).toBe(NOW);
@@ -88,7 +88,7 @@ describe("OrganizationApiKey.revoke (D34)", () => {
 	});
 
 	it("leaves an already revoked key as it is", () => {
-		const key = OrganizationApiKey.rehydrate({ id: "key-1", organizationId: ORGANIZATION_ID, locationId: STORE_A, revokedAt: epochMs(NOW - 1) });
+		const key = TenantApiKey.rehydrate({ id: "key-1", tenantId: TENANT_ID, locationId: STORE_A, revokedAt: epochMs(NOW - 1) });
 
 		expect(key.revoke(NOW)).toBe(false);
 		expect(key.revokedInThisUnitOfWork).toBeNull();
@@ -97,7 +97,7 @@ describe("OrganizationApiKey.revoke (D34)", () => {
 });
 
 describe("API_KEY_SCOPE_CAPABILITIES", () => {
-	it("gives a till key nothing on the organization API and an integration key read + manage rewards only", () => {
+	it("gives a till key nothing on the tenant API and an integration key read + manage rewards only", () => {
 		expect(API_KEY_SCOPE_CAPABILITIES.POS).toEqual([]);
 		expect(API_KEY_SCOPE_CAPABILITIES.INTEGRATION).toEqual(["merchant:view_rewards", "merchant:manage_rewards", "merchant:view_redemptions", "merchant:view_analytics"]);
 	});

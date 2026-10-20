@@ -55,8 +55,8 @@ const MessageTypeSchema = z.object({ type: z.string() });
 class RecordingBundleCache implements PolicyBundleCacheTarget {
 	public readonly dropped: string[] = [];
 
-	public invalidateOrganization(organizationId: string): void {
-		this.dropped.push(organizationId);
+	public invalidateTenant(tenantId: string): void {
+		this.dropped.push(tenantId);
 	}
 
 	public invalidateAll(): void {
@@ -220,7 +220,7 @@ describe("AuthorizationInvalidationService", () => {
 		sender.service.registerPolicyBundleCache(senderBundles);
 		receiver.service.registerPolicyBundleCache(receiverBundles);
 
-		await sender.service.invalidatePolicyBundles({ kind: "organization", organizationId: "org-1" });
+		await sender.service.invalidatePolicyBundles({ kind: "tenant", tenantId: "org-1" });
 		await sender.service.invalidatePolicyBundles({ kind: "all" });
 		for (const message of publisher.published) {
 			subscriber.emit(CHANNEL, message.payload);
@@ -232,7 +232,7 @@ describe("AuthorizationInvalidationService", () => {
 		expect(publisher.published.map((message) => MessageTypeSchema.parse(JSON.parse(message.payload)).type)).toEqual(["policy_bundles", "policy_bundles"]);
 	});
 
-	it("rejects a policy-bundle message without an organization field", async () => {
+	it("rejects a policy-bundle message without a tenant field", async () => {
 		const receiver = instance(publisher, subscriber);
 		await receiver.service.onModuleInit();
 		const bundles = new RecordingBundleCache();

@@ -1,7 +1,7 @@
 import { LIST_SLOT_INDEX, EnvValidationError } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { SINGLE_TENANT_SEED_ORGANIZATION_ID } from "../../../prisma/seed/organization-seed-ids";
+import { SINGLE_TENANT_SEED_TENANT_ID } from "../../../prisma/seed/tenant-seed-ids";
 import { TEST_API_ENV, type TestEnv } from "../../../test/support/test-api-env";
 import { API_ENV_SCOPE, parseApiConfig } from "../api-config";
 import { isLoopbackUrl, resolveApiDocsPolicy, resolveCacheBackend, resolveLogLevel, resolveRedisNamespace, type ApiConfig } from "../api-config.schema";
@@ -90,7 +90,7 @@ describe("API env schema", () => {
 			memoryLeakDetection: { warmupMs: 300_000, windowMs: 1_800_000, growthThresholdMb: 64 },
 			observe: null,
 		});
-		expect(config.tenancy).toEqual({ enabled: false, singleTenantOrganizationId: SINGLE_TENANT_SEED_ORGANIZATION_ID });
+		expect(config.tenancy).toEqual({ mode: "single", defaultTenantId: SINGLE_TENANT_SEED_TENANT_ID });
 		expect(config.encryption.tenantJobHmacSecret).toBeNull();
 		expect(config.storage).toMatchObject({
 			provider: "local",
@@ -174,14 +174,18 @@ describe("API env schema", () => {
 		});
 	});
 
-	describe("DEFAULT_ORGANIZATION_ID", () => {
-		it("is required in single-tenant mode and must be an organization uuid — there is no placeholder default", () => {
-			expect(captureEnvError({ DEFAULT_ORGANIZATION_ID: undefined }).variables).toEqual(["DEFAULT_ORGANIZATION_ID"]);
-			expect(captureEnvError({ DEFAULT_ORGANIZATION_ID: "default" }).variables).toEqual(["DEFAULT_ORGANIZATION_ID"]);
+	describe("DEFAULT_TENANT_ID", () => {
+		it("ST-003: is required in single-tenant mode and must be a tenant uuid — there is no placeholder default", () => {
+			expect(captureEnvError({ DEFAULT_TENANT_ID: undefined }).variables).toEqual(["DEFAULT_TENANT_ID"]);
+			expect(captureEnvError({ DEFAULT_TENANT_ID: "default" }).variables).toEqual(["DEFAULT_TENANT_ID"]);
 		});
 
-		it("is not needed in multi-tenant mode, which has no fallback organization", () => {
-			expect(parse({ TENANCY_ENABLED: "true", DEFAULT_ORGANIZATION_ID: undefined }).tenancy).toEqual({ enabled: true });
+		it("is not needed in multi-tenant mode, which has no fallback tenant", () => {
+			expect(parse({ TENANCY_ENABLED: "true", DEFAULT_TENANT_ID: undefined }).tenancy).toEqual({ mode: "multi" });
+		});
+
+		it("is rejected in multi-tenant mode so a stray fallback cannot exist", () => {
+			expect(captureEnvError({ TENANCY_ENABLED: "true", DEFAULT_TENANT_ID: SINGLE_TENANT_SEED_TENANT_ID }).variables).toEqual(["DEFAULT_TENANT_ID"]);
 		});
 	});
 
@@ -285,7 +289,7 @@ describe("API env schema", () => {
 		});
 
 		it("requires true/false (not 0/1) for the boolean feature flags", () => {
-			expect(parse({ TENANCY_ENABLED: "true" }).tenancy.enabled).toBe(true);
+			expect(parse({ TENANCY_ENABLED: "true", DEFAULT_TENANT_ID: undefined }).tenancy.mode).toBe("multi");
 			expect(captureEnvError({ TENANCY_ENABLED: "1" }).variables).toEqual(["TENANCY_ENABLED"]);
 		});
 

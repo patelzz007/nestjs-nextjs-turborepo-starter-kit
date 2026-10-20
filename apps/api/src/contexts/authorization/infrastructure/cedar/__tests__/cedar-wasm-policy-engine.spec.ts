@@ -16,7 +16,7 @@ function member(role: string, overrides: Partial<PolicyPrincipal> = {}): PolicyP
 }
 
 function request(principal: PolicyPrincipal, action: string = MANAGE_TEAM, locationId?: string): PolicyRequest {
-	return { organizationId: ORG, principal, action, ...(locationId === undefined ? {} : { locationId }) };
+	return { tenantId: ORG, principal, action, ...(locationId === undefined ? {} : { locationId }) };
 }
 
 function bundle(...sources: string[]): PolicyBundle {

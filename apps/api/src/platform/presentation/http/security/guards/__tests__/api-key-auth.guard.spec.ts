@@ -1,7 +1,7 @@
 import { ForbiddenException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { Test } from "@nestjs/testing";
-import type { CapabilitySlug, OrganizationApiKeyScope } from "@workspace/shared";
+import type { CapabilitySlug, TenantApiKeyScope } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHttpContext, testRequest } from "../../../../../../../test/support/http-execution-context";
@@ -13,14 +13,14 @@ import { ApiKeyAuthGuard } from "../api-key-auth.guard";
 
 const mocks = vi.hoisted(() => ({ verify: vi.fn() }));
 
-/** What each scope holds on the organization API (the guard only reads the scope). */
-const SCOPE_CAPABILITIES: Readonly<Record<OrganizationApiKeyScope, readonly CapabilitySlug[]>> = { POS: [], INTEGRATION: ["merchant:view_rewards"] };
+/** What each scope holds on the tenant API (the guard only reads the scope). */
+const SCOPE_CAPABILITIES: Readonly<Record<TenantApiKeyScope, readonly CapabilitySlug[]>> = { POS: [], INTEGRATION: ["merchant:view_rewards"] };
 
-function keyContext(scope: OrganizationApiKeyScope): MerchantApiKeyAuthContext {
+function keyContext(scope: TenantApiKeyScope): MerchantApiKeyAuthContext {
 	return {
 		provider: "merchant",
 		apiKeyId: "key-1",
-		organizationId: "org-1",
+		tenantId: "org-1",
 		locationId: null,
 		terminal: null,
 		requireRegisteredTerminals: false,
@@ -30,7 +30,7 @@ function keyContext(scope: OrganizationApiKeyScope): MerchantApiKeyAuthContext {
 }
 
 /** An `@AllowApiKeyAuth()` route (default options) called with a non-JWT API key. */
-async function callOrganizationRoute(scope: OrganizationApiKeyScope): Promise<boolean> {
+async function callTenantRoute(scope: TenantApiKeyScope): Promise<boolean> {
 	mocks.verify.mockResolvedValue(keyContext(scope));
 	const moduleRef = await Test.createTestingModule({
 		providers: [ApiKeyAuthGuard, Reflector, RequestContextService, { provide: API_KEY_VERIFICATION, useValue: { verify: mocks.verify } }],
@@ -46,24 +46,24 @@ describe("ApiKeyAuthGuard key scope", () => {
 		mocks.verify.mockReset();
 	});
 
-	it("admits an integration key to the organization API", async () => {
-		await expect(callOrganizationRoute("INTEGRATION")).resolves.toBe(true);
+	it("admits an integration key to the tenant API", async () => {
+		await expect(callTenantRoute("INTEGRATION")).resolves.toBe(true);
 		expect(mocks.verify).toHaveBeenCalledWith("mk_live_test");
 	});
 
 	it("binds the authenticated key as the request's principal (idempotency scope, audit trail)", async () => {
 		const requestContext = new RequestContextService();
 		const bound = await requestContext.run({ correlationId: "corr-key", ip: undefined, userAgent: undefined, edgeLocation: undefined }, async () => {
-			await callOrganizationRoute("INTEGRATION");
+			await callTenantRoute("INTEGRATION");
 			return requestContext.current()?.apiKey;
 		});
 
-		// The key's own store (`null` = organization-wide) is the request's database store scope.
-		expect(bound).toEqual({ apiKeyId: "key-1", organizationId: "org-1", terminalId: undefined, locationId: null });
+		// The key's own store (`null` = tenant-wide) is the request's database store scope.
+		expect(bound).toEqual({ apiKeyId: "key-1", tenantId: "org-1", terminalId: undefined, locationId: null });
 	});
 
-	it("refuses a paired till's POS key on the organization API (403 API_KEY_SCOPE_FORBIDDEN)", async () => {
-		await expect(callOrganizationRoute("POS")).rejects.toBeInstanceOf(ForbiddenException);
-		await expect(callOrganizationRoute("POS")).rejects.toMatchObject({ response: { error: "API_KEY_SCOPE_FORBIDDEN" } });
+	it("refuses a paired till's POS key on the tenant API (403 API_KEY_SCOPE_FORBIDDEN)", async () => {
+		await expect(callTenantRoute("POS")).rejects.toBeInstanceOf(ForbiddenException);
+		await expect(callTenantRoute("POS")).rejects.toMatchObject({ response: { error: "API_KEY_SCOPE_FORBIDDEN" } });
 	});
 });

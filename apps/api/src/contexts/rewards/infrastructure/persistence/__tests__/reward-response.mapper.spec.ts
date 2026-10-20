@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { RewardResponseSchema } from "@workspace/shared";
 
-import { mapRewardImages, mapRewardToResponse, rewardLogoUrl, RewardImageUnavailableError, type RewardOrganizationDisplay } from "../reward-response.mapper";
+import { mapRewardImages, mapRewardToResponse, rewardLogoUrl, RewardImageUnavailableError, type RewardTenantDisplay } from "../reward-response.mapper";
 import { TEST_RESOLVE_PUBLIC_URL } from "../../../../../../test/support/public-urls";
 import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
 import { LIVE_ROW_FIELDS } from "../../../../../platform/infrastructure/persistence/__tests__/base-row-fields";
@@ -11,7 +11,7 @@ import { LIVE_ROW_FIELDS } from "../../../../../platform/infrastructure/persiste
 const CREATED_AT_MS = 1_786_300_000_000n;
 const EXPIRY_MS = 1_786_400_000_000n;
 const QUANTITY_TOTAL = 100;
-const LOGO_URL = "https://cdn.example.com/organizations/kopi-co/logo.png";
+const LOGO_URL = "https://cdn.example.com/tenants/kopi-co/logo.png";
 const IMAGE_FILE_ID = "5a7d2c11-9e3b-4f6a-8b1c-2d3e4f5a6b7c";
 const SECOND_IMAGE_FILE_ID = "6b8e3d22-0f4c-4a7b-9c2d-3e4f5a6b7c8d";
 
@@ -52,7 +52,7 @@ function buildRewardRow(overrides: Partial<RewardRow> = {}): RewardRow {
 	return {
 		...LIVE_ROW_FIELDS,
 		id: "7f1c1b9e-8a43-4c2e-9d1a-3b7e6f2a9c01",
-		organizationId: "0b6a3c55-2f1d-4e8a-a7b9-5c4d3e2f1a10",
+		tenantId: "0b6a3c55-2f1d-4e8a-a7b9-5c4d3e2f1a10",
 		title: "Free coffee",
 		description: "One free coffee",
 		rewardType: "FREE_ITEM",
@@ -98,8 +98,8 @@ const LOGO_RENDITIONS = [
 	{ width: 256, publicPath: LOGO_MEDIUM_URL },
 ];
 
-/** The organizations context's display data for a merchant with this logo URL (or none). */
-function organization(publicPaths: readonly (string | null)[]): RewardOrganizationDisplay {
+/** The tenants context's display data for a merchant with this logo URL (or none). */
+function tenant(publicPaths: readonly (string | null)[]): RewardTenantDisplay {
 	const [logoUrl] = publicPaths;
 	return {
 		displayName: "Kopi Co",
@@ -109,35 +109,35 @@ function organization(publicPaths: readonly (string | null)[]): RewardOrganizati
 }
 
 describe("rewardLogoUrl", () => {
-	it("returns the logo's public URL when the organization has a READY logo", () => {
-		expect(rewardLogoUrl(organization([LOGO_URL]))).toBe(LOGO_URL);
+	it("returns the logo's public URL when the tenant has a READY logo", () => {
+		expect(rewardLogoUrl(tenant([LOGO_URL]))).toBe(LOGO_URL);
 	});
 
-	it("returns null when the organization has no logo asset", () => {
-		expect(rewardLogoUrl(organization([]))).toBeNull();
+	it("returns null when the tenant has no logo asset", () => {
+		expect(rewardLogoUrl(tenant([]))).toBeNull();
 	});
 
 	it("returns null when the logo file has no public URL yet", () => {
-		expect(rewardLogoUrl(organization([null]))).toBeNull();
+		expect(rewardLogoUrl(tenant([null]))).toBeNull();
 	});
 
-	it("returns null when no organization was loaded", () => {
+	it("returns null when no tenant was loaded", () => {
 		expect(rewardLogoUrl(undefined)).toBeNull();
 	});
 
 	it("degrades a stored value that breaks the contract to null instead of failing the response", () => {
-		expect(rewardLogoUrl(organization(["organizations/kopi-co/logo.png"]))).toBeNull();
-		expect(rewardLogoUrl(organization(["javascript:alert(1)"]))).toBeNull();
+		expect(rewardLogoUrl(tenant(["tenants/kopi-co/logo.png"]))).toBeNull();
+		expect(rewardLogoUrl(tenant(["javascript:alert(1)"]))).toBeNull();
 	});
 });
 
 describe("mapRewardToResponse merchant identity", () => {
 	it("carries the merchant name, logo URL and the logo's renditions, and satisfies the response contract", () => {
-		const response = mapRewardToResponse(buildRewardRow(), organization([LOGO_URL]), TEST_RESOLVE_PUBLIC_URL);
+		const response = mapRewardToResponse(buildRewardRow(), tenant([LOGO_URL]), TEST_RESOLVE_PUBLIC_URL);
 
-		expect(response.organizationName).toBe("Kopi Co");
-		expect(response.organizationLogoUrl).toBe(LOGO_URL);
-		expect(response.organizationLogoSources).toEqual([
+		expect(response.tenantName).toBe("Kopi Co");
+		expect(response.tenantLogoUrl).toBe(LOGO_URL);
+		expect(response.tenantLogoSources).toEqual([
 			{ width: 128, url: LOGO_THUMBNAIL_URL },
 			{ width: 256, url: LOGO_MEDIUM_URL },
 		]);
@@ -145,27 +145,27 @@ describe("mapRewardToResponse merchant identity", () => {
 	});
 
 	it("sends an explicit null logo (monogram fallback) and no renditions when the merchant has none", () => {
-		const response = mapRewardToResponse(buildRewardRow(), organization([]), TEST_RESOLVE_PUBLIC_URL);
+		const response = mapRewardToResponse(buildRewardRow(), tenant([]), TEST_RESOLVE_PUBLIC_URL);
 
-		expect(response.organizationLogoUrl).toBeNull();
-		expect(response.organizationLogoSources).toEqual([]);
+		expect(response.tenantLogoUrl).toBeNull();
+		expect(response.tenantLogoSources).toEqual([]);
 		expect(RewardResponseSchema.safeParse(response).success).toBe(true);
 	});
 
-	it("sends a null logo when the reward is mapped without its organization", () => {
+	it("sends a null logo when the reward is mapped without its tenant", () => {
 		const response = mapRewardToResponse(buildRewardRow(), undefined, TEST_RESOLVE_PUBLIC_URL);
 
-		expect(response.organizationName).toBeUndefined();
-		expect(response.organizationLogoUrl).toBeNull();
+		expect(response.tenantName).toBeUndefined();
+		expect(response.tenantLogoUrl).toBeNull();
 	});
 });
 
 describe("mapRewardToResponse logo renditions", () => {
 	it("serves no renditions for a logo whose own URL the contract rejects (no logo is shown)", () => {
-		const response = mapRewardToResponse(buildRewardRow(), organization(["javascript:alert(1)"]), TEST_RESOLVE_PUBLIC_URL);
+		const response = mapRewardToResponse(buildRewardRow(), tenant(["javascript:alert(1)"]), TEST_RESOLVE_PUBLIC_URL);
 
-		expect(response.organizationLogoUrl).toBeNull();
-		expect(response.organizationLogoSources).toEqual([]);
+		expect(response.tenantLogoUrl).toBeNull();
+		expect(response.tenantLogoSources).toEqual([]);
 	});
 });
 
@@ -180,7 +180,7 @@ describe("reward images", () => {
 	});
 
 	it("carries every image in display order, each with its renditions for srcset and the largest as its url", () => {
-		const response = mapRewardToResponse(buildRewardRow({ images: [imageRow(IMAGE_FILE_ID), imageRow(SECOND_IMAGE_FILE_ID)] }), organization([]), TEST_RESOLVE_PUBLIC_URL);
+		const response = mapRewardToResponse(buildRewardRow({ images: [imageRow(IMAGE_FILE_ID), imageRow(SECOND_IMAGE_FILE_ID)] }), tenant([]), TEST_RESOLVE_PUBLIC_URL);
 
 		expect(response.images.map((image) => image.fileId)).toEqual([IMAGE_FILE_ID, SECOND_IMAGE_FILE_ID]);
 		const [cover] = response.images;

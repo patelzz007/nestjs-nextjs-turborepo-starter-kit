@@ -6,14 +6,12 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
 import { ApproveRewardCommand } from "../src/contexts/rewards/application/commands/approve-reward/approve-reward.command";
 import { RejectRewardCommand } from "../src/contexts/rewards/application/commands/reject-reward/reject-reward.command";
 import { ActorContextSchema, type ActorContext } from "../src/platform/application/actor-context";
-import { PrismaService } from "../src/prisma/prisma.service";
-import { runWithSystemRlsContext } from "../src/prisma/rls-context";
-import { createE2eApp } from "./e2e-helpers";
+import { createE2eApp, withTenantMember } from "./e2e-helpers";
 
 const DAY_MS = 86_400_000;
 
@@ -21,28 +19,29 @@ const IdRowSchema = z.object({ id: z.string() });
 const NoticeRowSchema = z.object({ userId: z.string(), type: z.string(), body: z.string() });
 
 /**
- * A moderation decision tells the organization's owners in the decision's own transaction: claims'
+ * A moderation decision tells the tenant's owners in the decision's own transaction: claims'
  * in-transaction handler writes one reward-inbox notice per active owner (mechanism 1).
  */
 describe("Reward review notices (e2e)", () => {
 	let app: NestFastifyApplication;
 	let pool: Pool;
 	let reviewer: ActorContext;
+	let ownerId: string;
 	let ownerIds: string[];
 	const rewardIds: string[] = [];
 
 	async function pendingReward(): Promise<string> {
 		const id = randomUUID();
-		await runWithSystemRlsContext("route.rls_bypass", async () =>
-			app.get(PrismaService).reward.create({
+		await withTenantMember(app, ownerId, TENANT_SEED_IDS.klTenant, (tx) =>
+			tx.reward.create({
 				data: {
 					id,
-					organizationId: ORGANIZATION_SEED_IDS.klOrganization,
+					tenantId: TENANT_SEED_IDS.klTenant,
 					title: `E2E review ${id}`,
 					description: "Created by reward-review-notices.e2e-spec.ts",
 					rewardType: "FREE_ITEM",
 					category: "cafe",
-					images: { create: [{ organizationId: ORGANIZATION_SEED_IDS.klOrganization, fileId: rewardCoverImageSeedId("free-coffee"), position: 0 }] },
+					images: { create: [{ fileId: rewardCoverImageSeedId("free-coffee"), position: 0 }] },
 					quantityTotal: 5,
 					quantityRemaining: 5,
 					expiryDate: Date.now() + 30 * DAY_MS,
@@ -65,20 +64,21 @@ describe("Reward review notices (e2e)", () => {
 	beforeAll(async () => {
 		app = await createE2eApp();
 		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		ownerId = IdRowSchema.parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'brew.owner@kl-rewards.demo'`)).rows.at(0)).id;
 		const superAdminId = IdRowSchema.parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'superadmin@example.com'`)).rows.at(0)).id;
 		reviewer = ActorContextSchema.parse({
 			kind: "user",
 			userId: superAdminId,
 			sessionId: randomUUID(),
-			organizationId: null,
+			tenantId: null,
 			isSuperAdmin: true,
-			accessScope: "superadmin",
+			accessScope: "tenant",
 			impersonatorUserId: null,
 			request: { requestId: randomUUID(), ip: null, userAgent: null, deviceLabel: null, endpoint: null },
 		});
 		const owners = await pool.query(
-			`SELECT "userId" AS id FROM public."OrganizationMembership" WHERE "organizationId" = $1 AND role = 'OWNER' AND status = 'ACTIVE' AND "isDeleted" = false ORDER BY "userId"`,
-			[ORGANIZATION_SEED_IDS.klOrganization],
+			`SELECT "userId" AS id FROM public."Membership" WHERE "tenantId" = $1 AND role = 'OWNER' AND status = 'ACTIVE' AND "isDeleted" = false ORDER BY "userId"`,
+			[TENANT_SEED_IDS.klTenant],
 		);
 		ownerIds = z
 			.array(IdRowSchema)

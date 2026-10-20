@@ -179,9 +179,4 @@ export class TypedConfigService {
 	public get isDebugLogging(): boolean {
 		return this.config.observability.logLevel === "debug" || this.config.observability.logLevel === "trace";
 	}
-
-	/** The organization a single-tenant deployment serves; `null` in multi-tenant mode. */
-	public get singleTenantOrganizationId(): string | null {
-		return this.config.tenancy.enabled ? null : this.config.tenancy.singleTenantOrganizationId;
-	}
 }

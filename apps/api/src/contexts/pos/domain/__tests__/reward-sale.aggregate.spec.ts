@@ -47,7 +47,7 @@ describe("RewardSale.checkout", () => {
 		expect(event).toBeInstanceOf(SaleCheckedOut);
 		expect(event).toMatchObject({
 			saleId: "sale-1",
-			organizationId: POINT.organizationId,
+			tenantId: POINT.tenantId,
 			terminalId: POINT.terminalId,
 			billTotalMinor: 5_000,
 			claimIds: ["claim-a", "claim-b"],

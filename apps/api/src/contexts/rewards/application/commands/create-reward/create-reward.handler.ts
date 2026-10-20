@@ -8,7 +8,7 @@ import type { UnitOfWork } from "../../../../../platform/application/unit-of-wor
 import { Reward } from "../../../domain/aggregates/reward.aggregate";
 import { decideRewardLocationScope } from "../../../domain/policies/reward-location-scope.policy";
 import { RewardRulesValue } from "../../../domain/value-objects/reward-rules.value-object";
-import { MERCHANT_ACCESS } from "../../../../organizations/public-api";
+import { MERCHANT_ACCESS } from "../../../../tenancy/public-api";
 import { REWARD_ID_GENERATOR, REWARDS_UNIT_OF_WORK, type IdGenerator } from "../../ports/rewards.tokens";
 import type { RewardsScope } from "../../rewards-scope";
 import { managerLocationIds } from "../merchant-manager-scope";
@@ -29,16 +29,16 @@ export class CreateRewardHandler implements ICommandHandler<CreateRewardCommand,
 
 	public async execute(command: CreateRewardCommand): Promise<RewardResponse> {
 		const { actor, input } = command;
-		const grant = await this.merchantAccess.assertCapability(actor, { organizationId: input.organizationId, capability: MERCHANT_CAPABILITY.manageRewards });
+		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageRewards });
 
 		return this.uow.run(actor, async (scope: RewardsScope): Promise<RewardResponse> => {
 			const now = this.clock.now();
-			const stores = await scope.stores.factsFor(input.organizationId, input.locationIds);
+			const stores = await scope.stores.factsFor(input.tenantId, input.locationIds);
 			const reward = Reward.create(
 				{
 					id: this.ids.next(),
 					referrerId: this.ids.next(),
-					organizationId: input.organizationId,
+					tenantId: input.tenantId,
 					title: input.title,
 					description: input.description,
 					offer: { rewardType: input.rewardType, rewardValue: input.rewardValue, termsConditions: input.termsConditions ?? null, category: input.category },
@@ -55,7 +55,7 @@ export class CreateRewardHandler implements ICommandHandler<CreateRewardCommand,
 				},
 				now,
 			);
-			await scope.imageFiles.lockUsable(input.organizationId, reward.imagesToBind());
+			await scope.imageFiles.lockUsable(input.tenantId, reward.imagesToBind());
 			await scope.rewards.add(reward);
 			scope.events.collectFrom(reward);
 			return scope.views.getResponse(reward.id);

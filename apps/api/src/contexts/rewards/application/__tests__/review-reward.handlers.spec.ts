@@ -7,7 +7,7 @@ import type { ActorContext } from "../../../../platform/application/actor-contex
 import { AuthenticationError, ConflictError } from "../../../../platform/application/errors/app-error";
 import { RewardNotFoundError, RewardNotPendingReviewError, RewardRejectionReasonBlankError } from "../../domain/errors/reward.errors";
 import { AUTO_PUBLISH_WINDOW_MS } from "../../domain/value-objects/reward-status.value-object";
-import { NOW, ORGANIZATION_ID, REVIEWER_ID, REWARD_ID, referrerRow, rewardState } from "../../domain/__tests__/reward-state.fixture";
+import { NOW, TENANT_ID, REVIEWER_ID, REWARD_ID, referrerRow, rewardState } from "../../domain/__tests__/reward-state.fixture";
 import { ApproveRewardCommand } from "../commands/approve-reward/approve-reward.command";
 import { ApproveRewardHandler } from "../commands/approve-reward/approve-reward.handler";
 import { AutoPublishDueRewardsCommand } from "../commands/auto-publish-due-rewards/auto-publish-due-rewards.command";
@@ -51,7 +51,7 @@ describe("ApproveRewardHandler (D01)", () => {
 		const response = await new ApproveRewardHandler(uow, clock).execute(new ApproveRewardCommand(actor, { rewardId: REWARD_ID }));
 
 		expect(response.status).toBe("PUBLISHED");
-		expect(uow.committed).toEqual([{ actor, operation: "route.rls_bypass" }]);
+		expect(uow.committed).toEqual([{ actor, operation: "rewards.admin_review" }]);
 		expect(scope.rewards.rows.get(REWARD_ID)?.reviewedByUserId).toBe(REVIEWER_ID);
 		expect(scope.rewards.rows.get(REWARD_ID)?.referrer?.status).toBe("PUBLISHED");
 		expect(scope.events.recordedNames()).toEqual(["rewards.RewardApproved"]);
@@ -77,9 +77,7 @@ describe("ApproveRewardHandler (D01)", () => {
 	it("answers 404 for a missing reward and refuses a machine caller before opening a transaction", async () => {
 		const { uow, clock } = setup();
 		await expect(new ApproveRewardHandler(uow, clock).execute(new ApproveRewardCommand(userActor(REVIEWER_ID), { rewardId: REWARD_ID }))).rejects.toThrow(RewardNotFoundError);
-		await expect(new ApproveRewardHandler(uow, clock).execute(new ApproveRewardCommand(apiKeyActor(ORGANIZATION_ID), { rewardId: REWARD_ID }))).rejects.toThrow(
-			AuthenticationError,
-		);
+		await expect(new ApproveRewardHandler(uow, clock).execute(new ApproveRewardCommand(apiKeyActor(TENANT_ID), { rewardId: REWARD_ID }))).rejects.toThrow(AuthenticationError);
 		expect(uow.committed).toEqual([]);
 	});
 });
@@ -174,7 +172,7 @@ describe("RecordRewardReviewAuditHandler", () => {
 			await handler.handle(rejected, scope);
 		}
 		expect(scope.audit.entries).toEqual([
-			{ organizationId: ORGANIZATION_ID, actorUserId: REVIEWER_ID, action: "reward.rejected", metadata: { rewardId: REWARD_ID, reason: "Fix the terms" } },
+			{ tenantId: TENANT_ID, actorUserId: REVIEWER_ID, action: "reward.rejected", metadata: { rewardId: REWARD_ID, reason: "Fix the terms" } },
 		]);
 	});
 
@@ -188,6 +186,6 @@ describe("RecordRewardReviewAuditHandler", () => {
 				await handler.handle(event, scope);
 			}
 		}
-		expect(scope.audit.entries).toEqual([{ organizationId: ORGANIZATION_ID, actorUserId: null, action: "reward.auto_published", metadata: { rewardId: REWARD_ID } }]);
+		expect(scope.audit.entries).toEqual([{ tenantId: TENANT_ID, actorUserId: null, action: "reward.auto_published", metadata: { rewardId: REWARD_ID } }]);
 	});
 });

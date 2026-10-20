@@ -16,16 +16,16 @@ import { HARNESS_NOW, HARNESS_ORG_ID, HARNESS_STORE_ID, reportingHarness } from 
 const MEMBER = userActor("8d0f3b0e-1f7a-4c55-9d1e-2f1a6b7c8d90");
 
 describe("GetMerchantDashboardHandler", () => {
-	it("asks for merchant:view_analytics on the route's organization and store before reading anything", async () => {
+	it("asks for merchant:view_analytics on the route's tenant and store before reading anything", async () => {
 		const harness = reportingHarness();
 		harness.access.allow = false;
 		const handler = new GetMerchantDashboardHandler(harness.access, harness.dashboards);
 
-		await expect(handler.execute(new GetMerchantDashboardQuery(MEMBER, { organizationId: HARNESS_ORG_ID, query: { locationId: HARNESS_STORE_ID } }))).rejects.toBeInstanceOf(
+		await expect(handler.execute(new GetMerchantDashboardQuery(MEMBER, { tenantId: HARNESS_ORG_ID, query: { locationId: HARNESS_STORE_ID } }))).rejects.toBeInstanceOf(
 			MerchantAccessDeniedForTest,
 		);
 		expect(harness.access.requests).toEqual([
-			{ actor: MEMBER, request: { organizationId: HARNESS_ORG_ID, capability: MERCHANT_CAPABILITY.viewAnalytics, locationId: HARNESS_STORE_ID } },
+			{ actor: MEMBER, request: { tenantId: HARNESS_ORG_ID, capability: MERCHANT_CAPABILITY.viewAnalytics, locationId: HARNESS_STORE_ID } },
 		]);
 		expect(harness.facts.seriesCalls).toHaveLength(0);
 		expect(harness.breakdowns.calls).toBe(0);
@@ -36,9 +36,9 @@ describe("GetMerchantDashboardHandler", () => {
 		harness.access.grantScope = { locationScope: "SELECTED", locationIds: [HARNESS_STORE_ID] };
 		const handler = new GetMerchantDashboardHandler(harness.access, harness.dashboards);
 
-		const dashboard = await handler.execute(new GetMerchantDashboardQuery(MEMBER, { organizationId: HARNESS_ORG_ID, query: {} }));
+		const dashboard = await handler.execute(new GetMerchantDashboardQuery(MEMBER, { tenantId: HARNESS_ORG_ID, query: {} }));
 
-		const scope = { kind: "organization", organizationId: HARNESS_ORG_ID, locationScope: selectedAnalyticsLocations([HARNESS_STORE_ID]) };
+		const scope = { kind: "tenant", tenantId: HARNESS_ORG_ID, locationScope: selectedAnalyticsLocations([HARNESS_STORE_ID]) };
 		expect(harness.facts.seriesCalls.map((call) => call.scope)).toEqual([scope]);
 		expect(harness.breakdowns.storeCalls.map((call) => call.scope)).toEqual([scope]);
 		expect(harness.access.requests.map((entry) => entry.request.locationId)).toEqual([null]);
@@ -50,11 +50,9 @@ describe("GetMerchantDashboardHandler", () => {
 		harness.access.grantScope = { locationScope: "SELECTED", locationIds: [] };
 		const handler = new GetMerchantDashboardHandler(harness.access, harness.dashboards);
 
-		await handler.execute(new GetMerchantDashboardQuery(MEMBER, { organizationId: HARNESS_ORG_ID, query: {} }));
+		await handler.execute(new GetMerchantDashboardQuery(MEMBER, { tenantId: HARNESS_ORG_ID, query: {} }));
 
-		expect(harness.facts.seriesCalls.map((call) => call.scope)).toEqual([
-			{ kind: "organization", organizationId: HARNESS_ORG_ID, locationScope: selectedAnalyticsLocations([]) },
-		]);
+		expect(harness.facts.seriesCalls.map((call) => call.scope)).toEqual([{ kind: "tenant", tenantId: HARNESS_ORG_ID, locationScope: selectedAnalyticsLocations([]) }]);
 	});
 });
 
@@ -71,11 +69,11 @@ describe("GetMerchantAnalyticsHandler", () => {
 		harness.activity.titles = [{ id: "reward-1", title: "Free coffee" }];
 		const handler = new GetMerchantAnalyticsHandler(harness.access, harness.weekly);
 
-		const analytics = await handler.execute(new GetMerchantAnalyticsQuery(key, { organizationId: HARNESS_ORG_ID, query: {} }));
+		const analytics = await handler.execute(new GetMerchantAnalyticsQuery(key, { tenantId: HARNESS_ORG_ID, query: {} }));
 
 		expect(harness.access.requests.map((entry) => [entry.actor, entry.request.capability])).toEqual([[key, MERCHANT_CAPABILITY.viewAnalytics]]);
 		expect(harness.activity.countFilters.every((filter) => filter.locationScope.kind === "SELECTED_LOCATIONS")).toBe(true);
-		expect(harness.sales.aggregateScopes).toContainEqual({ organizationId: HARNESS_ORG_ID, locationIds: [HARNESS_STORE_ID] });
+		expect(harness.sales.aggregateScopes).toContainEqual({ tenantId: HARNESS_ORG_ID, locationIds: [HARNESS_STORE_ID] });
 		expect(analytics.totalClaims.value).toBe(2);
 		expect(analytics.totalRedemptions.value).toBe(1);
 		expect(analytics.conversionRate.value).toBe(50);
@@ -88,21 +86,21 @@ describe("GetMerchantAnalyticsHandler", () => {
 		harness.access.allow = false;
 		const handler = new GetMerchantAnalyticsHandler(harness.access, harness.weekly);
 
-		await expect(handler.execute(new GetMerchantAnalyticsQuery(MEMBER, { organizationId: HARNESS_ORG_ID, query: {} }))).rejects.toBeInstanceOf(MerchantAccessDeniedForTest);
+		await expect(handler.execute(new GetMerchantAnalyticsQuery(MEMBER, { tenantId: HARNESS_ORG_ID, query: {} }))).rejects.toBeInstanceOf(MerchantAccessDeniedForTest);
 		expect(harness.activity.countFilters).toHaveLength(0);
 		expect(harness.sales.aggregateScopes).toHaveLength(0);
 	});
 });
 
 describe("ExportMerchantReportHandler", () => {
-	it("exports the authorized dashboard under the organization's slug and audits it once", async () => {
+	it("exports the authorized dashboard under the tenant's slug and audits it once", async () => {
 		const harness = reportingHarness();
 		const handler = new ExportMerchantReportHandler(harness.access, harness.dashboards, harness.exporter);
 		const request = await captureFastifyRequest({ headers: {} });
 
 		const file = await handler.execute(
 			new ExportMerchantReportQuery(MEMBER, {
-				organizationId: HARNESS_ORG_ID,
+				tenantId: HARNESS_ORG_ID,
 				query: { format: "csv", from: epochMs(HARNESS_NOW - DAY_MS), to: epochMs(HARNESS_NOW) },
 				request,
 			}),
@@ -121,7 +119,7 @@ describe("ExportMerchantReportHandler", () => {
 		await expect(
 			handler.execute(
 				new ExportMerchantReportQuery(MEMBER, {
-					organizationId: HARNESS_ORG_ID,
+					tenantId: HARNESS_ORG_ID,
 					query: { format: "pdf", from: epochMs(HARNESS_NOW - DAY_MS), to: epochMs(HARNESS_NOW) },
 					request: await captureFastifyRequest({ headers: {} }),
 				}),

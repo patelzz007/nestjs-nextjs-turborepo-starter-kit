@@ -1,6 +1,6 @@
 import type { MerchantBusinessCategory, PilotCity, RewardRedemptionMethod } from "@workspace/shared";
 
-import type { AnalyticsScope, AnalyticsTimeRange, AnalyticsWindow, OrganizationAnalyticsScope } from "../../domain/value-objects/analytics-scope.value-object";
+import type { AnalyticsScope, AnalyticsTimeRange, AnalyticsWindow, TenantAnalyticsScope } from "../../domain/value-objects/analytics-scope.value-object";
 
 export interface StoreBreakdownRow {
 	readonly locationId: string | null;
@@ -25,7 +25,7 @@ export interface RedemptionMethodRow {
 }
 
 export interface MerchantSalesRow {
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly name: string;
 	readonly category: MerchantBusinessCategory | null;
 	readonly salesMinor: number;
@@ -49,7 +49,7 @@ export interface CitySalesRow {
 
 /** One merchant's paid bills in one bucket (only buckets with bills). */
 export interface MerchantBucketSalesRow {
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly startMs: number;
 	readonly salesMinor: number;
 	readonly bills: number;
@@ -57,8 +57,8 @@ export interface MerchantBucketSalesRow {
 
 /** Breakdowns of a range by one dimension, grouped in the database. Every query is bounded by the scope or an explicit `limit`. */
 export interface AnalyticsBreakdownReadPort {
-	byStore(scope: OrganizationAnalyticsScope, range: AnalyticsTimeRange): Promise<StoreBreakdownRow[]>;
-	byReward(scope: OrganizationAnalyticsScope, range: AnalyticsTimeRange, limit: number): Promise<RewardBreakdownRow[]>;
+	byStore(scope: TenantAnalyticsScope, range: AnalyticsTimeRange): Promise<StoreBreakdownRow[]>;
+	byReward(scope: TenantAnalyticsScope, range: AnalyticsTimeRange, limit: number): Promise<RewardBreakdownRow[]>;
 	byRedemptionMethod(scope: AnalyticsScope, range: AnalyticsTimeRange): Promise<RedemptionMethodRow[]>;
 	byMerchant(scope: AnalyticsScope, range: AnalyticsTimeRange, limit: number): Promise<MerchantSalesRow[]>;
 	byCategory(scope: AnalyticsScope, range: AnalyticsTimeRange): Promise<CategorySalesRow[]>;

@@ -12,7 +12,7 @@ import { TransactionalEventDispatcher } from "../../platform/infrastructure/unit
 import { AFTER_COMMIT_PUBLISHER, UnitOfWorkModule } from "../../platform/infrastructure/unit-of-work/unit-of-work.module";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { TenantTransactionService } from "../../prisma/tenant-transaction.service";
-import { OrganizationAccessModule } from "../organizations/public-api";
+import { TenantAccessModule } from "../tenancy/public-api";
 import { ChangePosSettingsHandler } from "./application/commands/change-pos-settings/change-pos-settings.handler";
 import { CheckoutSaleHandler } from "./application/commands/checkout-sale/checkout-sale.handler";
 import { IssueApiKeyHandler } from "./application/commands/issue-api-key/issue-api-key.handler";
@@ -29,7 +29,7 @@ import { GetPosSettingsHandler } from "./application/queries/get-pos-settings/ge
 import { GetTerminalSummaryHandler } from "./application/queries/get-terminal-summary/get-terminal-summary.handler";
 import { GetTerminalHandler } from "./application/queries/get-terminal/get-terminal.handler";
 import { ListApiKeysHandler } from "./application/queries/list-api-keys/list-api-keys.handler";
-import { ListOrganizationRedemptionsHandler } from "./application/queries/list-organization-redemptions/list-organization-redemptions.handler";
+import { ListTenantRedemptionsHandler } from "./application/queries/list-tenant-redemptions/list-tenant-redemptions.handler";
 import { ListTerminalsHandler } from "./application/queries/list-terminals/list-terminals.handler";
 import { RedemptionCodeResolver } from "./application/services/redemption-code-resolver";
 import { Sha256CheckoutFingerprint } from "./infrastructure/adapters/checkout-fingerprint.adapter";
@@ -40,20 +40,28 @@ import { PrismaApiKeyReadRepository, PrismaRedemptionReadRepository, PrismaTermi
 import { PosRegistrations } from "./infrastructure/pos-registrations";
 import { MerchantApiKeyGuard } from "../../platform/presentation/http/security/guards/merchant-api-key.guard";
 import { PosRateLimitGuard } from "./presentation/http/guards/pos-rate-limit.guard";
-import { OrganizationApiKeysController } from "./presentation/http/organization-api-keys.controller";
-import { OrganizationRedemptionsController } from "./presentation/http/organization-redemptions.controller";
-import { OrganizationTerminalsController, PosTerminalsController } from "./presentation/http/organization-terminals.controller";
+import { TenantApiKeysController } from "./presentation/http/tenant-api-keys.controller";
+import { IntegrationRedemptionsController } from "./presentation/http/integration-redemptions.controller";
+import { TenantRedemptionsController } from "./presentation/http/tenant-redemptions.controller";
+import { TenantTerminalsController, PosTerminalsController } from "./presentation/http/tenant-terminals.controller";
 import { RedemptionsController } from "./presentation/http/redemptions.controller";
 
 /**
  * The pos context: checking out at a till (validate, checkout as one unit of work over claims, rewards
  * and referrals), the backup-code lockout, terminals and pairing, merchant API keys, and the
- * organization's redemption history. A composition module (it binds other contexts' transactional
+ * tenant's redemption history. A composition module (it binds other contexts' transactional
  * ports to its transaction), mounted by `app.module.ts` only; `PosAccessModule` is its global leaf.
  */
 @Module({
-	imports: [PrismaModule, OutboxModule, UnitOfWorkModule, OrganizationAccessModule],
-	controllers: [RedemptionsController, OrganizationTerminalsController, PosTerminalsController, OrganizationApiKeysController, OrganizationRedemptionsController],
+	imports: [PrismaModule, OutboxModule, UnitOfWorkModule, TenantAccessModule],
+	controllers: [
+		RedemptionsController,
+		TenantTerminalsController,
+		PosTerminalsController,
+		TenantApiKeysController,
+		TenantRedemptionsController,
+		IntegrationRedemptionsController,
+	],
 	providers: [
 		REWARD_CODE_HASHER_PROVIDER,
 		{
@@ -107,7 +115,7 @@ import { RedemptionsController } from "./presentation/http/redemptions.controlle
 		GetTerminalHandler,
 		GetPosSettingsHandler,
 		ListApiKeysHandler,
-		ListOrganizationRedemptionsHandler,
+		ListTenantRedemptionsHandler,
 	],
 })
 export class PosModule {}

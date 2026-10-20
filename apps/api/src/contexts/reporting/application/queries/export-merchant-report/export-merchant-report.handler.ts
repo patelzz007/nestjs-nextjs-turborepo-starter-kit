@@ -20,8 +20,8 @@ export class ExportMerchantReportHandler implements IQueryHandler<ExportMerchant
 
 	public async execute(query: ExportMerchantReportQuery): Promise<ReportFile> {
 		const { actor, input } = query;
-		const scope = await authorizeMerchantAnalytics(this.merchantAccess, actor, { organizationId: input.organizationId, locationId: input.query.locationId });
-		const { dashboard, subject } = await this.dashboards.merchantDashboard(input.organizationId, scope, input.query);
+		const scope = await authorizeMerchantAnalytics(this.merchantAccess, actor, { tenantId: input.tenantId, locationId: input.query.locationId });
+		const { dashboard, subject } = await this.dashboards.merchantDashboard(input.tenantId, scope, input.query);
 		return this.exporter.exportMerchant(dashboard, subject, input.query.format, input.request);
 	}
 }

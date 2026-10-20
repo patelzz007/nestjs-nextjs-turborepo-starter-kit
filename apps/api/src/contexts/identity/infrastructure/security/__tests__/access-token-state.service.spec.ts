@@ -2,8 +2,10 @@ import { UnauthorizedException } from "@nestjs/common";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../../../../prisma/prisma.service";
+import type { SystemDatabaseContext } from "../../../../../prisma/tenant-context";
 
 import { AccessTokenStateService, REVOKED_SESSION_LOOKBACK_MARGIN_MS } from "../access-token-state.service";
 import { TypedConfigService } from "../../../../../config/typed-config.service";
@@ -43,7 +45,13 @@ describe("AccessTokenStateService", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.userFindUnique.mockResolvedValue(accountState);
-		service = new AccessTokenStateService(new PrismaService(createTestTypedConfig()), new TypedConfigService(createTestApiConfig()));
+		const prisma = new PrismaService(createTestTypedConfig());
+		service = new AccessTokenStateService(
+			{
+				withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
+			},
+			new TypedConfigService(createTestApiConfig()),
+		);
 	});
 
 	it("uses the cache on a second validation for the same user", async () => {

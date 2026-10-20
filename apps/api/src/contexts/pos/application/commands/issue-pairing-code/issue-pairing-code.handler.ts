@@ -5,9 +5,9 @@ import { epochMs, MERCHANT_CAPABILITY, POS_PAIRING_CODE_TTL_MS, type MerchantTer
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
-import { MERCHANT_ACCESS } from "../../../../organizations/public-api";
+import { MERCHANT_ACCESS } from "../../../../tenancy/public-api";
 import { TerminalNotFoundError } from "../../../domain/errors/pos.errors";
-import { actingInOrganization, actingMemberId } from "../../acting-member";
+import { actingInTenant, actingMemberId } from "../../acting-member";
 import type { PosScope } from "../../pos-scope";
 import type { PosCredentialsPort } from "../../ports/pos-credentials.port";
 import { POS_CREDENTIALS, POS_UNIT_OF_WORK } from "../../ports/pos.tokens";
@@ -31,11 +31,11 @@ export class IssuePairingCodeHandler implements ICommandHandler<IssuePairingCode
 	public async execute(command: IssuePairingCodeCommand): Promise<MerchantTerminalPairing> {
 		const { actor, input } = command;
 		const memberId = actingMemberId(actor);
-		const grant = await this.merchantAccess.assertCapability(actor, { organizationId: input.organizationId, capability: MERCHANT_CAPABILITY.manageApiKeys });
-		const tenant = actingInOrganization(actor, input.organizationId);
+		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageApiKeys });
+		const tenant = actingInTenant(actor, input.tenantId);
 		const secret = this.credentials.newPairingCode();
 		return this.uow.run(tenant, async (scope: PosScope): Promise<MerchantTerminalPairing> => {
-			const terminal = await scope.terminals.lockLive(input.terminalRowId, input.organizationId);
+			const terminal = await scope.terminals.lockLive(input.terminalRowId, input.tenantId);
 			if (terminal === null || !isWithinGrant(grant, terminal.locationId)) {
 				throw new TerminalNotFoundError();
 			}
@@ -44,7 +44,7 @@ export class IssuePairingCodeHandler implements ICommandHandler<IssuePairingCode
 			terminal.issuePairingCode({ hash: secret.hash, expiresAt, issuedByUserId: memberId, issuedAt: now });
 			await scope.terminals.save(terminal);
 			await scope.rewardAudit.append({
-				organizationId: input.organizationId,
+				tenantId: input.tenantId,
 				actorUserId: memberId,
 				action: "merchant.terminal_pairing_code_issued",
 				metadata: { terminalId: terminal.id },

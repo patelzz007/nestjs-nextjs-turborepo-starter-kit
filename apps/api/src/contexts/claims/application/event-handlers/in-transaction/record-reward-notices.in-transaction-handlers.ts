@@ -1,6 +1,6 @@
 import type { InTransactionEventHandler } from "../../../../../platform/application/events/in-transaction-event-handler";
 import type { DomainEvent } from "../../../../../platform/domain/domain-event";
-import type { OrganizationReadPort } from "../../../../organizations/public-api";
+import type { TenantReadPort } from "../../../../tenancy/public-api";
 import { ReferrerCredited } from "../../../../referrals/public-api";
 import { RewardApproved, RewardAutoPublished, RewardRejected } from "../../../../rewards/public-api";
 import type { ClaimsScope } from "../../claims-scope";
@@ -41,16 +41,16 @@ function noticeFor(event: RewardReviewDecision, ownerUserId: string): RewardNoti
 	return { userId: ownerUserId, type: "reward_auto_published", title: "Reward published", body: `"${event.title}" was auto-published after the 24h review window.`, metadata };
 }
 
-/** Every review decision tells the organization's owners, in the decision's own transaction. */
+/** Every review decision tells the tenant's owners, in the decision's own transaction. */
 export class RecordOwnerNoticesOnRewardReview implements InTransactionEventHandler<RewardReviewDecision, ClaimsScope> {
-	public constructor(private readonly organizations: OrganizationReadPort) {}
+	public constructor(private readonly tenants: TenantReadPort) {}
 
 	public accepts(event: DomainEvent): event is RewardReviewDecision {
 		return event instanceof RewardApproved || event instanceof RewardRejected || event instanceof RewardAutoPublished;
 	}
 
 	public async handle(event: RewardReviewDecision, scope: ClaimsScope): Promise<void> {
-		const owners = await this.organizations.listOwnerUserIds(event.organizationId);
+		const owners = await this.tenants.listOwnerUserIds(event.tenantId);
 		await scope.notifications.add(owners.map((ownerUserId) => noticeFor(event, ownerUserId)));
 	}
 }

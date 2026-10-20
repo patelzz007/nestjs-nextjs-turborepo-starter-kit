@@ -5,6 +5,7 @@ import type { FastifyRequest } from "fastify";
 import { API_KEY_VERIFICATION, type ApiKeyVerificationPort } from "../../../../application/ports/api-key-verification.port";
 import { TILL_RESOLVER, type TillRefusal, type TillResolverPort } from "../../../../application/ports/till-resolution.port";
 import { RequestContextService } from "../../../../infrastructure/context/request-context";
+import { rejectMachineTenantSelector } from "../../../../infrastructure/tenancy/machine-tenant-selector";
 import { extractApiKeyFromRequest, requestHeader, setTillPointOnRequest } from "../api-keys/api-key-request";
 
 /** One wire answer: status, stable code and message. */
@@ -60,7 +61,8 @@ export class MerchantApiKeyGuard implements CanActivate {
 			throw refuse(REFUSALS[till.refusal]);
 		}
 		setTillPointOnRequest(request, till.point);
-		this.requestContext.bindApiKey({ apiKeyId: key.apiKeyId, organizationId: key.organizationId, terminalId: till.point.terminalId, locationId: key.locationId });
+		rejectMachineTenantSelector(request);
+		this.requestContext.bindApiKey({ apiKeyId: key.apiKeyId, tenantId: key.tenantId, terminalId: till.point.terminalId, locationId: key.locationId });
 		return true;
 	}
 

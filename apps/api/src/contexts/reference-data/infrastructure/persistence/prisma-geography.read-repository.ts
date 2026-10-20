@@ -33,6 +33,7 @@ import { fetchListPage, mapListResult, toPaginatedServiceResult } from "../../..
 import { buildListOrder } from "../../../../platform/infrastructure/persistence/list-query/list-order";
 import type { PrismaReadExecutor } from "../../../../platform/infrastructure/unit-of-work/prisma-read-executor";
 import type { GeographyReadPort } from "../../application/ports/geography-read.port";
+import { GEO_READ_OPERATION } from "../../application/ports/reference-data.tokens";
 import type { GeoChildLevel } from "../../domain/policies/geo-cascade.policy";
 import type { GeoParentKind } from "../../domain/value-objects/geo-entity-kind.value-object";
 import { GEO_CASCADE_WHERE } from "./geo-cascade.where";
@@ -140,15 +141,16 @@ function assertNever(value: never): never {
 }
 
 /**
- * Geography reads. Each one runs under the actor's own RLS session
- * (`PrismaReadExecutor`, the geo tables are world-readable to signed-in
- * sessions) and always excludes soft-deleted rows.
+ * Geography reads. Each one runs as `geo.reference_data.read` (the five geo
+ * tables only). SELECT on those tables is world-readable; the named operation
+ * keeps a platform admin's session from reaching any other table. Soft-deleted
+ * rows are always excluded.
  */
 export class PrismaGeographyReadRepository implements GeographyReadPort {
 	public constructor(private readonly reads: PrismaReadExecutor<GeoReadClient>) {}
 
 	public stats(actor: ActorContext): Promise<GeoStats> {
-		return this.reads.read(actor, async (db): Promise<GeoStats> => {
+		return this.reads.readAsSystemOperation(GEO_READ_OPERATION, actor, async (db): Promise<GeoStats> => {
 			const live = { where: LIVE };
 			const [regions, subregions, countries, states, cities]: [number, number, number, number, number] = await Promise.all([
 				db.region.count(live),
@@ -162,7 +164,7 @@ export class PrismaGeographyReadRepository implements GeographyReadPort {
 	}
 
 	public autocomplete(actor: ActorContext, query: GeoAutocompleteQuery): Promise<readonly GeoAutocompleteItem[]> {
-		return this.reads.read(actor, async (db): Promise<readonly GeoAutocompleteItem[]> => {
+		return this.reads.readAsSystemOperation(GEO_READ_OPERATION, actor, async (db): Promise<readonly GeoAutocompleteItem[]> => {
 			const { q, country, limit } = query;
 			const nameMatch = { contains: q, mode: "insensitive" } satisfies Prisma.StringFilter;
 			const countryFilter = country ? { countryCode: country } : {};
@@ -214,7 +216,7 @@ export class PrismaGeographyReadRepository implements GeographyReadPort {
 
 	/** The cities of every country matching `countryCode` / `regionId` (the flat city rows ARE the export, `GeoExportResponseSchema`). */
 	public exportCities(actor: ActorContext, query: GeoExportQuery): Promise<readonly City[]> {
-		return this.reads.read(actor, async (db): Promise<readonly City[]> => {
+		return this.reads.readAsSystemOperation(GEO_READ_OPERATION, actor, async (db): Promise<readonly City[]> => {
 			const { countryCode, regionId } = query;
 			const countryWhere: Prisma.CountryWhereInput = {
 				...LIVE,
@@ -230,7 +232,7 @@ export class PrismaGeographyReadRepository implements GeographyReadPort {
 	}
 
 	public cascadePreview(actor: ActorContext, entity: GeoParentKind, id: number, levels: readonly GeoChildLevel[]): Promise<CascadePreviewResult | null> {
-		return this.reads.read(actor, async (db): Promise<CascadePreviewResult | null> => {
+		return this.reads.readAsSystemOperation(GEO_READ_OPERATION, actor, async (db): Promise<CascadePreviewResult | null> => {
 			const root = await findCascadeRoot(db, entity, id);
 			if (root === null) {
 				return null;
@@ -248,7 +250,7 @@ export class PrismaGeographyReadRepository implements GeographyReadPort {
 	}
 
 	public listRegions(actor: ActorContext, query: RegionListQuery): Promise<PaginatedServiceResult<RegionListItem>> {
-		return this.reads.read(actor, async (db): Promise<PaginatedServiceResult<RegionListItem>> => {
+		return this.reads.readAsSystemOperation(GEO_READ_OPERATION, actor, async (db): Promise<PaginatedServiceResult<RegionListItem>> => {
 			const searchIds = await searchIdsFor(db, "Region", query.search);
 			const include = parseInclude(query.include, REGION_INCLUDES);
 			const result = await fetchListPage(query, {
@@ -264,14 +266,14 @@ export class PrismaGeographyReadRepository implements GeographyReadPort {
 	}
 
 	public getRegion(actor: ActorContext, id: number): Promise<Region | null> {
-		return this.reads.read(actor, async (db): Promise<Region | null> => {
+		return this.reads.readAsSystemOperation(GEO_READ_OPERATION, actor, async (db): Promise<Region | null> => {
 			const row = await db.region.findFirst({ where: { id, ...LIVE } });
 			return row === null ? null : toRegionDto(row);
 		});
 	}
 
 	public listSubregions(actor: ActorContext, query: SubregionListQuery): Promise<PaginatedServiceResult<SubregionListItem>> {
-		return this.reads.read(actor, async (db): Promise<PaginatedServiceResult<SubregionListItem>> => {
+		return this.reads.readAsSystemOperation(GEO_READ_OPERATION, actor, async (db): Promise<PaginatedServiceResult<SubregionListItem>> => {
 			const searchIds = await searchIdsFor(db, "Subregion", query.search);
 			const include = parseInclude(query.include, SUBREGION_INCLUDES);
 			const result = await fetchListPage(query, {
@@ -291,14 +293,14 @@ export class PrismaGeographyReadRepository implements GeographyReadPort {
 	}
 
 	public getSubregion(actor: ActorContext, id: number): Promise<Subregion | null> {
-		return this.reads.read(actor, async (db): Promise<Subregion | null> => {
+		return this.reads.readAsSystemOperation(GEO_READ_OPERATION, actor, async (db): Promise<Subregion | null> => {
 			const row = await db.subregion.findFirst({ where: { id, ...LIVE } });
 			return row === null ? null : toSubregionDto(row);
 		});
 	}
 
 	public listCountries(actor: ActorContext, query: CountryListQuery): Promise<PaginatedServiceResult<CountryListItem>> {
-		return this.reads.read(actor, async (db): Promise<PaginatedServiceResult<CountryListItem>> => {
+		return this.reads.readAsSystemOperation(GEO_READ_OPERATION, actor, async (db): Promise<PaginatedServiceResult<CountryListItem>> => {
 			const searchIds = await searchIdsFor(db, "Country", query.search);
 			const include = parseInclude(query.include, COUNTRY_INCLUDES);
 			const result = await fetchListPage(query, {
@@ -314,14 +316,14 @@ export class PrismaGeographyReadRepository implements GeographyReadPort {
 	}
 
 	public getCountry(actor: ActorContext, id: number): Promise<Country | null> {
-		return this.reads.read(actor, async (db): Promise<Country | null> => {
+		return this.reads.readAsSystemOperation(GEO_READ_OPERATION, actor, async (db): Promise<Country | null> => {
 			const row = await db.country.findFirst({ where: { id, ...LIVE } });
 			return row === null ? null : toCountryDto(row);
 		});
 	}
 
 	public listStates(actor: ActorContext, query: StateListQuery): Promise<PaginatedServiceResult<StateListItem>> {
-		return this.reads.read(actor, async (db): Promise<PaginatedServiceResult<StateListItem>> => {
+		return this.reads.readAsSystemOperation(GEO_READ_OPERATION, actor, async (db): Promise<PaginatedServiceResult<StateListItem>> => {
 			const searchIds = await searchIdsFor(db, "State", query.search);
 			const include = parseInclude(query.include, STATE_INCLUDES);
 			const result = await fetchListPage(query, {
@@ -337,14 +339,14 @@ export class PrismaGeographyReadRepository implements GeographyReadPort {
 	}
 
 	public getState(actor: ActorContext, id: number): Promise<State | null> {
-		return this.reads.read(actor, async (db): Promise<State | null> => {
+		return this.reads.readAsSystemOperation(GEO_READ_OPERATION, actor, async (db): Promise<State | null> => {
 			const row = await db.state.findFirst({ where: { id, ...LIVE } });
 			return row === null ? null : toStateDto(row);
 		});
 	}
 
 	public listCities(actor: ActorContext, query: CityListQuery): Promise<PaginatedServiceResult<CityListItem>> {
-		return this.reads.read(actor, async (db): Promise<PaginatedServiceResult<CityListItem>> => {
+		return this.reads.readAsSystemOperation(GEO_READ_OPERATION, actor, async (db): Promise<PaginatedServiceResult<CityListItem>> => {
 			const searchIds = await searchIdsFor(db, "City", query.search);
 			const include = parseInclude(query.include, CITY_INCLUDES);
 			const result = await fetchListPage(query, {
@@ -360,7 +362,7 @@ export class PrismaGeographyReadRepository implements GeographyReadPort {
 	}
 
 	public getCity(actor: ActorContext, id: number): Promise<City | null> {
-		return this.reads.read(actor, async (db): Promise<City | null> => {
+		return this.reads.readAsSystemOperation(GEO_READ_OPERATION, actor, async (db): Promise<City | null> => {
 			const row = await db.city.findFirst({ where: { id, ...LIVE } });
 			return row === null ? null : toCityDto(row);
 		});

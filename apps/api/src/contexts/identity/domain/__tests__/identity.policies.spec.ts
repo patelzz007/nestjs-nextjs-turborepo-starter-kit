@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { epochMs, type EpochMs } from "@workspace/shared";
 
-import { AlreadyImpersonatingError, MerchantAccessRequiredError, MfaStepUpRequiredError, ProfileUpdateDuringImpersonationError } from "../errors/identity.errors";
-import { assertCanRequestImpersonation } from "../policies/impersonation-start.policy";
+import {
+	AlreadyImpersonatingError,
+	ImpersonationGrantRequiredError,
+	MerchantAccessRequiredError,
+	MfaStepUpRequiredError,
+	ProfileUpdateDuringImpersonationError,
+} from "../errors/identity.errors";
+import { assertCanRequestImpersonation, assertImpersonationGrants } from "../policies/impersonation-start.policy";
 import { assertMerchantPortalAccess } from "../policies/merchant-portal-access.policy";
 import { assertOwnProfileWritable, decideOwnProfileWrite, toProfileActor } from "../policies/own-profile-write.policy";
 import { resolveSessionRestriction, sessionScopeOf } from "../policies/session-restriction.policy";
@@ -27,6 +33,31 @@ describe("assertCanRequestImpersonation", () => {
 		expect(() => {
 			assertCanRequestImpersonation({ mfaAssuredAt: NOW, isImpersonating: true }, STEP_UP_MS, NOW);
 		}).toThrow(AlreadyImpersonatingError);
+	});
+});
+
+describe("assertImpersonationGrants", () => {
+	it("allows a customer with no membership, and a member covered by a grant for every tenant, returning those grants", () => {
+		expect(assertImpersonationGrants([], [])).toEqual([]);
+		expect(
+			assertImpersonationGrants(
+				["tenant-a", "tenant-b"],
+				[
+					{ grantId: "grant-b", tenantId: "tenant-b" },
+					{ grantId: "grant-a", tenantId: "tenant-a" },
+					{ grantId: "grant-c", tenantId: "tenant-c" },
+				],
+			),
+		).toEqual(["grant-a", "grant-b"]);
+	});
+
+	it("refuses when any of the target's tenants has no approved grant", () => {
+		expect(() => {
+			assertImpersonationGrants(["tenant-a"], []);
+		}).toThrow(ImpersonationGrantRequiredError);
+		expect(() => {
+			assertImpersonationGrants(["tenant-a", "tenant-b"], [{ grantId: "grant-a", tenantId: "tenant-a" }]);
+		}).toThrow(ImpersonationGrantRequiredError);
 	});
 });
 

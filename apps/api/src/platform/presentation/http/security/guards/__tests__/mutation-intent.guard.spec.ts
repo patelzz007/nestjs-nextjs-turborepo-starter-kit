@@ -37,6 +37,10 @@ describe("MutationIntentGuard", () => {
 		expect(activate({}, "POST", { [SKIP_MUTATION_INTENT_KEY]: true })).toBe(true);
 	});
 
+	it("exempts an X-API-Key request: an explicit credential, sent server to server with no Origin", () => {
+		expect(activate({ "x-api-key": "mk_live_example" })).toBe(true);
+	});
+
 	it("exempts client type mobile: it carries no ambient credential and a native app sends no Origin", () => {
 		expect(activate({ "x-client-type": "mobile" })).toBe(true);
 	});

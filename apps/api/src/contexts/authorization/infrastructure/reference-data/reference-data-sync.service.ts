@@ -1,16 +1,13 @@
 import type { Prisma } from "@prisma/client";
 
 import type { OperatorIdentity, OperatorIdentityProvider } from "../../../../platform/infrastructure/operator-identity";
-import type { SystemOperation } from "../../../../prisma/system-operation.registry";
 import type { ReferenceDataSyncPort } from "../../application/ports/catalog-sync.port";
 import type { PermissionAuditActor, PermissionAuditWriter } from "../../application/ports/permission-audit.port";
 import { changeCount, type ReferenceDataSection, type ReferenceDataTransactionRunner, type SectionChange } from "./reference-data.types";
+import { REFERENCE_DATA_SYNC_OPERATION } from "../../application/ports/authorization.tokens";
 
 /** The permission audit writer bound to one section transaction. */
 export type SectionAuditWriterFactory = (tx: Prisma.TransactionClient) => PermissionAuditWriter;
-
-/** The system operation (and audit actor) the sync runs as. */
-export const REFERENCE_DATA_SYNC_OPERATION: SystemOperation = "reference_data.sync";
 
 export interface SectionReport {
 	readonly section: string;
@@ -33,7 +30,7 @@ interface SyncAuditDetail extends SectionChange {
  * audit row — and never deletes rows an operator created), and idempotent.
  *
  * Each section that changed something writes one `REFERENCE_DATA_SYNCED` audit row IN THE SAME
- * transaction, with the actor `{ kind: "SYSTEM_OPERATION", operation: "reference_data.sync" }` and the
+ * transaction, with the actor `{ kind: "SYSTEM_OPERATION", operation: REFERENCE_DATA_SYNC_OPERATION }` and the
  * operator (OS user, host) in the detail. A failing section rolls back alone; the sections before it stay
  * committed and a re-run continues from there.
  */

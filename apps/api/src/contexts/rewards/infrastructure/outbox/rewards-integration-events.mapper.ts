@@ -16,13 +16,13 @@ function rewardPlatform(payload: RewardPlatformEvent): PlatformEventInput {
 export class RewardsIntegrationEventsMapper implements IntegrationEventMapper {
 	public map(event: DomainEvent): PlatformEventInput | null {
 		if (event instanceof RewardApproved) {
-			return rewardPlatform({ event: "reward.approved", actorUserId: event.reviewerUserId, organizationId: event.organizationId, metadata: { rewardId: event.rewardId } });
+			return rewardPlatform({ event: "reward.approved", actorUserId: event.reviewerUserId, tenantId: event.tenantId, metadata: { rewardId: event.rewardId } });
 		}
 		if (event instanceof RewardRejected) {
-			return rewardPlatform({ event: "reward.rejected", actorUserId: event.reviewerUserId, organizationId: event.organizationId, metadata: { rewardId: event.rewardId } });
+			return rewardPlatform({ event: "reward.rejected", actorUserId: event.reviewerUserId, tenantId: event.tenantId, metadata: { rewardId: event.rewardId } });
 		}
 		if (event instanceof RewardAutoPublished) {
-			return rewardPlatform({ event: "reward.auto_published", actorUserId: null, organizationId: event.organizationId, metadata: { rewardId: event.rewardId } });
+			return rewardPlatform({ event: "reward.auto_published", actorUserId: null, tenantId: event.tenantId, metadata: { rewardId: event.rewardId } });
 		}
 		return null;
 	}

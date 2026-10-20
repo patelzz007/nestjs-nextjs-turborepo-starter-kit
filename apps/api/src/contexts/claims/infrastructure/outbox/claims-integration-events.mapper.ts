@@ -16,7 +16,7 @@ export class ClaimsIntegrationEventsMapper implements IntegrationEventMapper {
 				payload: RewardPlatformEventSchema.parse({
 					event: "reward.claim_expired",
 					actorUserId: event.userId,
-					organizationId: event.organizationId,
+					tenantId: event.tenantId,
 					metadata: { claimId: event.claimId, isReferrerCredit: event.isReferrerCredit },
 				}),
 			};

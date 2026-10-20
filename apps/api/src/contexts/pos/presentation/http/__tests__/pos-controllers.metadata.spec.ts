@@ -23,9 +23,10 @@ import { MerchantApiKeyGuard } from "../../../../../platform/presentation/http/s
 import { MerchantActorInterceptor } from "../../../../../platform/presentation/http/security/interceptors/merchant-actor.interceptor";
 import { RATE_LIMIT_POLICY, RATE_LIMIT_POLICY_KEY } from "../../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
 import { PosRateLimitGuard } from "../guards/pos-rate-limit.guard";
-import { OrganizationApiKeysController } from "../organization-api-keys.controller";
-import { OrganizationRedemptionsController } from "../organization-redemptions.controller";
-import { OrganizationTerminalsController, PosTerminalsController } from "../organization-terminals.controller";
+import { TenantApiKeysController } from "../tenant-api-keys.controller";
+import { IntegrationRedemptionsController } from "../integration-redemptions.controller";
+import { TenantRedemptionsController } from "../tenant-redemptions.controller";
+import { TenantTerminalsController, PosTerminalsController } from "../tenant-terminals.controller";
 import { RedemptionsController } from "../redemptions.controller";
 
 /** One route of a controller: method name → its verb, path, response contract and guards. */
@@ -55,8 +56,8 @@ function expectRoutes(prototype: object, routes: readonly ExpectedRoute[]): void
 }
 
 describe("pos controllers keep every route and its decorators", () => {
-	it("checks a till's codes out under /redemptions: public, key-guarded, rate-limited per key, no mutation-intent header", () => {
-		expect(controllerOf(RedemptionsController)).toEqual({ path: `${API_VERSION_PREFIX}/redemptions`, interceptors: [] });
+	it("checks a till's codes out under /integration/redemptions: public, key-guarded, rate-limited per key, no mutation-intent header", () => {
+		expect(controllerOf(RedemptionsController)).toEqual({ path: `${API_VERSION_PREFIX}/integration/redemptions`, interceptors: [] });
 		expect(metadataOf(SKIP_MUTATION_INTENT_KEY, RedemptionsController)).toBe(true);
 		const guards = [MerchantApiKeyGuard, PosRateLimitGuard];
 		expectRoutes(RedemptionsController.prototype, [
@@ -68,9 +69,9 @@ describe("pos controllers keep every route and its decorators", () => {
 		}
 	});
 
-	it("manages terminals under /orgs/:orgSlug/terminals through the merchant actor, writes rate-limited", () => {
-		expect(controllerOf(OrganizationTerminalsController)).toEqual({ path: `${API_VERSION_PREFIX}/orgs/:orgSlug/terminals`, interceptors: [MerchantActorInterceptor] });
-		const prototype = OrganizationTerminalsController.prototype;
+	it("manages terminals under /tenants/:tenantSlug/terminals through the merchant actor, writes rate-limited", () => {
+		expect(controllerOf(TenantTerminalsController)).toEqual({ path: `${API_VERSION_PREFIX}/tenants/:tenantSlug/terminals`, interceptors: [MerchantActorInterceptor] });
+		const prototype = TenantTerminalsController.prototype;
 		expectRoutes(prototype, [
 			{ name: "list", method: RequestMethod.GET, path: "/", kind: "paginated", schema: MerchantTerminalSummarySchema, status: HttpStatus.OK },
 			{ name: "create", method: RequestMethod.POST, path: "/", kind: "single", schema: MerchantTerminalPairingSchema, status: HttpStatus.CREATED },
@@ -86,8 +87,8 @@ describe("pos controllers keep every route and its decorators", () => {
 		}
 	});
 
-	it("pairs a till at /pos/terminals/pair: public, pairing-rate-limited, no mutation-intent header", () => {
-		expect(controllerOf(PosTerminalsController)).toEqual({ path: `${API_VERSION_PREFIX}/pos/terminals`, interceptors: [] });
+	it("pairs a till at /integration/terminals/pair: public, pairing-rate-limited, no mutation-intent header", () => {
+		expect(controllerOf(PosTerminalsController)).toEqual({ path: `${API_VERSION_PREFIX}/integration/terminals`, interceptors: [] });
 		expect(metadataOf(SKIP_MUTATION_INTENT_KEY, PosTerminalsController)).toBe(true);
 		expectRoutes(PosTerminalsController.prototype, [
 			{ name: "pair", method: RequestMethod.POST, path: "pair", kind: "single", schema: PosPairedTerminalSchema, status: HttpStatus.CREATED },
@@ -97,9 +98,9 @@ describe("pos controllers keep every route and its decorators", () => {
 		expect(metadataOf(RATE_LIMIT_POLICY_KEY, pair)).toBe(RATE_LIMIT_POLICY.terminalPairing.name);
 	});
 
-	it("manages API keys under /orgs/:orgSlug/api-keys through the merchant actor, writes rate-limited", () => {
-		expect(controllerOf(OrganizationApiKeysController)).toEqual({ path: `${API_VERSION_PREFIX}/orgs/:orgSlug/api-keys`, interceptors: [MerchantActorInterceptor] });
-		const prototype = OrganizationApiKeysController.prototype;
+	it("manages API keys under /tenants/:tenantSlug/api-keys through the merchant actor, writes rate-limited", () => {
+		expect(controllerOf(TenantApiKeysController)).toEqual({ path: `${API_VERSION_PREFIX}/tenants/:tenantSlug/api-keys`, interceptors: [MerchantActorInterceptor] });
+		const prototype = TenantApiKeysController.prototype;
 		expectRoutes(prototype, [
 			{ name: "listKeys", method: RequestMethod.GET, path: "/", kind: "paginated", schema: MerchantApiKeySummarySchema, status: HttpStatus.OK },
 			{ name: "createKey", method: RequestMethod.POST, path: "/", kind: "single", schema: MerchantApiKeyCreatedSchema, status: HttpStatus.CREATED },
@@ -110,10 +111,18 @@ describe("pos controllers keep every route and its decorators", () => {
 		}
 	});
 
-	it("lists redemptions under /orgs/:orgSlug/redemptions for members and API keys alike", () => {
-		expect(controllerOf(OrganizationRedemptionsController)).toEqual({ path: `${API_VERSION_PREFIX}/orgs/:orgSlug/redemptions`, interceptors: [MerchantActorInterceptor] });
-		expect(metadataOf(ALLOW_API_KEY_AUTH_KEY, OrganizationRedemptionsController)).toBeDefined();
-		expectRoutes(OrganizationRedemptionsController.prototype, [
+	it("lists redemptions under /tenants/:tenantSlug/redemptions for members only", () => {
+		expect(controllerOf(TenantRedemptionsController)).toEqual({ path: `${API_VERSION_PREFIX}/tenants/:tenantSlug/redemptions`, interceptors: [MerchantActorInterceptor] });
+		expect(metadataOf(ALLOW_API_KEY_AUTH_KEY, TenantRedemptionsController)).toBeUndefined();
+		expectRoutes(TenantRedemptionsController.prototype, [
+			{ name: "listRedemptions", method: RequestMethod.GET, path: "/", kind: "paginated", schema: MerchantRedemptionListItemSchema, status: HttpStatus.OK },
+		]);
+	});
+
+	it("lists an integration key's own redemptions under /integration/redemptions (the key names its tenant)", () => {
+		expect(controllerOf(IntegrationRedemptionsController)).toEqual({ path: `${API_VERSION_PREFIX}/integration/redemptions`, interceptors: [MerchantActorInterceptor] });
+		expect(metadataOf(ALLOW_API_KEY_AUTH_KEY, IntegrationRedemptionsController)).toBeDefined();
+		expectRoutes(IntegrationRedemptionsController.prototype, [
 			{ name: "listRedemptions", method: RequestMethod.GET, path: "/", kind: "paginated", schema: MerchantRedemptionListItemSchema, status: HttpStatus.OK },
 		]);
 	});

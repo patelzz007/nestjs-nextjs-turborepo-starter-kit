@@ -12,7 +12,7 @@ import type { FailedChallengeAttempt } from "../../domain/repositories/two-facto
 import type { SessionDeviceContext } from "../../domain/value-objects/session-device.value-object";
 import type { IdentityScope } from "../identity-scope";
 import type { IdentityTokensPort, VerifiedChallengeRef } from "../ports/identity-tokens.port";
-import { IDENTITY_TOKENS, IDENTITY_UNIT_OF_WORK, PUBLIC_AUTH_FLOW_OPERATION } from "../ports/identity.tokens";
+import { IDENTITY_TOKENS, IDENTITY_UNIT_OF_WORK, LOGIN_MFA_FAILURE_OPERATION } from "../ports/identity.tokens";
 import { LoginVerificationGate } from "./login-verification.gate";
 import type { PendingSignInMethod } from "./pending-sign-in";
 
@@ -79,7 +79,7 @@ export class MfaLoginCompletion {
 	 * `INVALID_CREDENTIALS`; any other failure answers with `refusal`. Returns the error the caller throws.
 	 */
 	public async countWrongCode(actor: ActorContext, ref: VerifiedChallengeRef, refusal: Error): Promise<Error> {
-		const exhausted: boolean = await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, actor, async (scope: IdentityScope): Promise<boolean> => {
+		const exhausted: boolean = await this.uow.runSystemOperation(LOGIN_MFA_FAILURE_OPERATION, actor, async (scope: IdentityScope): Promise<boolean> => {
 			const now: EpochMs = this.clock.now();
 			const attempt: FailedChallengeAttempt = await scope.challenges.recordFailedAttempt(ref.challengeId, now);
 			const challenge: TwoFactorLoginChallenge | null = await scope.challenges.findById(ref.challengeId);

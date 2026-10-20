@@ -17,7 +17,7 @@ export interface AnalyticsWindow extends AnalyticsTimeRange {
  * The stores a merchant analytics request may see, resolved server-side from the caller's
  * membership (or the API key's store), never from raw client input.
  *
- * - `ALL_LOCATIONS`: every store of the organization.
+ * - `ALL_LOCATIONS`: every store of the tenant.
  * - `SELECTED_LOCATIONS`: exactly these stores. An empty list is valid and matches nothing.
  */
 export type AnalyticsLocationScope = { readonly kind: "ALL_LOCATIONS" } | { readonly kind: "SELECTED_LOCATIONS"; readonly locationIds: readonly string[] };
@@ -34,15 +34,15 @@ export function selectedAnalyticsLocations(locationIds: readonly string[]): Anal
  * caller (never from raw client input):
  *
  * - `platform`: every merchant (the admin view).
- * - `organization`: one merchant, limited to `locationScope` (a store-limited
+ * - `tenant`: one merchant, limited to `locationScope` (a store-limited
  *   member or store-scoped API key never sees another store's bills,
  *   redemptions, or claims of rewards not offered at its stores).
  * - `customer`: one customer's own activity.
  */
 export type AnalyticsScope =
 	| { readonly kind: "platform" }
-	| { readonly kind: "organization"; readonly organizationId: string; readonly locationScope: AnalyticsLocationScope }
+	| { readonly kind: "tenant"; readonly tenantId: string; readonly locationScope: AnalyticsLocationScope }
 	| { readonly kind: "customer"; readonly userId: string };
 
 /** One merchant's analytics scope (the store breakdown only exists for a merchant). */
-export type OrganizationAnalyticsScope = Extract<AnalyticsScope, { readonly kind: "organization" }>;
+export type TenantAnalyticsScope = Extract<AnalyticsScope, { readonly kind: "tenant" }>;

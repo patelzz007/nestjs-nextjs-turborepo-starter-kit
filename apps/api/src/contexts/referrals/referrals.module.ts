@@ -2,9 +2,9 @@ import { Module } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
 import { SystemCommandModule } from "../../platform/infrastructure/system-command.module";
+import { USER_OWNED_DATA_SCOPE } from "../../platform/infrastructure/unit-of-work/actor-to-rls-context";
 import { PrismaReadExecutor } from "../../platform/infrastructure/unit-of-work/prisma-read-executor";
 import { PrismaModule } from "../../prisma/prisma.module";
-import { PrismaService } from "../../prisma/prisma.service";
 import { TenantTransactionService } from "../../prisma/tenant-transaction.service";
 import { MaintainSignupReferralCodesHandler } from "./application/commands/maintain-signup-referral-codes/maintain-signup-referral-codes.handler";
 import type { SignupReferralCodeMaintenancePort } from "./application/ports/signup-referral-maintenance.port";
@@ -31,9 +31,9 @@ import { SignupReferralMaintenanceCron } from "./presentation/jobs/signup-referr
 	providers: [
 		{
 			provide: SIGNUP_REFERRAL_READS,
-			inject: [TenantTransactionService, PrismaService],
-			useFactory: (transactions: TenantTransactionService, prisma: PrismaService): SignupReferralReadPort =>
-				new PrismaSignupReferralReadRepository(new PrismaReadExecutor<Prisma.TransactionClient>(transactions), transactions, prisma),
+			inject: [TenantTransactionService],
+			useFactory: (transactions: TenantTransactionService): SignupReferralReadPort =>
+				new PrismaSignupReferralReadRepository(new PrismaReadExecutor<Prisma.TransactionClient>(transactions, USER_OWNED_DATA_SCOPE), transactions),
 		},
 		{
 			provide: SIGNUP_REFERRAL_CODE_MAINTENANCE,

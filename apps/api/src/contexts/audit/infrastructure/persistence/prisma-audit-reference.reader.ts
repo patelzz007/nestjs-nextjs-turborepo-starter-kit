@@ -1,22 +1,22 @@
 import type { Prisma } from "@prisma/client";
 
-import { toAuditLogReferences, type AuditLogOrganizationRow, type AuditLogReferenceIds, type AuditLogReferences, type AuditLogUserRow } from "./audit-references";
+import { toAuditLogReferences, type AuditLogTenantRow, type AuditLogReferenceIds, type AuditLogReferences, type AuditLogUserRow } from "./audit-references";
 
 /**
- * Resolves the user and organization names a page of audit records
+ * Resolves the user and tenant names a page of audit records
  * references — shared by both audit viewers. Bound to the audit read's own
  * transaction (`db`, a system operation). Soft-deleted users and
- * organizations are included on purpose: an audit record outlives its actor.
+ * tenants are included on purpose: an audit record outlives its actor.
  */
 export class PrismaAuditReferenceReader {
 	public constructor(private readonly db: Prisma.TransactionClient) {}
 
-	/** The users and organizations with these ids, indexed by id. */
+	/** The users and tenants with these ids, indexed by id. */
 	public async load(ids: AuditLogReferenceIds): Promise<AuditLogReferences> {
 		// Sequential: an interactive transaction runs its statements on one connection anyway.
 		const users: readonly AuditLogUserRow[] = await this.findUsers(ids.userIds);
-		const organizations: readonly AuditLogOrganizationRow[] = await this.findOrganizations(ids.organizationIds);
-		return toAuditLogReferences(users, organizations);
+		const tenants: readonly AuditLogTenantRow[] = await this.findTenants(ids.tenantIds);
+		return toAuditLogReferences(users, tenants);
 	}
 
 	private async findUsers(ids: readonly string[]): Promise<readonly AuditLogUserRow[]> {
@@ -26,10 +26,10 @@ export class PrismaAuditReferenceReader {
 		return this.db.user.findMany({ where: { id: { in: [...ids] } }, select: { id: true, email: true, fullName: true } });
 	}
 
-	private async findOrganizations(ids: readonly string[]): Promise<readonly AuditLogOrganizationRow[]> {
+	private async findTenants(ids: readonly string[]): Promise<readonly AuditLogTenantRow[]> {
 		if (ids.length === 0) {
 			return [];
 		}
-		return this.db.organization.findMany({ where: { id: { in: [...ids] } }, select: { id: true, displayName: true } });
+		return this.db.tenant.findMany({ where: { id: { in: [...ids] } }, select: { id: true, displayName: true } });
 	}
 }

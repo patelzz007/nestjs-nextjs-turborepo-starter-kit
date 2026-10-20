@@ -1,10 +1,9 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 
 import { AuthenticationError } from "../../../application/errors/app-error";
 import type { ActorContext } from "../../../application/actor-context";
 import { RequestContextService, type RequestActorResolution, type RequestContext } from "../../../infrastructure/context/request-context";
-import { NestActorTenancyPolicy, type ActorTenancyPolicy } from "./actor-tenancy.policy";
 import { actorForPrincipal, buildRequestMetadata, resolveRequestPrincipal, type RequestPrincipalDecision } from "./request-principal";
 
 export interface ActorContextFromHttpOptions {
@@ -47,26 +46,20 @@ export function actorFromResolution(resolution: RequestActorResolution | undefin
  * to the request context; `@CurrentActor()` and every later caller read that
  * bound actor, so the actor always matches the database scope. A method guard
  * runs before interceptors: {@link fromHttpRequest} then resolves the same way
- * from the verified facts, without `@RlsBypass()` (route metadata is not on the
+ * from the verified facts (route metadata is not on the
  * request) — a guard asks who is calling, never which database scope applies.
  */
 @Injectable()
 export class ActorContextFactory {
-	public constructor(
-		private readonly requestContext: RequestContextService,
-		@Inject(NestActorTenancyPolicy) private readonly tenancy: ActorTenancyPolicy,
-	) {}
+	public constructor(private readonly requestContext: RequestContextService) {}
 
-	/** The decision and actor for `request`; `routeRlsBypass` is the route's `@RlsBypass()` metadata. */
-	public resolve(request: FastifyRequest, routeRlsBypass: boolean): ResolvedRequestActor {
+	/** The decision and actor for `request`. */
+	public resolve(request: FastifyRequest): ResolvedRequestActor {
 		const context: RequestContext | undefined = this.requestContext.current();
 		if (context === undefined) {
 			throw new AuthenticationError({ message: "Request context is not available." });
 		}
-		const decision: RequestPrincipalDecision = resolveRequestPrincipal(
-			{ routeRlsBypass, user: request.user, apiKey: context.apiKey, requestOrganizationId: context.tenant.organizationId },
-			this.tenancy,
-		);
+		const decision: RequestPrincipalDecision = resolveRequestPrincipal({ user: request.user, apiKey: context.apiKey, requestTenantId: context.tenant.tenantId });
 		return { decision, actor: actorForPrincipal(decision, buildRequestMetadata(request, context)) };
 	}
 
@@ -75,6 +68,6 @@ export class ActorContextFactory {
 		if (bound !== undefined) {
 			return actorFromResolution(bound, options);
 		}
-		return actorFromResolution(this.resolve(request, false).actor, options);
+		return actorFromResolution(this.resolve(request).actor, options);
 	}
 }

@@ -32,8 +32,9 @@ import {
 	IDENTITY_SETTINGS,
 	IDENTITY_TOKENS,
 	IDENTITY_UNIT_OF_WORK,
+	ACCOUNT_LOOKUP_OPERATION,
 	MERCHANT_PORTAL_ACCESS,
-	PUBLIC_AUTH_FLOW_OPERATION,
+	SESSION_ISSUE_OPERATION,
 	SESSION_LOCATION_LOOKUP,
 	USER_SESSION_CACHE,
 } from "../ports/identity.tokens";
@@ -92,13 +93,13 @@ export class SessionIssuer {
 		options: IssueSessionOptions = {},
 	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse> {
 		const now: EpochMs = this.clock.now();
-		const account: UserAccount | null = await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, actor, (scope) => scope.accounts.findById(userId));
+		const account: UserAccount | null = await this.uow.runSystemOperation(ACCOUNT_LOOKUP_OPERATION, actor, (scope) => scope.accounts.findById(userId));
 		if (!account?.canSignIn()) {
 			throw new InvalidCredentialsError();
 		}
 
 		const permissions: UserPermissions = await this.grants.getUserPermissionDetails(account.id);
-		const organizationSlug: string | null = clientType === "merchant" ? await this.requireMerchantPortalAccess(account, permissions, now) : null;
+		const tenantSlug: string | null = clientType === "merchant" ? await this.requireMerchantPortalAccess(account, permissions, now) : null;
 
 		const view = accountViewOf(account);
 		const profile: UserResponse = buildUserResponse(view, permissions, now);
@@ -123,7 +124,7 @@ export class SessionIssuer {
 		});
 		const location: SessionLocation | null = await this.locations.lookup(signIn.device.ipAddress);
 
-		await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, actor, async (scope: IdentityScope): Promise<void> => {
+		await this.uow.runSystemOperation(SESSION_ISSUE_OPERATION, actor, async (scope: IdentityScope): Promise<void> => {
 			const locked: UserAccount | null = await scope.accounts.lockById(account.id);
 			if (!locked?.canSignIn()) {
 				throw new InvalidCredentialsError();
@@ -175,7 +176,7 @@ export class SessionIssuer {
 				enrollmentReason: restriction.reason,
 				message: restriction.message,
 				user: profile,
-				...(organizationSlug !== null ? { organizationSlug } : {}),
+				...(tenantSlug !== null ? { tenantSlug } : {}),
 				...sessionTokens,
 			};
 		}
@@ -186,11 +187,11 @@ export class SessionIssuer {
 	private async requireMerchantPortalAccess(account: UserAccount, permissions: UserPermissions, now: EpochMs): Promise<string | null> {
 		const access = await this.merchantAccess.findAccess(account.id, account.email.value, now);
 		assertMerchantPortalAccess({
-			hasMerchantMembership: access.organizationSlug !== null,
+			hasMerchantMembership: access.tenantSlug !== null,
 			canManageMerchants: permissions.permissions.some((permission) => permission.action === MANAGE_MERCHANTS_ACTION && permission.resource === MANAGE_MERCHANTS_RESOURCE),
 			hasPendingTeamInvite: access.hasPendingTeamInvite,
 		});
-		return access.organizationSlug;
+		return access.tenantSlug;
 	}
 
 	/** Warm the `/auth/me` + `/auth/permissions` cache after sign-in (shared by web, admin and merchant). */

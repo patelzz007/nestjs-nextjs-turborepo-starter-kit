@@ -18,17 +18,17 @@ import { CompleteFileUploadCommand } from "./complete-file-upload.command";
 import { completeFileUpload } from "./complete-file-upload";
 
 /**
- * Only the uploader completes an upload, and the request names no organization, so the file is found
+ * Only the uploader completes an upload, and the request names no tenant, so the file is found
  * as the caller's OWN upload (a file uploaded by someone else is not found — existence never leaks).
- * After the category's access rule allowed it (membership, for an organization's file), the claim runs
- * in the uploader's RLS session within the file's organization (D28); the compare-and-set on PENDING
+ * After the category's access rule allowed it (membership, for a tenant's file), the claim runs
+ * in the uploader's RLS session within the file's tenant (D28); the compare-and-set on PENDING
  * decides a race.
  * The response reflects the state after dispatch: SCANNING while a queued
  * scan runs, or the verdict when it ran inline.
  */
-/** The actor acting within the file's organization (a personal file keeps the actor's own scope). */
-function actingInOrganization(actor: ActorContext, organizationId: string | null): ActorContext {
-	return actor.kind === "user" && organizationId !== null ? { ...actor, organizationId } : actor;
+/** The actor acting within the file's tenant (a personal file keeps the actor's own scope). */
+function actingInTenant(actor: ActorContext, tenantId: string | null): ActorContext {
+	return actor.kind === "user" && tenantId !== null ? { ...actor, tenantId } : actor;
 }
 
 @CommandHandler(CompleteFileUploadCommand)
@@ -49,9 +49,9 @@ export class CompleteFileUploadHandler implements ICommandHandler<CompleteFileUp
 		}
 		await this.access.assertCanAct(actor, file, "complete");
 		const uploader = fileActorOf(actor, "complete");
-		const inFileOrganization = actingInOrganization(actor, file.organizationId);
+		const inFileTenant = actingInTenant(actor, file.tenantId);
 		await completeFileUpload(this.storage, this.dispatcher, uploader.userId, file, input.checksumSha256, (verified: VerifiedUpload) =>
-			this.uow.run(inFileOrganization, async (scope): Promise<StoredFileSaveOutcome> => {
+			this.uow.run(inFileTenant, async (scope): Promise<StoredFileSaveOutcome> => {
 				const live = await scope.storedFiles.findLive(fileId);
 				if (live === null) {
 					throw new FileUploadAlreadyCompletedError();
@@ -60,7 +60,7 @@ export class CompleteFileUploadHandler implements ICommandHandler<CompleteFileUp
 				return scope.storedFiles.save(live);
 			}),
 		);
-		const after = await this.reads.findLive(inFileOrganization, fileId);
+		const after = await this.reads.findLive(inFileTenant, fileId);
 		if (after === null) {
 			throw fileNotFound();
 		}

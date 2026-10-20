@@ -41,7 +41,7 @@ describe("Admin reward detail (e2e)", () => {
 		expect(response.statusCode).toBe(200);
 		const { data } = parseSuccessEnvelope(response, RewardResponseSchema);
 		expect(data).toMatchObject({ id: REWARD_SEED_IDS.klRewardPending, title: "20% off weekend brunch", status: "PENDING_REVIEW", category: "cafe" });
-		expect(data.organizationName).toBeDefined();
+		expect(data.tenantName).toBeDefined();
 		expect(data.images.map((image) => image.fileId)).toEqual(["01", "02", "03"].map((position) => rewardImageSeedId(`weekend-brunch/${position}.webp`)));
 	});
 

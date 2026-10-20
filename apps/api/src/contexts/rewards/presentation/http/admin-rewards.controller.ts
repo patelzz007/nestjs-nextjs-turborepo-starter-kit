@@ -17,10 +17,11 @@ import type { FastifyReply } from "fastify";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
-import { RlsBypass } from "../../../../platform/presentation/http/security/decorators/rls-bypass.decorator";
+import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
 import { ZodBody, ZodListQuery, ZodParams } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodFileResponse, ZodPaginatedResponse, ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
+import { REWARDS_ADMIN_REVIEW_OPERATION } from "../../application/ports/rewards.tokens";
 import { ApproveRewardCommand } from "../../application/commands/approve-reward/approve-reward.command";
 import { RejectRewardCommand } from "../../application/commands/reject-reward/reject-reward.command";
 import type { RewardImagesArchive } from "../../application/ports/reward-read.port";
@@ -33,7 +34,7 @@ import { RewardsEmptyBodyDto } from "./rewards-empty-body.dto";
 
 @ApiTags("Rewards Admin")
 @ApiBearerAuth()
-@RlsBypass()
+@PlatformOperation(REWARDS_ADMIN_REVIEW_OPERATION)
 @Controller(apiPath("/admin/rewards"))
 export class RewardsAdminRewardsController {
 	public constructor(

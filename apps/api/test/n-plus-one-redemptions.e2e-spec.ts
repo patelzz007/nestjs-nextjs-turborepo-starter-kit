@@ -5,7 +5,7 @@ import { API_VERSION_PREFIX } from "@workspace/shared";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { createE2eApp, login, type LoginResult } from "./e2e-helpers";
 import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
@@ -15,13 +15,13 @@ const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:
 const FIXTURE_EPOCH = 1_790_812_800_000;
 
 /**
- * GET /orgs/:orgSlug/redemptions (plan §7.3) must issue the same number of SQL statements for a 1-row
+ * GET /tenants/:tenantSlug/redemptions (plan §7.3) must issue the same number of SQL statements for a 1-row
  * page and a 25-row page: each row's reward title comes from the page's one joined read.
  */
 describe("merchant redemption history has no N+1 (e2e)", () => {
 	const marker = `n1r${randomUUID().slice(0, 8)}`;
 	const rewardId = randomUUID();
-	/** The fixture redemptions are dated inside this window, which no other row of the organization uses. */
+	/** The fixture redemptions are dated inside this window, which no other row of the tenant uses. */
 	const windowStart = FIXTURE_EPOCH - 1_000_000;
 	const windowEnd = FIXTURE_EPOCH + 1_000_000;
 	let app: NestFastifyApplication;
@@ -60,14 +60,14 @@ describe("merchant redemption history has no N+1 (e2e)", () => {
 				[claimId, customerId, rewardId, `${marker}-token-${claimId}`, `${marker}-backup-${claimId}`, redeemedAt, redeemedAt + 1],
 			);
 			await query(
-				`INSERT INTO public."RewardSale" (id, "organizationId", "locationId", "userId", "terminalId", "billTotalMinor", currency, "idempotencyKey", "requestHash", "paidAt")
+				`INSERT INTO public."RewardSale" (id, "tenantId", "locationId", "userId", "terminalId", "billTotalMinor", currency, "idempotencyKey", "requestHash", "paidAt")
 				 VALUES ($1, $2, $3, $4, 'KL-REGISTER-01', 2500, 'MYR', $5, $6, $7)`,
-				[saleId, ORGANIZATION_SEED_IDS.klOrganization, ORGANIZATION_SEED_IDS.klLocation, customerId, `${marker}-${saleId}`.slice(0, 64), marker.padEnd(64, "0"), redeemedAt],
+				[saleId, TENANT_SEED_IDS.klTenant, TENANT_SEED_IDS.klLocation, customerId, `${marker}-${saleId}`.slice(0, 64), marker.padEnd(64, "0"), redeemedAt],
 			);
 			await query(
-				`INSERT INTO public."RewardRedemption" (id, "claimId", "organizationId", "locationId", "userId", "terminalId", "redemptionMethod", "saleId", "redeemedAt")
+				`INSERT INTO public."RewardRedemption" (id, "claimId", "tenantId", "locationId", "userId", "terminalId", "redemptionMethod", "saleId", "redeemedAt")
 				 VALUES ($1, $2, $3, $4, $5, 'KL-REGISTER-01', 'SCAN', $6, $7)`,
-				[randomUUID(), claimId, ORGANIZATION_SEED_IDS.klOrganization, ORGANIZATION_SEED_IDS.klLocation, customerId, saleId, redeemedAt],
+				[randomUUID(), claimId, TENANT_SEED_IDS.klTenant, TENANT_SEED_IDS.klLocation, customerId, saleId, redeemedAt],
 			);
 		}
 	}
@@ -75,7 +75,7 @@ describe("merchant redemption history has no N+1 (e2e)", () => {
 	function listRedemptions(pageSize: number): ReturnType<NestFastifyApplication["inject"]> {
 		return app.inject({
 			method: "GET",
-			url: `${API_VERSION_PREFIX}/orgs/${ORGANIZATION_SEED_SLUGS.kl}/redemptions`,
+			url: `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.kl}/redemptions`,
 			query: { limit: String(pageSize), "filter[redeemedAt][gte]": String(windowStart), "filter[redeemedAt][lt]": String(windowEnd) },
 			headers: { cookie: `merchantAccessToken=${owner.accessToken}; merchantRefreshToken=${owner.refreshToken}`, "x-client-type": "merchant" },
 		});
@@ -86,12 +86,12 @@ describe("merchant redemption history has no N+1 (e2e)", () => {
 		const [customer] = await query(`SELECT id FROM public."User" WHERE email = 'bob.smith@example.com'`);
 		customerId = String(customer?.id);
 		await query(
-			`INSERT INTO public."Reward" (id, "organizationId", title, description, "rewardType", "rewardValue", "rewardKind", category, "quantityTotal", "quantityRemaining",
+			`INSERT INTO public."Reward" (id, "tenantId", title, description, "rewardType", "rewardValue", "rewardKind", category, "quantityTotal", "quantityRemaining",
 			   "expiryDate", status, "locationScopeType")
 			 VALUES ($1, $2, $3, 'Created by n-plus-one.e2e-spec.ts', 'DISCOUNT', 10, 'CONSUMER', 'cafe', 100, 100, $4, 'PUBLISHED', 'ALL_LOCATIONS')`,
-			[rewardId, ORGANIZATION_SEED_IDS.klOrganization, `${marker} reward`, FIXTURE_EPOCH + 1_000_000_000],
+			[rewardId, TENANT_SEED_IDS.klTenant, `${marker} reward`, FIXTURE_EPOCH + 1_000_000_000],
 		);
-		await query(INSERT_REWARD_COVER_SQL, [...rewardCoverParams(rewardId, ORGANIZATION_SEED_IDS.klOrganization, "free-coffee")]);
+		await query(INSERT_REWARD_COVER_SQL, [...rewardCoverParams(rewardId, TENANT_SEED_IDS.klTenant, "free-coffee")]);
 		app = await createE2eApp();
 		owner = await login(app, "brew.owner@kl-rewards.demo", "BrewOwner@123", "merchant");
 	});

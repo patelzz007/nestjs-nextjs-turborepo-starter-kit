@@ -4,18 +4,18 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
 import { sha256Hex } from "../src/platform/infrastructure/crypto/sha256";
 import { anonymousRlsContext, apiKeyRlsContext, rlsSessionVariables, type RlsContext } from "../src/prisma/rls-context";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
 
-const KL_ORG = ORGANIZATION_SEED_IDS.klOrganization;
-const KL_STORE = ORGANIZATION_SEED_IDS.klLocation;
-const MLK_ORG = ORGANIZATION_SEED_IDS.mlkOrganization;
-const KATIL = ORGANIZATION_SEED_IDS.mlkLocationKatil;
-const BERUANG = ORGANIZATION_SEED_IDS.mlkLocationBeruang;
+const KL_ORG = TENANT_SEED_IDS.klTenant;
+const KL_STORE = TENANT_SEED_IDS.klLocation;
+const MLK_ORG = TENANT_SEED_IDS.mlkTenant;
+const KATIL = TENANT_SEED_IDS.mlkLocationKatil;
+const BERUANG = TENANT_SEED_IDS.mlkLocationBeruang;
 const DAY_MS = 86_400_000;
 /** Bill total of every fixture sale, in minor units. */
 const BILL_MINOR = 1_500;
@@ -36,7 +36,7 @@ interface StoreBill {
  * request — `SET ROLE app_runtime` plus the session variables produced by
  * `rlsSessionVariables(apiKeyRlsContext(…))` — runs a query and rolls back. No
  * bypass is involved anywhere, so what the key sees is what RLS lets it see:
- * its own organization only, and only its store's per-store rows when the key
+ * its own tenant only, and only its store's per-store rows when the key
  * is store-scoped — even when the query names another tenant's id directly.
  */
 describe("API key RLS principal (e2e)", () => {
@@ -71,7 +71,7 @@ describe("API key RLS principal (e2e)", () => {
 			await client.query("SELECT set_config('role', $1, true)", [session.role]);
 			await client.query("SELECT set_config('app.current_user_id', $1, true)", [session.currentUserId]);
 			await client.query("SELECT set_config('app.rls_bypass', $1, true)", [session.rlsBypass]);
-			await client.query("SELECT set_config('app.current_organization_id', $1, true)", [session.currentOrganizationId]);
+			await client.query("SELECT set_config('app.current_tenant_id', $1, true)", [session.currentTenantId]);
 			await client.query("SELECT set_config('app.system_operation', $1, true)", [session.systemOperation]);
 			await client.query("SELECT set_config('app.current_api_key_id', $1, true)", [session.currentApiKeyId]);
 			await client.query("SELECT set_config('app.current_api_key_location_id', $1, true)", [session.currentApiKeyLocationId]);
@@ -87,42 +87,46 @@ describe("API key RLS principal (e2e)", () => {
 		return result.rows[LIST_SLOT_INDEX.first]?.n ?? 0;
 	}
 
-	async function createKey(organizationId: string, locationId: string | null): Promise<string> {
+	async function createKey(tenantId: string, locationId: string | null): Promise<string> {
 		const id = randomUUID();
 		await asBypass((client) =>
 			client.query(
-				`INSERT INTO public."OrganizationApiKey" (id, "organizationId", "locationId", name, "keyHash", "keyPrefix", scope, "createdByUserId")
+				`INSERT INTO public."TenantApiKey" (id, "tenantId", "locationId", name, "keyHash", "keyPrefix", scope, "createdByUserId")
          VALUES ($1, $2, $3, $4, $5, 'e2e-rls-prefix', 'INTEGRATION', $6)`,
-				[id, organizationId, locationId, `${KEY_NAME_PREFIX} ${id}`, sha256Hex(id), customerId],
+				[id, tenantId, locationId, `${KEY_NAME_PREFIX} ${id}`, sha256Hex(id), customerId],
 			),
 		);
 		return id;
 	}
 
-	async function createBill(organizationId: string, locationId: string, rewardId: string): Promise<StoreBill> {
+	async function createBill(tenantId: string, locationId: string, rewardId: string): Promise<StoreBill> {
 		const now = Date.now();
 		const bill: StoreBill = { saleId: randomUUID(), redemptionId: randomUUID(), terminalRowId: randomUUID() };
 		const claimId = randomUUID();
 		claimIds.push(claimId);
 		await asBypass(async (client) => {
-			await client.query(
-				`INSERT INTO public."OrganizationTerminal" (id, "organizationId", "locationId", "terminalId", label, "createdByUserId") VALUES ($1, $2, $3, $4, $5, $6)`,
-				[bill.terminalRowId, organizationId, locationId, `E2E-RLS-${bill.terminalRowId.slice(0, 8)}`, `${KEY_NAME_PREFIX} till`, customerId],
-			);
+			await client.query(`INSERT INTO public."TenantTerminal" (id, "tenantId", "locationId", "terminalId", label, "createdByUserId") VALUES ($1, $2, $3, $4, $5, $6)`, [
+				bill.terminalRowId,
+				tenantId,
+				locationId,
+				`E2E-RLS-${bill.terminalRowId.slice(0, 8)}`,
+				`${KEY_NAME_PREFIX} till`,
+				customerId,
+			]);
 			await client.query(
 				`INSERT INTO public."RewardClaim" (id, "userId", "rewardId", "redemptionTokenHash", "backupCodeHash", status, "claimedAt", "claimExpiresAt", "redeemedAt")
          VALUES ($1, $2, $3, $4, $5, 'REDEEMED', $6, $7, $6)`,
 				[claimId, customerId, rewardId, sha256Hex(`token-${claimId}`), sha256Hex(`backup-${claimId}`), now, now + DAY_MS],
 			);
 			await client.query(
-				`INSERT INTO public."RewardSale" (id, "organizationId", "locationId", "userId", "terminalId", "billTotalMinor", currency, "idempotencyKey", "requestHash", "paidAt")
+				`INSERT INTO public."RewardSale" (id, "tenantId", "locationId", "userId", "terminalId", "billTotalMinor", currency, "idempotencyKey", "requestHash", "paidAt")
          VALUES ($1, $2, $3, $4, 'E2E-RLS-TILL', $5, 'MYR', $6, $7, $8)`,
-				[bill.saleId, organizationId, locationId, customerId, BILL_MINOR, randomUUID(), sha256Hex(bill.saleId), now],
+				[bill.saleId, tenantId, locationId, customerId, BILL_MINOR, randomUUID(), sha256Hex(bill.saleId), now],
 			);
 			await client.query(
-				`INSERT INTO public."RewardRedemption" (id, "claimId", "organizationId", "locationId", "userId", "terminalId", "redemptionMethod", "saleId", "redeemedAt")
+				`INSERT INTO public."RewardRedemption" (id, "claimId", "tenantId", "locationId", "userId", "terminalId", "redemptionMethod", "saleId", "redeemedAt")
          VALUES ($1, $2, $3, $4, $5, 'E2E-RLS-TILL', 'SCAN', $6, $7)`,
-				[bill.redemptionId, claimId, organizationId, locationId, customerId, bill.saleId, now],
+				[bill.redemptionId, claimId, tenantId, locationId, customerId, bill.saleId, now],
 			);
 		});
 		return bill;
@@ -174,17 +178,15 @@ describe("API key RLS principal (e2e)", () => {
 			["kl", KL_ORG],
 			["mlk", MLK_ORG],
 		];
-		for (const [key, organizationId] of fixtureRewards) {
+		for (const [key, tenantId] of fixtureRewards) {
 			await asBypass((client) =>
 				client.query(
-					`INSERT INTO public."Reward" (id, "organizationId", title, description, "rewardType", "rewardValue", category, "quantityTotal", "quantityRemaining", "expiryDate", status, "referralsEnabled")
+					`INSERT INTO public."Reward" (id, "tenantId", title, description, "rewardType", "rewardValue", category, "quantityTotal", "quantityRemaining", "expiryDate", status, "referralsEnabled")
            VALUES ($1, $2, 'E2E RLS reward', 'Created by api-key-rls-principal.e2e-spec.ts', 'DISCOUNT', 5, 'cafe', 5, 5, $3, 'DRAFT', false)`,
-					[rewardIds[key], organizationId, now + DAY_MS],
+					[rewardIds[key], tenantId, now + DAY_MS],
 				),
 			);
-			await asBypass((client) =>
-				client.query(INSERT_REWARD_COVER_SQL, [...rewardCoverParams(rewardIds[key], organizationId, key === "kl" ? "free-coffee" : "jonker-lunch-set")]),
-			);
+			await asBypass((client) => client.query(INSERT_REWARD_COVER_SQL, [...rewardCoverParams(rewardIds[key], tenantId, key === "kl" ? "free-coffee" : "jonker-lunch-set")]));
 		}
 		klKeyId = await createKey(KL_ORG, null);
 		mlkKatilKeyId = await createKey(MLK_ORG, KATIL);
@@ -218,15 +220,15 @@ describe("API key RLS principal (e2e)", () => {
 			const fixtureBills = Object.values(bills);
 			await client.query(`DELETE FROM public."RewardRedemption" WHERE id = ANY($1::text[])`, [fixtureBills.map((bill) => bill.redemptionId)]);
 			await client.query(`DELETE FROM public."RewardSale" WHERE id = ANY($1::text[])`, [fixtureBills.map((bill) => bill.saleId)]);
-			await client.query(`DELETE FROM public."OrganizationTerminal" WHERE id = ANY($1::text[])`, [fixtureBills.map((bill) => bill.terminalRowId)]);
+			await client.query(`DELETE FROM public."TenantTerminal" WHERE id = ANY($1::text[])`, [fixtureBills.map((bill) => bill.terminalRowId)]);
 			await client.query(`DELETE FROM public."RewardClaim" WHERE id = ANY($1::text[])`, [claimIds]);
 			await client.query(`DELETE FROM public."Reward" WHERE id = ANY($1::text[])`, [Object.values(rewardIds)]);
-			await client.query(`DELETE FROM public."OrganizationApiKey" WHERE name LIKE $1`, [`${KEY_NAME_PREFIX}%`]);
+			await client.query(`DELETE FROM public."TenantApiKey" WHERE name LIKE $1`, [`${KEY_NAME_PREFIX}%`]);
 		});
 		await pool.end();
 	});
 
-	it("lets an organization-wide key see its own organization's rows — and nothing of another organization, even by id", async () => {
+	it("lets a tenant-wide key see its own tenant's rows — and nothing of another tenant, even by id", async () => {
 		await as(apiKeyRlsContext(klKeyId, KL_ORG, null), async (client) => {
 			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."RewardSale" WHERE id = $1`, [requireBill("kl").saleId])).toBe(1);
 			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."Reward" WHERE id = $1`, [rewardIds.kl])).toBe(1);
@@ -234,8 +236,8 @@ describe("API key RLS principal (e2e)", () => {
 			const foreignRows: readonly (readonly [string, string])[] = [
 				["RewardSale", requireBill("katil").saleId],
 				["RewardRedemption", requireBill("katil").redemptionId],
-				["OrganizationTerminal", requireBill("katil").terminalRowId],
-				["OrganizationApiKey", mlkKatilKeyId],
+				["TenantTerminal", requireBill("katil").terminalRowId],
+				["TenantApiKey", mlkKatilKeyId],
 				["Reward", rewardIds.mlk],
 			];
 			for (const [table, id] of foreignRows) {
@@ -250,18 +252,18 @@ describe("API key RLS principal (e2e)", () => {
 			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."RewardSale" WHERE id = $1`, [requireBill("katil").saleId])).toBe(1);
 			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."RewardSale" WHERE id = $1`, [requireBill("beruang").saleId])).toBe(0);
 			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."RewardRedemption" WHERE id = $1`, [requireBill("beruang").redemptionId])).toBe(0);
-			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."OrganizationTerminal" WHERE id = $1`, [requireBill("beruang").terminalRowId])).toBe(0);
-			// Organization rows without a store (rewards, claims of its rewards) stay visible: their store availability is the service's job.
+			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."TenantTerminal" WHERE id = $1`, [requireBill("beruang").terminalRowId])).toBe(0);
+			// Tenant rows without a store (rewards, claims of its rewards) stay visible: their store availability is the service's job.
 			expect(await count(client, `SELECT COUNT(*)::int AS n FROM public."Reward" WHERE id = $1`, [rewardIds.mlk])).toBe(1);
 		});
 	});
 
-	it("lets a key write a bill only for its own organization and store", async () => {
-		const insertSale = (client: PoolClient, organizationId: string, locationId: string): Promise<object> =>
+	it("lets a key write a bill only for its own tenant and store", async () => {
+		const insertSale = (client: PoolClient, tenantId: string, locationId: string): Promise<object> =>
 			client.query(
-				`INSERT INTO public."RewardSale" (id, "organizationId", "locationId", "userId", "terminalId", "billTotalMinor", currency, "idempotencyKey", "requestHash", "paidAt")
+				`INSERT INTO public."RewardSale" (id, "tenantId", "locationId", "userId", "terminalId", "billTotalMinor", currency, "idempotencyKey", "requestHash", "paidAt")
          VALUES ($1, $2, $3, $4, 'E2E-RLS-TILL', $5, 'MYR', $6, $7, $8)`,
-				[randomUUID(), organizationId, locationId, customerId, BILL_MINOR, randomUUID(), sha256Hex(randomUUID()), Date.now()],
+				[randomUUID(), tenantId, locationId, customerId, BILL_MINOR, randomUUID(), sha256Hex(randomUUID()), Date.now()],
 			);
 
 		await as(apiKeyRlsContext(mlkKatilKeyId, MLK_ORG, KATIL), async (client) => {
@@ -277,9 +279,9 @@ describe("API key RLS principal (e2e)", () => {
 
 	it("lets a key update only its own key row, and never delete a financial row", async () => {
 		await as(apiKeyRlsContext(mlkKatilKeyId, MLK_ORG, KATIL), async (client) => {
-			const own = await client.query(`UPDATE public."OrganizationApiKey" SET "lastUsedAt" = $2 WHERE id = $1`, [mlkKatilKeyId, Date.now()]);
+			const own = await client.query(`UPDATE public."TenantApiKey" SET "lastUsedAt" = $2 WHERE id = $1`, [mlkKatilKeyId, Date.now()]);
 			expect(own.rowCount).toBe(1);
-			const other = await client.query(`UPDATE public."OrganizationApiKey" SET "lastUsedAt" = $2 WHERE id = $1`, [klKeyId, Date.now()]);
+			const other = await client.query(`UPDATE public."TenantApiKey" SET "lastUsedAt" = $2 WHERE id = $1`, [klKeyId, Date.now()]);
 			expect(other.rowCount).toBe(0);
 			const deleted = await client.query(`DELETE FROM public."RewardSale" WHERE id = $1`, [requireBill("katil").saleId]);
 			expect(deleted.rowCount).toBe(0);

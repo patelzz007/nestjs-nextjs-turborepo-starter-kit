@@ -34,8 +34,8 @@ function nonNegativeAfter(column: "quantityRemaining" | "quantityReserved" | "re
 export class PrismaRewardRepository implements RewardRepository {
 	public constructor(private readonly db: Prisma.TransactionClient) {}
 
-	public async getConsumerInOrganization(organizationId: string, rewardId: string): Promise<Reward> {
-		return this.require(rewardId, await this.findRow({ id: rewardId, organizationId, isDeleted: false, rewardKind: "CONSUMER" }));
+	public async getConsumerInTenant(tenantId: string, rewardId: string): Promise<Reward> {
+		return this.require(rewardId, await this.findRow({ id: rewardId, tenantId, isDeleted: false, rewardKind: "CONSUMER" }));
 	}
 
 	public async getConsumer(rewardId: string): Promise<Reward> {
@@ -96,7 +96,7 @@ export class PrismaRewardRepository implements RewardRepository {
 		await this.db.reward.create({
 			data: {
 				id: snapshot.id,
-				organizationId: snapshot.organizationId,
+				tenantId: snapshot.tenantId,
 				title: snapshot.title,
 				description: snapshot.description,
 				rewardType: snapshot.offer.rewardType,
@@ -121,7 +121,7 @@ export class PrismaRewardRepository implements RewardRepository {
 			},
 			select: { id: true },
 		});
-		await this.insertImages(snapshot.id, snapshot.organizationId, snapshot.imageFileIds);
+		await this.insertImages(snapshot.id, snapshot.tenantId, snapshot.imageFileIds);
 		await this.insertLocationScopes(snapshot.id, snapshot);
 		if (snapshot.referrer !== null) {
 			await this.insertReferrer(snapshot, snapshot.referrer);
@@ -163,7 +163,7 @@ export class PrismaRewardRepository implements RewardRepository {
 		await this.db.reward.create({
 			data: {
 				id: child.id,
-				organizationId: parent.organizationId,
+				tenantId: parent.tenantId,
 				title: child.title,
 				description: child.description,
 				rewardType: child.offer.rewardType,
@@ -184,7 +184,7 @@ export class PrismaRewardRepository implements RewardRepository {
 			},
 			select: { id: true },
 		});
-		await this.insertImages(child.id, parent.organizationId, parent.imageFileIds);
+		await this.insertImages(child.id, parent.tenantId, parent.imageFileIds);
 		await this.insertLocationScopes(child.id, parent);
 	}
 
@@ -204,9 +204,9 @@ export class PrismaRewardRepository implements RewardRepository {
 		const images = reward.imagesToBind();
 		const replacedBy = reward.imagesReplacedBy;
 		if (images.length > 0 && replacedBy !== null) {
-			await this.replaceImages(reward.id, reward.organizationId, images, replacedBy);
+			await this.replaceImages(reward.id, reward.tenantId, images, replacedBy);
 			if (child !== null) {
-				await this.replaceImages(child.id, reward.organizationId, images, replacedBy);
+				await this.replaceImages(child.id, reward.tenantId, images, replacedBy);
 			}
 		}
 	}
@@ -289,20 +289,15 @@ export class PrismaRewardRepository implements RewardRepository {
 	}
 
 	/** Image rows in display order (position 0 is the cover). */
-	private async insertImages(rewardId: string, organizationId: string, fileIds: readonly string[]): Promise<void> {
-		await this.db.rewardImage.createMany({ data: fileIds.map((fileId, position) => ({ rewardId, organizationId, fileId, position })) });
+	private async insertImages(rewardId: string, tenantId: string, fileIds: readonly string[]): Promise<void> {
+		await this.db.rewardImage.createMany({ data: fileIds.map((fileId, position) => ({ rewardId, tenantId, fileId, position })) });
 	}
 
 	/** The old image rows are soft-deleted (kept as history), the new ones written in order. */
-	private async replaceImages(
-		rewardId: string,
-		organizationId: string,
-		fileIds: readonly string[],
-		replacedBy: { readonly actorId: string; readonly at: number },
-	): Promise<void> {
+	private async replaceImages(rewardId: string, tenantId: string, fileIds: readonly string[], replacedBy: { readonly actorId: string; readonly at: number }): Promise<void> {
 		const deletedAt = BigInt(replacedBy.at);
 		await this.db.rewardImage.updateMany({ where: { rewardId, isDeleted: false }, data: { isDeleted: true, deletedAt, deletedBy: replacedBy.actorId, updatedAt: deletedAt } });
-		await this.insertImages(rewardId, organizationId, fileIds);
+		await this.insertImages(rewardId, tenantId, fileIds);
 	}
 
 	private async insertLocationScopes(rewardId: string, parent: RewardSnapshot): Promise<void> {
@@ -310,7 +305,7 @@ export class PrismaRewardRepository implements RewardRepository {
 			return;
 		}
 		await this.db.rewardLocationScope.createMany({
-			data: parent.locationScope.locationIds.map((locationId) => ({ organizationId: parent.organizationId, rewardId, locationId })),
+			data: parent.locationScope.locationIds.map((locationId) => ({ tenantId: parent.tenantId, rewardId, locationId })),
 		});
 	}
 }

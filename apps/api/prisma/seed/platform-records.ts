@@ -4,7 +4,7 @@ import { JsonObjectSchema, PLATFORM_EVENT_TOPICS, PlatformEventEnvelopeSchema, t
 import { resolvePartitionKey } from "../../src/platform/infrastructure/outbox/platform-outbox.service";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
-import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "./organizations";
+import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "./tenants";
 
 // ---------------------------------------------------------------------------
 // Platform records that no other seeder covers, so that after `db:seed` every
@@ -13,7 +13,7 @@ import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "./organizations"
 //
 //   OutboxEvent              one PUBLISHED and one dead-lettered (FAILED) event,
 //                              built from the real event envelope + topic map
-//   OrganizationSlugHistory  the KL merchant's previous slug, still reserved
+//   TenantSlugHistory  the KL merchant's previous slug, still reserved
 //   SampleCategory / product  a soft-deleted category with its soft-deleted
 //                              product (cascade, as the app deletes them), and a
 //                              live, twice-edited product with an image
@@ -27,7 +27,7 @@ const NAMESPACE = "seed.platform_records";
 /** Fixed demo clock (2026-09-15T08:00:00Z) — byte-identical rows across runs. */
 const BASE_EPOCH_MS = 1_789_459_200_000;
 const ONE_MINUTE_MS = 60_000;
-/** How long a released organization slug stays reserved for its former owner. */
+/** How long a released tenant slug stays reserved for its former owner. */
 const SLUG_RESERVATION_DAYS = 90;
 /** Delivery attempts after which the outbox dispatcher dead-letters an event. */
 const OUTBOX_DEAD_LETTER_ATTEMPTS = 5;
@@ -108,12 +108,12 @@ async function seedOutbox(actors: PlatformRecordsActors): Promise<number> {
 			updatedAt: at(16),
 		},
 		{
-			// Tagged with its tenant, so the analytics row is partitioned by organization.
+			// Tagged with its tenant, so the analytics row is partitioned by tenant.
 			...outboxRow(
 				"outbox:published-reward",
 				{
 					type: "reward.platform",
-					payload: { event: "reward.auto_published", actorUserId: null, organizationId: ORGANIZATION_SEED_IDS.klOrganization, metadata: { rewardCount: "2" } },
+					payload: { event: "reward.auto_published", actorUserId: null, tenantId: TENANT_SEED_IDS.klTenant, metadata: { rewardCount: "2" } },
 				},
 				25,
 			),
@@ -149,11 +149,11 @@ async function seedOutbox(actors: PlatformRecordsActors): Promise<number> {
 
 /** The KL merchant renamed its slug: the old one stays reserved for it (no one else can claim it). */
 async function seedSlugHistory(): Promise<number> {
-	const previousSlug = `${ORGANIZATION_SEED_SLUGS.kl}-cafe`;
-	await prisma.organizationSlugHistory.upsert({
+	const previousSlug = `${TENANT_SEED_SLUGS.kl}-cafe`;
+	await prisma.tenantSlugHistory.upsert({
 		where: { slug: previousSlug },
 		create: {
-			organizationId: ORGANIZATION_SEED_IDS.klOrganization,
+			tenantId: TENANT_SEED_IDS.klTenant,
 			slug: previousSlug,
 			reservedUntil: BigInt(Date.now() + SLUG_RESERVATION_DAYS * DAY_MS),
 			createdAt: at(-30 * 24 * 60),

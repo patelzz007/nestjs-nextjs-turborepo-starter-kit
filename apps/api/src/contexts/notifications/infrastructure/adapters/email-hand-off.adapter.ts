@@ -9,6 +9,7 @@ import type { OutboxEmailRequestTarget } from "../../../../platform/infrastructu
 import { DeliverEmailCommand } from "../../application/commands/deliver-email/deliver-email.command";
 import { EmailDeliveryRetryRequestedError } from "../../application/commands/deliver-email/deliver-email.errors";
 import { EmailQueueService } from "./email-queue.adapter";
+import { QUEUE_EMAIL_SEND_OPERATION } from "../../application/ports/notifications.tokens";
 
 /** Inline-retry backoff: 300 ms × 2^(n-2), ±40 % jitter (the BullMQ preset's shape, for the no-Redis path). */
 const RETRY_BASE_DELAY_MS = 300;
@@ -53,7 +54,7 @@ export class EmailRequestHandOff implements OutboxEmailRequestTarget {
 
 	private async deliverInline(request: NotificationEmailRequestedPayload): Promise<void> {
 		const maxAttempts = this.config.email.maxAttempts;
-		const actor = systemActor("queue.email.send", "job", null, "Deliver one requested email inline (no Redis)", null);
+		const actor = systemActor(QUEUE_EMAIL_SEND_OPERATION, "job", null, "Deliver one requested email inline (no Redis)", null);
 		for (let attemptNumber = 1; attemptNumber <= maxAttempts; attemptNumber += 1) {
 			if (attemptNumber >= FIRST_RETRY_ATTEMPT) {
 				await this.backoff(attemptNumber);

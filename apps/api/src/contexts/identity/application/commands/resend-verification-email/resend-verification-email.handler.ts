@@ -7,7 +7,7 @@ import type { UserAccount } from "../../../domain/aggregates/user-account.aggreg
 import { EmailAddress } from "../../../domain/value-objects/email-address.value-object";
 import type { IdentityScope } from "../../identity-scope";
 import type { IdentityTokensPort } from "../../ports/identity-tokens.port";
-import { IDENTITY_TOKENS, IDENTITY_UNIT_OF_WORK, PUBLIC_AUTH_FLOW_OPERATION } from "../../ports/identity.tokens";
+import { IDENTITY_TOKENS, IDENTITY_UNIT_OF_WORK, EMAIL_VERIFICATION_SEND_OPERATION } from "../../ports/identity.tokens";
 import { ResendVerificationEmailCommand } from "./resend-verification-email.command";
 
 /** The same answer whether or not the account exists (no email enumeration). */
@@ -22,7 +22,7 @@ export class ResendVerificationEmailHandler implements ICommandHandler<ResendVer
 
 	public async execute(command: ResendVerificationEmailCommand): Promise<ResendVerificationResponse> {
 		const email: EmailAddress = EmailAddress.of(command.input.email);
-		await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, command.actor, async (scope: IdentityScope): Promise<void> => {
+		await this.uow.runSystemOperation(EMAIL_VERIFICATION_SEND_OPERATION, command.actor, async (scope: IdentityScope): Promise<void> => {
 			const account: UserAccount | null = await scope.accounts.findByEmail(email);
 			if (account?.awaitsEmailVerification() !== true) {
 				return;

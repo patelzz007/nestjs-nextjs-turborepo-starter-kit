@@ -30,6 +30,11 @@ BEGIN
   END IF;
 END $$;
 
+-- The applying login may act as the consumer (`SET ROLE`), as it may act as app_runtime: `pnpm
+-- db:seed` replays the outbox through the consumer's own SQL under this role (prisma/seed/
+-- analytics-ingest.ts). The role is narrower than the login, so the membership widens nothing.
+GRANT analytics_consumer TO CURRENT_USER;
+
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM analytics_consumer;
 REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM analytics_consumer;
 

@@ -24,6 +24,7 @@ import {
 	toPrismaNullableStringFilter,
 } from "../../../../platform/infrastructure/persistence/list-query/prisma-filter";
 import { PrismaReadExecutor } from "../../../../platform/infrastructure/unit-of-work/prisma-read-executor";
+import { RBAC_CATALOG_READ_OPERATION } from "../../application/ports/authorization.tokens";
 import type { RbacCatalogReadPort } from "../../application/ports/rbac-read.port";
 import { toAdminPermissionResponse, toRoleResponse } from "../../application/services/rbac-response.mapper";
 import { permissionStateOf, roleStateOf } from "../persistence/rbac-row.mapper";
@@ -79,14 +80,14 @@ export function buildRoleListOrder(query: RoleListQuery): ListOrder<Prisma.RoleO
 	return buildListOrder(roleListQuery.resolveSort(query.sort), { columns: ROLE_SORT_COLUMNS, tieBreaker: (direction) => ({ id: direction }) });
 }
 
-/** Catalog reads under the caller's RLS session. One statement per list (no per-row reads). */
+/** Catalog reads as `authorization.rbac.catalog.read` (Role and Permission only). One statement per list (no per-row reads). */
 @Injectable()
 export class PrismaRbacCatalogReader implements RbacCatalogReadPort {
 	public constructor(private readonly reads: PrismaReadExecutor<Prisma.TransactionClient>) {}
 
 	public async listPermissions(actor: ActorContext, query: PermissionListQuery): Promise<PaginatedServiceResult<PermissionListItem>> {
 		// Offset pages only: the default order (group, resource, action) is not a keyset a cursor can continue.
-		const page = await this.reads.read(actor, (db) =>
+		const page = await this.reads.readAsSystemOperation(RBAC_CATALOG_READ_OPERATION, actor, (db) =>
 			fetchListPage(query, {
 				where: buildPermissionListWhere(query),
 				order: buildPermissionListOrder(query),
@@ -109,12 +110,12 @@ export class PrismaRbacCatalogReader implements RbacCatalogReadPort {
 	}
 
 	public async findPermission(actor: ActorContext, permissionId: string): Promise<AdminPermissionResponse | null> {
-		const row = await this.reads.read(actor, (db) => db.permission.findFirst({ where: { id: permissionId, isDeleted: false } }));
+		const row = await this.reads.readAsSystemOperation(RBAC_CATALOG_READ_OPERATION, actor, (db) => db.permission.findFirst({ where: { id: permissionId, isDeleted: false } }));
 		return row === null ? null : toAdminPermissionResponse(permissionStateOf(row));
 	}
 
 	public async listPermissionGroups(actor: ActorContext): Promise<string[]> {
-		const rows = await this.reads.read(actor, (db) =>
+		const rows = await this.reads.readAsSystemOperation(RBAC_CATALOG_READ_OPERATION, actor, (db) =>
 			db.permission.findMany({ where: { isDeleted: false, group: { not: null } }, select: { group: true }, distinct: ["group"] }),
 		);
 		return rows.flatMap((row): string[] => (row.group === null || row.group.length === 0 ? [] : [row.group]));
@@ -122,7 +123,7 @@ export class PrismaRbacCatalogReader implements RbacCatalogReadPort {
 
 	public async listRoles(actor: ActorContext, query: RoleListQuery): Promise<PaginatedServiceResult<RoleListItem>> {
 		// Offset pages only: the default order (by name) is not a keyset a cursor can continue.
-		const page = await this.reads.read(actor, (db) =>
+		const page = await this.reads.readAsSystemOperation(RBAC_CATALOG_READ_OPERATION, actor, (db) =>
 			fetchListPage(query, {
 				where: buildRoleListWhere(query),
 				order: buildRoleListOrder(query),
@@ -138,7 +139,7 @@ export class PrismaRbacCatalogReader implements RbacCatalogReadPort {
 	}
 
 	public async findRole(actor: ActorContext, roleId: string): Promise<RoleResponse | null> {
-		const row = await this.reads.read(actor, (db) => db.role.findFirst({ where: { id: roleId, isDeleted: false } }));
+		const row = await this.reads.readAsSystemOperation(RBAC_CATALOG_READ_OPERATION, actor, (db) => db.role.findFirst({ where: { id: roleId, isDeleted: false } }));
 		return row === null ? null : toRoleResponse(roleStateOf(row));
 	}
 }

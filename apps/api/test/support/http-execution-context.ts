@@ -24,7 +24,7 @@ export interface TestHttpRequest {
 }
 
 /** Route metadata applied to the test handler (what decorators would set). */
-export type TestRouteMetadata = Readonly<Record<string, object | boolean>>;
+export type TestRouteMetadata = Readonly<Record<string, object | boolean | string>>;
 
 function rawRequest(headers: Record<string, string>): IncomingMessage {
 	const raw = new IncomingMessage(new Socket());

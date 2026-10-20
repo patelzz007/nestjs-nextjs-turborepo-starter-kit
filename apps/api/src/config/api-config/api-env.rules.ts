@@ -177,11 +177,18 @@ export function checkApiEnvRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>):
 	const isProduction: boolean = env.NODE_ENV === NodeEnvSchema.enum.production;
 
 	requireDistinctSecrets(env, context);
-	if (!env.TENANCY_ENABLED && env.DEFAULT_ORGANIZATION_ID === undefined) {
+	if (!env.TENANCY_ENABLED && env.DEFAULT_TENANT_ID === undefined) {
 		context.addIssue({
 			code: "custom",
-			path: ["DEFAULT_ORGANIZATION_ID"],
-			message: "is required in single-tenant mode (TENANCY_ENABLED off): the id of the organization this deployment serves (`pnpm db:seed` creates one)",
+			path: ["DEFAULT_TENANT_ID"],
+			message: "is required in single-tenant mode (TENANCY_ENABLED off): the id of the tenant this deployment serves (`pnpm db:seed` creates one)",
+		});
+	}
+	if (env.TENANCY_ENABLED && env.DEFAULT_TENANT_ID !== undefined) {
+		context.addIssue({
+			code: "custom",
+			path: ["DEFAULT_TENANT_ID"],
+			message: "must not be set when TENANCY_ENABLED is on. Multi-tenant mode has no fallback tenant — remove DEFAULT_TENANT_ID.",
 		});
 	}
 

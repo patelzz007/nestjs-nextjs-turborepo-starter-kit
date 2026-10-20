@@ -4,11 +4,11 @@ import type { MerchantAnalyticsResponse, RewardsAnalyticsQuery } from "@workspac
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 
 export interface GetMerchantAnalyticsInput {
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly query: RewardsAnalyticsQuery;
 }
 
-/** One merchant's weekly analytics (`GET /orgs/:orgSlug/analytics`), limited to the caller's stores. */
+/** One merchant's weekly analytics (`GET /tenants/:tenantSlug/analytics`), limited to the caller's stores. */
 export class GetMerchantAnalyticsQuery extends Query<MerchantAnalyticsResponse> {
 	public constructor(
 		public readonly actor: ActorContext,

@@ -41,12 +41,11 @@ const USER: ActorContext = {
 	kind: "user",
 	userId: VIEWER_ID,
 	sessionId: "session-1",
-	organizationId: null,
+	tenantId: null,
 	isSuperAdmin: false,
 	accessScope: "tenant",
 	impersonatorUserId: null,
 	request: REQUEST,
-	routeRlsBypass: false,
 };
 
 describe("PrismaAuditReadSession", () => {
@@ -62,15 +61,15 @@ describe("PrismaAuditReadSession", () => {
 		{ name: "a system actor's human", actor: systemActor("audit.trail.read", "cli", null, "export", VIEWER_ID), actorUserId: VIEWER_ID },
 		{
 			name: "no one for an API key",
-			actor: { kind: "api_key", apiKeyId: "key-1", organizationId: "org-1", locationId: null, terminalId: null, request: REQUEST, routeRlsBypass: false },
+			actor: { kind: "api_key", apiKeyId: "key-1", tenantId: "org-1", locationId: null, terminalId: null, request: REQUEST },
 			actorUserId: null,
 		},
 		{
 			name: "a refresh-token subject",
-			actor: { kind: "token_subject", userId: VIEWER_ID, organizationId: null, request: REQUEST, routeRlsBypass: false },
+			actor: { kind: "token_subject", userId: VIEWER_ID, tenantId: null, request: REQUEST },
 			actorUserId: VIEWER_ID,
 		},
-		{ name: "no one for an anonymous caller", actor: { kind: "anonymous", organizationId: null, request: REQUEST, routeRlsBypass: false }, actorUserId: null },
+		{ name: "no one for an anonymous caller", actor: { kind: "anonymous", tenantId: null, request: REQUEST }, actorUserId: null },
 	])("records $name as the operation's actor", async ({ actor, actorUserId }) => {
 		const { session, transactions } = sessionWith();
 

@@ -4,11 +4,11 @@ import type { MerchantAnalyticsDashboard, MerchantAnalyticsDashboardQuery } from
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 
 export interface GetMerchantDashboardInput {
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly query: MerchantAnalyticsDashboardQuery;
 }
 
-/** The merchant dashboard (`GET /orgs/:orgSlug/analytics/dashboard`), limited to the caller's stores. */
+/** The merchant dashboard (`GET /tenants/:tenantSlug/analytics/dashboard`), limited to the caller's stores. */
 export class GetMerchantDashboardQuery extends Query<MerchantAnalyticsDashboard> {
 	public constructor(
 		public readonly actor: ActorContext,

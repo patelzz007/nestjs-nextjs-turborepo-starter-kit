@@ -216,5 +216,5 @@ export class FilesUnitOfWorkHarness {
 }
 
 export function scanActor(): ActorContext {
-	return systemActor("queue.storage.scan", "job", null, "Malware-scan a file in a test", null);
+	return systemActor("files.scan_verdict.apply", "job", null, "Malware-scan a file in a test", null);
 }

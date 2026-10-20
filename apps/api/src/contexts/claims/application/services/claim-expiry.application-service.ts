@@ -32,19 +32,19 @@ export class ClaimExpiryApplicationService {
 		const overdue = await this.uow.run(actor, async (scope: ClaimsScope) => scope.claims.listOverdue(isReferrerCredit, now, CLAIM_EXPIRY_BATCH_SIZE));
 		let expired = 0;
 		const failures: Error[] = [];
-		for (const { claimId, organizationId } of overdue) {
+		for (const { claimId, tenantId } of overdue) {
 			try {
 				const didExpire = await this.uow.run(actor, async (scope: ClaimsScope): Promise<boolean> => {
 					const claim = await scope.claims.findById(claimId);
 					if (!claim?.isOverdue(now)) {
 						return false;
 					}
-					claim.expire(organizationId, now);
+					claim.expire(tenantId, now);
 					if (!(await scope.claims.saveIfUnchanged(claim))) {
 						return false;
 					}
 					await scope.rewards.release(claim.rewardId, now);
-					await scope.rewardAudit.append({ organizationId, actorUserId: null, action: "reward.claim_expired", metadata: { claimId, isReferrerCredit } });
+					await scope.rewardAudit.append({ tenantId, actorUserId: null, action: "reward.claim_expired", metadata: { claimId, isReferrerCredit } });
 					scope.events.collectFrom(claim);
 					return true;
 				});

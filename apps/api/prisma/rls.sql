@@ -30,7 +30,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ap
 GRANT EXECUTE ON FUNCTION app_rls_bypass() TO app_runtime;
 GRANT EXECUTE ON FUNCTION app_rls_bypass_on(text) TO app_runtime;
 GRANT EXECUTE ON FUNCTION app_current_user_id() TO app_runtime;
-GRANT EXECUTE ON FUNCTION app_current_organization_id() TO app_runtime;
+GRANT EXECUTE ON FUNCTION app_current_tenant_id() TO app_runtime;
 GRANT EXECUTE ON FUNCTION app_owns(text) TO app_runtime;
 
 -- ── 3. Enable RLS on every table ───────────────────────────────────────────
@@ -190,8 +190,8 @@ DROP POLICY IF EXISTS resource_acls_member ON public."ResourceAcl";
 CREATE POLICY resource_acls_member ON public."ResourceAcl"
   USING (
     (SELECT app_rls_bypass_on('ResourceAcl'))
-    OR "organizationId" IS NULL
-    OR app_tenant_organization_member_of("organizationId")
+    OR "tenantId" IS NULL
+    OR app_tenant_member_of("tenantId")
   )
   WITH CHECK ((SELECT app_rls_bypass_on('ResourceAcl')));
 
@@ -203,8 +203,8 @@ CREATE POLICY policy_definitions_read ON public."PolicyDefinition"
   FOR SELECT
   USING (
     (SELECT app_rls_bypass_on('PolicyDefinition'))
-    OR "organizationId" IS NULL
-    OR app_tenant_organization_member_of("organizationId")
+    OR "tenantId" IS NULL
+    OR app_tenant_member_of("tenantId")
   );
 
 DROP POLICY IF EXISTS policy_definitions_write ON public."PolicyDefinition";
@@ -247,7 +247,7 @@ CREATE POLICY github_webhook_deliveries_bypass ON public."GithubWebhookDelivery"
   WITH CHECK ((SELECT app_rls_bypass_on('GithubWebhookDelivery')));
 
 -- Resend delivery-webhook history (one row per verified webhook delivery). Written
--- and read only by the signature-verified webhook route (@RlsBypass) — bypass-only.
+-- and read only by the signature-verified webhook route — bypass-only.
 DROP POLICY IF EXISTS email_delivery_events_bypass ON public."EmailDeliveryEvent";
 CREATE POLICY email_delivery_events_bypass ON public."EmailDeliveryEvent"
   USING ((SELECT app_rls_bypass_on('EmailDeliveryEvent')))
@@ -282,8 +282,8 @@ CREATE POLICY impersonation_audit_logs_insert ON public."ImpersonationAuditLog"
   TO app_runtime
   WITH CHECK ((SELECT app_rls_bypass_on('ImpersonationAuditLog')));
 
--- Impersonation sessions: written under `platform.superadmin` / `route.rls_bypass`,
--- read by AuthGuard under `request.pre_handler` — every path is a bypass scope.
+-- Impersonation sessions: written under `platform.superadmin` or `auth.impersonation.start`,
+-- read by AuthGuard under `auth.principal.lookup`.
 -- Rows are never deleted (ended sessions are part of the forensic record).
 ALTER TABLE public."ImpersonationSession" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public."ImpersonationSession" FORCE ROW LEVEL SECURITY;
@@ -314,11 +314,13 @@ CREATE POLICY mfa_recovery_audit_logs_insert ON public."MfaRecoveryAuditLog"
 
 -- ── Geo tables (reference data: public read, SuperAdmin write) ───────────
 -- Writes are allowed ONLY under the `geo.reference_data.write` system
--- operation (GeoRepository, SuperAdmin-only endpoints) — not under any other
--- bypass, not even `platform.superadmin`. Rows are soft-deleted: DELETE is
--- revoked from app_runtime in 99-app-runtime-grants.sql.
+-- operation (GeoRepository, SuperAdmin-only endpoints) or the CLI-only
+-- `seed.demo_dataset` (pnpm db:seed loads the geo dataset) — not under any
+-- other bypass. Rows are soft-deleted: DELETE is revoked from app_runtime in
+-- 99-app-runtime-grants.sql.
 
 ALTER TABLE IF EXISTS public."Region" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public."Region" FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS regions_read ON public."Region";
 CREATE POLICY regions_read ON public."Region"
   FOR SELECT
@@ -326,10 +328,11 @@ CREATE POLICY regions_read ON public."Region"
 DROP POLICY IF EXISTS regions_write ON public."Region";
 CREATE POLICY regions_write ON public."Region"
   FOR ALL
-  USING ((SELECT app_rls_bypass_on('Region')) AND app_system_operation() = 'geo.reference_data.write')
-  WITH CHECK ((SELECT app_rls_bypass_on('Region')) AND app_system_operation() = 'geo.reference_data.write');
+  USING ((SELECT app_rls_bypass_on('Region')) AND app_system_operation() IN ('geo.reference_data.write', 'seed.demo_dataset'))
+  WITH CHECK ((SELECT app_rls_bypass_on('Region')) AND app_system_operation() IN ('geo.reference_data.write', 'seed.demo_dataset'));
 
 ALTER TABLE IF EXISTS public."Subregion" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public."Subregion" FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS subregions_read ON public."Subregion";
 CREATE POLICY subregions_read ON public."Subregion"
   FOR SELECT
@@ -337,10 +340,11 @@ CREATE POLICY subregions_read ON public."Subregion"
 DROP POLICY IF EXISTS subregions_write ON public."Subregion";
 CREATE POLICY subregions_write ON public."Subregion"
   FOR ALL
-  USING ((SELECT app_rls_bypass_on('Subregion')) AND app_system_operation() = 'geo.reference_data.write')
-  WITH CHECK ((SELECT app_rls_bypass_on('Subregion')) AND app_system_operation() = 'geo.reference_data.write');
+  USING ((SELECT app_rls_bypass_on('Subregion')) AND app_system_operation() IN ('geo.reference_data.write', 'seed.demo_dataset'))
+  WITH CHECK ((SELECT app_rls_bypass_on('Subregion')) AND app_system_operation() IN ('geo.reference_data.write', 'seed.demo_dataset'));
 
 ALTER TABLE IF EXISTS public."Country" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public."Country" FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS countries_read ON public."Country";
 CREATE POLICY countries_read ON public."Country"
   FOR SELECT
@@ -348,10 +352,11 @@ CREATE POLICY countries_read ON public."Country"
 DROP POLICY IF EXISTS countries_write ON public."Country";
 CREATE POLICY countries_write ON public."Country"
   FOR ALL
-  USING ((SELECT app_rls_bypass_on('Country')) AND app_system_operation() = 'geo.reference_data.write')
-  WITH CHECK ((SELECT app_rls_bypass_on('Country')) AND app_system_operation() = 'geo.reference_data.write');
+  USING ((SELECT app_rls_bypass_on('Country')) AND app_system_operation() IN ('geo.reference_data.write', 'seed.demo_dataset'))
+  WITH CHECK ((SELECT app_rls_bypass_on('Country')) AND app_system_operation() IN ('geo.reference_data.write', 'seed.demo_dataset'));
 
 ALTER TABLE IF EXISTS public."State" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public."State" FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS states_read ON public."State";
 CREATE POLICY states_read ON public."State"
   FOR SELECT
@@ -359,10 +364,11 @@ CREATE POLICY states_read ON public."State"
 DROP POLICY IF EXISTS states_write ON public."State";
 CREATE POLICY states_write ON public."State"
   FOR ALL
-  USING ((SELECT app_rls_bypass_on('State')) AND app_system_operation() = 'geo.reference_data.write')
-  WITH CHECK ((SELECT app_rls_bypass_on('State')) AND app_system_operation() = 'geo.reference_data.write');
+  USING ((SELECT app_rls_bypass_on('State')) AND app_system_operation() IN ('geo.reference_data.write', 'seed.demo_dataset'))
+  WITH CHECK ((SELECT app_rls_bypass_on('State')) AND app_system_operation() IN ('geo.reference_data.write', 'seed.demo_dataset'));
 
 ALTER TABLE IF EXISTS public."City" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public."City" FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS cities_read ON public."City";
 CREATE POLICY cities_read ON public."City"
   FOR SELECT
@@ -370,18 +376,18 @@ CREATE POLICY cities_read ON public."City"
 DROP POLICY IF EXISTS cities_write ON public."City";
 CREATE POLICY cities_write ON public."City"
   FOR ALL
-  USING ((SELECT app_rls_bypass_on('City')) AND app_system_operation() = 'geo.reference_data.write')
-  WITH CHECK ((SELECT app_rls_bypass_on('City')) AND app_system_operation() = 'geo.reference_data.write');
+  USING ((SELECT app_rls_bypass_on('City')) AND app_system_operation() IN ('geo.reference_data.write', 'seed.demo_dataset'))
+  WITH CHECK ((SELECT app_rls_bypass_on('City')) AND app_system_operation() IN ('geo.reference_data.write', 'seed.demo_dataset'));
 
--- ── Rewards platform (organization-scoped — ReBAC via app_tenant_org_member in 01) ─
+-- ── Rewards platform (tenant-scoped — ReBAC via app_tenant_org_member in 01) ─
 
 DO $$
 DECLARE
   t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY[
-    'OrganizationApiKey',
-    'OrganizationTerminal',
+    'TenantApiKey',
+    'TenantTerminal',
     'Reward',
     'RewardClaim',
     'RewardRedemption',
@@ -396,9 +402,9 @@ BEGIN
     'StoredFile',
     'FileVariant',
     'ProductImage',
-    'OrganizationAsset',
+    'TenantAsset',
     'UserAvatar',
-    'OrganizationKybFile'
+    'TenantKybFile'
   ]
   LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
@@ -408,8 +414,8 @@ END $$;
 
 DROP POLICY IF EXISTS stored_files_owner ON public."StoredFile";
 CREATE POLICY stored_files_owner ON public."StoredFile"
-  USING (app_owns("uploadedById") OR ("organizationId" IS NOT NULL AND app_tenant_org_member("organizationId")) OR (SELECT app_rls_bypass_on('StoredFile')))
-  WITH CHECK (app_owns("uploadedById") OR ("organizationId" IS NOT NULL AND app_tenant_org_member("organizationId")) OR (SELECT app_rls_bypass_on('StoredFile')));
+  USING (app_owns("uploadedById") OR ("tenantId" IS NOT NULL AND app_tenant_org_member("tenantId")) OR (SELECT app_rls_bypass_on('StoredFile')))
+  WITH CHECK (app_owns("uploadedById") OR ("tenantId" IS NOT NULL AND app_tenant_org_member("tenantId")) OR (SELECT app_rls_bypass_on('StoredFile')));
 
 -- A reward's images are readable by whoever can read the reward (marketplace
 -- shoppers, claim holders, members): the EXISTS runs under rewards_read (through
@@ -445,7 +451,7 @@ CREATE POLICY file_variants_file ON public."FileVariant"
     OR EXISTS (
       SELECT 1 FROM public."StoredFile" sf
       WHERE sf.id = "fileId"
-        AND (app_owns(sf."uploadedById") OR (sf."organizationId" IS NOT NULL AND app_tenant_org_member(sf."organizationId")))
+        AND (app_owns(sf."uploadedById") OR (sf."tenantId" IS NOT NULL AND app_tenant_org_member(sf."tenantId")))
     )
   )
   WITH CHECK (
@@ -453,7 +459,7 @@ CREATE POLICY file_variants_file ON public."FileVariant"
     OR EXISTS (
       SELECT 1 FROM public."StoredFile" sf
       WHERE sf.id = "fileId"
-        AND (app_owns(sf."uploadedById") OR (sf."organizationId" IS NOT NULL AND app_tenant_org_member(sf."organizationId")))
+        AND (app_owns(sf."uploadedById") OR (sf."tenantId" IS NOT NULL AND app_tenant_org_member(sf."tenantId")))
     )
   );
 
@@ -462,20 +468,20 @@ CREATE POLICY product_images_catalog ON public."ProductImage"
   USING ((SELECT app_rls_bypass_on('ProductImage')))
   WITH CHECK ((SELECT app_rls_bypass_on('ProductImage')));
 
-DROP POLICY IF EXISTS organization_assets_org ON public."OrganizationAsset";
-CREATE POLICY organization_assets_org ON public."OrganizationAsset"
-  USING (app_tenant_org_member("organizationId") OR (SELECT app_rls_bypass_on('OrganizationAsset')))
-  WITH CHECK (app_tenant_org_member("organizationId") OR (SELECT app_rls_bypass_on('OrganizationAsset')));
+DROP POLICY IF EXISTS tenant_assets_org ON public."TenantAsset";
+CREATE POLICY tenant_assets_org ON public."TenantAsset"
+  USING (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('TenantAsset')))
+  WITH CHECK (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('TenantAsset')));
 
 DROP POLICY IF EXISTS user_avatars_owner ON public."UserAvatar";
 CREATE POLICY user_avatars_owner ON public."UserAvatar"
   USING (app_owns("userId") OR (SELECT app_rls_bypass_on('UserAvatar')))
   WITH CHECK (app_owns("userId") OR (SELECT app_rls_bypass_on('UserAvatar')));
 
-DROP POLICY IF EXISTS organization_kyb_files_org ON public."OrganizationKybFile";
-CREATE POLICY organization_kyb_files_org ON public."OrganizationKybFile"
-  USING (app_tenant_org_member("organizationId") OR (SELECT app_rls_bypass_on('OrganizationKybFile')))
-  WITH CHECK (app_tenant_org_member("organizationId") OR (SELECT app_rls_bypass_on('OrganizationKybFile')));
+DROP POLICY IF EXISTS tenant_kyb_files_org ON public."TenantKybFile";
+CREATE POLICY tenant_kyb_files_org ON public."TenantKybFile"
+  USING (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('TenantKybFile')))
+  WITH CHECK (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('TenantKybFile')));
 
 -- The session's user holds a (non-deleted) claim on the reward. A claim is the
 -- user's own record, so the reward it names stays readable to them after the
@@ -504,7 +510,7 @@ CREATE POLICY rewards_read ON public."Reward"
   FOR SELECT
   USING (
     (SELECT app_rls_bypass_on('Reward'))
-    OR app_tenant_org_member("organizationId")
+    OR app_tenant_org_member("tenantId")
     OR (
       "isDeleted" = false
       AND "rewardKind" = 'CONSUMER'
@@ -516,18 +522,18 @@ CREATE POLICY rewards_read ON public."Reward"
 DROP POLICY IF EXISTS rewards_write ON public."Reward";
 CREATE POLICY rewards_write ON public."Reward"
   FOR INSERT
-  WITH CHECK (app_tenant_org_member("organizationId") OR (SELECT app_rls_bypass_on('Reward')));
+  WITH CHECK (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('Reward')));
 
 DROP POLICY IF EXISTS rewards_update ON public."Reward";
 CREATE POLICY rewards_update ON public."Reward"
   FOR UPDATE
-  USING (app_tenant_org_member("organizationId") OR (SELECT app_rls_bypass_on('Reward')))
-  WITH CHECK (app_tenant_org_member("organizationId") OR (SELECT app_rls_bypass_on('Reward')));
+  USING (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('Reward')))
+  WITH CHECK (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('Reward')));
 
 DROP POLICY IF EXISTS rewards_delete ON public."Reward";
 CREATE POLICY rewards_delete ON public."Reward"
   FOR DELETE
-  USING (app_tenant_org_member("organizationId") OR (SELECT app_rls_bypass_on('Reward')));
+  USING (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('Reward')));
 
 ALTER TABLE public."RewardLocationScope" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public."RewardLocationScope" FORCE ROW LEVEL SECURITY;
@@ -537,7 +543,7 @@ CREATE POLICY reward_location_scopes_read ON public."RewardLocationScope"
   FOR SELECT
   USING (
     (SELECT app_rls_bypass_on('RewardLocationScope'))
-    OR app_tenant_org_member("organizationId")
+    OR app_tenant_org_member("tenantId")
     OR EXISTS (
       SELECT 1 FROM public."Reward" r
       WHERE r.id = "RewardLocationScope"."rewardId"
@@ -550,8 +556,8 @@ CREATE POLICY reward_location_scopes_read ON public."RewardLocationScope"
 DROP POLICY IF EXISTS reward_location_scopes_write ON public."RewardLocationScope";
 CREATE POLICY reward_location_scopes_write ON public."RewardLocationScope"
   FOR ALL
-  USING (app_tenant_org_member("organizationId") OR (SELECT app_rls_bypass_on('RewardLocationScope')))
-  WITH CHECK (app_tenant_org_member("organizationId") OR (SELECT app_rls_bypass_on('RewardLocationScope')));
+  USING (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('RewardLocationScope')))
+  WITH CHECK (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('RewardLocationScope')));
 
 ALTER TABLE public."RewardImage" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public."RewardImage" FORCE ROW LEVEL SECURITY;
@@ -562,25 +568,25 @@ CREATE POLICY reward_images_read ON public."RewardImage"
   FOR SELECT
   USING (
     (SELECT app_rls_bypass_on('RewardImage'))
-    OR app_tenant_org_member("organizationId")
+    OR app_tenant_org_member("tenantId")
     OR EXISTS (SELECT 1 FROM public."Reward" r WHERE r.id = "RewardImage"."rewardId")
   );
 
 DROP POLICY IF EXISTS reward_images_write ON public."RewardImage";
 CREATE POLICY reward_images_write ON public."RewardImage"
   FOR ALL
-  USING (app_tenant_org_member("organizationId") OR (SELECT app_rls_bypass_on('RewardImage')))
-  WITH CHECK (app_tenant_org_member("organizationId") OR (SELECT app_rls_bypass_on('RewardImage')));
+  USING (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('RewardImage')))
+  WITH CHECK (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('RewardImage')));
 
 DROP POLICY IF EXISTS reward_claims_own ON public."RewardClaim";
 CREATE POLICY reward_claims_own ON public."RewardClaim"
   USING (app_owns("userId") OR (SELECT app_rls_bypass_on('RewardClaim')))
   WITH CHECK (app_owns("userId") OR (SELECT app_rls_bypass_on('RewardClaim')));
 
--- The merchant's members may READ the claims of their organization's rewards
+-- The merchant's members may READ the claims of their tenant's rewards
 -- (redemption history and analytics join a redemption to its claim and reward).
 -- Read-only: claims are written by the customer (own row) or system flows.
--- Store scope within the organization is enforced by the API service layer.
+-- Store scope within the tenant is enforced by the API service layer.
 DROP POLICY IF EXISTS reward_claims_merchant_read ON public."RewardClaim";
 CREATE POLICY reward_claims_merchant_read ON public."RewardClaim"
   FOR SELECT
@@ -589,7 +595,7 @@ CREATE POLICY reward_claims_merchant_read ON public."RewardClaim"
     OR (EXISTS (
       SELECT 1 FROM public."Reward" r
       WHERE r.id = "RewardClaim"."rewardId"
-        AND app_tenant_org_member(r."organizationId")
+        AND app_tenant_org_member(r."tenantId")
     ))
   );
 
@@ -602,7 +608,7 @@ CREATE POLICY reward_redemptions_select ON public."RewardRedemption"
   FOR SELECT
   USING (
     app_owns("userId")
-    OR app_tenant_org_member("organizationId")
+    OR app_tenant_org_member("tenantId")
     OR (SELECT app_rls_bypass_on('RewardRedemption'))
   );
 DROP POLICY IF EXISTS reward_redemptions_system_write ON public."RewardRedemption";
@@ -616,7 +622,7 @@ CREATE POLICY reward_sales_select ON public."RewardSale"
   FOR SELECT
   USING (
     app_owns("userId")
-    OR app_tenant_org_member("organizationId")
+    OR app_tenant_org_member("tenantId")
     OR (SELECT app_rls_bypass_on('RewardSale'))
   );
 DROP POLICY IF EXISTS reward_sales_system_write ON public."RewardSale";
@@ -661,14 +667,14 @@ CREATE POLICY reward_notifications_own ON public."RewardNotification"
 DROP POLICY IF EXISTS reward_audit_insert ON public."RewardAuditLog";
 CREATE POLICY reward_audit_insert ON public."RewardAuditLog"
   FOR INSERT
-  WITH CHECK ((SELECT app_rls_bypass_on('RewardAuditLog')) OR ("organizationId" IS NOT NULL AND app_tenant_org_member("organizationId")));
+  WITH CHECK ((SELECT app_rls_bypass_on('RewardAuditLog')) OR ("tenantId" IS NOT NULL AND app_tenant_org_member("tenantId")));
 
 DROP POLICY IF EXISTS reward_audit_select ON public."RewardAuditLog";
 CREATE POLICY reward_audit_select ON public."RewardAuditLog"
   FOR SELECT
   USING (
     (SELECT app_rls_bypass_on('RewardAuditLog'))
-    OR ("organizationId" IS NOT NULL AND app_tenant_org_member("organizationId"))
+    OR ("tenantId" IS NOT NULL AND app_tenant_org_member("tenantId"))
   );
 
 -- Internal infrastructure tables — bypass-only (never user-scoped reads/writes).
@@ -751,7 +757,7 @@ DROP POLICY IF EXISTS platform_resource_idempotency_bypass ON public."PlatformRe
 CREATE POLICY platform_resource_idempotency_bypass ON public."PlatformResourceIdempotencyRecord"
   USING ((SELECT app_rls_bypass_on('PlatformResourceIdempotencyRecord')))
   WITH CHECK ((SELECT app_rls_bypass_on('PlatformResourceIdempotencyRecord')));
--- ── Organization multi-tenancy (docs/technical/authorization/tenancy-and-rls.md) ───────────────────
+-- ── Tenant multi-tenancy (docs/technical/authorization/tenancy-and-rls.md) ───────────────────
 -- ReBAC helpers: prisma/rls/01-acl-location-access.sql (applied before this bundle).
 
 DO $$
@@ -759,24 +765,24 @@ DECLARE
   t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY[
-    'Organization',
-    'OrganizationSlugHistory',
-    'OrganizationLocation',
+    'Tenant',
+    'TenantSlugHistory',
+    'Location',
     'Store',
     'StoreMembership',
-    'OrganizationMembership',
-    'OrganizationMembershipLocationScope',
-    'OrganizationMerchantProfile',
-    'OrganizationInvitation',
-    'OrganizationInvitationLocationScope',
-    'OrganizationAccessRequest',
-    'OrganizationLifecycleEvent',
+    'Membership',
+    'MembershipLocationScope',
+    'TenantMerchantProfile',
+    'TenantInvitation',
+    'TenantInvitationLocationScope',
+    'TenantAccessRequest',
+    'TenantLifecycleEvent',
     'TenantPlacement',
     'AuthorizationPolicyDraft',
     'AuthorizationPolicyVersion',
     'SupportAccessGrant',
     'TenantEncryptionKey',
-    'OrganizationAuditLog'
+    'TenantAuditLog'
   ]
   LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
@@ -784,18 +790,18 @@ BEGIN
   END LOOP;
 END $$;
 
-DROP POLICY IF EXISTS organizations_member ON public."Organization";
-CREATE POLICY organizations_member ON public."Organization"
+DROP POLICY IF EXISTS tenants_member ON public."Tenant";
+CREATE POLICY tenants_member ON public."Tenant"
   FOR SELECT
   USING (
-    (SELECT app_rls_bypass_on('Organization'))
-    OR app_organization_member_of(id)
+    (SELECT app_rls_bypass_on('Tenant'))
+    OR app_member_of(id)
     OR (
       app_current_user_id() IS NOT NULL
       AND EXISTS (
         SELECT 1
-        FROM public."OrganizationMembership" m
-        WHERE m."organizationId" = "Organization".id
+        FROM public."Membership" m
+        WHERE m."tenantId" = "Tenant".id
           AND m."userId" = app_current_user_id()
           AND m.status = 'ACTIVE'
           AND m."isDeleted" = false
@@ -803,32 +809,32 @@ CREATE POLICY organizations_member ON public."Organization"
     )
   );
 
-DROP POLICY IF EXISTS organizations_write ON public."Organization";
-CREATE POLICY organizations_write ON public."Organization"
+DROP POLICY IF EXISTS tenants_write ON public."Tenant";
+CREATE POLICY tenants_write ON public."Tenant"
   FOR ALL
-  USING ((SELECT app_rls_bypass_on('Organization')))
-  WITH CHECK ((SELECT app_rls_bypass_on('Organization')));
+  USING ((SELECT app_rls_bypass_on('Tenant')))
+  WITH CHECK ((SELECT app_rls_bypass_on('Tenant')));
 
-DROP POLICY IF EXISTS organization_tenant_tables ON public."OrganizationLocation";
-DROP POLICY IF EXISTS organization_locations_member ON public."OrganizationLocation";
-CREATE POLICY organization_locations_member ON public."OrganizationLocation"
+DROP POLICY IF EXISTS tenant_tables ON public."Location";
+DROP POLICY IF EXISTS locations_member ON public."Location";
+CREATE POLICY locations_member ON public."Location"
   USING (
-    (SELECT app_rls_bypass_on('OrganizationLocation'))
-    OR app_tenant_organization_member_of("organizationId")
-    OR app_organization_member_of("organizationId")
+    (SELECT app_rls_bypass_on('Location'))
+    OR app_tenant_member_of("tenantId")
+    OR app_member_of("tenantId")
   )
   WITH CHECK (
-    (SELECT app_rls_bypass_on('OrganizationLocation'))
-    OR app_tenant_organization_member_of("organizationId")
-    OR app_organization_member_of("organizationId")
+    (SELECT app_rls_bypass_on('Location'))
+    OR app_tenant_member_of("tenantId")
+    OR app_member_of("tenantId")
   );
 
--- Stores: organization members read their org's stores; store members read their store.
--- A store is the 1:1 mirror of an organization location, written in the SAME
+-- Stores: tenant members read their org's stores; store members read their store.
+-- A store is the 1:1 mirror of a tenant location, written in the SAME
 -- transaction as every location write (syncStoreForLocation). Location writes
 -- run in the member's tenant transaction (store request / resubmit) or a system
 -- operation (admin review, close), so the mirror is writable under exactly the
--- tenant condition `organization_locations_member` accepts — and only for a row
+-- tenant condition `locations_member` accepts — and only for a row
 -- that mirrors one of that tenant's own locations. Never hard-deleted (DELETE
 -- stays bypass-only).
 DROP POLICY IF EXISTS stores_member ON public."Store";
@@ -840,8 +846,8 @@ CREATE POLICY stores_select ON public."Store"
   FOR SELECT
   USING (
     (SELECT app_rls_bypass_on('Store'))
-    OR app_tenant_organization_member_of("organizationId")
-    OR app_organization_member_of("organizationId")
+    OR app_tenant_member_of("tenantId")
+    OR app_member_of("tenantId")
     OR EXISTS (
       SELECT 1
       FROM public."StoreMembership" sm
@@ -856,27 +862,27 @@ CREATE POLICY stores_mirror_insert ON public."Store"
   WITH CHECK (
     (SELECT app_rls_bypass_on('Store'))
     OR (
-      app_tenant_organization_member_of("organizationId")
+      app_tenant_member_of("tenantId")
       AND EXISTS (
         SELECT 1
-        FROM public."OrganizationLocation" loc
+        FROM public."Location" loc
         WHERE loc.id = "Store"."locationId"
-          AND loc."organizationId" = "Store"."organizationId"
+          AND loc."tenantId" = "Store"."tenantId"
       )
     )
   );
 CREATE POLICY stores_mirror_update ON public."Store"
   FOR UPDATE
-  USING ((SELECT app_rls_bypass_on('Store')) OR app_tenant_organization_member_of("organizationId"))
+  USING ((SELECT app_rls_bypass_on('Store')) OR app_tenant_member_of("tenantId"))
   WITH CHECK (
     (SELECT app_rls_bypass_on('Store'))
     OR (
-      app_tenant_organization_member_of("organizationId")
+      app_tenant_member_of("tenantId")
       AND EXISTS (
         SELECT 1
-        FROM public."OrganizationLocation" loc
+        FROM public."Location" loc
         WHERE loc.id = "Store"."locationId"
-          AND loc."organizationId" = "Store"."organizationId"
+          AND loc."tenantId" = "Store"."tenantId"
       )
     )
   );
@@ -884,61 +890,61 @@ CREATE POLICY stores_delete ON public."Store"
   FOR DELETE
   USING ((SELECT app_rls_bypass_on('Store')));
 
--- Store memberships: a user sees their own rows; organization members see the org's rows.
+-- Store memberships: a user sees their own rows; tenant members see the org's rows.
 DROP POLICY IF EXISTS store_memberships_member ON public."StoreMembership";
 CREATE POLICY store_memberships_member ON public."StoreMembership"
   USING (
     (SELECT app_rls_bypass_on('StoreMembership'))
     OR "userId" = app_current_user_id()
-    OR app_tenant_organization_member_of("organizationId")
+    OR app_tenant_member_of("tenantId")
   )
   WITH CHECK ((SELECT app_rls_bypass_on('StoreMembership')));
 
-DROP POLICY IF EXISTS organization_memberships_member ON public."OrganizationMembership";
-CREATE POLICY organization_memberships_member ON public."OrganizationMembership"
-  USING ((SELECT app_rls_bypass_on('OrganizationMembership')) OR app_tenant_organization_member_of("organizationId"))
-  WITH CHECK ((SELECT app_rls_bypass_on('OrganizationMembership')) OR app_tenant_organization_member_of("organizationId"));
+DROP POLICY IF EXISTS tenant_memberships_member ON public."Membership";
+CREATE POLICY tenant_memberships_member ON public."Membership"
+  USING ((SELECT app_rls_bypass_on('Membership')) OR app_tenant_member_of("tenantId"))
+  WITH CHECK ((SELECT app_rls_bypass_on('Membership')) OR app_tenant_member_of("tenantId"));
 
-DROP POLICY IF EXISTS organization_audit_logs_member ON public."OrganizationAuditLog";
-CREATE POLICY organization_audit_logs_member ON public."OrganizationAuditLog"
-  USING ((SELECT app_rls_bypass_on('OrganizationAuditLog')) OR app_tenant_organization_member_of("organizationId"))
-  WITH CHECK ((SELECT app_rls_bypass_on('OrganizationAuditLog')) OR app_tenant_organization_member_of("organizationId"));
+DROP POLICY IF EXISTS tenant_audit_logs_member ON public."TenantAuditLog";
+CREATE POLICY tenant_audit_logs_member ON public."TenantAuditLog"
+  USING ((SELECT app_rls_bypass_on('TenantAuditLog')) OR app_tenant_member_of("tenantId"))
+  WITH CHECK ((SELECT app_rls_bypass_on('TenantAuditLog')) OR app_tenant_member_of("tenantId"));
 
-DROP POLICY IF EXISTS organization_access_requests_policy ON public."OrganizationAccessRequest";
-DROP POLICY IF EXISTS organization_access_requests_select ON public."OrganizationAccessRequest";
-DROP POLICY IF EXISTS organization_access_requests_insert ON public."OrganizationAccessRequest";
-CREATE POLICY organization_access_requests_select ON public."OrganizationAccessRequest"
+DROP POLICY IF EXISTS tenant_access_requests_policy ON public."TenantAccessRequest";
+DROP POLICY IF EXISTS tenant_access_requests_select ON public."TenantAccessRequest";
+DROP POLICY IF EXISTS tenant_access_requests_insert ON public."TenantAccessRequest";
+CREATE POLICY tenant_access_requests_select ON public."TenantAccessRequest"
   FOR SELECT
-  USING ((SELECT app_rls_bypass_on('OrganizationAccessRequest')) OR app_tenant_organization_member_of("organizationId") OR "userId" = app_current_user_id());
-CREATE POLICY organization_access_requests_insert ON public."OrganizationAccessRequest"
+  USING ((SELECT app_rls_bypass_on('TenantAccessRequest')) OR app_tenant_member_of("tenantId") OR "userId" = app_current_user_id());
+CREATE POLICY tenant_access_requests_insert ON public."TenantAccessRequest"
   FOR INSERT
-  WITH CHECK ((SELECT app_rls_bypass_on('OrganizationAccessRequest')) OR "userId" = app_current_user_id());
+  WITH CHECK ((SELECT app_rls_bypass_on('TenantAccessRequest')) OR "userId" = app_current_user_id());
 -- Reviewing (the PENDING → APPROVED/REJECTED compare-and-set) runs only as the
--- `organization.access_request.review` system operation, after the reviewer's
+-- `tenant.access_request.review` system operation, after the reviewer's
 -- manage-team check. Without an UPDATE policy forced RLS matches no row, so the
 -- claim updated nothing and every review reported "already reviewed" (409).
-DROP POLICY IF EXISTS organization_access_requests_review ON public."OrganizationAccessRequest";
-CREATE POLICY organization_access_requests_review ON public."OrganizationAccessRequest"
+DROP POLICY IF EXISTS tenant_access_requests_review ON public."TenantAccessRequest";
+CREATE POLICY tenant_access_requests_review ON public."TenantAccessRequest"
   FOR UPDATE
-  USING ((SELECT app_rls_bypass_on('OrganizationAccessRequest')))
-  WITH CHECK ((SELECT app_rls_bypass_on('OrganizationAccessRequest')));
+  USING ((SELECT app_rls_bypass_on('TenantAccessRequest')))
+  WITH CHECK ((SELECT app_rls_bypass_on('TenantAccessRequest')));
 
-DROP POLICY IF EXISTS organization_merchant_profiles_member ON public."OrganizationMerchantProfile";
-CREATE POLICY organization_merchant_profiles_member ON public."OrganizationMerchantProfile"
-  USING ((SELECT app_rls_bypass_on('OrganizationMerchantProfile')) OR app_tenant_org_member("organizationId"))
-  WITH CHECK ((SELECT app_rls_bypass_on('OrganizationMerchantProfile')) OR app_tenant_org_member("organizationId"));
+DROP POLICY IF EXISTS tenant_merchant_profiles_member ON public."TenantMerchantProfile";
+CREATE POLICY tenant_merchant_profiles_member ON public."TenantMerchantProfile"
+  USING ((SELECT app_rls_bypass_on('TenantMerchantProfile')) OR app_tenant_org_member("tenantId"))
+  WITH CHECK ((SELECT app_rls_bypass_on('TenantMerchantProfile')) OR app_tenant_org_member("tenantId"));
 
--- Remaining organization tables: tenant member read, bypass write for sagas.
+-- Remaining tenant tables: tenant member read, bypass write for sagas.
 DO $$
 DECLARE
   tbl text;
 BEGIN
   FOREACH tbl IN ARRAY ARRAY[
-    'OrganizationSlugHistory',
-    'OrganizationMembershipLocationScope',
-    'OrganizationInvitation',
-    'OrganizationInvitationLocationScope',
-    'OrganizationLifecycleEvent',
+    'TenantSlugHistory',
+    'MembershipLocationScope',
+    'TenantInvitation',
+    'TenantInvitationLocationScope',
+    'TenantLifecycleEvent',
     'TenantPlacement',
     'AuthorizationPolicyDraft',
     'AuthorizationPolicyVersion',
@@ -948,7 +954,7 @@ BEGIN
   LOOP
     EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', tbl || '_member', tbl);
     EXECUTE format(
-      'CREATE POLICY %I ON public.%I USING ((SELECT app_rls_bypass_on(%L)) OR app_tenant_organization_member_of("organizationId")) WITH CHECK ((SELECT app_rls_bypass_on(%L)))',
+      'CREATE POLICY %I ON public.%I USING ((SELECT app_rls_bypass_on(%L)) OR app_tenant_member_of("tenantId")) WITH CHECK ((SELECT app_rls_bypass_on(%L)))',
       tbl || '_member', tbl, tbl, tbl
     );
   END LOOP;
@@ -963,6 +969,7 @@ CREATE POLICY authorization_policy_simulations_bypass ON public."AuthorizationPo
 
 -- RLS for SampleCategory (admin-only)
 ALTER TABLE "SampleCategory" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "SampleCategory" FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS sample_category_select ON "SampleCategory";
 DROP POLICY IF EXISTS sample_category_insert ON "SampleCategory";
 DROP POLICY IF EXISTS sample_category_update ON "SampleCategory";
@@ -973,6 +980,7 @@ CREATE POLICY sample_category_update ON "SampleCategory" FOR UPDATE USING ((SELE
 CREATE POLICY sample_category_delete ON "SampleCategory" FOR DELETE USING ((SELECT app_rls_bypass_on('SampleCategory')));
 -- RLS for Product (admin-only)
 ALTER TABLE "Product" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Product" FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS product_select ON "Product";
 DROP POLICY IF EXISTS product_insert ON "Product";
 DROP POLICY IF EXISTS product_update ON "Product";

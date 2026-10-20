@@ -10,7 +10,7 @@ import {
 	type RewardRedemptionMethod,
 } from "@workspace/shared";
 
-import type { MerchantDashboardSubject } from "../ports/analytics-organization-read.port";
+import type { MerchantDashboardSubject } from "../ports/analytics-tenant-read.port";
 import type { AnalyticsReport, AnalyticsReportCell, AnalyticsReportColumn, AnalyticsReportTable } from "./analytics-report";
 
 /** Shown for a store breakdown row of bills paid without a known store. */

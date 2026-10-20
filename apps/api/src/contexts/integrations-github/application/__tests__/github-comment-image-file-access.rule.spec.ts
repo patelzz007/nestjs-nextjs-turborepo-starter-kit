@@ -14,7 +14,7 @@ const UPLOAD: Omit<CreateFileUploadUrlInput, "userId"> = {
 	checksumSha256: "a".repeat(64),
 };
 const CATEGORY: FileCategory = "GITHUB_COMMENT_IMAGE";
-const PICTURE: FileAccessSubject = { id: "file-1", category: CATEGORY, uploadedById: "user-1", organizationId: null, productId: null };
+const PICTURE: FileAccessSubject = { id: "file-1", category: CATEGORY, uploadedById: "user-1", tenantId: null, productId: null };
 
 /** Records kernel checks and denies when told to. */
 class RecordingKernel implements KernelAuthorizeCheck {

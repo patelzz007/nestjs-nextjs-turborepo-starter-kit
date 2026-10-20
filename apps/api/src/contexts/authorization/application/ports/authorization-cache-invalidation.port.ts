@@ -35,7 +35,7 @@ export interface UserInvalidationScope {
 }
 
 /** Which compiled policy bundles a policy publish made stale. */
-export type PolicyBundleInvalidationScope = { readonly kind: "organization"; readonly organizationId: string } | { readonly kind: "all" };
+export type PolicyBundleInvalidationScope = { readonly kind: "tenant"; readonly tenantId: string } | { readonly kind: "all" };
 
 /**
  * The single place authorization state is invalidated AFTER commit, on this instance and (through Redis

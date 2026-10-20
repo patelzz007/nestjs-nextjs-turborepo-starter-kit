@@ -11,15 +11,24 @@
 // handed to the schema, so the bundler's `process.env.NODE_ENV` inlining
 // (rspack DefinePlugin, for dependencies) does not apply to our config.
 
-import { parseEnvOrThrow, type EnvSource } from "@workspace/shared";
+import { EnvValidationError, parseEnvOrThrow, type EnvSource } from "@workspace/shared";
+import { z } from "zod";
 
 import { ApiEnvSchema, type ApiConfig } from "./api-config.schema";
 
 /** Scope named in the fail-fast error message. */
 export const API_ENV_SCOPE = "apps/api";
 
+const RetiredDefaultTenantIdSchema = z.object({ DEFAULT_ORGANIZATION_ID: z.string().optional() });
+
 /** Parse an env source into the typed config, or throw an `EnvValidationError` (value-free). */
 export function parseApiConfig(source: EnvSource): ApiConfig {
+	const retired = RetiredDefaultTenantIdSchema.safeParse(source);
+	if (retired.success && retired.data.DEFAULT_ORGANIZATION_ID !== undefined && retired.data.DEFAULT_ORGANIZATION_ID.trim().length > 0) {
+		throw new EnvValidationError(API_ENV_SCOPE, [
+			{ variable: "DEFAULT_ORGANIZATION_ID", problem: "was renamed to DEFAULT_TENANT_ID. Set DEFAULT_TENANT_ID and remove DEFAULT_ORGANIZATION_ID." },
+		]);
+	}
 	return parseEnvOrThrow(ApiEnvSchema, source, API_ENV_SCOPE);
 }
 

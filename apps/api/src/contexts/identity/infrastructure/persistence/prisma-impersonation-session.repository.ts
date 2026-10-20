@@ -28,6 +28,7 @@ export class PrismaImpersonationSessionRepository implements ImpersonationSessio
 			endedBy: row.endedBy,
 			ipAddress: row.ipAddress,
 			userAgent: row.userAgent,
+			supportAccessGrantIds: row.supportAccessGrantIds,
 		});
 	}
 
@@ -46,6 +47,7 @@ export class PrismaImpersonationSessionRepository implements ImpersonationSessio
 				expiresAt: state.expiresAt,
 				ipAddress: state.ipAddress,
 				userAgent: state.userAgent,
+				supportAccessGrantIds: [...state.supportAccessGrantIds],
 			},
 		});
 		await this.appendAudits(session);

@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { ORGANIZATION_SEED_IDS } from "../organization-seed-ids";
+import { TENANT_SEED_IDS } from "../tenant-seed-ids";
 
 const SEED_DIR: string = resolve(import.meta.dirname, "..");
 const TESTS_DIR_NAME = "__tests__";
@@ -31,7 +31,7 @@ describe("seed id literals", () => {
 		expect(notV7).toEqual([]);
 	});
 
-	it("covers the fixed organization ids the tests and the single-tenant config name", () => {
-		expect(Object.values(ORGANIZATION_SEED_IDS).every((id: string): boolean => UUID_V7.test(id))).toBe(true);
+	it("covers the fixed tenant ids the tests and the single-tenant config name", () => {
+		expect(Object.values(TENANT_SEED_IDS).every((id: string): boolean => UUID_V7.test(id))).toBe(true);
 	});
 });

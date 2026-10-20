@@ -19,8 +19,8 @@ export class GetMerchantDashboardHandler implements IQueryHandler<GetMerchantDas
 	public async execute(query: GetMerchantDashboardQuery): Promise<MerchantAnalyticsDashboard> {
 		const { actor, input } = query;
 		// Never "no filter": a store-limited member (or store-scoped key) sees only its stores.
-		const scope = await authorizeMerchantAnalytics(this.merchantAccess, actor, { organizationId: input.organizationId, locationId: input.query.locationId });
-		const { dashboard } = await this.dashboards.merchantDashboard(input.organizationId, scope, input.query);
+		const scope = await authorizeMerchantAnalytics(this.merchantAccess, actor, { tenantId: input.tenantId, locationId: input.query.locationId });
+		const { dashboard } = await this.dashboards.merchantDashboard(input.tenantId, scope, input.query);
 		return dashboard;
 	}
 }

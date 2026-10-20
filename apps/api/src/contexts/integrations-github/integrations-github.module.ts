@@ -6,6 +6,7 @@ import type { UnitOfWork } from "../../platform/application/unit-of-work.port";
 import { PgListenConnection, type OpenListenConnection } from "../../platform/infrastructure/database/pg-listen-connection";
 import { SystemCommandModule } from "../../platform/infrastructure/system-command.module";
 import type { AfterCommitPublisher } from "../../platform/infrastructure/unit-of-work/after-commit-publisher";
+import { USER_OWNED_DATA_SCOPE } from "../../platform/infrastructure/unit-of-work/actor-to-rls-context";
 import { PrismaReadExecutor } from "../../platform/infrastructure/unit-of-work/prisma-read-executor";
 import { PrismaUnitOfWork } from "../../platform/infrastructure/unit-of-work/prisma-unit-of-work";
 import { TransactionalEventDispatcher } from "../../platform/infrastructure/unit-of-work/transactional-event-dispatcher";
@@ -151,7 +152,8 @@ import { GithubWebhookDeliveryRetentionCron } from "./presentation/jobs/github-w
 		{
 			provide: GITHUB_ACCOUNT_LINK_READS,
 			inject: [TenantTransactionService],
-			useFactory: (transactions: TenantTransactionService): GithubAccountLinkReadPort => new PrismaGithubAccountLinkReadRepository(new PrismaReadExecutor(transactions)),
+			useFactory: (transactions: TenantTransactionService): GithubAccountLinkReadPort =>
+				new PrismaGithubAccountLinkReadRepository(new PrismaReadExecutor(transactions, USER_OWNED_DATA_SCOPE)),
 		},
 		{
 			provide: GITHUB_UNIT_OF_WORK,
@@ -160,7 +162,7 @@ import { GithubWebhookDeliveryRetentionCron } from "./presentation/jobs/github-w
 				transactions: TenantTransactionService,
 				dispatcher: TransactionalEventDispatcher<Prisma.TransactionClient>,
 				publisher: AfterCommitPublisher,
-			): UnitOfWork<GithubScope> => new PrismaUnitOfWork(transactions, new GithubScopeFactory(), dispatcher, publisher),
+			): UnitOfWork<GithubScope> => new PrismaUnitOfWork(transactions, new GithubScopeFactory(), dispatcher, publisher, USER_OWNED_DATA_SCOPE),
 		},
 		GithubLinkedCredentials,
 		GithubCommentPictures,

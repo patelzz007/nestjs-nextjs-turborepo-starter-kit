@@ -4,7 +4,7 @@
  * removing a retired key from TENANT_ENCRYPTION_PREVIOUS_MASTER_KEYS.
  *
  * Usage: pnpm --filter @workspace/api db:rewrap-tenant-keys -- --actor-user-id <superadmin user id>
- * Every re-wrapped key gets an organization audit row naming the actor.
+ * Every re-wrapped key gets a tenant audit row naming the actor.
  * Command-line entry point only (run through tsx; not part of the API bundle).
  */
 import { Logger } from "@nestjs/common";

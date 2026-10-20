@@ -7,7 +7,9 @@ import { describe, expect, it } from "vitest";
 import { RewardsAdminAnalyticsController } from "../admin-analytics.controller";
 import { AnalyticsExportRateLimitGuard } from "../analytics-export-rate-limit.guard";
 import { ConsumerAnalyticsController } from "../consumer-analytics.controller";
-import { OrganizationAnalyticsController } from "../organization-analytics.controller";
+import { ALLOW_API_KEY_AUTH_KEY } from "../../../../../platform/presentation/http/security/api-keys/api-key-request";
+import { IntegrationAnalyticsController } from "../integration-analytics.controller";
+import { TenantAnalyticsController } from "../tenant-analytics.controller";
 
 const reflector = new Reflector();
 
@@ -35,9 +37,19 @@ function routeOf(prototype: object, name: string): RouteMetadata {
 }
 
 describe("reporting controllers keep every analytics route", () => {
-	it("serves the merchant routes under /orgs/:orgSlug/analytics, the export behind the rate limit", () => {
-		const prototype = OrganizationAnalyticsController.prototype;
-		expect(reflector.get<string>(PATH_METADATA, OrganizationAnalyticsController)).toBe(`${API_VERSION_PREFIX}/orgs/:orgSlug/analytics`);
+	it("serves the merchant routes under /tenants/:tenantSlug/analytics, the export behind the rate limit", () => {
+		const prototype = TenantAnalyticsController.prototype;
+		expect(reflector.get<string>(PATH_METADATA, TenantAnalyticsController)).toBe(`${API_VERSION_PREFIX}/tenants/:tenantSlug/analytics`);
+		expect(routeOf(prototype, "getAnalytics")).toEqual({ path: "/", method: RequestMethod.GET, guards: [] });
+		expect(routeOf(prototype, "getDashboard")).toEqual({ path: "dashboard", method: RequestMethod.GET, guards: [] });
+		expect(routeOf(prototype, "exportReport")).toEqual({ path: "export", method: RequestMethod.GET, guards: [AnalyticsExportRateLimitGuard] });
+		expect(reflector.get<object | undefined>(ALLOW_API_KEY_AUTH_KEY, TenantAnalyticsController)).toBeUndefined();
+	});
+
+	it("serves an integration key the same reports under /integration/analytics (the key names its tenant), the export behind the rate limit", () => {
+		const prototype = IntegrationAnalyticsController.prototype;
+		expect(reflector.get<string>(PATH_METADATA, IntegrationAnalyticsController)).toBe(`${API_VERSION_PREFIX}/integration/analytics`);
+		expect(reflector.get<object | undefined>(ALLOW_API_KEY_AUTH_KEY, IntegrationAnalyticsController)).toBeDefined();
 		expect(routeOf(prototype, "getAnalytics")).toEqual({ path: "/", method: RequestMethod.GET, guards: [] });
 		expect(routeOf(prototype, "getDashboard")).toEqual({ path: "dashboard", method: RequestMethod.GET, guards: [] });
 		expect(routeOf(prototype, "exportReport")).toEqual({ path: "export", method: RequestMethod.GET, guards: [AnalyticsExportRateLimitGuard] });

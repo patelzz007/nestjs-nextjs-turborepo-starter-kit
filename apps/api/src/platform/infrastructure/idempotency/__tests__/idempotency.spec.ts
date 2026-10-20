@@ -333,14 +333,14 @@ class FakeAuthGuard implements CanActivate {
 		if (request.headers["x-anonymous"] !== undefined) {
 			return true;
 		}
-		const organizationId: string | undefined = readFirstHeader(request.headers["x-test-org"]);
+		const tenantId: string | undefined = readFirstHeader(request.headers["x-test-org"]);
 		const apiKeyId: string | undefined = readFirstHeader(request.headers["x-test-api-key"]);
 		if (apiKeyId !== undefined) {
-			requestContext.bindApiKey({ apiKeyId, organizationId: organizationId ?? "org-pos", terminalId: "T-1", locationId: null });
+			requestContext.bindApiKey({ apiKeyId, tenantId: tenantId ?? "org-pos", terminalId: "T-1", locationId: null });
 			return true;
 		}
 		requestContext.bindPrincipal({ userId: "user-1", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
-		requestContext.bindTenant({ organizationId });
+		requestContext.bindTenant({ tenantId });
 		return true;
 	}
 }
@@ -501,7 +501,7 @@ describe("@Idempotent() over HTTP (global interceptor)", () => {
 		expect(error).toHaveBeenCalledWith(expect.objectContaining({ event: "idempotency.lease_lost" }));
 	});
 
-	it("namespaces keys by the verified tenant: the same user and key in another organization runs again", async () => {
+	it("namespaces keys by the verified tenant: the same user and key in another tenant runs again", async () => {
 		await post("/things", { name: "a" }, { "idempotency-key": "key-00000001", "x-test-org": "org-a" });
 		const otherOrg = await post("/things", { name: "a" }, { "idempotency-key": "key-00000001", "x-test-org": "org-b" });
 

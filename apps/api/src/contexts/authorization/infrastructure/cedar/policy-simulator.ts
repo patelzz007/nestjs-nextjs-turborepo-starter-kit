@@ -15,10 +15,10 @@ import type {
 import { POLICY_ENGINE, type PolicyBundle, type PolicyEngine, type PolicyRequest } from "../../application/ports/policy-engine.port";
 import type { PolicySlot } from "../../domain/aggregates/authorization-policy-draft.aggregate";
 import { policyBaselineFingerprint } from "./policy-baseline";
-import { composePolicyBundle, isVersionInOrganizationBundle } from "./policy-bundle";
+import { composePolicyBundle, isVersionInTenantBundle } from "./policy-bundle";
 import {
 	MAX_REPORTED_DECISION_CHANGES,
-	MAX_REPORTED_LOCKOUT_ORGANIZATIONS,
+	MAX_REPORTED_LOCKOUT_TENANTS,
 	MAX_SIMULATED_PRINCIPALS,
 	OWNER_CRITICAL_CEDAR_ACTION,
 	OWNER_MEMBERSHIP_ROLE,
@@ -34,7 +34,7 @@ interface OwnerAccess {
 	after: number;
 }
 
-interface OrganizationBundles {
+interface TenantBundles {
 	readonly current: PolicyBundle;
 	readonly candidate: PolicyBundle;
 }
@@ -48,14 +48,14 @@ interface SimulationTally {
 	readonly ownerAccess: Map<string, OwnerAccess>;
 }
 
-/** The organization a simulation evaluates principals in: one tenant, or (`null`) every organization. */
-export function simulatedOrganizationId(draft: PolicySlot): string | null {
-	return draft.scope === "TENANT" ? draft.organizationId : null;
+/** The tenant a simulation evaluates principals in: one tenant, or (`null`) every tenant. */
+export function simulatedTenantId(draft: PolicySlot): string | null {
+	return draft.scope === "TENANT" ? draft.tenantId : null;
 }
 
 /**
  * Evaluates a policy draft against the currently published policy set over
- * the real principals (active organization memberships) in its scope, with
+ * the real principals (active tenant memberships) in its scope, with
  * the SAME engine the runtime decides with (the {@link PolicyEngine} port —
  * the official Cedar engine), on the same request shape.
  *
@@ -69,12 +69,12 @@ export class PolicySimulator implements PolicySimulatorPort {
 	public constructor(@Inject(POLICY_ENGINE) private readonly engine: PolicyEngine) {}
 
 	public async simulate(draft: SimulatedDraft, versions: PolicyVersionStore, principals: PolicyPrincipalReader): Promise<PolicySimulationRun> {
-		const organizationId: string | null = simulatedOrganizationId(draft);
-		const baselineIds: string[] = await versions.baselineVersionIds(organizationId);
+		const tenantId: string | null = simulatedTenantId(draft);
+		const baselineIds: string[] = await versions.baselineVersionIds(tenantId);
 		const tally: SimulationTally = { evaluated: 0, affected: 0, changes: [], truncated: false, ownerAccess: new Map<string, OwnerAccess>() };
 
 		// Fail fast (one COUNT) when the scope is too large to simulate exhaustively.
-		const principalCount: number = await principals.countActive(organizationId);
+		const principalCount: number = await principals.countActive(tenantId);
 		if (principalCount > MAX_SIMULATED_PRINCIPALS) {
 			return { outcome: this.buildOutcome(draft, tally, true), baselineFingerprint: policyBaselineFingerprint(baselineIds) };
 		}
@@ -83,7 +83,7 @@ export class PolicySimulator implements PolicySimulatorPort {
 		let limitExceeded = false;
 		for (;;) {
 			const afterId: string | null = cursor;
-			const page: SimulationPrincipal[] = await principals.listActive(organizationId, afterId, SIMULATION_PAGE_SIZE);
+			const page: SimulationPrincipal[] = await principals.listActive(tenantId, afterId, SIMULATION_PAGE_SIZE);
 			const last: SimulationPrincipal | undefined = page.at(-1);
 			if (last === undefined) {
 				break;
@@ -105,54 +105,52 @@ export class PolicySimulator implements PolicySimulatorPort {
 
 	/** Recomputes the baseline fingerprint (publish compares it with the simulated one). */
 	public async currentBaselineFingerprint(slot: PolicySlot, versions: PolicyVersionStore): Promise<string> {
-		return policyBaselineFingerprint(await versions.baselineVersionIds(simulatedOrganizationId(slot)));
+		return policyBaselineFingerprint(await versions.baselineVersionIds(simulatedTenantId(slot)));
 	}
 
 	private async evaluatePage(draft: SimulatedDraft, page: readonly SimulationPrincipal[], store: PolicyVersionStore, tally: SimulationTally): Promise<void> {
-		const organizationIds: string[] = [...new Set(page.map((principal: SimulationPrincipal): string => principal.organizationId))];
-		const versions: ActivePolicyVersion[] = await store.activeVersionsForOrganizations(organizationIds);
-		const bundles = new Map<string, OrganizationBundles>(organizationIds.map((id: string): [string, OrganizationBundles] => [id, this.bundlesFor(draft, versions, id)]));
+		const tenantIds: string[] = [...new Set(page.map((principal: SimulationPrincipal): string => principal.tenantId))];
+		const versions: ActivePolicyVersion[] = await store.activeVersionsForTenants(tenantIds);
+		const bundles = new Map<string, TenantBundles>(tenantIds.map((id: string): [string, TenantBundles] => [id, this.bundlesFor(draft, versions, id)]));
 
 		for (const principal of page) {
-			const organizationBundles: OrganizationBundles | undefined = bundles.get(principal.organizationId);
-			if (organizationBundles === undefined) {
-				throw new Error(`Policy simulation built no bundle for organization ${principal.organizationId}`);
+			const tenantBundles: TenantBundles | undefined = bundles.get(principal.tenantId);
+			if (tenantBundles === undefined) {
+				throw new Error(`Policy simulation built no bundle for tenant ${principal.tenantId}`);
 			}
-			this.evaluatePrincipal(principal, organizationBundles, tally);
+			this.evaluatePrincipal(principal, tenantBundles, tally);
 		}
 		tally.evaluated += page.length;
 	}
 
-	/** The organization's bundle as published, and as it would be with the draft published in its slot. */
-	private bundlesFor(draft: SimulatedDraft, versions: readonly ActivePolicyVersion[], organizationId: string): OrganizationBundles {
-		const inBundle: ActivePolicyVersion[] = versions.filter((version: ActivePolicyVersion): boolean => isVersionInOrganizationBundle(version, organizationId));
-		const draftSource: PolicyBundleSource = { organizationId: draft.organizationId, scope: draft.scope, version: DRAFT_SOURCE_VERSION, cedarSource: draft.cedarSource };
-		const kept: PolicyBundleSource[] = inBundle.filter(
-			(version: ActivePolicyVersion): boolean => version.organizationId !== draft.organizationId || version.scope !== draft.scope,
-		);
-		const candidate: PolicyBundleSource[] = isVersionInOrganizationBundle(draftSource, organizationId) ? [...kept, draftSource] : kept;
+	/** The tenant's bundle as published, and as it would be with the draft published in its slot. */
+	private bundlesFor(draft: SimulatedDraft, versions: readonly ActivePolicyVersion[], tenantId: string): TenantBundles {
+		const inBundle: ActivePolicyVersion[] = versions.filter((version: ActivePolicyVersion): boolean => isVersionInTenantBundle(version, tenantId));
+		const draftSource: PolicyBundleSource = { tenantId: draft.tenantId, scope: draft.scope, version: DRAFT_SOURCE_VERSION, cedarSource: draft.cedarSource };
+		const kept: PolicyBundleSource[] = inBundle.filter((version: ActivePolicyVersion): boolean => version.tenantId !== draft.tenantId || version.scope !== draft.scope);
+		const candidate: PolicyBundleSource[] = isVersionInTenantBundle(draftSource, tenantId) ? [...kept, draftSource] : kept;
 		return { current: composePolicyBundle(inBundle), candidate: composePolicyBundle(candidate) };
 	}
 
-	private evaluatePrincipal(principal: SimulationPrincipal, bundles: OrganizationBundles, tally: SimulationTally): void {
+	private evaluatePrincipal(principal: SimulationPrincipal, bundles: TenantBundles, tally: SimulationTally): void {
 		let changed = false;
 		for (const action of SIMULATED_CEDAR_ACTIONS) {
 			const request: PolicyRequest = {
-				organizationId: principal.organizationId,
+				tenantId: principal.tenantId,
 				principal: { userId: principal.userId, role: principal.role, locationScope: principal.locationScope, locationIds: principal.locationIds },
 				action,
 			};
 			const before: CedarDecision = this.engine.decide(bundles.current, request).decision;
 			const after: CedarDecision = this.engine.decide(bundles.candidate, request).decision;
 			if (action === OWNER_CRITICAL_CEDAR_ACTION && principal.role === OWNER_MEMBERSHIP_ROLE) {
-				this.countOwnerAccess(tally, principal.organizationId, before, after);
+				this.countOwnerAccess(tally, principal.tenantId, before, after);
 			}
 			if (before === after) {
 				continue;
 			}
 			changed = true;
 			if (tally.changes.length < MAX_REPORTED_DECISION_CHANGES) {
-				tally.changes.push({ organizationId: principal.organizationId, userId: principal.userId, membershipRole: principal.role, action, before, after });
+				tally.changes.push({ tenantId: principal.tenantId, userId: principal.userId, membershipRole: principal.role, action, before, after });
 			} else {
 				tally.truncated = true;
 			}
@@ -162,24 +160,24 @@ export class PolicySimulator implements PolicySimulatorPort {
 		}
 	}
 
-	private countOwnerAccess(tally: SimulationTally, organizationId: string, before: CedarDecision, after: CedarDecision): void {
-		const access: OwnerAccess = tally.ownerAccess.get(organizationId) ?? { before: 0, after: 0 };
+	private countOwnerAccess(tally: SimulationTally, tenantId: string, before: CedarDecision, after: CedarDecision): void {
+		const access: OwnerAccess = tally.ownerAccess.get(tenantId) ?? { before: 0, after: 0 };
 		access.before += before === "Allow" ? 1 : 0;
 		access.after += after === "Allow" ? 1 : 0;
-		tally.ownerAccess.set(organizationId, access);
+		tally.ownerAccess.set(tenantId, access);
 	}
 
 	private buildOutcome(draft: SimulatedDraft, tally: SimulationTally, limitExceeded: boolean): PolicySimulationOutcome {
 		const lockedOut: string[] = [...tally.ownerAccess.entries()]
 			.filter(([, access]: [string, OwnerAccess]): boolean => access.before > 0 && access.after === 0)
-			.map(([organizationId]: [string, OwnerAccess]): string => organizationId);
+			.map(([tenantId]: [string, OwnerAccess]): string => tenantId);
 		const errors: string[] = [];
 		if (limitExceeded) {
 			errors.push(`The policy scope has more than ${String(MAX_SIMULATED_PRINCIPALS)} principals; it cannot be simulated exhaustively`);
 		}
 		if (lockedOut.length > 0) {
-			const named: string = lockedOut.slice(0, MAX_REPORTED_LOCKOUT_ORGANIZATIONS).join(", ");
-			errors.push(`Owners would lose ${OWNER_CRITICAL_CEDAR_ACTION} in ${String(lockedOut.length)} organization(s): ${named}`);
+			const named: string = lockedOut.slice(0, MAX_REPORTED_LOCKOUT_TENANTS).join(", ");
+			errors.push(`Owners would lose ${OWNER_CRITICAL_CEDAR_ACTION} in ${String(lockedOut.length)} tenant(s): ${named}`);
 		}
 		const warnings: string[] = [];
 		if (draft.scope === "PLATFORM") {

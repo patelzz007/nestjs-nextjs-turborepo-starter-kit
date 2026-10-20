@@ -800,16 +800,16 @@ export function userActor(userId: string, overrides: { readonly isSuperAdmin?: b
 		kind: "user",
 		userId,
 		sessionId: "session-1",
-		organizationId: null,
+		tenantId: null,
 		isSuperAdmin: overrides.isSuperAdmin ?? false,
-		accessScope: overrides.isSuperAdmin === true ? "superadmin" : "tenant",
+		accessScope: "tenant",
 		impersonatorUserId: overrides.impersonatorUserId ?? null,
 		request: REQUEST,
 	};
 }
 
 export function anonymousActor(): ActorContext {
-	return { kind: "anonymous", organizationId: null, request: REQUEST };
+	return { kind: "anonymous", tenantId: null, request: REQUEST };
 }
 
 /** A stored, verified, active account without 2FA. */

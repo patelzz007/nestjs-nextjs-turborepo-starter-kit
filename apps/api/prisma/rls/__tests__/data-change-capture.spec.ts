@@ -50,7 +50,7 @@ describe("the declared data-change capture manifest", () => {
 	it("captures the business tables a user action changes", () => {
 		const captured = planDataChangeCapture(schemaCatalog()).captured.map((capturedTable) => capturedTable.name);
 
-		expect(captured).toEqual(expect.arrayContaining(["User", "Organization", "OrganizationMembership", "Reward", "RewardClaim", "RewardRedemption", "StoredFile"]));
+		expect(captured).toEqual(expect.arrayContaining(["User", "Tenant", "Membership", "Reward", "RewardClaim", "RewardRedemption", "StoredFile"]));
 	});
 });
 
@@ -189,7 +189,7 @@ describe("buildDataChangeCaptureSql", () => {
 		expect(sql).toContain("SECURITY INVOKER");
 		for (const setting of [
 			"app.current_user_id",
-			"app.current_organization_id",
+			"app.current_tenant_id",
 			"app.current_api_key_id",
 			"app.system_operation",
 			"app.actor_purpose",

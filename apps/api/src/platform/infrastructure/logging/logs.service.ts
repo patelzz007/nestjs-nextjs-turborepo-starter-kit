@@ -15,7 +15,7 @@ export type LogOptions = LogServiceOptions;
  * detection is a separate concern: `memory/memory-monitor.service.ts`.)
  *
  * Every line written inside a request carries that request's `correlationId`
- * (plus `userId` / `impersonatorId` / `organizationId` once known), read from
+ * (plus `userId` / `impersonatorId` / `tenantId` once known), read from
  * the one request context (ADR 017) — callers never thread it through.
  */
 @Injectable()
@@ -65,8 +65,8 @@ export class LogService {
 			if (requestFields.impersonatorId !== undefined) {
 				parts.impersonatorId = requestFields.impersonatorId;
 			}
-			if (requestFields.organizationId !== undefined) {
-				parts.organizationId = requestFields.organizationId;
+			if (requestFields.tenantId !== undefined) {
+				parts.tenantId = requestFields.tenantId;
 			}
 		}
 

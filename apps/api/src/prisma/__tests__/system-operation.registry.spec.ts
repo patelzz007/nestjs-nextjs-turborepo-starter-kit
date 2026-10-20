@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import {
 	DatabaseRoleSchema,
@@ -10,6 +10,8 @@ import {
 	isAllowlistedSystemOperation,
 	parseSystemOperation,
 	SystemOperationNotAllowlistedError,
+	type SystemOperationScope,
+	type TableName,
 } from "../system-operation.registry";
 
 const API_ROOT: string = resolve(import.meta.dirname, "..", "..", "..");
@@ -44,7 +46,7 @@ describe("system-operation registry", () => {
 	});
 
 	it("names one narrow purpose per operation (no catch-all names)", () => {
-		const catchAll: readonly string[] = ["organization.provision", "auth.pre_login", "queue.job", "scheduled.maintenance", "organization.membership.invite"];
+		const catchAll: readonly string[] = ["tenant.provision", "auth.pre_login", "queue.job", "scheduled.maintenance", "tenant.membership.invite"];
 
 		for (const name of catchAll) {
 			expect(isAllowlistedSystemOperation(name)).toBe(false);
@@ -78,28 +80,26 @@ describe("system-operation registry", () => {
 		expect(SYSTEM_OPERATIONS["outbox.publish"].scope).toEqual({ kind: "tables", tables: ["OutboxEvent"] });
 		expect(SYSTEM_OPERATIONS["http.idempotency"].scope).toEqual({ kind: "tables", tables: ["PlatformResourceIdempotencyRecord"] });
 		expect(SYSTEM_OPERATIONS["maintenance.authorization_change_sweep"].scope).toEqual({ kind: "tables", tables: ["User"] });
-		expect(SYSTEM_OPERATIONS["tenant.enumerate"].scope).toEqual({ kind: "tables", tables: ["Organization"] });
+		expect(SYSTEM_OPERATIONS["tenant.enumerate"].scope).toEqual({ kind: "tables", tables: ["Tenant"] });
 	});
 
-	it("declares a non-empty table list for every table-scoped operation", () => {
+	it("declares a non-empty table list for every operation except the one job that runs no SQL", () => {
 		const empty: string[] = Object.entries(SYSTEM_OPERATIONS)
-			.filter(([, definition]): boolean => definition.scope.kind === "tables" && definition.scope.tables.length === 0)
+			.filter(([, definition]): boolean => definition.scope.tables.length === 0)
 			.map(([name]): string => name);
 
-		expect(empty).toEqual([]);
+		expect(empty).toEqual(["queue.storage.delete"]);
 	});
 
-	it("keeps every-table bypass to the request-wide scopes and the operations not narrowed yet — widening one is a visible change here", () => {
-		const requestScopes: string[] = Object.entries(SYSTEM_OPERATIONS)
-			.filter(([, definition]): boolean => definition.scope.kind === "allTables" && definition.scope.reason === "request_scope")
-			.map(([name]): string => name)
-			.sort();
-
-		expect(requestScopes).toEqual(["platform.staff_single_tenant", "platform.superadmin", "request.pre_handler", "route.rls_bypass"]);
+	it("has no operation that can reach every table: each scope is a declared table list", () => {
 		for (const [name, definition] of Object.entries(SYSTEM_OPERATIONS)) {
-			if (name.startsWith("outbox.") || name.startsWith("audit.") || name.startsWith("encryption.") || name.startsWith("github.webhook.")) {
-				expect({ name, kind: definition.scope.kind }).toEqual({ name, kind: "tables" });
-			}
+			expect({ name, kind: definition.scope.kind }).toEqual({ name, kind: "tables" });
 		}
+	});
+
+	it("cannot express an every-table scope in the type", () => {
+		expectTypeOf<SystemOperationScope["kind"]>().toEqualTypeOf<"tables">();
+		expectTypeOf<SystemOperationScope["tables"]>().toEqualTypeOf<readonly TableName[]>();
+		expectTypeOf<"NotAModel">().not.toExtend<TableName>();
 	});
 });

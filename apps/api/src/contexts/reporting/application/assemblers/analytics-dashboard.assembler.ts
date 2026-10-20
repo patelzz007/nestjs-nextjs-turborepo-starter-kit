@@ -26,8 +26,8 @@ import { compare, conversionRate, seriesFor } from "../../domain/policies/analyt
 import type { AnalyticsLocationScope, AnalyticsScope, AnalyticsTimeRange, AnalyticsWindow } from "../../domain/value-objects/analytics-scope.value-object";
 import type { AnalyticsBreakdownReadPort, MerchantBucketSalesRow } from "../ports/analytics-breakdown.port";
 import type { ActivityBucket, AnalyticsFactsReadPort } from "../ports/analytics-facts.port";
-import type { AnalyticsOrganizationReadPort, MerchantDashboardSubject } from "../ports/analytics-organization-read.port";
-import { ANALYTICS_BREAKDOWN_READ, ANALYTICS_FACTS_READ, ANALYTICS_ORGANIZATION_READ, SALES_READ } from "../ports/reporting.tokens";
+import type { AnalyticsTenantReadPort, MerchantDashboardSubject } from "../ports/analytics-tenant-read.port";
+import { ANALYTICS_BREAKDOWN_READ, ANALYTICS_FACTS_READ, ANALYTICS_TENANT_READ, SALES_READ } from "../ports/reporting.tokens";
 import type { SalesReadPort } from "../ports/sales-read.port";
 
 /** The range fields of any dashboard / export request. */
@@ -37,18 +37,18 @@ export interface AnalyticsRangeRequest {
 	readonly interval?: AnalyticsInterval | undefined;
 }
 
-/** A merchant's analytics row points at an organization that is gone: an integrity fault, never papered over. */
-export class AnalyticsOrganizationMissingError extends Error {
-	public constructor(organizationId: string) {
-		super(`Analytics organization ${organizationId} could not be loaded`);
-		this.name = "AnalyticsOrganizationMissingError";
+/** A merchant's analytics row points at a tenant that is gone: an integrity fault, never papered over. */
+export class AnalyticsTenantMissingError extends Error {
+	public constructor(tenantId: string) {
+		super(`Analytics tenant ${tenantId} could not be loaded`);
+		this.name = "AnalyticsTenantMissingError";
 	}
 }
 
 /** A customer's spending row points at a merchant whose name could not be loaded. */
 export class AnalyticsMerchantSummaryMissingError extends Error {
-	public constructor(organizationId: string) {
-		super(`Merchant summary for ${organizationId} could not be loaded`);
+	public constructor(tenantId: string) {
+		super(`Merchant summary for ${tenantId} could not be loaded`);
 		this.name = "AnalyticsMerchantSummaryMissingError";
 	}
 }
@@ -60,7 +60,7 @@ interface ResolvedRequest {
 	readonly range: AnalyticsReportRange;
 }
 
-/** One merchant's dashboard together with the organization it belongs to (for an export's title and file name). */
+/** One merchant's dashboard together with the tenant it belongs to (for an export's title and file name). */
 export interface MerchantDashboardResult {
 	readonly dashboard: MerchantAnalyticsDashboard;
 	readonly subject: MerchantDashboardSubject;
@@ -81,20 +81,20 @@ export class AnalyticsDashboardAssembler {
 	public constructor(
 		@Inject(ANALYTICS_FACTS_READ) private readonly facts: AnalyticsFactsReadPort,
 		@Inject(ANALYTICS_BREAKDOWN_READ) private readonly breakdowns: AnalyticsBreakdownReadPort,
-		@Inject(ANALYTICS_ORGANIZATION_READ) private readonly organizations: AnalyticsOrganizationReadPort,
+		@Inject(ANALYTICS_TENANT_READ) private readonly tenants: AnalyticsTenantReadPort,
 		@Inject(SALES_READ) private readonly sales: SalesReadPort,
 		@Inject(CLOCK) private readonly clock: Clock,
 	) {}
 
-	/** The merchant dashboard of `organizationId`, limited to `locationScope` (already authorized). */
-	public async merchantDashboard(organizationId: string, locationScope: AnalyticsLocationScope, query: AnalyticsRangeRequest): Promise<MerchantDashboardResult> {
-		const organization = await this.organizations.findById(organizationId);
-		if (organization === null) {
-			throw new AnalyticsOrganizationMissingError(organizationId);
+	/** The merchant dashboard of `tenantId`, limited to `locationScope` (already authorized). */
+	public async merchantDashboard(tenantId: string, locationScope: AnalyticsLocationScope, query: AnalyticsRangeRequest): Promise<MerchantDashboardResult> {
+		const tenant = await this.tenants.findById(tenantId);
+		if (tenant === null) {
+			throw new AnalyticsTenantMissingError(tenantId);
 		}
-		// Merchant buckets are cut in the merchant's own zone (Organization.timeZone).
-		const request = this.resolve(query, IanaTimeZoneSchema.parse(organization.timeZone));
-		const scope: AnalyticsScope = { kind: "organization", organizationId, locationScope };
+		// Merchant buckets are cut in the merchant's own zone (Tenant.timeZone).
+		const request = this.resolve(query, IanaTimeZoneSchema.parse(tenant.timeZone));
+		const scope: AnalyticsScope = { kind: "tenant", tenantId, locationScope };
 
 		const [series, totals, firstBillAt, byStore, byReward, byMethod] = await Promise.all([
 			this.facts.activitySeries(scope, request.window),
@@ -131,7 +131,7 @@ export class AnalyticsDashboardAssembler {
 			byReward: byReward.map((row) => ({ ...row, conversionRate: conversionRate(row.claims, row.redemptions) })),
 			byRedemptionMethod: RewardRedemptionMethodSchema.options.map((method) => ({ method, redemptions: redemptionsByMethod.get(method) ?? 0 })),
 		};
-		return { dashboard, subject: { slug: organization.slug, displayName: organization.displayName } };
+		return { dashboard, subject: { slug: tenant.slug, displayName: tenant.displayName } };
 	}
 
 	/** The platform dashboard (the route enforces `READ ANALYTICS` and bypasses RLS). Buckets in UTC. */
@@ -196,15 +196,15 @@ export class AnalyticsDashboardAssembler {
 		const claimsByStatus = new Map(claimStatuses.map((row) => [row.status, row.claims]));
 		const bucketStarts = series.map((bucket) => bucket.startMs);
 		const merchantSpend = this.groupByMerchant(merchantBuckets);
-		// Names + categories of merchants taken from the customer's OWN bills only (a system read: customers can't read `Organization`).
+		// Names + categories of merchants taken from the customer's OWN bills only (a system read: customers can't read `Tenant`).
 		const summaries = await this.sales.listMerchantSummaries([...merchantSpend.keys()], userId);
 
-		const merchants = [...merchantSpend.entries()].map(([organizationId, spend]) => {
-			const summary = summaries.get(organizationId);
+		const merchants = [...merchantSpend.entries()].map(([tenantId, spend]) => {
+			const summary = summaries.get(tenantId);
 			if (summary === undefined) {
-				throw new AnalyticsMerchantSummaryMissingError(organizationId);
+				throw new AnalyticsMerchantSummaryMissingError(tenantId);
 			}
-			return { organizationId, merchantName: summary.name, category: summary.category, ...spend };
+			return { tenantId, merchantName: summary.name, category: summary.category, ...spend };
 		});
 		const byCategory = new Map<MerchantBusinessCategory | null, { totalMinor: number; visits: number; perBucket: Map<number, number> }>();
 		for (const merchant of merchants) {
@@ -247,7 +247,7 @@ export class AnalyticsDashboardAssembler {
 				.sort((left, right) => right.totalMinor - left.totalMinor || left.merchantName.localeCompare(right.merchantName))
 				.slice(0, CUSTOMER_TOP_MERCHANTS_LIMIT)
 				.map((merchant) => ({
-					organizationId: merchant.organizationId,
+					tenantId: merchant.tenantId,
 					merchantName: merchant.merchantName,
 					category: merchant.category,
 					totalMinor: merchant.totalMinor,
@@ -288,11 +288,11 @@ export class AnalyticsDashboardAssembler {
 	private groupByMerchant(rows: readonly MerchantBucketSalesRow[]): Map<string, { totalMinor: number; visits: number; perBucket: Map<number, number> }> {
 		const merchants = new Map<string, { totalMinor: number; visits: number; perBucket: Map<number, number> }>();
 		for (const row of rows) {
-			const entry = merchants.get(row.organizationId) ?? { totalMinor: 0, visits: 0, perBucket: new Map<number, number>() };
+			const entry = merchants.get(row.tenantId) ?? { totalMinor: 0, visits: 0, perBucket: new Map<number, number>() };
 			entry.totalMinor += row.salesMinor;
 			entry.visits += row.bills;
 			entry.perBucket.set(row.startMs, row.salesMinor);
-			merchants.set(row.organizationId, entry);
+			merchants.set(row.tenantId, entry);
 		}
 		return merchants;
 	}

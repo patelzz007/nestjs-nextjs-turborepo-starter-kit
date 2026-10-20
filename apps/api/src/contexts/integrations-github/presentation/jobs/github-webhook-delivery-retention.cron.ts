@@ -4,9 +4,7 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 import { systemActor } from "../../../../platform/application/actor-context";
 import { SystemCommandDispatcher } from "../../../../platform/application/system-command-dispatcher";
 import { PruneGithubWebhookDeliveriesCommand } from "../../application/commands/prune-github-webhook-deliveries/prune-github-webhook-deliveries.command";
-
-/** The system operation the deliveries table is reached through (bypass-only, ADR 052). */
-const GITHUB_WEBHOOK_DELIVERIES_OPERATION = "github.webhook.deliveries";
+import { GITHUB_WEBHOOK_DELIVERIES_OPERATION } from "../../application/ports/github.tokens";
 
 /** The cron's name on its audit row. */
 const RETENTION_CRON_NAME = "GithubWebhookDeliveryRetentionCron.prune";

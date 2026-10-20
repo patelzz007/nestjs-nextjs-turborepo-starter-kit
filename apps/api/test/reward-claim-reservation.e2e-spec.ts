@@ -6,13 +6,11 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
 import { ClaimRewardCommand } from "../src/contexts/claims/application/commands/claim-reward/claim-reward.command";
 import { ActorContextSchema, type ActorContext } from "../src/platform/application/actor-context";
-import { PrismaService } from "../src/prisma/prisma.service";
-import { runWithSystemRlsContext } from "../src/prisma/rls-context";
-import { createE2eApp } from "./e2e-helpers";
+import { createE2eApp, withTenantMember } from "./e2e-helpers";
 
 const DAY_MS = 86_400_000;
 const PARALLEL = 5;
@@ -32,29 +30,25 @@ type ClaimOutcome = string;
  */
 describe("Reward claim reservation (integration)", () => {
 	let app: NestFastifyApplication;
-	let prisma: PrismaService;
 	let pool: Pool;
+	let merchantUserId: string;
 	let customers: z.output<typeof CustomerRowSchema>[] = [];
 	const rewardIds: string[] = [];
 	const insertedAcceptanceIds: string[] = [];
 	let storedPhones: z.output<typeof StoredPhoneSchema>[] = [];
 
-	function asSystem<T>(work: () => Promise<T>): Promise<T> {
-		return runWithSystemRlsContext("route.rls_bypass", work);
-	}
-
 	async function createReward(quantity: number, maxUsePerUser: number | null): Promise<string> {
 		const id = randomUUID();
-		await asSystem(async () =>
-			prisma.reward.create({
+		await withTenantMember(app, merchantUserId, TENANT_SEED_IDS.klTenant, (tx) =>
+			tx.reward.create({
 				data: {
 					id,
-					organizationId: ORGANIZATION_SEED_IDS.klOrganization,
+					tenantId: TENANT_SEED_IDS.klTenant,
 					title: "E2E reservation reward",
 					description: "Created by reward-claim-reservation.e2e-spec.ts",
 					rewardType: "FREE_ITEM",
 					category: "cafe",
-					images: { create: [{ organizationId: ORGANIZATION_SEED_IDS.klOrganization, fileId: rewardCoverImageSeedId("free-coffee"), position: 0 }] },
+					images: { create: [{ fileId: rewardCoverImageSeedId("free-coffee"), position: 0 }] },
 					quantityTotal: quantity,
 					quantityRemaining: quantity,
 					expiryDate: Date.now() + 30 * DAY_MS,
@@ -73,7 +67,7 @@ describe("Reward claim reservation (integration)", () => {
 			kind: "user",
 			userId,
 			sessionId: randomUUID(),
-			organizationId: null,
+			tenantId: null,
 			isSuperAdmin: false,
 			accessScope: "tenant",
 			impersonatorUserId: null,
@@ -92,8 +86,8 @@ describe("Reward claim reservation (integration)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
-		prisma = app.get(PrismaService);
 		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		merchantUserId = z.object({ id: z.string() }).parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'brew.owner@kl-rewards.demo'`)).rows.at(0)).id;
 		const rows = await pool.query(
 			`SELECT id, phone, "phoneVerifiedAt"::text AS "phoneVerifiedAt" FROM public."User"
 			 WHERE email IN ('alice.johnson@example.com', 'bob.smith@example.com', 'carol.white@example.com', 'david.lee@example.com', 'user@example.com') ORDER BY email`,
@@ -118,10 +112,9 @@ describe("Reward claim reservation (integration)", () => {
 	});
 
 	afterAll(async () => {
-		await asSystem(async () => {
-			await prisma.rewardClaim.deleteMany({ where: { rewardId: { in: rewardIds } } });
-			await prisma.reward.deleteMany({ where: { id: { in: rewardIds } } });
-		});
+		await pool.query(`DELETE FROM public."RewardClaim" WHERE "rewardId" = ANY($1)`, [rewardIds]);
+		await pool.query(`DELETE FROM public."RewardImage" WHERE "rewardId" = ANY($1)`, [rewardIds]);
+		await pool.query(`DELETE FROM public."Reward" WHERE id = ANY($1)`, [rewardIds]);
 		// Fixture teardown: the seeded customers get their own phones back, and only this spec's acceptances go.
 		for (const stored of storedPhones) {
 			await pool.query(`UPDATE public."User" SET phone = $2, "phoneVerifiedAt" = $3::bigint WHERE id = $1`, [stored.id, stored.phone, stored.phoneVerifiedAt]);
@@ -143,7 +136,7 @@ describe("Reward claim reservation (integration)", () => {
 		expect(outcomes.filter((outcome) => outcome === "created")).toHaveLength(1);
 		expect(outcomes.filter((outcome) => outcome === "CLAIM_LIMIT_REACHED")).toHaveLength(PARALLEL - 1);
 		// Refused claims rolled back their reservation: exactly one unit is gone.
-		const after = await asSystem(async () => prisma.reward.findUniqueOrThrow({ where: { id: rewardId } }));
+		const after = await withTenantMember(app, merchantUserId, TENANT_SEED_IDS.klTenant, (tx) => tx.reward.findUniqueOrThrow({ where: { id: rewardId } }));
 		expect({ remaining: after.quantityRemaining, reserved: after.quantityReserved, claims: after.claimCount }).toEqual({ remaining: PARALLEL - 1, reserved: 1, claims: 1 });
 	});
 
@@ -154,8 +147,8 @@ describe("Reward claim reservation (integration)", () => {
 
 		expect(outcomes.filter((outcome) => outcome === "created")).toHaveLength(1);
 		expect(outcomes.filter((outcome) => outcome === "REWARD_OUT_OF_STOCK")).toHaveLength(PARALLEL - 1);
-		const after = await asSystem(async () => prisma.reward.findUniqueOrThrow({ where: { id: rewardId } }));
+		const after = await withTenantMember(app, merchantUserId, TENANT_SEED_IDS.klTenant, (tx) => tx.reward.findUniqueOrThrow({ where: { id: rewardId } }));
 		expect(after.quantityRemaining).toBe(0);
-		expect(await asSystem(async () => prisma.rewardClaim.count({ where: { rewardId } }))).toBe(1);
+		expect(await withTenantMember(app, merchantUserId, TENANT_SEED_IDS.klTenant, (tx) => tx.rewardClaim.count({ where: { rewardId } }))).toBe(1);
 	});
 });

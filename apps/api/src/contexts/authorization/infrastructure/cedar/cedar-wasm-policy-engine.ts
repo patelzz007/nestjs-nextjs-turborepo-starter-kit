@@ -41,7 +41,7 @@ function messagesOf(errors: readonly DetailedError[]): string[] {
  * - Bundles are evaluated from a bounded pool of preparsed policy sets
  *   ({@link PreparsedPolicySetCache}); memory stays bounded however many
  *   policies are published over the process lifetime.
- * - An empty bundle denies (Cedar's default deny); every organization gets a
+ * - An empty bundle denies (Cedar's default deny); every tenant gets a
  *   published TENANT policy at provisioning.
  *
  * No constructor dependencies: Nest provides it under `POLICY_ENGINE`
@@ -75,7 +75,7 @@ export class CedarWasmPolicyEngine implements PolicyEngine {
 
 	public decide(bundle: PolicyBundle, request: PolicyRequest): PolicyEngineDecision {
 		const principal = { type: qualifiedCedarType(CEDAR_ENTITY_TYPES.member), id: request.principal.userId };
-		const resource = { type: qualifiedCedarType(CEDAR_ENTITY_TYPES.organization), id: request.organizationId };
+		const resource = { type: qualifiedCedarType(CEDAR_ENTITY_TYPES.tenant), id: request.tenantId };
 		const entities: EntityJson[] = [
 			{
 				uid: principal,
@@ -84,7 +84,7 @@ export class CedarWasmPolicyEngine implements PolicyEngine {
 			},
 			{
 				uid: resource,
-				attrs: { organizationId: request.organizationId, ...(request.locationId === undefined ? {} : { locationId: request.locationId }) },
+				attrs: { tenantId: request.tenantId, ...(request.locationId === undefined ? {} : { locationId: request.locationId }) },
 				parents: [],
 			},
 		];

@@ -36,8 +36,9 @@ describe("RequestContextService", () => {
 			edgeLocation: undefined,
 			principal: undefined,
 			apiKey: undefined,
-			tenant: { organizationId: undefined, storeId: undefined, locationId: undefined },
+			tenant: { tenantId: undefined, storeId: undefined, locationId: undefined },
 			systemOperations: [],
+			supportAccessGrantId: undefined,
 			isAuditRecorded: false,
 			actor: undefined,
 		});
@@ -65,17 +66,17 @@ describe("RequestContextService", () => {
 
 	it("binds the API key that authenticated the request without touching the user principal", () => {
 		const context = service.run(SEED, () => {
-			service.bindApiKey({ apiKeyId: "key-1", organizationId: "org-1", terminalId: "T-1", locationId: "store-1" });
+			service.bindApiKey({ apiKeyId: "key-1", tenantId: "org-1", terminalId: "T-1", locationId: "store-1" });
 			return service.current();
 		});
 
-		expect(context?.apiKey).toEqual({ apiKeyId: "key-1", organizationId: "org-1", terminalId: "T-1", locationId: "store-1" });
+		expect(context?.apiKey).toEqual({ apiKeyId: "key-1", tenantId: "org-1", terminalId: "T-1", locationId: "store-1" });
 		expect(context?.principal).toBeUndefined();
 	});
 
 	it("ignores system-operation and API-key bindings outside a request", () => {
 		service.recordSystemOperation("queue.email.send");
-		service.bindApiKey({ apiKeyId: "key-1", organizationId: "org-1", terminalId: undefined, locationId: null });
+		service.bindApiKey({ apiKeyId: "key-1", tenantId: "org-1", terminalId: undefined, locationId: null });
 
 		expect(service.current()).toBeUndefined();
 	});
@@ -117,20 +118,20 @@ describe("RequestContextService", () => {
 		const snapshots = service.run(SEED, () => {
 			const beforeAuth = service.current();
 			service.bindPrincipal({ userId: "user-1", impersonatorId: "admin-1", impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
-			service.bindTenant({ organizationId: "org-1", locationId: "loc-1" });
+			service.bindTenant({ tenantId: "org-1", locationId: "loc-1" });
 			return { beforeAuth, afterTenancy: service.current(), log: service.logFields() };
 		});
 
 		// Snapshots are immutable: the pre-auth snapshot is unchanged.
 		expect(snapshots.beforeAuth?.principal).toBeUndefined();
 		expect(snapshots.afterTenancy?.principal).toEqual({ userId: "user-1", impersonatorId: "admin-1", impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
-		expect(snapshots.afterTenancy?.tenant).toEqual({ organizationId: "org-1", storeId: undefined, locationId: "loc-1" });
-		expect(snapshots.log).toEqual({ correlationId: "corr-ctx-1", userId: "user-1", impersonatorId: "admin-1", organizationId: "org-1" });
+		expect(snapshots.afterTenancy?.tenant).toEqual({ tenantId: "org-1", storeId: undefined, locationId: "loc-1" });
+		expect(snapshots.log).toEqual({ correlationId: "corr-ctx-1", userId: "user-1", impersonatorId: "admin-1", tenantId: "org-1" });
 	});
 
 	it("ignores enrichment outside a request instead of creating a context", () => {
 		service.bindPrincipal({ userId: "user-1", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
-		service.bindTenant({ organizationId: "org-1" });
+		service.bindTenant({ tenantId: "org-1" });
 
 		expect(service.current()).toBeUndefined();
 	});

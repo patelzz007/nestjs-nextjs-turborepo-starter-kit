@@ -29,15 +29,15 @@ export class CreatePolicyDraftHandler implements ICommandHandler<CreatePolicyDra
 	public async execute(command: CreatePolicyDraftCommand): Promise<PolicyDraftCreatedResponse> {
 		const { actor, policyActor, input } = command;
 		AuthorizationPolicyDraftAggregate.assertActorMayChangePolicies(policyActor);
-		const organizationId: string | null = AuthorizationPolicyDraftAggregate.organizationFor(input.scope, input.organizationId ?? null);
-		const compiled: CompiledPolicy = this.compileAndValidate(input.builderPayload, organizationId);
+		const tenantId: string | null = AuthorizationPolicyDraftAggregate.tenantFor(input.scope, input.tenantId ?? null);
+		const compiled: CompiledPolicy = this.compileAndValidate(input.builderPayload, tenantId);
 
 		return this.uow.runSystemOperation(POLICY_DRAFT_CREATE_OPERATION, actor, async (scope: AuthorizationScope): Promise<PolicyDraftCreatedResponse> => {
 			const draft: AuthorizationPolicyDraftAggregate = AuthorizationPolicyDraftAggregate.create(
 				{
 					id: newRowId(),
 					scope: input.scope,
-					organizationId,
+					tenantId,
 					name: input.name,
 					description: input.description ?? null,
 					builderPayload: input.builderPayload,
@@ -50,7 +50,7 @@ export class CreatePolicyDraftHandler implements ICommandHandler<CreatePolicyDra
 			await scope.policyDrafts.add(draft);
 			await scope.policyAudit.append({
 				draftId: draft.id,
-				organizationId,
+				tenantId,
 				scope: input.scope,
 				action: POLICY_AUDIT_ACTIONS.draftCreated,
 				actorUserId: policyActor.userId,
@@ -61,8 +61,8 @@ export class CreatePolicyDraftHandler implements ICommandHandler<CreatePolicyDra
 		});
 	}
 
-	private compileAndValidate(payload: CreatePolicyDraftCommand["input"]["builderPayload"], organizationId: string | null): CompiledPolicy {
-		const compilation: PolicyCompilation = this.compiler.compile(payload, organizationId);
+	private compileAndValidate(payload: CreatePolicyDraftCommand["input"]["builderPayload"], tenantId: string | null): CompiledPolicy {
+		const compilation: PolicyCompilation = this.compiler.compile(payload, tenantId);
 		if (compilation.kind === "invalid") {
 			throw new ValidationError({ code: POLICY_VALIDATION_FAILED_CODE, message: compilation.message });
 		}

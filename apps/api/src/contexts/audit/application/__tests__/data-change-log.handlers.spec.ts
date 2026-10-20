@@ -34,7 +34,7 @@ describe("ListDataChangesHandler", () => {
 
 		const page = await handler.execute(new ListDataChangesQuery(VIEWER, DataChangeLogListQuerySchema.parse({})));
 
-		expect(page.items[LIST_SLOT_INDEX.first]).toMatchObject({ id: recordId(1), tableName: "Reward", organization: { name: "Kopi Corner" } });
+		expect(page.items[LIST_SLOT_INDEX.first]).toMatchObject({ id: recordId(1), tableName: "Reward", tenant: { name: "Kopi Corner" } });
 		expect(session.committedSummaries).toEqual([{ dataChangeView: { view: "list", returned: 1, total: 1, page: 1 } }]);
 	});
 

@@ -14,7 +14,7 @@ import { SUPPORT_ACCESS_AUDIT_ACTIONS, SUPPORT_ACCESS_AUDIT_RESOURCE_TYPE } from
 import { ApproveSupportAccessCommand } from "./approve-support-access.command";
 
 /**
- * Authorization is resource-scoped: the caller must be an active OWNER of the organization the grant
+ * Authorization is resource-scoped: the caller must be an active OWNER of the tenant the grant
  * belongs to (read from the grant). The owner membership and the pending, unexpired state are re-checked
  * in the transaction that flips the status (compare-and-set).
  */
@@ -30,10 +30,10 @@ export class ApproveSupportAccessHandler implements ICommandHandler<ApproveSuppo
 	public async execute(command: ApproveSupportAccessCommand): Promise<void> {
 		const { grantId } = command;
 		const actor = requireUserActor(command.actor);
-		const organizationId: string = await this.locator.organizationOf(actor, grantId);
-		const policyVersion: number = await this.cedar.getActivePolicyVersion(organizationId);
+		const tenantId: string = await this.locator.tenantOf(actor, grantId);
+		const policyVersion: number = await this.cedar.getActivePolicyVersion(tenantId);
 		await this.uow.runSystemOperation(SUPPORT_ACCESS_APPROVE_OPERATION, actor, async (scope: AuthorizationScope): Promise<void> => {
-			if (!(await scope.supportOrganizations.isActiveOwner(organizationId, actor.userId))) {
+			if (!(await scope.supportTenants.isActiveOwner(tenantId, actor.userId))) {
 				throw new SupportAccessApproverNotOwnerError();
 			}
 			const grant: SupportAccessGrantAggregate | null = await scope.supportGrants.findById(grantId);
@@ -44,8 +44,8 @@ export class ApproveSupportAccessHandler implements ICommandHandler<ApproveSuppo
 			if ((await scope.supportGrants.save(grant)) === "lost") {
 				throw new SupportAccessGrantNotPendingError();
 			}
-			await scope.organizationAudit.record({
-				organizationId,
+			await scope.tenantAudit.record({
+				tenantId,
 				actorUserId: actor.userId,
 				policyVersion,
 				action: SUPPORT_ACCESS_AUDIT_ACTIONS.approved,

@@ -28,7 +28,7 @@ const IdRowSchema = z.object({ id: z.string() });
 describe("hot lists have no N+1 (e2e)", () => {
 	const marker = `nplus${randomUUID().slice(0, 8)}`;
 	const clonedUserIds: string[] = [];
-	const clonedOrganizationIds: string[] = [];
+	const clonedTenantIds: string[] = [];
 	const clonedRewardIds: string[] = [];
 	let app: NestFastifyApplication;
 	let pool: Pool;
@@ -115,10 +115,10 @@ describe("hot lists have no N+1 (e2e)", () => {
 	});
 
 	afterAll(async (): Promise<void> => {
-		await pool.query(`DELETE FROM public."OrganizationMembership" WHERE "userId" = ANY($1)`, [clonedUserIds]);
+		await pool.query(`DELETE FROM public."Membership" WHERE "userId" = ANY($1)`, [clonedUserIds]);
 		await pool.query(`DELETE FROM public."User" WHERE id = ANY($1)`, [clonedUserIds]);
 		await pool.query(`DELETE FROM public."Reward" WHERE id = ANY($1)`, [clonedRewardIds]);
-		await pool.query(`DELETE FROM public."Organization" WHERE id = ANY($1)`, [clonedOrganizationIds]);
+		await pool.query(`DELETE FROM public."Tenant" WHERE id = ANY($1)`, [clonedTenantIds]);
 		await pool.end();
 		await app.close();
 	});
@@ -133,39 +133,37 @@ describe("hot lists have no N+1 (e2e)", () => {
 	});
 
 	it("GET /admin/merchants", async (): Promise<void> => {
-		const sourceOrganizationId = await idOf(`SELECT id FROM public."Organization" WHERE slug = $1`, [MERCHANT_SLUG]);
-		// The list holds organizations with a merchant profile, so each clone gets its own.
-		const sourceProfileId = await idOf(`SELECT id FROM public."OrganizationMerchantProfile" WHERE "organizationId" = $1`, [sourceOrganizationId]);
+		const sourceTenantId = await idOf(`SELECT id FROM public."Tenant" WHERE slug = $1`, [MERCHANT_SLUG]);
+		// The list holds tenants with a merchant profile, so each clone gets its own.
+		const sourceProfileId = await idOf(`SELECT id FROM public."TenantMerchantProfile" WHERE "tenantId" = $1`, [sourceTenantId]);
 		await expectFlatList(
 			(limit) => `${API_VERSION_PREFIX}/admin/merchants?search=${marker}&limit=${String(limit)}`,
 			sessionHeaders(admin, "admin"),
 			async (rows) => {
-				while (clonedOrganizationIds.length < rows) {
-					const index = String(clonedOrganizationIds.length);
-					const organizationId = await cloneRow(
-						"Organization",
-						sourceOrganizationId,
+				while (clonedTenantIds.length < rows) {
+					const index = String(clonedTenantIds.length);
+					const tenantId = await cloneRow(
+						"Tenant",
+						sourceTenantId,
 						new Map([
 							["slug", `${marker}-${index}`],
 							["displayName", `${marker} ${index}`],
 						]),
 					);
-					clonedOrganizationIds.push(organizationId);
-					await cloneRow("OrganizationMerchantProfile", sourceProfileId, new Map([["organizationId", organizationId]]));
+					clonedTenantIds.push(tenantId);
+					await cloneRow("TenantMerchantProfile", sourceProfileId, new Map([["tenantId", tenantId]]));
 				}
 			},
 		);
 	});
 
-	it("GET /orgs/:orgSlug/members", async (): Promise<void> => {
-		const organizationId = await idOf(`SELECT id FROM public."Organization" WHERE slug = $1`, [MERCHANT_SLUG]);
+	it("GET /tenants/:tenantSlug/members", async (): Promise<void> => {
+		const tenantId = await idOf(`SELECT id FROM public."Tenant" WHERE slug = $1`, [MERCHANT_SLUG]);
 		const sourceUserId = await idOf(`SELECT id FROM public."User" WHERE email = $1`, [CONSUMER.email]);
-		const sourceMembershipId = await idOf(`SELECT id FROM public."OrganizationMembership" WHERE "organizationId" = $1 AND NOT "isDeleted" ORDER BY "createdAt" LIMIT 1`, [
-			organizationId,
-		]);
+		const sourceMembershipId = await idOf(`SELECT id FROM public."Membership" WHERE "tenantId" = $1 AND NOT "isDeleted" ORDER BY "createdAt" LIMIT 1`, [tenantId]);
 		const memberships = new Set<string>();
 		await expectFlatList(
-			(limit) => `${API_VERSION_PREFIX}/orgs/${MERCHANT_SLUG}/members?limit=${String(limit)}`,
+			(limit) => `${API_VERSION_PREFIX}/tenants/${MERCHANT_SLUG}/members?limit=${String(limit)}`,
 			sessionHeaders(owner, "merchant"),
 			async (rows) => {
 				await cloneUsers(rows, sourceUserId);
@@ -173,7 +171,7 @@ describe("hot lists have no N+1 (e2e)", () => {
 					if (!memberships.has(userId)) {
 						memberships.add(userId);
 						await cloneRow(
-							"OrganizationMembership",
+							"Membership",
 							sourceMembershipId,
 							new Map([
 								["userId", userId],

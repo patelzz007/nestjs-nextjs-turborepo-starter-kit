@@ -5,6 +5,7 @@ import type { UnitOfWork } from "../../platform/application/unit-of-work.port";
 import { AuditTrailService } from "../../platform/infrastructure/audit/audit-trail.service";
 import { SystemCommandModule } from "../../platform/infrastructure/system-command.module";
 import type { AfterCommitPublisher } from "../../platform/infrastructure/unit-of-work/after-commit-publisher";
+import { USER_OWNED_DATA_SCOPE } from "../../platform/infrastructure/unit-of-work/actor-to-rls-context";
 import { PrismaReadExecutor } from "../../platform/infrastructure/unit-of-work/prisma-read-executor";
 import { PrismaUnitOfWork } from "../../platform/infrastructure/unit-of-work/prisma-unit-of-work";
 import { TransactionalEventDispatcher } from "../../platform/infrastructure/unit-of-work/transactional-event-dispatcher";
@@ -42,7 +43,8 @@ import { GeoController } from "./presentation/http/geo.controller";
 		{
 			provide: GEOGRAPHY_READ,
 			inject: [TenantTransactionService],
-			useFactory: (transactions: TenantTransactionService): GeographyReadPort => new PrismaGeographyReadRepository(new PrismaReadExecutor(transactions)),
+			useFactory: (transactions: TenantTransactionService): GeographyReadPort =>
+				new PrismaGeographyReadRepository(new PrismaReadExecutor(transactions, USER_OWNED_DATA_SCOPE)),
 		},
 		GeographyApplicationService,
 	],

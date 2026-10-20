@@ -18,7 +18,7 @@ import {
 	RoleLimitExceededError,
 	SupportAccessGrantNotPendingError,
 	SupportAccessGrantNotRevocableError,
-	TenantPolicyDraftOrganizationRequiredError,
+	TenantPolicyDraftTenantRequiredError,
 } from "../errors/authorization.errors";
 import { PolicyPublished } from "../events/policy-published.event";
 import { MAX_ROLES_PER_USER } from "../rbac-catalog";
@@ -125,7 +125,7 @@ describe("UserAuthorizationAggregate direct permissions", () => {
 describe("SupportAccessGrantAggregate", () => {
 	function requested(): SupportAccessGrantAggregate {
 		return SupportAccessGrantAggregate.request(
-			{ id: "grant-1", organizationId: "org-1", supportUserId: "support-1", mode: "READ_ONLY", reason: "ticket #42", ticketRef: "SUP-42", durationMinutes: 30 },
+			{ id: "grant-1", tenantId: "org-1", supportUserId: "support-1", mode: "READ_ONLY", reason: "ticket #42", ticketRef: "SUP-42", durationMinutes: 30 },
 			NOW,
 		);
 	}
@@ -167,7 +167,7 @@ describe("AuthorizationPolicyDraftAggregate", () => {
 	const DRAFT: NewPolicyDraft = {
 		id: "draft-1",
 		scope: "TENANT",
-		organizationId: "org-1",
+		tenantId: "org-1",
 		name: "Managers approve refunds",
 		description: null,
 		builderPayload: { rules: [] },
@@ -177,10 +177,10 @@ describe("AuthorizationPolicyDraftAggregate", () => {
 	};
 	const PASSED = { passed: true, createdAt: NOW, baselineFingerprint: "baseline-1" };
 
-	it("binds a TENANT draft to its organization and drops the organization of a platform draft", () => {
-		expect(AuthorizationPolicyDraftAggregate.create(DRAFT, NOW).slot).toEqual({ organizationId: "org-1", scope: "TENANT" });
-		expect(AuthorizationPolicyDraftAggregate.create({ ...DRAFT, scope: "PLATFORM" }, NOW).slot).toEqual({ organizationId: null, scope: "PLATFORM" });
-		expect(() => AuthorizationPolicyDraftAggregate.create({ ...DRAFT, organizationId: null }, NOW)).toThrow(TenantPolicyDraftOrganizationRequiredError);
+	it("binds a TENANT draft to its tenant and drops the tenant of a platform draft", () => {
+		expect(AuthorizationPolicyDraftAggregate.create(DRAFT, NOW).slot).toEqual({ tenantId: "org-1", scope: "TENANT" });
+		expect(AuthorizationPolicyDraftAggregate.create({ ...DRAFT, scope: "PLATFORM" }, NOW).slot).toEqual({ tenantId: null, scope: "PLATFORM" });
+		expect(() => AuthorizationPolicyDraftAggregate.create({ ...DRAFT, tenantId: null }, NOW)).toThrow(TenantPolicyDraftTenantRequiredError);
 	});
 
 	it("refuses policy changes from an impersonation session", () => {

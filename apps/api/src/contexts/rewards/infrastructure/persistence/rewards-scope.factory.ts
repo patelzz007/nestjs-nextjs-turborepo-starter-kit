@@ -5,11 +5,11 @@ import { PublicUrlResolver } from "../../../../config/public-url.resolver";
 import type { ScopeFactory } from "../../../../platform/application/events/in-transaction-event-handler";
 import type { TransactionalEventCollector } from "../../../../platform/application/events/transactional-event-collector";
 import { createFilesTransactionalPorts } from "../../../files/public-api";
-import { ORGANIZATION_READ, type OrganizationReadPort } from "../../../organizations/public-api";
-import { OrganizationDisplayAdapter } from "../adapters/organization-display.adapter";
+import { TENANT_READ, type TenantReadPort } from "../../../tenancy/public-api";
+import { TenantDisplayAdapter } from "../adapters/tenant-display.adapter";
 import type { RewardsScope } from "../../application/rewards-scope";
 import { PrismaLegalAcceptanceRepository } from "./prisma-legal-acceptance.repository";
-import { PrismaOrganizationStoresAdapter, PrismaRewardAuditWriter, RewardImageFilesAdapter, PrismaRewardViewAdapter } from "./prisma-reward-transactional.adapters";
+import { PrismaTenantStoresAdapter, PrismaRewardAuditWriter, RewardImageFilesAdapter, PrismaRewardViewAdapter } from "./prisma-reward-transactional.adapters";
 import { PrismaRewardRepository } from "./prisma-reward.repository";
 
 /** Builds the rewards scope bound to the unit-of-work transaction. New instances every call; never cached. */
@@ -17,7 +17,7 @@ import { PrismaRewardRepository } from "./prisma-reward.repository";
 export class RewardsScopeFactory implements ScopeFactory<RewardsScope, Prisma.TransactionClient> {
 	public constructor(
 		private readonly publicUrls: PublicUrlResolver,
-		@Inject(ORGANIZATION_READ) private readonly organizations: OrganizationReadPort,
+		@Inject(TENANT_READ) private readonly tenants: TenantReadPort,
 	) {}
 
 	public create(db: Prisma.TransactionClient, events: TransactionalEventCollector): RewardsScope {
@@ -25,8 +25,8 @@ export class RewardsScopeFactory implements ScopeFactory<RewardsScope, Prisma.Tr
 			rewards: this.rewardRepository(db),
 			legalAcceptances: new PrismaLegalAcceptanceRepository(db),
 			imageFiles: new RewardImageFilesAdapter(createFilesTransactionalPorts(db).fileReferences),
-			stores: new PrismaOrganizationStoresAdapter(db),
-			views: new PrismaRewardViewAdapter(db, new OrganizationDisplayAdapter(this.organizations), this.publicUrls.resolve),
+			stores: new PrismaTenantStoresAdapter(db),
+			views: new PrismaRewardViewAdapter(db, new TenantDisplayAdapter(this.tenants), this.publicUrls.resolve),
 			audit: new PrismaRewardAuditWriter(db),
 			events,
 		};

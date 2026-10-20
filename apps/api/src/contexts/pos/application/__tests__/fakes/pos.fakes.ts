@@ -13,7 +13,7 @@ import { TransactionalEventCollector } from "../../../../../platform/application
 import type { SystemOperationName } from "../../../../../platform/application/system-operation-names";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import { ClaimNoLongerRedeemableError, type ClaimRedemptionLookup, type ClaimRedemptionPort } from "../../../../claims/public-api";
-import type { MerchantPosSettingsPort, TillOrganizationFacts } from "../../../../organizations/public-api";
+import type { MerchantPosSettingsPort, TillTenantFacts } from "../../../../tenancy/public-api";
 import type { ReferralCreditPort } from "../../../../referrals/public-api";
 import type {
 	ClaimableRewardFacts,
@@ -24,18 +24,12 @@ import type {
 	RewardRedemptionFacts,
 	RewardRedemptionFactsPort,
 } from "../../../../rewards/public-api";
-import { OrganizationApiKey, type NewApiKey, type OrganizationApiKeyState } from "../../../domain/aggregates/organization-api-key.aggregate";
-import { OrganizationTerminal, type OrganizationTerminalState } from "../../../domain/aggregates/organization-terminal.aggregate";
+import { TenantApiKey, type NewApiKey, type TenantApiKeyState } from "../../../domain/aggregates/tenant-api-key.aggregate";
+import { TenantTerminal, type TenantTerminalState } from "../../../domain/aggregates/tenant-terminal.aggregate";
 import type { RewardSale } from "../../../domain/aggregates/reward-sale.aggregate";
 import { SaleIdempotencyKeyTakenError } from "../../../domain/errors/pos.errors";
 import { terminalStatus } from "../../../domain/policies/terminal-status.policy";
-import type {
-	CodeLockoutRepository,
-	OrganizationApiKeyRepository,
-	OrganizationTerminalRepository,
-	RewardSaleRepository,
-	StoredSale,
-} from "../../../domain/repositories/pos.repositories";
+import type { CodeLockoutRepository, TenantApiKeyRepository, TenantTerminalRepository, RewardSaleRepository, StoredSale } from "../../../domain/repositories/pos.repositories";
 import type { PosScope } from "../../pos-scope";
 import type { CheckoutFingerprintPort } from "../../ports/checkout-fingerprint.port";
 import type { IssuedApiKeySecret, IssuedPairingSecret, PosCredentialsPort } from "../../ports/pos-credentials.port";
@@ -44,7 +38,7 @@ import type { PosIdGenerator } from "../../ports/pos.tokens";
 
 /** A fixed instant every pos application test measures from. */
 export const NOW: EpochMs = epochMs(1_792_195_200_000);
-export const ORGANIZATION_ID = "org-1";
+export const TENANT_ID = "org-1";
 export const STORE_A = "store-a";
 export const STORE_B = "store-b";
 export const CUSTOMER = "customer-1";
@@ -56,15 +50,15 @@ export const FIXTURE_CLAIM_TTL_MS = 3_600_000;
 const REQUEST = { requestId: "req-1", ip: null, userAgent: null, deviceLabel: null, endpoint: null };
 
 export function apiKeyActor(apiKeyId = "key-1", locationId: string | null = STORE_A): ActorContext {
-	return { kind: "api_key", apiKeyId, organizationId: ORGANIZATION_ID, locationId, terminalId: "TERM-AAAA2222", request: REQUEST };
+	return { kind: "api_key", apiKeyId, tenantId: TENANT_ID, locationId, terminalId: "TERM-AAAA2222", request: REQUEST };
 }
 
 export function member(userId = MEMBER): ActorContext {
-	return { kind: "user", userId, sessionId: "session-1", organizationId: null, isSuperAdmin: false, accessScope: "tenant", impersonatorUserId: null, request: REQUEST };
+	return { kind: "user", userId, sessionId: "session-1", tenantId: null, isSuperAdmin: false, accessScope: "tenant", impersonatorUserId: null, request: REQUEST };
 }
 
 export function anonymous(): ActorContext {
-	return { kind: "anonymous", organizationId: null, request: REQUEST };
+	return { kind: "anonymous", tenantId: null, request: REQUEST };
 }
 
 /** Sequential ids per prefix (`sale-1`, `sale-2`, …). */
@@ -150,7 +144,7 @@ export class InMemoryClaimRedemption implements ClaimRedemptionPort {
 			},
 			reward: {
 				id: rewardId,
-				organizationId: ORGANIZATION_ID,
+				tenantId: TENANT_ID,
 				title: "Free latte",
 				rewardType: "FREE_ITEM",
 				expiryDate: epochMs(NOW + FIXTURE_CLAIM_TTL_MS),
@@ -167,10 +161,10 @@ export class InMemoryClaimRedemption implements ClaimRedemptionPort {
 		return { token, backupCode };
 	}
 
-	public findMerchantClaim(code: RedemptionCode, organizationId: string): Promise<ClaimRedemptionLookup | null> {
+	public findMerchantClaim(code: RedemptionCode, tenantId: string): Promise<ClaimRedemptionLookup | null> {
 		const claimId = this.codes.get(code.token ?? code.backupCode ?? "");
 		const lookup = claimId === undefined ? undefined : this.claims.get(claimId);
-		return Promise.resolve(lookup?.reward.organizationId === organizationId ? lookup : null);
+		return Promise.resolve(lookup?.reward.tenantId === tenantId ? lookup : null);
 	}
 
 	public redeem(claimIds: readonly string[]): Promise<void> {
@@ -307,7 +301,7 @@ export class RecordingReferralCredit implements ReferralCreditPort {
 	}
 }
 
-/** Sales by `(organization, idempotency key)`, with the unique index's refusal of a second insert. */
+/** Sales by `(tenant, idempotency key)`, with the unique index's refusal of a second insert. */
 export class InMemorySales implements RewardSaleRepository {
 	public readonly rows = new Map<string, StoredSale>();
 	/** A concurrent checkout with the same key that commits just before this one inserts. */
@@ -318,15 +312,15 @@ export class InMemorySales implements RewardSaleRepository {
 	private readonly committedElsewhere = new Map<string, StoredSale>();
 	private redemptionCounter = 0;
 
-	public findByIdempotencyKey(organizationId: string, idempotencyKey: string): Promise<StoredSale | null> {
-		const key = `${organizationId}:${idempotencyKey}`;
+	public findByIdempotencyKey(tenantId: string, idempotencyKey: string): Promise<StoredSale | null> {
+		const key = `${tenantId}:${idempotencyKey}`;
 		const stored = this.rows.get(key) ?? this.committedElsewhere.get(key) ?? null;
 		return Promise.resolve(stored === null || this.hiddenFromReplay.has(stored.id) ? null : stored);
 	}
 
 	public add(sale: RewardSale): Promise<StoredSale> {
 		const state = sale.snapshot();
-		const key = `${state.point.organizationId}:${state.idempotencyKey}`;
+		const key = `${state.point.tenantId}:${state.idempotencyKey}`;
 		if (this.concurrentWinner !== null) {
 			this.committedElsewhere.set(key, this.concurrentWinner);
 			this.concurrentWinner = null;
@@ -379,22 +373,22 @@ export class InMemoryLockout implements CodeLockoutRepository {
 
 /** A stored terminal: its state, whether it is deleted, and who deleted it. */
 export interface StoredTerminal {
-	readonly state: OrganizationTerminalState;
+	readonly state: TenantTerminalState;
 	readonly deleted: boolean;
 	readonly createdByUserId: string | null;
 }
 
-/** Terminals as stored rows; removal soft-deletes; a live terminal id is unique per organization. */
-export class InMemoryTerminals implements OrganizationTerminalRepository {
+/** Terminals as stored rows; removal soft-deletes; a live terminal id is unique per tenant. */
+export class InMemoryTerminals implements TenantTerminalRepository {
 	public readonly rows = new Map<string, StoredTerminal>();
 	public readonly locked: string[] = [];
 	/** Terminal ids retired by soft-deleted tills (they still count as used). */
 	public readonly retiredTerminalIds = new Set<string>();
 
-	public seed(state: Partial<OrganizationTerminalState> & Pick<OrganizationTerminalState, "id">): void {
+	public seed(state: Partial<TenantTerminalState> & Pick<TenantTerminalState, "id">): void {
 		this.rows.set(state.id, {
 			state: {
-				organizationId: ORGANIZATION_ID,
+				tenantId: TENANT_ID,
 				locationId: STORE_A,
 				terminalId: `TERM-${state.id.toUpperCase().slice(-8).padStart(8, "2")}`,
 				label: null,
@@ -408,37 +402,37 @@ export class InMemoryTerminals implements OrganizationTerminalRepository {
 		});
 	}
 
-	public add(terminal: OrganizationTerminal): Promise<void> {
+	public add(terminal: TenantTerminal): Promise<void> {
 		const state = terminal.snapshot();
-		if ([...this.rows.values()].some((row) => !row.deleted && row.state.organizationId === state.organizationId && row.state.terminalId === state.terminalId)) {
+		if ([...this.rows.values()].some((row) => !row.deleted && row.state.tenantId === state.tenantId && row.state.terminalId === state.terminalId)) {
 			return Promise.reject(new Error("TERMINAL_ID_TAKEN"));
 		}
 		this.rows.set(state.id, { state, deleted: false, createdByUserId: terminal.registrant });
 		return Promise.resolve();
 	}
 
-	public terminalIdExists(organizationId: string, terminalId: string): Promise<boolean> {
+	public terminalIdExists(tenantId: string, terminalId: string): Promise<boolean> {
 		return Promise.resolve(
-			this.retiredTerminalIds.has(terminalId) || [...this.rows.values()].some((row) => row.state.organizationId === organizationId && row.state.terminalId === terminalId),
+			this.retiredTerminalIds.has(terminalId) || [...this.rows.values()].some((row) => row.state.tenantId === tenantId && row.state.terminalId === terminalId),
 		);
 	}
 
-	public lockLive(id: string, organizationId: string): Promise<OrganizationTerminal | null> {
+	public lockLive(id: string, tenantId: string): Promise<TenantTerminal | null> {
 		this.locked.push(id);
 		const row = this.rows.get(id);
-		return Promise.resolve(row === undefined || row.deleted || row.state.organizationId !== organizationId ? null : OrganizationTerminal.rehydrate(row.state));
+		return Promise.resolve(row === undefined || row.deleted || row.state.tenantId !== tenantId ? null : TenantTerminal.rehydrate(row.state));
 	}
 
-	public consumePairingCode(codeHashes: readonly string[], now: EpochMs): Promise<OrganizationTerminal | null> {
+	public consumePairingCode(codeHashes: readonly string[], now: EpochMs): Promise<TenantTerminal | null> {
 		const row = [...this.rows.values()].find((candidate) => candidate.state.pairingCode !== null && codeHashes.includes(candidate.state.pairingCode.hash));
 		if (row === undefined || row.deleted || row.state.pairingCode === null || row.state.pairingCode.expiresAt < now) {
 			return Promise.resolve(null);
 		}
 		this.rows.set(row.state.id, { ...row, state: { ...row.state, pairingCode: null } });
-		return Promise.resolve(OrganizationTerminal.rehydrate(row.state));
+		return Promise.resolve(TenantTerminal.rehydrate(row.state));
 	}
 
-	public save(terminal: OrganizationTerminal): Promise<void> {
+	public save(terminal: TenantTerminal): Promise<void> {
 		const row = this.rows.get(terminal.id);
 		const change = terminal.pendingChange;
 		if (row === undefined || change === null) {
@@ -450,18 +444,18 @@ export class InMemoryTerminals implements OrganizationTerminalRepository {
 }
 
 /** Keys as stored rows; revocation is a compare-and-set on `revokedAt IS NULL`. */
-export class InMemoryApiKeys implements OrganizationApiKeyRepository {
+export class InMemoryApiKeys implements TenantApiKeyRepository {
 	public readonly rows = new Map<
 		string,
-		OrganizationApiKeyState & { readonly name: string; readonly scope: NewApiKey["scope"]; readonly createdByUserId: string; readonly keyHash: string }
+		TenantApiKeyState & { readonly name: string; readonly scope: NewApiKey["scope"]; readonly createdByUserId: string; readonly keyHash: string }
 	>();
 	/** Keys a concurrent request revokes just before this one saves. */
 	public readonly revokedConcurrently = new Set<string>();
 
-	public seed(id: string, patch: Partial<OrganizationApiKeyState> = {}): void {
+	public seed(id: string, patch: Partial<TenantApiKeyState> = {}): void {
 		this.rows.set(id, {
 			id,
-			organizationId: ORGANIZATION_ID,
+			tenantId: TENANT_ID,
 			locationId: null,
 			revokedAt: null,
 			name: id,
@@ -475,7 +469,7 @@ export class InMemoryApiKeys implements OrganizationApiKeyRepository {
 	public add(key: NewApiKey): Promise<void> {
 		this.rows.set(key.id, {
 			id: key.id,
-			organizationId: key.organizationId,
+			tenantId: key.tenantId,
 			locationId: key.locationId,
 			revokedAt: null,
 			name: key.name,
@@ -486,17 +480,17 @@ export class InMemoryApiKeys implements OrganizationApiKeyRepository {
 		return Promise.resolve();
 	}
 
-	public findInOrganization(id: string, organizationId: string): Promise<OrganizationApiKey | null> {
+	public findInTenant(id: string, tenantId: string): Promise<TenantApiKey | null> {
 		const row = this.rows.get(id);
-		return Promise.resolve(row?.organizationId === organizationId ? OrganizationApiKey.rehydrate(row) : null);
+		return Promise.resolve(row?.tenantId === tenantId ? TenantApiKey.rehydrate(row) : null);
 	}
 
-	public findById(id: string): Promise<OrganizationApiKey | null> {
+	public findById(id: string): Promise<TenantApiKey | null> {
 		const row = this.rows.get(id);
-		return Promise.resolve(row === undefined ? null : OrganizationApiKey.rehydrate(row));
+		return Promise.resolve(row === undefined ? null : TenantApiKey.rehydrate(row));
 	}
 
-	public save(key: OrganizationApiKey): Promise<boolean> {
+	public save(key: TenantApiKey): Promise<boolean> {
 		const row = this.rows.get(key.id);
 		const revokedAt = key.revokedInThisUnitOfWork;
 		if (row === undefined || revokedAt === null || row.revokedAt !== null || this.revokedConcurrently.has(key.id)) {
@@ -507,9 +501,9 @@ export class InMemoryApiKeys implements OrganizationApiKeyRepository {
 	}
 }
 
-/** Organizations' POS facts for {@link ORGANIZATION_ID}. */
+/** Tenants' POS facts for {@link TENANT_ID}. */
 export class InMemoryPosSettings implements MerchantPosSettingsPort {
-	public organization: TillOrganizationFacts | null = { slug: "brew-bean", displayName: "Brew & Bean", operating: true, requireRegisteredTerminals: false };
+	public tenant: TillTenantFacts | null = { slug: "brew-bean", displayName: "Brew & Bean", operating: true, requireRegisteredTerminals: false };
 	public hasProfile = true;
 	public readonly stores = new Map<string, string>([
 		[STORE_A, "Store A"],
@@ -518,16 +512,16 @@ export class InMemoryPosSettings implements MerchantPosSettingsPort {
 
 	/** Stores that are closed (or soft-deleted): a till cannot be registered there. */
 	public readonly closedStores = new Set<string>();
-	/** Each store lock taken, as `organizationId/locationId`. */
+	/** Each store lock taken, as `tenantId/locationId`. */
 	public readonly lockedStores: string[] = [];
 
-	public lockOpenStore(organizationId: string, locationId: string): Promise<boolean> {
-		this.lockedStores.push(`${organizationId}/${locationId}`);
-		return Promise.resolve(organizationId === ORGANIZATION_ID && this.stores.has(locationId) && !this.closedStores.has(locationId));
+	public lockOpenStore(tenantId: string, locationId: string): Promise<boolean> {
+		this.lockedStores.push(`${tenantId}/${locationId}`);
+		return Promise.resolve(tenantId === TENANT_ID && this.stores.has(locationId) && !this.closedStores.has(locationId));
 	}
 
-	public tillOrganization(): Promise<TillOrganizationFacts | null> {
-		return Promise.resolve(this.organization);
+	public tillTenant(): Promise<TillTenantFacts | null> {
+		return Promise.resolve(this.tenant);
 	}
 
 	public storeNames(locationIds: readonly string[]): Promise<ReadonlyMap<string, string>> {
@@ -537,14 +531,14 @@ export class InMemoryPosSettings implements MerchantPosSettingsPort {
 	}
 
 	public requireRegisteredTerminals(): Promise<boolean | null> {
-		return Promise.resolve(this.hasProfile && this.organization !== null ? this.organization.requireRegisteredTerminals : null);
+		return Promise.resolve(this.hasProfile && this.tenant !== null ? this.tenant.requireRegisteredTerminals : null);
 	}
 
-	public setRequireRegisteredTerminals(_organizationId: string, requireRegisteredTerminals: boolean): Promise<boolean> {
-		if (!this.hasProfile || this.organization === null) {
+	public setRequireRegisteredTerminals(_tenantId: string, requireRegisteredTerminals: boolean): Promise<boolean> {
+		if (!this.hasProfile || this.tenant === null) {
 			return Promise.resolve(false);
 		}
-		this.organization = { ...this.organization, requireRegisteredTerminals };
+		this.tenant = { ...this.tenant, requireRegisteredTerminals };
 		return Promise.resolve(true);
 	}
 }

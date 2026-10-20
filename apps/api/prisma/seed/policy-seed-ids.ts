@@ -33,8 +33,8 @@ export function platformGuardrailSeedIds(): PlatformGuardrailSeedIds {
 	};
 }
 
-/** Stable ids for an organization's seeded default tenant policy (draft, version, audit row). */
-export function defaultTenantPolicySeedIds(organizationId: string): DefaultTenantPolicyRecordIds {
-	const id = (part: string): string => deterministicUuid(POLICY_SEED_NAMESPACE, `tenant-default:${organizationId}:${part}`);
+/** Stable ids for a tenant's seeded default tenant policy (draft, version, audit row). */
+export function defaultTenantPolicySeedIds(tenantId: string): DefaultTenantPolicyRecordIds {
+	const id = (part: string): string => deterministicUuid(POLICY_SEED_NAMESPACE, `tenant-default:${tenantId}:${part}`);
 	return { draftId: id("draft"), versionId: id("version"), auditId: id("audit:published") };
 }

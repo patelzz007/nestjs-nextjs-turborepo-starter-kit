@@ -16,7 +16,7 @@ import type { OutboxTransaction } from "../outbox/platform-outbox.service";
 export class PrismaReadExecutor<TDb extends OutboxTransaction> {
 	public constructor(
 		private readonly transactions: RlsTransactionRunner<TDb>,
-		/** Whether the reads need the actor's organization (tenant data) or read the user's own rows (see {@link RlsScopeOptions}). */
+		/** Whether the reads need the actor's tenant (tenant data) or read the user's own rows (see {@link RlsScopeOptions}). */
 		private readonly scopeOptions: RlsScopeOptions = TENANT_DATA_SCOPE,
 	) {}
 
@@ -29,7 +29,7 @@ export class PrismaReadExecutor<TDb extends OutboxTransaction> {
 	 * For the lookups an authorization decision needs before the actor's own scope is known.
 	 */
 	public readAsSystemOperation<TResult>(operation: SystemOperationName, actor: ActorContext, work: (db: TDb) => Promise<TResult>): Promise<TResult> {
-		const context = systemRlsContext(operation, actingUserId(actor), actor.organizationId);
+		const context = systemRlsContext(operation, actingUserId(actor), actor.tenantId);
 		return this.transactions.withRlsContext({ context, reason: operation }, (db) => work(db));
 	}
 }

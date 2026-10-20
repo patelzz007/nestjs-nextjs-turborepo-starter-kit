@@ -42,7 +42,7 @@ import type {
 	SimulationPrincipal,
 } from "../../ports/policy-control-plane.port";
 import type { RbacGraphReader, RbacMutationLock } from "../../ports/rbac-graph.port";
-import type { OrganizationAuditRecord, OrganizationAuditWriter, SupportAccessOrganizationReader } from "../../ports/support-access.port";
+import type { TenantAuditRecord, TenantAuditWriter, SupportAccessTenantReader } from "../../ports/support-access.port";
 
 export const NOW: EpochMs = epochMs(1_800_000_000_000);
 
@@ -434,7 +434,7 @@ export class InMemoryPolicyVersions implements PolicyVersionStore {
 
 	public supersedeActive(slot: PolicySlot, now: EpochMs): Promise<void> {
 		for (const [index, version] of this.versions.entries()) {
-			if (version.organizationId === slot.organizationId && version.scope === slot.scope && version.supersededAt === null) {
+			if (version.tenantId === slot.tenantId && version.scope === slot.scope && version.supersededAt === null) {
 				this.versions.splice(index, 1, { ...version, supersededAt: now });
 			}
 		}
@@ -447,21 +447,21 @@ export class InMemoryPolicyVersions implements PolicyVersionStore {
 		return Promise.resolve({ id, version: version.version });
 	}
 
-	public baselineVersionIds(organizationId: string | null): Promise<string[]> {
+	public baselineVersionIds(tenantId: string | null): Promise<string[]> {
 		return Promise.resolve(
 			this.versions
-				.filter((version): boolean => version.supersededAt === null && (version.organizationId === null || version.organizationId === organizationId))
+				.filter((version): boolean => version.supersededAt === null && (version.tenantId === null || version.tenantId === tenantId))
 				.map((version): string => version.id),
 		);
 	}
 
-	public activeVersionsForOrganizations(organizationIds: readonly string[]): Promise<ActivePolicyVersion[]> {
+	public activeVersionsForTenants(tenantIds: readonly string[]): Promise<ActivePolicyVersion[]> {
 		return Promise.resolve(
 			this.versions
-				.filter((version): boolean => version.supersededAt === null && version.organizationId !== null && organizationIds.includes(version.organizationId))
+				.filter((version): boolean => version.supersededAt === null && version.tenantId !== null && tenantIds.includes(version.tenantId))
 				.map((version): ActivePolicyVersion => ({
 					id: version.id,
-					organizationId: version.organizationId,
+					tenantId: version.tenantId,
 					scope: version.scope,
 					version: version.version,
 					cedarSource: version.cedarSource,
@@ -470,7 +470,7 @@ export class InMemoryPolicyVersions implements PolicyVersionStore {
 	}
 
 	private inSlot(slot: PolicySlot): NewPolicyVersion[] {
-		return this.versions.filter((version): boolean => version.organizationId === slot.organizationId && version.scope === slot.scope);
+		return this.versions.filter((version): boolean => version.tenantId === slot.tenantId && version.scope === slot.scope);
 	}
 }
 
@@ -498,18 +498,18 @@ export class InMemoryPolicySimulations implements PolicySimulationStore {
 export class FixedPrincipals implements PolicyPrincipalReader {
 	public constructor(private readonly principals: readonly SimulationPrincipal[] = []) {}
 
-	public countActive(organizationId: string | null): Promise<number> {
-		return Promise.resolve(this.of(organizationId).length);
+	public countActive(tenantId: string | null): Promise<number> {
+		return Promise.resolve(this.of(tenantId).length);
 	}
 
-	public listActive(organizationId: string | null, afterMembershipId: string | null, take: number): Promise<SimulationPrincipal[]> {
-		const all: SimulationPrincipal[] = this.of(organizationId);
+	public listActive(tenantId: string | null, afterMembershipId: string | null, take: number): Promise<SimulationPrincipal[]> {
+		const all: SimulationPrincipal[] = this.of(tenantId);
 		const start: number = afterMembershipId === null ? 0 : all.findIndex((principal): boolean => principal.id === afterMembershipId) + 1;
 		return Promise.resolve(all.slice(start, start + take));
 	}
 
-	private of(organizationId: string | null): SimulationPrincipal[] {
-		return this.principals.filter((principal): boolean => organizationId === null || principal.organizationId === organizationId);
+	private of(tenantId: string | null): SimulationPrincipal[] {
+		return this.principals.filter((principal): boolean => tenantId === null || principal.tenantId === tenantId);
 	}
 }
 
@@ -546,27 +546,27 @@ export class InMemorySupportGrants implements SupportAccessGrantRepository {
 	}
 }
 
-export class InMemoryOrganizations implements SupportAccessOrganizationReader, OrganizationAuditWriter {
-	public readonly organizations = new Set<string>();
+export class InMemoryTenants implements SupportAccessTenantReader, TenantAuditWriter {
+	public readonly tenants = new Set<string>();
 	public readonly owners = new Set<string>();
-	public readonly audits: OrganizationAuditRecord[] = [];
+	public readonly audits: TenantAuditRecord[] = [];
 
-	public addOrganization(organizationId: string, ownerUserIds: readonly string[] = []): void {
-		this.organizations.add(organizationId);
+	public addTenant(tenantId: string, ownerUserIds: readonly string[] = []): void {
+		this.tenants.add(tenantId);
 		for (const userId of ownerUserIds) {
-			this.owners.add(`${organizationId}:${userId}`);
+			this.owners.add(`${tenantId}:${userId}`);
 		}
 	}
 
-	public exists(organizationId: string): Promise<boolean> {
-		return Promise.resolve(this.organizations.has(organizationId));
+	public exists(tenantId: string): Promise<boolean> {
+		return Promise.resolve(this.tenants.has(tenantId));
 	}
 
-	public isActiveOwner(organizationId: string, userId: string): Promise<boolean> {
-		return Promise.resolve(this.owners.has(`${organizationId}:${userId}`));
+	public isActiveOwner(tenantId: string, userId: string): Promise<boolean> {
+		return Promise.resolve(this.owners.has(`${tenantId}:${userId}`));
 	}
 
-	public record(entry: OrganizationAuditRecord): Promise<void> {
+	public record(entry: TenantAuditRecord): Promise<void> {
 		this.audits.push(entry);
 		return Promise.resolve();
 	}
@@ -613,7 +613,7 @@ export class InMemoryAuthorizationStore {
 	public readonly policySimulations: InMemoryPolicySimulations;
 	public readonly policyAudit = new RecordingPolicyAudit();
 	public readonly supportGrants = new InMemorySupportGrants();
-	public readonly organizations = new InMemoryOrganizations();
+	public readonly tenants = new InMemoryTenants();
 	public readonly events = new TransactionalEventCollector();
 	public principals: PolicyPrincipalReader = new FixedPrincipals();
 	public readonly uow: InMemoryAuthorizationUnitOfWork;
@@ -640,8 +640,8 @@ export class InMemoryAuthorizationStore {
 			policyPrincipals: this.principals,
 			policyAudit: this.policyAudit,
 			supportGrants: this.supportGrants,
-			supportOrganizations: this.organizations,
-			organizationAudit: this.organizations,
+			supportTenants: this.tenants,
+			tenantAudit: this.tenants,
 			events: this.events,
 		};
 	}
@@ -660,7 +660,7 @@ export class InMemoryAuthorizationStore {
 			restorableArray(this.policyVersions.versions),
 			restorableArray(this.policySimulations.recorded),
 			restorableArray(this.policyAudit.records),
-			restorableArray(this.organizations.audits),
+			restorableArray(this.tenants.audits),
 		];
 		const pendingEvents: number = this.events.pendingCount();
 		return (): void => {
@@ -721,16 +721,16 @@ export function adminActor(userId: string, overrides: { readonly isSuperAdmin?: 
 		kind: "user",
 		userId,
 		sessionId: "session-1",
-		organizationId: null,
+		tenantId: null,
 		isSuperAdmin: overrides.isSuperAdmin ?? false,
-		accessScope: overrides.isSuperAdmin === true ? "superadmin" : "tenant",
+		accessScope: "tenant",
 		impersonatorUserId: overrides.impersonatorUserId ?? null,
 		request: REQUEST,
 	};
 }
 
 export function anonymousActor(): ActorContext {
-	return { kind: "anonymous", organizationId: null, request: REQUEST };
+	return { kind: "anonymous", tenantId: null, request: REQUEST };
 }
 
 /** The tenant's active Cedar policy version is fixed; evaluation is not part of these tests. */

@@ -2,7 +2,8 @@ import { NodeOperatorIdentityProvider } from "../../../../platform/infrastructur
 import { RequestContextService } from "../../../../platform/infrastructure/context/request-context";
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import { PrismaPermissionAuditWriter } from "../persistence/prisma-permission-audit.writer";
-import { REFERENCE_DATA_SYNC_OPERATION, ReferenceDataSyncService } from "./reference-data-sync.service";
+import { REFERENCE_DATA_SYNC_OPERATION } from "../../application/ports/authorization.tokens";
+import { ReferenceDataSyncService } from "./reference-data-sync.service";
 import { createReferenceDataSections } from "./reference-data.sections";
 import type { ReferenceDataTransactionRunner } from "./reference-data.types";
 

@@ -40,7 +40,7 @@ export class ValidateRedemptionCodesHandler implements ICommandHandler<ValidateR
 			}
 			const { claim } = resolved;
 			await scope.rewardAudit.append({
-				organizationId: point.organizationId,
+				tenantId: point.tenantId,
 				actorUserId: null,
 				action: "merchant.scan_qr",
 				metadata: { claimId: claim.claimId, terminalId: point.terminalId, apiKeyId: point.apiKeyId, locationId: point.locationId },

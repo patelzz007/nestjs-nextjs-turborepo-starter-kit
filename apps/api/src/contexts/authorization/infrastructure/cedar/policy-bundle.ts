@@ -3,20 +3,20 @@ import type { PolicyBundle } from "../../application/ports/policy-engine.port";
 
 export type { PolicyBundleSource };
 
-/** Version reported when no policy version is published for an organization. */
+/** Version reported when no policy version is published for a tenant. */
 export const NO_PUBLISHED_POLICY_VERSION = 1;
 
 /**
- * Whether a published version is part of an organization's runtime bundle:
- * the organization's own versions plus the platform guardrails. Platform-wide
+ * Whether a published version is part of a tenant's runtime bundle:
+ * the tenant's own versions plus the platform guardrails. Platform-wide
  * `PLATFORM` versions are NOT part of any bundle. The runtime's bundle query
  * (`CedarPolicyEvaluatorService`) and the simulation both apply this rule.
  */
-export function isVersionInOrganizationBundle(source: Pick<PolicyBundleSource, "organizationId" | "scope">, organizationId: string): boolean {
-	if (source.organizationId === organizationId) {
+export function isVersionInTenantBundle(source: Pick<PolicyBundleSource, "tenantId" | "scope">, tenantId: string): boolean {
+	if (source.tenantId === tenantId) {
 		return true;
 	}
-	return source.organizationId === null && source.scope === "PLATFORM_GUARDRAIL";
+	return source.tenantId === null && source.scope === "PLATFORM_GUARDRAIL";
 }
 
 /** The bundle the engine evaluates, from the versions that are in it. */

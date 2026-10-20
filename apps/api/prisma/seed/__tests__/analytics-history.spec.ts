@@ -37,7 +37,7 @@ describe("buildAnalyticsHistoryPlan", () => {
 			expect(claim.claimedAt).toBeGreaterThanOrEqual(window.startMs);
 			expect(claim.checkout.paidAt).toBeLessThanOrEqual(window.endMs);
 			expect(claim.checkout.paidAt).toBeLessThan(NOW);
-			expect(reward.organizationId).toBe(store.organizationId);
+			expect(reward.tenantId).toBe(store.tenantId);
 			expect(reward.locationIds === null || reward.locationIds.includes(store.locationId)).toBe(true);
 			expect(claim.checkout.billTotalMinor).toBeGreaterThanOrEqual(reward.minSpendMinor);
 		}

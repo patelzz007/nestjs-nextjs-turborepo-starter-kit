@@ -11,7 +11,7 @@ import type { UserAccount } from "../../../domain/aggregates/user-account.aggreg
 import { ImpersonationSessionInvalidError, RefreshTokenInvalidError, RefreshTokenRevokedError } from "../../../domain/errors/identity.errors";
 import type { IdentityScope } from "../../identity-scope";
 import type { IdentityTokensPort } from "../../ports/identity-tokens.port";
-import { IDENTITY_TOKENS, IDENTITY_UNIT_OF_WORK, PUBLIC_AUTH_FLOW_OPERATION } from "../../ports/identity.tokens";
+import { IDENTITY_TOKENS, IDENTITY_UNIT_OF_WORK, IMPERSONATION_STOP_OPERATION } from "../../ports/identity.tokens";
 import { auditOriginOf } from "../../services/audit-origin";
 import { accountViewOf, buildFlatUser } from "../../services/user-response.assembler";
 import { StopImpersonationCommand } from "./stop-impersonation.command";
@@ -42,7 +42,7 @@ export class StopImpersonationHandler implements ICommandHandler<StopImpersonati
 		if (refresh.sub !== input.impersonatorId) {
 			throw new RefreshTokenInvalidError("The refresh token does not belong to the impersonating administrator");
 		}
-		const impersonator: UserAccount = await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, actor, async (scope: IdentityScope): Promise<UserAccount> => {
+		const impersonator: UserAccount = await this.uow.runSystemOperation(IMPERSONATION_STOP_OPERATION, actor, async (scope: IdentityScope): Promise<UserAccount> => {
 			const account: UserAccount | null = await scope.accounts.findById(input.impersonatorId);
 			ImpersonationSession.assertImpersonatorRestorable(
 				account === null ? null : { userId: account.id, isSuperAdmin: account.isSuperAdmin, isActive: account.isActive, isDeleted: account.isDeleted },

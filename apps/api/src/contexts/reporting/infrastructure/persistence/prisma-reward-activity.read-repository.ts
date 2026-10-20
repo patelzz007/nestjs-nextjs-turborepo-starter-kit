@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { RewardClaimStatusSchema, type RewardClaimStatus } from "@workspace/shared";
 import { z } from "zod";
 
-import type { PrismaService } from "../../../../prisma/prisma.service";
+import type { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import type {
 	ActivityWeek,
 	ComparedPeriods,
@@ -40,7 +40,7 @@ function toActivityWeek(row: z.output<typeof ActivityWeekRowSchema>): ActivityWe
 	return { weekStartMs: Number(row.week_start_ms), claims: row.claims, redemptions: row.redemptions };
 }
 
-/** Rewards available at a store of `scope`: organization-wide rewards plus those limited to one of its stores. */
+/** Rewards available at a store of `scope`: tenant-wide rewards plus those limited to one of its stores. */
 function rewardAvailabilityWhere(scope: AnalyticsLocationScope): Prisma.RewardWhereInput {
 	if (scope.kind === "ALL_LOCATIONS") {
 		return {};
@@ -48,34 +48,40 @@ function rewardAvailabilityWhere(scope: AnalyticsLocationScope): Prisma.RewardWh
 	return { OR: [{ locationScopeType: "ALL_LOCATIONS" }, { locationScopes: { some: { locationId: { in: [...scope.locationIds] } } } }] };
 }
 
-/** The organization's live rewards offered at a store of `scope` (the relation filter of a claim / referral). */
-function organizationRewardWhere(organizationId: string, scope: AnalyticsLocationScope): Prisma.RewardWhereInput {
-	return { AND: [{ organizationId, isDeleted: false }, rewardAvailabilityWhere(scope)] };
+/** The tenant's live rewards offered at a store of `scope` (the relation filter of a claim / referral). */
+function tenantRewardWhere(tenantId: string, scope: AnalyticsLocationScope): Prisma.RewardWhereInput {
+	return { AND: [{ tenantId, isDeleted: false }, rewardAvailabilityWhere(scope)] };
 }
 
 /**
  * Reward, claim, redemption and referral facts for the weekly analytics. Reporting owns no model: these are
- * read-only fact reads (§6.2) under the caller's RLS session.
+ * read-only fact reads (§6.2) inside a transaction that keeps the caller's already-bound RLS session.
  */
 export class PrismaRewardActivityReadRepository implements RewardActivityReadPort {
-	public constructor(private readonly prisma: PrismaService) {}
+	public constructor(private readonly transactions: TenantTransactionService) {}
+
+	private run<TResult>(reason: string, work: (db: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> {
+		return this.transactions.withBoundSession(reason, work);
+	}
 
 	public async countRewards(filter: RewardCountFilter): Promise<number> {
 		const rewardWhere: Prisma.RewardWhereInput = {
-			AND: [{ organizationId: filter.organizationId, isDeleted: false, rewardKind: "CONSUMER" }, rewardAvailabilityWhere(filter.locationScope)],
+			AND: [{ tenantId: filter.tenantId, isDeleted: false, rewardKind: "CONSUMER" }, rewardAvailabilityWhere(filter.locationScope)],
 		};
-		return this.prisma.reward.count({
-			where: {
-				...rewardWhere,
-				...(filter.publishedOnly ? { status: "PUBLISHED" } : {}),
-				...(filter.createdIn !== undefined ? { createdAt: { gte: filter.createdIn.gte, lte: filter.createdIn.lte } } : {}),
-				...(filter.reviewedIn !== undefined ? { reviewedAt: { gte: filter.reviewedIn.gte, lte: filter.reviewedIn.lte } } : {}),
-			},
-		});
+		return this.run("Count a merchant's rewards", (db) =>
+			db.reward.count({
+				where: {
+					...rewardWhere,
+					...(filter.publishedOnly ? { status: "PUBLISHED" } : {}),
+					...(filter.createdIn !== undefined ? { createdAt: { gte: filter.createdIn.gte, lte: filter.createdIn.lte } } : {}),
+					...(filter.reviewedIn !== undefined ? { reviewedAt: { gte: filter.reviewedIn.gte, lte: filter.reviewedIn.lte } } : {}),
+				},
+			}),
+		);
 	}
 
-	public async merchantActivity(organizationId: string, periods: ComparedPeriods, locationScope: AnalyticsLocationScope, topRewards: number): Promise<MerchantActivity> {
-		const scope: AnalyticsScope = { kind: "organization", organizationId, locationScope };
+	public async merchantActivity(tenantId: string, periods: ComparedPeriods, locationScope: AnalyticsLocationScope, topRewards: number): Promise<MerchantActivity> {
+		const scope: AnalyticsScope = { kind: "tenant", tenantId, locationScope };
 		const both: InclusiveRange = { gte: periods.previous.gte, lte: periods.current.lte };
 		// One row per claim or redemption of both periods, with its reward; every count below groups it.
 		const activity = Prisma.sql`
@@ -87,27 +93,29 @@ export class PrismaRewardActivityReadRepository implements RewardActivityReadPor
 			  FROM "RewardRedemption" rd JOIN "RewardClaim" c ON c.id = rd."claimId"
 			 WHERE ${allOf([...redemptionConditions(scope), withinInclusive(Prisma.sql`rd."redeemedAt"`, both)])}`;
 		const current = withinInclusive(Prisma.sql`at`, periods.current);
-		const [totals, weeks, rewards] = await Promise.all([
-			this.prisma.$queryRaw`
+		const [totals, weeks, rewards] = await this.run("Merchant weekly reward activity", (db) =>
+			Promise.all([
+				db.$queryRaw`
 				SELECT COALESCE(SUM(claims) FILTER (WHERE ${current}), 0)::int AS claims_current,
 				       COALESCE(SUM(claims) FILTER (WHERE ${withinInclusive(Prisma.sql`at`, periods.previous)}), 0)::int AS claims_previous,
 				       COALESCE(SUM(redemptions) FILTER (WHERE ${current}), 0)::int AS redemptions_current,
 				       COALESCE(SUM(redemptions) FILTER (WHERE ${withinInclusive(Prisma.sql`at`, periods.previous)}), 0)::int AS redemptions_previous
 				  FROM (${activity}) activity`,
-			this.prisma.$queryRaw`
+				db.$queryRaw`
 				SELECT ${weekStartMsSql(Prisma.sql`at`, periods.timeZone)} AS week_start_ms, SUM(claims)::int AS claims, SUM(redemptions)::int AS redemptions
 				  FROM (${activity}) activity
 				 WHERE ${current}
 				 GROUP BY 1
 				 ORDER BY 1`,
-			this.prisma.$queryRaw`
+				db.$queryRaw`
 				SELECT "rewardId", SUM(claims)::int AS claims, SUM(redemptions)::int AS redemptions
 				  FROM (${activity}) activity
 				 WHERE ${current}
 				 GROUP BY "rewardId"
 				 ORDER BY SUM(claims) + SUM(redemptions) DESC, "rewardId"
 				 LIMIT ${topRewards}`,
-		]);
+			]),
+		);
 		const [counts] = z.tuple([MerchantTotalsRowSchema]).parse(totals);
 		return {
 			claims: { current: counts.claims_current, previous: counts.claims_previous },
@@ -119,14 +127,18 @@ export class PrismaRewardActivityReadRepository implements RewardActivityReadPor
 		};
 	}
 
-	public async countMerchantReferrals(organizationId: string, range: InclusiveRange, locationScope: AnalyticsLocationScope): Promise<number> {
-		return this.prisma.rewardReferral.count({
-			where: { isDeleted: false, createdAt: { gte: range.gte, lte: range.lte }, reward: organizationRewardWhere(organizationId, locationScope) },
-		});
+	public async countMerchantReferrals(tenantId: string, range: InclusiveRange, locationScope: AnalyticsLocationScope): Promise<number> {
+		return this.run("Count a merchant's referrals", (db) =>
+			db.rewardReferral.count({
+				where: { isDeleted: false, createdAt: { gte: range.gte, lte: range.lte }, reward: tenantRewardWhere(tenantId, locationScope) },
+			}),
+		);
 	}
 
-	public async listRewardTitles(organizationId: string, rewardIds: readonly string[]): Promise<RewardTitle[]> {
-		return this.prisma.reward.findMany({ where: { organizationId, id: { in: [...rewardIds] } }, select: { id: true, title: true } });
+	public async listRewardTitles(tenantId: string, rewardIds: readonly string[]): Promise<RewardTitle[]> {
+		return this.run("Reward titles for a merchant's weekly activity", (db) =>
+			db.reward.findMany({ where: { tenantId, id: { in: [...rewardIds] } }, select: { id: true, title: true } }),
+		);
 	}
 
 	public async customerActivity(userId: string, periods: ComparedPeriods): Promise<CustomerActivity> {
@@ -137,13 +149,14 @@ export class PrismaRewardActivityReadRepository implements RewardActivityReadPor
 		const claimedBefore = withinInclusive(Prisma.sql`c."claimedAt"`, periods.previous);
 		const sentNow = withinInclusive(Prisma.sql`rr."createdAt"`, periods.current);
 		const sentBefore = withinInclusive(Prisma.sql`rr."createdAt"`, periods.previous);
-		const [statuses, weeks, referrals] = await Promise.all([
-			this.prisma.$queryRaw`
+		const [statuses, weeks, referrals] = await this.run("Customer weekly reward activity", (db) =>
+			Promise.all([
+				db.$queryRaw`
 				SELECT c.status::text AS status, (COUNT(*) FILTER (WHERE ${claimedNow}))::int AS current, (COUNT(*) FILTER (WHERE ${claimedBefore}))::int AS previous
 				  FROM ${claimSource(scope)}
 				 WHERE ${ownClaims}
 				 GROUP BY c.status`,
-			this.prisma.$queryRaw`
+				db.$queryRaw`
 				SELECT ${weekStartMsSql(Prisma.sql`at`, periods.timeZone)} AS week_start_ms, SUM(claims)::int AS claims, SUM(redemptions)::int AS redemptions
 				  FROM (
 					SELECT c."claimedAt" AS at, 1 AS claims, 0 AS redemptions FROM ${claimSource(scope)} WHERE ${ownClaims} AND ${claimedNow}
@@ -154,14 +167,15 @@ export class PrismaRewardActivityReadRepository implements RewardActivityReadPor
 				  ) activity
 				 GROUP BY 1
 				 ORDER BY 1`,
-			this.prisma.$queryRaw`
+				db.$queryRaw`
 				SELECT (COUNT(*) FILTER (WHERE ${sentNow}))::int AS sent_current,
 				       (COUNT(*) FILTER (WHERE ${sentBefore}))::int AS sent_previous,
 				       (COUNT(*) FILTER (WHERE ${sentNow} AND rr.status = 'CREDITED'))::int AS credited_current,
 				       (COUNT(*) FILTER (WHERE ${sentBefore} AND rr.status = 'CREDITED'))::int AS credited_previous
 				  FROM "RewardReferral" rr
 				 WHERE rr."referrerUserId" = ${userId} AND rr."isDeleted" = false AND ${withinInclusive(Prisma.sql`rr."createdAt"`, both)}`,
-		]);
+			]),
+		);
 		const byStatus = new Map(
 			ClaimStatusRowSchema.array()
 				.parse(statuses)

@@ -1,22 +1,31 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 
 import { RequestContextService } from "../../../../platform/infrastructure/context/request-context";
-import { PrismaService } from "../../../../prisma/prisma.service";
+import type { SystemDatabaseContext } from "../../../../prisma/tenant-context";
+import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import type { SuperAdminBypassAuditPort } from "../../application/ports/authorization-kernel.port";
 import { PrismaPermissionAuditWriter } from "../persistence/prisma-permission-audit.writer";
 
+/** The bypass audit the guard writes before the handler's RLS scope exists. */
+interface BypassAuditTransactions {
+	withSystemOperation<TResult>(context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult>;
+}
+
 /**
- * The SuperAdmin platform bypass on a protected route, written to `PermissionAuditLog`. Guards run
- * inside the `request.pre_handler` bypass scope, so the pool connection may append to the bypass-only table.
+ * The SuperAdmin platform bypass on a protected route, written to `PermissionAuditLog`.
  */
 @Injectable()
 export class SuperAdminBypassAuditAdapter implements SuperAdminBypassAuditPort {
 	public constructor(
-		private readonly prisma: PrismaService,
+		@Inject(TenantTransactionService) private readonly transactions: BypassAuditTransactions,
 		private readonly requestContext: RequestContextService,
 	) {}
 
 	public async recordBypass(userId: string, detail: string): Promise<void> {
-		await new PrismaPermissionAuditWriter(this.prisma, this.requestContext).append({ action: "SUPER_ADMIN_BYPASS", actor: { kind: "USER", userId }, detail });
+		await this.transactions.withSystemOperation(
+			{ operation: "authorization.superadmin_bypass.audit", reason: "Record a superadmin authorization bypass", actorUserId: userId },
+			(tx) => new PrismaPermissionAuditWriter(tx, this.requestContext).append({ action: "SUPER_ADMIN_BYPASS", actor: { kind: "USER", userId }, detail }),
+		);
 	}
 }

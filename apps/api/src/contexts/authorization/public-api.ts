@@ -45,8 +45,8 @@ export { createAuthorizationTransactionalPorts, type AuthorizationTransactionalP
 /** For command-line composition roots that run without a Nest container (the tenant-key rewrap CLI). */
 export { createCedarPolicyEvaluator } from "./infrastructure/cedar/cedar-policy-evaluator.factory";
 
-// ── The default tenant Cedar policy, published when an organization is provisioned ──
-// Organizations calls it in its provisioning transaction; the seed and the policy specs use it too.
+// ── The default tenant Cedar policy, published when a tenant is provisioned ──
+// Tenants calls it in its provisioning transaction; the seed and the policy specs use it too.
 export {
 	DEFAULT_TENANT_POLICY_AUDIT_ACTION,
 	findActivePolicyVersionInTx,

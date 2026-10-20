@@ -31,7 +31,7 @@ describe("resolveUploadOwnerId", () => {
 		expect(resolveUploadOwnerId({ ...upload, category: "PRODUCT_IMAGE", productId: "product-1" })).toBe("product-1");
 		expect(resolveUploadOwnerId({ ...upload, category: "USER_AVATAR", userId: "user-1" })).toBe("user-1");
 		expect(resolveUploadOwnerId({ ...upload, category: "GITHUB_COMMENT_IMAGE", userId: "user-1" })).toBe("user-1");
-		expect(resolveUploadOwnerId({ ...upload, category: "REWARD_IMAGE", organizationId: "org-1" })).toBe("org-1");
+		expect(resolveUploadOwnerId({ ...upload, category: "REWARD_IMAGE", tenantId: "org-1" })).toBe("org-1");
 	});
 
 	it("refuses an upload whose owner is missing", () => {
@@ -40,14 +40,14 @@ describe("resolveUploadOwnerId", () => {
 });
 
 describe("resolveFileOwnerId (stored columns)", () => {
-	it("reads the uploader for personal files and the organization or product otherwise", () => {
-		expect(resolveFileOwnerId({ category: "GITHUB_COMMENT_IMAGE", productId: null, organizationId: null, userId: "user-7" })).toBe("user-7");
-		expect(resolveFileOwnerId({ category: "STORE_LOGO", productId: null, organizationId: "org-1", userId: "user-7" })).toBe("org-1");
-		expect(resolveFileOwnerId({ category: "PRODUCT_IMAGE", productId: "product-1", organizationId: null, userId: "user-7" })).toBe("product-1");
+	it("reads the uploader for personal files and the tenant or product otherwise", () => {
+		expect(resolveFileOwnerId({ category: "GITHUB_COMMENT_IMAGE", productId: null, tenantId: null, userId: "user-7" })).toBe("user-7");
+		expect(resolveFileOwnerId({ category: "STORE_LOGO", productId: null, tenantId: "org-1", userId: "user-7" })).toBe("org-1");
+		expect(resolveFileOwnerId({ category: "PRODUCT_IMAGE", productId: "product-1", tenantId: null, userId: "user-7" })).toBe("product-1");
 	});
 
-	it("refuses a stored organization file without its organization", () => {
-		expect(() => resolveFileOwnerId({ category: "REWARD_IMAGE", productId: null, organizationId: null, userId: "user-7" })).toThrow(FileOwnerUnresolvedError);
+	it("refuses a stored tenant file without its tenant", () => {
+		expect(() => resolveFileOwnerId({ category: "REWARD_IMAGE", productId: null, tenantId: null, userId: "user-7" })).toThrow(FileOwnerUnresolvedError);
 	});
 });
 

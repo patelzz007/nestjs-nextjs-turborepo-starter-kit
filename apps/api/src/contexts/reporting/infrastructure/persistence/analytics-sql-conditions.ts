@@ -11,7 +11,7 @@ function inLocations(column: Prisma.Sql, locationIds: readonly string[]): Prisma
 /**
  * Filters of `"RewardSale" s` for `scope`: live bills in the platform currency
  * (totals only add up within one currency). Bills without a store are
- * organization-wide: only an all-stores caller sees them.
+ * tenant-wide: only an all-stores caller sees them.
  */
 export function salesConditions(scope: AnalyticsScope): Prisma.Sql[] {
 	const base: Prisma.Sql[] = [Prisma.sql`s."isDeleted" = false`, Prisma.sql`s.currency = ${DEFAULT_SALE_CURRENCY}`];
@@ -20,10 +20,10 @@ export function salesConditions(scope: AnalyticsScope): Prisma.Sql[] {
 			return base;
 		case "customer":
 			return [...base, Prisma.sql`s."userId" = ${scope.userId}`];
-		case "organization":
+		case "tenant":
 			return [
 				...base,
-				Prisma.sql`s."organizationId" = ${scope.organizationId}`,
+				Prisma.sql`s."tenantId" = ${scope.tenantId}`,
 				...(scope.locationScope.kind === "ALL_LOCATIONS" ? [] : [inLocations(Prisma.sql`s."locationId"`, scope.locationScope.locationIds)]),
 			];
 	}
@@ -40,10 +40,10 @@ export function redemptionConditions(scope: AnalyticsScope): Prisma.Sql[] {
 			return base;
 		case "customer":
 			return [...base, Prisma.sql`rd."userId" = ${scope.userId}`];
-		case "organization":
+		case "tenant":
 			return [
 				...base,
-				Prisma.sql`rd."organizationId" = ${scope.organizationId}`,
+				Prisma.sql`rd."tenantId" = ${scope.tenantId}`,
 				...(scope.locationScope.kind === "ALL_LOCATIONS" ? [] : [inLocations(Prisma.sql`rd."locationId"`, scope.locationScope.locationIds)]),
 			];
 	}
@@ -52,7 +52,7 @@ export function redemptionConditions(scope: AnalyticsScope): Prisma.Sql[] {
 /**
  * Filters of `reward_claims c` (joined to its reward `r`) for `scope`. Live
  * claims of live rewards; a merchant counts the claims of its rewards that are
- * offered at one of the caller's stores (organization-wide rewards count for
+ * offered at one of the caller's stores (tenant-wide rewards count for
  * every store). A customer's own claims are counted without reading the
  * reward, so a reward the customer can no longer see still counts.
  */
@@ -63,11 +63,11 @@ export function claimConditions(scope: AnalyticsScope): Prisma.Sql[] {
 			return [...base, Prisma.sql`r."isDeleted" = false`];
 		case "customer":
 			return [...base, Prisma.sql`c."userId" = ${scope.userId}`];
-		case "organization":
+		case "tenant":
 			return [
 				...base,
 				Prisma.sql`r."isDeleted" = false`,
-				Prisma.sql`r."organizationId" = ${scope.organizationId}`,
+				Prisma.sql`r."tenantId" = ${scope.tenantId}`,
 				...(scope.locationScope.kind === "ALL_LOCATIONS"
 					? []
 					: [

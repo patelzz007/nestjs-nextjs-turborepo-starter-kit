@@ -170,7 +170,7 @@ export async function seedGeoDemo(superAdminId: string): Promise<GeoDemoSummary>
 			requestParams: toAuditPayload({ params: { id: String(regionId) }, query: {} }),
 			requestBody: null,
 			responseBody: toAuditPayload({ message: `Region #${String(regionId)} deleted` }),
-			systemOperations: ["platform.superadmin", "geo.reference_data.write"],
+			systemOperations: ["geo.reference_data.write"],
 		}),
 	];
 	if (cityId !== null) {
@@ -189,7 +189,7 @@ export async function seedGeoDemo(superAdminId: string): Promise<GeoDemoSummary>
 				requestParams: toAuditPayload({ params: { id: String(cityId) }, query: {} }),
 				requestBody: toAuditPayload({ native: ENRICHED_CITY_NATIVE, translations: ENRICHED_CITY_TRANSLATIONS, wikiDataId: ENRICHED_CITY_WIKIDATA_ID }),
 				responseBody: toAuditPayload({ success: true, data: { id: cityId, name: ENRICHED_CITY.name, wikiDataId: ENRICHED_CITY_WIKIDATA_ID } }),
-				systemOperations: ["platform.superadmin", "geo.reference_data.write"],
+				systemOperations: ["geo.reference_data.write"],
 			}),
 		);
 	}

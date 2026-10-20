@@ -6,7 +6,7 @@ import {
 	SupportAccessGrantNotFoundError,
 	SupportAccessGrantNotPendingError,
 	SupportAccessGrantNotRevocableError,
-	SupportAccessOrganizationNotFoundError,
+	SupportAccessTenantNotFoundError,
 } from "../../domain/errors/authorization.errors";
 import { ApproveSupportAccessCommand } from "../commands/approve-support-access/approve-support-access.command";
 import { ApproveSupportAccessHandler } from "../commands/approve-support-access/approve-support-access.handler";
@@ -28,13 +28,13 @@ const cedar = new FixedPolicyVersion(7);
 
 beforeEach(() => {
 	store = new InMemoryAuthorizationStore();
-	store.organizations.addOrganization(ORG, [OWNER]);
+	store.tenants.addTenant(ORG, [OWNER]);
 });
 
-async function request(organizationId: string = ORG): Promise<string> {
+async function request(tenantId: string = ORG): Promise<string> {
 	const grant = await new RequestSupportAccessHandler(store.uow, cedar, store.clock).execute(
 		new RequestSupportAccessCommand(adminActor(SUPPORT, { isSuperAdmin: true }), {
-			organizationId,
+			tenantId,
 			reason: "investigating ticket",
 			ticketRef: "SUP-1",
 			mode: "READ_ONLY",
@@ -61,29 +61,29 @@ describe("Support access", () => {
 		const grantId = await request();
 
 		expect(store.supportGrants.rows.get(grantId)).toMatchObject({ status: "PENDING_TENANT_APPROVAL", supportUserId: SUPPORT, expiresAt: NOW + 30 * MINUTE_MS });
-		expect(store.organizations.audits).toEqual([
+		expect(store.tenants.audits).toEqual([
 			expect.objectContaining({ action: SUPPORT_ACCESS_AUDIT_ACTIONS.requested, policyVersion: 7, resourceId: grantId, actorUserId: SUPPORT }),
 		]);
 	});
 
-	it("refuses a grant for an organization that does not exist, and an actor who is not signed in", async () => {
-		await expect(request("22222222-2222-4222-8222-222222222222")).rejects.toBeInstanceOf(SupportAccessOrganizationNotFoundError);
+	it("refuses a grant for a tenant that does not exist, and an actor who is not signed in", async () => {
+		await expect(request("22222222-2222-4222-8222-222222222222")).rejects.toBeInstanceOf(SupportAccessTenantNotFoundError);
 		await expect(
 			new RequestSupportAccessHandler(store.uow, cedar, store.clock).execute(
-				new RequestSupportAccessCommand(anonymousActor(), { organizationId: ORG, reason: "investigating ticket", mode: "READ_ONLY", durationMinutes: 30 }),
+				new RequestSupportAccessCommand(anonymousActor(), { tenantId: ORG, reason: "investigating ticket", mode: "READ_ONLY", durationMinutes: 30 }),
 			),
 		).rejects.toBeInstanceOf(AccessDeniedError);
 		expect(store.supportGrants.rows.size).toBe(0);
 	});
 
-	it("is approved once by an active owner of the organization, with an Allow audit row", async () => {
+	it("is approved once by an active owner of the tenant, with an Allow audit row", async () => {
 		const grantId = await request();
 
 		await expect(approve("stranger-1", grantId)).rejects.toBeInstanceOf(SupportAccessApproverNotOwnerError);
 		await approve(OWNER, grantId);
 
 		expect(store.supportGrants.rows.get(grantId)).toMatchObject({ status: "ACTIVE", tenantApprovedById: OWNER });
-		expect(store.organizations.audits.at(-1)).toMatchObject({ action: SUPPORT_ACCESS_AUDIT_ACTIONS.approved, decision: "Allow" });
+		expect(store.tenants.audits.at(-1)).toMatchObject({ action: SUPPORT_ACCESS_AUDIT_ACTIONS.approved, decision: "Allow" });
 		await expect(approve(OWNER, grantId)).rejects.toBeInstanceOf(SupportAccessGrantNotPendingError);
 	});
 
@@ -101,7 +101,7 @@ describe("Support access", () => {
 
 		expect(store.supportGrants.rows.get(grantId)).toMatchObject({ status: "REVOKED", revokedAt: NOW });
 		await expect(revoke(grantId)).rejects.toBeInstanceOf(SupportAccessGrantNotRevocableError);
-		expect(store.organizations.audits.map((audit) => audit.action)).toEqual([SUPPORT_ACCESS_AUDIT_ACTIONS.requested, SUPPORT_ACCESS_AUDIT_ACTIONS.revoked]);
+		expect(store.tenants.audits.map((audit) => audit.action)).toEqual([SUPPORT_ACCESS_AUDIT_ACTIONS.requested, SUPPORT_ACCESS_AUDIT_ACTIONS.revoked]);
 	});
 
 	it("answers not found for an unknown grant", async () => {

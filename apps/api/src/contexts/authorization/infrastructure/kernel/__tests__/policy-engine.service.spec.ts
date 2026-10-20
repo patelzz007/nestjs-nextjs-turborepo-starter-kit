@@ -3,6 +3,7 @@ import type { PolicyDefinition, Prisma } from "@prisma/client";
 import { LIST_SLOT_INDEX, PolicyConditionsSchema, type AuthorizationRequest, type PolicyOperator, type PolicyValue } from "@workspace/shared";
 
 import { PrismaService } from "../../../../../prisma/prisma.service";
+import type { SystemDatabaseContext } from "../../../../../prisma/tenant-context";
 import { applyPolicyOperator, matchesPolicyRule, PolicyEngineService } from "../policy-engine.service";
 import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
 import { LIVE_ROW_FIELDS } from "../../../../../platform/infrastructure/persistence/__tests__/base-row-fields";
@@ -17,6 +18,13 @@ vi.mock("../../../../../prisma/prisma.service", () => ({
 	},
 }));
 
+function engineLookup(): PolicyEngineService {
+	const prisma = new PrismaService(createTestTypedConfig());
+	return new PolicyEngineService({
+		withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
+	});
+}
+
 function policy(overrides: Partial<PolicyDefinition>): PolicyDefinition {
 	return {
 		...LIVE_ROW_FIELDS,
@@ -28,7 +36,7 @@ function policy(overrides: Partial<PolicyDefinition>): PolicyDefinition {
 		scope: "GLOBAL",
 		actions: ["UPDATE"],
 		resources: ["ORDER"],
-		organizationId: null,
+		tenantId: null,
 		locationId: null,
 		conditions: null,
 		isActive: true,
@@ -45,17 +53,17 @@ function policy(overrides: Partial<PolicyDefinition>): PolicyDefinition {
 
 function request(overrides: Partial<AuthorizationRequest> = {}): AuthorizationRequest {
 	return {
-		subject: { userId: "user-1", organizationId: "org-a" },
+		subject: { userId: "user-1", tenantId: "org-a" },
 		action: "UPDATE",
 		resource: "ORDER",
-		resourceAttributes: { status: "PENDING", total: 250, organizationId: "org-a", tags: ["vip", "rush"] },
+		resourceAttributes: { status: "PENDING", total: 250, tenantId: "org-a", tags: ["vip", "rush"] },
 		...overrides,
 	};
 }
 
 /** Stored `conditions` JSON, exactly as the `PolicyDefinition` row holds it. */
 const statusIsCompleted: Prisma.JsonObject = { condition: { field: "order.status", operator: "equals", value: "COMPLETED" } };
-const sameOrganization: Prisma.JsonObject = { condition: { field: "order.organizationId", operator: "equals", valueRef: "$user.organizationId" } };
+const sameTenant: Prisma.JsonObject = { condition: { field: "order.tenantId", operator: "equals", valueRef: "$user.tenantId" } };
 
 describe("PolicyEngineService", () => {
 	beforeEach(() => {
@@ -64,13 +72,13 @@ describe("PolicyEngineService", () => {
 
 	it("uses stored condition fixtures that are valid policy rules", () => {
 		expect(PolicyConditionsSchema.safeParse(statusIsCompleted).success).toBe(true);
-		expect(PolicyConditionsSchema.safeParse(sameOrganization).success).toBe(true);
+		expect(PolicyConditionsSchema.safeParse(sameTenant).success).toBe(true);
 	});
 
 	it("abstains when no policy targets the request", async () => {
 		mocks.policyFindMany.mockResolvedValue([]);
 
-		const result = await new PolicyEngineService(new PrismaService(createTestTypedConfig())).evaluate(request());
+		const result = await engineLookup().evaluate(request());
 
 		expect(result.decision).toBe("NOT_APPLICABLE");
 	});
@@ -78,7 +86,7 @@ describe("PolicyEngineService", () => {
 	it("abstains when only non-matching DENY policies exist (does not block everyone)", async () => {
 		mocks.policyFindMany.mockResolvedValue([policy({ effect: "DENY", conditions: statusIsCompleted })]);
 
-		const result = await new PolicyEngineService(new PrismaService(createTestTypedConfig())).evaluate(request());
+		const result = await engineLookup().evaluate(request());
 
 		expect(result.decision).toBe("NOT_APPLICABLE");
 	});
@@ -86,23 +94,23 @@ describe("PolicyEngineService", () => {
 	it("denies when a DENY policy matches", async () => {
 		mocks.policyFindMany.mockResolvedValue([policy({ effect: "DENY", conditions: statusIsCompleted })]);
 
-		const result = await new PolicyEngineService(new PrismaService(createTestTypedConfig())).evaluate(request({ resourceAttributes: { status: "COMPLETED" } }));
+		const result = await engineLookup().evaluate(request({ resourceAttributes: { status: "COMPLETED" } }));
 
 		expect(result.decision).toBe("DENY");
 		expect(result.evaluation.at(-1)?.details).toEqual({ policyId: "policy-1" });
 	});
 
 	it("requires at least one conditional ALLOW policy to match", async () => {
-		mocks.policyFindMany.mockResolvedValue([policy({ conditions: sameOrganization })]);
-		const engine = new PolicyEngineService(new PrismaService(createTestTypedConfig()));
+		mocks.policyFindMany.mockResolvedValue([policy({ conditions: sameTenant })]);
+		const engine = engineLookup();
 
 		expect((await engine.evaluate(request())).decision).toBe("ALLOW");
-		expect((await engine.evaluate(request({ resourceAttributes: { organizationId: "org-b" } }))).decision).toBe("DENY");
+		expect((await engine.evaluate(request({ resourceAttributes: { tenantId: "org-b" } }))).decision).toBe("DENY");
 	});
 
 	it("fails closed on malformed stored conditions", async () => {
 		const legacyShape = { all: [{ operator: "gte", path: "context.hour", value: 9 }] };
-		const engine = new PolicyEngineService(new PrismaService(createTestTypedConfig()));
+		const engine = engineLookup();
 
 		mocks.policyFindMany.mockResolvedValue([policy({ effect: "DENY", conditions: legacyShape })]);
 		expect((await engine.evaluate(request())).decision).toBe("DENY");
@@ -114,25 +122,23 @@ describe("PolicyEngineService", () => {
 	it("reports unconditional DENY policies for list filters", async () => {
 		mocks.policyFindMany.mockResolvedValue([policy({ effect: "DENY", conditions: null })]);
 
-		expect(await new PolicyEngineService(new PrismaService(createTestTypedConfig())).hasUnconditionalDeny(request())).toBe(true);
+		expect(await engineLookup().hasUnconditionalDeny(request())).toBe(true);
 	});
 
 	it("scopes the policy query to the verified tenant", async () => {
 		mocks.policyFindMany.mockResolvedValue([]);
 
-		await new PolicyEngineService(new PrismaService(createTestTypedConfig())).evaluate(
-			request({ subject: { userId: "user-1", organizationId: "org-a", locationId: "loc-1" } }),
-		);
+		await engineLookup().evaluate(request({ subject: { userId: "user-1", tenantId: "org-a", locationId: "loc-1" } }));
 
 		expect(mocks.policyFindMany).toHaveBeenCalledTimes(1);
 		expect(mocks.policyFindMany.mock.lastCall?.[LIST_SLOT_INDEX.first].where?.AND).toEqual([
-			{ OR: [{ organizationId: null }, { organizationId: "org-a" }] },
+			{ OR: [{ tenantId: null }, { tenantId: "org-a" }] },
 			{ OR: [{ locationId: null }, { locationId: "loc-1" }] },
 		]);
 	});
 
 	it("treats null stored conditions as unconditional", () => {
-		const engine = new PolicyEngineService(new PrismaService(createTestTypedConfig()));
+		const engine = engineLookup();
 
 		expect(engine.matchesStoredConditions(null, request(), false)).toBe(true);
 	});
@@ -165,7 +171,7 @@ describe("policy DSL evaluation", () => {
 	it("evaluates nested all/any rules against resource and subject attributes", () => {
 		const rule = PolicyConditionsSchema.parse({
 			all: [
-				{ condition: { field: "order.organizationId", operator: "equals", valueRef: "$user.organizationId" } },
+				{ condition: { field: "order.tenantId", operator: "equals", valueRef: "$user.tenantId" } },
 				{
 					any: [
 						{ condition: { field: "$resource.total", operator: "less_than_or_equals", value: 500 } },
@@ -176,7 +182,7 @@ describe("policy DSL evaluation", () => {
 		});
 
 		expect(matchesPolicyRule(rule, request())).toBe(true);
-		expect(matchesPolicyRule(rule, request({ resourceAttributes: { organizationId: "org-a", total: 900, status: "PENDING" } }))).toBe(false);
+		expect(matchesPolicyRule(rule, request({ resourceAttributes: { tenantId: "org-a", total: 900, status: "PENDING" } }))).toBe(false);
 	});
 
 	it("rejects rules that are empty, mix branches, or use unknown keys", () => {

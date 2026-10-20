@@ -9,7 +9,7 @@ import { SystemCommandModule } from "../../platform/infrastructure/system-comman
 import type { AfterCommitPublisher } from "../../platform/infrastructure/unit-of-work/after-commit-publisher";
 import { PrismaReadExecutor } from "../../platform/infrastructure/unit-of-work/prisma-read-executor";
 import { PrismaUnitOfWork } from "../../platform/infrastructure/unit-of-work/prisma-unit-of-work";
-// Claims are a customer's own rows (`reward_user` RLS): no organization is needed; merchants' requests carry theirs.
+// Claims are a customer's own rows (`reward_user` RLS): no tenant is needed; merchants' requests carry theirs.
 import { USER_OWNED_DATA_SCOPE } from "../../platform/infrastructure/unit-of-work/actor-to-rls-context";
 import { TransactionalEventDispatcher } from "../../platform/infrastructure/unit-of-work/transactional-event-dispatcher";
 import { AFTER_COMMIT_PUBLISHER, UnitOfWorkModule } from "../../platform/infrastructure/unit-of-work/unit-of-work.module";
@@ -17,7 +17,7 @@ import { getApiConfig } from "../../config/api-config";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { TenantTransactionService } from "../../prisma/tenant-transaction.service";
 import { NotificationsModule, NotificationsTransactionalPortsFactory } from "../notifications/public-api";
-import { OrganizationAccessModule } from "../organizations/public-api";
+import { TenantAccessModule } from "../tenancy/public-api";
 import type { ClaimsScope } from "./application/claims-scope";
 import { ClaimRewardHandler } from "./application/commands/claim-reward/claim-reward.handler";
 import { ExpireOverdueClaimsHandler } from "./application/commands/expire-overdue-claims/expire-overdue-claims.handler";
@@ -56,7 +56,7 @@ const claimsQueueImports = getApiConfig().messaging.redisUrl !== undefined ? [Cl
  * transaction), mounted by `app.module.ts` only.
  */
 @Module({
-	imports: [PrismaModule, OutboxModule, UnitOfWorkModule, SystemCommandModule, NotificationsModule, OrganizationAccessModule, ...claimsQueueImports],
+	imports: [PrismaModule, OutboxModule, UnitOfWorkModule, SystemCommandModule, NotificationsModule, TenantAccessModule, ...claimsQueueImports],
 	controllers: [ConsumerClaimsController, RewardNotificationsController],
 	providers: [
 		{

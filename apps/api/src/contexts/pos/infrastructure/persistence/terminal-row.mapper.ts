@@ -7,9 +7,9 @@ import { terminalStatus } from "../../domain/policies/terminal-status.policy";
 export const TERMINAL_SUMMARY_INCLUDE = {
 	location: { select: { name: true } },
 	apiKey: { select: { revokedAt: true } },
-} satisfies Prisma.OrganizationTerminalInclude;
+} satisfies Prisma.TenantTerminalInclude;
 
-export type TerminalSummaryRow = Prisma.OrganizationTerminalGetPayload<{ include: typeof TERMINAL_SUMMARY_INCLUDE }>;
+export type TerminalSummaryRow = Prisma.TenantTerminalGetPayload<{ include: typeof TERMINAL_SUMMARY_INCLUDE }>;
 
 function epochOrNull(value: bigint | null): EpochMs | null {
 	return value === null ? null : epochMs(Number(value));
@@ -43,8 +43,8 @@ export function toTerminalSummary(row: TerminalSummaryRow, now: EpochMs): Mercha
  * The same status derivation as Prisma filters, so counts per status are computed by the database
  * instead of loading every terminal. `UNPAIRED` is the remainder (statuses partition the rows).
  */
-export function terminalStatusWhere(status: "AWAITING_PAIRING" | "ACTIVE", now: EpochMs): Prisma.OrganizationTerminalWhereInput {
-	const awaiting: Prisma.OrganizationTerminalWhereInput = { pairingCodeHash: { not: null }, pairingCodeExpiresAt: { gte: now } };
+export function terminalStatusWhere(status: "AWAITING_PAIRING" | "ACTIVE", now: EpochMs): Prisma.TenantTerminalWhereInput {
+	const awaiting: Prisma.TenantTerminalWhereInput = { pairingCodeHash: { not: null }, pairingCodeExpiresAt: { gte: now } };
 	if (status === "AWAITING_PAIRING") {
 		return awaiting;
 	}

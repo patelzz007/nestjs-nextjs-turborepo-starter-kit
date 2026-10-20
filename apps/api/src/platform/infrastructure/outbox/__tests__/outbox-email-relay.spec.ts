@@ -54,10 +54,12 @@ class InMemoryEmailRows implements OutboxEmailRelayStore {
 		return Promise.resolve(this.claimed(row));
 	}
 
-	public markPublished(id: string): Promise<void> {
-		this.update(id, (row) => {
-			row.status = "PUBLISHED";
-		});
+	public markPublished(ids: readonly string[]): Promise<void> {
+		for (const id of ids) {
+			this.update(id, (row) => {
+				row.status = "PUBLISHED";
+			});
+		}
 		return Promise.resolve();
 	}
 

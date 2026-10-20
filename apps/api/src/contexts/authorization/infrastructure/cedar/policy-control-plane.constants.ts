@@ -1,4 +1,4 @@
-import { MERCHANT_CAPABILITY, OrganizationMembershipRoleSchema, type MerchantCapability, type OrganizationMembershipRole } from "@workspace/shared";
+import { MERCHANT_CAPABILITY, MembershipRoleSchema, type MerchantCapability, type MembershipRole } from "@workspace/shared";
 
 import { MERCHANT_CAPABILITY_CEDAR_ACTIONS } from "@workspace/shared";
 import { CEDAR_CAPABILITY_ACTIONS } from "./cedar-model";
@@ -23,8 +23,8 @@ export const MAX_SIMULATED_PRINCIPALS = 10_000;
 /** At most this many individual decision changes are returned / stored per simulation. */
 export const MAX_REPORTED_DECISION_CHANGES = 100;
 
-/** At most this many locked-out organizations are named in the simulation errors. */
-export const MAX_REPORTED_LOCKOUT_ORGANIZATIONS = 20;
+/** At most this many locked-out tenants are named in the simulation errors. */
+export const MAX_REPORTED_LOCKOUT_TENANTS = 20;
 
 /**
  * Backstop lifetime of a compiled policy bundle in the per-process cache.
@@ -46,10 +46,10 @@ function cedarActionOf(capability: MerchantCapability): string {
 export const SIMULATED_CEDAR_ACTIONS: readonly string[] = CEDAR_CAPABILITY_ACTIONS;
 
 /**
- * The action whose loss locks owners out of their organization: without it no
+ * The action whose loss locks owners out of their tenant: without it no
  * owner can manage the team (and so cannot restore anyone's access).
  */
 export const OWNER_CRITICAL_CEDAR_ACTION: string = cedarActionOf(MERCHANT_CAPABILITY.manageTeam);
 
 /** Membership role whose lockout fails a simulation. */
-export const OWNER_MEMBERSHIP_ROLE: OrganizationMembershipRole = OrganizationMembershipRoleSchema.enum.OWNER;
+export const OWNER_MEMBERSHIP_ROLE: MembershipRole = MembershipRoleSchema.enum.OWNER;

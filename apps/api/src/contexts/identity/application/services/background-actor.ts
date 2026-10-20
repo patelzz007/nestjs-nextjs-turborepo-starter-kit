@@ -10,7 +10,7 @@ import { ActorContextSchema, type ActorContext } from "../../../../platform/appl
 export function backgroundActorOf(): ActorContext {
 	return ActorContextSchema.parse({
 		kind: "anonymous",
-		organizationId: null,
+		tenantId: null,
 		request: { requestId: randomUUID(), ip: null, userAgent: null, deviceLabel: null, endpoint: null },
 	});
 }

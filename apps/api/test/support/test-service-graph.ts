@@ -9,6 +9,8 @@
 // simply ignored; when it is not, the real (connection-less) instance is used.
 // Nothing here opens a network or database connection — pg pools connect lazily.
 
+import type { Prisma } from "@prisma/client";
+
 import type { TypedConfigService } from "../../src/config/typed-config.service";
 import { AuthorizationAuditKernelService } from "../../src/contexts/authorization/infrastructure/kernel/authorization-audit-kernel.service";
 import { AclService } from "../../src/contexts/authorization/infrastructure/kernel/acl.service";
@@ -19,7 +21,17 @@ import { SubjectGrantsLoader } from "../../src/contexts/authorization/infrastruc
 import { TenantMembershipService } from "../../src/contexts/authorization/infrastructure/kernel/tenant-membership.service";
 import { PrismaService } from "../../src/prisma/prisma.service";
 import { SystemPrismaService } from "../../src/prisma/system-prisma.service";
+import type { SystemDatabaseContext } from "../../src/prisma/tenant-context";
 import { createTestTypedConfig } from "./test-api-env";
+
+/** Runs a system operation on the test client, which never opens a connection. */
+function lookupOn(prisma: PrismaService): {
+	withSystemOperation<TResult>(context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult>;
+} {
+	return {
+		withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
+	};
+}
 
 /** A tenant-scoped Prisma client over the TEST-ONLY config (no connection is opened). */
 export function createTestPrisma(config: TypedConfigService = createTestTypedConfig()): PrismaService {
@@ -43,12 +55,13 @@ export interface TestAuthorizationKernelCollaborators {
 
 /** Builds the kernel's collaborators with their real constructor arguments. */
 export function createTestAuthorizationKernelCollaborators(prisma: PrismaService = createTestPrisma()): TestAuthorizationKernelCollaborators {
-	const policyEngine = new PolicyEngineService(prisma);
+	const lookup = lookupOn(prisma);
+	const policyEngine = new PolicyEngineService(lookup);
 	return {
-		grantsLoader: new SubjectGrantsLoader(prisma),
-		tenantMembership: new TenantMembershipService(prisma),
-		ownership: new ResourceOwnershipResolver(prisma),
-		aclService: new AclService(prisma, policyEngine),
+		grantsLoader: new SubjectGrantsLoader(lookup),
+		tenantMembership: new TenantMembershipService(lookup),
+		ownership: new ResourceOwnershipResolver(lookup),
+		aclService: new AclService(policyEngine, lookup),
 		policyEngine,
 		audit: new AuthorizationAuditKernelService(createTestSystemPrisma()),
 	};

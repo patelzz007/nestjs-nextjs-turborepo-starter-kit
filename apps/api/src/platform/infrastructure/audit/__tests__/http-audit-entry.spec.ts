@@ -18,9 +18,10 @@ function context(overrides: Partial<RequestContext> = {}): RequestContext {
 		edgeLocation: undefined,
 		principal: { userId: "user-1", impersonatorId: "admin-9", impersonationSessionId: "imp-session-3", authMethod: "SESSION_COOKIE" },
 		apiKey: undefined,
-		tenant: { organizationId: "org-1", storeId: "store-1", locationId: undefined },
-		systemOperations: ["platform.superadmin", "geo.reference_data.write"],
+		tenant: { tenantId: "org-1", storeId: "store-1", locationId: undefined },
+		systemOperations: ["geo.reference_data.write"],
 		receivedAtEpochMs: RECEIVED_AT,
+		supportAccessGrantId: undefined,
 		isAuditRecorded: false,
 		actor: undefined,
 		...overrides,
@@ -104,7 +105,7 @@ describe("buildHttpAuditEntry", () => {
 		const request = await captureFastifyRequest({
 			headers: {
 				"content-type": "application/json",
-				"x-organization-id": "org-forged",
+				"x-tenant-id": "org-forged",
 				"x-client-type": "admin",
 				origin: "https://admin.example.com",
 				referer: "https://admin.example.com/catalog/products/new",
@@ -130,10 +131,11 @@ describe("buildHttpAuditEntry", () => {
 			actorUserId: "user-1",
 			impersonatorUserId: "admin-9",
 			impersonationSessionId: "imp-session-3",
+			supportAccessGrantId: null,
 			authMethod: "SESSION_COOKIE",
 			apiKeyId: null,
 			terminalId: null,
-			organizationId: "org-1",
+			tenantId: "org-1",
 			storeId: "store-1",
 			locationId: null,
 			ipAddress: "203.0.113.9",
@@ -162,19 +164,19 @@ describe("buildHttpAuditEntry", () => {
 			requestParams: { params: {}, query: {} },
 			requestBody: { name: "Mug", password: REDACTED },
 			responseBody: { id: "p-1", token: REDACTED },
-			systemOperations: ["platform.superadmin", "geo.reference_data.write"],
+			systemOperations: ["geo.reference_data.write"],
 		});
 	});
 
-	it("records an API-key caller and its organization when no user principal exists", async () => {
+	it("records an API-key caller and its tenant when no user principal exists", async () => {
 		const request = await captureFastifyRequest({ headers: {} });
 
 		const entry = buildHttpAuditEntry(
 			request,
 			context({
 				principal: undefined,
-				tenant: { organizationId: undefined, storeId: undefined, locationId: undefined },
-				apiKey: { apiKeyId: "key-1", organizationId: "org-pos", terminalId: "T-1", locationId: null },
+				tenant: { tenantId: undefined, storeId: undefined, locationId: undefined },
+				apiKey: { apiKeyId: "key-1", tenantId: "org-pos", terminalId: "T-1", locationId: null },
 			}),
 			{ outcome: "FAILED", status: 409, errorCode: "CONFLICT", responseBody: { success: false } },
 			COMPLETED_AT,
@@ -184,9 +186,10 @@ describe("buildHttpAuditEntry", () => {
 			actorUserId: null,
 			authMethod: "API_KEY",
 			impersonationSessionId: null,
+			supportAccessGrantId: null,
 			apiKeyId: "key-1",
 			terminalId: "T-1",
-			organizationId: "org-pos",
+			tenantId: "org-pos",
 			outcome: "FAILED",
 			errorCode: "CONFLICT",
 			requestBody: {},
@@ -216,6 +219,7 @@ describe("buildHttpAuditEntry", () => {
 			actorUserId: null,
 			authMethod: null,
 			impersonationSessionId: null,
+			supportAccessGrantId: null,
 			clientType: null,
 			origin: null,
 			referer: null,

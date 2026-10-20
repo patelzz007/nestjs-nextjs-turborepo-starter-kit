@@ -30,15 +30,15 @@ import type { ApiEnv } from "./api-env.input";
 
 // ── Grouping ───────────────────────────────────────────────────────────────
 
-/** Single-tenant mode with its organization id (guaranteed by `checkApiEnvRules`, ./api-env.rules.ts), or multi-tenant mode. */
+/** Single mode with its tenant id (guaranteed by `checkApiEnvRules`), or multi mode with no fallback id. */
 export function resolveTenancy(env: ApiEnv): TenancyConfig {
 	if (env.TENANCY_ENABLED) {
-		return { enabled: true };
+		return { mode: "multi" };
 	}
-	if (env.DEFAULT_ORGANIZATION_ID === undefined) {
-		throw new Error("DEFAULT_ORGANIZATION_ID is required in single-tenant mode (checkApiEnvRules enforces this)");
+	if (env.DEFAULT_TENANT_ID === undefined) {
+		throw new Error("DEFAULT_TENANT_ID is required in single-tenant mode (checkApiEnvRules enforces this)");
 	}
-	return { enabled: false, singleTenantOrganizationId: env.DEFAULT_ORGANIZATION_ID };
+	return { mode: "single", defaultTenantId: env.DEFAULT_TENANT_ID };
 }
 
 /** Groups the validated flat environment into the typed `ApiConfig`. */

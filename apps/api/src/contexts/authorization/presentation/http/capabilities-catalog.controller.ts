@@ -5,14 +5,15 @@ import { CapabilityCatalogQuerySchema, CapabilityCatalogResponseSchema, apiPath,
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
-import { RlsBypass } from "../../../../platform/presentation/http/security/decorators/rls-bypass.decorator";
+import { PublicOperation } from "../../../../platform/presentation/http/security/decorators/public-operation.decorator";
 import { ZodQuery } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
+import { CAPABILITY_CATALOG_READ_OPERATION } from "../../application/ports/authorization.tokens";
 import { GetCapabilityCatalogQuery } from "../../application/queries/get-capability-catalog/get-capability-catalog.query";
 
 @ApiTags("Capabilities")
 @ApiBearerAuth()
-@RlsBypass()
+@PublicOperation(CAPABILITY_CATALOG_READ_OPERATION)
 @Controller(apiPath("/capabilities/catalog"))
 export class CapabilitiesCatalogController {
 	public constructor(private readonly queryBus: QueryBus) {}

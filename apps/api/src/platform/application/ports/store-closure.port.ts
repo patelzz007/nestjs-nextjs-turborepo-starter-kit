@@ -2,11 +2,11 @@ import type { EpochMs } from "@workspace/shared";
 
 /**
  * Closing a store takes its tills and credentials with it (migration plan §6.3, D27). Implemented by
- * pos (it owns `OrganizationTerminal` and `OrganizationApiKey`) and consumed by organizations through
- * its `STORE_CLOSURE_FACTORY` token, so organizations never imports pos (pos depends on organizations).
+ * pos (it owns `TenantTerminal` and `TenantApiKey`) and consumed by tenants through
+ * its `STORE_CLOSURE_FACTORY` token, so tenants never imports pos (pos depends on tenants).
  */
 export interface StoreClosureRequest {
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly locationId: string;
 	readonly closedByUserId: string;
 	readonly closedAt: EpochMs;

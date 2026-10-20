@@ -51,27 +51,27 @@ describe("FakeAuthorizationPort", () => {
 });
 
 describe("FakeMerchantAccessPort", () => {
-	it("grants the whole organization by default and records the request", async () => {
+	it("grants the whole tenant by default and records the request", async () => {
 		const port = new FakeMerchantAccessPort();
 
-		const grant = await port.assertCapability(ACTOR, { organizationId: "org-1", capability: "rewards:manage" });
+		const grant = await port.assertCapability(ACTOR, { tenantId: "org-1", capability: "rewards:manage" });
 
-		expect(grant).toEqual({ organizationId: "org-1", locationScope: "ALL_LOCATIONS", locationIds: [] });
+		expect(grant).toEqual({ tenantId: "org-1", locationScope: "ALL_LOCATIONS", locationIds: [] });
 		expect(port.requests).toHaveLength(1);
 	});
 
 	it("narrows the grant to the configured locations", async () => {
 		const port = new FakeMerchantAccessPort().grantLocations(["loc-1"]);
 
-		const grant = await port.assertCapability(ACTOR, { organizationId: "org-1", capability: "rewards:manage", locationId: "loc-1" });
+		const grant = await port.assertCapability(ACTOR, { tenantId: "org-1", capability: "rewards:manage", locationId: "loc-1" });
 
-		expect(grant).toEqual({ organizationId: "org-1", locationScope: "SELECTED", locationIds: ["loc-1"] });
+		expect(grant).toEqual({ tenantId: "org-1", locationScope: "SELECTED", locationIds: ["loc-1"] });
 	});
 
 	it("denies a capability it was told to deny", async () => {
 		const port = new FakeMerchantAccessPort().deny("rewards:manage");
 
-		await expect(port.assertCapability(ACTOR, { organizationId: "org-1", capability: "rewards:manage" })).rejects.toBeInstanceOf(AuthorizationDeniedError);
+		await expect(port.assertCapability(ACTOR, { tenantId: "org-1", capability: "rewards:manage" })).rejects.toBeInstanceOf(AuthorizationDeniedError);
 	});
 });
 

@@ -29,10 +29,10 @@ export interface RewardClaimRepository {
 	saveIfUnchanged(claim: RewardClaim): Promise<boolean>;
 }
 
-/** An overdue claim the expiry job will expire, with its reward's organization. */
+/** An overdue claim the expiry job will expire, with its reward's tenant. */
 export interface OverdueClaim {
 	readonly claimId: string;
-	readonly organizationId: string;
+	readonly tenantId: string;
 }
 
 /** Persistence port of {@link OtpChallenge}. */

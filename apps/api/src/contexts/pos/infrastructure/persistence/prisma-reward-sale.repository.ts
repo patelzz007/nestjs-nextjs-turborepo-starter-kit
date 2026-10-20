@@ -7,8 +7,8 @@ import { SaleIdempotencyKeyTakenError } from "../../domain/errors/pos.errors";
 import type { RewardSaleRepository, StoredSale, StoredSaleLine } from "../../domain/repositories/pos.repositories";
 import { minorUnitsToNumber } from "../../../../platform/infrastructure/persistence/minor-units";
 
-/** The `("organizationId", "idempotencyKey")` unique index of `RewardSale`: a concurrent request with the same key inserted first. */
-export const SALE_IDEMPOTENCY_KEY_INDEX = "RewardSale_organizationId_idempotencyKey_key";
+/** The `("tenantId", "idempotencyKey")` unique index of `RewardSale`: a concurrent request with the same key inserted first. */
+export const SALE_IDEMPOTENCY_KEY_INDEX = "RewardSale_tenantId_idempotencyKey_key";
 
 const STORED_SALE_SELECT = {
 	id: true,
@@ -38,8 +38,8 @@ function toStoredSale(row: StoredSaleRow): StoredSale {
 export class PrismaRewardSaleRepository implements RewardSaleRepository {
 	public constructor(private readonly db: Prisma.TransactionClient) {}
 
-	public async findByIdempotencyKey(organizationId: string, idempotencyKey: string): Promise<StoredSale | null> {
-		const row = await this.db.rewardSale.findUnique({ where: { organizationId_idempotencyKey: { organizationId, idempotencyKey } }, select: STORED_SALE_SELECT });
+	public async findByIdempotencyKey(tenantId: string, idempotencyKey: string): Promise<StoredSale | null> {
+		const row = await this.db.rewardSale.findUnique({ where: { tenantId_idempotencyKey: { tenantId, idempotencyKey } }, select: STORED_SALE_SELECT });
 		return row === null ? null : toStoredSale(row);
 	}
 
@@ -49,7 +49,7 @@ export class PrismaRewardSaleRepository implements RewardSaleRepository {
 			await this.db.rewardSale.create({
 				data: {
 					id: state.id,
-					organizationId: state.point.organizationId,
+					tenantId: state.point.tenantId,
 					locationId: state.point.locationId,
 					userId: state.customerUserId,
 					terminalId: state.point.terminalId,
@@ -71,7 +71,7 @@ export class PrismaRewardSaleRepository implements RewardSaleRepository {
 		await this.db.rewardRedemption.createMany({
 			data: state.lines.map((line: SaleLine) => ({
 				claimId: line.claimId,
-				organizationId: state.point.organizationId,
+				tenantId: state.point.tenantId,
 				locationId: state.point.locationId,
 				userId: state.customerUserId,
 				terminalId: state.point.terminalId,

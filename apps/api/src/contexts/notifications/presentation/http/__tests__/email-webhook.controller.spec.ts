@@ -29,7 +29,7 @@ const CONFIGURED: TestEnv = { RESEND_API_KEY: "re_test_only", RESEND_WEBHOOK_SEC
 const EXPIRED_SIGNATURE_AGE_MS = 10 * 60 * 1000;
 const ACTOR: ActorContext = ActorContextSchema.parse({
 	kind: "anonymous",
-	organizationId: null,
+	tenantId: null,
 	request: { requestId: "request-1", ip: null, userAgent: null, deviceLabel: null, endpoint: null },
 });
 

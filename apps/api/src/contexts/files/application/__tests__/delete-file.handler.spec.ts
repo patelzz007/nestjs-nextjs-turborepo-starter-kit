@@ -104,7 +104,7 @@ describe("DeleteFileHandler", () => {
 				{ create: (): object => ({}) },
 			),
 		);
-		const fixture = setup(storedFileState({ status: "READY", category: "PRODUCT_IMAGE", organizationId: null, productId: "p-1" }), new Map(), guards);
+		const fixture = setup(storedFileState({ status: "READY", category: "PRODUCT_IMAGE", tenantId: null, productId: "p-1" }), new Map(), guards);
 
 		await fixture.handler.execute(new DeleteFileCommand(userActor(), FILE_ID));
 

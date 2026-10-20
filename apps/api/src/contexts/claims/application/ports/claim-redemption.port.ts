@@ -21,10 +21,10 @@ export interface ClaimRedemptionLookup {
  */
 export interface ClaimRedemptionPort {
 	/**
-	 * The claim behind one code, if it is a claim on one of `organizationId`'s rewards. `null` for an
+	 * The claim behind one code, if it is a claim on one of `tenantId`'s rewards. `null` for an
 	 * unknown code AND for another merchant's code — answered alike (no cross-merchant oracle).
 	 */
-	findMerchantClaim(code: RedemptionCode, organizationId: string): Promise<ClaimRedemptionLookup | null>;
+	findMerchantClaim(code: RedemptionCode, tenantId: string): Promise<ClaimRedemptionLookup | null>;
 
 	/**
 	 * PENDING → REDEEMED for every claim, in a stable (claim id) order so overlapping checkouts

@@ -6,7 +6,7 @@ import { POS_PAIRING_CODE_TTL_MS } from "@workspace/shared";
 import { sha256Hex } from "../../src/platform/infrastructure/crypto/sha256";
 import { API_KEY_PREFIX_LENGTH } from "../../src/contexts/pos/public-api";
 
-import { cleanupOrganizationSeedData, ORGANIZATION_SEED_IDS, SEED_ORGANIZATION_IDS, SEED_TEAM_INVITE_TOKEN_KL_ALICE, seedOrganizationsAndMerchants } from "./organizations";
+import { cleanupTenantSeedData, TENANT_SEED_IDS, SEED_TENANT_IDS, SEED_TEAM_INVITE_TOKEN_KL_ALICE, seedTenantsAndMerchants } from "./tenants";
 import { prisma } from "./client";
 import { seedCodeHash } from "./reward-code-hashing";
 import { deterministicUuid } from "./deterministic-uuid";
@@ -49,7 +49,7 @@ export const REWARD_SEED_IDS = Object.freeze({
 export const DEMO_MERCHANT_API_KEYS = Object.freeze({
 	kl: "mk_live_IwgbQID2Csq4nbnfwUxVUrQT8lwrlhEz7bzagwasKyFtZYSQ42LSH43lzTfRdBkV7tZArdHQQE4EW0wDHpVAroL57w/+5AzsCxRpax2fmu3JqITATsJKJRi4+fifNVj1E3WswonhsleEBinxwcMOlqccH0suhUq6mJWVvaWYkf8=",
 	mlk: "mk_live_Dx20Nsn5K79wGXWaTYbEvUyVLQrXWIwExA7zsK4jGyMMKxVPxsmJHoIrGimviO7RBtbb5ZdLsEcT0vxGeBVhV7NP72FoIRxFcF17juhUiMxrHxfAMuIy5NuYIK/eMqDdpWY5KNYxMGNCy/iT20Kc7813y2bMoOjZTCJJ/84JMQY=",
-	/** Organization-wide INTEGRATION key (back-office sync): not bound to a store or terminal, not usable on /redemptions/*. */
+	/** Tenant-wide INTEGRATION key (back-office sync): not bound to a store or terminal, not usable on /redemptions/*. */
 	klIntegration: "mk_live_seedKlBackOfficeIntegrationKey7Hq2Vt9Xc4Lm8Np3Rs6Wz5Yb2Dg7Jk4Fh9Qa3Ue6Ti8Oy1Pw5",
 });
 
@@ -119,7 +119,7 @@ async function upsertMerchantUser(id: string, email: string, fullName: string, p
 	});
 }
 
-async function setRewardLocationScopes(rewardId: string, organizationId: string, locationIds: readonly string[]): Promise<void> {
+async function setRewardLocationScopes(rewardId: string, tenantId: string, locationIds: readonly string[]): Promise<void> {
 	if (locationIds.length === 0) {
 		return;
 	}
@@ -132,7 +132,7 @@ async function setRewardLocationScopes(rewardId: string, organizationId: string,
 	await prisma.rewardLocationScope.createMany({
 		data: locationIds.map((locationId) => ({
 			rewardId,
-			organizationId,
+			tenantId,
 			locationId,
 		})),
 	});
@@ -162,33 +162,33 @@ const SEED_CONSUMER_EMAILS: readonly string[] = ["alice.johnson@example.com", "b
  * Removes the re-creatable reward rows of the SEED tenants (and the seed
  * consumers' notification/legal/OTP rows) so the next run converges. Scoped by
  * id — another tenant's data is never touched — and audit tables
- * (`RewardAuditLog`, `OrganizationAuditLog`) are never deleted: the seed
+ * (`RewardAuditLog`, `TenantAuditLog`) are never deleted: the seed
  * writes its own audit rows with deterministic ids instead.
  */
 export async function cleanupRewardSeedData(): Promise<void> {
-	const organizationId = { in: [...SEED_ORGANIZATION_IDS] };
+	const tenantId = { in: [...SEED_TENANT_IDS] };
 	const seedConsumers = await prisma.user.findMany({ where: { email: { in: [...SEED_CONSUMER_EMAILS] } }, select: { id: true } });
 	const userId = { in: seedConsumers.map((consumer) => consumer.id) };
 
 	await prisma.rewardNotification.deleteMany({ where: { userId } });
 	await prisma.rewardLegalAcceptance.deleteMany({ where: { userId } });
 	await prisma.rewardOtpChallenge.deleteMany({ where: { userId } });
-	await prisma.rewardRedemption.deleteMany({ where: { organizationId } });
+	await prisma.rewardRedemption.deleteMany({ where: { tenantId } });
 	// After redemptions: they reference their sale (ON DELETE RESTRICT).
-	await prisma.rewardSale.deleteMany({ where: { organizationId } });
-	await prisma.rewardClaim.deleteMany({ where: { reward: { organizationId } } });
-	await prisma.rewardReferral.deleteMany({ where: { reward: { organizationId } } });
-	await prisma.rewardLocationScope.deleteMany({ where: { organizationId } });
+	await prisma.rewardSale.deleteMany({ where: { tenantId } });
+	await prisma.rewardClaim.deleteMany({ where: { reward: { tenantId } } });
+	await prisma.rewardReferral.deleteMany({ where: { reward: { tenantId } } });
+	await prisma.rewardLocationScope.deleteMany({ where: { tenantId } });
 	// Referrer clones point at their parent; unlink before deleting either side.
-	await prisma.reward.updateMany({ where: { organizationId }, data: { referrerRewardId: null, parentConsumerRewardId: null } });
-	await prisma.reward.deleteMany({ where: { organizationId } });
-	await prisma.organizationTerminal.deleteMany({ where: { organizationId } });
-	await prisma.organizationApiKey.deleteMany({ where: { organizationId } });
-	await cleanupOrganizationSeedData();
+	await prisma.reward.updateMany({ where: { tenantId }, data: { referrerRewardId: null, parentConsumerRewardId: null } });
+	await prisma.reward.deleteMany({ where: { tenantId } });
+	await prisma.tenantTerminal.deleteMany({ where: { tenantId } });
+	await prisma.tenantApiKey.deleteMany({ where: { tenantId } });
+	await cleanupTenantSeedData();
 }
 
 export interface RewardSeedSummary {
-	organizations: number;
+	tenants: number;
 	rewards: number;
 	claims: number;
 	redemptions: number;
@@ -251,28 +251,28 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		await ensureSeedConsumerRole(merchantUser.id);
 	}
 
-	const { klOrganization, mlkOrganization } = await seedOrganizationsAndMerchants(adminUser, klOwner, mlkOwner, klCashier, mlkCashier, user, klPendingCashier);
+	const { klTenant, mlkTenant } = await seedTenantsAndMerchants(adminUser, klOwner, mlkOwner, klCashier, mlkCashier, user, klPendingCashier);
 
 	// Every reward shows images, so the photos are uploaded (and rendered) before any reward is linked to them.
 	const imageCount = await seedRewardImageFiles({
-		klOrganizationId: klOrganization.id,
+		klTenantId: klTenant.id,
 		klOwnerUserId: klOwner.id,
-		mlkOrganizationId: mlkOrganization.id,
+		mlkTenantId: mlkTenant.id,
 		mlkOwnerUserId: mlkOwner.id,
 	});
 	seedLog(`Reward images: ${String(imageCount)} published with their renditions`);
 	/** Which photo set each reward shows — linked once every reward exists. */
 	const imageLinks: RewardImageLink[] = [
-		{ rewardId: REWARD_SEED_IDS.klRewardPublished, organizationId: klOrganization.id, slug: "free-coffee" },
-		{ rewardId: REWARD_SEED_IDS.mlkRewardPublished, organizationId: mlkOrganization.id, slug: "jonker-lunch-set" },
-		{ rewardId: REWARD_SEED_IDS.mlkRewardKatilOnly, organizationId: mlkOrganization.id, slug: "iced-tea" },
-		{ rewardId: REWARD_SEED_IDS.mlkRewardBeruangOnly, organizationId: mlkOrganization.id, slug: "weekend-dinner" },
-		{ rewardId: REWARD_SEED_IDS.klRewardReferrer, organizationId: klOrganization.id, slug: "free-pastry" },
-		{ rewardId: REWARD_SEED_IDS.mlkRewardReferrer, organizationId: mlkOrganization.id, slug: "next-meal" },
-		{ rewardId: REWARD_SEED_IDS.klRewardPending, organizationId: klOrganization.id, slug: "weekend-brunch" },
-		{ rewardId: REWARD_SEED_IDS.klRewardDraft, organizationId: klOrganization.id, slug: "matcha-latte" },
-		{ rewardId: REWARD_SEED_IDS.klRewardExpired, organizationId: klOrganization.id, slug: "merdeka-coffee" },
-		{ rewardId: REWARD_SEED_IDS.mlkRewardDisabled, organizationId: mlkOrganization.id, slug: "cendol" },
+		{ rewardId: REWARD_SEED_IDS.klRewardPublished, tenantId: klTenant.id, slug: "free-coffee" },
+		{ rewardId: REWARD_SEED_IDS.mlkRewardPublished, tenantId: mlkTenant.id, slug: "jonker-lunch-set" },
+		{ rewardId: REWARD_SEED_IDS.mlkRewardKatilOnly, tenantId: mlkTenant.id, slug: "iced-tea" },
+		{ rewardId: REWARD_SEED_IDS.mlkRewardBeruangOnly, tenantId: mlkTenant.id, slug: "weekend-dinner" },
+		{ rewardId: REWARD_SEED_IDS.klRewardReferrer, tenantId: klTenant.id, slug: "free-pastry" },
+		{ rewardId: REWARD_SEED_IDS.mlkRewardReferrer, tenantId: mlkTenant.id, slug: "next-meal" },
+		{ rewardId: REWARD_SEED_IDS.klRewardPending, tenantId: klTenant.id, slug: "weekend-brunch" },
+		{ rewardId: REWARD_SEED_IDS.klRewardDraft, tenantId: klTenant.id, slug: "matcha-latte" },
+		{ rewardId: REWARD_SEED_IDS.klRewardExpired, tenantId: klTenant.id, slug: "merdeka-coffee" },
+		{ rewardId: REWARD_SEED_IDS.mlkRewardDisabled, tenantId: mlkTenant.id, slug: "cendol" },
 	];
 
 	const klKeyId = deterministicUuid("reward-seed-api-key", "kl-pos-simulator");
@@ -281,12 +281,12 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 
 	// The two simulator keys only call /redemptions/* — POS scope. The Melaka key carries a few
 	// recent unknown backup codes (below the lockout limit) so the lockout columns hold real data.
-	await prisma.organizationApiKey.createMany({
+	await prisma.tenantApiKey.createMany({
 		data: [
 			{
 				id: klKeyId,
-				organizationId: klOrganization.id,
-				locationId: ORGANIZATION_SEED_IDS.klLocation,
+				tenantId: klTenant.id,
+				locationId: TENANT_SEED_IDS.klLocation,
 				name: "KL POS Simulator",
 				keyHash: sha256Hex(DEMO_MERCHANT_API_KEYS.kl),
 				keyPrefix: DEMO_MERCHANT_API_KEYS.kl.slice(0, API_KEY_PREFIX_LENGTH),
@@ -295,8 +295,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			},
 			{
 				id: mlkKeyId,
-				organizationId: mlkOrganization.id,
-				locationId: ORGANIZATION_SEED_IDS.mlkLocationKatil,
+				tenantId: mlkTenant.id,
+				locationId: TENANT_SEED_IDS.mlkLocationKatil,
 				name: "Melaka Bukit Katil POS",
 				keyHash: sha256Hex(DEMO_MERCHANT_API_KEYS.mlk),
 				keyPrefix: DEMO_MERCHANT_API_KEYS.mlk.slice(0, API_KEY_PREFIX_LENGTH),
@@ -307,7 +307,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			},
 			{
 				id: klIntegrationKeyId,
-				organizationId: klOrganization.id,
+				tenantId: klTenant.id,
 				locationId: null,
 				name: "Brew & Bean back-office integration",
 				keyHash: sha256Hex(DEMO_MERCHANT_API_KEYS.klIntegration),
@@ -320,18 +320,18 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 
 	// Every till has its creator (the owner who registered it). KL-REGISTER-02 is awaiting pairing:
 	// the cashier issued a code (`DEMO_PAIRING_CODE_KL_REGISTER_02`) that the till has not used yet.
-	await prisma.organizationTerminal.createMany({
+	await prisma.tenantTerminal.createMany({
 		data: [
 			{
-				organizationId: klOrganization.id,
-				locationId: ORGANIZATION_SEED_IDS.klLocation,
+				tenantId: klTenant.id,
+				locationId: TENANT_SEED_IDS.klLocation,
 				terminalId: "KL-REGISTER-01",
 				label: "Front counter",
 				createdByUserId: klOwner.id,
 			},
 			{
-				organizationId: klOrganization.id,
-				locationId: ORGANIZATION_SEED_IDS.klLocation,
+				tenantId: klTenant.id,
+				locationId: TENANT_SEED_IDS.klLocation,
 				terminalId: "KL-REGISTER-02",
 				label: "Drive-through",
 				createdByUserId: klOwner.id,
@@ -341,15 +341,15 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				pairingCodeIssuedAt: now,
 			},
 			{
-				organizationId: mlkOrganization.id,
-				locationId: ORGANIZATION_SEED_IDS.mlkLocationKatil,
+				tenantId: mlkTenant.id,
+				locationId: TENANT_SEED_IDS.mlkLocationKatil,
 				terminalId: "MLK-KATIL-01",
 				label: "Bukit Katil counter",
 				createdByUserId: mlkOwner.id,
 			},
 			{
-				organizationId: mlkOrganization.id,
-				locationId: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+				tenantId: mlkTenant.id,
+				locationId: TENANT_SEED_IDS.mlkLocationBeruang,
 				terminalId: "MLK-BERUANG-01",
 				label: "Bukit Beruang counter",
 				createdByUserId: mlkOwner.id,
@@ -362,7 +362,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		data: [
 			{
 				id: REWARD_SEED_IDS.klRewardPublished,
-				organizationId: klOrganization.id,
+				tenantId: klTenant.id,
 				title: "Free coffee — Grand Opening",
 				description: "One free regular coffee. Show QR at counter. Valid 7 days after claim.",
 				rewardType: "FREE_ITEM",
@@ -385,7 +385,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			},
 			{
 				id: REWARD_SEED_IDS.mlkRewardPublished,
-				organizationId: mlkOrganization.id,
+				tenantId: mlkTenant.id,
 				title: "10% off the Jonker lunch set",
 				description: "Weekday lunch 11am–3pm. Min spend RM35. Available at both Bukit Katil and Bukit Beruang.",
 				rewardType: "DISCOUNT",
@@ -409,7 +409,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			},
 			{
 				id: REWARD_SEED_IDS.mlkRewardKatilOnly,
-				organizationId: mlkOrganization.id,
+				tenantId: mlkTenant.id,
 				title: "Free iced tea — Bukit Katil opening",
 				description: "Complimentary iced tea with any main course at Bukit Katil only.",
 				rewardType: "FREE_ITEM",
@@ -430,7 +430,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			},
 			{
 				id: REWARD_SEED_IDS.mlkRewardBeruangOnly,
-				organizationId: mlkOrganization.id,
+				tenantId: mlkTenant.id,
 				title: "15% off weekend dinner — Bukit Beruang",
 				description: "Friday and Saturday dinner from 6pm. Bukit Beruang store only.",
 				rewardType: "DISCOUNT",
@@ -453,14 +453,14 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		],
 	});
 
-	await setRewardLocationScopes(REWARD_SEED_IDS.mlkRewardPublished, mlkOrganization.id, [ORGANIZATION_SEED_IDS.mlkLocationKatil, ORGANIZATION_SEED_IDS.mlkLocationBeruang]);
-	await setRewardLocationScopes(REWARD_SEED_IDS.mlkRewardKatilOnly, mlkOrganization.id, [ORGANIZATION_SEED_IDS.mlkLocationKatil]);
-	await setRewardLocationScopes(REWARD_SEED_IDS.mlkRewardBeruangOnly, mlkOrganization.id, [ORGANIZATION_SEED_IDS.mlkLocationBeruang]);
+	await setRewardLocationScopes(REWARD_SEED_IDS.mlkRewardPublished, mlkTenant.id, [TENANT_SEED_IDS.mlkLocationKatil, TENANT_SEED_IDS.mlkLocationBeruang]);
+	await setRewardLocationScopes(REWARD_SEED_IDS.mlkRewardKatilOnly, mlkTenant.id, [TENANT_SEED_IDS.mlkLocationKatil]);
+	await setRewardLocationScopes(REWARD_SEED_IDS.mlkRewardBeruangOnly, mlkTenant.id, [TENANT_SEED_IDS.mlkLocationBeruang]);
 
 	const klReferrerReward = await prisma.reward.create({
 		data: {
 			id: REWARD_SEED_IDS.klRewardReferrer,
-			organizationId: klOrganization.id,
+			tenantId: klTenant.id,
 			title: "Referrer: Free pastry (Brew & Bean)",
 			description: "A free pastry of your choice, earned when a friend redeems their free coffee.",
 			rewardType: "FREE_ITEM",
@@ -480,16 +480,19 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	const mlkReferrerReward = await prisma.reward.create({
 		data: {
 			id: REWARD_SEED_IDS.mlkRewardReferrer,
-			organizationId: mlkOrganization.id,
+			tenantId: mlkTenant.id,
 			title: "Referrer: 15% off next meal",
 			description: "15% off your next meal, earned when a friend redeems the Jonker lunch set offer.",
 			rewardType: "DISCOUNT",
 			rewardValue: 15,
 			rewardKind: "REFERRER",
 			category: "restaurant",
+			// Carol's one PENDING credit claim (below) holds a unit, as the app's credit does: it is
+			// reserved, not yet redeemed, so an expiry can return it.
 			quantityTotal: 30,
 			quantityRemaining: 29,
-			quantityReserved: 0,
+			quantityReserved: 1,
+			claimCount: 1,
 			expiryDate: daysFromNow(60),
 			status: "PUBLISHED",
 			referralsEnabled: false,
@@ -507,13 +510,13 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		data: { referrerRewardId: mlkReferrerReward.id },
 	});
 
-	await setRewardLocationScopes(mlkReferrerReward.id, mlkOrganization.id, [ORGANIZATION_SEED_IDS.mlkLocationKatil, ORGANIZATION_SEED_IDS.mlkLocationBeruang]);
+	await setRewardLocationScopes(mlkReferrerReward.id, mlkTenant.id, [TENANT_SEED_IDS.mlkLocationKatil, TENANT_SEED_IDS.mlkLocationBeruang]);
 
 	await prisma.reward.createMany({
 		data: [
 			{
 				id: REWARD_SEED_IDS.klRewardPending,
-				organizationId: klOrganization.id,
+				tenantId: klTenant.id,
 				title: "20% off weekend brunch",
 				description: "20% off any brunch plate on Saturdays and Sundays, 9am–1pm.",
 				rewardType: "DISCOUNT",
@@ -531,7 +534,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			},
 			{
 				id: REWARD_SEED_IDS.klRewardDraft,
-				organizationId: klOrganization.id,
+				tenantId: klTenant.id,
 				title: "Draft: Matcha latte trial",
 				description: "A free iced or hot matcha latte while we trial our new matcha.",
 				rewardType: "FREE_ITEM",
@@ -547,7 +550,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			},
 			{
 				id: REWARD_SEED_IDS.klRewardExpired,
-				organizationId: klOrganization.id,
+				tenantId: klTenant.id,
 				title: "Expired: Merdeka promo",
 				description: "31% off any kopi to celebrate Merdeka Day.",
 				rewardType: "DISCOUNT",
@@ -563,7 +566,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			},
 			{
 				id: REWARD_SEED_IDS.mlkRewardDisabled,
-				organizationId: mlkOrganization.id,
+				tenantId: mlkTenant.id,
 				title: "Disabled: Cendol giveaway",
 				description: "A free bowl of cendol with gula Melaka with any main course.",
 				rewardType: "FREE_ITEM",
@@ -653,7 +656,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	for (const [index, row] of extraKlRewards.entries()) {
 		const created = await prisma.reward.create({
 			data: {
-				organizationId: klOrganization.id,
+				tenantId: klTenant.id,
 				title: row.title,
 				description: row.description,
 				rewardType: row.rewardType,
@@ -669,7 +672,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				referralsEnabled: false,
 			},
 		});
-		imageLinks.push({ rewardId: created.id, organizationId: klOrganization.id, slug: row.imageSet });
+		imageLinks.push({ rewardId: created.id, tenantId: klTenant.id, slug: row.imageSet });
 	}
 
 	const extraMlkRewards: readonly ExtraMlkRewardSeed[] = [
@@ -680,7 +683,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			description: "Three-piece kuih platter. Bukit Katil only.",
 			category: "food",
 			imageSet: "nyonya-kuih",
-			locationIds: [ORGANIZATION_SEED_IDS.mlkLocationKatil],
+			locationIds: [TENANT_SEED_IDS.mlkLocationKatil],
 		},
 		{
 			title: "15% off Friday live-music dinner",
@@ -689,14 +692,14 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			description: "15% off your dinner bill on live-music Friday nights. Bukit Beruang only.",
 			category: "entertainment",
 			imageSet: "live-music-night",
-			locationIds: [ORGANIZATION_SEED_IDS.mlkLocationBeruang],
+			locationIds: [TENANT_SEED_IDS.mlkLocationBeruang],
 		},
 	];
 
 	for (const row of extraMlkRewards) {
 		const reward = await prisma.reward.create({
 			data: {
-				organizationId: mlkOrganization.id,
+				tenantId: mlkTenant.id,
 				title: row.title,
 				description: row.description,
 				rewardType: row.rewardType,
@@ -713,8 +716,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				locationScopeType: "SELECTED",
 			},
 		});
-		imageLinks.push({ rewardId: reward.id, organizationId: mlkOrganization.id, slug: row.imageSet });
-		await setRewardLocationScopes(reward.id, mlkOrganization.id, row.locationIds);
+		imageLinks.push({ rewardId: reward.id, tenantId: mlkTenant.id, slug: row.imageSet });
+		await setRewardLocationScopes(reward.id, mlkTenant.id, row.locationIds);
 	}
 
 	await prisma.rewardReferral.create({
@@ -744,7 +747,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		},
 	});
 
-	const klCheckout = { organizationId: klOrganization.id, locationId: ORGANIZATION_SEED_IDS.klLocation, terminalId: "KL-REGISTER-01", apiKeyId: klKeyId };
+	const klCheckout = { tenantId: klTenant.id, locationId: TENANT_SEED_IDS.klLocation, terminalId: "KL-REGISTER-01", apiKeyId: klKeyId };
 	const seedClaims: SeedClaim[] = [
 		{
 			id: REWARD_SEED_IDS.claimPendingKl,
@@ -802,8 +805,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			redeemedAt: daysAgo(3),
 			checkout: {
 				key: "mlk-carol",
-				organizationId: mlkOrganization.id,
-				locationId: ORGANIZATION_SEED_IDS.mlkLocationKatil,
+				tenantId: mlkTenant.id,
+				locationId: TENANT_SEED_IDS.mlkLocationKatil,
 				terminalId: "MLK-KATIL-01",
 				apiKeyId: mlkKeyId,
 				billTotalMinor: SEED_BILL_MLK_CAROL_MINOR,
@@ -912,7 +915,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			{
 				id: deterministicUuid("reward-seed-audit", "kl-cashier-scan-qr"),
 				actorUserId: klCashier.id,
-				organizationId: klOrganization.id,
+				tenantId: klTenant.id,
 				action: "merchant.scan_qr",
 				metadata: { claimId: REWARD_SEED_IDS.claimPendingKl, terminalId: "KL-REGISTER-01" },
 				createdAt: daysAgo(1),
@@ -920,7 +923,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			{
 				id: deterministicUuid("reward-seed-audit", "kl-redeem-reward"),
 				actorUserId: null,
-				organizationId: klOrganization.id,
+				tenantId: klTenant.id,
 				action: "merchant.redeem_reward",
 				metadata: { claimId: REWARD_SEED_IDS.claimRedeemedKl, redemptionMethod: "SCAN" },
 				createdAt: daysAgo(4),
@@ -928,7 +931,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			{
 				id: deterministicUuid("reward-seed-audit", "kl-owner-self-redeem"),
 				actorUserId: klOwner.id,
-				organizationId: klOrganization.id,
+				tenantId: klTenant.id,
 				action: "self_redeem_audit",
 				metadata: { note: "Owner self-redeem allowed with audit flag" },
 				createdAt: daysAgo(6),
@@ -936,7 +939,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			{
 				id: deterministicUuid("reward-seed-audit", "mlk-redeem-reward"),
 				actorUserId: null,
-				organizationId: mlkOrganization.id,
+				tenantId: mlkTenant.id,
 				action: "merchant.redeem_reward",
 				metadata: { claimId: REWARD_SEED_IDS.claimRedeemedMlk, redemptionMethod: "SCAN" },
 				createdAt: daysAgo(3),
@@ -962,7 +965,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	// The grand-opening coffee first showed a latte-art photo; the owner swapped in the current cover a week before launch.
 	await seedReplacedRewardImage({
 		rewardId: REWARD_SEED_IDS.klRewardPublished,
-		organizationId: klOrganization.id,
+		tenantId: klTenant.id,
 		slug: "free-coffee",
 		previousSlug: "second-coffee",
 		replacedBy: klOwner.id,
@@ -970,8 +973,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	});
 
 	await seedRewardLifecycleStates({
-		klOrganizationId: klOrganization.id,
-		mlkOrganizationId: mlkOrganization.id,
+		klTenantId: klTenant.id,
+		mlkTenantId: mlkTenant.id,
 		adminUserId: adminUser.id,
 		klOwnerId: klOwner.id,
 		mlkOwnerId: mlkOwner.id,
@@ -984,7 +987,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		now,
 	});
 
-	const organizations = await prisma.organization.count({ where: { merchantProfile: { isNot: null } } });
+	const tenants = await prisma.tenant.count({ where: { merchantProfile: { isNot: null } } });
 	const rewards = await prisma.reward.count();
 	const claims = await prisma.rewardClaim.count();
 	const redemptions = await prisma.rewardRedemption.count();
@@ -992,7 +995,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	const notifications = await prisma.rewardNotification.count();
 
 	return {
-		organizations,
+		tenants,
 		rewards,
 		claims,
 		redemptions,

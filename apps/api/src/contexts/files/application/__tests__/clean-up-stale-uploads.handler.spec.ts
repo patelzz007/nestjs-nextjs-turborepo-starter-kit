@@ -68,8 +68,8 @@ describe("CleanUpStaleUploadsHandler", () => {
 	});
 
 	it("deletes READY staging copies nothing consumed within their category's retention (a comment picture never posted)", async () => {
-		const first = storedFileState({ status: "READY", category: "GITHUB_COMMENT_IMAGE", organizationId: null });
-		const second = storedFileState({ id: OTHER_FILE_ID, status: "READY", category: "GITHUB_COMMENT_IMAGE", organizationId: null });
+		const first = storedFileState({ status: "READY", category: "GITHUB_COMMENT_IMAGE", tenantId: null });
+		const second = storedFileState({ id: OTHER_FILE_ID, status: "READY", category: "GITHUB_COMMENT_IMAGE", tenantId: null });
 		const fixture = setup(first, second);
 		fixture.reads.expiredStaging.set("GITHUB_COMMENT_IMAGE", [viewOf(first), viewOf(second)]);
 

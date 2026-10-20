@@ -49,6 +49,8 @@ export interface ImpersonationSessionState {
 	readonly endedBy: string | null;
 	readonly ipAddress: string | null;
 	readonly userAgent: string | null;
+	/** The approved support grants that authorized the session (D21): one per tenant the target belongs to. */
+	readonly supportAccessGrantIds: readonly string[];
 }
 
 /** One immutable `ImpersonationAuditLog` row a transition writes in its transaction. */
@@ -92,6 +94,8 @@ export class ImpersonationSession extends AggregateRoot<IdentityEvent> {
 			readonly target: ImpersonationParty | null;
 			readonly targetUserId: string;
 			readonly impersonatorHasLiveSession: boolean;
+			/** The grants `assertImpersonationGrants` found covering every tenant of the target. */
+			readonly supportAccessGrantIds: readonly string[];
 			readonly origin: AuditOrigin;
 			readonly actionStartedAt: EpochMs;
 		},
@@ -128,6 +132,7 @@ export class ImpersonationSession extends AggregateRoot<IdentityEvent> {
 				endedBy: null,
 				ipAddress: input.origin.ipAddress,
 				userAgent: input.origin.userAgent,
+				supportAccessGrantIds: input.supportAccessGrantIds,
 			},
 			true,
 		);

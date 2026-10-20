@@ -132,7 +132,7 @@ export class OutboxEmailRelay {
 		} catch (error) {
 			return this.handleFailure(row, error instanceof Error ? error.message : String(error));
 		}
-		await this.store.markPublished(row.id, this.clock.nowEpochMs());
+		await this.store.markPublished([row.id], this.clock.nowEpochMs());
 		this.logger.log({ event: "outbox.email_handed_off", eventId: row.id, emailLogId: envelope.data.payload.emailLogId, attempt: row.attempts + 1 });
 		return { kind: "handed_off" };
 	}

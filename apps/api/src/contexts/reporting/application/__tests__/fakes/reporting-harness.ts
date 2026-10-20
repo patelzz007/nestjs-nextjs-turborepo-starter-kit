@@ -8,7 +8,7 @@ import {
 	FrozenClock,
 	InMemoryAnalyticsBreakdowns,
 	InMemoryAnalyticsFacts,
-	InMemoryAnalyticsOrganizations,
+	InMemoryAnalyticsTenants,
 	InMemoryRewardActivity,
 	InMemorySales,
 } from "./analytics-read-fakes";
@@ -24,7 +24,7 @@ export interface ReportingHarness {
 	readonly access: FakeMerchantAccess;
 	readonly facts: InMemoryAnalyticsFacts;
 	readonly breakdowns: InMemoryAnalyticsBreakdowns;
-	readonly organizations: InMemoryAnalyticsOrganizations;
+	readonly tenants: InMemoryAnalyticsTenants;
 	readonly sales: InMemorySales;
 	readonly activity: InMemoryRewardActivity;
 	readonly audit: RecordingExportAudit;
@@ -38,8 +38,8 @@ export function reportingHarness(): ReportingHarness {
 	const clock = new FrozenClock(EpochMsSchema.parse(HARNESS_NOW));
 	const facts = new InMemoryAnalyticsFacts();
 	const breakdowns = new InMemoryAnalyticsBreakdowns();
-	const organizations = new InMemoryAnalyticsOrganizations();
-	organizations.rows.set(HARNESS_ORG_ID, { slug: "brew-and-bean", displayName: "Brew & Bean", timeZone: "Asia/Kuala_Lumpur" });
+	const tenants = new InMemoryAnalyticsTenants();
+	tenants.rows.set(HARNESS_ORG_ID, { slug: "brew-and-bean", displayName: "Brew & Bean", timeZone: "Asia/Kuala_Lumpur" });
 	const sales = new InMemorySales();
 	const activity = new InMemoryRewardActivity();
 	const audit = new RecordingExportAudit();
@@ -48,13 +48,13 @@ export function reportingHarness(): ReportingHarness {
 		access: new FakeMerchantAccess(),
 		facts,
 		breakdowns,
-		organizations,
+		tenants,
 		sales,
 		activity,
 		audit,
 		renderers,
-		dashboards: new AnalyticsDashboardAssembler(facts, breakdowns, organizations, sales, clock),
-		weekly: new WeeklyAnalyticsAssembler(activity, sales, organizations, clock),
+		dashboards: new AnalyticsDashboardAssembler(facts, breakdowns, tenants, sales, clock),
+		weekly: new WeeklyAnalyticsAssembler(activity, sales, tenants, clock),
 		exporter: new AnalyticsReportExporter(renderers, audit, "Starter", clock),
 	};
 }

@@ -105,7 +105,7 @@ export function requestEntryConditions(query: AuditTrailListQuery): Prisma.Sql {
 	];
 	return allOf([
 		...(filter?.actorUserId?.eq === undefined ? [] : [Prisma.sql`a."actorUserId" = ${filter.actorUserId.eq}`]),
-		...(filter?.organizationId?.eq === undefined ? [] : [Prisma.sql`a."organizationId" = ${filter.organizationId.eq}`]),
+		...(filter?.tenantId?.eq === undefined ? [] : [Prisma.sql`a."tenantId" = ${filter.tenantId.eq}`]),
 		...(filter?.correlationId?.eq === undefined ? [] : [Prisma.sql`a."correlationId" = ${filter.correlationId.eq}`]),
 		...(filter?.occurredAt?.gte === undefined ? [] : [Prisma.sql`a."occurredAt" >= ${filter.occurredAt.gte}`]),
 		...(filter?.occurredAt?.lte === undefined ? [] : [Prisma.sql`a."occurredAt" <= ${filter.occurredAt.lte}`]),
@@ -138,7 +138,7 @@ export function backgroundEntryConditions(query: AuditTrailListQuery): { readonl
 			// Changes made by an HTTP request belong to that request's entry.
 			Prisma.sql`NOT EXISTS (SELECT 1 FROM public."AuditLog" a WHERE a."correlationId" = d."correlationId")`,
 			...(filter?.actorUserId?.eq === undefined ? [] : [Prisma.sql`d."actorUserId" = ${filter.actorUserId.eq}`]),
-			...(filter?.organizationId?.eq === undefined ? [] : [Prisma.sql`d."organizationId" = ${filter.organizationId.eq}`]),
+			...(filter?.tenantId?.eq === undefined ? [] : [Prisma.sql`d."tenantId" = ${filter.tenantId.eq}`]),
 			...(filter?.correlationId?.eq === undefined ? [] : [Prisma.sql`d."correlationId" = ${filter.correlationId.eq}`]),
 			...(filter?.occurredAt?.gte === undefined ? [] : [Prisma.sql`d."occurredAt" >= ${filter.occurredAt.gte}`]),
 			...(filter?.occurredAt?.lte === undefined ? [] : [Prisma.sql`d."occurredAt" <= ${filter.occurredAt.lte}`]),

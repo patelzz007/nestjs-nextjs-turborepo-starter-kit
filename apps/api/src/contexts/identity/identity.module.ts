@@ -21,9 +21,10 @@ import { TransactionalEventDispatcher } from "../../platform/infrastructure/unit
 import { AFTER_COMMIT_PUBLISHER, UnitOfWorkModule } from "../../platform/infrastructure/unit-of-work/unit-of-work.module";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { TenantTransactionService } from "../../prisma/tenant-transaction.service";
+import { PrismaImpersonationTenantFacts } from "./infrastructure/adapters/prisma-impersonation-tenant-facts";
 import { FilesModule } from "../files/public-api";
 import { NotificationsModule, NotificationsTransactionalPortsFactory } from "../notifications/public-api";
-import { OrganizationAccessModule } from "../organizations/public-api";
+import { TenantAccessModule } from "../tenancy/public-api";
 import { ReferralsModule } from "../referrals/public-api";
 import type { IdentityScope } from "./application/identity-scope";
 import {
@@ -32,6 +33,7 @@ import {
 	AUTHENTICATOR,
 	CREDENTIAL_CRYPTO,
 	ID_GENERATOR,
+	IMPERSONATION_TENANT_FACTS,
 	IDENTITY_READ,
 	IDENTITY_SETTINGS,
 	IDENTITY_TELEMETRY,
@@ -192,13 +194,15 @@ const REDIS_USER_SESSION_CACHE = Symbol("REDIS_USER_SESSION_CACHE");
 		JwtModule.register({ global: true }),
 		NotificationsModule,
 		FilesModule,
-		OrganizationAccessModule,
+		TenantAccessModule,
 		ReferralsModule,
 		SessionLocationModule,
 	],
 	controllers: [AuthController, TwoFactorController, MfaRecoveryController, ProfileController, SessionsController, SessionStatusController, ImpersonationController],
 	providers: [
 		PublicUrlResolver,
+		PrismaImpersonationTenantFacts,
+		{ provide: IMPERSONATION_TENANT_FACTS, useExisting: PrismaImpersonationTenantFacts },
 		// ── Unit of work and reads ──────────────────────────────────────
 		{
 			provide: IDENTITY_UNIT_OF_WORK,
@@ -220,7 +224,7 @@ const REDIS_USER_SESSION_CACHE = Symbol("REDIS_USER_SESSION_CACHE");
 				dispatcher: TransactionalEventDispatcher<Prisma.TransactionClient>,
 				publisher: AfterCommitPublisher,
 			): UnitOfWork<IdentityScope> =>
-				// Identity's rows are the user's own (scoped by user id): no organization is needed to change them.
+				// Identity's rows are the user's own (scoped by user id): no tenant is needed to change them.
 				new PrismaUnitOfWork(
 					transactions,
 					new IdentityScopeFactory({ notifications, auditTrail, config, resolvePublicUrl: publicUrls.resolve }),

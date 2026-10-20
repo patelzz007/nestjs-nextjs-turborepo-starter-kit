@@ -8,6 +8,7 @@ import type { RlsTransactionScope } from "../../../../platform/infrastructure/un
 import { PrismaReadExecutor } from "../../../../platform/infrastructure/unit-of-work/prisma-read-executor";
 import type { RlsTransactionRunner } from "../../../../platform/infrastructure/unit-of-work/prisma-unit-of-work";
 import { PrismaService } from "../../../../prisma/prisma.service";
+import type { SystemDatabaseContext } from "../../../../prisma/tenant-context";
 import { ApiKeyCapabilitiesAdapter } from "../adapters/api-key-capabilities.adapter";
 import { PRISMA_STORE_CLOSURE_FACTORY } from "../adapters/prisma-store-closure";
 import { PrismaTillTerminals } from "../adapters/prisma-till-terminals";
@@ -17,9 +18,9 @@ vi.mock("../../../../prisma/prisma.service", () => ({ PrismaService: class {} })
 const NOW = epochMs(1_800_000_000_000);
 
 describe("PrismaStoreClosure (D27)", () => {
-	type FindTerminals = (args: Prisma.OrganizationTerminalFindManyArgs) => Promise<readonly { readonly id: string; readonly apiKeyId: string | null }[]>;
-	type UpdateTerminals = (args: Prisma.OrganizationTerminalUpdateManyArgs) => Promise<Prisma.BatchPayload>;
-	type UpdateKeys = (args: Prisma.OrganizationApiKeyUpdateManyArgs) => Promise<Prisma.BatchPayload>;
+	type FindTerminals = (args: Prisma.TenantTerminalFindManyArgs) => Promise<readonly { readonly id: string; readonly apiKeyId: string | null }[]>;
+	type UpdateTerminals = (args: Prisma.TenantTerminalUpdateManyArgs) => Promise<Prisma.BatchPayload>;
+	type UpdateKeys = (args: Prisma.TenantApiKeyUpdateManyArgs) => Promise<Prisma.BatchPayload>;
 
 	function closureDatabase(): {
 		readonly prisma: PrismaService;
@@ -34,8 +35,8 @@ describe("PrismaStoreClosure (D27)", () => {
 		const updateTerminals = vi.fn<UpdateTerminals>().mockResolvedValue({ count: 2 });
 		const updateKeys = vi.fn<UpdateKeys>().mockResolvedValue({ count: 3 });
 		const prisma = Object.assign(new PrismaService(createTestTypedConfig()), {
-			organizationTerminal: { findMany: findTerminals, updateMany: updateTerminals },
-			organizationApiKey: { updateMany: updateKeys },
+			tenantTerminal: { findMany: findTerminals, updateMany: updateTerminals },
+			tenantApiKey: { updateMany: updateKeys },
 		});
 		return { prisma, findTerminals, updateTerminals, updateKeys };
 	}
@@ -44,32 +45,35 @@ describe("PrismaStoreClosure (D27)", () => {
 		const db = closureDatabase();
 
 		await expect(
-			PRISMA_STORE_CLOSURE_FACTORY.forTransaction(db.prisma).closeStore({ organizationId: "org-1", locationId: "store-a", closedByUserId: "owner-1", closedAt: NOW }),
+			PRISMA_STORE_CLOSURE_FACTORY.forTransaction(db.prisma).closeStore({ tenantId: "org-1", locationId: "store-a", closedByUserId: "owner-1", closedAt: NOW }),
 		).resolves.toEqual({ terminalsRemoved: 2, apiKeysRevoked: 3 });
 
-		expect(db.findTerminals.mock.calls.at(0)?.at(0)?.where).toEqual({ organizationId: "org-1", locationId: "store-a", isDeleted: false });
+		expect(db.findTerminals.mock.calls.at(0)?.at(0)?.where).toEqual({ tenantId: "org-1", locationId: "store-a", isDeleted: false });
 		expect(db.updateTerminals).toHaveBeenCalledWith({
 			where: { id: { in: ["terminal-1", "terminal-2"] }, isDeleted: false },
 			data: { isDeleted: true, deletedAt: NOW, deletedBy: "owner-1", pairingCodeHash: null, pairingCodeExpiresAt: null, updatedAt: NOW },
 		});
 		expect(db.updateKeys).toHaveBeenCalledWith({
-			where: { organizationId: "org-1", isDeleted: false, revokedAt: null, OR: [{ locationId: "store-a" }, { id: { in: ["key-1"] } }] },
+			where: { tenantId: "org-1", isDeleted: false, revokedAt: null, OR: [{ locationId: "store-a" }, { id: { in: ["key-1"] } }] },
 			data: { revokedAt: NOW, updatedAt: NOW },
 		});
 	});
 });
 
 describe("PrismaTillTerminals", () => {
-	it("finds a live till of the organization by its terminal id, and stamps when it was last seen", async () => {
-		const findFirst = vi.fn<(args: Prisma.OrganizationTerminalFindFirstArgs) => Promise<{ readonly id: string; readonly locationId: string } | null>>();
+	it("finds a live till of the tenant by its terminal id, and stamps when it was last seen", async () => {
+		const findFirst = vi.fn<(args: Prisma.TenantTerminalFindFirstArgs) => Promise<{ readonly id: string; readonly locationId: string } | null>>();
 		findFirst.mockResolvedValue({ id: "terminal-1", locationId: "store-a" });
-		const update = vi.fn<(args: Prisma.OrganizationTerminalUpdateArgs) => Promise<object>>().mockResolvedValue({ id: "terminal-1" });
-		const tills = new PrismaTillTerminals(Object.assign(new PrismaService(createTestTypedConfig()), { organizationTerminal: { findFirst, update } }));
+		const update = vi.fn<(args: Prisma.TenantTerminalUpdateArgs) => Promise<object>>().mockResolvedValue({ id: "terminal-1" });
+		const prisma = Object.assign(new PrismaService(createTestTypedConfig()), { tenantTerminal: { findFirst, update } });
+		const tills = new PrismaTillTerminals({
+			withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
+		});
 
 		await expect(tills.findLive("org-1", "TERM-AAAA2222")).resolves.toEqual({ id: "terminal-1", locationId: "store-a" });
 		await tills.touchLastSeen("terminal-1", NOW);
 
-		expect(findFirst.mock.calls.at(0)?.at(0)?.where).toEqual({ organizationId: "org-1", terminalId: "TERM-AAAA2222", isDeleted: false });
+		expect(findFirst.mock.calls.at(0)?.at(0)?.where).toEqual({ tenantId: "org-1", terminalId: "TERM-AAAA2222", isDeleted: false });
 		expect(update).toHaveBeenCalledWith({ where: { id: "terminal-1" }, data: { lastSeenAt: NOW }, select: { id: true } });
 	});
 });
@@ -78,7 +82,7 @@ describe("ApiKeyCapabilitiesAdapter", () => {
 	const KEY: Extract<ActorContext, { kind: "api_key" }> = {
 		kind: "api_key",
 		apiKeyId: "key-1",
-		organizationId: "org-1",
+		tenantId: "org-1",
 		locationId: null,
 		terminalId: null,
 		request: { requestId: "req-1", ip: null, userAgent: null, deviceLabel: null, endpoint: null },
@@ -97,16 +101,16 @@ describe("ApiKeyCapabilitiesAdapter", () => {
 	}
 
 	it("maps a live key's scope to its capabilities, read under the key's own RLS session; a revoked or missing key has none", async () => {
-		const findFirst = vi.fn<(args: Prisma.OrganizationApiKeyFindFirstArgs) => Promise<{ readonly scope: "POS" | "INTEGRATION" } | null>>();
+		const findFirst = vi.fn<(args: Prisma.TenantApiKeyFindFirstArgs) => Promise<{ readonly scope: "POS" | "INTEGRATION" } | null>>();
 		findFirst.mockResolvedValueOnce({ scope: "INTEGRATION" }).mockResolvedValueOnce(null);
-		const runner = new RecordingRunner(Object.assign(new PrismaService(createTestTypedConfig()), { organizationApiKey: { findFirst } }));
+		const runner = new RecordingRunner(Object.assign(new PrismaService(createTestTypedConfig()), { tenantApiKey: { findFirst } }));
 		const adapter = new ApiKeyCapabilitiesAdapter(new PrismaReadExecutor(runner));
 
 		await expect(adapter.capabilitiesOf(KEY)).resolves.toEqual(["merchant:view_rewards", "merchant:manage_rewards", "merchant:view_redemptions", "merchant:view_analytics"]);
 		await expect(adapter.capabilitiesOf(KEY)).resolves.toBeNull();
 
-		expect(findFirst.mock.calls.at(0)?.at(0)?.where).toEqual({ id: "key-1", organizationId: "org-1", isDeleted: false, revokedAt: null });
+		expect(findFirst.mock.calls.at(0)?.at(0)?.where).toEqual({ id: "key-1", tenantId: "org-1", isDeleted: false, revokedAt: null });
 		expect(runner.scopes).toHaveLength(2);
-		expect(runner.scopes.at(0)).toMatchObject({ context: { apiKeyId: "key-1", organizationId: "org-1", userId: null, bypass: false } });
+		expect(runner.scopes.at(0)).toMatchObject({ context: { apiKeyId: "key-1", tenantId: "org-1", userId: null, bypass: false } });
 	});
 });

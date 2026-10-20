@@ -27,9 +27,9 @@ export async function startImpersonation(app: NestFastifyApplication, pool: Pool
 		kind: "user",
 		userId: superAdminId,
 		sessionId: randomUUID(),
-		organizationId: null,
+		tenantId: null,
 		isSuperAdmin: true,
-		accessScope: "superadmin",
+		accessScope: "tenant",
 		impersonatorUserId: null,
 		request: { requestId: randomUUID(), ip: null, userAgent: null, deviceLabel: null, endpoint: null },
 	});

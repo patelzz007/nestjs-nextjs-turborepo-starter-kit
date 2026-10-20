@@ -1,25 +1,25 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 
+import { rejectMachineTenantSelector } from "../../../../platform/infrastructure/tenancy/machine-tenant-selector";
+import { TENANT_SOURCE, type TenantSource } from "../../../../platform/application/tenancy/tenant-source.port";
 import { readFirstHeader } from "../../../../platform/infrastructure/utils/http-headers";
+import { hasApiKeyAuthOnRequest } from "../../../../platform/presentation/http/security/api-keys/api-key-request";
 import type { AuthenticatedUser } from "../../../../types/authenticated-user";
 import { AccessDeniedError } from "../../domain/errors/authorization.errors";
-import { TenantMembershipService, type VerifiedTenantContext } from "./tenant-membership.service";
+import { TenantMembershipService, type TargetTenant, type VerifiedTenantContext } from "./tenant-membership.service";
 
-const TenantIdSchema = z.string().min(1).max(64);
+const ResourceIdSchema = z.string().min(1).max(64);
 
-/** Tenant selectors a route may carry in params, query, or body. Other keys are ignored. */
-const TenantSelectorSchema = z.looseObject({
-	organizationId: TenantIdSchema.optional(),
-	/** `/orgs/:orgSlug/...` routes: the organization's slug (or id), resolved to its id before verification. */
-	orgSlug: TenantIdSchema.optional(),
-	orgId: TenantIdSchema.optional(),
-	storeId: TenantIdSchema.optional(),
-	locationId: TenantIdSchema.optional(),
+/** Store and location selectors. The tenant comes from {@link TenantSource}, never from these fields. */
+const ResourceSelectorSchema = z.looseObject({
+	tenantSlug: ResourceIdSchema.optional(),
+	storeId: ResourceIdSchema.optional(),
+	locationId: ResourceIdSchema.optional(),
 });
 
-type TenantSelector = z.output<typeof TenantSelectorSchema>;
+type ResourceSelector = z.output<typeof ResourceSelectorSchema>;
 
 /** Resolves and verifies the tenant a request operates in (`AuthorizationGuard`, ADR 017). */
 export interface RequestTenantResolverPort {
@@ -29,13 +29,17 @@ export interface RequestTenantResolverPort {
 export interface RequestTenantContext {
 	/** Proven against the caller's active membership — safe for RLS and scoped grants. */
 	readonly verified: VerifiedTenantContext;
-	/** Ids the request targets (route/body/query), verified or not — used as resource attributes. */
+	/** Ids the request targets, verified or not — used as resource attributes. */
 	readonly requested: VerifiedTenantContext;
+	/**
+	 * The tenant the request targets (by `:tenantSlug`, store or location) with its lifecycle and the
+	 * caller's access, or null when it targets none. The lifecycle rule applies to it on every path.
+	 */
+	readonly target: TargetTenant | null;
 }
 
-/** Params, query, and body are all untyped request input — validated here before use. */
-function readSelector(source: FastifyRequest["body"]): TenantSelector {
-	const parsed = TenantSelectorSchema.safeParse(source);
+function readSelector(source: FastifyRequest["body"]): ResourceSelector {
+	const parsed = ResourceSelectorSchema.safeParse(source);
 	return parsed.success ? parsed.data : {};
 }
 
@@ -44,68 +48,58 @@ function firstDefined(values: readonly (string | undefined)[]): string | undefin
 }
 
 /**
- * Resolves the tenant a request operates in (spec §55, §92, §93).
- *
- * The client may *request* a tenant through the `x-organization-id` /
- * `x-store-id` / `x-location-id` headers or route/body/query ids; the server decides whether
- * that request is legitimate:
- *
- * - An explicit tenant **header** the caller is not an active member of is a
- *   forged tenant claim → 403.
- * - Route/body/query ids are verified the same way but, when unproven, are only
- *   carried as resource attributes (a GLOBAL-scoped permission may still act on
- *   another organization's resource; an ORGANIZATION-scoped one may not).
- * - Platform SuperAdmins may select any tenant.
+ * The tenant for a user is {@link TenantSource} (`:tenantSlug` in multi mode, the default tenant in single mode).
+ * On a route without one, a requested store or location still belongs to a tenant: membership verification
+ * reports that tenant as the request's target, so its lifecycle is enforced exactly as for a named tenant.
+ * A machine credential names its own tenant; a slug or tenant id on that request is rejected.
+ * `x-tenant-id` and `x-location-id` select nothing: the merchant console and POS clients send them on
+ * every call as information only (what they think the request is about), and this resolver never
+ * reads them. A SuperAdmin is verified like any other user.
  */
 @Injectable()
 export class AuthorizationContextResolver implements RequestTenantResolverPort {
-	public constructor(private readonly tenantMembership: TenantMembershipService) {}
+	public constructor(
+		private readonly tenantMembership: TenantMembershipService,
+		@Inject(TENANT_SOURCE) private readonly tenantSource: TenantSource,
+	) {}
 
 	public async resolve(request: FastifyRequest, user: AuthenticatedUser): Promise<RequestTenantContext> {
+		if (hasApiKeyAuthOnRequest(request)) {
+			rejectMachineTenantSelector(request);
+			return { verified: {}, requested: {}, target: null };
+		}
+
 		const params = readSelector(request.params);
 		const query = readSelector(request.query);
 		const body = readSelector(request.body);
+		const resolution = await this.tenantSource.resolve(params.tenantSlug === undefined ? {} : { tenantSlug: params.tenantSlug });
+		const requestedTenantId = resolution.kind === "tenant" ? resolution.tenantId : undefined;
 
-		const headerOrganizationId = this.readHeader(request, "x-organization-id");
 		const headerStoreId = this.readHeader(request, "x-store-id");
-		const headerLocationId = this.readHeader(request, "x-location-id");
-
-		const explicitOrganizationId = firstDefined([headerOrganizationId, params.organizationId, params.orgId, query.organizationId, body.organizationId]);
-		// An `/orgs/:orgSlug` route names its organization by route key; it is verified like any route id below,
-		// so in multi-tenant mode the request's RLS scope carries the organization the URL names.
-		const requestedOrganizationId =
-			explicitOrganizationId ?? (params.orgSlug === undefined ? undefined : ((await this.tenantMembership.organizationIdForRouteKey(params.orgSlug)) ?? undefined));
 		const requestedStoreId = firstDefined([headerStoreId, params.storeId, query.storeId, body.storeId]);
-		const requestedLocationId = firstDefined([headerLocationId, params.locationId, query.locationId, body.locationId]);
+		const requestedLocationId = firstDefined([params.locationId, query.locationId, body.locationId]);
 		const requested: VerifiedTenantContext = {
-			...(requestedOrganizationId === undefined ? {} : { organizationId: requestedOrganizationId }),
+			...(requestedTenantId === undefined ? {} : { tenantId: requestedTenantId }),
 			...(requestedStoreId === undefined ? {} : { storeId: requestedStoreId }),
 			...(requestedLocationId === undefined ? {} : { locationId: requestedLocationId }),
 		};
 
-		if (user.isSuperAdmin) {
-			return { verified: requested, requested };
-		}
-
+		// Platform staff are verified like every user (D4): a membership, or an approved support grant
+		// for this tenant (`TenantMembershipService.verify`). Being a SuperAdmin never binds a tenant.
 		const verification = await this.tenantMembership.verify(user.id, requested);
-		const forgedHeader =
-			(headerOrganizationId !== undefined && verification.organizationRejected) ||
-			(headerStoreId !== undefined && verification.storeRejected) ||
-			(headerLocationId !== undefined && verification.locationRejected);
-		if (forgedHeader) {
+		if (headerStoreId !== undefined && verification.storeRejected) {
 			throw new AccessDeniedError();
 		}
 
-		return { verified: verification.context, requested };
+		return { verified: verification.context, requested, target: verification.target };
 	}
 
-	private readHeader(request: FastifyRequest, name: "x-organization-id" | "x-store-id" | "x-location-id"): string | undefined {
+	private readHeader(request: FastifyRequest, name: "x-store-id"): string | undefined {
 		const value = readFirstHeader(request.headers[name]);
 		if (value === undefined) {
 			return undefined;
 		}
-		const parsed = TenantIdSchema.safeParse(value);
-		// A malformed tenant header can never match a membership — reject it as forged.
+		const parsed = ResourceIdSchema.safeParse(value);
 		if (!parsed.success) {
 			throw new AccessDeniedError();
 		}

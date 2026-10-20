@@ -28,7 +28,7 @@ export class TenantJobContextService {
 	public sign(context: Omit<TenantJobContext, "signature">): TenantJobContext {
 		const secret: string = this.requireSecret();
 		const payload = JSON.stringify({
-			organizationId: context.organizationId,
+			tenantId: context.tenantId,
 			initiatingActorId: context.initiatingActorId,
 			purpose: context.purpose,
 			policyVersion: context.policyVersion,
@@ -44,7 +44,7 @@ export class TenantJobContextService {
 		if (this.secret === null || context.expiresAt < Date.now()) return false;
 
 		const expected = this.sign({
-			organizationId: context.organizationId,
+			tenantId: context.tenantId,
 			initiatingActorId: context.initiatingActorId,
 			purpose: context.purpose,
 			policyVersion: context.policyVersion,

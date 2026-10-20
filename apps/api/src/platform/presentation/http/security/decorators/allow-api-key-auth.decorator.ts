@@ -1,17 +1,17 @@
 import { SetMetadata } from "@nestjs/common";
-import type { OrganizationApiKeyScope } from "@workspace/shared";
+import type { TenantApiKeyScope } from "@workspace/shared";
 
 import type { ApiKeyProvider } from "../../../../application/ports/api-key-verification.port";
 import { ALLOW_API_KEY_AUTH_KEY } from "../api-keys/api-key-request";
 
 export interface AllowApiKeyAuthOptions {
 	readonly providers?: readonly ApiKeyProvider[];
-	/** Merchant key scopes accepted on the route (default: `INTEGRATION` only — a POS till key never reaches the organization API). */
-	readonly scopes?: readonly OrganizationApiKeyScope[];
+	/** Merchant key scopes accepted on the route (default: `INTEGRATION` only — a POS till key never reaches the tenant API). */
+	readonly scopes?: readonly TenantApiKeyScope[];
 }
 
 /** Key scopes an `@AllowApiKeyAuth()` route accepts when the decorator names none. */
-export const DEFAULT_ALLOWED_API_KEY_SCOPES: readonly OrganizationApiKeyScope[] = ["INTEGRATION"];
+export const DEFAULT_ALLOWED_API_KEY_SCOPES: readonly TenantApiKeyScope[] = ["INTEGRATION"];
 
 const DEFAULT_ALLOW_API_KEY_AUTH_OPTIONS: AllowApiKeyAuthOptions = {
 	providers: ["merchant"],

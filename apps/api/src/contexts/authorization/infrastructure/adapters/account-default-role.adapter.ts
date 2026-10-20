@@ -27,7 +27,7 @@ export class AccountDefaultRoleAdapter implements AccountDefaultRolePort {
 		const context = this.requestContext.current();
 		return ActorContextSchema.parse({
 			kind: "anonymous",
-			organizationId: null,
+			tenantId: null,
 			request: {
 				requestId: this.requestContext.correlationId() ?? generateCorrelationId(),
 				ip: context?.ip ?? null,

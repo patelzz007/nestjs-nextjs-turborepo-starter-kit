@@ -21,7 +21,7 @@ describe("REWARD_AUDIT_SIGNUP_REFERRAL_AUDIT_FACTORY", () => {
 		expect(createMany).toHaveBeenCalledWith({
 			data: [
 				{
-					organizationId: null,
+					tenantId: null,
 					actorUserId: null,
 					action: SIGNUP_REFERRAL_CODE_ISSUED_AUDIT_ACTION,
 					metadata: { actor: "system", ownerUserId: "user-1", referralCodeId: "code-1", successor: true },

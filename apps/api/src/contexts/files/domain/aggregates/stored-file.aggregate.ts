@@ -79,7 +79,7 @@ export interface StoredFileState {
 	readonly status: FileStatus;
 	readonly isDeleted: boolean;
 	readonly uploadedById: string;
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 	readonly productId: string | null;
 	readonly expectedChecksum: string;
 	/** The original upload's current location and public copy. */
@@ -94,7 +94,7 @@ export interface RequestedUpload {
 	readonly category: FileCategory;
 	readonly visibility: FileVisibility;
 	readonly uploadedById: string;
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 	readonly productId: string | null;
 	readonly expectedChecksum: string;
 	readonly original: StoredFileObject;
@@ -205,8 +205,8 @@ export class StoredFileAggregate extends AggregateRoot<StoredFileEvent> {
 		return this.state.uploadedById;
 	}
 
-	public get organizationId(): string | null {
-		return this.state.organizationId;
+	public get tenantId(): string | null {
+		return this.state.tenantId;
 	}
 
 	public get productId(): string | null {
@@ -249,7 +249,7 @@ export class StoredFileAggregate extends AggregateRoot<StoredFileEvent> {
 		}
 		this.state = { ...this.state, status: outcome };
 		this.change = { kind: "verdict", outcome, record };
-		this.record(new FileVerdictReached(now, this.state.id, this.state.category, this.state.organizationId, this.state.uploadedById, outcome, this.state.productId));
+		this.record(new FileVerdictReached(now, this.state.id, this.state.category, this.state.tenantId, this.state.uploadedById, outcome, this.state.productId));
 	}
 
 	/**
@@ -266,6 +266,6 @@ export class StoredFileAggregate extends AggregateRoot<StoredFileEvent> {
 			// A private original may carry no public copy; a public file's copy exists once it was published.
 			published: object.publicPath !== null && (object.slot !== "ORIGINAL" || this.state.visibility === "PUBLIC"),
 		}));
-		this.record(new FileDeleted(now, this.state.id, this.state.category, this.state.organizationId, deletedBy, objects));
+		this.record(new FileDeleted(now, this.state.id, this.state.category, this.state.tenantId, deletedBy, objects));
 	}
 }

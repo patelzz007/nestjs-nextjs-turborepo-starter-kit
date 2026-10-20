@@ -21,14 +21,14 @@ import { AuthenticationError, ConflictError } from "../../../../platform/applica
 import type { MerchantAccessGrant } from "../../../../platform/application/ports/authorization.port";
 import { AuthorizationDeniedError } from "../../../../platform/domain/errors/authorization-denied.error";
 import { RewardImageNotFoundError, RewardJustSoldOutError, RewardNotFoundError, RewardReservationMissingError } from "../../domain/errors/reward.errors";
-import { NOW, ORGANIZATION_ID, REFERRER_ID, referrerRow, REWARD_ID, rewardState, STORE_A } from "../../domain/__tests__/reward-state.fixture";
+import { NOW, TENANT_ID, REFERRER_ID, referrerRow, REWARD_ID, rewardState, STORE_A } from "../../domain/__tests__/reward-state.fixture";
 import { AcceptLegalTermsCommand } from "../commands/accept-legal-terms/accept-legal-terms.command";
 import { AcceptLegalTermsHandler } from "../commands/accept-legal-terms/accept-legal-terms.handler";
 import type { DueForAutoPublish, LegalAcceptanceReadPort, RewardImageDeliveryPort, RewardImagesArchive, RewardReadPort } from "../ports/reward-read.port";
 import { GetLegalAcceptanceStatusQuery } from "../queries/get-legal-acceptance-status/get-legal-acceptance-status.query";
 import { GetLegalAcceptanceStatusHandler } from "../queries/get-legal-acceptance-status/get-legal-acceptance-status.handler";
-import { GetOrganizationRewardQuery } from "../queries/get-organization-reward/get-organization-reward.query";
-import { GetOrganizationRewardHandler } from "../queries/get-organization-reward/get-organization-reward.handler";
+import { GetTenantRewardQuery } from "../queries/get-tenant-reward/get-tenant-reward.query";
+import { GetTenantRewardHandler } from "../queries/get-tenant-reward/get-tenant-reward.handler";
 import { GetPublishedRewardQuery } from "../queries/get-published-reward/get-published-reward.query";
 import { GetPublishedRewardHandler } from "../queries/get-published-reward/get-published-reward.handler";
 import { GetRewardForAdminQuery } from "../queries/get-reward-for-admin/get-reward-for-admin.query";
@@ -39,10 +39,10 @@ import { GetRewardImagesArchiveQuery } from "../queries/get-reward-images-archiv
 import { GetRewardImagesArchiveHandler } from "../queries/get-reward-images-archive/get-reward-images-archive.handler";
 import { ListMarketplaceRewardsQuery } from "../queries/list-marketplace-rewards/list-marketplace-rewards.query";
 import { ListMarketplaceRewardsHandler } from "../queries/list-marketplace-rewards/list-marketplace-rewards.handler";
-import { ListOrganizationRewardsQuery } from "../queries/list-organization-rewards/list-organization-rewards.query";
-import { ListOrganizationRewardsHandler } from "../queries/list-organization-rewards/list-organization-rewards.handler";
-import { SummarizeOrganizationRewardsHandler } from "../queries/summarize-organization-rewards/summarize-organization-rewards.handler";
-import { SummarizeOrganizationRewardsQuery } from "../queries/summarize-organization-rewards/summarize-organization-rewards.query";
+import { ListTenantRewardsQuery } from "../queries/list-tenant-rewards/list-tenant-rewards.query";
+import { ListTenantRewardsHandler } from "../queries/list-tenant-rewards/list-tenant-rewards.handler";
+import { SummarizeTenantRewardsHandler } from "../queries/summarize-tenant-rewards/summarize-tenant-rewards.handler";
+import { SummarizeTenantRewardsQuery } from "../queries/summarize-tenant-rewards/summarize-tenant-rewards.query";
 import { ListRewardsPendingReviewQuery } from "../queries/list-rewards-pending-review/list-rewards-pending-review.query";
 import { ListRewardsPendingReviewHandler } from "../queries/list-rewards-pending-review/list-rewards-pending-review.handler";
 import { RewardInventoryApplicationService } from "../services/reward-inventory.application-service";
@@ -50,7 +50,7 @@ import type { RewardsScope } from "../rewards-scope";
 import { fakeRewardResponse, fakeRewardsScope } from "./fakes/rewards-scope.fakes";
 import { apiKeyActor, userActor } from "./reward-test-actors";
 
-const VISIBLE = fakeRewardResponse(REWARD_ID, ORGANIZATION_ID, "PUBLISHED", "Free coffee");
+const VISIBLE = fakeRewardResponse(REWARD_ID, TENANT_ID, "PUBLISHED", "Free coffee");
 const OTHER_REWARD_ID = "0199a1b2-0000-7000-8000-0000000000f1";
 
 /** A real read port over a fixed list: answers by id and records the grant it was asked with. */
@@ -59,7 +59,7 @@ class FixedRewardReads implements RewardReadPort {
 
 	public constructor(private readonly rewards: readonly RewardResponse[]) {}
 
-	public listOrganizationRewards(_actor: ActorContext, grant: MerchantAccessGrant, query: MerchantRewardListQuery): Promise<PaginatedServiceResult<RewardResponse>> {
+	public listTenantRewards(_actor: ActorContext, grant: MerchantAccessGrant, query: MerchantRewardListQuery): Promise<PaginatedServiceResult<RewardResponse>> {
 		this.grants.push(grant);
 		return Promise.resolve({
 			items: [...this.rewards],
@@ -73,7 +73,7 @@ class FixedRewardReads implements RewardReadPort {
 		});
 	}
 
-	public summarizeOrganizationRewards(_actor: ActorContext, grant: MerchantAccessGrant): Promise<MerchantRewardSummary> {
+	public summarizeTenantRewards(_actor: ActorContext, grant: MerchantAccessGrant): Promise<MerchantRewardSummary> {
 		this.grants.push(grant);
 		const countsByStatus = MerchantRewardSummarySchema.shape.countsByStatus.parse(
 			Object.fromEntries(RewardStatusSchema.options.map((status) => [status, this.rewards.filter((reward) => reward.status === status).length])),
@@ -81,7 +81,7 @@ class FixedRewardReads implements RewardReadPort {
 		return Promise.resolve({ countsByStatus, unitsRemaining: this.rewards.reduce((sum, reward) => sum + reward.quantityRemaining, 0) });
 	}
 
-	public findOrganizationReward(_actor: ActorContext, grant: MerchantAccessGrant, rewardId: string): Promise<RewardResponse | null> {
+	public findTenantReward(_actor: ActorContext, grant: MerchantAccessGrant, rewardId: string): Promise<RewardResponse | null> {
 		this.grants.push(grant);
 		return Promise.resolve(this.rewards.find((reward) => reward.id === rewardId) ?? null);
 	}
@@ -134,38 +134,36 @@ describe("merchant reward queries", () => {
 	it("lists with the caller's store scope narrowed to the requested store", async () => {
 		const access = new FakeMerchantAccessPort().grantLocations([STORE_A]);
 		const reads = new FixedRewardReads([VISIBLE]);
-		const rewards = await new ListOrganizationRewardsHandler(access, reads).execute(
-			new ListOrganizationRewardsQuery(userActor(), { organizationId: ORGANIZATION_ID, locationId: STORE_A, page: 1, limit: 20 }),
+		const rewards = await new ListTenantRewardsHandler(access, reads).execute(
+			new ListTenantRewardsQuery(userActor(), { tenantId: TENANT_ID, locationId: STORE_A, page: 1, limit: 20 }),
 		);
 		expect(rewards.items).toEqual([VISIBLE]);
-		expect(access.requests.at(0)?.request).toEqual({ organizationId: ORGANIZATION_ID, capability: "merchant:view_rewards", locationId: STORE_A });
-		expect(reads.grants).toEqual([{ organizationId: ORGANIZATION_ID, locationScope: "SELECTED", locationIds: [STORE_A] }]);
+		expect(access.requests.at(0)?.request).toEqual({ tenantId: TENANT_ID, capability: "merchant:view_rewards", locationId: STORE_A });
+		expect(reads.grants).toEqual([{ tenantId: TENANT_ID, locationScope: "SELECTED", locationIds: [STORE_A] }]);
 	});
 
 	it("summarizes every reward in the caller's store scope behind the same view capability", async () => {
 		const access = new FakeMerchantAccessPort().grantLocations([STORE_A]);
-		const reads = new FixedRewardReads([VISIBLE, fakeRewardResponse(OTHER_REWARD_ID, ORGANIZATION_ID, "DRAFT", "Muffin")]);
+		const reads = new FixedRewardReads([VISIBLE, fakeRewardResponse(OTHER_REWARD_ID, TENANT_ID, "DRAFT", "Muffin")]);
 
-		const summary = await new SummarizeOrganizationRewardsHandler(access, reads).execute(
-			new SummarizeOrganizationRewardsQuery(userActor(), { organizationId: ORGANIZATION_ID, locationId: STORE_A }),
-		);
+		const summary = await new SummarizeTenantRewardsHandler(access, reads).execute(new SummarizeTenantRewardsQuery(userActor(), { tenantId: TENANT_ID, locationId: STORE_A }));
 
 		expect(summary.countsByStatus).toMatchObject({ PUBLISHED: 1, DRAFT: 1, PENDING_REVIEW: 0 });
 		expect(summary.unitsRemaining).toBe(VISIBLE.quantityRemaining * 2);
-		expect(access.requests.at(0)?.request).toEqual({ organizationId: ORGANIZATION_ID, capability: "merchant:view_rewards", locationId: STORE_A });
-		expect(reads.grants).toEqual([{ organizationId: ORGANIZATION_ID, locationScope: "SELECTED", locationIds: [STORE_A] }]);
+		expect(access.requests.at(0)?.request).toEqual({ tenantId: TENANT_ID, capability: "merchant:view_rewards", locationId: STORE_A });
+		expect(reads.grants).toEqual([{ tenantId: TENANT_ID, locationScope: "SELECTED", locationIds: [STORE_A] }]);
 	});
 
 	it("answers 404 for a reward not offered at the caller's stores, and nothing at all without the capability", async () => {
 		const access = new FakeMerchantAccessPort();
 		const reads = new FixedRewardReads([]);
-		await expect(
-			new GetOrganizationRewardHandler(access, reads).execute(new GetOrganizationRewardQuery(userActor(), { organizationId: ORGANIZATION_ID, rewardId: REWARD_ID })),
-		).rejects.toThrow(RewardNotFoundError);
+		await expect(new GetTenantRewardHandler(access, reads).execute(new GetTenantRewardQuery(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID }))).rejects.toThrow(
+			RewardNotFoundError,
+		);
 		access.deny("merchant:view_rewards");
-		await expect(
-			new GetOrganizationRewardHandler(access, reads).execute(new GetOrganizationRewardQuery(userActor(), { organizationId: ORGANIZATION_ID, rewardId: REWARD_ID })),
-		).rejects.toThrow(AuthorizationDeniedError);
+		await expect(new GetTenantRewardHandler(access, reads).execute(new GetTenantRewardQuery(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID }))).rejects.toThrow(
+			AuthorizationDeniedError,
+		);
 	});
 });
 
@@ -181,7 +179,7 @@ describe("review and marketplace queries", () => {
 	});
 
 	it("serves only published rewards publicly", async () => {
-		const draft = fakeRewardResponse(REWARD_ID, ORGANIZATION_ID, "DRAFT", "Hidden");
+		const draft = fakeRewardResponse(REWARD_ID, TENANT_ID, "DRAFT", "Hidden");
 		await expect(new GetPublishedRewardHandler(new FixedRewardReads([draft])).execute(new GetPublishedRewardQuery(userActor(), { rewardId: REWARD_ID }))).rejects.toThrow(
 			RewardNotFoundError,
 		);
@@ -214,9 +212,7 @@ describe("legal acceptance", () => {
 		await handler.execute(new AcceptLegalTermsCommand(userActor(), { termsVersion: "v1", privacyVersion: "v1" }));
 		await handler.execute(new AcceptLegalTermsCommand(userActor(), { termsVersion: "v2", privacyVersion: "v1" }));
 		expect(scope.legalAcceptances.added.map((acceptance) => acceptance.snapshot().termsVersion)).toEqual(["v1", "v2"]);
-		await expect(handler.execute(new AcceptLegalTermsCommand(apiKeyActor(ORGANIZATION_ID), { termsVersion: "v1", privacyVersion: "v1" }))).rejects.toThrow(
-			AuthenticationError,
-		);
+		await expect(handler.execute(new AcceptLegalTermsCommand(apiKeyActor(TENANT_ID), { termsVersion: "v1", privacyVersion: "v1" }))).rejects.toThrow(AuthenticationError);
 	});
 
 	it("reads the caller's own status", async () => {

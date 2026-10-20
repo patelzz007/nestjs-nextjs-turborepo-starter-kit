@@ -4,9 +4,9 @@ import { MERCHANT_CAPABILITY, type MerchantApiKeyCreated } from "@workspace/shar
 
 import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
-import { MERCHANT_ACCESS } from "../../../../organizations/public-api";
+import { MERCHANT_ACCESS } from "../../../../tenancy/public-api";
 import { ApiKeyLocationRequiredError } from "../../../domain/errors/pos.errors";
-import { actingInOrganization, actingMemberId } from "../../acting-member";
+import { actingInTenant, actingMemberId } from "../../acting-member";
 import type { PosScope } from "../../pos-scope";
 import type { PosCredentialsPort } from "../../ports/pos-credentials.port";
 import { POS_CREDENTIALS, POS_ID_GENERATOR, POS_UNIT_OF_WORK, type PosIdGenerator } from "../../ports/pos.tokens";
@@ -17,7 +17,7 @@ const DEFAULT_API_KEY_NAME = "API key";
 
 /**
  * Mints a key for one of the member's stores, or (only for a member with access to every store) an
- * organization-wide key, with its audit row. The plaintext is returned once and never stored.
+ * tenant-wide key, with its audit row. The plaintext is returned once and never stored.
  */
 @CommandHandler(IssueApiKeyCommand)
 export class IssueApiKeyHandler implements ICommandHandler<IssueApiKeyCommand, MerchantApiKeyCreated> {
@@ -32,11 +32,11 @@ export class IssueApiKeyHandler implements ICommandHandler<IssueApiKeyCommand, M
 		const { actor, input } = command;
 		const memberId = actingMemberId(actor);
 		const grant = await this.merchantAccess.assertCapability(actor, {
-			organizationId: input.organizationId,
+			tenantId: input.tenantId,
 			capability: MERCHANT_CAPABILITY.manageApiKeys,
 			locationId: input.locationId ?? null,
 		});
-		const tenant = actingInOrganization(actor, input.organizationId);
+		const tenant = actingInTenant(actor, input.tenantId);
 		if (grant.locationScope === "SELECTED" && input.locationId === undefined) {
 			throw new ApiKeyLocationRequiredError();
 		}
@@ -47,7 +47,7 @@ export class IssueApiKeyHandler implements ICommandHandler<IssueApiKeyCommand, M
 		await this.uow.run(tenant, async (scope: PosScope): Promise<void> => {
 			await scope.apiKeys.add({
 				id,
-				organizationId: input.organizationId,
+				tenantId: input.tenantId,
 				locationId,
 				name,
 				keyHash: key.hash,
@@ -56,7 +56,7 @@ export class IssueApiKeyHandler implements ICommandHandler<IssueApiKeyCommand, M
 				createdByUserId: memberId,
 			});
 			await scope.rewardAudit.append({
-				organizationId: input.organizationId,
+				tenantId: input.tenantId,
 				actorUserId: memberId,
 				action: "merchant.api_key_created",
 				metadata: { keyId: id, name, scope: input.scope, locationId },

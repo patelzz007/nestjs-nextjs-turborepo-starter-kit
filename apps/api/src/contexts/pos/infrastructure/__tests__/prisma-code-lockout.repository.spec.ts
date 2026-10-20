@@ -11,7 +11,7 @@ vi.mock("../../../../prisma/prisma.service", () => ({ PrismaService: class {} })
 const NOW = epochMs(1_800_000_000_000);
 const WINDOW_MS = 900_000;
 
-type UpdateMany = (args: Prisma.OrganizationApiKeyUpdateManyArgs) => Promise<Prisma.BatchPayload>;
+type UpdateMany = (args: Prisma.TenantApiKeyUpdateManyArgs) => Promise<Prisma.BatchPayload>;
 
 function database(updates: readonly number[], failureCount = 3): { readonly prisma: PrismaService; readonly updateMany: Mock<UpdateMany> } {
 	const updateMany = vi.fn<UpdateMany>();
@@ -19,7 +19,7 @@ function database(updates: readonly number[], failureCount = 3): { readonly pris
 		updateMany.mockResolvedValueOnce({ count });
 	}
 	const prisma = Object.assign(new PrismaService(createTestTypedConfig()), {
-		organizationApiKey: {
+		tenantApiKey: {
 			updateMany,
 			findUniqueOrThrow: vi.fn().mockResolvedValue({ codeFailureCount: failureCount }),
 			findUnique: vi.fn().mockResolvedValue({ codeLockedUntil: BigInt(NOW + 1) }),

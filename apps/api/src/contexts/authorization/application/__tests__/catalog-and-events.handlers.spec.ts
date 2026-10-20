@@ -144,14 +144,14 @@ describe("After-commit invalidation", () => {
 		expect(invalidation.users).toEqual([{ userIds: ["user-1", "user-2"], scope: { accessTokenState: true, trigger: "rbac_mutation" } }]);
 	});
 
-	it("drops one organization's policy bundles, or every bundle for a platform policy", async () => {
+	it("drops one tenant's policy bundles, or every bundle for a platform policy", async () => {
 		const invalidation = new RecordingInvalidation();
 		const handler = new InvalidatePolicyBundlesOnPolicyPublished(invalidation);
 
 		await handler.handle(new PolicyPublished(NOW, "draft-1", "org-1", 2));
 		await handler.handle(new PolicyPublished(NOW, "draft-2", null, 5));
 
-		expect(invalidation.bundles).toEqual([{ kind: "organization", organizationId: "org-1" }, { kind: "all" }]);
+		expect(invalidation.bundles).toEqual([{ kind: "tenant", tenantId: "org-1" }, { kind: "all" }]);
 	});
 
 	it("logs instead of throwing after commit when the cache is unavailable", async () => {

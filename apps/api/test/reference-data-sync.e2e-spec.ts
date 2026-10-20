@@ -9,7 +9,8 @@ import type { TypedConfigService } from "../src/config/typed-config.service";
 import { createSuperAdminBootstrap } from "../src/contexts/identity/superadmin-bootstrap.composition";
 import { SuperAdminRoleMissingError } from "../src/contexts/identity/domain/errors/identity.errors";
 import { createReferenceDataSyncService, systemOperationRunner } from "../src/contexts/authorization/infrastructure/reference-data/reference-data.composition";
-import { REFERENCE_DATA_SYNC_OPERATION, type ReferenceDataSyncReport } from "../src/contexts/authorization/infrastructure/reference-data/reference-data-sync.service";
+import { REFERENCE_DATA_SYNC_OPERATION } from "../src/contexts/authorization/application/ports/authorization.tokens";
+import type { ReferenceDataSyncReport } from "../src/contexts/authorization/infrastructure/reference-data/reference-data-sync.service";
 import { MERCHANT_CAPABILITY_CATALOG } from "../src/contexts/authorization/infrastructure/reference-data/merchant-capability-catalog";
 import { SYSTEM_ROLE_CATALOG } from "../src/contexts/authorization/infrastructure/reference-data/system-role-catalog";
 import { PrismaService } from "../src/prisma/prisma.service";
@@ -89,7 +90,7 @@ describe("Reference data sync (integration, scratch database)", () => {
 		expect(await count(`SELECT count(*)::int AS n FROM "RolePermission" rp JOIN "Role" r ON r.id = rp."roleId" WHERE r.name = 'SuperAdmin' AND NOT rp."isDeleted"`)).toBe(
 			getPermissionDefinitions().length,
 		);
-		for (const table of ["User", "Organization", "OrganizationMembership"]) {
+		for (const table of ["User", "Tenant", "Membership"]) {
 			expect(await count(`SELECT count(*)::int AS n FROM "${table}"`)).toBe(0);
 		}
 

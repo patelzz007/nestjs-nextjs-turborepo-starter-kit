@@ -28,7 +28,7 @@ function toState(snapshot: RewardSnapshot, previous: RewardState | undefined): R
 	return {
 		id: snapshot.id,
 		kind: snapshot.kind,
-		organizationId: snapshot.organizationId,
+		tenantId: snapshot.tenantId,
 		status: snapshot.review.status,
 		title: snapshot.title,
 		description: snapshot.description,
@@ -80,9 +80,9 @@ export class InMemoryRewardRepository implements RewardRepository {
 		return this;
 	}
 
-	public getConsumerInOrganization(organizationId: string, rewardId: string): Promise<Reward> {
+	public getConsumerInTenant(tenantId: string, rewardId: string): Promise<Reward> {
 		const row = this.rows.get(rewardId);
-		if (row?.kind !== "CONSUMER" || row.organizationId !== organizationId) {
+		if (row?.kind !== "CONSUMER" || row.tenantId !== tenantId) {
 			return Promise.reject(new RewardNotFoundError(rewardId));
 		}
 		return Promise.resolve(Reward.rehydrate(row));

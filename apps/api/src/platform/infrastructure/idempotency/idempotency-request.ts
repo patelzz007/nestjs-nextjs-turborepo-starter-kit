@@ -121,11 +121,11 @@ export function readIdempotentRequestBody(source: IdempotentRequestBodySource): 
  * The namespace a key lives in: WHO is calling, for WHICH tenant, on WHICH
  * endpoint. All three come from the server-verified request context (ADR 017)
  * — never from raw headers — so one caller can never replay another caller's
- * response, nor the same caller's response from another organization/store.
+ * response, nor the same caller's response from another tenant/store.
  *
  * - user principal → `user:<id>` (plus `:as:<impersonator>` while impersonating)
  * - API-key principal (POS / `@AllowApiKeyAuth()`) → `key:<apiKeyId>`
- * - tenant → the verified organization / store / location (API keys: the key's organization)
+ * - tenant → the verified tenant / store / location (API keys: the key's tenant)
  *
  * Over-long scopes are hashed to fit the `VarChar(200)` column.
  */
@@ -154,6 +154,6 @@ function describePrincipal(context: RequestContext | undefined): string {
 
 function describeTenant(context: RequestContext | undefined): string {
 	const tenant = context?.tenant;
-	const organizationId: string | undefined = tenant?.organizationId ?? context?.apiKey?.organizationId;
-	return [`org:${organizationId ?? NO_TENANT_COMPONENT}`, `store:${tenant?.storeId ?? NO_TENANT_COMPONENT}`, `loc:${tenant?.locationId ?? NO_TENANT_COMPONENT}`].join(":");
+	const tenantId: string | undefined = tenant?.tenantId ?? context?.apiKey?.tenantId;
+	return [`org:${tenantId ?? NO_TENANT_COMPONENT}`, `store:${tenant?.storeId ?? NO_TENANT_COMPONENT}`, `loc:${tenant?.locationId ?? NO_TENANT_COMPONENT}`].join(":");
 }

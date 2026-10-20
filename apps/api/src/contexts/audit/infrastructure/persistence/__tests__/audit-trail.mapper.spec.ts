@@ -7,7 +7,7 @@ import type { AuditLogSummaryRow } from "../prisma-http-audit-log.read-repositor
 
 const OCCURRED_AT = 1_790_812_800_000;
 const ACTOR_ID = "11111111-1111-4111-8111-111111111111";
-const ORGANIZATION_ID = "33333333-3333-4333-8333-333333333333";
+const TENANT_ID = "33333333-3333-4333-8333-333333333333";
 const REQUEST_ID = "55555555-5555-4555-8555-555555555555";
 const CHANGE_ID = "66666666-6666-4666-8666-666666666666";
 
@@ -27,7 +27,7 @@ const REQUEST: AuditLogSummaryRow = {
 	impersonatorUserId: null,
 	apiKeyId: null,
 	terminalId: null,
-	organizationId: ORGANIZATION_ID,
+	tenantId: TENANT_ID,
 	storeId: null,
 	locationId: null,
 	ipAddress: "203.0.113.24",
@@ -59,7 +59,7 @@ function change(overrides: Partial<DataChangeLogSummaryRow> = {}): DataChangeLog
 		changedColumns: ["status"],
 		actorKind: "SYSTEM",
 		actorUserId: null,
-		organizationId: null,
+		tenantId: null,
 		apiKeyId: null,
 		systemOperation: "queue.email.send",
 		correlationId: "corr-job",
@@ -76,7 +76,7 @@ function pageRows(changes: readonly DataChangeLogSummaryRow[]): AuditTrailPageRo
 			["corr-request", { changeCount: 2, changedTables: ["User"] }],
 			["corr-job", { changeCount: 3, changedTables: ["email_jobs", "outbox_targets"] }],
 		]),
-		references: toAuditLogReferences([{ id: ACTOR_ID, email: "user@example.com", fullName: "Demo Customer" }], [{ id: ORGANIZATION_ID, displayName: "Kopi Corner" }]),
+		references: toAuditLogReferences([{ id: ACTOR_ID, email: "user@example.com", fullName: "Demo Customer" }], [{ id: TENANT_ID, displayName: "Kopi Corner" }]),
 	};
 }
 
@@ -86,7 +86,7 @@ describe("toAuditTrailEntry", () => {
 			kind: "REQUEST",
 			method: "PATCH",
 			actor: { fullName: "Demo Customer" },
-			organization: { name: "Kopi Corner" },
+			tenant: { name: "Kopi Corner" },
 			changeCount: 2,
 			changedTables: ["User"],
 		});
@@ -105,7 +105,7 @@ describe("toAuditTrailEntry", () => {
 			occurredAt: OCCURRED_AT + 60_000,
 			actorKind: "SYSTEM",
 			actor: null,
-			organization: null,
+			tenant: null,
 			apiKeyId: null,
 			systemOperation: "queue.email.send",
 			correlationId: "corr-job",
@@ -138,6 +138,6 @@ describe("page references", () => {
 		const rows = [change(), change({ id: "x", correlationId: null, actorUserId: ACTOR_ID }), change({ id: "y", correlationId: null })];
 
 		expect(auditTrailChangeGroups([REQUEST], rows)).toEqual({ correlationIds: ["corr-request", "corr-job"], transactionIds: [BigInt(77)] });
-		expect(auditTrailReferenceIds([REQUEST], rows)).toEqual({ userIds: [ACTOR_ID], organizationIds: [ORGANIZATION_ID] });
+		expect(auditTrailReferenceIds([REQUEST], rows)).toEqual({ userIds: [ACTOR_ID], tenantIds: [TENANT_ID] });
 	});
 });

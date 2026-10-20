@@ -21,7 +21,8 @@ import {
 	IDENTITY_SETTINGS,
 	IDENTITY_TOKENS,
 	IDENTITY_UNIT_OF_WORK,
-	PUBLIC_AUTH_FLOW_OPERATION,
+	ACCOUNT_LOOKUP_OPERATION,
+	SIGNUP_REGISTER_OPERATION,
 } from "../../ports/identity.tokens";
 import { SignUpCommand } from "./sign-up.command";
 
@@ -56,7 +57,7 @@ export class SignUpHandler implements ICommandHandler<SignUpCommand, SignupRespo
 		// never a generic "check your inbox" (ADR 035).
 		const accepted: AcceptedSignupReferral | null = await this.signupReferrals.acceptCodeForSignup(input.body.referralCode, input.clientType);
 
-		const emailTaken: boolean = await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, actor, (scope) => scope.accounts.existsByEmail(email));
+		const emailTaken: boolean = await this.uow.runSystemOperation(ACCOUNT_LOOKUP_OPERATION, actor, (scope) => scope.accounts.existsByEmail(email));
 		if (emailTaken) {
 			return GENERIC_SIGNUP_RESPONSE;
 		}
@@ -78,7 +79,7 @@ export class SignUpHandler implements ICommandHandler<SignUpCommand, SignupRespo
 		);
 
 		try {
-			await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, actor, async (scope: IdentityScope): Promise<void> => {
+			await this.uow.runSystemOperation(SIGNUP_REGISTER_OPERATION, actor, async (scope: IdentityScope): Promise<void> => {
 				await scope.accounts.add(account);
 				await scope.signupReferrals.issueFirstCode(account.id, now);
 				if (accepted !== null) {

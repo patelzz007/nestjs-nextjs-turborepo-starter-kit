@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { buildDataChangeLogListOrder, buildDataChangeLogListWhere } from "../prisma-data-change-log.read-repository";
 
 const ACTOR_ID = "11111111-1111-4111-8111-111111111111";
-const ORGANIZATION_ID = "33333333-3333-4333-8333-333333333333";
+const TENANT_ID = "33333333-3333-4333-8333-333333333333";
 
 /** The query string as Fastify parses it (`filter[operation][eq]=UPDATE` → nested objects). */
 type RawQuery = Readonly<Record<string, string | Readonly<Record<string, Readonly<Record<string, string>>>>>>;
@@ -26,10 +26,10 @@ describe("buildDataChangeLogListWhere", () => {
 					operation: { in: "UPDATE,DELETE" },
 					actorKind: { eq: "UNATTRIBUTED" },
 					actorUserId: { eq: ACTOR_ID },
-					organizationId: { isNull: "false" },
+					tenantId: { isNull: "false" },
 					systemOperation: { eq: "geo.reference_data.write" },
 					correlationId: { eq: "corr-1" },
-					rowId: { eq: ORGANIZATION_ID },
+					rowId: { eq: TENANT_ID },
 					transactionId: { eq: "4242" },
 					occurredAt: { gte: "1790812800000" },
 				},
@@ -41,10 +41,10 @@ describe("buildDataChangeLogListWhere", () => {
 			{ operation: { in: ["UPDATE", "DELETE"] } },
 			{ actorKind: { equals: "UNATTRIBUTED" } },
 			{ actorUserId: { equals: ACTOR_ID } },
-			{ organizationId: { not: null } },
+			{ tenantId: { not: null } },
 			{ systemOperation: { equals: "geo.reference_data.write" } },
 			{ correlationId: { equals: "corr-1" } },
-			{ rowId: { equals: ORGANIZATION_ID } },
+			{ rowId: { equals: TENANT_ID } },
 			{ transactionId: { equals: 4242 } },
 			{ occurredAt: { gte: 1_790_812_800_000 } },
 		]);

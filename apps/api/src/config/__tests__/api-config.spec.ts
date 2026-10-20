@@ -16,6 +16,14 @@ describe("parseApiConfig", () => {
 		expect(run).not.toThrow(new RegExp(secret.slice(0, 10)));
 	});
 
+	it("rejects the retired DEFAULT_ORGANIZATION_ID and names DEFAULT_TENANT_ID", () => {
+		const run = (): void => {
+			parseApiConfig({ ...TEST_API_ENV, DEFAULT_ORGANIZATION_ID: "019b76da-a800-7a94-a198-23ad1b4cfdd9" });
+		};
+		expect(run).toThrow(EnvValidationError);
+		expect(run).toThrow(/DEFAULT_TENANT_ID/);
+	});
+
 	it("ignores unrelated OS variables (PATH, HOME, …)", () => {
 		expect(parseApiConfig({ ...TEST_API_ENV, PATH: "/usr/bin", SOME_OTHER_TOOL_FLAG: "x" }).runtime.appName).toBe("hello-world");
 	});

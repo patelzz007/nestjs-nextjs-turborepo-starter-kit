@@ -128,6 +128,7 @@ describe("ImpersonationSession", () => {
 				target: overrides.target === undefined ? TARGET : overrides.target,
 				targetUserId: overrides.targetUserId ?? "user-1",
 				impersonatorHasLiveSession: overrides.live ?? false,
+				supportAccessGrantIds: ["grant-1"],
 				origin: ORIGIN,
 				actionStartedAt: NOW,
 			},
@@ -138,7 +139,13 @@ describe("ImpersonationSession", () => {
 	it("starts a time-boxed session with its START audit row and event", () => {
 		const session = start();
 
-		expect(session.snapshot).toMatchObject({ impersonatorId: "admin-1", targetUserId: "user-1", expiresAt: NOW + IMPERSONATION_SESSION_TTL_MS, endedAt: null });
+		expect(session.snapshot).toMatchObject({
+			impersonatorId: "admin-1",
+			targetUserId: "user-1",
+			expiresAt: NOW + IMPERSONATION_SESSION_TTL_MS,
+			endedAt: null,
+			supportAccessGrantIds: ["grant-1"],
+		});
 		expect(session.isLiveAt(NOW)).toBe(true);
 		expect(session.isLiveAt(epochMs(NOW + IMPERSONATION_SESSION_TTL_MS))).toBe(false);
 		expect(session.pendingAudits).toEqual([{ action: "START", ipAddress: ORIGIN.ipAddress, userAgent: ORIGIN.userAgent }]);

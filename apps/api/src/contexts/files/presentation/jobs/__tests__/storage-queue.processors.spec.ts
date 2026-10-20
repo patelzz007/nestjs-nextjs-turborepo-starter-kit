@@ -56,7 +56,7 @@ describe("storage queue processors", () => {
 
 		const [dispatch] = dispatcher.dispatched;
 		expect(dispatch?.command).toBeInstanceOf(ScanFileCommand);
-		expect(dispatch?.command).toMatchObject({ fileId: FILE_ID, finalAttempt, actor: { operation: "queue.storage.scan" } });
+		expect(dispatch?.command).toMatchObject({ fileId: FILE_ID, finalAttempt, actor: { operation: "files.scan_verdict.apply" } });
 	});
 
 	it("refuses a malformed job before dispatching anything", async () => {

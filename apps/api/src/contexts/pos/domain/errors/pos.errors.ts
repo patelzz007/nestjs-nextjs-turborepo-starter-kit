@@ -21,7 +21,7 @@ export const PosDomainErrorCodeSchema = DomainErrorCodeSchema.extract([
 	"API_KEY_NOT_FOUND",
 	"API_KEY_LOCATION_REQUIRED",
 	"MERCHANT_PROFILE_NOT_FOUND",
-	"ORGANIZATION_NOT_ACTIVE",
+	"TENANT_NOT_ACTIVE",
 ]);
 
 export type PosDomainErrorCode = (typeof PosDomainErrorCodeSchema)["options"][number];
@@ -114,7 +114,7 @@ export class SaleIdempotencyKeyTakenError extends Error {
 	}
 }
 
-/** Another store's till (for a store-limited member), another organization's, and a missing one are answered alike. */
+/** Another store's till (for a store-limited member), another tenant's, and a missing one are answered alike. */
 export class TerminalNotFoundError extends DomainError {
 	public readonly code = "TERMINAL_NOT_FOUND";
 
@@ -123,7 +123,7 @@ export class TerminalNotFoundError extends DomainError {
 	}
 }
 
-/** Another live till of this organization already uses the terminal id (the database decides, race-free). */
+/** Another live till of this tenant already uses the terminal id (the database decides, race-free). */
 export class TerminalIdTakenError extends DomainError {
 	public readonly code = "TERMINAL_ID_TAKEN";
 
@@ -159,7 +159,7 @@ export class PairingCodeInvalidError extends DomainError {
 	}
 }
 
-/** Another store's key, an organization-wide key for a store-limited member, and a missing one are answered alike. */
+/** Another store's key, a tenant-wide key for a store-limited member, and a missing one are answered alike. */
 export class ApiKeyNotFoundError extends DomainError {
 	public readonly code = "API_KEY_NOT_FOUND";
 
@@ -173,7 +173,7 @@ export class ApiKeyLocationRequiredError extends DomainError {
 	public readonly code = "API_KEY_LOCATION_REQUIRED";
 
 	public constructor() {
-		super("Choose one of your stores — only members with access to every store can create an organization-wide key");
+		super("Choose one of your stores — only members with access to every store can create a tenant-wide key");
 	}
 }
 
@@ -186,8 +186,8 @@ export class MerchantProfileNotFoundError extends DomainError {
 }
 
 /** A suspended / deactivated merchant may pair no till and use no key: one 403 for every path. */
-export class OrganizationNotActiveError extends DomainError {
-	public readonly code = "ORGANIZATION_NOT_ACTIVE";
+export class TenantNotActiveError extends DomainError {
+	public readonly code = "TENANT_NOT_ACTIVE";
 
 	public constructor() {
 		super("This merchant is not active");

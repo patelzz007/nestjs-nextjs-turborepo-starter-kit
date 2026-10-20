@@ -22,18 +22,19 @@ describe("system-operation scopes", () => {
 		expect(committed).toBe(buildSystemOperationScopesSql(SYSTEM_OPERATIONS, new Set(listAllManifestTables())));
 	});
 
-	it("renders one branch per operation: its tables, or every table with the reason why", () => {
+	it("renders one branch per operation: its tables, or none for an operation that runs no SQL", () => {
 		const operations: ScopedOperations = {
 			"outbox.publish": { scope: { kind: "tables", tables: ["OutboxEvent"] } },
 			"audit.trail.read": { scope: { kind: "tables", tables: ["User", "AuditLog", "User"] } },
-			"route.rls_bypass": { scope: { kind: "allTables", reason: "request_scope" } },
+			"queue.storage.delete": { scope: { kind: "tables", tables: [] } },
 		};
 
 		const sql: string = buildSystemOperationScopesSql(operations, KNOWN);
 
 		expect(sql).toContain("WHEN 'outbox.publish' THEN table_name IN ('OutboxEvent')");
 		expect(sql).toContain("WHEN 'audit.trail.read' THEN table_name IN ('AuditLog', 'User')");
-		expect(sql).toContain("WHEN 'route.rls_bypass' THEN true -- every table: request_scope");
+		expect(sql).toContain("WHEN 'queue.storage.delete' THEN false -- no tables");
+		expect(sql).not.toContain("THEN true");
 		expect(sql.indexOf("'audit.trail.read'")).toBeLessThan(sql.indexOf("'outbox.publish'"));
 	});
 

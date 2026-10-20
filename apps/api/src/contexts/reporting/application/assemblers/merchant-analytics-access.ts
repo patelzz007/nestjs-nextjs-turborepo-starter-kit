@@ -4,9 +4,9 @@ import type { ActorContext } from "../../../../platform/application/actor-contex
 import type { MerchantAccessGrant, MerchantAccessPort } from "../../../../platform/application/ports/authorization.port";
 import { ALL_ANALYTICS_LOCATIONS, selectedAnalyticsLocations, type AnalyticsLocationScope } from "../../domain/value-objects/analytics-scope.value-object";
 
-/** What a merchant analytics request asks for: the organization (resolved from the route) and, optionally, one store. */
+/** What a merchant analytics request asks for: the tenant (resolved from the route) and, optionally, one store. */
 export interface MerchantAnalyticsTarget {
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly locationId?: string | undefined;
 }
 
@@ -22,7 +22,7 @@ export function toAnalyticsLocationScope(grant: MerchantAccessGrant): AnalyticsL
  */
 export async function authorizeMerchantAnalytics(access: MerchantAccessPort, actor: ActorContext, target: MerchantAnalyticsTarget): Promise<AnalyticsLocationScope> {
 	const grant = await access.assertCapability(actor, {
-		organizationId: target.organizationId,
+		tenantId: target.tenantId,
 		capability: MERCHANT_CAPABILITY.viewAnalytics,
 		locationId: target.locationId ?? null,
 	});

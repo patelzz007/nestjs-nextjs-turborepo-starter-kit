@@ -26,8 +26,8 @@ export class RevokeSupportAccessHandler implements ICommandHandler<RevokeSupport
 	public async execute(command: RevokeSupportAccessCommand): Promise<void> {
 		const { grantId } = command;
 		const actor = requireUserActor(command.actor);
-		const organizationId: string = await this.locator.organizationOf(actor, grantId);
-		const policyVersion: number = await this.cedar.getActivePolicyVersion(organizationId);
+		const tenantId: string = await this.locator.tenantOf(actor, grantId);
+		const policyVersion: number = await this.cedar.getActivePolicyVersion(tenantId);
 		await this.uow.runSystemOperation(SUPPORT_ACCESS_REVOKE_OPERATION, actor, async (scope: AuthorizationScope): Promise<void> => {
 			const grant: SupportAccessGrantAggregate | null = await scope.supportGrants.findById(grantId);
 			if (grant === null) {
@@ -37,8 +37,8 @@ export class RevokeSupportAccessHandler implements ICommandHandler<RevokeSupport
 			if ((await scope.supportGrants.save(grant)) === "lost") {
 				throw new SupportAccessGrantNotRevocableError();
 			}
-			await scope.organizationAudit.record({
-				organizationId,
+			await scope.tenantAudit.record({
+				tenantId,
 				actorUserId: actor.userId,
 				policyVersion,
 				action: SUPPORT_ACCESS_AUDIT_ACTIONS.revoked,

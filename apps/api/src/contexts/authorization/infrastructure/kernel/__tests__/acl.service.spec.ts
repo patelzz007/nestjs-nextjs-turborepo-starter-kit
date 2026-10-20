@@ -3,6 +3,7 @@ import type { Prisma, ResourceAcl } from "@prisma/client";
 import { LIST_SLOT_INDEX, PolicyConditionsSchema, type AuthorizationRequest } from "@workspace/shared";
 
 import { PrismaService } from "../../../../../prisma/prisma.service";
+import type { SystemDatabaseContext } from "../../../../../prisma/tenant-context";
 import { AclService, type AclLookup } from "../acl.service";
 import { PolicyEngineService } from "../policy-engine.service";
 import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
@@ -31,7 +32,7 @@ function entry(overrides: Partial<ResourceAcl>): ResourceAcl {
 		resourceId: "order-1",
 		effect: "ALLOW",
 		scope: null,
-		organizationId: null,
+		tenantId: null,
 		locationId: null,
 		conditions: null,
 		expiresAt: null,
@@ -51,10 +52,10 @@ const lookup: AclLookup = {
 	action: "DELETE",
 	resource: "ORDER",
 	resourceScope: { kind: "resource", id: "order-1" },
-	organizationId: "org-a",
+	tenantId: "org-a",
 };
 const request: AuthorizationRequest = {
-	subject: { userId: "user-1", organizationId: "org-a" },
+	subject: { userId: "user-1", tenantId: "org-a" },
 	action: "DELETE",
 	resource: "ORDER",
 	resourceId: "order-1",
@@ -63,7 +64,10 @@ const request: AuthorizationRequest = {
 
 function createService(): AclService {
 	const prisma = new PrismaService(createTestTypedConfig());
-	return new AclService(prisma, new PolicyEngineService(prisma));
+	const lookup = {
+		withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
+	};
+	return new AclService(new PolicyEngineService(lookup), lookup);
 }
 
 describe("AclService.findApplicable", () => {
@@ -88,7 +92,7 @@ describe("AclService.findApplicable", () => {
 						{ subjectType: "ROLE", subjectId: { in: ["role-1"] } },
 					],
 				},
-				{ OR: [{ organizationId: null }, { organizationId: "org-a" }] },
+				{ OR: [{ tenantId: null }, { tenantId: "org-a" }] },
 				{ OR: [{ locationId: null }] },
 				{ OR: [{ resourceId: null }, { resourceId: "order-1" }] },
 			]),

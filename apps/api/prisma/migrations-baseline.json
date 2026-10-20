@@ -1,5 +1,5 @@
 {
-	"baseline": "20261019182652_init",
-	"reason": "Pre-release reset: all earlier migrations were regenerated into one baseline from schema.prisma before any shared or deployed database ran them.",
-	"since": "2026-10-19"
+	"baseline": "20261020173417_init",
+	"reason": "Second pre-release reset: the tenancy rename to Tenant (multi-tenancy plan D14). No shared or deployed database has run the previous baseline.",
+	"since": "2026-10-20"
 }

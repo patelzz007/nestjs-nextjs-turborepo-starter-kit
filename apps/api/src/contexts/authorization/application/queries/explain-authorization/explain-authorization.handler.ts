@@ -9,7 +9,7 @@ import { ExplainAuthorizationQuery } from "./explain-authorization.query";
 
 /**
  * The SuperAdmin bypass only applies when explaining oneself; another user is always explained as a
- * regular subject. The kernel re-verifies organization / location membership for the explained subject.
+ * regular subject. The kernel re-verifies tenant / location membership for the explained subject.
  */
 @QueryHandler(ExplainAuthorizationQuery)
 export class ExplainAuthorizationHandler implements IQueryHandler<ExplainAuthorizationQuery, AuthorizationResult> {
@@ -23,7 +23,7 @@ export class ExplainAuthorizationHandler implements IQueryHandler<ExplainAuthori
 			subject: {
 				userId: explain.userId ?? actor.userId,
 				isSuperAdmin: explainingSelf ? actor.isSuperAdmin : false,
-				...(explain.organizationId === undefined ? {} : { organizationId: explain.organizationId }),
+				...(explain.tenantId === undefined ? {} : { tenantId: explain.tenantId }),
 				...(explain.storeId === undefined ? {} : { storeId: explain.storeId }),
 				...(explain.locationId === undefined ? {} : { locationId: explain.locationId }),
 			},

@@ -28,6 +28,6 @@ describe("ReferrerCreditEmailsProcessor", () => {
 		expect(dispatcher.dispatched.map(({ command, origin }) => [command.constructor, origin])).toEqual([
 			[SweepReferrerCreditEmailsCommand, { kind: "job", name: QUEUE_NAMES.rewardsReferralCreditNotify }],
 		]);
-		expect(dispatcher.dispatched.at(0)?.command).toMatchObject({ actor: { kind: "system", operation: "queue.rewards.referral_credit_notify", origin: "job" } });
+		expect(dispatcher.dispatched.at(0)?.command).toMatchObject({ actor: { kind: "system", operation: "rewards.referral_credit.deliver", origin: "job" } });
 	});
 });

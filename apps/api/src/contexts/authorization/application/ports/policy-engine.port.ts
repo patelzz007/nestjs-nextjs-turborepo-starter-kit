@@ -7,7 +7,7 @@ import type { CedarDecision } from "@workspace/shared";
  * never disagree with the runtime; draft validation uses it too.
  */
 
-/** The principal: an organization member and the attributes policies may read. */
+/** The principal: a tenant member and the attributes policies may read. */
 export interface PolicyPrincipal {
 	readonly userId: string;
 	readonly role: string;
@@ -16,7 +16,7 @@ export interface PolicyPrincipal {
 }
 
 export interface PolicyRequest {
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly principal: PolicyPrincipal;
 	/** Bare action id, e.g. `tenant:manage_team` (declared in the Cedar schema). */
 	readonly action: string;
@@ -24,7 +24,7 @@ export interface PolicyRequest {
 	readonly locationId?: string;
 }
 
-/** The published (or candidate) policy sources of one organization's bundle. */
+/** The published (or candidate) policy sources of one tenant's bundle. */
 export interface PolicyBundle {
 	/** Highest published version in the bundle (reported on decisions and audit rows). */
 	readonly version: number;

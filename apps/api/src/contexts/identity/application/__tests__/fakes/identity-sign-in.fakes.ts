@@ -101,7 +101,7 @@ export class ScriptedMerchantAccess implements MerchantPortalAccessPort {
 	public readonly access = new Map<string, MerchantPortalAccess>();
 
 	public findAccess(userId: string): Promise<MerchantPortalAccess> {
-		return Promise.resolve(this.access.get(userId) ?? { organizationSlug: null, hasPendingTeamInvite: false });
+		return Promise.resolve(this.access.get(userId) ?? { tenantSlug: null, hasPendingTeamInvite: false });
 	}
 }
 

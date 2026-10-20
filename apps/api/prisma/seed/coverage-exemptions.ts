@@ -58,8 +58,8 @@ export const SEED_COVERAGE_EXEMPTIONS: readonly SeedCoverageExemption[] = [
 		"EmailLog",
 		"ImpersonationAuditLog",
 		"MfaRecoveryAuditLog",
-		"OrganizationAuditLog",
-		"OrganizationLifecycleEvent",
+		"TenantAuditLog",
+		"TenantLifecycleEvent",
 		"PasswordHistory",
 		"RewardAuditLog",
 	].map((table: string): SeedCoverageExemption => neverSoftDeleted(table, APPEND_ONLY_RECORD)),
@@ -86,21 +86,21 @@ export const SEED_COVERAGE_EXEMPTIONS: readonly SeedCoverageExemption[] = [
 		"MfaRecoveryRequest",
 		"An MFA recovery request ends through its status (reviewedAt, completedAt) and is kept for the recovery audit; nothing soft-deletes one.",
 	),
-	neverSoftDeleted("OrganizationAccessRequest", "An access request ends through its status and reviewedAt, and is kept as the decision record; nothing soft-deletes one."),
+	neverSoftDeleted("TenantAccessRequest", "An access request ends through its status and reviewedAt, and is kept as the decision record; nothing soft-deletes one."),
 	neverSoftDeleted(
-		"OrganizationInvitation",
+		"TenantInvitation",
 		"An invitation ends through its status (accepted, revoked or expired via expiresAt) and is kept as the onboarding record; nothing soft-deletes one.",
 	),
 	neverSoftDeleted(
-		"OrganizationInvitationLocationScope",
+		"TenantInvitationLocationScope",
 		"The store scope of an invitation is written with the invitation and ends with it (through the invitation's status); the repository never removes or soft-deletes a scope row.",
 	),
 	neverSoftDeleted(
-		"OrganizationMerchantProfile",
-		"The merchant profile is created with its organization and updated in place for the organization's whole life (the organization itself carries the soft delete); nothing soft-deletes a profile.",
+		"TenantMerchantProfile",
+		"The merchant profile is created with its tenant and updated in place for the tenant's whole life (the tenant itself carries the soft delete); nothing soft-deletes a profile.",
 	),
 	neverSoftDeleted(
-		"OrganizationSlugHistory",
+		"TenantSlugHistory",
 		"A retired slug is history: the row keeps the old slug reserved until reservedUntil so links keep resolving; nothing edits or soft-deletes it.",
 	),
 	neverSoftDeleted(
@@ -112,17 +112,14 @@ export const SEED_COVERAGE_EXEMPTIONS: readonly SeedCoverageExemption[] = [
 		"TenantEncryptionKey",
 		"A tenant data key is rotated (status, rotatedAt), never removed: an old key must stay to decrypt the data it wrapped, so nothing soft-deletes one.",
 	),
-	neverSoftDeleted(
-		"TenantPlacement",
-		"A tenant's placement is created with its organization and updated in place for the organization's whole life; nothing soft-deletes one.",
-	),
+	neverSoftDeleted("TenantPlacement", "A tenant's placement is created with its tenant and updated in place for the tenant's whole life; nothing soft-deletes one."),
 	neverSoftDeleted("TwoFactorLoginChallenge", "A login challenge ends through consumedAt or expiresAt and is kept for the sign-in audit; nothing soft-deletes one."),
 	neverSoftDeleted(
 		"TwoFactorPendingSetup",
 		"A pending two-factor setup holds an unconfirmed secret: confirming or restarting the setup removes it outright so the secret does not linger, and nothing soft-deletes one.",
 	),
 	neverSoftDeleted(
-		"OrganizationKybFile",
+		"TenantKybFile",
 		'Submitted KYB evidence is retained for the review history: a resubmission retires a link ("isActive" = false) and DELETE /files/:id refuses submitted evidence (KYB_EVIDENCE_RETAINED), so no correct database holds a soft-deleted link.',
 	),
 	neverSoftDeleted(

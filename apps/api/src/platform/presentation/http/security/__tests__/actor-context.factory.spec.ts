@@ -4,7 +4,6 @@ import type { AccessTokenPayload } from "@workspace/shared";
 import { AuthenticationError } from "../../../../application/errors/app-error";
 import { RequestContextService, type RequestContextSeed } from "../../../../infrastructure/context/request-context";
 import { ActorContextFactory } from "../actor-context.factory";
-import type { ActorTenancyPolicy } from "../actor-tenancy.policy";
 
 async function captureTestRequest(): Promise<FastifyRequest> {
 	const app = fastify({ logger: false });
@@ -48,24 +47,16 @@ function accessToken(overrides: Partial<AccessTokenPayload> = {}): AccessTokenPa
 	};
 }
 
-const MULTI_TENANT: ActorTenancyPolicy = {
-	enabled: true,
-	staffBypassesRls: false,
-	singleTenantOrganizationId: (): string => {
-		throw new Error("single-tenant organization is not used when tenancy is enabled");
-	},
-};
-
 describe("ActorContextFactory", () => {
 	const requestContext = new RequestContextService();
-	const factory = new ActorContextFactory(requestContext, MULTI_TENANT);
+	const factory = new ActorContextFactory(requestContext);
 
 	it("builds a user actor with request metadata", async () => {
 		const request = await captureTestRequest();
 		Object.defineProperty(request, "user", { value: accessToken(), configurable: true });
 
 		const actor = requestContext.run(SEED, () => {
-			requestContext.bindTenant({ organizationId: "org-9" });
+			requestContext.bindTenant({ tenantId: "org-9" });
 			return factory.fromHttpRequest(request);
 		});
 
@@ -73,7 +64,7 @@ describe("ActorContextFactory", () => {
 			kind: "user",
 			userId: "user-1",
 			sessionId: "session-1",
-			organizationId: "org-9",
+			tenantId: "org-9",
 			isSuperAdmin: false,
 			accessScope: "tenant",
 			impersonatorUserId: null,
@@ -84,7 +75,6 @@ describe("ActorContextFactory", () => {
 				deviceLabel: "Chrome on macOS",
 				endpoint: "/capture",
 			},
-			routeRlsBypass: false,
 		});
 	});
 
@@ -116,7 +106,7 @@ describe("ActorContextFactory", () => {
 		const actor = requestContext.run(SEED, () => {
 			requestContext.bindApiKey({
 				apiKeyId: "key-1",
-				organizationId: "org-1",
+				tenantId: "org-1",
 				terminalId: "terminal-9",
 				locationId: "store-1",
 			});
@@ -126,7 +116,7 @@ describe("ActorContextFactory", () => {
 		expect(actor).toMatchObject({
 			kind: "api_key",
 			apiKeyId: "key-1",
-			organizationId: "org-1",
+			tenantId: "org-1",
 			terminalId: "terminal-9",
 			locationId: "store-1",
 		});
@@ -138,7 +128,7 @@ describe("ActorContextFactory", () => {
 		const actor = requestContext.run(SEED, () => {
 			requestContext.bindApiKey({
 				apiKeyId: "key-2",
-				organizationId: "org-2",
+				tenantId: "org-2",
 				terminalId: undefined,
 				locationId: null,
 			});
@@ -157,7 +147,7 @@ describe("ActorContextFactory", () => {
 
 		const actor = requestContext.run(SEED, () => factory.fromHttpRequest(request, { allowAnonymous: true }));
 
-		expect(actor).toMatchObject({ kind: "anonymous", organizationId: null });
+		expect(actor).toMatchObject({ kind: "anonymous", tenantId: null });
 	});
 
 	it("throws when credentials are missing and anonymous is not allowed", async () => {
@@ -176,19 +166,19 @@ describe("ActorContextFactory", () => {
 
 		const actor = requestContext.run(SEED, () => factory.fromHttpRequest(request));
 
-		expect(actor).toMatchObject({ kind: "token_subject", userId: "user-9", organizationId: null, routeRlsBypass: false });
+		expect(actor).toMatchObject({ kind: "token_subject", userId: "user-9", tenantId: null });
 	});
 
-	it("returns the actor RlsInterceptor bound, with its route bypass, once it is bound", async () => {
+	it("returns the actor RlsInterceptor bound, once it is bound", async () => {
 		const request = await captureTestRequest();
 		Object.defineProperty(request, "user", { value: accessToken(), configurable: true });
 
 		const actor = requestContext.run(SEED, () => {
-			requestContext.bindActor(factory.resolve(request, true).actor);
+			requestContext.bindActor(factory.resolve(request).actor);
 			return factory.fromHttpRequest(request);
 		});
 
-		expect(actor).toMatchObject({ kind: "user", userId: "user-1", routeRlsBypass: true });
+		expect(actor).toMatchObject({ kind: "user", userId: "user-1" });
 	});
 
 	it("throws when the user token has no session id", async () => {

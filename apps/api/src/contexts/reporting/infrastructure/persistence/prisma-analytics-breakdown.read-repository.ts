@@ -12,7 +12,7 @@ import type {
 	RewardBreakdownRow,
 	StoreBreakdownRow,
 } from "../../application/ports/analytics-breakdown.port";
-import type { AnalyticsScope, AnalyticsTimeRange, AnalyticsWindow, OrganizationAnalyticsScope } from "../../domain/value-objects/analytics-scope.value-object";
+import type { AnalyticsScope, AnalyticsTimeRange, AnalyticsWindow, TenantAnalyticsScope } from "../../domain/value-objects/analytics-scope.value-object";
 import { allOf, claimConditions, claimSource, redemptionConditions, salesConditions, withinRange } from "./analytics-sql-conditions";
 import { minorUnitsToNumber } from "../../../../platform/infrastructure/persistence/minor-units";
 import { type AnalyticsSqlRunner, averageSql, bucketsCte, localBucketOf } from "./analytics-sql";
@@ -35,7 +35,7 @@ const RewardBreakdownRowSchema = z.object({ rewardId: z.string(), title: z.strin
 const RedemptionMethodRowSchema = z.object({ method: RewardRedemptionMethodSchema, redemptions: IntColumn });
 
 const MerchantSalesRowSchema = z.object({
-	organizationId: z.string(),
+	tenantId: z.string(),
 	name: z.string(),
 	category: MerchantBusinessCategorySchema.nullable(),
 	sales_minor: BigIntColumn,
@@ -47,7 +47,7 @@ const CategorySalesRowSchema = z.object({ category: MerchantBusinessCategorySche
 
 const CitySalesRowSchema = z.object({ city: PilotCitySchema.nullable(), sales_minor: BigIntColumn, bills: IntColumn, merchants: IntColumn });
 
-const MerchantBucketSalesRowSchema = z.object({ organizationId: z.string(), start_ms: BigIntColumn, sales_minor: BigIntColumn, bills: IntColumn });
+const MerchantBucketSalesRowSchema = z.object({ tenantId: z.string(), start_ms: BigIntColumn, sales_minor: BigIntColumn, bills: IntColumn });
 
 /**
  * Breakdowns of a range by one dimension (store, reward, redemption method,
@@ -64,9 +64,10 @@ export class PrismaAnalyticsBreakdownReadRepository implements AnalyticsBreakdow
 	 * callers only — the scope filter already hides them from the others).
 	 * Highest sales first.
 	 */
-	public async byStore(scope: OrganizationAnalyticsScope, range: AnalyticsTimeRange): Promise<StoreBreakdownRow[]> {
+	public async byStore(scope: TenantAnalyticsScope, range: AnalyticsTimeRange): Promise<StoreBreakdownRow[]> {
 		const storeFilter = scope.locationScope.kind === "ALL_LOCATIONS" ? Prisma.sql`TRUE` : Prisma.sql`l.id = ANY(${[...scope.locationScope.locationIds]}::text[])`;
-		const rows = await this.sql.rows(
+		const rows = await this.sql.rowsFor(
+			scope,
 			StoreBreakdownRowSchema,
 			Prisma.sql`
 			WITH sales AS (
@@ -82,8 +83,8 @@ export class PrismaAnalyticsBreakdownReadRepository implements AnalyticsBreakdow
 				GROUP BY rd."locationId"
 			),
 			store_keys AS (
-				SELECT l.id AS "locationId" FROM "OrganizationLocation" l
-				WHERE l."organizationId" = ${scope.organizationId} AND l."isDeleted" = false AND l.status = 'ACTIVE' AND ${storeFilter}
+				SELECT l.id AS "locationId" FROM "Location" l
+				WHERE l."tenantId" = ${scope.tenantId} AND l."isDeleted" = false AND l.status = 'ACTIVE' AND ${storeFilter}
 				UNION SELECT "locationId" FROM sales
 				UNION SELECT "locationId" FROM redemptions
 			)
@@ -93,7 +94,7 @@ export class PrismaAnalyticsBreakdownReadRepository implements AnalyticsBreakdow
 			       ${averageSql(Prisma.sql`COALESCE(sa.sales_minor, 0)`, Prisma.sql`COALESCE(sa.bills, 0)`)} AS average_bill_minor,
 			       COALESCE(rd.redemptions, 0)::int AS redemptions
 			FROM store_keys k
-			LEFT JOIN "OrganizationLocation" l ON l.id = k."locationId"
+			LEFT JOIN "Location" l ON l.id = k."locationId"
 			LEFT JOIN sales sa ON sa."locationId" IS NOT DISTINCT FROM k."locationId"
 			LEFT JOIN redemptions rd ON rd."locationId" IS NOT DISTINCT FROM k."locationId"
 			ORDER BY sales_minor DESC, l.name ASC NULLS LAST`,
@@ -110,8 +111,9 @@ export class PrismaAnalyticsBreakdownReadRepository implements AnalyticsBreakdow
 	}
 
 	/** The `limit` most active rewards of the scope (claims + redemptions in the range), most active first. */
-	public async byReward(scope: OrganizationAnalyticsScope, range: AnalyticsTimeRange, limit: number): Promise<RewardBreakdownRow[]> {
-		const rows = await this.sql.rows(
+	public async byReward(scope: TenantAnalyticsScope, range: AnalyticsTimeRange, limit: number): Promise<RewardBreakdownRow[]> {
+		const rows = await this.sql.rowsFor(
+			scope,
 			RewardBreakdownRowSchema,
 			Prisma.sql`
 			WITH claims AS (
@@ -140,7 +142,8 @@ export class PrismaAnalyticsBreakdownReadRepository implements AnalyticsBreakdow
 
 	/** Redemptions per method; methods without redemptions are absent (the service lists every method). */
 	public async byRedemptionMethod(scope: AnalyticsScope, range: AnalyticsTimeRange): Promise<RedemptionMethodRow[]> {
-		const rows = await this.sql.rows(
+		const rows = await this.sql.rowsFor(
+			scope,
 			RedemptionMethodRowSchema,
 			Prisma.sql`
 			SELECT rd."redemptionMethod"::text AS method, COUNT(*)::int AS redemptions
@@ -153,28 +156,29 @@ export class PrismaAnalyticsBreakdownReadRepository implements AnalyticsBreakdow
 
 	/**
 	 * Paid bills per merchant, highest sales first, at most `limit`. Name and
-	 * business category come from the organization (an unknown category reads
-	 * as `null`). Reads `Organization` / `OrganizationMerchantProfile`, so
+	 * business category come from the tenant (an unknown category reads
+	 * as `null`). Reads `Tenant` / `TenantMerchantProfile`, so
 	 * it runs only for the admin's platform view (RLS bypass on that route).
 	 */
 	public async byMerchant(scope: AnalyticsScope, range: AnalyticsTimeRange, limit: number): Promise<MerchantSalesRow[]> {
-		const rows = await this.sql.rows(
+		const rows = await this.sql.rowsFor(
+			scope,
 			MerchantSalesRowSchema,
 			Prisma.sql`
-			SELECT s."organizationId", o."displayName" AS name, ${this.knownCategory()} AS category,
+			SELECT s."tenantId", o."displayName" AS name, ${this.knownCategory()} AS category,
 			       SUM(s."billTotalMinor")::bigint AS sales_minor,
 			       COUNT(*)::int AS bills,
 			       ${averageSql(Prisma.sql`SUM(s."billTotalMinor")`, Prisma.sql`COUNT(*)`)} AS average_bill_minor
 			FROM "RewardSale" s
-			JOIN "Organization" o ON o.id = s."organizationId"
-			LEFT JOIN "OrganizationMerchantProfile" mp ON mp."organizationId" = s."organizationId"
+			JOIN "Tenant" o ON o.id = s."tenantId"
+			LEFT JOIN "TenantMerchantProfile" mp ON mp."tenantId" = s."tenantId"
 			WHERE ${allOf([...salesConditions(scope), withinRange(Prisma.sql`s."paidAt"`, range)])}
-			GROUP BY s."organizationId", o."displayName", mp.category
-			ORDER BY sales_minor DESC, o."displayName" ASC, s."organizationId" ASC
+			GROUP BY s."tenantId", o."displayName", mp.category
+			ORDER BY sales_minor DESC, o."displayName" ASC, s."tenantId" ASC
 			LIMIT ${limit}`,
 		);
 		return rows.map((row) => ({
-			organizationId: row.organizationId,
+			tenantId: row.tenantId,
 			name: row.name,
 			category: row.category,
 			salesMinor: minorUnitsToNumber(row.sales_minor),
@@ -185,15 +189,16 @@ export class PrismaAnalyticsBreakdownReadRepository implements AnalyticsBreakdow
 
 	/** Paid bills per merchant business category (unknown / missing category → `null`), highest sales first. Admin view only (see {@link byMerchant}). */
 	public async byCategory(scope: AnalyticsScope, range: AnalyticsTimeRange): Promise<CategorySalesRow[]> {
-		const rows = await this.sql.rows(
+		const rows = await this.sql.rowsFor(
+			scope,
 			CategorySalesRowSchema,
 			Prisma.sql`
 			SELECT ${this.knownCategory()} AS category,
 			       SUM(s."billTotalMinor")::bigint AS sales_minor,
 			       COUNT(*)::int AS bills,
-			       COUNT(DISTINCT s."organizationId")::int AS merchants
+			       COUNT(DISTINCT s."tenantId")::int AS merchants
 			FROM "RewardSale" s
-			LEFT JOIN "OrganizationMerchantProfile" mp ON mp."organizationId" = s."organizationId"
+			LEFT JOIN "TenantMerchantProfile" mp ON mp."tenantId" = s."tenantId"
 			WHERE ${allOf([...salesConditions(scope), withinRange(Prisma.sql`s."paidAt"`, range)])}
 			GROUP BY 1
 			ORDER BY sales_minor DESC, category ASC NULLS LAST`,
@@ -203,15 +208,16 @@ export class PrismaAnalyticsBreakdownReadRepository implements AnalyticsBreakdow
 
 	/** Paid bills per city of the store they were paid at (no store → `null`), highest sales first. Admin view only. */
 	public async byCity(scope: AnalyticsScope, range: AnalyticsTimeRange): Promise<CitySalesRow[]> {
-		const rows = await this.sql.rows(
+		const rows = await this.sql.rowsFor(
+			scope,
 			CitySalesRowSchema,
 			Prisma.sql`
 			SELECT l.city::text AS city,
 			       SUM(s."billTotalMinor")::bigint AS sales_minor,
 			       COUNT(*)::int AS bills,
-			       COUNT(DISTINCT s."organizationId")::int AS merchants
+			       COUNT(DISTINCT s."tenantId")::int AS merchants
 			FROM "RewardSale" s
-			LEFT JOIN "OrganizationLocation" l ON l.id = s."locationId"
+			LEFT JOIN "Location" l ON l.id = s."locationId"
 			WHERE ${allOf([...salesConditions(scope), withinRange(Prisma.sql`s."paidAt"`, range)])}
 			GROUP BY l.city
 			ORDER BY sales_minor DESC, city ASC NULLS LAST`,
@@ -225,21 +231,22 @@ export class PrismaAnalyticsBreakdownReadRepository implements AnalyticsBreakdow
 	 * series reports. Bounded by merchants visited × buckets.
 	 */
 	public async merchantBucketSales(scope: AnalyticsScope, window: AnalyticsWindow): Promise<MerchantBucketSalesRow[]> {
-		const rows = await this.sql.rows(
+		const rows = await this.sql.rowsFor(
+			scope,
 			MerchantBucketSalesRowSchema,
 			Prisma.sql`
 			WITH ${bucketsCte(window)},
 			sales AS (
-				SELECT s."organizationId", ${localBucketOf(Prisma.sql`s."paidAt"`, window)} AS local_start, SUM(s."billTotalMinor") AS sales_minor, COUNT(*) AS bills
+				SELECT s."tenantId", ${localBucketOf(Prisma.sql`s."paidAt"`, window)} AS local_start, SUM(s."billTotalMinor") AS sales_minor, COUNT(*) AS bills
 				FROM "RewardSale" s
 				WHERE ${allOf([...salesConditions(scope), withinRange(Prisma.sql`s."paidAt"`, window)])}
 				GROUP BY 1, 2
 			)
-			SELECT sa."organizationId", b.start_ms, sa.sales_minor::bigint AS sales_minor, sa.bills::int AS bills
+			SELECT sa."tenantId", b.start_ms, sa.sales_minor::bigint AS sales_minor, sa.bills::int AS bills
 			FROM sales sa JOIN buckets b ON b.local_start = sa.local_start
-			ORDER BY sa."organizationId", b.local_start`,
+			ORDER BY sa."tenantId", b.local_start`,
 		);
-		return rows.map((row) => ({ organizationId: row.organizationId, startMs: Number(row.start_ms), salesMinor: minorUnitsToNumber(row.sales_minor), bills: row.bills }));
+		return rows.map((row) => ({ tenantId: row.tenantId, startMs: Number(row.start_ms), salesMinor: minorUnitsToNumber(row.sales_minor), bills: row.bills }));
 	}
 
 	/** `mp.category` when it is one of the known business categories, else NULL — so unknown values group with "uncategorised". */

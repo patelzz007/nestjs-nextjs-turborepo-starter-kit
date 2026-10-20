@@ -6,7 +6,7 @@
 // real values. They exist so unit tests are hermetic and e2e runs are
 // deterministic. NEVER copy one of these into a real .env file.
 
-import { SINGLE_TENANT_SEED_ORGANIZATION_ID } from "../../prisma/seed/organization-seed-ids";
+import { SINGLE_TENANT_SEED_TENANT_ID } from "../../prisma/seed/tenant-seed-ids";
 import { parseApiConfig } from "../../src/config/api-config";
 import type { ApiConfig } from "../../src/config/api-config.schema";
 import { TypedConfigService } from "../../src/config/typed-config.service";
@@ -75,8 +75,8 @@ export const TEST_API_INFRASTRUCTURE: TestEnv = {
 	BCRYPT_SALT_ROUNDS: "10",
 	// Explicit no-scanner mode: files become READY with scan status NOT_SCANNED (never CLEAN).
 	MALWARE_SCANNER: "none",
-	// Single-tenant mode serves a REAL organization: the one `pnpm db:seed` creates (verified at e2e boot).
-	DEFAULT_ORGANIZATION_ID: SINGLE_TENANT_SEED_ORGANIZATION_ID,
+	// Single-tenant mode serves a REAL tenant: the one `pnpm db:seed` creates (verified at e2e boot).
+	DEFAULT_TENANT_ID: SINGLE_TENANT_SEED_TENANT_ID,
 };
 
 /** The complete hermetic fixture used by unit tests. */
@@ -99,12 +99,12 @@ export const TEST_E2E_STORAGE: TestEnv = { STORAGE_PROVIDER: "local", MALWARE_SC
 
 export const TEST_API_ENV: TestEnv = { ...TEST_API_INFRASTRUCTURE, ...TEST_API_SECRETS, ...TEST_API_SWITCHES };
 
-/** A fully validated `ApiConfig` built from the fixture (through the real schema) plus `overrides`. */
-export function createTestApiConfig(overrides: TestEnv = {}): ApiConfig {
+/** A fully validated `ApiConfig` built from the fixture (through the real schema) plus `overrides`. An `undefined` override removes that variable. */
+export function createTestApiConfig(overrides: Readonly<Record<string, string | undefined>> = {}): ApiConfig {
 	return parseApiConfig({ ...TEST_API_ENV, ...overrides });
 }
 
 /** `TypedConfigService` over {@link createTestApiConfig}. */
-export function createTestTypedConfig(overrides: TestEnv = {}): TypedConfigService {
+export function createTestTypedConfig(overrides: Readonly<Record<string, string | undefined>> = {}): TypedConfigService {
 	return new TypedConfigService(createTestApiConfig(overrides));
 }

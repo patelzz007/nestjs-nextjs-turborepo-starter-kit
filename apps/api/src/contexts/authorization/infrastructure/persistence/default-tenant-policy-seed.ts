@@ -9,7 +9,7 @@ const OWNER_CEDAR = `permit(principal, action, resource) when { principal.role =
 const CASHIER_CEDAR = `permit(principal, action, resource) when { principal.role == "CASHIER" };`;
 
 /**
- * Default TENANT Cedar policy published for every organization. It is role-
+ * Default TENANT Cedar policy published for every tenant. It is role-
  * based and action-agnostic, so it never denies what the merchant role table
  * (`MERCHANT_ROLE_CAPABILITIES`) grants to OWNER / ADMIN / CASHIER; tenants
  * narrow it through the policy control plane.
@@ -34,12 +34,12 @@ export function newDefaultTenantPolicyRecordIds(): DefaultTenantPolicyRecordIds 
 	return { draftId: newRowId(), versionId: newRowId(), auditId: newRowId() };
 }
 
-/** Version number of the first published TENANT policy of an organization. */
+/** Version number of the first published TENANT policy of a tenant. */
 const INITIAL_TENANT_POLICY_VERSION = 1;
 
 /**
  * Idempotently publish the default TENANT Cedar policy for an
- * organization, inside the caller's transaction.
+ * tenant, inside the caller's transaction.
  *
  * This is NOT a four-eyes control-plane publish and does not pretend to be
  * one: the source is a fixed, code-reviewed template (reviewed through code
@@ -48,19 +48,19 @@ const INITIAL_TENANT_POLICY_VERSION = 1;
  * approving their own draft — and the publish is written to the
  * authorization audit trail with that reason. Any later change to the tenant
  * policy goes through the four-eyes control plane. Returns the
- * organization's active TENANT policy version.
+ * tenant's active TENANT policy version.
  *
  * Rows are written with `ids`: random at runtime, deterministic in the seed.
  * The audit row is an upsert on its id, so a re-run never duplicates it.
  */
 export async function seedDefaultTenantPolicies(
 	tx: PolicySeedClient,
-	organizationId: string,
+	tenantId: string,
 	actorUserId: string,
 	ids: DefaultTenantPolicyRecordIds = newDefaultTenantPolicyRecordIds(),
 ): Promise<number> {
 	const existing = await tx.authorizationPolicyVersion.findFirst({
-		where: { organizationId, scope: "TENANT", supersededAt: null },
+		where: { tenantId, scope: "TENANT", supersededAt: null },
 	});
 
 	if (existing !== null) {
@@ -71,10 +71,10 @@ export async function seedDefaultTenantPolicies(
 	const draft = await tx.authorizationPolicyDraft.create({
 		data: {
 			id: ids.draftId,
-			organizationId,
+			tenantId,
 			scope: "TENANT",
 			name: "Default role access",
-			description: "Default Cedar permits for organization members",
+			description: "Default Cedar permits for tenant members",
 			builderPayload: DEFAULT_TENANT_TEMPLATE_PAYLOAD,
 			cedarSource,
 			status: "PUBLISHED",
@@ -87,7 +87,7 @@ export async function seedDefaultTenantPolicies(
 	const version = await tx.authorizationPolicyVersion.create({
 		data: {
 			id: ids.versionId,
-			organizationId,
+			tenantId,
 			draftId: draft.id,
 			scope: "TENANT",
 			version: INITIAL_TENANT_POLICY_VERSION,
@@ -104,12 +104,12 @@ export async function seedDefaultTenantPolicies(
 		create: {
 			id: ids.auditId,
 			actorId: actorUserId,
-			organizationId,
+			tenantId,
 			action: DEFAULT_TENANT_POLICY_AUDIT_ACTION,
 			resource: "AuthorizationPolicyDraft",
 			resourceId: draft.id,
 			decision: "ALLOW",
-			reason: "Platform default tenant policy template published at organization provisioning (approval kind PLATFORM_DEFAULT_TEMPLATE; no runtime approver)",
+			reason: "Platform default tenant policy template published at tenant provisioning (approval kind PLATFORM_DEFAULT_TEMPLATE; no runtime approver)",
 			policyIds: [version.id],
 			evaluation: { templateId: DEFAULT_TENANT_TEMPLATE_PAYLOAD.templateId, version: INITIAL_TENANT_POLICY_VERSION, contentHash: sha256Hex(cedarSource) },
 		},
@@ -118,16 +118,16 @@ export async function seedDefaultTenantPolicies(
 }
 
 /**
- * The organization's effective policy version, read inside the caller's
+ * The tenant's effective policy version, read inside the caller's
  * transaction: the highest live version among its own policies and the
  * platform guardrails — the same version `CedarPolicyEvaluatorService` stamps
- * on decisions. Used where the organization (and its policies) are not yet
+ * on decisions. Used where the tenant (and its policies) are not yet
  * committed, so the evaluator's own (separate-connection, cached) load would
  * not see them.
  */
-export async function findActivePolicyVersionInTx(tx: Pick<PrismaClient, "authorizationPolicyVersion">, organizationId: string): Promise<number> {
+export async function findActivePolicyVersionInTx(tx: Pick<PrismaClient, "authorizationPolicyVersion">, tenantId: string): Promise<number> {
 	const latest = await tx.authorizationPolicyVersion.aggregate({
-		where: { OR: [{ organizationId }, { organizationId: null, scope: "PLATFORM_GUARDRAIL" }], supersededAt: null },
+		where: { OR: [{ tenantId }, { tenantId: null, scope: "PLATFORM_GUARDRAIL" }], supersededAt: null },
 		_max: { version: true },
 	});
 	return Math.max(INITIAL_TENANT_POLICY_VERSION, latest._max.version ?? INITIAL_TENANT_POLICY_VERSION);

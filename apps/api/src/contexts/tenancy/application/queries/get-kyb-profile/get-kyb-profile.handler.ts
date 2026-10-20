@@ -1,0 +1,32 @@
+import { Inject } from "@nestjs/common";
+import { QueryHandler, type IQueryHandler } from "@nestjs/cqrs";
+import { MERCHANT_CAPABILITY, type MerchantKybProfileResponse } from "@workspace/shared";
+
+import { merchantNotFound } from "../../kyb-errors";
+import { actingInTenant, requireUserActor } from "../../tenant-actor";
+import type { KybReadPort } from "../../ports/kyb-read.port";
+import type { MerchantAccessPort } from "../../ports/merchant-access.port";
+import type { TenantDirectoryPort } from "../../ports/tenant-directory.port";
+import { KYB_READ, MERCHANT_ACCESS, TENANT_DIRECTORY } from "../../ports/tenants.tokens";
+import { GetKybProfileQuery } from "./get-kyb-profile.query";
+
+/** KYB holds the business's legal and identity details: `merchant:manage_verification` only. */
+@QueryHandler(GetKybProfileQuery)
+export class GetKybProfileHandler implements IQueryHandler<GetKybProfileQuery, MerchantKybProfileResponse> {
+	public constructor(
+		@Inject(TENANT_DIRECTORY) private readonly directory: TenantDirectoryPort,
+		@Inject(MERCHANT_ACCESS) private readonly merchantAccess: MerchantAccessPort,
+		@Inject(KYB_READ) private readonly kyb: KybReadPort,
+	) {}
+
+	public async execute(query: GetKybProfileQuery): Promise<MerchantKybProfileResponse> {
+		const user = requireUserActor(query.actor);
+		const member = await this.directory.resolveMember(user, query.input.tenantSlug);
+		await this.merchantAccess.assertCapability(user, { tenantId: member.tenantId, capability: MERCHANT_CAPABILITY.manageVerification });
+		const profile = await this.kyb.getProfile(actingInTenant(user, member.tenantId), member.tenantId);
+		if (profile === null) {
+			throw merchantNotFound();
+		}
+		return profile;
+	}
+}

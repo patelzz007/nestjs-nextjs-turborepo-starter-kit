@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { RequestContextService, type RequestContextSeed } from "../../platform/infrastructure/context/request-context";
 import { rlsStorage, systemRlsContext, userRlsContext } from "../rls-context";
 import { applyRlsSession, type RlsSessionConnection } from "../rls-pool";
 
@@ -25,33 +24,32 @@ class RecordingClient implements RlsSessionConnection {
 	}
 }
 
-const SEED: RequestContextSeed = { correlationId: "corr-pool-1", ip: "203.0.113.7", userAgent: "vitest", edgeLocation: undefined };
-
 describe("applyRlsSession", () => {
-	const requestContext = new RequestContextService();
-
-	it("stamps the user scope and the current request's correlation id", async () => {
+	it("switches to the restricted role and does not copy a bound user onto the connection", async () => {
 		const client = new RecordingClient();
-		await requestContext.run(SEED, () => rlsStorage.run(userRlsContext("user-1", "org-a", false), () => applyRlsSession(client)));
+		await rlsStorage.run(userRlsContext("user-1", "org-a", false), () => applyRlsSession(client));
 
 		expect(client.setting("role")).toBe("app_runtime");
-		expect(client.setting("app.current_user_id")).toBe("user-1");
-		expect(client.setting("app.current_organization_id")).toBe("org-a");
-		expect(client.setting("app.correlation_id")).toBe("corr-pool-1");
+		expect(client.setting("app.current_user_id")).toBeUndefined();
+		expect(client.setting("app.current_tenant_id")).toBeUndefined();
+		expect(client.setting("app.rls_bypass")).toBeUndefined();
+		expect(client.setting("app.correlation_id")).toBeUndefined();
+		expect(client.sent).toHaveLength(1);
 	});
 
-	it("clears the correlation id outside a request, so a reused connection never carries the previous request's id", async () => {
+	it("does not copy a system operation onto the connection", async () => {
 		const client = new RecordingClient();
 		await rlsStorage.run(systemRlsContext("queue.email.send"), () => applyRlsSession(client));
 
-		expect(client.setting("app.system_operation")).toBe("queue.email.send");
-		expect(client.setting("app.correlation_id")).toBe("");
+		expect(client.setting("role")).toBe("app_runtime");
+		expect(client.setting("app.system_operation")).toBeUndefined();
 	});
 
-	it("refuses a tenant-scoped checkout without a bound organization", async () => {
+	it("still checks out when the bound user has no tenant; the transaction service owns that refusal", async () => {
 		const client = new RecordingClient();
 
-		await expect(rlsStorage.run(userRlsContext("user-1", null, true), () => applyRlsSession(client))).rejects.toThrow(/organization context/);
-		expect(client.sent).toEqual([]);
+		await expect(rlsStorage.run(userRlsContext("user-1", null, true), () => applyRlsSession(client))).resolves.toBeUndefined();
+		expect(client.setting("role")).toBe("app_runtime");
+		expect(client.setting("app.current_tenant_id")).toBeUndefined();
 	});
 });

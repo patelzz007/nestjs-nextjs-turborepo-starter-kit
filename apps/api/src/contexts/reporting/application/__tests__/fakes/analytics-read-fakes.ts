@@ -8,7 +8,7 @@ import type {
 	AnalyticsScope,
 	AnalyticsTimeRange,
 	AnalyticsWindow,
-	OrganizationAnalyticsScope,
+	TenantAnalyticsScope,
 } from "../../../domain/value-objects/analytics-scope.value-object";
 import type {
 	AnalyticsBreakdownReadPort,
@@ -29,7 +29,7 @@ import type {
 	CustomerCohortBucket,
 	ReferralTotals,
 } from "../../ports/analytics-facts.port";
-import type { AnalyticsOrganization, AnalyticsOrganizationReadPort } from "../../ports/analytics-organization-read.port";
+import type { AnalyticsTenant, AnalyticsTenantReadPort } from "../../ports/analytics-tenant-read.port";
 import type {
 	ActivityWeek,
 	ComparedPeriods,
@@ -118,10 +118,10 @@ export class InMemoryAnalyticsBreakdowns implements AnalyticsBreakdownReadPort {
 	public categories: CategorySalesRow[] = [];
 	public cities: CitySalesRow[] = [];
 	public merchantBuckets: MerchantBucketSalesRow[] = [];
-	public readonly storeCalls: { readonly scope: OrganizationAnalyticsScope; readonly range: AnalyticsTimeRange }[] = [];
+	public readonly storeCalls: { readonly scope: TenantAnalyticsScope; readonly range: AnalyticsTimeRange }[] = [];
 	public calls = 0;
 
-	public byStore(scope: OrganizationAnalyticsScope, range: AnalyticsTimeRange): Promise<StoreBreakdownRow[]> {
+	public byStore(scope: TenantAnalyticsScope, range: AnalyticsTimeRange): Promise<StoreBreakdownRow[]> {
 		this.calls += 1;
 		this.storeCalls.push({ scope, range });
 		return Promise.resolve(this.stores);
@@ -158,12 +158,12 @@ export class InMemoryAnalyticsBreakdowns implements AnalyticsBreakdownReadPort {
 	}
 }
 
-/** Organizations by id. */
-export class InMemoryAnalyticsOrganizations implements AnalyticsOrganizationReadPort {
-	public readonly rows = new Map<string, AnalyticsOrganization>();
+/** Tenants by id. */
+export class InMemoryAnalyticsTenants implements AnalyticsTenantReadPort {
+	public readonly rows = new Map<string, AnalyticsTenant>();
 
-	public findById(organizationId: string): Promise<AnalyticsOrganization | null> {
-		return Promise.resolve(this.rows.get(organizationId) ?? null);
+	public findById(tenantId: string): Promise<AnalyticsTenant | null> {
+		return Promise.resolve(this.rows.get(tenantId) ?? null);
 	}
 }
 
@@ -172,10 +172,10 @@ export class InMemorySales implements SalesReadPort {
 	public aggregates: SalesAggregate = { totalMinor: 0, bills: 0 };
 	public weeks: SalesWeek[] = [];
 	public groups: SalesGroup[] = [];
-	public organizations = 0;
+	public tenants = 0;
 	public summaries = new Map<string, SalesMerchantSummary>();
 	public readonly aggregateScopes: SalesScope[] = [];
-	public readonly summaryCalls: { readonly organizationIds: readonly string[]; readonly actorUserId: string | null }[] = [];
+	public readonly summaryCalls: { readonly tenantIds: readonly string[]; readonly actorUserId: string | null }[] = [];
 
 	public firstPaidAt(): Promise<number | null> {
 		return Promise.resolve(null);
@@ -190,17 +190,17 @@ export class InMemorySales implements SalesReadPort {
 		return Promise.resolve(this.weeks);
 	}
 
-	public groupByOrganization(): Promise<SalesGroup[]> {
+	public groupByTenant(): Promise<SalesGroup[]> {
 		return Promise.resolve(this.groups);
 	}
 
-	public countOrganizations(): Promise<number> {
-		return Promise.resolve(this.organizations);
+	public countTenants(): Promise<number> {
+		return Promise.resolve(this.tenants);
 	}
 
-	public listMerchantSummaries(organizationIds: readonly string[], actorUserId: string | null): Promise<Map<string, SalesMerchantSummary>> {
-		this.summaryCalls.push({ organizationIds, actorUserId });
-		return Promise.resolve(new Map([...this.summaries].filter(([organizationId]) => organizationIds.includes(organizationId))));
+	public listMerchantSummaries(tenantIds: readonly string[], actorUserId: string | null): Promise<Map<string, SalesMerchantSummary>> {
+		this.summaryCalls.push({ tenantIds, actorUserId });
+		return Promise.resolve(new Map([...this.summaries].filter(([tenantId]) => tenantIds.includes(tenantId))));
 	}
 }
 
@@ -260,7 +260,7 @@ export class InMemoryRewardActivity implements RewardActivityReadPort {
 		return Promise.resolve(this.rewardCount);
 	}
 
-	public merchantActivity(_organizationId: string, periods: ComparedPeriods, _locationScope: AnalyticsLocationScope, topRewards: number): Promise<MerchantActivity> {
+	public merchantActivity(_tenantId: string, periods: ComparedPeriods, _locationScope: AnalyticsLocationScope, topRewards: number): Promise<MerchantActivity> {
 		const claims = this.merchantClaims.filter((row) => within(row.claimedAt, periods.current));
 		const redemptions = this.merchantRedemptions.filter((row) => within(row.redeemedAt, periods.current));
 		const byReward = new Map<string, RewardActivityCounts>();
@@ -290,7 +290,7 @@ export class InMemoryRewardActivity implements RewardActivityReadPort {
 		return Promise.resolve(this.referralCount);
 	}
 
-	public listRewardTitles(_organizationId: string, rewardIds: readonly string[]): Promise<RewardTitle[]> {
+	public listRewardTitles(_tenantId: string, rewardIds: readonly string[]): Promise<RewardTitle[]> {
 		return Promise.resolve(this.titles.filter((row) => rewardIds.includes(row.id)));
 	}
 
@@ -339,6 +339,6 @@ export class FakeMerchantAccess implements MerchantAccessPort {
 		if (!this.allow) {
 			return Promise.reject(new MerchantAccessDeniedForTest());
 		}
-		return Promise.resolve({ organizationId: request.organizationId, ...this.grantScope });
+		return Promise.resolve({ tenantId: request.tenantId, ...this.grantScope });
 	}
 }

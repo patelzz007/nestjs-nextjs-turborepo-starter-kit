@@ -17,11 +17,13 @@ import {
 import { ZodListQuery, ZodParams } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
+import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { GetDataChangeQuery } from "../../application/queries/get-data-change/get-data-change.query";
 import { ListDataChangesQuery } from "../../application/queries/list-data-changes/list-data-changes.query";
+import { DATA_CHANGE_READ_OPERATION } from "../../application/audit-read-operations";
 
 /**
  * Admin viewer for the row-level data-change trail (`DataChangeLog`,
@@ -35,6 +37,7 @@ import { ListDataChangesQuery } from "../../application/queries/list-data-change
  */
 @ApiTags("Audit Log")
 @AdminAccessOnly("Admin access required to view the data-change trail.")
+@PlatformOperation(DATA_CHANGE_READ_OPERATION)
 @Controller(apiPath("/admin/data-changes"))
 export class DataChangesController {
 	public constructor(private readonly queryBus: QueryBus) {}

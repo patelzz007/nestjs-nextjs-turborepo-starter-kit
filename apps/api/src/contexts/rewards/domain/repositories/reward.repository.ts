@@ -5,10 +5,10 @@ import type { Reward } from "../aggregates/reward.aggregate";
  * Every save is a compare-and-set on the aggregate's concurrency token.
  */
 export interface RewardRepository {
-	/** One live consumer reward of the organization (with its referrer child); {@link RewardNotFoundError} otherwise. */
-	getConsumerInOrganization(organizationId: string, rewardId: string): Promise<Reward>;
+	/** One live consumer reward of the tenant (with its referrer child); {@link RewardNotFoundError} otherwise. */
+	getConsumerInTenant(tenantId: string, rewardId: string): Promise<Reward>;
 
-	/** One live consumer reward of any organization (reviewers); {@link RewardNotFoundError} otherwise. */
+	/** One live consumer reward of any tenant (reviewers); {@link RewardNotFoundError} otherwise. */
 	getConsumer(rewardId: string): Promise<Reward>;
 
 	/** Same as {@link getConsumer}, but `null` when it is gone (batch jobs skip it). */

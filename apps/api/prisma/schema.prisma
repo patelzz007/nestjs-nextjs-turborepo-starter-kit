@@ -56,9 +56,9 @@ datasource db {
 // Runtime (apps/api):
 //   - Role `app_runtime` (NOLOGIN NOSUPERUSER NOINHERIT NOBYPASSRLS)
 //   - RlsPool + TenantTransactionService: SET ROLE + transaction-local set_config
-//   - Session: app.current_user_id, app.current_organization_id, app.rls_bypass
+//   - Session: app.current_user_id, app.current_tenant_id, app.rls_bypass
 //   - RBAC: roles/permissions (data) — guards, not per-role RLS policies
-//   - ACL: OrganizationMembership + location scopes — generic SQL helpers
+//   - ACL: Membership + location scopes — generic SQL helpers
 // See docs/technical/security/database-security.md.
 // ---------------------------------------------------------------------------
 enum DeviceType {
@@ -184,38 +184,38 @@ model User {
   impersonationSessionsRun    ImpersonationSession[]    @relation("ImpersonationSessionImpersonator")
   impersonationSessionsOf     ImpersonationSession[]    @relation("ImpersonationSessionTarget")
 
-  organizationMemberships                OrganizationMembership[]        @relation("OrganizationMemberships")
-  organizationInvitationsCreated         OrganizationInvitation[]        @relation("OrganizationInvitationCreator")
-  organizationInvitationsAccepted        OrganizationInvitation[]        @relation("OrganizationInvitationAcceptor")
-  organizationAccessRequests             OrganizationAccessRequest[]     @relation("OrganizationAccessRequests")
-  organizationAccessRequestsReviewed     OrganizationAccessRequest[]     @relation("OrganizationAccessRequestReviewer")
-  authorizationPolicyDraftsCreated       AuthorizationPolicyDraft[]      @relation("AuthorizationPolicyDraftCreator")
-  authorizationPolicyDraftsApproved      AuthorizationPolicyDraft[]      @relation("AuthorizationPolicyDraftApprover")
-  authorizationPolicyVersionsPublished   AuthorizationPolicyVersion[]    @relation("AuthorizationPolicyPublisher")
-  authorizationPolicySimulations         AuthorizationPolicySimulation[] @relation("AuthorizationPolicySimulator")
-  supportAccessGrants                    SupportAccessGrant[]            @relation("SupportAccessGrantSupportUser")
-  organizationApiKeysCreated             OrganizationApiKey[]            @relation("OrganizationApiKeyCreator")
-  organizationTerminalsCreated           OrganizationTerminal[]          @relation("OrganizationTerminalCreator")
-  organizationTerminalPairingCodesIssued OrganizationTerminal[]          @relation("OrganizationTerminalPairingCodeIssuer")
-  organizationLocationsRequested         OrganizationLocation[]          @relation("OrganizationLocationRequestedBy")
-  organizationLocationsReviewed          OrganizationLocation[]          @relation("OrganizationLocationReviewedBy")
-  storeMemberships                       StoreMembership[]               @relation("StoreMemberships")
-  rewardClaims                           RewardClaim[]
-  rewardRedemptions                      RewardRedemption[]
-  rewardSales                            RewardSale[]
-  rewardReferralsAsReferrer              RewardReferral[]                @relation("ReferrerUser")
-  rewardReferralsAsReferee               RewardReferral[]                @relation("RefereeUser")
-  signupReferralCodes                    SignupReferralCode[]
-  signupReferralsAsReferrer              SignupReferral[]                @relation("SignupReferrerUser")
-  signupReferralsAsReferee               SignupReferral?                 @relation("SignupRefereeUser")
-  rewardOtpChallenges                    RewardOtpChallenge[]
-  rewardLegalAcceptances                 RewardLegalAcceptance[]
-  rewardNotifications                    RewardNotification[]
-  rewardAuditLogs                        RewardAuditLog[]
-  avatar                                 UserAvatar?
-  githubAccountLink                      GithubAccountLink?
-  githubWebhookSubscriptions             GithubWebhookSubscription[]
-  storedFilesUploaded                    StoredFile[]                    @relation("StoredFileUploader")
+  memberships                          Membership[]                    @relation("Memberships")
+  tenantInvitationsCreated             TenantInvitation[]              @relation("TenantInvitationCreator")
+  tenantInvitationsAccepted            TenantInvitation[]              @relation("TenantInvitationAcceptor")
+  tenantAccessRequests                 TenantAccessRequest[]           @relation("TenantAccessRequests")
+  tenantAccessRequestsReviewed         TenantAccessRequest[]           @relation("TenantAccessRequestReviewer")
+  authorizationPolicyDraftsCreated     AuthorizationPolicyDraft[]      @relation("AuthorizationPolicyDraftCreator")
+  authorizationPolicyDraftsApproved    AuthorizationPolicyDraft[]      @relation("AuthorizationPolicyDraftApprover")
+  authorizationPolicyVersionsPublished AuthorizationPolicyVersion[]    @relation("AuthorizationPolicyPublisher")
+  authorizationPolicySimulations       AuthorizationPolicySimulation[] @relation("AuthorizationPolicySimulator")
+  supportAccessGrants                  SupportAccessGrant[]            @relation("SupportAccessGrantSupportUser")
+  tenantApiKeysCreated                 TenantApiKey[]                  @relation("TenantApiKeyCreator")
+  tenantTerminalsCreated               TenantTerminal[]                @relation("TenantTerminalCreator")
+  tenantTerminalPairingCodesIssued     TenantTerminal[]                @relation("TenantTerminalPairingCodeIssuer")
+  locationsRequested                   Location[]                      @relation("LocationRequestedBy")
+  locationsReviewed                    Location[]                      @relation("LocationReviewedBy")
+  storeMemberships                     StoreMembership[]               @relation("StoreMemberships")
+  rewardClaims                         RewardClaim[]
+  rewardRedemptions                    RewardRedemption[]
+  rewardSales                          RewardSale[]
+  rewardReferralsAsReferrer            RewardReferral[]                @relation("ReferrerUser")
+  rewardReferralsAsReferee             RewardReferral[]                @relation("RefereeUser")
+  signupReferralCodes                  SignupReferralCode[]
+  signupReferralsAsReferrer            SignupReferral[]                @relation("SignupReferrerUser")
+  signupReferralsAsReferee             SignupReferral?                 @relation("SignupRefereeUser")
+  rewardOtpChallenges                  RewardOtpChallenge[]
+  rewardLegalAcceptances               RewardLegalAcceptance[]
+  rewardNotifications                  RewardNotification[]
+  rewardAuditLogs                      RewardAuditLog[]
+  avatar                               UserAvatar?
+  githubAccountLink                    GithubAccountLink?
+  githubWebhookSubscriptions           GithubWebhookSubscription[]
+  storedFilesUploaded                  StoredFile[]                    @relation("StoredFileUploader")
 
   @@index([pendingAttributionToken])
   @@index([authorizationChangedAt])
@@ -554,15 +554,18 @@ model ImpersonationSession {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  impersonatorId String
-  targetUserId   String
-  startedAt      BigInt
-  expiresAt      BigInt
-  endedAt        BigInt?
-  endedBy        String?
-  endReason      ImpersonationSessionEndReason?
-  ipAddress      String?                        @db.VarChar(45)
-  userAgent      String?                        @db.Text
+  impersonatorId        String
+  targetUserId          String
+  startedAt             BigInt
+  expiresAt             BigInt
+  endedAt               BigInt?
+  endedBy               String?
+  endReason             ImpersonationSessionEndReason?
+  ipAddress             String?                        @db.VarChar(45)
+  userAgent             String?                        @db.Text
+  /// The approved SupportAccessGrant ids that authorized this session: one per tenant the target
+  /// belongs to (D21). Empty when the target is a customer with no membership.
+  supportAccessGrantIds String[]                       @default([]) @db.VarChar(64)
 
   impersonator User                    @relation("ImpersonationSessionImpersonator", fields: [impersonatorId], references: [id], onDelete: Restrict)
   targetUser   User                    @relation("ImpersonationSessionTarget", fields: [targetUserId], references: [id], onDelete: Restrict)
@@ -628,7 +631,7 @@ enum PermissionResource {
   ORDER
   PAYMENT
   INVENTORY
-  ORGANIZATION
+  TENANT
   LOCATION
   STORE
   GITHUB
@@ -637,7 +640,7 @@ enum PermissionResource {
 
 enum PermissionScope {
   GLOBAL
-  ORGANIZATION
+  TENANT
   STORE
   LOCATION
   RESOURCE
@@ -908,23 +911,23 @@ model ResourceAcl {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  subjectType    String           @db.VarChar(50) // "USER" | "ROLE"
-  subjectId      String
-  action         String           @db.VarChar(50)
-  resourceType   String           @db.VarChar(50)
-  resourceId     String? // null = all resources of type
-  effect         AclEffect
-  scope          PermissionScope?
-  organizationId String?
-  locationId     String?
-  conditions     Json?
-  expiresAt      BigInt?
-  assignedBy     String?
-  reason         String?          @db.Text
+  subjectType  String           @db.VarChar(50) // "USER" | "ROLE"
+  subjectId    String
+  action       String           @db.VarChar(50)
+  resourceType String           @db.VarChar(50)
+  resourceId   String? // null = all resources of type
+  effect       AclEffect
+  scope        PermissionScope?
+  tenantId     String?
+  locationId   String?
+  conditions   Json?
+  expiresAt    BigInt?
+  assignedBy   String?
+  reason       String?          @db.Text
 
   @@index([subjectType, subjectId])
   @@index([resourceType, resourceId])
-  @@index([organizationId])
+  @@index([tenantId])
   @@index([locationId])
 }
 
@@ -942,22 +945,22 @@ model PolicyDefinition {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  name           String          @db.VarChar(200)
-  description    String?         @db.Text
-  version        Int             @default(1)
-  effect         PolicyEffect
-  scope          PermissionScope
-  actions        String[] // ["CREATE", "UPDATE", ...]
-  resources      String[] // ["ORDER", "PAYMENT", ...]
-  organizationId String?
-  locationId     String?
-  conditions     Json? // Zod-validated policy DSL
-  isActive       Boolean         @default(true)
-  publishedAt    BigInt?
-  publishedBy    String?
-  supersededBy   String?
+  name         String          @db.VarChar(200)
+  description  String?         @db.Text
+  version      Int             @default(1)
+  effect       PolicyEffect
+  scope        PermissionScope
+  actions      String[] // ["CREATE", "UPDATE", ...]
+  resources    String[] // ["ORDER", "PAYMENT", ...]
+  tenantId     String?
+  locationId   String?
+  conditions   Json? // Zod-validated policy DSL
+  isActive     Boolean         @default(true)
+  publishedAt  BigInt?
+  publishedBy  String?
+  supersededBy String?
 
-  @@index([organizationId])
+  @@index([tenantId])
   @@index([locationId])
   @@index([isActive])
 }
@@ -977,24 +980,24 @@ model AuthorizationAudit {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  actorId        String?
-  organizationId String?
-  locationId     String?
-  action         String                @db.VarChar(120)
-  resource       String                @db.VarChar(120)
-  resourceId     String?
-  decision       AuthorizationDecision
-  reason         String?               @db.Text
-  policyIds      String[]              @default([])
-  aclIds         String[]              @default([])
-  evaluation     Json? // explain() output
-  ipAddress      String?               @db.VarChar(45)
-  userAgent      String?               @db.Text
-  requestId      String?               @db.VarChar(64)
-  durationMs     Int?
+  actorId    String?
+  tenantId   String?
+  locationId String?
+  action     String                @db.VarChar(120)
+  resource   String                @db.VarChar(120)
+  resourceId String?
+  decision   AuthorizationDecision
+  reason     String?               @db.Text
+  policyIds  String[]              @default([])
+  aclIds     String[]              @default([])
+  evaluation Json? // explain() output
+  ipAddress  String?               @db.VarChar(45)
+  userAgent  String?               @db.Text
+  requestId  String?               @db.VarChar(64)
+  durationMs Int?
 
   @@index([actorId])
-  @@index([organizationId])
+  @@index([tenantId])
   @@index([locationId])
   @@index([decision])
   @@index([action])
@@ -1011,7 +1014,7 @@ enum AuthorizationPolicyScope {
 enum AuthorizationPolicyApprovalKind {
   /// Approved and published by a SuperAdmin other than its author (policy control plane).
   FOUR_EYES
-  /// The fixed, code-reviewed default tenant template published at organization provisioning;
+  /// The fixed, code-reviewed default tenant template published at tenant provisioning;
   /// no human approver exists (`approvedById` is NULL) and the publish is audited with this reason.
   PLATFORM_DEFAULT_TEMPLATE
 }
@@ -1053,7 +1056,7 @@ model AuthorizationPolicyDraft {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String?
+  tenantId       String?
   scope          AuthorizationPolicyScope
   name           String                           @db.VarChar(120)
   description    String?                          @db.Text
@@ -1067,13 +1070,13 @@ model AuthorizationPolicyDraft {
   /// NULL until the draft is published.
   approvalKind   AuthorizationPolicyApprovalKind?
 
-  organization Organization?                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  creator      User                            @relation("AuthorizationPolicyDraftCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  approvedBy   User?                           @relation("AuthorizationPolicyDraftApprover", fields: [approvedById], references: [id], onDelete: SetNull)
-  versions     AuthorizationPolicyVersion[]
-  simulations  AuthorizationPolicySimulation[]
+  tenant      Tenant?                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator     User                            @relation("AuthorizationPolicyDraftCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  approvedBy  User?                           @relation("AuthorizationPolicyDraftApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  versions    AuthorizationPolicyVersion[]
+  simulations AuthorizationPolicySimulation[]
 
-  @@index([organizationId, status])
+  @@index([tenantId, status])
 }
 
 /// RLS: TENANT + GLOBAL — immutable published policy versions.
@@ -1090,26 +1093,26 @@ model AuthorizationPolicyVersion {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String?
-  draftId        String
-  scope          AuthorizationPolicyScope
-  version        Int
-  cedarSource    String                   @db.Text
-  sqlPredicate   String?                  @db.Text
-  contentHash    String                   @db.VarChar(64)
-  publishedAt    BigInt
-  publishedById  String
-  supersededAt   BigInt?
+  tenantId      String?
+  draftId       String
+  scope         AuthorizationPolicyScope
+  version       Int
+  cedarSource   String                   @db.Text
+  sqlPredicate  String?                  @db.Text
+  contentHash   String                   @db.VarChar(64)
+  publishedAt   BigInt
+  publishedById String
+  supersededAt  BigInt?
 
-  organization Organization?            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  draft        AuthorizationPolicyDraft @relation(fields: [draftId], references: [id], onDelete: Restrict)
-  publishedBy  User                     @relation("AuthorizationPolicyPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
+  tenant      Tenant?                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  draft       AuthorizationPolicyDraft @relation(fields: [draftId], references: [id], onDelete: Restrict)
+  publishedBy User                     @relation("AuthorizationPolicyPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
 
-  @@unique([organizationId, scope, version])
-  @@unique([scope, version], where: { organizationId: null })
-  @@unique([organizationId, scope], where: { supersededAt: null })
-  @@unique([scope], where: { organizationId: null, supersededAt: null })
-  @@index([organizationId, publishedAt])
+  @@unique([tenantId, scope, version])
+  @@unique([scope, version], where: { tenantId: null })
+  @@unique([tenantId, scope], where: { supersededAt: null })
+  @@unique([scope], where: { tenantId: null, supersededAt: null })
+  @@index([tenantId, publishedAt])
 }
 
 /// RLS: OPERATIONAL — policy simulation runs.
@@ -1155,7 +1158,7 @@ model SupportAccessGrant {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId     String
+  tenantId           String
   supportUserId      String
   mode               SupportAccessGrantMode   @default(READ_ONLY)
   status             SupportAccessGrantStatus @default(PENDING_TENANT_APPROVAL)
@@ -1165,19 +1168,19 @@ model SupportAccessGrant {
   expiresAt          BigInt
   revokedAt          BigInt?
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  supportUser  User         @relation("SupportAccessGrantSupportUser", fields: [supportUserId], references: [id], onDelete: Restrict)
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supportUser User   @relation("SupportAccessGrantSupportUser", fields: [supportUserId], references: [id], onDelete: Restrict)
 
-  @@index([organizationId, status])
+  @@index([tenantId, status])
   @@index([supportUserId, status])
 }
 
 // ============================================================================
-// Organizations
+// Tenants
 // ============================================================================
 
 // ---------------------------------------------------------------------------
-// Organization multi-tenancy (see docs/technical/authorization/tenancy-and-rls.md, ADRs 008–013)
+// Tenant multi-tenancy (see docs/technical/authorization/tenancy-and-rls.md, ADRs 008–013)
 // ---------------------------------------------------------------------------
 enum PilotCity {
   KUALA_LUMPUR
@@ -1191,7 +1194,7 @@ enum KybStatus {
   ACTION_REQUIRED
 }
 
-enum OrganizationLifecycleState {
+enum TenantLifecycleState {
   PROVISIONING
   ACTIVE
   RESTRICTED
@@ -1200,7 +1203,7 @@ enum OrganizationLifecycleState {
   DELETED
 }
 
-enum OrganizationMembershipRole {
+enum MembershipRole {
   OWNER
   ADMIN
   MEMBER
@@ -1208,37 +1211,37 @@ enum OrganizationMembershipRole {
   CASHIER
 }
 
-enum OrganizationMembershipStatus {
+enum MembershipStatus {
   ACTIVE
   SUSPENDED
   PENDING
 }
 
-enum OrganizationLocationScopeType {
+enum LocationScopeType {
   ALL_LOCATIONS
   SELECTED
 }
 
-enum OrganizationLocationStatus {
+enum LocationStatus {
   PENDING_APPROVAL
   ACTIVE
   REJECTED
   INACTIVE
 }
 
-enum OrganizationInvitationStatus {
+enum TenantInvitationStatus {
   PENDING
   ACCEPTED
   EXPIRED
   REVOKED
 }
 
-enum OrganizationInvitationKind {
+enum TenantInvitationKind {
   PLATFORM_ONBOARDING
   TEAM_MEMBER
 }
 
-enum OrganizationAccessRequestStatus {
+enum TenantAccessRequestStatus {
   PENDING
   APPROVED
   REJECTED
@@ -1256,9 +1259,9 @@ enum TenantEncryptionKeyStatus {
   REVOKED
 }
 
-/// RLS: TENANT — canonical organization root.
+/// RLS: TENANT — canonical tenant root.
 /// @extends BaseModel
-model Organization {
+model Tenant {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -1270,40 +1273,40 @@ model Organization {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  slug                String                     @unique @db.VarChar(64)
-  displayName         String                     @db.VarChar(200)
-  lifecycleState      OrganizationLifecycleState @default(PROVISIONING)
+  slug                String               @unique @db.VarChar(64)
+  displayName         String               @db.VarChar(200)
+  lifecycleState      TenantLifecycleState @default(PROVISIONING)
   /// IANA time zone the merchant operates in (e.g. Asia/Kuala_Lumpur): merchant analytics bucket weeks
   /// at Monday 00:00 in this zone. Validated by `IanaTimeZoneSchema`; the default is
   /// `PLATFORM_DISPLAY_REGION.timeZone` (packages/shared) and must stay equal to it.
-  timeZone            String                     @default("Asia/Kuala_Lumpur") @db.VarChar(64)
+  timeZone            String               @default("Asia/Kuala_Lumpur") @db.VarChar(64)
   deletionGraceEndsAt BigInt?
 
-  slugHistory              OrganizationSlugHistory[]
-  locations                OrganizationLocation[]
-  memberships              OrganizationMembership[]
-  merchantProfile          OrganizationMerchantProfile?
-  invitations              OrganizationInvitation[]
-  accessRequests           OrganizationAccessRequest[]
-  lifecycleEvents          OrganizationLifecycleEvent[]
+  slugHistory              TenantSlugHistory[]
+  locations                Location[]
+  memberships              Membership[]
+  merchantProfile          TenantMerchantProfile?
+  invitations              TenantInvitation[]
+  accessRequests           TenantAccessRequest[]
+  lifecycleEvents          TenantLifecycleEvent[]
   placement                TenantPlacement?
   policyDrafts             AuthorizationPolicyDraft[]
   policyVersions           AuthorizationPolicyVersion[]
   supportGrants            SupportAccessGrant[]
   encryptionKeys           TenantEncryptionKey[]
-  auditLogs                OrganizationAuditLog[]
+  auditLogs                TenantAuditLog[]
   rewards                  Reward[]
   redemptions              RewardRedemption[]
   rewardSales              RewardSale[]
   rewardAuditLogs          RewardAuditLog[]
-  apiKeys                  OrganizationApiKey[]
-  kybFiles                 OrganizationKybFile[]
-  assets                   OrganizationAsset[]
-  terminals                OrganizationTerminal[]
-  storedFiles              StoredFile[]                          @relation("StoredFileOrganization")
+  apiKeys                  TenantApiKey[]
+  kybFiles                 TenantKybFile[]
+  assets                   TenantAsset[]
+  terminals                TenantTerminal[]
+  storedFiles              StoredFile[]                    @relation("StoredFileTenant")
   rewardImages             RewardImage[]
-  membershipLocationScopes OrganizationMembershipLocationScope[]
-  invitationLocationScopes OrganizationInvitationLocationScope[]
+  membershipLocationScopes MembershipLocationScope[]
+  invitationLocationScopes TenantInvitationLocationScope[]
   rewardLocationScopes     RewardLocationScope[]
   stores                   Store[]
   storeMemberships         StoreMembership[]
@@ -1313,7 +1316,7 @@ model Organization {
 
 /// RLS: TENANT — reserved slug aliases for safe redirects.
 /// @extends BaseModel
-model OrganizationSlugHistory {
+model TenantSlugHistory {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -1325,19 +1328,19 @@ model OrganizationSlugHistory {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String
-  slug           String  @db.VarChar(64)
-  reservedUntil  BigInt?
+  tenantId      String
+  slug          String  @db.VarChar(64)
+  reservedUntil BigInt?
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([slug])
-  @@index([organizationId])
+  @@index([tenantId])
 }
 
-/// RLS: TENANT — store/site within an organization.
+/// RLS: TENANT — store/site within a tenant.
 /// @extends BaseModel
-model OrganizationLocation {
+model Location {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -1349,43 +1352,46 @@ model OrganizationLocation {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId    String
-  name              String                     @db.VarChar(200)
-  code              String                     @db.VarChar(64)
-  addressText       String?                    @db.Text
+  tenantId          String
+  name              String         @db.VarChar(200)
+  code              String         @db.VarChar(64)
+  addressText       String?        @db.Text
   city              PilotCity?
-  contactPhone      String?                    @db.VarChar(20)
-  status            OrganizationLocationStatus @default(PENDING_APPROVAL)
-  rejectionReason   String?                    @db.Text
+  contactPhone      String?        @db.VarChar(20)
+  status            LocationStatus @default(PENDING_APPROVAL)
+  rejectionReason   String?        @db.Text
   requestedByUserId String?
   reviewedByUserId  String?
   reviewedAt        BigInt?
-  isPrimary         Boolean                    @default(false)
+  isPrimary         Boolean        @default(false)
   /// Why the store was closed (bankruptcy, lease ended, ...); set together with the soft-delete fields when it is closed.
-  closureReason     String?                    @db.Text
+  closureReason     String?        @db.Text
 
-  organization             Organization                          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  requestedBy              User?                                 @relation("OrganizationLocationRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
-  reviewedBy               User?                                 @relation("OrganizationLocationReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
-  locationScopes           OrganizationMembershipLocationScope[]
-  invitationLocationScopes OrganizationInvitationLocationScope[]
+  tenant                   Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requestedBy              User?                           @relation("LocationRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  reviewedBy               User?                           @relation("LocationReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  locationScopes           MembershipLocationScope[]
+  invitationLocationScopes TenantInvitationLocationScope[]
   rewardLocationScopes     RewardLocationScope[]
-  terminals                OrganizationTerminal[]
+  terminals                TenantTerminal[]
   redemptions              RewardRedemption[]
   rewardSales              RewardSale[]
-  apiKeys                  OrganizationApiKey[]
+  apiKeys                  TenantApiKey[]
   store                    Store?
 
-  @@unique([organizationId, code])
-  /// At most one live primary location per organization (partial unique — soft-deleted rows ignored).
-  @@unique([organizationId], where: { isPrimary: true, isDeleted: false })
-  @@index([organizationId])
-  @@index([organizationId, status])
+  @@unique([tenantId, code])
+  /// At most one live primary location per tenant (partial unique — soft-deleted rows ignored).
+  @@unique([tenantId], where: { isPrimary: true, isDeleted: false })
+  /// Composite target of the tenant-scoped foreign keys (multi-tenancy plan §7): a child row
+  /// can reference this row only from the same tenant.
+  @@unique([tenantId, id])
+  @@index([tenantId])
+  @@index([tenantId, status])
 }
 
-/// RLS: MEMBERSHIP — user membership in an organization.
+/// RLS: MEMBERSHIP — user membership in a tenant.
 /// @extends BaseModel
-model OrganizationMembership {
+model Membership {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -1397,29 +1403,32 @@ model OrganizationMembership {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String
-  userId         String
-  role           OrganizationMembershipRole
-  status         OrganizationMembershipStatus @default(ACTIVE)
-  /// The member's own name for this organization (`PATCH /orgs/:orgSlug/members/me`); trimmed, at most
-  /// `ORGANIZATION_MEMBER_DISPLAY_NAME_MAX_LENGTH` (100) characters; NULL = show the account's full name.
-  displayName    String?                      @db.VarChar(100)
+  tenantId    String
+  userId      String
+  role        MembershipRole
+  status      MembershipStatus @default(ACTIVE)
+  /// The member's own name for this tenant (`PATCH /tenants/:tenantSlug/members/me`); trimmed, at most
+  /// `TENANT_MEMBER_DISPLAY_NAME_MAX_LENGTH` (100) characters; NULL = show the account's full name.
+  displayName String?          @db.VarChar(100)
 
-  organization   Organization                          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User                                  @relation("OrganizationMemberships", fields: [userId], references: [id], onDelete: Cascade)
-  locationScopes OrganizationMembershipLocationScope[]
+  tenant         Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user           User                      @relation("Memberships", fields: [userId], references: [id], onDelete: Cascade)
+  locationScopes MembershipLocationScope[]
 
-  @@unique([organizationId, userId], where: { isDeleted: false })
+  @@unique([tenantId, userId], where: { isDeleted: false })
+  /// Composite target of the tenant-scoped foreign keys (multi-tenancy plan §7): a child row
+  /// can reference this row only from the same tenant.
+  @@unique([tenantId, id])
   @@index([userId])
-  @@index([organizationId, status])
-  /// `GET /orgs/:orgSlug/members` (join order within one organization) and `GET /orgs/memberships` (one user's, in join order).
-  @@index([organizationId, createdAt, id])
+  @@index([tenantId, status])
+  /// `GET /orgs/:orgSlug/members` (join order within one tenant) and `GET /orgs/memberships` (one user's, in join order).
+  @@index([tenantId, createdAt, id])
   @@index([userId, createdAt, id])
 }
 
 /// RLS: MEMBERSHIP — location scope for a membership.
 /// @extends BaseModel
-model OrganizationMembershipLocationScope {
+model MembershipLocationScope {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -1431,17 +1440,17 @@ model OrganizationMembershipLocationScope {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String
-  membershipId   String
-  scopeType      OrganizationLocationScopeType
-  locationId     String?
+  tenantId     String
+  membershipId String
+  scopeType    LocationScopeType
+  locationId   String?
 
-  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  membership   OrganizationMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
-  location     OrganizationLocation?  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [tenantId, membershipId], references: [tenantId, id], onDelete: Cascade)
+  location   Location?  @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade)
 
   @@unique([membershipId, locationId], where: { isDeleted: false })
-  @@index([organizationId])
+  @@index([tenantId])
 }
 
 /// Store lifecycle — mirrors the linked location (ACTIVE only while the location is ACTIVE).
@@ -1450,9 +1459,9 @@ enum StoreStatus {
   INACTIVE
 }
 
-/// RLS: TENANT — a store within an organization (spec §35). Each store is linked 1:1 to
-/// its operational `OrganizationLocation` (terminals, rewards, redemptions) and kept in
-/// sync by `OrganizationLocationRepository`.
+/// RLS: TENANT — a store within a tenant (spec §35). Each store is linked 1:1 to
+/// its operational `Location` (terminals, rewards, redemptions) and kept in
+/// sync by `LocationRepository`.
 /// @extends BaseModel
 model Store {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
@@ -1466,18 +1475,24 @@ model Store {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String
-  locationId     String      @unique
-  name           String      @db.VarChar(200)
-  code           String      @db.VarChar(64)
-  status         StoreStatus @default(INACTIVE)
+  tenantId   String
+  locationId String      @unique
+  name       String      @db.VarChar(200)
+  code       String      @db.VarChar(64)
+  status     StoreStatus @default(INACTIVE)
 
-  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  location     OrganizationLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  memberships  StoreMembership[]
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location    Location          @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade)
+  memberships StoreMembership[]
 
-  @@unique([organizationId, code])
-  @@index([organizationId, status])
+  @@unique([tenantId, code])
+  /// Composite target of the tenant-scoped foreign keys (multi-tenancy plan §7): a child row
+  /// can reference this row only from the same tenant.
+  @@unique([tenantId, id])
+  /// One-to-one with a composite tenant foreign key: Prisma needs the FK's fields unique here too. The
+  /// single column is already unique, so this adds no constraint, only the index Prisma requires.
+  @@unique([tenantId, locationId])
+  @@index([tenantId, status])
 }
 
 /// RLS: TENANT — a user's membership in one store with a dynamic RBAC role (spec §36).
@@ -1495,26 +1510,26 @@ model StoreMembership {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String
-  storeId        String
-  userId         String
-  roleId         String
-  status         OrganizationMembershipStatus @default(ACTIVE)
+  tenantId String
+  storeId  String
+  userId   String
+  roleId   String
+  status   MembershipStatus @default(ACTIVE)
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  store        Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  user         User         @relation("StoreMemberships", fields: [userId], references: [id], onDelete: Cascade)
-  role         Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store  Store  @relation(fields: [tenantId, storeId], references: [tenantId, id], onDelete: Cascade)
+  user   User   @relation("StoreMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([storeId, userId])
   @@index([userId])
-  @@index([organizationId])
+  @@index([tenantId])
   @@index([roleId])
 }
 
-/// RLS: TENANT — merchant-specific organization profile (KYB, contact).
+/// RLS: TENANT — merchant-specific tenant profile (KYB, contact).
 /// @extends BaseModel
-model OrganizationMerchantProfile {
+model TenantMerchantProfile {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -1526,7 +1541,7 @@ model OrganizationMerchantProfile {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId             String    @unique
+  tenantId                   String    @unique
   legalName                  String?   @db.VarChar(200)
   /// Null until the merchant submits it during onboarding (an admin invite does not know it).
   category                   String?   @db.VarChar(100)
@@ -1539,14 +1554,14 @@ model OrganizationMerchantProfile {
   /// When on, POS calls with a manually created API key must come from a registered terminal id.
   requireRegisteredTerminals Boolean   @default(false)
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([kybStatus])
 }
 
 /// RLS: TENANT — platform onboarding or team-member invite.
 /// @extends BaseModel
-model OrganizationInvitation {
+model TenantInvitation {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -1558,14 +1573,14 @@ model OrganizationInvitation {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId       String?
-  /// Case-insensitive (citext), so the one-PENDING-per-(organization, email, kind) unique ignores case.
-  email                String                        @db.Citext
-  tokenHash            String                        @unique @db.Text
-  kind                 OrganizationInvitationKind    @default(PLATFORM_ONBOARDING)
-  intendedRole         OrganizationMembershipRole
-  locationScopeType    OrganizationLocationScopeType @default(ALL_LOCATIONS)
-  status               OrganizationInvitationStatus  @default(PENDING)
+  tenantId             String?
+  /// Case-insensitive (citext), so the one-PENDING-per-(tenant, email, kind) unique ignores case.
+  email                String                 @db.Citext
+  tokenHash            String                 @unique @db.Text
+  kind                 TenantInvitationKind   @default(PLATFORM_ONBOARDING)
+  intendedRole         MembershipRole
+  locationScopeType    LocationScopeType      @default(ALL_LOCATIONS)
+  status               TenantInvitationStatus @default(PENDING)
   createdByAdminId     String
   acceptedByUserId     String?
   expiresAt            BigInt
@@ -1573,22 +1588,22 @@ model OrganizationInvitation {
   /// When the post-acceptance KYB document submission consumed this token (onboarding tokens are single-use).
   documentsSubmittedAt BigInt?
 
-  organization   Organization?                         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  createdByAdmin User                                  @relation("OrganizationInvitationCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
-  acceptedByUser User?                                 @relation("OrganizationInvitationAcceptor", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
-  locationScopes OrganizationInvitationLocationScope[]
+  tenant         Tenant?                         @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  createdByAdmin User                            @relation("TenantInvitationCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  acceptedByUser User?                           @relation("TenantInvitationAcceptor", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+  locationScopes TenantInvitationLocationScope[]
 
-  @@unique([organizationId, email, kind], where: { status: "PENDING" })
+  @@unique([tenantId, email, kind], where: { status: "PENDING" })
   @@index([email])
-  @@index([organizationId])
-  @@index([organizationId, kind, status])
-  /// `GET /orgs/:orgSlug/members/invites`: one organization's pending team invites, newest first.
-  @@index([organizationId, kind, status, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([tenantId])
+  @@index([tenantId, kind, status])
+  /// `GET /orgs/:orgSlug/members/invites`: one tenant's pending team invites, newest first.
+  @@index([tenantId, kind, status, createdAt(sort: Desc), id(sort: Desc)])
 }
 
 /// RLS: TENANT — selected locations on a pending team invite.
 /// @extends BaseModel
-model OrganizationInvitationLocationScope {
+model TenantInvitationLocationScope {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -1600,21 +1615,21 @@ model OrganizationInvitationLocationScope {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String
-  invitationId   String
-  locationId     String
+  tenantId     String
+  invitationId String
+  locationId   String
 
-  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  invitation   OrganizationInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
-  location     OrganizationLocation   @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  tenant     Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invitation TenantInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  location   Location         @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade)
 
   @@unique([invitationId, locationId])
-  @@index([organizationId])
+  @@index([tenantId])
 }
 
-/// RLS: TENANT — user-requested access to an organization.
+/// RLS: TENANT — user-requested access to a tenant.
 /// @extends BaseModel
-model OrganizationAccessRequest {
+model TenantAccessRequest {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -1626,25 +1641,25 @@ model OrganizationAccessRequest {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String
-  userId         String
-  status         OrganizationAccessRequestStatus @default(PENDING)
-  message        String?                         @db.Text
-  reviewedById   String?
-  reviewedAt     BigInt?
+  tenantId     String
+  userId       String
+  status       TenantAccessRequestStatus @default(PENDING)
+  message      String?                   @db.Text
+  reviewedById String?
+  reviewedAt   BigInt?
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User         @relation("OrganizationAccessRequests", fields: [userId], references: [id], onDelete: Cascade)
-  reviewedBy   User?        @relation("OrganizationAccessRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user       User   @relation("TenantAccessRequests", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User?  @relation("TenantAccessRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
-  @@unique([organizationId, userId], where: { status: "PENDING" })
-  @@index([organizationId, userId, status])
-  @@index([organizationId, status])
+  @@unique([tenantId, userId], where: { status: "PENDING" })
+  @@index([tenantId, userId, status])
+  @@index([tenantId, status])
 }
 
 /// RLS: OPERATIONAL — lifecycle state transition audit.
 /// @extends BaseModel
-model OrganizationLifecycleEvent {
+model TenantLifecycleEvent {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -1656,18 +1671,18 @@ model OrganizationLifecycleEvent {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String
-  fromState      OrganizationLifecycleState?
-  toState        OrganizationLifecycleState
-  actorUserId    String?
-  reason         String?                     @db.Text
+  tenantId      String
+  fromState     TenantLifecycleState?
+  toState       TenantLifecycleState
+  actorUserId   String?
+  reason        String?               @db.Text
   /// The request's correlation id (or the system operation's, for background work) the transition ran under.
-  /// Written only by `OrganizationLifecycleEventRecorder`, which reads it from the transaction (`app.correlation_id`).
-  correlationId  String                      @db.VarChar(64)
+  /// Written only by `TenantLifecycleEventRecorder`, which reads it from the transaction (`app.correlation_id`).
+  correlationId String                @db.VarChar(64)
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([organizationId, createdAt])
+  @@index([tenantId, createdAt])
 }
 
 /// RLS: TENANT — future placement / shard directory.
@@ -1684,11 +1699,11 @@ model TenantPlacement {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String              @unique
-  kind           TenantPlacementKind @default(SHARED)
-  regionCode     String              @default("default") @db.VarChar(32)
+  tenantId   String              @unique
+  kind       TenantPlacementKind @default(SHARED)
+  regionCode String              @default("default") @db.VarChar(32)
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 /// RLS: TENANT — envelope encryption key metadata.
@@ -1705,28 +1720,28 @@ model TenantEncryptionKey {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String
-  keyVersion     Int
+  tenantId   String
+  keyVersion Int
   /// Provider-serialized ciphertext of the data key (local provider: base64 `iv:tag:ciphertext`, AES-256-GCM).
-  wrappedKey     String                    @db.Text
+  wrappedKey String                    @db.Text
   /// Key id of the KEK that wrapped `wrappedKey` (e.g. `local-dev-kek/v2`; legacy `local:pilot`).
   /// `pnpm db:rewrap-tenant-keys` moves every row to the provider's current KEK.
-  kmsKeyId       String                    @db.VarChar(255)
-  status         TenantEncryptionKeyStatus @default(ACTIVE)
+  kmsKeyId   String                    @db.VarChar(255)
+  status     TenantEncryptionKeyStatus @default(ACTIVE)
   /// Last time the data key was re-wrapped under a new KEK.
-  rotatedAt      BigInt?
+  rotatedAt  BigInt?
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@unique([organizationId, keyVersion])
-  /// At most one ACTIVE data key per organization — concurrent first-key creation cannot create two.
-  @@unique([organizationId], where: { status: "ACTIVE" })
+  @@unique([tenantId, keyVersion])
+  /// At most one ACTIVE data key per tenant — concurrent first-key creation cannot create two.
+  @@unique([tenantId], where: { status: "ACTIVE" })
   @@index([kmsKeyId])
 }
 
 /// RLS: TENANT — security and mutation audit (7-year retention).
 /// @extends BaseModel
-model OrganizationAuditLog {
+model TenantAuditLog {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -1738,30 +1753,30 @@ model OrganizationAuditLog {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String
-  actorUserId    String?
-  action         String  @db.VarChar(120)
-  resourceType   String  @db.VarChar(120)
-  resourceId     String? @db.VarChar(64)
-  decision       String? @db.VarChar(32)
-  policyVersion  Int?
-  correlationId  String? @db.VarChar(64)
-  metadata       Json?
+  tenantId      String
+  actorUserId   String?
+  action        String  @db.VarChar(120)
+  resourceType  String  @db.VarChar(120)
+  resourceId    String? @db.VarChar(64)
+  decision      String? @db.VarChar(32)
+  policyVersion Int?
+  correlationId String? @db.VarChar(64)
+  metadata      Json?
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([organizationId, createdAt])
-  @@index([organizationId, action])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, action])
 }
 
-enum OrganizationAssetType {
+enum TenantAssetType {
   LOGO
   BANNER
 }
 
-/// RLS: via organizationId membership.
+/// RLS: via tenantId membership.
 /// @extends BaseModel
-model OrganizationAsset {
+model TenantAsset {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -1773,20 +1788,20 @@ model OrganizationAsset {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String
-  assetType      OrganizationAssetType
-  fileId         String
+  tenantId  String
+  assetType TenantAssetType
+  fileId    String
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  file         StoredFile   @relation(fields: [fileId], references: [id], onDelete: Restrict)
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  file   StoredFile @relation(fields: [fileId], references: [id], onDelete: Restrict)
 
-  @@unique([organizationId, assetType])
+  @@unique([tenantId, assetType])
   @@index([fileId])
 }
 
-/// RLS: via organizationId membership.
+/// RLS: via tenantId membership.
 /// @extends BaseModel
-model OrganizationKybFile {
+model TenantKybFile {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -1798,16 +1813,16 @@ model OrganizationKybFile {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String
-  fileId         String
-  submissionId   String
-  isActive       Boolean @default(true)
+  tenantId     String
+  fileId       String
+  submissionId String
+  isActive     Boolean @default(true)
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  file         StoredFile   @relation(fields: [fileId], references: [id], onDelete: Restrict)
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  file   StoredFile @relation(fields: [fileId], references: [id], onDelete: Restrict)
 
-  @@index([organizationId])
-  @@index([organizationId, isActive])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
   @@index([submissionId])
   @@index([fileId])
 }
@@ -1846,7 +1861,7 @@ enum FileCategory {
   STORE_BANNER
   USER_AVATAR
   MERCHANT_KYB
-  /// A reward image (16:9, at least 4K) — uploaded to the organization, then listed in `RewardImage`.
+  /// A reward image (16:9, at least 4K) — uploaded to the tenant, then listed in `RewardImage`.
   REWARD_IMAGE
   /// A picture an admin attaches to a GitHub comment from the app (ADR 052) — public, linked from the comment.
   GITHUB_COMMENT_IMAGE
@@ -1909,22 +1924,22 @@ model StoredFile {
   scannedAt        BigInt?
   scanResult       String?                @db.VarChar(500)
   uploadedById     String
-  organizationId   String?
+  tenantId         String?
   /// Product a PRODUCT_IMAGE upload is bound to (set at upload-url time, never parsed from the object path).
   productId        String?
 
-  uploadedBy         User                  @relation("StoredFileUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
-  organization       Organization?         @relation("StoredFileOrganization", fields: [organizationId], references: [id], onDelete: SetNull)
-  product            Product?              @relation("StoredFileProduct", fields: [productId], references: [id], onDelete: SetNull)
-  variants           FileVariant[]
-  productImages      ProductImage[]
-  organizationAssets OrganizationAsset[]
-  userAvatar         UserAvatar?
-  kybFiles           OrganizationKybFile[]
-  rewardImages       RewardImage[]
+  uploadedBy    User            @relation("StoredFileUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  tenant        Tenant?         @relation("StoredFileTenant", fields: [tenantId], references: [id], onDelete: SetNull)
+  product       Product?        @relation("StoredFileProduct", fields: [productId], references: [id], onDelete: SetNull)
+  variants      FileVariant[]
+  productImages ProductImage[]
+  tenantAssets  TenantAsset[]
+  userAvatar    UserAvatar?
+  kybFiles      TenantKybFile[]
+  rewardImages  RewardImage[]
 
   @@index([uploadedById])
-  @@index([organizationId])
+  @@index([tenantId])
   @@index([productId])
   @@index([status])
   @@index([category])
@@ -1990,7 +2005,7 @@ enum RewardKind {
   REFERRER
 }
 
-/// RLS: organization members for writes; public read for published consumer rewards.
+/// RLS: tenant members for writes; public read for published consumer rewards.
 /// @extends BaseModel
 model Reward {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
@@ -2004,14 +2019,14 @@ model Reward {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId         String
-  title                  String                        @db.VarChar(200)
-  description            String                        @db.Text
+  tenantId               String
+  title                  String            @db.VarChar(200)
+  description            String            @db.Text
   rewardType             RewardType
-  rewardValue            Int                           @default(0)
-  termsConditions        String?                       @db.Text
-  rewardKind             RewardKind                    @default(CONSUMER)
-  category               String                        @db.VarChar(100)
+  rewardValue            Int               @default(0)
+  termsConditions        String?           @db.Text
+  rewardKind             RewardKind        @default(CONSUMER)
+  category               String            @db.VarChar(100)
   /// Reward rules other than the minimum spend (e.g. `maxUsePerUser`); validated by `RewardRulesSchema`.
   rules                  Json?
   /// Minimum bill, in integer minor units (sen), for redeeming this reward; null = no minimum.
@@ -2020,29 +2035,29 @@ model Reward {
   minSpendMinor          Int?
   quantityTotal          Int
   quantityRemaining      Int
-  quantityReserved       Int                           @default(0)
+  quantityReserved       Int               @default(0)
   startDate              BigInt?
   expiryDate             BigInt
-  status                 RewardStatus                  @default(DRAFT)
-  claimCount             Int                           @default(0)
-  redemptionCount        Int                           @default(0)
+  status                 RewardStatus      @default(DRAFT)
+  claimCount             Int               @default(0)
+  redemptionCount        Int               @default(0)
   metadata               Json?
-  referralsEnabled       Boolean                       @default(true)
+  referralsEnabled       Boolean           @default(true)
   referralPoolTotal      Int?
   referralPoolRemaining  Int?
   referrerRewardId       String?
   parentConsumerRewardId String?
-  locationScopeType      OrganizationLocationScopeType @default(ALL_LOCATIONS)
+  locationScopeType      LocationScopeType @default(ALL_LOCATIONS)
   submittedForReviewAt   BigInt?
   autoPublishAt          BigInt?
   reviewedAt             BigInt?
   reviewedByUserId       String?
-  rejectionReason        String?                       @db.Text
+  rejectionReason        String?           @db.Text
 
-  organization         Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  referrerReward       Reward?               @relation("ConsumerReferrerReward", fields: [referrerRewardId], references: [id], onDelete: SetNull)
+  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  referrerReward       Reward?               @relation("ConsumerReferrerReward", fields: [tenantId, referrerRewardId], references: [tenantId, id], onDelete: Restrict)
   consumerRewards      Reward[]              @relation("ConsumerReferrerReward")
-  parentConsumerReward Reward?               @relation("ReferrerCloneParent", fields: [parentConsumerRewardId], references: [id], onDelete: SetNull)
+  parentConsumerReward Reward?               @relation("ReferrerCloneParent", fields: [tenantId, parentConsumerRewardId], references: [tenantId, id], onDelete: Restrict)
   referrerClones       Reward[]              @relation("ReferrerCloneParent")
   claims               RewardClaim[]
   referrals            RewardReferral[]
@@ -2050,9 +2065,12 @@ model Reward {
   /// The reward's images in display order (1–10 live rows; position 0 is the cover).
   images               RewardImage[]
 
-  @@index([organizationId])
-  /// `GET /orgs/:orgSlug/rewards`: one organization's catalog, newest first (a status tab narrows it).
-  @@index([organizationId, createdAt(sort: Desc), id(sort: Desc)])
+  /// Composite target of the tenant-scoped foreign keys (multi-tenancy plan §7): a child row
+  /// can reference this row only from the same tenant.
+  @@unique([tenantId, id])
+  @@index([tenantId])
+  /// `GET /orgs/:orgSlug/rewards`: one tenant's catalog, newest first (a status tab narrows it).
+  @@index([tenantId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([status])
   @@index([category])
   @@index([expiryDate])
@@ -2060,10 +2078,10 @@ model Reward {
   @@index([rewardKind])
 }
 
-/// RLS: organization members write; readable whenever its reward is readable.
+/// RLS: tenant members write; readable whenever its reward is readable.
 /// One image of a reward, in display order. Replacing a reward's images soft-deletes the old rows and
 /// inserts the new ones in the same transaction; the files are READY, PUBLIC `REWARD_IMAGE`s of the
-/// same organization (checked under a row lock on every write).
+/// same tenant (checked under a row lock on every write).
 /// @extends BaseModel
 model RewardImage {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
@@ -2077,24 +2095,24 @@ model RewardImage {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String
-  rewardId       String
-  fileId         String
+  tenantId String
+  rewardId String
+  fileId   String
   /// 0-based display position; position 0 is the reward's cover.
-  position       Int
+  position Int
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  reward       Reward       @relation(fields: [rewardId], references: [id], onDelete: Cascade)
-  file         StoredFile   @relation(fields: [fileId], references: [id], onDelete: Restrict)
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reward Reward     @relation(fields: [tenantId, rewardId], references: [tenantId, id], onDelete: Cascade)
+  file   StoredFile @relation(fields: [fileId], references: [id], onDelete: Restrict)
 
   @@unique([rewardId, position], where: { isDeleted: false })
   @@unique([rewardId, fileId], where: { isDeleted: false })
   @@index([rewardId])
   @@index([fileId])
-  @@index([organizationId])
+  @@index([tenantId])
 }
 
-/// RLS: organization members — which stores a reward is available at.
+/// RLS: tenant members — which stores a reward is available at.
 /// @extends BaseModel
 model RewardLocationScope {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
@@ -2108,16 +2126,16 @@ model RewardLocationScope {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String
-  rewardId       String
-  locationId     String
+  tenantId   String
+  rewardId   String
+  locationId String
 
-  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  reward       Reward               @relation(fields: [rewardId], references: [id], onDelete: Cascade)
-  location     OrganizationLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reward   Reward   @relation(fields: [tenantId, rewardId], references: [tenantId, id], onDelete: Cascade)
+  location Location @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade)
 
   @@unique([rewardId, locationId])
-  @@index([organizationId])
+  @@index([tenantId])
   @@index([locationId])
 }
 
@@ -2159,15 +2177,15 @@ model RewardAuditLog {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  actorUserId    String?
-  organizationId String?
-  action         String  @db.VarChar(64)
-  metadata       Json?
+  actorUserId String?
+  tenantId    String?
+  action      String  @db.VarChar(64)
+  metadata    Json?
 
-  actorUser    User?         @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actorUser User?   @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  tenant    Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
-  @@index([organizationId])
+  @@index([tenantId])
   @@index([action])
   @@index([createdAt])
 }
@@ -2399,17 +2417,17 @@ enum RewardRedemptionMethod {
   MANUAL
 }
 
-/// What a merchant API key may call. Mirrors `OrganizationApiKeyScopeSchema` (packages/shared).
-enum OrganizationApiKeyScope {
+/// What a merchant API key may call. Mirrors `TenantApiKeyScopeSchema` (packages/shared).
+enum TenantApiKeyScope {
   /// A till: only the POS redemption routes. Every key a terminal receives by pairing is POS.
   POS
-  /// A back-office integration: the POS routes plus the organization reward / redemption / analytics API.
+  /// A back-office integration: the POS routes plus the tenant reward / redemption / analytics API.
   INTEGRATION
 }
 
 /// RLS: org members write; POS auth uses key hash lookup with bypass.
 /// @extends BaseModel
-model OrganizationApiKey {
+model TenantApiKey {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -2421,36 +2439,39 @@ model OrganizationApiKey {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId             String
+  tenantId                   String
   locationId                 String?
-  name                       String                  @db.VarChar(100)
-  keyHash                    String                  @unique @db.Text
-  keyPrefix                  String                  @db.VarChar(16)
-  /// What the key may call (POS routes only, or also the organization API). Paired terminal keys are always POS.
-  scope                      OrganizationApiKeyScope
+  name                       String            @db.VarChar(100)
+  keyHash                    String            @unique @db.Text
+  keyPrefix                  String            @db.VarChar(16)
+  /// What the key may call (POS routes only, or also the tenant API). Paired terminal keys are always POS.
+  scope                      TenantApiKeyScope
   createdByUserId            String
   revokedAt                  BigInt?
   lastUsedAt                 BigInt?
   /// POS code-guess lockout (see `PosCodeLockoutService`): unknown QR tokens / backup codes presented with this key in the current window.
-  codeFailureCount           Int                     @default(0)
+  codeFailureCount           Int               @default(0)
   /// Start of the current failure-counting window; null before the first failure.
   codeFailureWindowStartedAt BigInt?
   /// While in the future, every redemption call with this key is refused (429 POS_CODE_LOCKED).
   codeLockedUntil            BigInt?
 
-  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  location     OrganizationLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  creator      User                  @relation("OrganizationApiKeyCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
-  sales        RewardSale[]
-  terminal     OrganizationTerminal?
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location Location?       @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Restrict)
+  creator  User            @relation("TenantApiKeyCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  sales    RewardSale[]
+  terminal TenantTerminal?
 
-  @@index([organizationId])
+  /// Composite target of the tenant-scoped foreign keys (multi-tenancy plan §7): a child row
+  /// can reference this row only from the same tenant.
+  @@unique([tenantId, id])
+  @@index([tenantId])
   @@index([locationId])
 }
 
-/// RLS: via organizationId and locationId.
+/// RLS: via tenantId and locationId.
 /// @extends BaseModel
-model OrganizationTerminal {
+model TenantTerminal {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
   id        String  @id @default(uuid(7))
   createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
@@ -2462,7 +2483,7 @@ model OrganizationTerminal {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId            String
+  tenantId                  String
   locationId                String
   terminalId                String  @db.VarChar(100)
   label                     String? @db.VarChar(100)
@@ -2480,17 +2501,20 @@ model OrganizationTerminal {
   pairedAt                  BigInt?
   lastSeenAt                BigInt?
 
-  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  location            OrganizationLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  creator             User                 @relation("OrganizationTerminalCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
-  pairingCodeIssuedBy User?                @relation("OrganizationTerminalPairingCodeIssuer", fields: [pairingCodeIssuedByUserId], references: [id], onDelete: SetNull)
-  apiKey              OrganizationApiKey?  @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  tenant              Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location            Location      @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade)
+  creator             User          @relation("TenantTerminalCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  pairingCodeIssuedBy User?         @relation("TenantTerminalPairingCodeIssuer", fields: [pairingCodeIssuedByUserId], references: [id], onDelete: SetNull)
+  apiKey              TenantApiKey? @relation(fields: [tenantId, apiKeyId], references: [tenantId, id], onDelete: Restrict)
 
-  @@unique([organizationId, terminalId], where: { isDeleted: false })
+  @@unique([tenantId, terminalId], where: { isDeleted: false })
+  /// One-to-one with a composite tenant foreign key: Prisma needs the FK's fields unique here too. The
+  /// single column is already unique, so this adds no constraint, only the index Prisma requires.
+  @@unique([tenantId, apiKeyId])
   @@index([locationId])
 }
 
-/// RLS: organization member + user own row.
+/// RLS: tenant member + user own row.
 /// @extends BaseModel
 model RewardRedemption {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
@@ -2505,7 +2529,7 @@ model RewardRedemption {
   // ── end BaseModel ──
 
   claimId          String                 @unique
-  organizationId   String
+  tenantId         String
   locationId       String?
   userId           String
   terminalId       String                 @db.VarChar(100)
@@ -2515,19 +2539,19 @@ model RewardRedemption {
   saleId           String
   redeemedAt       BigInt
 
-  claim        RewardClaim           @relation(fields: [claimId], references: [id], onDelete: Restrict)
-  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  location     OrganizationLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  user         User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
-  sale         RewardSale            @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  claim    RewardClaim @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  location Location?   @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Restrict)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  sale     RewardSale  @relation(fields: [saleId], references: [id], onDelete: Restrict)
 
-  @@index([organizationId])
+  @@index([tenantId])
   @@index([locationId])
   @@index([userId])
   @@index([redeemedAt])
   @@index([saleId])
   /// Analytics: one merchant's redemptions in a range (series, totals, store / reward / method breakdowns).
-  @@index([organizationId, redeemedAt])
+  @@index([tenantId, redeemedAt])
   /// Analytics: one customer's redemptions in a range.
   @@index([userId, redeemedAt])
 }
@@ -2536,6 +2560,9 @@ model RewardRedemption {
 /// (`POST /redemptions/checkout`). The source of every "sales" figure:
 /// merchant/admin sales analytics and the customer's spending breakdown.
 /// Money is stored in minor units (sen) with an explicit ISO-4217 currency.
+/// RLS: tenant-owned (`tenantId`): members of the tenant read its sales, the customer (`userId`) reads
+/// their own, and the tenant's API key reads and inserts (prisma/rls/40-api-key-principal.sql); every other
+/// write is bypass-only (`app_rls_bypass_on('RewardSale')`).
 /// @extends BaseModel
 model RewardSale {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
@@ -2549,7 +2576,7 @@ model RewardSale {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  organizationId String
+  tenantId       String
   /// The store the bill was paid at (store-scoped API key, else the registered terminal's store); null when unknown.
   locationId     String?
   /// The customer whose rewards were redeemed.
@@ -2565,14 +2592,14 @@ model RewardSale {
   requestHash    String  @db.VarChar(64)
   paidAt         BigInt
 
-  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  location     OrganizationLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  user         User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
-  apiKey       OrganizationApiKey?   @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
-  redemptions  RewardRedemption[]
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  location    Location?          @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Restrict)
+  user        User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  apiKey      TenantApiKey?      @relation(fields: [tenantId, apiKeyId], references: [tenantId, id], onDelete: Restrict)
+  redemptions RewardRedemption[]
 
-  @@unique([organizationId, idempotencyKey])
-  @@index([organizationId, paidAt])
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, paidAt])
   @@index([userId, paidAt])
   @@index([locationId])
   @@index([paidAt])
@@ -2712,7 +2739,8 @@ model EmailLog {
 /// Every Resend delivery webhook event received, verified and recorded once (history of an
 /// email's lifecycle; `EmailLog.status` is only the latest outcome). `webhookId` (the signed
 /// `webhook-id` / `svix-id` header) is UNIQUE, so a redelivered webhook is a no-op.
-/// Infrastructure log, not a business entity: no soft delete. RLS: insert/select/update bypass-only.
+/// Infrastructure log, not a business entity: no soft delete.
+/// RLS: insert/select/update bypass-only (`app_rls_bypass_on('EmailDeliveryEvent')`).
 /// @extends BaseModel
 model EmailDeliveryEvent {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
@@ -3003,6 +3031,7 @@ model GithubAccountLink {
 /// One row per repository, shared by every admin: turning live updates off soft-deletes it, turning them
 /// on again restores it with the new hook. Owner and repository are stored lower-case (GitHub matches
 /// them case-insensitively).
+/// RLS: bypass-only (`app_rls_bypass_on('GithubWebhookSubscription')`, operation `github.webhook.subscriptions`).
 /// @extends BaseModel
 model GithubWebhookSubscription {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
@@ -3030,6 +3059,7 @@ model GithubWebhookSubscription {
 
 /// One verified GitHub webhook delivery (ADR 052), kept so a redelivery of it is recognised and ignored.
 /// Append-only; deliveries older than the retention window are pruned.
+/// RLS: bypass-only (`app_rls_bypass_on('GithubWebhookDelivery')`, operation `github.webhook.deliveries`).
 /// @extends BaseModel
 model GithubWebhookDelivery {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
@@ -3190,6 +3220,8 @@ model InboxDeadLetter {
 }
 
 /// Analytics staging table populated by the analytics-consumer service.
+/// RLS: bypass-only for `app_runtime`; the `analytics_consumer` role inserts and reads its own staging rows
+/// (prisma/rls/90-analytics-consumer.sql).
 /// @extends BaseModel
 model AnalyticsEvent {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
@@ -3263,10 +3295,10 @@ enum IpAddressScope {
 /// the `audit.http_request.record` system operation — or inside the handler's own transaction
 /// when the handler opts in (`AuditTrailService.recordInTransaction`). Bodies are redacted
 /// (common/logging/redaction.ts) and size-capped before they are stored.
-/// Domain audit tables (OrganizationAuditLog, RewardAuditLog, PermissionAuditLog,
+/// Domain audit tables (TenantAuditLog, RewardAuditLog, PermissionAuditLog,
 /// ImpersonationAuditLog, AuthorizationAudit) keep their domain events; they correlate with
 /// this table through `correlationId`. No foreign keys: an audit row outlives what it describes.
-/// The organization is the tenant in this platform, so there is no separate tenant column.
+/// The tenant is the tenant in this platform, so there is no separate tenant column.
 /// RLS: INSERT only under a named system operation (or by the acting user inside their own
 /// transaction); SELECT bypass-only; UPDATE/DELETE revoked from app_runtime (append-only).
 /// Read by the admin audit viewer (`GET /admin/audit-logs`) under `audit.http_request.read`,
@@ -3307,11 +3339,13 @@ model AuditLog {
   impersonatorUserId     String?          @db.VarChar(64)
   /// The server-side impersonation session (`ImpersonationSession.id`) the request ran under.
   impersonationSessionId String?          @db.VarChar(64)
+  /// The approved support grant that let a platform user act in this tenant without a membership.
+  supportAccessGrantId   String?          @db.VarChar(64)
   /// How the caller authenticated; NULL for an anonymous request.
   authMethod             AuditAuthMethod?
   apiKeyId               String?          @db.VarChar(64)
   terminalId             String?          @db.VarChar(64)
-  organizationId         String?          @db.VarChar(64)
+  tenantId               String?          @db.VarChar(64)
   storeId                String?          @db.VarChar(64)
   locationId             String?          @db.VarChar(64)
   ipAddress              String?          @db.VarChar(64)
@@ -3364,7 +3398,7 @@ model AuditLog {
   /// Allowlisted system operations (RLS bypasses) the request ran, in first-use order.
   systemOperations       String[]
 
-  @@index([organizationId, occurredAt])
+  @@index([tenantId, occurredAt])
   @@index([actorUserId, occurredAt])
   @@index([impersonatorUserId, occurredAt])
   @@index([outcome, occurredAt])
@@ -3444,7 +3478,7 @@ model DataChangeLog {
   newData         Json?
   actorKind       DataChangeActorKind
   actorUserId     String?             @db.VarChar(64)
-  organizationId  String?             @db.VarChar(64)
+  tenantId        String?             @db.VarChar(64)
   apiKeyId        String?             @db.VarChar(64)
   /// The allowlisted system operation (RLS bypass) the change ran under.
   systemOperation String?             @db.VarChar(100)
@@ -3465,7 +3499,7 @@ model DataChangeLog {
   @@index([correlationId])
   @@index([tableName, rowId, occurredAt])
   @@index([actorUserId, occurredAt])
-  @@index([organizationId, occurredAt])
+  @@index([tenantId, occurredAt])
   @@index([actorKind, occurredAt])
   @@index([transactionId])
 }
@@ -3481,6 +3515,8 @@ enum IdempotencyRecordStatus {
 /// Idempotency records for `@Idempotent()` HTTP endpoints.
 /// Ephemeral infrastructure state (not a business entity): an expired row is
 /// taken over in place by the next request with the same key — never deleted.
+/// RLS: bypass-only (`app_rls_bypass_on('PlatformResourceIdempotencyRecord')`, operations `http.idempotency`
+/// and `idempotency.retention`).
 /// @extends BaseModel
 model PlatformResourceIdempotencyRecord {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──

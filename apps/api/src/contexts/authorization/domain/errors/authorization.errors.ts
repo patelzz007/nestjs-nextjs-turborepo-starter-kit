@@ -282,11 +282,11 @@ export class PolicyDraftNotFoundError extends DomainError {
 	}
 }
 
-export class TenantPolicyDraftOrganizationRequiredError extends DomainError {
+export class TenantPolicyDraftTenantRequiredError extends DomainError {
 	public readonly code: DomainErrorCode = "VALIDATION_ERROR";
 
 	public constructor() {
-		super("A TENANT policy draft must name its organization");
+		super("A TENANT policy draft must name its tenant");
 	}
 }
 
@@ -296,7 +296,7 @@ export class SupportAccessApproverNotOwnerError extends DomainError {
 	public readonly code: DomainErrorCode = "SUPPORT_ACCESS_APPROVER_NOT_OWNER";
 
 	public constructor() {
-		super("Only an active owner of the organization may approve support access");
+		super("Only an active owner of the tenant may approve support access");
 	}
 }
 
@@ -324,11 +324,11 @@ export class SupportAccessGrantNotFoundError extends DomainError {
 	}
 }
 
-export class SupportAccessOrganizationNotFoundError extends DomainError {
+export class SupportAccessTenantNotFoundError extends DomainError {
 	public readonly code: DomainErrorCode = "NOT_FOUND";
 
 	public constructor() {
-		super("Organization not found");
+		super("Tenant not found");
 	}
 }
 

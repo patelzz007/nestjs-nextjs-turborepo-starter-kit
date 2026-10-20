@@ -3,10 +3,10 @@ import type { RewardClaimStatus } from "@workspace/shared";
 import type { AnalyticsLocationScope } from "../../domain/value-objects/analytics-scope.value-object";
 import type { InclusiveRange } from "./sales-read.port";
 
-/** Which of an organization's consumer rewards to count (all of them when no range is given). */
+/** Which of a tenant's consumer rewards to count (all of them when no range is given). */
 export interface RewardCountFilter {
-	readonly organizationId: string;
-	/** Only rewards offered at a store of this scope (organization-wide rewards count for every store). */
+	readonly tenantId: string;
+	/** Only rewards offered at a store of this scope (tenant-wide rewards count for every store). */
 	readonly locationScope: AnalyticsLocationScope;
 	/** Only PUBLISHED rewards. */
 	readonly publishedOnly: boolean;
@@ -70,14 +70,14 @@ export interface RewardTitle {
 export interface RewardActivityReadPort {
 	countRewards(filter: RewardCountFilter): Promise<number>;
 	/**
-	 * Claims of the organization's live rewards offered at a store of `locationScope`, and redemptions of
+	 * Claims of the tenant's live rewards offered at a store of `locationScope`, and redemptions of
 	 * live claims at its stores in `locationScope`: per period, per week and per reward (at most `topRewards`).
 	 */
-	merchantActivity(organizationId: string, periods: ComparedPeriods, locationScope: AnalyticsLocationScope, topRewards: number): Promise<MerchantActivity>;
-	/** Referrals created in `range` for the organization's live rewards offered at a store of `locationScope`. */
-	countMerchantReferrals(organizationId: string, range: InclusiveRange, locationScope: AnalyticsLocationScope): Promise<number>;
-	/** Titles of the organization's rewards with these ids (soft-deleted included: they may still have claims). */
-	listRewardTitles(organizationId: string, rewardIds: readonly string[]): Promise<RewardTitle[]>;
+	merchantActivity(tenantId: string, periods: ComparedPeriods, locationScope: AnalyticsLocationScope, topRewards: number): Promise<MerchantActivity>;
+	/** Referrals created in `range` for the tenant's live rewards offered at a store of `locationScope`. */
+	countMerchantReferrals(tenantId: string, range: InclusiveRange, locationScope: AnalyticsLocationScope): Promise<number>;
+	/** Titles of the tenant's rewards with these ids (soft-deleted included: they may still have claims). */
+	listRewardTitles(tenantId: string, rewardIds: readonly string[]): Promise<RewardTitle[]>;
 	/** One customer's live claims (per status and per week) and the live referrals they sent (sent and credited). */
 	customerActivity(userId: string, periods: ComparedPeriods): Promise<CustomerActivity>;
 }

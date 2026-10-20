@@ -4,13 +4,13 @@ import { describe, expect, it, vi, type Mock } from "vitest";
 
 import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
 import { PrismaService } from "../../../../prisma/prisma.service";
-import { OrganizationApiKey } from "../../domain/aggregates/organization-api-key.aggregate";
-import { OrganizationTerminal } from "../../domain/aggregates/organization-terminal.aggregate";
+import { TenantApiKey } from "../../domain/aggregates/tenant-api-key.aggregate";
+import { TenantTerminal } from "../../domain/aggregates/tenant-terminal.aggregate";
 import { RewardSale } from "../../domain/aggregates/reward-sale.aggregate";
 import { SaleIdempotencyKeyTakenError, TerminalIdTakenError } from "../../domain/errors/pos.errors";
 import { newSale, NOW, presented } from "../../domain/__tests__/pos-domain.fixture";
-import { PrismaOrganizationApiKeyRepository } from "../persistence/prisma-organization-api-key.repository";
-import { LIVE_TERMINAL_ID_INDEX, PrismaOrganizationTerminalRepository, TerminalNotSavedError } from "../persistence/prisma-organization-terminal.repository";
+import { PrismaTenantApiKeyRepository } from "../persistence/prisma-tenant-api-key.repository";
+import { LIVE_TERMINAL_ID_INDEX, PrismaTenantTerminalRepository, TerminalNotSavedError } from "../persistence/prisma-tenant-terminal.repository";
 import { PrismaRewardSaleRepository, SALE_IDEMPOTENCY_KEY_INDEX } from "../persistence/prisma-reward-sale.repository";
 import { committedUniqueIndexNames } from "../../../../platform/infrastructure/persistence/__tests__/committed-unique-indexes";
 import { LIVE_ROW_FIELDS } from "../../../../platform/infrastructure/persistence/__tests__/base-row-fields";
@@ -94,7 +94,7 @@ describe("PrismaRewardSaleRepository", () => {
 		expect(db.createRedemptions).not.toHaveBeenCalled();
 	});
 
-	it("finds a sale by its organization's idempotency key, or nothing", async () => {
+	it("finds a sale by its tenant's idempotency key, or nothing", async () => {
 		const db = saleDatabase();
 		const repository = new PrismaRewardSaleRepository(db.prisma);
 
@@ -102,18 +102,18 @@ describe("PrismaRewardSaleRepository", () => {
 			id: "sale-1",
 			lines: [{ redemptionId: "redemption-a" }, { redemptionId: "redemption-b" }],
 		});
-		expect(db.findSale.mock.calls.at(0)?.at(0)?.where).toEqual({ organizationId_idempotencyKey: { organizationId: "org-1", idempotencyKey: "idem-1" } });
+		expect(db.findSale.mock.calls.at(0)?.at(0)?.where).toEqual({ tenantId_idempotencyKey: { tenantId: "org-1", idempotencyKey: "idem-1" } });
 		db.findSale.mockResolvedValueOnce(null);
 		await expect(repository.findByIdempotencyKey("org-1", "idem-2")).resolves.toBeNull();
 	});
 });
 
 /** A terminal row with every column the repository reads. */
-function terminalRow(patch: Partial<Prisma.OrganizationTerminalGetPayload<object>> = {}): Prisma.OrganizationTerminalGetPayload<object> {
+function terminalRow(patch: Partial<Prisma.TenantTerminalGetPayload<object>> = {}): Prisma.TenantTerminalGetPayload<object> {
 	return {
 		...LIVE_ROW_FIELDS,
 		id: "terminal-1",
-		organizationId: "org-1",
+		tenantId: "org-1",
 		locationId: "store-a",
 		terminalId: "TERM-AAAA2222",
 		label: "Front till",
@@ -139,25 +139,25 @@ type TerminalRow = ReturnType<typeof terminalRow>;
 interface TerminalDatabase {
 	readonly prisma: PrismaService;
 	readonly lock: Mock<() => Promise<object[]>>;
-	readonly create: Mock<(args: Prisma.OrganizationTerminalCreateArgs) => Promise<object>>;
-	readonly findFirst: Mock<(args: Prisma.OrganizationTerminalFindFirstArgs) => Promise<TerminalRow | null>>;
-	readonly updateMany: Mock<(args: Prisma.OrganizationTerminalUpdateManyArgs) => Promise<Prisma.BatchPayload>>;
-	readonly count: Mock<(args: Prisma.OrganizationTerminalCountArgs) => Promise<number>>;
+	readonly create: Mock<(args: Prisma.TenantTerminalCreateArgs) => Promise<object>>;
+	readonly findFirst: Mock<(args: Prisma.TenantTerminalFindFirstArgs) => Promise<TerminalRow | null>>;
+	readonly updateMany: Mock<(args: Prisma.TenantTerminalUpdateManyArgs) => Promise<Prisma.BatchPayload>>;
+	readonly count: Mock<(args: Prisma.TenantTerminalCountArgs) => Promise<number>>;
 }
 
 function terminalDatabase(): TerminalDatabase {
 	const lock = vi.fn<() => Promise<object[]>>().mockResolvedValue([]);
-	const create = vi.fn<(args: Prisma.OrganizationTerminalCreateArgs) => Promise<object>>().mockResolvedValue({ id: "terminal-1" });
-	const findFirst = vi.fn<(args: Prisma.OrganizationTerminalFindFirstArgs) => Promise<TerminalRow | null>>().mockResolvedValue(terminalRow());
-	const updateMany = vi.fn<(args: Prisma.OrganizationTerminalUpdateManyArgs) => Promise<Prisma.BatchPayload>>().mockResolvedValue({ count: 1 });
-	const count = vi.fn<(args: Prisma.OrganizationTerminalCountArgs) => Promise<number>>().mockResolvedValue(0);
-	const prisma = Object.assign(new PrismaService(createTestTypedConfig()), { $queryRaw: lock, organizationTerminal: { create, findFirst, updateMany, count } });
+	const create = vi.fn<(args: Prisma.TenantTerminalCreateArgs) => Promise<object>>().mockResolvedValue({ id: "terminal-1" });
+	const findFirst = vi.fn<(args: Prisma.TenantTerminalFindFirstArgs) => Promise<TerminalRow | null>>().mockResolvedValue(terminalRow());
+	const updateMany = vi.fn<(args: Prisma.TenantTerminalUpdateManyArgs) => Promise<Prisma.BatchPayload>>().mockResolvedValue({ count: 1 });
+	const count = vi.fn<(args: Prisma.TenantTerminalCountArgs) => Promise<number>>().mockResolvedValue(0);
+	const prisma = Object.assign(new PrismaService(createTestTypedConfig()), { $queryRaw: lock, tenantTerminal: { create, findFirst, updateMany, count } });
 	return { prisma, lock, create, findFirst, updateMany, count };
 }
 
 const REGISTERED = {
 	id: "terminal-1",
-	organizationId: "org-1",
+	tenantId: "org-1",
 	locationId: "store-a",
 	terminalId: "TERM-AAAA2222",
 	name: "Front till",
@@ -165,33 +165,33 @@ const REGISTERED = {
 	pairingCode: { hash: "hash:code", expiresAt: epochMs(NOW + 1), issuedByUserId: "member-1", issuedAt: NOW },
 };
 
-describe("PrismaOrganizationTerminalRepository", () => {
+describe("PrismaTenantTerminalRepository", () => {
 	it("inserts a registered till with its first code, answering the live terminal-id index as TerminalIdTaken", async () => {
 		const db = terminalDatabase();
-		const repository = new PrismaOrganizationTerminalRepository(db.prisma);
+		const repository = new PrismaTenantTerminalRepository(db.prisma);
 
-		await repository.add(OrganizationTerminal.register(REGISTERED));
+		await repository.add(TenantTerminal.register(REGISTERED));
 		expect(db.create.mock.calls.at(0)?.at(0)?.data).toMatchObject({ id: "terminal-1", createdByUserId: "member-1", pairingCodeHash: "hash:code", pairingCodeIssuedAt: NOW });
 
 		db.create.mockRejectedValueOnce(uniqueViolationOn(LIVE_TERMINAL_ID_INDEX));
-		await expect(repository.add(OrganizationTerminal.register(REGISTERED))).rejects.toBeInstanceOf(TerminalIdTakenError);
+		await expect(repository.add(TenantTerminal.register(REGISTERED))).rejects.toBeInstanceOf(TerminalIdTakenError);
 	});
 
 	it("refuses to insert a loaded (not registered) till", async () => {
-		const repository = new PrismaOrganizationTerminalRepository(terminalDatabase().prisma);
+		const repository = new PrismaTenantTerminalRepository(terminalDatabase().prisma);
 
-		await expect(repository.add(OrganizationTerminal.rehydrate({ ...REGISTERED, label: null, apiKeyId: null, pairingCode: null, pairedAt: null }))).rejects.toBeInstanceOf(
+		await expect(repository.add(TenantTerminal.rehydrate({ ...REGISTERED, label: null, apiKeyId: null, pairingCode: null, pairedAt: null }))).rejects.toBeInstanceOf(
 			TerminalNotSavedError,
 		);
 	});
 
-	it("locks a live till of the organization FOR UPDATE before reading it (D33), and finds no deleted or foreign one", async () => {
+	it("locks a live till of the tenant FOR UPDATE before reading it (D33), and finds no deleted or foreign one", async () => {
 		const db = terminalDatabase();
-		const repository = new PrismaOrganizationTerminalRepository(db.prisma);
+		const repository = new PrismaTenantTerminalRepository(db.prisma);
 
-		await expect(repository.lockLive("terminal-1", "org-1")).resolves.toBeInstanceOf(OrganizationTerminal);
+		await expect(repository.lockLive("terminal-1", "org-1")).resolves.toBeInstanceOf(TenantTerminal);
 		expect(db.lock).toHaveBeenCalledOnce();
-		expect(db.findFirst.mock.calls.at(0)?.at(0)?.where).toEqual({ id: "terminal-1", organizationId: "org-1", isDeleted: false });
+		expect(db.findFirst.mock.calls.at(0)?.at(0)?.where).toEqual({ id: "terminal-1", tenantId: "org-1", isDeleted: false });
 		expect(db.lock.mock.invocationCallOrder.at(0)).toBeLessThan(db.findFirst.mock.invocationCallOrder.at(0) ?? 0);
 		db.findFirst.mockResolvedValueOnce(null);
 		await expect(repository.lockLive("terminal-1", "org-1")).resolves.toBeNull();
@@ -199,9 +199,9 @@ describe("PrismaOrganizationTerminalRepository", () => {
 
 	it("consumes a live, unexpired code with a compare-and-set on its hash, so only one concurrent pairing wins", async () => {
 		const db = terminalDatabase();
-		const repository = new PrismaOrganizationTerminalRepository(db.prisma);
+		const repository = new PrismaTenantTerminalRepository(db.prisma);
 
-		await expect(repository.consumePairingCode(["hash:code"], NOW)).resolves.toBeInstanceOf(OrganizationTerminal);
+		await expect(repository.consumePairingCode(["hash:code"], NOW)).resolves.toBeInstanceOf(TenantTerminal);
 		expect(db.updateMany.mock.calls.at(0)?.at(0)).toEqual({
 			where: { id: "terminal-1", pairingCodeHash: "hash:code", isDeleted: false },
 			data: { pairingCodeHash: null, pairingCodeExpiresAt: null },
@@ -212,7 +212,7 @@ describe("PrismaOrganizationTerminalRepository", () => {
 
 	it("never consumes an expired code, or a removed till's", async () => {
 		const db = terminalDatabase();
-		const repository = new PrismaOrganizationTerminalRepository(db.prisma);
+		const repository = new PrismaTenantTerminalRepository(db.prisma);
 		db.findFirst.mockResolvedValueOnce(terminalRow({ pairingCodeExpiresAt: BigInt(NOW - 1) })).mockResolvedValueOnce(terminalRow({ isDeleted: true }));
 
 		await expect(repository.consumePairingCode(["hash:code"], NOW)).resolves.toBeNull();
@@ -222,8 +222,8 @@ describe("PrismaOrganizationTerminalRepository", () => {
 
 	it("writes each change only to a live row, and treats a vanished row as a programming error", async () => {
 		const db = terminalDatabase();
-		const repository = new PrismaOrganizationTerminalRepository(db.prisma);
-		const terminal = OrganizationTerminal.rehydrate({ ...REGISTERED, label: null, apiKeyId: "key-1", pairedAt: NOW });
+		const repository = new PrismaTenantTerminalRepository(db.prisma);
+		const terminal = TenantTerminal.rehydrate({ ...REGISTERED, label: null, apiKeyId: "key-1", pairedAt: NOW });
 		terminal.remove("member-1", NOW);
 
 		await repository.save(terminal);
@@ -233,7 +233,7 @@ describe("PrismaOrganizationTerminalRepository", () => {
 		});
 		db.updateMany.mockResolvedValueOnce({ count: 0 });
 		await expect(repository.save(terminal)).rejects.toBeInstanceOf(TerminalNotSavedError);
-		await expect(repository.save(OrganizationTerminal.rehydrate({ ...REGISTERED, label: null, apiKeyId: null, pairingCode: null, pairedAt: null }))).rejects.toBeInstanceOf(
+		await expect(repository.save(TenantTerminal.rehydrate({ ...REGISTERED, label: null, apiKeyId: null, pairingCode: null, pairedAt: null }))).rejects.toBeInstanceOf(
 			TerminalNotSavedError,
 		);
 	});
@@ -242,21 +242,21 @@ describe("PrismaOrganizationTerminalRepository", () => {
 		const db = terminalDatabase();
 		db.count.mockResolvedValueOnce(1);
 
-		await expect(new PrismaOrganizationTerminalRepository(db.prisma).terminalIdExists("org-1", "TERM-AAAA2222")).resolves.toBe(true);
-		expect(db.count.mock.calls.at(0)?.at(0)?.where).toEqual({ organizationId: "org-1", terminalId: "TERM-AAAA2222" });
+		await expect(new PrismaTenantTerminalRepository(db.prisma).terminalIdExists("org-1", "TERM-AAAA2222")).resolves.toBe(true);
+		expect(db.count.mock.calls.at(0)?.at(0)?.where).toEqual({ tenantId: "org-1", terminalId: "TERM-AAAA2222" });
 	});
 });
 
-describe("PrismaOrganizationApiKeyRepository", () => {
-	function keyDatabase(): { readonly prisma: PrismaService; readonly updateMany: Mock<(args: Prisma.OrganizationApiKeyUpdateManyArgs) => Promise<Prisma.BatchPayload>> } {
-		const updateMany = vi.fn<(args: Prisma.OrganizationApiKeyUpdateManyArgs) => Promise<Prisma.BatchPayload>>().mockResolvedValue({ count: 1 });
-		return { prisma: Object.assign(new PrismaService(createTestTypedConfig()), { organizationApiKey: { updateMany } }), updateMany };
+describe("PrismaTenantApiKeyRepository", () => {
+	function keyDatabase(): { readonly prisma: PrismaService; readonly updateMany: Mock<(args: Prisma.TenantApiKeyUpdateManyArgs) => Promise<Prisma.BatchPayload>> } {
+		const updateMany = vi.fn<(args: Prisma.TenantApiKeyUpdateManyArgs) => Promise<Prisma.BatchPayload>>().mockResolvedValue({ count: 1 });
+		return { prisma: Object.assign(new PrismaService(createTestTypedConfig()), { tenantApiKey: { updateMany } }), updateMany };
 	}
 
 	it("revokes with a compare-and-set on revokedAt IS NULL (D34): the loser of a race writes nothing", async () => {
 		const db = keyDatabase();
-		const repository = new PrismaOrganizationApiKeyRepository(db.prisma);
-		const key = OrganizationApiKey.rehydrate({ id: "key-1", organizationId: "org-1", locationId: null, revokedAt: null });
+		const repository = new PrismaTenantApiKeyRepository(db.prisma);
+		const key = TenantApiKey.rehydrate({ id: "key-1", tenantId: "org-1", locationId: null, revokedAt: null });
 		key.revoke(NOW);
 
 		await expect(repository.save(key)).resolves.toBe(true);
@@ -269,9 +269,7 @@ describe("PrismaOrganizationApiKeyRepository", () => {
 		const db = keyDatabase();
 
 		await expect(
-			new PrismaOrganizationApiKeyRepository(db.prisma).save(
-				OrganizationApiKey.rehydrate({ id: "key-1", organizationId: "org-1", locationId: null, revokedAt: epochMs(NOW - 1) }),
-			),
+			new PrismaTenantApiKeyRepository(db.prisma).save(TenantApiKey.rehydrate({ id: "key-1", tenantId: "org-1", locationId: null, revokedAt: epochMs(NOW - 1) })),
 		).resolves.toBe(false);
 		expect(db.updateMany).not.toHaveBeenCalled();
 	});

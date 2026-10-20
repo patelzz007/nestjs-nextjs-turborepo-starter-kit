@@ -12,13 +12,13 @@ const REQUEST = {
 	endpoint: null,
 };
 
-function userActor(accessScope: "tenant" | "superadmin" | "staff_single_tenant"): ActorContext {
+function userActor(accessScope: "tenant", isSuperAdmin = false): ActorContext {
 	return ActorContextSchema.parse({
 		kind: "user",
 		userId: "user-1",
 		sessionId: "session-1",
-		organizationId: "org-1",
-		isSuperAdmin: accessScope === "superadmin",
+		tenantId: "org-1",
+		isSuperAdmin,
 		accessScope,
 		impersonatorUserId: null,
 		request: REQUEST,
@@ -31,23 +31,17 @@ describe("toRlsTransactionScope", () => {
 		expect(toRlsTransactionScope(userActor("tenant")).reason).toBeNull();
 	});
 
-	it("maps a superadmin onto the platform.superadmin bypass, keeping the user and organization", () => {
-		const scope = toRlsTransactionScope(userActor("superadmin"));
-		expect(scope.context).toEqual(systemRlsContext("platform.superadmin", "user-1", "org-1"));
-		expect(scope.reason).toBe("platform.superadmin");
+	it("does not widen a superadmin beyond the tenant user's own session", () => {
+		const scope = toRlsTransactionScope(userActor("tenant", true));
+		expect(scope.context).toEqual(userRlsContext("user-1", "org-1", true));
+		expect(scope.reason).toBeNull();
 	});
 
-	it("maps single-tenant staff onto the staff bypass", () => {
-		const scope = toRlsTransactionScope(userActor("staff_single_tenant"));
-		expect(scope.context).toEqual(systemRlsContext("platform.staff_single_tenant", "user-1", "org-1"));
-		expect(scope.reason).toBe("platform.staff_single_tenant");
-	});
-
-	it("maps an API key onto its organization and location", () => {
+	it("maps an API key onto its tenant and location", () => {
 		const actor = ActorContextSchema.parse({
 			kind: "api_key",
 			apiKeyId: "key-1",
-			organizationId: "org-1",
+			tenantId: "org-1",
 			locationId: "store-1",
 			terminalId: "terminal-1",
 			request: REQUEST,
@@ -55,29 +49,32 @@ describe("toRlsTransactionScope", () => {
 		expect(toRlsContext(actor)).toEqual(apiKeyRlsContext("key-1", "org-1", "store-1"));
 	});
 
-	it("maps an anonymous actor onto the resolved organization and no principal", () => {
-		const actor = ActorContextSchema.parse({ kind: "anonymous", organizationId: "org-1", request: REQUEST });
+	it("maps an anonymous actor onto the resolved tenant and no principal", () => {
+		const actor = ActorContextSchema.parse({ kind: "anonymous", tenantId: "org-1", request: REQUEST });
 		expect(toRlsContext(actor)).toEqual(anonymousRlsContext("org-1"));
 	});
 
-	it("maps a system actor onto its operation, organization, acting user, and audit reason", () => {
+	it("maps a system actor onto its operation, tenant, acting user, and audit reason", () => {
 		const actor = systemActor("outbox.enqueue", "job", "org-1", "Enqueue a domain event", "user-9");
 		const scope = toRlsTransactionScope(actor);
 		expect(scope.context).toEqual(systemRlsContext("outbox.enqueue", "user-9", "org-1"));
 		expect(scope.reason).toBe("Enqueue a domain event");
 	});
 
-	it("maps a refresh-token subject onto its own user without requiring an organization", () => {
-		const actor = ActorContextSchema.parse({ kind: "token_subject", userId: "user-9", organizationId: null, request: REQUEST });
+	it("maps a refresh-token subject onto its own user without requiring a tenant", () => {
+		const actor = ActorContextSchema.parse({ kind: "token_subject", userId: "user-9", tenantId: null, request: REQUEST });
 		expect(toRlsTransactionScope(actor)).toEqual({ context: userRlsContext("user-9", null, false), reason: null });
 	});
 
-	it("maps any HTTP actor on an @RlsBypass() route onto route.rls_bypass, before its own scope", () => {
+	it("strips a stray route-bypass flag from an actor, so it cannot widen the scope", () => {
 		const user = ActorContextSchema.parse({ ...userActor("tenant"), routeRlsBypass: true });
-		const anonymous = ActorContextSchema.parse({ kind: "anonymous", organizationId: null, request: REQUEST, routeRlsBypass: true });
+		const anonymous = ActorContextSchema.parse({ kind: "anonymous", tenantId: null, request: REQUEST, routeRlsBypass: true });
 
-		expect(toRlsTransactionScope(user)).toEqual({ context: systemRlsContext("route.rls_bypass", "user-1", "org-1"), reason: "route.rls_bypass" });
-		expect(toRlsContext(anonymous)).toEqual(systemRlsContext("route.rls_bypass", null, null));
+		expect(Object.keys(user)).not.toContain("routeRlsBypass");
+		expect(Object.keys(anonymous)).not.toContain("routeRlsBypass");
+
+		expect(toRlsTransactionScope(user)).toEqual({ context: userRlsContext("user-1", "org-1", true), reason: null });
+		expect(toRlsContext(anonymous)).toEqual(anonymousRlsContext(null));
 	});
 });
 
@@ -86,28 +83,29 @@ describe("toRlsTransactionScope options", () => {
 		kind: "user",
 		userId: "user-1",
 		sessionId: "session-1",
-		organizationId: null,
+		tenantId: null,
 		isSuperAdmin: false,
 		accessScope: "tenant",
 		impersonatorUserId: null,
 		request: REQUEST,
 	});
 
-	it("requires the organization for tenant data (the default)", () => {
-		expect(toRlsTransactionScope(customer).context).toMatchObject({ kind: "user", organizationId: null, requireExplicitContext: true });
+	it("requires the tenant for tenant data (the default)", () => {
+		expect(toRlsTransactionScope(customer).context).toMatchObject({ kind: "user", tenantId: null, requireExplicitContext: true });
 		expect(toRlsTransactionScope(customer, TENANT_DATA_SCOPE).context).toMatchObject({ requireExplicitContext: true });
 	});
 
-	it("needs no organization for the user's own rows", () => {
+	it("needs no tenant for the user's own rows", () => {
 		expect(toRlsTransactionScope(customer, USER_OWNED_DATA_SCOPE).context).toMatchObject({
 			kind: "user",
 			userId: "user-1",
-			organizationId: null,
+			tenantId: null,
 			requireExplicitContext: false,
 		});
 	});
 
-	it("never relaxes a superadmin's or a system scope", () => {
-		expect(toRlsTransactionScope(userActor("superadmin"), USER_OWNED_DATA_SCOPE).context.kind).toBe("system");
+	it("applies the own-rows option to a superadmin and leaves a system actor on its operation", () => {
+		expect(toRlsTransactionScope(userActor("tenant", true), USER_OWNED_DATA_SCOPE).context).toMatchObject({ kind: "user", requireExplicitContext: false });
+		expect(toRlsTransactionScope(systemActor("outbox.enqueue", "job", "org-1", "Enqueue a domain event", "user-9"), USER_OWNED_DATA_SCOPE).context.kind).toBe("system");
 	});
 });

@@ -34,7 +34,7 @@ function requestFor(actor: ActorContext, check: AuthorizationCheck): Authorizati
 		return null;
 	}
 	return {
-		subject: { userId: actor.userId, isSuperAdmin: actor.isSuperAdmin, ...(actor.organizationId === null ? {} : { organizationId: actor.organizationId }) },
+		subject: { userId: actor.userId, isSuperAdmin: actor.isSuperAdmin, ...(actor.tenantId === null ? {} : { tenantId: actor.tenantId }) },
 		action: action.data,
 		resource: resource.data,
 		...(check.resourceId === null ? {} : { resourceId: check.resourceId }),

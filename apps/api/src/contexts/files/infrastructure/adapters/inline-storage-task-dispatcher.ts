@@ -4,12 +4,12 @@ import { StorageDeleteJobSchema, type StorageCdnInvalidationJob, type StorageDel
 import { systemActor, type ActorContext } from "../../../../platform/application/actor-context";
 import type { FileObjectStoragePort } from "../../application/ports/file-object-storage.port";
 import type { CdnInvalidationPort, FileProcessingPort } from "../../application/ports/file-processing.port";
-import { STORAGE_SCAN_OPERATION } from "../../application/ports/files.tokens";
+import { FILES_SCAN_VERDICT_OPERATION } from "../../application/ports/files.tokens";
 import { StorageTaskDispatcher } from "../../application/ports/storage-task-dispatcher.port";
 
 /** The inline scan runs as the scan job would. */
 function inlineScanActor(fileId: string): ActorContext {
-	return systemActor(STORAGE_SCAN_OPERATION, "job", null, `Inline malware scan of file ${fileId} (no Redis)`, null);
+	return systemActor(FILES_SCAN_VERDICT_OPERATION, "job", null, `Inline malware scan of file ${fileId} (no Redis)`, null);
 }
 
 /**

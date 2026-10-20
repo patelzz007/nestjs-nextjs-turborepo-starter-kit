@@ -10,7 +10,7 @@ export class TenantEnumeratorService {
 		private readonly jobContext: TenantJobContextService,
 	) {}
 
-	public async listActiveOrganizationIds(): Promise<string[]> {
+	public async listActiveTenantIds(): Promise<string[]> {
 		const rows = await this.tenantTx.withSystemOperation(
 			{
 				operation: "tenant.enumerate",
@@ -18,7 +18,7 @@ export class TenantEnumeratorService {
 				actorUserId: null,
 			},
 			async (tx) =>
-				tx.organization.findMany({
+				tx.tenant.findMany({
 					where: { lifecycleState: { in: ["ACTIVE", "RESTRICTED"] }, isDeleted: false },
 					select: { id: true },
 				}),
@@ -26,14 +26,14 @@ export class TenantEnumeratorService {
 		return rows.map((r) => r.id);
 	}
 
-	public buildTenantJobContext(organizationId: string, purpose: string, policyVersion: number): ReturnType<TenantJobContextService["sign"]> {
+	public buildTenantJobContext(tenantId: string, purpose: string, policyVersion: number): ReturnType<TenantJobContextService["sign"]> {
 		const now = Date.now();
 		return this.jobContext.sign({
-			organizationId,
+			tenantId,
 			initiatingActorId: null,
 			purpose,
 			policyVersion,
-			correlationId: `${purpose}:${organizationId}:${String(now)}`,
+			correlationId: `${purpose}:${tenantId}:${String(now)}`,
 			issuedAt: now,
 			expiresAt: now + 300_000,
 		});

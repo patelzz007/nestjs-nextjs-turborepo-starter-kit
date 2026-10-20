@@ -43,7 +43,7 @@ const KYB_REQUEST: CreateFileUploadUrlInput = {
 	mimeType: "application/pdf",
 	sizeBytes: 10,
 	checksumSha256: CHECKSUM,
-	organizationId: ORG_ID,
+	tenantId: ORG_ID,
 };
 
 describe("RequestFileUploadHandler", () => {
@@ -55,7 +55,7 @@ describe("RequestFileUploadHandler", () => {
 
 		expect(rule.uploads).toEqual([{ actor: { userId: UPLOADER_ID, isSuperAdmin: false }, request: KYB_REQUEST }]);
 		expect(files.added).toHaveLength(1);
-		expect(files.added.at(0)).toMatchObject({ category: "MERCHANT_KYB", uploadedById: UPLOADER_ID, organizationId: ORG_ID, status: "PENDING" });
+		expect(files.added.at(0)).toMatchObject({ category: "MERCHANT_KYB", uploadedById: UPLOADER_ID, tenantId: ORG_ID, status: "PENDING" });
 		expect(uow.committed).toEqual([{ actor, operation: null }]);
 		expect(storage.tickets.map((request) => request.fileId)).toEqual([ticket.fileId]);
 		expect(ticket.objectPath).toContain(ORG_ID);

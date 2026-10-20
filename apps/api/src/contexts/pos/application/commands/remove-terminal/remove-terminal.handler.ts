@@ -5,9 +5,9 @@ import { MERCHANT_CAPABILITY, type OkResponse } from "@workspace/shared";
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
-import { MERCHANT_ACCESS } from "../../../../organizations/public-api";
+import { MERCHANT_ACCESS } from "../../../../tenancy/public-api";
 import { TerminalNotFoundError } from "../../../domain/errors/pos.errors";
-import { actingInOrganization, actingMemberId } from "../../acting-member";
+import { actingInTenant, actingMemberId } from "../../acting-member";
 import type { PosScope } from "../../pos-scope";
 import { POS_UNIT_OF_WORK } from "../../ports/pos.tokens";
 import { isWithinGrant } from "../../services/store-scope";
@@ -29,10 +29,10 @@ export class RemoveTerminalHandler implements ICommandHandler<RemoveTerminalComm
 	public async execute(command: RemoveTerminalCommand): Promise<OkResponse> {
 		const { actor, input } = command;
 		const memberId = actingMemberId(actor);
-		const grant = await this.merchantAccess.assertCapability(actor, { organizationId: input.organizationId, capability: MERCHANT_CAPABILITY.manageApiKeys });
-		const tenant = actingInOrganization(actor, input.organizationId);
+		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageApiKeys });
+		const tenant = actingInTenant(actor, input.tenantId);
 		await this.uow.run(tenant, async (scope: PosScope): Promise<void> => {
-			const terminal = await scope.terminals.lockLive(input.terminalRowId, input.organizationId);
+			const terminal = await scope.terminals.lockLive(input.terminalRowId, input.tenantId);
 			if (terminal === null || !isWithinGrant(grant, terminal.locationId)) {
 				throw new TerminalNotFoundError();
 			}
@@ -44,7 +44,7 @@ export class RemoveTerminalHandler implements ICommandHandler<RemoveTerminalComm
 				await scope.apiKeys.save(boundKey);
 			}
 			await scope.rewardAudit.append({
-				organizationId: input.organizationId,
+				tenantId: input.tenantId,
 				actorUserId: memberId,
 				action: "merchant.terminal_removed",
 				metadata: { terminalId: terminal.id, revokedApiKeyId: boundKeyId },

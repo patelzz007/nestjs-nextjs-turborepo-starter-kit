@@ -177,7 +177,7 @@ function clamp(value: string | null, maxLength: number): string | null {
 /**
  * Kafka message key per event type — events sharing a key land on one
  * partition (ordered relative to each other). Rewards key by tenant so every
- * event for one organization stays ordered, falling back to the actor.
+ * event for one tenant stays ordered, falling back to the actor.
  */
 export function resolvePartitionKey(event: PlatformEventInput): string | null {
 	switch (event.type) {
@@ -193,6 +193,6 @@ export function resolvePartitionKey(event: PlatformEventInput): string | null {
 			// the correlation id, keeping one request's email events ordered.
 			return null;
 		case "reward.platform":
-			return event.payload.organizationId ?? event.payload.actorUserId;
+			return event.payload.tenantId ?? event.payload.actorUserId;
 	}
 }

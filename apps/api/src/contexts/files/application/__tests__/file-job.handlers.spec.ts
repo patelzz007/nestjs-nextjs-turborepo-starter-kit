@@ -14,7 +14,7 @@ import { ScanFileHandler } from "../commands/scan-file/scan-file.handler";
 import type { CdnInvalidationPort, FileProcessingPort, ProcessingCallbackAuthenticator, VerdictOutcome } from "../ports/file-processing.port";
 import { FILE_ID, FakeFileObjectStorage } from "./fakes/files.fakes";
 
-const SCAN_ACTOR: ActorContext = systemActor("queue.storage.scan", "job", null, "scan", null);
+const SCAN_ACTOR: ActorContext = systemActor("files.scan_verdict.apply", "job", null, "scan", null);
 
 /** Records the pipeline calls and answers with a fixed outcome. */
 class RecordingProcessing implements FileProcessingPort {

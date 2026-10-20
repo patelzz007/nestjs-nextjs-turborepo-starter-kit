@@ -1,10 +1,10 @@
 import { CorrelationIdSchema } from "../../src/platform/infrastructure/context/correlation-id";
 import { deterministicUuid } from "./deterministic-uuid";
 
-const LIFECYCLE_CORRELATION_NAMESPACE = "organization-lifecycle-correlation";
+const LIFECYCLE_CORRELATION_NAMESPACE = "tenant-lifecycle-correlation";
 
 /**
- * The correlation id a seeded organization lifecycle event carries — the value
+ * The correlation id a seeded tenant lifecycle event carries — the value
  * the app stamps from the request (or system operation) that made the
  * transition. Deterministic per event key, so re-running the seed converges,
  * and validated by the same `CorrelationIdSchema` the API accepts.

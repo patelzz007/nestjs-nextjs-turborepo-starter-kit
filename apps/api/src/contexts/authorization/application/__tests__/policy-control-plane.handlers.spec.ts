@@ -70,12 +70,12 @@ class ScriptedSimulator implements PolicySimulatorPort {
 				decisionChanges: [],
 				decisionChangesTruncated: false,
 			},
-			baselineFingerprint: await this.currentBaselineFingerprint({ organizationId: draft.organizationId, scope: draft.scope }, versions),
+			baselineFingerprint: await this.currentBaselineFingerprint({ tenantId: draft.tenantId, scope: draft.scope }, versions),
 		};
 	}
 
 	public async currentBaselineFingerprint(slot: PolicySlot, versions: PolicyVersionStore): Promise<string> {
-		return `baseline:${String((await versions.baselineVersionIds(slot.organizationId)).length)}`;
+		return `baseline:${String((await versions.baselineVersionIds(slot.tenantId)).length)}`;
 	}
 }
 
@@ -92,7 +92,7 @@ function create(builderPayload: PolicyBuilderPayload = PAYLOAD, isImpersonating 
 		new CreatePolicyDraftCommand(
 			adminActor(AUTHOR, { isSuperAdmin: true }),
 			{ userId: AUTHOR, isImpersonating },
-			{ scope: "TENANT", organizationId: ORG, name: "Refunds", builderPayload },
+			{ scope: "TENANT", tenantId: ORG, name: "Refunds", builderPayload },
 		),
 	);
 }
@@ -115,7 +115,7 @@ describe("CreatePolicyDraftHandler", () => {
 
 		expect(store.policyDrafts.rows.get(draftId)).toMatchObject({
 			status: "DRAFT",
-			organizationId: ORG,
+			tenantId: ORG,
 			createdById: AUTHOR,
 			cedarSource: "permit(principal, action, resource); // refund-approval",
 		});
@@ -137,7 +137,7 @@ describe("Simulate and publish (four eyes, D37)", () => {
 
 		await expect(publish(draftId)).resolves.toEqual({ version: 1 });
 
-		expect(store.policyVersions.lockedSlots).toEqual([{ organizationId: ORG, scope: "TENANT" }]);
+		expect(store.policyVersions.lockedSlots).toEqual([{ tenantId: ORG, scope: "TENANT" }]);
 		expect(store.policyVersions.versions).toEqual([expect.objectContaining({ draftId, version: 1, publishedById: APPROVER, supersededAt: null })]);
 		expect(store.policyDrafts.rows.get(draftId)).toMatchObject({ status: "PUBLISHED", approvedById: APPROVER });
 		expect(store.publishedEvents()).toEqual([expect.objectContaining({ draftId, version: 1 })]);
@@ -183,7 +183,7 @@ describe("Simulate and publish (four eyes, D37)", () => {
 		store.clock.advance(SIMULATION_VALIDITY_MS + 1);
 		await expect(publish(draftId)).rejects.toBeInstanceOf(PolicySimulationStaleError);
 
-		// A fresh simulation, then another policy goes live in the organization: the baseline moved.
+		// A fresh simulation, then another policy goes live in the tenant: the baseline moved.
 		await simulate(draftId);
 		const other = await create();
 		await simulate(other.draftId);

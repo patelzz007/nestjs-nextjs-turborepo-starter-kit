@@ -3,7 +3,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { API_VERSION_PREFIX, ApiErrorResponseSchema, MerchantTerminalPairingSchema, PosPairedTerminalSchema } from "@workspace/shared";
 
-import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { createE2eApp, login, type InjectResponse, type LoginResult, mutationHeaders, parseSuccessEnvelope, uniqueClientIp } from "./e2e-helpers";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
@@ -21,7 +21,7 @@ describe("POS pairing-code issue race (e2e, D33)", () => {
 	let pool: Pool;
 	let owner: LoginResult;
 
-	const terminalsPath = `${API_VERSION_PREFIX}/orgs/${ORGANIZATION_SEED_SLUGS.kl}/terminals`;
+	const terminalsPath = `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.kl}/terminals`;
 
 	function merchantCookies(session: LoginResult): Record<string, string> {
 		return { cookie: `merchantAccessToken=${session.accessToken}; merchantRefreshToken=${session.refreshToken}`, "x-client-type": "merchant" };
@@ -30,7 +30,7 @@ describe("POS pairing-code issue race (e2e, D33)", () => {
 	function pair(pairingCode: string): Promise<InjectResponse> {
 		return app.inject({
 			method: "POST",
-			url: `${API_VERSION_PREFIX}/pos/terminals/pair`,
+			url: `${API_VERSION_PREFIX}/integration/terminals/pair`,
 			headers: { "content-type": "application/json", "x-forwarded-for": uniqueClientIp() },
 			payload: JSON.stringify({ pairingCode }),
 		});
@@ -50,11 +50,9 @@ describe("POS pairing-code issue race (e2e, D33)", () => {
 		const client = await pool.connect();
 		try {
 			await client.query("SELECT set_config('app.rls_bypass', 'true', false)");
-			const keyIds = await client.query<{ apiKeyId: string | null }>(`SELECT "apiKeyId" AS "apiKeyId" FROM public."OrganizationTerminal" WHERE label LIKE $1`, [
-				`${NAME_PREFIX}%`,
-			]);
-			await client.query(`DELETE FROM public."OrganizationTerminal" WHERE label LIKE $1`, [`${NAME_PREFIX}%`]);
-			await client.query(`DELETE FROM public."OrganizationApiKey" WHERE id = ANY($1::text[])`, [keyIds.rows.flatMap((row) => (row.apiKeyId === null ? [] : [row.apiKeyId]))]);
+			const keyIds = await client.query<{ apiKeyId: string | null }>(`SELECT "apiKeyId" AS "apiKeyId" FROM public."TenantTerminal" WHERE label LIKE $1`, [`${NAME_PREFIX}%`]);
+			await client.query(`DELETE FROM public."TenantTerminal" WHERE label LIKE $1`, [`${NAME_PREFIX}%`]);
+			await client.query(`DELETE FROM public."TenantApiKey" WHERE id = ANY($1::text[])`, [keyIds.rows.flatMap((row) => (row.apiKeyId === null ? [] : [row.apiKeyId]))]);
 		} finally {
 			client.release();
 		}
@@ -67,7 +65,7 @@ describe("POS pairing-code issue race (e2e, D33)", () => {
 			method: "POST",
 			url: terminalsPath,
 			headers: mutationHeaders(merchantCookies(owner)),
-			payload: { name: `${NAME_PREFIX} till`, locationId: ORGANIZATION_SEED_IDS.klLocation },
+			payload: { name: `${NAME_PREFIX} till`, locationId: TENANT_SEED_IDS.klLocation },
 		});
 		expect(registered.statusCode, registered.body).toBe(201);
 		const terminal = parseSuccessEnvelope(registered, MerchantTerminalPairingSchema).data.terminal;

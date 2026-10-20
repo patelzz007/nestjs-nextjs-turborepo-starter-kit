@@ -11,9 +11,10 @@ import { CurrentActor } from "../../../../platform/presentation/http/security/cu
 import { Authorize } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
 import { EmailVerified } from "../../../../platform/presentation/http/security/decorators/email-verified.decorator";
 import { GetUser } from "../../../../platform/presentation/http/security/decorators/get-user.decorator";
+import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
+import { PublicOperation } from "../../../../platform/presentation/http/security/decorators/public-operation.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import { RequiresFullSession } from "../../../../platform/presentation/http/security/decorators/requires-full-session.decorator";
-import { RlsBypass } from "../../../../platform/presentation/http/security/decorators/rls-bypass.decorator";
 import { SuperAdminOnly } from "../../../../platform/presentation/http/security/decorators/super-admin.decorator";
 import { SetAuthCookiesInterceptor } from "../../../../platform/presentation/http/security/interceptors/set-auth-cookies.interceptor";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
@@ -23,6 +24,8 @@ import { readPresentedRefreshToken } from "../../../../platform/presentation/htt
 import { clientInfoOf } from "../../../../platform/presentation/http/security/request-client-info";
 import { StartImpersonationCommand } from "../../application/commands/start-impersonation/start-impersonation.command";
 import { StopImpersonationCommand } from "../../application/commands/stop-impersonation/stop-impersonation.command";
+import { IMPERSONATION_START_OPERATION } from "../../application/ports/identity.tokens";
+import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../platform/application/shared-system-operations";
 
 /** The access token the route was called with; a refresh token (or none) is refused. */
 function requireAccessToken(user: AccessTokenPayload | RefreshTokenPayload | undefined): AccessTokenPayload {
@@ -44,6 +47,7 @@ export class ImpersonationController {
 	@RequiresFullSession()
 	@EmailVerified()
 	@RequirePermission("CREATE", "USER")
+	@PlatformOperation(IMPERSONATION_START_OPERATION)
 	@Authorize({
 		action: "CREATE",
 		resource: "USER",
@@ -69,7 +73,7 @@ export class ImpersonationController {
 
 	@RateLimit(RATE_LIMIT_POLICY.sessionIssue)
 	@ApiBearerAuth()
-	@RlsBypass()
+	@PublicOperation(PRINCIPAL_LOOKUP_OPERATION)
 	@Post("/stop-impersonation")
 	@UseInterceptors(SetAuthCookiesInterceptor)
 	@ApiOperation({

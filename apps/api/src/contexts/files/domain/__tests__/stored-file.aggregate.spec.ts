@@ -27,7 +27,7 @@ describe("StoredFileAggregate.request", () => {
 			category: "MERCHANT_KYB",
 			visibility: "PRIVATE",
 			uploadedById: UPLOADER_ID,
-			organizationId: ORG_ID,
+			tenantId: ORG_ID,
 			productId: null,
 			expectedChecksum: CHECKSUM,
 			original: { slot: "ORIGINAL", locator: locator("staging/kyb/x.pdf"), publicPath: null },

@@ -5,7 +5,7 @@ import type { ActorContext } from "../../../../../platform/application/actor-con
 import type { CheckoutPoint } from "../../../domain/aggregates/reward-sale.aggregate";
 
 /**
- * `POST /redemptions/validate`: preview one code before the bill is paid. It redeems nothing but is
+ * `POST /integration/redemptions/validate`: preview one code before the bill is paid. It redeems nothing but is
  * a command: it writes the scan audit row and the backup-code lockout counters.
  */
 export class ValidateRedemptionCodesCommand extends Command<RedemptionPreviewResponse> {

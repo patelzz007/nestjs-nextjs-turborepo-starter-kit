@@ -3,8 +3,7 @@ import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { AuthorizationKernelService } from "../src/contexts/authorization/infrastructure/kernel/authorization-kernel.service";
-import { runWithSystemRlsContext } from "../src/prisma/rls-context";
-import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { createE2eApp } from "./e2e-helpers";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
@@ -21,8 +20,9 @@ async function idFor(pool: Pool, sql: string, value: string): Promise<string> {
 /**
  * Authorization Kernel against the seeded database: real role grants,
  * per-user overrides, ACL precedence, tenant verification, and filters.
- * Kernel reads run as an allowlisted system operation, exactly like the
- * guard's pre-handler phase.
+ * Kernel reads open their own allowlisted lookups (`auth.principal.lookup`,
+ * `auth.membership.lookup`, `authorization.acl.match`). The test does not
+ * wrap them in a request-wide bypass.
  */
 describe("Authorization Kernel (e2e, seeded database)", () => {
 	let app: NestFastifyApplication;
@@ -34,7 +34,7 @@ describe("Authorization Kernel (e2e, seeded database)", () => {
 	let readReportPermissionId: string;
 	const createdAclIds: string[] = [];
 
-	const asSystem = <T>(work: () => Promise<T>): Promise<T> => runWithSystemRlsContext("request.pre_handler", work);
+	const decide = <T>(work: () => Promise<T>): Promise<T> => work();
 
 	beforeAll(async () => {
 		app = await createE2eApp();
@@ -58,20 +58,20 @@ describe("Authorization Kernel (e2e, seeded database)", () => {
 	it("allows the seeded admin dashboard permission for Admin-role users", async () => {
 		const adminId = await idFor(pool, `SELECT id FROM public."User" WHERE email = $1`, "admin@example.com");
 
-		expect(await asSystem(() => kernel.can({ subject: { userId: adminId }, action: "READ", resource: "ADMIN_DASHBOARD" }))).toBe("ALLOW");
+		expect(await decide(() => kernel.can({ subject: { userId: adminId }, action: "READ", resource: "ADMIN_DASHBOARD" }))).toBe("ALLOW");
 	});
 
 	it("denies by default for permissions the subject does not hold", async () => {
-		expect(await asSystem(() => kernel.can({ subject: { userId }, action: "DELETE", resource: "USER" }))).toBe("DENY");
+		expect(await decide(() => kernel.can({ subject: { userId }, action: "DELETE", resource: "USER" }))).toBe("DENY");
 	});
 
 	it("honours implicit self grants but never extends them to other users", async () => {
-		expect(await asSystem(() => kernel.can({ subject: { userId }, action: "UPDATE", resource: "USER", resourceId: userId }))).toBe("ALLOW");
-		expect(await asSystem(() => kernel.can({ subject: { userId }, action: "UPDATE", resource: "USER", resourceId: managerId }))).toBe("DENY");
+		expect(await decide(() => kernel.can({ subject: { userId }, action: "UPDATE", resource: "USER", resourceId: userId }))).toBe("ALLOW");
+		expect(await decide(() => kernel.can({ subject: { userId }, action: "UPDATE", resource: "USER", resourceId: managerId }))).toBe("DENY");
 	});
 
 	it("lets a per-user DENY override beat a role grant", async () => {
-		expect(await asSystem(() => kernel.can({ subject: { userId: managerId }, action: "READ", resource: "REPORT" }))).toBe("ALLOW");
+		expect(await decide(() => kernel.can({ subject: { userId: managerId }, action: "READ", resource: "REPORT" }))).toBe("ALLOW");
 
 		await pool.query(
 			`INSERT INTO public."UserPermission" (id, "userId", "permissionId", effect) VALUES (uuidv7(), $1, $2, 'DENY')
@@ -79,7 +79,7 @@ describe("Authorization Kernel (e2e, seeded database)", () => {
 			[managerId, readReportPermissionId],
 		);
 
-		const result = await asSystem(() => kernel.explain({ subject: { userId: managerId }, action: "READ", resource: "REPORT" }));
+		const result = await decide(() => kernel.explain({ subject: { userId: managerId }, action: "READ", resource: "REPORT" }));
 		expect(result.decision).toBe("DENY");
 		expect(result.evaluation.at(-1)?.source).toBe("override");
 	});
@@ -95,32 +95,28 @@ describe("Authorization Kernel (e2e, seeded database)", () => {
 			createdAclIds.push(aclId);
 		}
 
-		expect(await asSystem(() => kernel.can({ subject: { userId }, action: "UPDATE", resource: "USER", resourceId: userId }))).toBe("DENY");
-		expect(await asSystem(() => kernel.can({ subject: { userId }, action: "READ", resource: "USER", resourceId: userId }))).toBe("ALLOW");
+		expect(await decide(() => kernel.can({ subject: { userId }, action: "UPDATE", resource: "USER", resourceId: userId }))).toBe("DENY");
+		expect(await decide(() => kernel.can({ subject: { userId }, action: "READ", resource: "USER", resourceId: userId }))).toBe("ALLOW");
 	});
 
-	it("rejects a forged organization and accepts a verified membership", async () => {
-		const forged = await asSystem(() =>
-			kernel.explain({ subject: { userId, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization }, action: "READ", resource: "USER", resourceId: userId }),
-		);
+	it("rejects a forged tenant and accepts a verified membership", async () => {
+		const forged = await decide(() => kernel.explain({ subject: { userId, tenantId: TENANT_SEED_IDS.mlkTenant }, action: "READ", resource: "USER", resourceId: userId }));
 		expect(forged.decision).toBe("DENY");
 		expect(forged.evaluation.at(-1)?.source).toBe("tenant");
 
-		const member = await asSystem(() =>
-			kernel.explain({ subject: { userId: mlkOwnerId, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization }, action: "READ", resource: "USER", resourceId: mlkOwnerId }),
+		const member = await decide(() =>
+			kernel.explain({ subject: { userId: mlkOwnerId, tenantId: TENANT_SEED_IDS.mlkTenant }, action: "READ", resource: "USER", resourceId: mlkOwnerId }),
 		);
 		expect(member.decision).toBe("ALLOW");
-		expect(member.request.subject.organizationId).toBe(ORGANIZATION_SEED_IDS.mlkOrganization);
+		expect(member.request.subject.tenantId).toBe(TENANT_SEED_IDS.mlkTenant);
 	});
 
-	it("never grants permissions from organization membership alone", async () => {
-		expect(
-			await asSystem(() => kernel.can({ subject: { userId: mlkOwnerId, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization }, action: "DELETE", resource: "ORGANIZATION" })),
-		).toBe("DENY");
+	it("never grants permissions from tenant membership alone", async () => {
+		expect(await decide(() => kernel.can({ subject: { userId: mlkOwnerId, tenantId: TENANT_SEED_IDS.mlkTenant }, action: "DELETE", resource: "TENANT" }))).toBe("DENY");
 	});
 
 	it("builds list filters from grants", async () => {
-		expect(await asSystem(() => kernel.filter({ userId }, "READ", "USER"))).toEqual({ id: { in: [userId] } });
-		expect(await asSystem(() => kernel.filter({ userId }, "DELETE", "ORDER"))).toEqual({ id: { in: [] } });
+		expect(await decide(() => kernel.filter({ userId }, "READ", "USER"))).toEqual({ id: { in: [userId] } });
+		expect(await decide(() => kernel.filter({ userId }, "DELETE", "ORDER"))).toEqual({ id: { in: [] } });
 	});
 });

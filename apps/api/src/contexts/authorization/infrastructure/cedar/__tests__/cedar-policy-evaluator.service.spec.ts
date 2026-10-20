@@ -50,11 +50,11 @@ describe("CedarPolicyEvaluatorService bundle cache", () => {
 		expect(mocks.findMany).toHaveBeenCalledTimes(2);
 	});
 
-	it("reloads immediately after an organization or global invalidation", async () => {
+	it("reloads immediately after a tenant or global invalidation", async () => {
 		const cedar = evaluator();
 		await cedar.getActivePolicyVersion(ORG);
 
-		cedar.invalidateOrganization(ORG);
+		cedar.invalidateTenant(ORG);
 		await cedar.getActivePolicyVersion(ORG);
 		cedar.invalidateAll();
 		await cedar.getActivePolicyVersion(ORG);

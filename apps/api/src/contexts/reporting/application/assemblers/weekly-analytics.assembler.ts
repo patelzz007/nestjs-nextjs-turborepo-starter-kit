@@ -26,8 +26,8 @@ import {
 	type AnalyticsPeriod,
 } from "../../domain/policies/weekly-analytics.policy";
 import type { AnalyticsLocationScope } from "../../domain/value-objects/analytics-scope.value-object";
-import type { AnalyticsOrganizationReadPort } from "../ports/analytics-organization-read.port";
-import { ANALYTICS_ORGANIZATION_READ, REWARD_ACTIVITY_READ, SALES_READ } from "../ports/reporting.tokens";
+import type { AnalyticsTenantReadPort } from "../ports/analytics-tenant-read.port";
+import { ANALYTICS_TENANT_READ, REWARD_ACTIVITY_READ, SALES_READ } from "../ports/reporting.tokens";
 import type { RewardActivityReadPort } from "../ports/reward-activity-read.port";
 import type { SalesReadPort, SalesScope } from "../ports/sales-read.port";
 
@@ -41,18 +41,18 @@ const ADMIN_TOP_MERCHANTS = 10;
 const MERCHANT_TOP_REWARDS = 8;
 
 /**
- * A sale or redemption points at an organization/reward the lookup could not
+ * A sale or redemption points at a tenant/reward the lookup could not
  * find. Foreign keys make this impossible, so it is an integrity fault —
  * surfaced as an error, never papered over with a placeholder name.
  */
 export class AnalyticsReferenceMissingError extends Error {
-	public constructor(entity: "organization" | "reward", id: string) {
+	public constructor(entity: "tenant" | "reward", id: string) {
 		super(`Analytics row references ${entity} ${id}, which could not be loaded`);
 		this.name = "AnalyticsReferenceMissingError";
 	}
 }
 
-function requireReference<TValue>(map: ReadonlyMap<string, TValue>, entity: "organization" | "reward", id: string): TValue {
+function requireReference<TValue>(map: ReadonlyMap<string, TValue>, entity: "tenant" | "reward", id: string): TValue {
 	const value = map.get(id);
 	if (value === undefined) {
 		throw new AnalyticsReferenceMissingError(entity, id);
@@ -61,7 +61,7 @@ function requireReference<TValue>(map: ReadonlyMap<string, TValue>, entity: "org
 }
 
 /**
- * The weekly analytics (`GET /orgs/:orgSlug/analytics`, `GET /claims/analytics`, `GET /admin/analytics/sales`):
+ * The weekly analytics (`GET /tenants/:tenantSlug/analytics`, `GET /claims/analytics`, `GET /admin/analytics/sales`):
  * week buckets, compared with the previous period of equal length. The query handlers authorize first
  * and pass the resolved scope in.
  */
@@ -70,17 +70,17 @@ export class WeeklyAnalyticsAssembler {
 	public constructor(
 		@Inject(REWARD_ACTIVITY_READ) private readonly activity: RewardActivityReadPort,
 		@Inject(SALES_READ) private readonly sales: SalesReadPort,
-		@Inject(ANALYTICS_ORGANIZATION_READ) private readonly organizations: AnalyticsOrganizationReadPort,
+		@Inject(ANALYTICS_TENANT_READ) private readonly tenants: AnalyticsTenantReadPort,
 		@Inject(CLOCK) private readonly clock: Clock,
 	) {}
 
 	/** One merchant's weekly analytics, limited to `scope` (already authorized: a store-limited caller sees only its stores). */
 	public async merchantAnalytics(orgId: string, scope: AnalyticsLocationScope, query: RewardsAnalyticsQuery): Promise<MerchantAnalyticsResponse> {
-		// Merchant weeks start Monday 00:00 in the merchant's own zone (Organization.timeZone).
-		const timeZone = IanaTimeZoneSchema.parse((await this.requireOrganization(orgId)).timeZone);
+		// Merchant weeks start Monday 00:00 in the merchant's own zone (Tenant.timeZone).
+		const timeZone = IanaTimeZoneSchema.parse((await this.requireTenant(orgId)).timeZone);
 		const period = resolveAnalyticsPeriod(query.from, query.to, this.clock.now(), timeZone);
 		const previous = previousAnalyticsPeriod(period);
-		const rewards = { organizationId: orgId, locationScope: scope };
+		const rewards = { tenantId: orgId, locationScope: scope };
 
 		const [
 			totalRewards,
@@ -108,7 +108,7 @@ export class WeeklyAnalyticsAssembler {
 			),
 			this.activity.countMerchantReferrals(orgId, { gte: period.fromMs, lte: period.toMs }, scope),
 			this.activity.countMerchantReferrals(orgId, { gte: previous.fromMs, lte: previous.toMs }, scope),
-			this.buildSalesSummary({ organizationId: orgId, locationIds: scope.kind === "ALL_LOCATIONS" ? undefined : scope.locationIds }, period),
+			this.buildSalesSummary({ tenantId: orgId, locationIds: scope.kind === "ALL_LOCATIONS" ? undefined : scope.locationIds }, period),
 		]);
 
 		const currentConversion = conversionRatePercent(activity.claims.current, activity.redemptions.current);
@@ -185,12 +185,12 @@ export class WeeklyAnalyticsAssembler {
 
 		const [sales, topMerchants, activeNow, activeBefore] = await Promise.all([
 			this.buildSalesSummary({}, period),
-			this.sales.groupByOrganization({}, range, ADMIN_TOP_MERCHANTS),
-			this.sales.countOrganizations(range),
-			this.sales.countOrganizations({ gte: previous.fromMs, lte: previous.toMs }),
+			this.sales.groupByTenant({}, range, ADMIN_TOP_MERCHANTS),
+			this.sales.countTenants(range),
+			this.sales.countTenants({ gte: previous.fromMs, lte: previous.toMs }),
 		]);
 		const merchants = await this.sales.listMerchantSummaries(
-			topMerchants.map((group) => group.organizationId),
+			topMerchants.map((group) => group.tenantId),
 			actorUserId,
 		);
 
@@ -199,18 +199,18 @@ export class WeeklyAnalyticsAssembler {
 			sales,
 			activeMerchants: buildAnalyticsMetric(activeNow, activeBefore),
 			topMerchants: topMerchants.map((group) => {
-				const merchant = requireReference(merchants, "organization", group.organizationId);
-				return { organizationId: group.organizationId, name: merchant.name, category: merchant.category, salesMinor: group.totalMinor, bills: group.bills };
+				const merchant = requireReference(merchants, "tenant", group.tenantId);
+				return { tenantId: group.tenantId, name: merchant.name, category: merchant.category, salesMinor: group.totalMinor, bills: group.bills };
 			}),
 		};
 	}
 
-	private async requireOrganization(organizationId: string): Promise<{ readonly timeZone: string }> {
-		const organization = await this.organizations.findById(organizationId);
-		if (organization === null) {
-			throw new AnalyticsReferenceMissingError("organization", organizationId);
+	private async requireTenant(tenantId: string): Promise<{ readonly timeZone: string }> {
+		const tenant = await this.tenants.findById(tenantId);
+		if (tenant === null) {
+			throw new AnalyticsReferenceMissingError("tenant", tenantId);
 		}
-		return organization;
+		return tenant;
 	}
 
 	/** Paid-bill totals for `scope` in `period`, compared with the previous period of equal length. */
@@ -238,19 +238,19 @@ export class WeeklyAnalyticsAssembler {
 	private async buildSpendingSummary(userId: string, period: AnalyticsPeriod): Promise<UserSpendingSummary> {
 		const previous = previousAnalyticsPeriod(period);
 		const range = { gte: period.fromMs, lte: period.toMs };
-		const [current, prior, byOrganization] = await Promise.all([
+		const [current, prior, byTenant] = await Promise.all([
 			this.sales.aggregate({ userId }, range),
 			this.sales.aggregate({ userId }, { gte: previous.fromMs, lte: previous.toMs }),
-			this.sales.groupByOrganization({ userId }, range),
+			this.sales.groupByTenant({ userId }, range),
 		]);
 		const merchants = await this.sales.listMerchantSummaries(
-			byOrganization.map((group) => group.organizationId),
+			byTenant.map((group) => group.tenantId),
 			userId,
 		);
 
-		const byMerchant = byOrganization.map((group) => {
-			const merchant = requireReference(merchants, "organization", group.organizationId);
-			return { organizationId: group.organizationId, merchantName: merchant.name, category: merchant.category, totalMinor: group.totalMinor, visits: group.bills };
+		const byMerchant = byTenant.map((group) => {
+			const merchant = requireReference(merchants, "tenant", group.tenantId);
+			return { tenantId: group.tenantId, merchantName: merchant.name, category: merchant.category, totalMinor: group.totalMinor, visits: group.bills };
 		});
 
 		const categoryTotals = new Map<MerchantBusinessCategory | null, { totalMinor: number; visits: number }>();

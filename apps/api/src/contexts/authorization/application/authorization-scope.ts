@@ -10,7 +10,7 @@ import type { AuthorizationCatalogStore } from "./ports/catalog-sync.port";
 import type { PermissionAuditWriter } from "./ports/permission-audit.port";
 import type { PolicyAuditWriter, PolicyPrincipalReader, PolicySimulationStore, PolicyVersionStore } from "./ports/policy-control-plane.port";
 import type { RbacGraphReader, RbacMutationLock } from "./ports/rbac-graph.port";
-import type { OrganizationAuditWriter, SupportAccessOrganizationReader } from "./ports/support-access.port";
+import type { TenantAuditWriter, SupportAccessTenantReader } from "./ports/support-access.port";
 
 /**
  * Everything one authorization transaction can touch. Every member is bound to that transaction by
@@ -37,7 +37,7 @@ export interface AuthorizationScope {
 	readonly policyAudit: PolicyAuditWriter;
 	// ── Support access ──────────────────────────────────────────────────
 	readonly supportGrants: SupportAccessGrantRepository;
-	readonly supportOrganizations: SupportAccessOrganizationReader;
-	readonly organizationAudit: OrganizationAuditWriter;
+	readonly supportTenants: SupportAccessTenantReader;
+	readonly tenantAudit: TenantAuditWriter;
 	readonly events: TransactionalEventCollector;
 }

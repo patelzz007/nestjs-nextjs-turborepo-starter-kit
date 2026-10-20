@@ -1,9 +1,9 @@
 import type { MerchantApiKeyAuthContext } from "./api-key-verification.port";
 
-/** The till a POS request redeems from: its organization, store (when known), terminal and key. */
+/** The till a POS request redeems from: its tenant, store (when known), terminal and key. */
 export interface TillPoint {
-	readonly organizationId: string;
-	/** `null` when the store is unknown (an organization-wide key on an unregistered terminal). */
+	readonly tenantId: string;
+	/** `null` when the store is unknown (a tenant-wide key on an unregistered terminal). */
 	readonly locationId: string | null;
 	readonly terminalId: string;
 	readonly apiKeyId: string;

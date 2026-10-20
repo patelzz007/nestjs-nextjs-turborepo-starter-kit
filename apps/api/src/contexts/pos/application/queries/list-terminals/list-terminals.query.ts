@@ -3,11 +3,11 @@ import type { MerchantTerminalListQuery, MerchantTerminalSummary, PaginatedServi
 
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 
-/** `GET /orgs/:orgSlug/terminals`. */
+/** `GET /tenants/:tenantSlug/terminals`. */
 export class ListTerminalsQuery extends Query<PaginatedServiceResult<MerchantTerminalSummary>> {
 	public constructor(
 		public readonly actor: ActorContext,
-		public readonly input: MerchantTerminalListQuery & { readonly organizationId: string },
+		public readonly input: MerchantTerminalListQuery & { readonly tenantId: string },
 	) {
 		super();
 	}

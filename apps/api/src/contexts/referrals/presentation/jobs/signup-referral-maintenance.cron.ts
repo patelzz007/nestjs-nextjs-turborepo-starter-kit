@@ -4,6 +4,7 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 import { systemActor } from "../../../../platform/application/actor-context";
 import { SystemCommandDispatcher } from "../../../../platform/application/system-command-dispatcher";
 import { MaintainSignupReferralCodesCommand } from "../../application/commands/maintain-signup-referral-codes/maintain-signup-referral-codes.command";
+import { MAINTENANCE_SIGNUP_REFERRAL_CODES_OPERATION } from "../../application/ports/referrals.tokens";
 
 /** The cron's name on its audit rows. */
 const MAINTENANCE_CRON_NAME = "SignupReferralMaintenanceCron.maintain";
@@ -23,7 +24,7 @@ export class SignupReferralMaintenanceCron {
 	@Cron(CronExpression.EVERY_HOUR)
 	public async maintain(): Promise<void> {
 		const codes = await this.dispatcher.dispatch(
-			new MaintainSignupReferralCodesCommand(systemActor("maintenance.signup_referral_codes", "cron", null, "Issue due signup referral codes", null)),
+			new MaintainSignupReferralCodesCommand(systemActor(MAINTENANCE_SIGNUP_REFERRAL_CODES_OPERATION, "cron", null, "Issue due signup referral codes", null)),
 			{ kind: "cron", name: MAINTENANCE_CRON_NAME },
 		);
 		if (codes.firstCodes > 0 || codes.successors > 0) {

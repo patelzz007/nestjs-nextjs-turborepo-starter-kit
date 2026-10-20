@@ -17,7 +17,7 @@ import sharp from "sharp";
 import { sha256Hex } from "../../src/platform/infrastructure/crypto/sha256";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
-import { ORGANIZATION_SEED_IDS } from "./organizations";
+import { TENANT_SEED_IDS } from "./tenants";
 import { buildProductSeedId } from "./products";
 import { requireRow } from "./require-row";
 import { createSeedFileWriter, type SeedObject } from "./stored-file-seed-writer";
@@ -74,11 +74,11 @@ export async function seedFileLifecycle(): Promise<FileSeedSummary> {
 	const squarePng = await squareImagePng();
 
 	const klOwnerMembership = requireRow(
-		(await prisma.organizationMembership.findUnique({ where: { id: ORGANIZATION_SEED_IDS.klOwnerMembership }, include: { user: true } })) ?? undefined,
+		(await prisma.membership.findUnique({ where: { id: TENANT_SEED_IDS.klOwnerMembership }, include: { user: true } })) ?? undefined,
 		"Brew & Bean KL owner membership",
 	);
 	const klOwner = klOwnerMembership.user;
-	const klOrganizationId = ORGANIZATION_SEED_IDS.klOrganization;
+	const klTenantId = TENANT_SEED_IDS.klTenant;
 	// Demo Product 001 (product seed ids are 1-based).
 	const productId = buildProductSeedId(1);
 	const admin = requireRow((await prisma.user.findUnique({ where: { email: "admin@example.com" } })) ?? undefined, "user admin@example.com");
@@ -87,7 +87,7 @@ export async function seedFileLifecycle(): Promise<FileSeedSummary> {
 	const acceptedAt = daysAgo(20);
 	const invitation = {
 		id: FILE_SEED_IDS.klOnboardingInvitation,
-		organizationId: klOrganizationId,
+		tenantId: klTenantId,
 		email: klOwner.email,
 		// The plaintext token is never stored and is not needed again: the invite is used up.
 		tokenHash: sha256Hex(`seed_invite_token_kl_onboarding_${FILE_SEED_IDS.klOnboardingInvitation}`),
@@ -102,18 +102,18 @@ export async function seedFileLifecycle(): Promise<FileSeedSummary> {
 		expiresAt: acceptedAt + BigInt(5 * DAY_MS),
 		createdAt: daysAgo(22),
 		updatedAt: acceptedAt + BigInt(2 * MS_PER_HOUR),
-	} satisfies Prisma.OrganizationInvitationUncheckedCreateInput;
-	await prisma.organizationInvitation.upsert({ where: { tokenHash: invitation.tokenHash }, create: invitation, update: invitation });
+	} satisfies Prisma.TenantInvitationUncheckedCreateInput;
+	await prisma.tenantInvitation.upsert({ where: { tokenHash: invitation.tokenHash }, create: invitation, update: invitation });
 
 	const kybObject = (id: string, fileName: string, uploadedDaysAgo: number): SeedObject => ({
 		id,
 		category: "MERCHANT_KYB",
-		ownerId: klOrganizationId,
+		ownerId: klTenantId,
 		fileName,
 		mimeType: "application/pdf",
 		bytes: PDF_BYTES,
 		uploadedById: klOwner.id,
-		organizationId: klOrganizationId,
+		tenantId: klTenantId,
 		uploadedDaysAgo,
 	});
 	await seedReadyFile(kybObject(FILE_SEED_IDS.klKybFirstScan, "brew-bean-ssm-certificate-scan.pdf", 21));
@@ -121,20 +121,20 @@ export async function seedFileLifecycle(): Promise<FileSeedSummary> {
 	// Submission 1 was retired (kept as review history) when submission 2 replaced it.
 	const firstLink = {
 		id: FILE_SEED_IDS.klKybFirstLink,
-		organizationId: klOrganizationId,
+		tenantId: klTenantId,
 		fileId: FILE_SEED_IDS.klKybFirstScan,
 		submissionId: FILE_SEED_IDS.klKybFirstSubmission,
 		isActive: false,
 	};
 	const secondLink = {
 		id: FILE_SEED_IDS.klKybSecondLink,
-		organizationId: klOrganizationId,
+		tenantId: klTenantId,
 		fileId: FILE_SEED_IDS.klKybLicence,
 		submissionId: FILE_SEED_IDS.klKybSecondSubmission,
 		isActive: true,
 	};
 	for (const link of [firstLink, secondLink]) {
-		await prisma.organizationKybFile.upsert({ where: { id: link.id }, create: link, update: link });
+		await prisma.tenantKybFile.upsert({ where: { id: link.id }, create: link, update: link });
 	}
 
 	// ── Product gallery: a live primary image, and a second image the admin deleted ──
@@ -146,7 +146,7 @@ export async function seedFileLifecycle(): Promise<FileSeedSummary> {
 		mimeType: "image/png",
 		bytes: PNG_BYTES,
 		uploadedById: admin.id,
-		organizationId: null,
+		tenantId: null,
 		uploadedDaysAgo,
 	});
 	await seedReadyFile(productObject(FILE_SEED_IDS.productImage, "demo-product-001.png", 10));
@@ -184,7 +184,7 @@ export async function seedFileLifecycle(): Promise<FileSeedSummary> {
 		mimeType: "image/png",
 		bytes: squarePng,
 		uploadedById: klOwner.id,
-		organizationId: null,
+		tenantId: null,
 		uploadedDaysAgo: 15,
 	});
 	const avatarRow = { id: FILE_SEED_IDS.deletedAvatarRow, userId: klOwner.id, fileId: FILE_SEED_IDS.deletedAvatar, isDeleted: false, deletedAt: null, deletedBy: null };
@@ -194,25 +194,25 @@ export async function seedFileLifecycle(): Promise<FileSeedSummary> {
 	const logo = await seedReadyFile({
 		id: FILE_SEED_IDS.deletedLogo,
 		category: "STORE_LOGO",
-		ownerId: klOrganizationId,
+		ownerId: klTenantId,
 		fileName: "old-logo.png",
 		mimeType: "image/png",
 		bytes: squarePng,
 		uploadedById: klOwner.id,
-		organizationId: klOrganizationId,
+		tenantId: klTenantId,
 		uploadedDaysAgo: 15,
 	});
 	const logoAsset = {
 		id: FILE_SEED_IDS.deletedLogoAsset,
-		organizationId: klOrganizationId,
+		tenantId: klTenantId,
 		assetType: "LOGO",
 		fileId: FILE_SEED_IDS.deletedLogo,
 		isDeleted: false,
 		deletedAt: null,
 		deletedBy: null,
-	} satisfies Prisma.OrganizationAssetUncheckedCreateInput;
-	await prisma.organizationAsset.upsert({
-		where: { organizationId_assetType: { organizationId: klOrganizationId, assetType: "LOGO" } },
+	} satisfies Prisma.TenantAssetUncheckedCreateInput;
+	await prisma.tenantAsset.upsert({
+		where: { tenantId_assetType: { tenantId: klTenantId, assetType: "LOGO" } },
 		create: logoAsset,
 		update: logoAsset,
 	});

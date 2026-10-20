@@ -19,9 +19,9 @@ import { z } from "zod";
 
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import type { GithubWebhookDeliveryInput, GithubWebhookStorePort, GithubWebhookSubscriptionRecord } from "../../application/ports/github-live-updates.port";
+import { GITHUB_WEBHOOK_DELIVERIES_OPERATION } from "../../application/ports/github.tokens";
 
 export const GITHUB_WEBHOOK_SUBSCRIPTIONS_OPERATION = "github.webhook.subscriptions";
-export const GITHUB_WEBHOOK_DELIVERIES_OPERATION = "github.webhook.deliveries";
 
 /** The PostgreSQL channel each recorded delivery's change is announced on — every API instance listens. */
 export const GITHUB_PULL_REQUEST_CHANNEL = "github_pull_requests";

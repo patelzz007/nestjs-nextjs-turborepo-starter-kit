@@ -53,7 +53,7 @@ describe("GithubWebhookDeliveryRetentionCron", () => {
 
 		const [dispatched] = dispatcher.dispatched;
 		expect(dispatched?.command).toBeInstanceOf(PruneGithubWebhookDeliveriesCommand);
-		expect(dispatched?.command).toMatchObject({ actor: { kind: "system", operation: "github.webhook.deliveries", origin: "cron", organizationId: null, actorUserId: null } });
+		expect(dispatched?.command).toMatchObject({ actor: { kind: "system", operation: "github.webhook.deliveries", origin: "cron", tenantId: null, actorUserId: null } });
 		expect(dispatched?.origin).toEqual({ kind: "cron", name: "GithubWebhookDeliveryRetentionCron.prune" });
 		expect(store.prunedBefore).toEqual([AT - GITHUB_WEBHOOK_DELIVERY_RETENTION_MS]);
 		expect(store.deliveries.size).toBe(0);

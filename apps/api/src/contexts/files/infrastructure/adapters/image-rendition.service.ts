@@ -21,7 +21,7 @@ import type { FileRenditionRecord } from "../../domain/aggregates/stored-file.ag
 import { resolveFileOwnerId } from "../../domain/policies/file-upload.policy";
 
 /** The stored-file columns a rendition is derived from. */
-export type RenditionSourceFile = Pick<StoredFile, "id" | "category" | "originalName" | "productId" | "organizationId" | "uploadedById">;
+export type RenditionSourceFile = Pick<StoredFile, "id" | "category" | "originalName" | "productId" | "tenantId" | "uploadedById">;
 
 /** The uploaded image breaks its category's pixel rules (shape or size). */
 export class ImageRulesViolationError extends Error {
@@ -134,7 +134,7 @@ export class ImageRenditionService {
 		const rendered = await this.processor.render(original, spec.width, height);
 		const path = buildPublicVariantPath({
 			category: file.category,
-			ownerId: resolveFileOwnerId({ category: file.category, productId: file.productId, organizationId: file.organizationId, userId: file.uploadedById }),
+			ownerId: resolveFileOwnerId({ category: file.category, productId: file.productId, tenantId: file.tenantId, userId: file.uploadedById }),
 			fileId: file.id,
 			fileName: file.originalName,
 			mimeType: RENDITION_MIME_TYPE,

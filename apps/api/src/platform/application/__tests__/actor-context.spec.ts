@@ -1,30 +1,30 @@
 import { describe, expect, it } from "vitest";
 
-import { actingInOrganization, ActorContextSchema, systemActor, type ActorContext } from "../actor-context";
+import { actingInTenant, ActorContextSchema, systemActor, type ActorContext } from "../actor-context";
 
 const REQUEST = { requestId: "req-1", ip: null, userAgent: null, deviceLabel: null, endpoint: null };
 
-describe("actingInOrganization", () => {
-	it("re-binds a signed-in user to the verified organization, leaving everything else as it was", () => {
+describe("actingInTenant", () => {
+	it("re-binds a signed-in user to the verified tenant, leaving everything else as it was", () => {
 		const user: ActorContext = {
 			kind: "user",
 			userId: "user-1",
 			sessionId: "session-1",
-			organizationId: null,
+			tenantId: null,
 			isSuperAdmin: false,
 			accessScope: "tenant",
 			impersonatorUserId: null,
 			request: REQUEST,
 		};
 
-		expect(actingInOrganization(user, "org-1")).toEqual({ ...user, organizationId: "org-1" });
-		expect(user.organizationId).toBeNull();
+		expect(actingInTenant(user, "org-1")).toEqual({ ...user, tenantId: "org-1" });
+		expect(user.tenantId).toBeNull();
 	});
 
-	it("never re-binds an API key, which is bound to its own organization", () => {
-		const key: ActorContext = { kind: "api_key", apiKeyId: "key-1", organizationId: "org-9", locationId: null, terminalId: null, request: REQUEST };
+	it("never re-binds an API key, which is bound to its own tenant", () => {
+		const key: ActorContext = { kind: "api_key", apiKeyId: "key-1", tenantId: "org-9", locationId: null, terminalId: null, request: REQUEST };
 
-		expect(actingInOrganization(key, "org-1")).toBe(key);
+		expect(actingInTenant(key, "org-1")).toBe(key);
 	});
 });
 
@@ -36,7 +36,7 @@ describe("systemActor", () => {
 			kind: "system",
 			operation: "queue.email.send",
 			origin: "job",
-			organizationId: "org-1",
+			tenantId: "org-1",
 			actorUserId: null,
 			reason: "Deliver a queued email",
 		});
@@ -44,7 +44,7 @@ describe("systemActor", () => {
 
 	// The parameter types already refuse these at compile time; the schema is the runtime contract for actors read from untyped input.
 	it("rejects an unknown operation name", () => {
-		const result = ActorContextSchema.safeParse({ kind: "system", operation: "not.a.real.operation", origin: "cli", organizationId: null, actorUserId: null, reason: "cli" });
+		const result = ActorContextSchema.safeParse({ kind: "system", operation: "not.a.real.operation", origin: "cli", tenantId: null, actorUserId: null, reason: "cli" });
 
 		expect(result.success).toBe(false);
 	});
@@ -54,7 +54,7 @@ describe("systemActor", () => {
 			kind: "system",
 			operation: "queue.email.send",
 			origin: "websocket",
-			organizationId: null,
+			tenantId: null,
 			actorUserId: null,
 			reason: "socket",
 		});

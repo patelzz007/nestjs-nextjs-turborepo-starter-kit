@@ -68,7 +68,7 @@ describe("file-path.util", () => {
 		expect(path).toBe("users/user-1/avatar/thumbnail/file-3.webp");
 	});
 
-	it("keeps reward images in their own folder under the organization", () => {
+	it("keeps reward images in their own folder under the tenant", () => {
 		const input: BuildFileObjectPathInput = { category: "REWARD_IMAGE", ownerId: "org-1", fileId: "file-4", fileName: "Kuih platter.webp", mimeType: "image/webp" };
 		expect(buildStagingPath(input)).toBe("staging/stores/org-1/reward-images/file-4-Kuih platter.webp");
 		expect(buildFinalStoragePath(input)).toBe("stores/org-1/reward-images/file-4.webp");

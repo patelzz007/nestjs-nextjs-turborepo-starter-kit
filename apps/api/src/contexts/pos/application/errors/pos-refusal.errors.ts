@@ -28,7 +28,7 @@ export function redemptionRefused(reason: RedemptionInvalidReason, claimId: stri
 
 /**
  * A concurrent checkout of ANOTHER store recorded a sale under this idempotency key: the key is unique
- * across the organization, but a store-limited till cannot read that store's sale to replay it. Answered
+ * across the tenant, but a store-limited till cannot read that store's sale to replay it. Answered
  * like a reused key (409), without naming a sale the caller may not see.
  */
 export function idempotencyKeyTakenElsewhere(): AppError {

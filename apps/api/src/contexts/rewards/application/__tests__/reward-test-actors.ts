@@ -8,11 +8,11 @@ const REQUEST = { requestId: "req-1", ip: null, userAgent: null, deviceLabel: nu
 
 /** A signed-in person (merchant member, reviewer or customer). */
 export function userActor(userId: string = MERCHANT_USER_ID): ActorContext {
-	return { kind: "user", userId, sessionId: "session-1", organizationId: null, isSuperAdmin: false, accessScope: "tenant", impersonatorUserId: null, request: REQUEST };
+	return { kind: "user", userId, sessionId: "session-1", tenantId: null, isSuperAdmin: false, accessScope: "tenant", impersonatorUserId: null, request: REQUEST };
 }
 
-export function apiKeyActor(organizationId: string): ActorContext {
-	return { kind: "api_key", apiKeyId: API_KEY_ID, organizationId, locationId: null, terminalId: null, request: REQUEST };
+export function apiKeyActor(tenantId: string): ActorContext {
+	return { kind: "api_key", apiKeyId: API_KEY_ID, tenantId, locationId: null, terminalId: null, request: REQUEST };
 }
 
 export function jobActor(): ActorContext {

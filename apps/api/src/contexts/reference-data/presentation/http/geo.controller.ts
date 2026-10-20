@@ -33,20 +33,23 @@ import { ZodBody, ZodListQuery, ZodQuery, ZodParams } from "../../../../platform
 import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
+import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { SuperAdminOnly } from "../../../../platform/presentation/http/security/decorators/super-admin.decorator";
 import { Authorize } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
+import { GEO_READ_OPERATION, GEO_WRITE_OPERATION } from "../../application/ports/reference-data.tokens";
 import { GeographyApplicationService } from "../../application/services/geography.application-service";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
 
 /**
- * Geo reference data. Reads need `GEO:READ`; every write (create, update,
- * soft-delete, import) is SuperAdmin-only and runs under the
- * `geo.reference_data.write` system operation (GeographyApplicationService).
+ * Geo reference data. Reads need `GEO:READ` and run as `geo.reference_data.read`.
+ * Every write (create, update, soft-delete, import) is SuperAdmin-only and runs
+ * as `geo.reference_data.write`.
  */
 @ApiTags("Geo")
+@PlatformOperation(GEO_READ_OPERATION)
 @Controller(apiPath("/geo"))
 export class GeoController {
 	public constructor(private readonly geography: GeographyApplicationService) {}
@@ -79,6 +82,7 @@ export class GeoController {
 	// ── Import ──────────────────────────────────────────────────────────
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
 	@RequirePermission("CREATE", "GEO")
 	@Authorize({ action: "CREATE", resource: "GEO", description: "Import geo data" })
@@ -155,6 +159,7 @@ export class GeoController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
 	@RequirePermission("CREATE", "GEO")
 	@Post("regions")
@@ -168,6 +173,7 @@ export class GeoController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
 	@RequirePermission("UPDATE", "GEO")
 	@Patch("regions/:id")
@@ -182,6 +188,7 @@ export class GeoController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
 	@RequirePermission("DELETE", "GEO")
 	@Delete("regions/:id")
@@ -221,6 +228,7 @@ export class GeoController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
 	@RequirePermission("CREATE", "GEO")
 	@Post("subregions")
@@ -234,6 +242,7 @@ export class GeoController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
 	@RequirePermission("UPDATE", "GEO")
 	@Patch("subregions/:id")
@@ -248,6 +257,7 @@ export class GeoController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
 	@RequirePermission("DELETE", "GEO")
 	@Delete("subregions/:id")
@@ -284,6 +294,7 @@ export class GeoController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
 	@RequirePermission("CREATE", "GEO")
 	@Post("countries")
@@ -297,6 +308,7 @@ export class GeoController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
 	@RequirePermission("UPDATE", "GEO")
 	@Patch("countries/:id")
@@ -311,6 +323,7 @@ export class GeoController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
 	@RequirePermission("DELETE", "GEO")
 	@Delete("countries/:id")
@@ -347,6 +360,7 @@ export class GeoController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
 	@RequirePermission("CREATE", "GEO")
 	@Post("states")
@@ -360,6 +374,7 @@ export class GeoController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
 	@RequirePermission("UPDATE", "GEO")
 	@Patch("states/:id")
@@ -374,6 +389,7 @@ export class GeoController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
 	@RequirePermission("DELETE", "GEO")
 	@Delete("states/:id")
@@ -410,6 +426,7 @@ export class GeoController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
 	@RequirePermission("CREATE", "GEO")
 	@Post("cities")
@@ -423,6 +440,7 @@ export class GeoController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
 	@RequirePermission("UPDATE", "GEO")
 	@Patch("cities/:id")
@@ -437,6 +455,7 @@ export class GeoController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
 	@RequirePermission("DELETE", "GEO")
 	@Delete("cities/:id")

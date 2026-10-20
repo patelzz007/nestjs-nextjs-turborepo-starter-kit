@@ -58,9 +58,10 @@ import { CurrentActor } from "../../../../platform/presentation/http/security/cu
 import { Authorize, self } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
 import { EmailVerified } from "../../../../platform/presentation/http/security/decorators/email-verified.decorator";
 import { GetUser } from "../../../../platform/presentation/http/security/decorators/get-user.decorator";
+import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
+import { PublicOperation } from "../../../../platform/presentation/http/security/decorators/public-operation.decorator";
 import { Public } from "../../../../platform/presentation/http/security/decorators/public.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
-import { RlsBypass } from "../../../../platform/presentation/http/security/decorators/rls-bypass.decorator";
 import { SkipAuthThrottle } from "../../../../platform/presentation/http/security/decorators/skip-auth-throttle.decorator";
 import { SkipMutationIntent } from "../../../../platform/presentation/http/security/decorators/skip-mutation-intent.decorator";
 import { SuperAdminOnly } from "../../../../platform/presentation/http/security/decorators/super-admin.decorator";
@@ -86,6 +87,17 @@ import { GetUserForAdminQuery } from "../../application/queries/get-user-for-adm
 import { ListUsersForAdminQuery } from "../../application/queries/list-users-for-admin/list-users-for-admin.query";
 import { clientTypeFromHeaderOrQuery } from "./auth-flow-client-type";
 import { TOKEN_DELIVERY_DESCRIPTION } from "./token-delivery.constants";
+import {
+	EMAIL_VERIFICATION_CONFIRM_OPERATION,
+	EMAIL_VERIFICATION_SEND_OPERATION,
+	SIGNUP_REGISTER_OPERATION,
+	PASSWORD_RESET_COMPLETE_OPERATION,
+	PASSWORD_RESET_LOOKUP_OPERATION,
+	PASSWORD_RESET_REQUEST_OPERATION,
+	ADMIN_USERS_READ_OPERATION,
+	ADMIN_USERS_UNLOCK_OPERATION,
+} from "../../application/ports/identity.tokens";
+import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../platform/application/shared-system-operations";
 
 const PUBLIC_ACTOR = { allowAnonymous: true };
 
@@ -106,7 +118,7 @@ export class AuthController {
 
 	@RateLimit(RATE_LIMIT_POLICY.credential)
 	@Public()
-	@RlsBypass()
+	@PublicOperation(SIGNUP_REGISTER_OPERATION)
 	@SkipMutationIntent()
 	@Post("/signup")
 	@ApiOperation({ summary: "Register a new user account" })
@@ -129,7 +141,7 @@ export class AuthController {
 
 	@RateLimit(RATE_LIMIT_POLICY.login)
 	@Public()
-	@RlsBypass()
+	@PublicOperation(PRINCIPAL_LOOKUP_OPERATION)
 	@SkipMutationIntent()
 	@Post("/login")
 	@ApiOperation({ summary: "Authenticate with email and password" })
@@ -159,7 +171,7 @@ export class AuthController {
 
 	@RateLimit(RATE_LIMIT_POLICY.credential)
 	@Public()
-	@RlsBypass()
+	@PublicOperation(EMAIL_VERIFICATION_SEND_OPERATION)
 	@SkipMutationIntent()
 	@Post("/resend-verification")
 	@ApiOperation({ summary: "Resend email verification link" })
@@ -182,7 +194,7 @@ export class AuthController {
 
 	@RateLimit(RATE_LIMIT_POLICY.credential)
 	@Public()
-	@RlsBypass()
+	@PublicOperation(PASSWORD_RESET_REQUEST_OPERATION)
 	@SkipMutationIntent()
 	@Post("/forgot-password")
 	@ApiOperation({ summary: "Request a password reset email" })
@@ -204,7 +216,7 @@ export class AuthController {
 
 	@RateLimit(RATE_LIMIT_POLICY.login)
 	@Public()
-	@RlsBypass()
+	@PublicOperation(PASSWORD_RESET_COMPLETE_OPERATION)
 	@SkipMutationIntent()
 	@Post("/reset-password")
 	@ApiOperation({ summary: "Reset password using a valid reset token" })
@@ -220,7 +232,7 @@ export class AuthController {
 
 	@RateLimit(RATE_LIMIT_POLICY.sessionIssue)
 	@Public()
-	@RlsBypass()
+	@PublicOperation(PASSWORD_RESET_LOOKUP_OPERATION)
 	@SkipMutationIntent()
 	@Post("/validate-reset-token")
 	@ApiOperation({ summary: "Validate a password reset token without consuming it" })
@@ -234,7 +246,7 @@ export class AuthController {
 
 	@RateLimit(RATE_LIMIT_POLICY.sessionIssue)
 	@Public()
-	@RlsBypass()
+	@PublicOperation(PRINCIPAL_LOOKUP_OPERATION)
 	@SkipMutationIntent()
 	@Post("/verify-login")
 	@ApiOperation({ summary: "Complete login with an email verification code" })
@@ -288,7 +300,7 @@ export class AuthController {
 	}
 
 	@Public()
-	@RlsBypass()
+	@PublicOperation(EMAIL_VERIFICATION_CONFIRM_OPERATION)
 	@SkipMutationIntent()
 	@RateLimit(RATE_LIMIT_POLICY.credential)
 	@Post("/verify-email")
@@ -310,6 +322,7 @@ export class AuthController {
 	@ApiBearerAuth()
 	@SuperAdminOnly()
 	@RequirePermission("LIST", "USER")
+	@PlatformOperation(ADMIN_USERS_READ_OPERATION)
 	@Get("/admin/users")
 	@ApiOperation({ summary: "SuperAdmin: list all users with roles and lockout status" })
 	@ZodPaginatedResponse(AdminUserDetailSchema, { description: "Paginated admin user list" })
@@ -325,6 +338,7 @@ export class AuthController {
 	@ApiBearerAuth()
 	@SuperAdminOnly()
 	@RequirePermission("READ", "USER")
+	@PlatformOperation(ADMIN_USERS_READ_OPERATION)
 	@Get("/admin/users/:userId")
 	@ApiOperation({ summary: "SuperAdmin: get detailed user info including security state" })
 	@ZodResponse(AdminUserDetailSchema, { description: "Full user detail with lockout status" })
@@ -338,6 +352,7 @@ export class AuthController {
 	@SuperAdminOnly()
 	@EmailVerified()
 	@RequirePermission("UPDATE", "USER")
+	@PlatformOperation(ADMIN_USERS_UNLOCK_OPERATION)
 	@Authorize({ action: "UPDATE", resource: "USER", resourceId: "userId", description: "SuperAdmin can unlock any user account" })
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@Patch("/admin/users/:userId/unlock")

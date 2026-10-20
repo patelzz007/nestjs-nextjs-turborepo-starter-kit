@@ -1,8 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import type { AclEffect, Prisma, ResourceAcl } from "@prisma/client";
 import type { AuthorizationRequest, PermissionAction, PermissionResource, PermissionScope } from "@workspace/shared";
 
-import { PrismaService } from "../../../../prisma/prisma.service";
+import type { SystemDatabaseContext } from "../../../../prisma/tenant-context";
+import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import { PolicyEngineService } from "./policy-engine.service";
 
 /**
@@ -21,7 +22,7 @@ export interface AclLookup {
 	/** Which entries to consider — see {@link AclResourceScope}. */
 	readonly resourceScope: AclResourceScope;
 	/** Server-verified tenant; org/location-bound entries only apply inside it. */
-	readonly organizationId?: string | undefined;
+	readonly tenantId?: string | undefined;
 	readonly locationId?: string | undefined;
 }
 
@@ -38,7 +39,7 @@ export interface CreateAclInput {
 	readonly resourceId?: string;
 	readonly effect: AclEffect;
 	readonly scope?: PermissionScope;
-	readonly organizationId?: string;
+	readonly tenantId?: string;
 	readonly locationId?: string;
 	readonly reason?: string;
 	readonly assignedBy?: string;
@@ -56,6 +57,11 @@ function resourceIdFilter(scope: AclResourceScope): Prisma.ResourceAclWhereInput
 	}
 }
 
+/** Access-control reads an authorization decision makes before the handler's RLS scope exists. */
+interface AclMatchTransactions {
+	withSystemOperation<TResult>(context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult>;
+}
+
 /**
  * ACL Service — resource-level ALLOW/DENY exceptions (spec §38, §124).
  *
@@ -63,7 +69,7 @@ function resourceIdFilter(scope: AclResourceScope): Prisma.ResourceAclWhereInput
  * - subject: the user directly, or any of the user's active (inherited) roles
  * - action: the exact action or `MANAGE`
  * - resource id: an entry without `resourceId` applies to every resource of the type
- * - tenant: an entry bound to an organization/location only applies inside that
+ * - tenant: an entry bound to a tenant/location only applies inside that
  *   server-verified tenant
  * - conditions: evaluated with the policy DSL; malformed DENY conditions fail closed
  * - expired / soft-deleted entries never match
@@ -71,8 +77,8 @@ function resourceIdFilter(scope: AclResourceScope): Prisma.ResourceAclWhereInput
 @Injectable()
 export class AclService {
 	public constructor(
-		private readonly prisma: PrismaService,
 		private readonly policyEngine: PolicyEngineService,
+		@Inject(TenantTransactionService) private readonly transactions: AclMatchTransactions,
 	) {}
 
 	/** Every applicable entry in one query, split by effect. */
@@ -85,21 +91,25 @@ export class AclService {
 			subjects.push({ subjectType: "ROLE", subjectId: { in: [...lookup.roleIds] } });
 		}
 
-		const entries = await this.prisma.resourceAcl.findMany({
-			where: {
-				isDeleted: false,
-				action: { in: lookup.action === "MANAGE" ? ["MANAGE"] : [lookup.action, "MANAGE"] },
-				resourceType: lookup.resource,
-				AND: [
-					{ OR: subjects },
-					{ OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
-					{ OR: [{ organizationId: null }, ...(lookup.organizationId === undefined ? [] : [{ organizationId: lookup.organizationId }])] },
-					{ OR: [{ locationId: null }, ...(lookup.locationId === undefined ? [] : [{ locationId: lookup.locationId }])] },
-					resourceIdFilter(lookup.resourceScope),
-				],
-			},
-			orderBy: { createdAt: "desc" },
-		});
+		const entries = await this.transactions.withSystemOperation(
+			{ operation: "authorization.acl.match", reason: "Read resource access-control entries for an authorization decision", actorUserId: lookup.userId },
+			(tx) =>
+				tx.resourceAcl.findMany({
+					where: {
+						isDeleted: false,
+						action: { in: lookup.action === "MANAGE" ? ["MANAGE"] : [lookup.action, "MANAGE"] },
+						resourceType: lookup.resource,
+						AND: [
+							{ OR: subjects },
+							{ OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+							{ OR: [{ tenantId: null }, ...(lookup.tenantId === undefined ? [] : [{ tenantId: lookup.tenantId }])] },
+							{ OR: [{ locationId: null }, ...(lookup.locationId === undefined ? [] : [{ locationId: lookup.locationId }])] },
+							resourceIdFilter(lookup.resourceScope),
+						],
+					},
+					orderBy: { createdAt: "desc" },
+				}),
+		);
 
 		const denies: ResourceAcl[] = [];
 		const allows: ResourceAcl[] = [];
@@ -118,36 +128,39 @@ export class AclService {
 	}
 
 	public async createAcl(data: CreateAclInput): Promise<ResourceAcl> {
-		return this.prisma.resourceAcl.create({
-			data: {
-				subjectType: data.subjectType,
-				subjectId: data.subjectId,
-				action: data.action,
-				resourceType: data.resourceType,
-				resourceId: data.resourceId ?? null,
-				effect: data.effect,
-				scope: data.scope ?? null,
-				organizationId: data.organizationId ?? null,
-				locationId: data.locationId ?? null,
-				reason: data.reason ?? null,
-				assignedBy: data.assignedBy ?? null,
-				expiresAt: data.expiresAt ?? null,
-			},
-		});
+		return this.transactions.withSystemOperation(
+			{ operation: "authorization.acl.write", reason: "Create a resource access-control entry", actorUserId: data.assignedBy ?? null },
+			(tx) =>
+				tx.resourceAcl.create({
+					data: {
+						subjectType: data.subjectType,
+						subjectId: data.subjectId,
+						action: data.action,
+						resourceType: data.resourceType,
+						resourceId: data.resourceId ?? null,
+						effect: data.effect,
+						scope: data.scope ?? null,
+						tenantId: data.tenantId ?? null,
+						locationId: data.locationId ?? null,
+						reason: data.reason ?? null,
+						assignedBy: data.assignedBy ?? null,
+						expiresAt: data.expiresAt ?? null,
+					},
+				}),
+		);
 	}
 
 	/** Soft delete an entry. */
 	public async removeAcl(id: string): Promise<void> {
-		await this.prisma.resourceAcl.update({
-			where: { id },
-			data: { isDeleted: true, deletedAt: Date.now() },
-		});
+		await this.transactions.withSystemOperation({ operation: "authorization.acl.write", reason: "Soft-delete a resource access-control entry", actorUserId: null }, (tx) =>
+			tx.resourceAcl.update({ where: { id }, data: { isDeleted: true, deletedAt: Date.now() } }),
+		);
 	}
 
 	public async listAcls(subjectId: string, subjectType: "USER" | "ROLE"): Promise<ResourceAcl[]> {
-		return this.prisma.resourceAcl.findMany({
-			where: { subjectType, subjectId, isDeleted: false },
-			orderBy: { createdAt: "desc" },
-		});
+		return this.transactions.withSystemOperation(
+			{ operation: "authorization.acl.write", reason: "List a subject's resource access-control entries", actorUserId: subjectType === "USER" ? subjectId : null },
+			(tx) => tx.resourceAcl.findMany({ where: { subjectType, subjectId, isDeleted: false }, orderBy: { createdAt: "desc" } }),
+		);
 	}
 }

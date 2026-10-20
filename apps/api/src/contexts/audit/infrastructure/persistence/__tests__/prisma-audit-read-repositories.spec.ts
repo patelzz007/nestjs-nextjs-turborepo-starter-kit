@@ -11,7 +11,7 @@ import { AUDIT_LOG_SUMMARY_SELECT, PrismaHttpAuditLogReadRepository, type AuditL
 import { LIVE_ROW_FIELDS } from "../../../../../platform/infrastructure/persistence/__tests__/base-row-fields";
 
 const ACTOR_ID = "11111111-1111-4111-8111-111111111111";
-const ORGANIZATION_ID = "33333333-3333-4333-8333-333333333333";
+const TENANT_ID = "33333333-3333-4333-8333-333333333333";
 const RECORD_ID = "55555555-5555-4555-8555-555555555555";
 const CHANGE_ID = "66666666-6666-4666-8666-666666666666";
 const OCCURRED_AT = 1_790_812_800_000;
@@ -36,7 +36,7 @@ const REQUEST_ROW: AuditLogSummaryRow = {
 	impersonatorUserId: null,
 	apiKeyId: null,
 	terminalId: null,
-	organizationId: ORGANIZATION_ID,
+	tenantId: TENANT_ID,
 	storeId: null,
 	locationId: null,
 	ipAddress: "203.0.113.24",
@@ -61,6 +61,7 @@ const REQUEST_FULL_ROW: AuditLog = {
 	...REQUEST_ROW,
 	traceId: "corr-1",
 	impersonationSessionId: null,
+	supportAccessGrantId: null,
 	httpVersion: "1.1",
 	host: "api.example.com",
 	origin: null,
@@ -88,7 +89,7 @@ const CHANGE_ROW: DataChangeLogSummaryRow = {
 	changedColumns: ["status"],
 	actorKind: "USER",
 	actorUserId: ACTOR_ID,
-	organizationId: ORGANIZATION_ID,
+	tenantId: TENANT_ID,
 	apiKeyId: null,
 	systemOperation: null,
 	correlationId: null,
@@ -119,22 +120,22 @@ function stubDb(): {
 	readonly auditLog: { readonly count: ReturnType<typeof vi.fn>; readonly findMany: ReturnType<typeof vi.fn>; readonly findUnique: ReturnType<typeof vi.fn> };
 	readonly dataChangeLog: { readonly count: ReturnType<typeof vi.fn>; readonly findMany: ReturnType<typeof vi.fn>; readonly findUnique: ReturnType<typeof vi.fn> };
 	readonly users: ReturnType<typeof vi.fn>;
-	readonly organizations: ReturnType<typeof vi.fn>;
+	readonly tenants: ReturnType<typeof vi.fn>;
 	readonly queryRaw: ReturnType<typeof vi.fn<QueryRaw>>;
 } {
 	const auditLog = { count: vi.fn(), findMany: vi.fn(), findUnique: vi.fn() };
 	const dataChangeLog = { count: vi.fn(), findMany: vi.fn(), findUnique: vi.fn() };
 	const users = vi.fn().mockResolvedValue([{ id: ACTOR_ID, email: "admin@example.com", fullName: "Admin" }]);
-	const organizations = vi.fn().mockResolvedValue([{ id: ORGANIZATION_ID, displayName: "Kopi Corner" }]);
+	const tenants = vi.fn().mockResolvedValue([{ id: TENANT_ID, displayName: "Kopi Corner" }]);
 	const queryRaw = vi.fn<QueryRaw>();
 	const db = Object.assign(new PrismaService(createTestTypedConfig()), {
 		auditLog,
 		dataChangeLog,
 		user: { findMany: users },
-		organization: { findMany: organizations },
+		tenant: { findMany: tenants },
 		$queryRaw: queryRaw,
 	});
-	return { db, auditLog, dataChangeLog, users, organizations, queryRaw };
+	return { db, auditLog, dataChangeLog, users, tenants, queryRaw };
 }
 
 describe("PrismaHttpAuditLogReadRepository", () => {
@@ -146,7 +147,7 @@ describe("PrismaHttpAuditLogReadRepository", () => {
 		repository = new PrismaHttpAuditLogReadRepository(stub.db, new PrismaAuditReferenceReader(stub.db));
 	});
 
-	it("answers one page with actor and organization names resolved, and the request's page size", async () => {
+	it("answers one page with actor and tenant names resolved, and the request's page size", async () => {
 		stub.auditLog.count.mockResolvedValue(1);
 		stub.auditLog.findMany.mockResolvedValue([REQUEST_ROW]);
 		const query = HttpAuditLogListQuerySchema.parse({});
@@ -158,7 +159,7 @@ describe("PrismaHttpAuditLogReadRepository", () => {
 		expect(page.items[LIST_SLOT_INDEX.first]).toMatchObject({
 			id: RECORD_ID,
 			actor: { id: ACTOR_ID, email: "admin@example.com", fullName: "Admin" },
-			organization: { id: ORGANIZATION_ID, name: "Kopi Corner" },
+			tenant: { id: TENANT_ID, name: "Kopi Corner" },
 			durationMs: REQUEST_DURATION_MS,
 		});
 	});
@@ -209,8 +210,8 @@ describe("PrismaDataChangeLogReadRepository", () => {
 
 		const page = await repository.list(DataChangeLogListQuerySchema.parse({}));
 
-		expect(stub.organizations).toHaveBeenCalledWith({ where: { id: { in: [ORGANIZATION_ID] } }, select: { id: true, displayName: true } });
-		expect(page.items[LIST_SLOT_INDEX.first]).toMatchObject({ id: CHANGE_ID, changeSequence: 7, actor: { fullName: "Admin" }, organization: { name: "Kopi Corner" } });
+		expect(stub.tenants).toHaveBeenCalledWith({ where: { id: { in: [TENANT_ID] } }, select: { id: true, displayName: true } });
+		expect(page.items[LIST_SLOT_INDEX.first]).toMatchObject({ id: CHANGE_ID, changeSequence: 7, actor: { fullName: "Admin" }, tenant: { name: "Kopi Corner" } });
 	});
 
 	it("answers one complete change with its row images, or null for an unknown id", async () => {

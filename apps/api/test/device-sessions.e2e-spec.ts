@@ -8,7 +8,6 @@ import {
 	LoginMobileResponseSchema,
 	RefreshMobileResponseSchema,
 	RevokeSessionResponseSchema,
-	ApiPaginatedMetaSchema,
 	SessionSchema,
 	type LoginMobileResponse,
 	type Session,
@@ -17,7 +16,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { createE2eApp, extractCookie, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type InjectResponse } from "./e2e-helpers";
+import { createE2eApp, extractCookie, mutationHeaders, parsePaginatedEnvelope, parseSuccessEnvelope, type InjectResponse, uniqueClientIp } from "./e2e-helpers";
 
 /**
  * Device sessions end to end (docs/technical/mobile/mobile-app.md §8, ADR 034):
@@ -237,8 +236,8 @@ describe("Device sessions (e2e)", () => {
 
 			const response = await app.inject({ method: "GET", url: `${SESSIONS_URL}?limit=1`, headers: mobileHeaders(phone.ip, { authorization: `Bearer ${phone.accessToken}` }) });
 			expect(response.statusCode, response.body).toBe(HTTP_OK);
-			const page = parseSuccessEnvelope(response, SessionListSchema);
-			const meta = ApiPaginatedMetaSchema.parse(page.meta);
+			const page = parsePaginatedEnvelope(response, SessionSchema);
+			const { meta } = page;
 
 			expect(page.data.map((session) => session.clientType)).toEqual(["web"]);
 			expect(meta).toMatchObject({ limit: 1, total: 2, page: 1, totalPages: 2, hasNext: true, hasPrevious: false });

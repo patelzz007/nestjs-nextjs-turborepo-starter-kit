@@ -15,7 +15,7 @@ import {
 	type RedemptionCheckoutInput,
 } from "@workspace/shared";
 
-import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { DEMO_MERCHANT_API_KEYS, REWARD_SEED_IDS } from "../prisma/seed/rewards";
 import { SweepReferrerCreditEmailsCommand } from "../src/contexts/claims/application/commands/sweep-referrer-credit-emails/sweep-referrer-credit-emails.command";
 import { POS_CODE_MAX_FAILURES } from "../src/contexts/pos/public-api";
@@ -74,7 +74,7 @@ describe("POS checkout (e2e)", () => {
 	/** Referral pair: redeeming `referredRewardId` credits the referrer with `referrerRewardId`. */
 	const referredRewardId = randomUUID();
 	const referrerRewardId = randomUUID();
-	/** Extra KL keys (removed afterwards): an organization-wide one and a throwaway one to lock. */
+	/** Extra KL keys (removed afterwards): a tenant-wide one and a throwaway one to lock. */
 	const orgWideKey = `mk_test_${randomBytes(TOKEN_BYTES).toString("base64url")}`;
 	const lockoutKey = `mk_test_${randomBytes(TOKEN_BYTES).toString("base64url")}`;
 	/** Unknown backup codes count toward a key's lockout — this file never sends them with the shared demo key. */
@@ -142,7 +142,7 @@ describe("POS checkout (e2e)", () => {
 	function pos(path: string, body: object, terminalId: string = KL_TERMINAL, apiKey: string = DEMO_MERCHANT_API_KEYS.kl): Promise<InjectResponse> {
 		return app.inject({
 			method: "POST",
-			url: `${API_VERSION_PREFIX}/redemptions/${path}`,
+			url: `${API_VERSION_PREFIX}/integration/redemptions/${path}`,
 			headers: { "x-api-key": apiKey, "x-terminal-id": terminalId, "content-type": "application/json" },
 			payload: JSON.stringify(body),
 		});
@@ -151,9 +151,9 @@ describe("POS checkout (e2e)", () => {
 	async function insertKlKey(plaintext: string, name: string, locationId: string | null): Promise<void> {
 		const id = randomUUID();
 		await query(
-			`INSERT INTO public."OrganizationApiKey" (id, "organizationId", "locationId", name, "keyHash", "keyPrefix", scope, "createdByUserId")
+			`INSERT INTO public."TenantApiKey" (id, "tenantId", "locationId", name, "keyHash", "keyPrefix", scope, "createdByUserId")
        VALUES ($1, $2, $3, $4, $5, $6, 'POS', $7)`,
-			[id, ORGANIZATION_SEED_IDS.klOrganization, locationId, name, sha256Hex(plaintext), plaintext.slice(0, 16), REWARD_SEED_IDS.klOwnerUser],
+			[id, TENANT_SEED_IDS.klTenant, locationId, name, sha256Hex(plaintext), plaintext.slice(0, 16), REWARD_SEED_IDS.klOwnerUser],
 		);
 		extraKeyIds.push(id);
 	}
@@ -165,12 +165,12 @@ describe("POS checkout (e2e)", () => {
 	): Promise<void> {
 		const referred = options.referrerRewardId !== undefined;
 		await query(
-			`INSERT INTO public."Reward" (id, "organizationId", title, description, "rewardType", "rewardValue", "rewardKind", category, "minSpendMinor",
+			`INSERT INTO public."Reward" (id, "tenantId", title, description, "rewardType", "rewardValue", "rewardKind", category, "minSpendMinor",
          "quantityTotal", "quantityRemaining", "expiryDate", status, "referralsEnabled", "referralPoolTotal", "referralPoolRemaining", "referrerRewardId", "locationScopeType")
        VALUES ($1, $2, $3, 'Created by pos-checkout.e2e-spec.ts', 'DISCOUNT', 10, $4, 'cafe', $5, 50, 50, $6, 'PUBLISHED', $7, $8, $8, $9, $10)`,
 			[
 				id,
-				ORGANIZATION_SEED_IDS.klOrganization,
+				TENANT_SEED_IDS.klTenant,
 				title,
 				options.kind ?? "CONSUMER",
 				options.kind === undefined ? MIN_SPEND_MINOR : null,
@@ -181,13 +181,13 @@ describe("POS checkout (e2e)", () => {
 				options.scope ?? "ALL_LOCATIONS",
 			],
 		);
-		await query(INSERT_REWARD_COVER_SQL, [...rewardCoverParams(id, ORGANIZATION_SEED_IDS.klOrganization, "free-coffee")]);
+		await query(INSERT_REWARD_COVER_SQL, [...rewardCoverParams(id, TENANT_SEED_IDS.klTenant, "free-coffee")]);
 		if (options.scope === "SELECTED") {
-			await query(`INSERT INTO public."RewardLocationScope" (id, "organizationId", "rewardId", "locationId") VALUES ($1, $2, $3, $4)`, [
+			await query(`INSERT INTO public."RewardLocationScope" (id, "tenantId", "rewardId", "locationId") VALUES ($1, $2, $3, $4)`, [
 				randomUUID(),
-				ORGANIZATION_SEED_IDS.klOrganization,
+				TENANT_SEED_IDS.klTenant,
 				id,
-				ORGANIZATION_SEED_IDS.klLocation,
+				TENANT_SEED_IDS.klLocation,
 			]);
 		}
 	}
@@ -220,9 +220,9 @@ describe("POS checkout (e2e)", () => {
 		await insertReward(storeOnlyRewardId, "E2E store-only reward", { scope: "SELECTED" });
 		await insertReward(referrerRewardId, "E2E referrer reward", { kind: "REFERRER" });
 		await insertReward(referredRewardId, "E2E referred reward", { referrerRewardId });
-		await insertKlKey(orgWideKey, "E2E organization-wide key", null);
-		await insertKlKey(lockoutKey, "E2E lockout key", ORGANIZATION_SEED_IDS.klLocation);
-		await insertKlKey(guessingKey, "E2E unknown-code key", ORGANIZATION_SEED_IDS.klLocation);
+		await insertKlKey(orgWideKey, "E2E tenant-wide key", null);
+		await insertKlKey(lockoutKey, "E2E lockout key", TENANT_SEED_IDS.klLocation);
+		await insertKlKey(guessingKey, "E2E unknown-code key", TENANT_SEED_IDS.klLocation);
 	});
 
 	afterAll(async () => {
@@ -237,7 +237,7 @@ describe("POS checkout (e2e)", () => {
 		await query(`DELETE FROM public."RewardReferral" WHERE "rewardId" = ANY($1::text[])`, [fixtureRewards]);
 		await query(`UPDATE public."Reward" SET "referrerRewardId" = NULL WHERE id = ANY($1::text[])`, [fixtureRewards]);
 		await query(`DELETE FROM public."Reward" WHERE id = ANY($1::text[])`, [fixtureRewards]);
-		await query(`DELETE FROM public."OrganizationApiKey" WHERE id = ANY($1::text[])`, [`{${extraKeyIds.join(",")}}`]);
+		await query(`DELETE FROM public."TenantApiKey" WHERE id = ANY($1::text[])`, [`{${extraKeyIds.join(",")}}`]);
 		await query(`DELETE FROM public."EmailLog" WHERE "templateKey" = 'referrer-reward-credited' AND "createdAt" >= $1`, [fileStartedAt]);
 		await pool.end();
 		await app.close();
@@ -272,7 +272,7 @@ describe("POS checkout (e2e)", () => {
 		expect(Number(after?.redemptionCount)).toBe(Number(before?.redemptionCount) + 2);
 
 		const [row] = await query(`SELECT "locationId", "userId" FROM public."RewardSale" WHERE id = $1`, [sale.saleId]);
-		expect(row).toMatchObject({ locationId: ORGANIZATION_SEED_IDS.klLocation, userId: aliceId });
+		expect(row).toMatchObject({ locationId: TENANT_SEED_IDS.klLocation, userId: aliceId });
 		const methods = await query(`SELECT "redemptionMethod" FROM public."RewardRedemption" WHERE "saleId" = $1`, [sale.saleId]);
 		expect(methods.map((method) => String(method.redemptionMethod)).toSorted()).toEqual(["MANUAL", "SCAN"]);
 	});
@@ -286,8 +286,8 @@ describe("POS checkout (e2e)", () => {
 
 		expect(retried.statusCode, retried.body).toBe(201);
 		expect(parseSuccessEnvelope(retried, RedemptionCheckoutResponseSchema).data.saleId).toBe(original.saleId);
-		const [count] = await query(`SELECT COUNT(*)::int AS n FROM public."RewardSale" WHERE "organizationId" = $1 AND "idempotencyKey" = $2`, [
-			ORGANIZATION_SEED_IDS.klOrganization,
+		const [count] = await query(`SELECT COUNT(*)::int AS n FROM public."RewardSale" WHERE "tenantId" = $1 AND "idempotencyKey" = $2`, [
+			TENANT_SEED_IDS.klTenant,
 			idempotencyKey,
 		]);
 		expect(count?.n).toBe(1);
@@ -354,7 +354,7 @@ describe("POS checkout (e2e)", () => {
 		const owner = await login(app, "brew.owner@kl-rewards.demo", "BrewOwner@123", "merchant");
 		const merchant = await app.inject({
 			method: "GET",
-			url: `${API_VERSION_PREFIX}/orgs/${ORGANIZATION_SEED_SLUGS.kl}/analytics`,
+			url: `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.kl}/analytics`,
 			headers: { cookie: merchantCookies(owner), "x-client-type": "merchant" },
 		});
 		expect(merchant.statusCode, merchant.body).toBe(200);
@@ -366,7 +366,7 @@ describe("POS checkout (e2e)", () => {
 		const user = await app.inject({ method: "GET", url: `${API_VERSION_PREFIX}/claims/analytics`, headers: { cookie: cookies(alice) } });
 		expect(user.statusCode, user.body).toBe(200);
 		const spending = parseSuccessEnvelope(user, UserRewardsAnalyticsResponseSchema).data.spending;
-		const kl = spending.byMerchant.find((merchantSpend) => merchantSpend.organizationId === ORGANIZATION_SEED_IDS.klOrganization);
+		const kl = spending.byMerchant.find((merchantSpend) => merchantSpend.tenantId === TENANT_SEED_IDS.klTenant);
 		expect(kl?.totalMinor).toBeGreaterThanOrEqual(BILL_MINOR);
 		expect(kl?.merchantName.length).toBeGreaterThan(0);
 		expect(spending.byCategory.length).toBeGreaterThan(0);
@@ -378,7 +378,7 @@ describe("POS checkout (e2e)", () => {
 		const admin = await app.inject({ method: "GET", url: `${API_VERSION_PREFIX}/admin/analytics/sales`, headers: mutationHeaders({ cookie: cookies(superAdmin) }) });
 		expect(admin.statusCode, admin.body).toBe(200);
 		const platform = parseSuccessEnvelope(admin, AdminSalesAnalyticsResponseSchema).data;
-		expect(platform.topMerchants.some((merchantSales) => merchantSales.organizationId === ORGANIZATION_SEED_IDS.klOrganization)).toBe(true);
+		expect(platform.topMerchants.some((merchantSales) => merchantSales.tenantId === TENANT_SEED_IDS.klTenant)).toBe(true);
 		expect(platform.activeMerchants.value).toBeGreaterThanOrEqual(1);
 	});
 
@@ -506,7 +506,7 @@ describe("POS checkout (e2e)", () => {
 	it("answers a key reused by another store's till 409 IDEMPOTENCY_KEY_REUSED, without naming a sale it cannot read", async () => {
 		const idempotencyKey = randomUUID();
 		const unknownStoreClaim = await createClaim(aliceId);
-		// The organization-wide key on an unregistered till records a sale with no store, which the store-limited KL key cannot read.
+		// The tenant-wide key on an unregistered till records a sale with no store, which the store-limited KL key cannot read.
 		const first = await pos(
 			"checkout",
 			{ idempotencyKey, billTotalMinor: BILL_MINOR, currency: "MYR", codes: [{ token: unknownStoreClaim.token }] },
@@ -539,7 +539,7 @@ describe("POS checkout (e2e)", () => {
 
 		const sweep = await app
 			.get(CommandBus)
-			.execute(new SweepReferrerCreditEmailsCommand(systemActor("queue.rewards.referral_credit_notify", "job", null, "Request owed referrer-credit emails", null)));
+			.execute(new SweepReferrerCreditEmailsCommand(systemActor("rewards.referral_credit.deliver", "job", null, "Request owed referrer-credit emails", null)));
 
 		expect(sweep.requested).toBeGreaterThanOrEqual(1);
 		const [referral] = await query(`SELECT "creditNotifiedAt" FROM public."RewardReferral" WHERE id = $1`, [referralId]);

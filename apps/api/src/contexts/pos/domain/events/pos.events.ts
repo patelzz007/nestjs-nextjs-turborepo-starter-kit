@@ -9,7 +9,7 @@ export class SaleCheckedOut extends DomainEvent {
 	public constructor(
 		occurredAt: EpochMs,
 		public readonly saleId: string,
-		public readonly organizationId: string,
+		public readonly tenantId: string,
 		public readonly customerUserId: string,
 		public readonly locationId: string | null,
 		public readonly terminalId: string,

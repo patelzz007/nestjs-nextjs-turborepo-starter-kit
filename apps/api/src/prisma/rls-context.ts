@@ -7,8 +7,8 @@ import { DEFAULT_DATABASE_ROLE, parseSystemOperation, systemOperationDefinition,
 interface RlsContextBase {
 	/** PostgreSQL role the checkout switches to (`SET ROLE`) — the operation's role, or `app_runtime`. */
 	readonly role: DatabaseRole;
-	/** Server-verified organization the scope is bound to; `null` = none bound (never a placeholder id). */
-	readonly organizationId: string | null;
+	/** Server-verified tenant the scope is bound to; `null` = none bound (never a placeholder id). */
+	readonly tenantId: string | null;
 }
 
 /** An authenticated user (or a refresh-token subject): no bypass. */
@@ -16,7 +16,7 @@ export interface UserRlsContext extends RlsContextBase {
 	readonly kind: "user";
 	readonly userId: string;
 	readonly bypass: false;
-	/** Tenant-scoped pool access without a bound organization fails closed (see `rls-pool.ts`). */
+	/** Tenant-scoped pool access without a bound tenant fails closed (see `rls-pool.ts`). */
 	readonly requireExplicitContext: boolean;
 	readonly systemOperation: null;
 }
@@ -34,13 +34,13 @@ export interface SystemRlsContext extends RlsContextBase {
 /**
  * A merchant API key (POS till or integration), verified by the API-key guards. A machine principal:
  * no user, no bypass. The policies in prisma/rls/40-api-key-principal.sql let it reach only its own
- * organization's rows — and, for a store-scoped key, only its store's rows where a row has a store.
+ * tenant's rows — and, for a store-scoped key, only its store's rows where a row has a store.
  */
 export interface ApiKeyRlsContext extends RlsContextBase {
 	readonly kind: "api_key";
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly apiKeyId: string;
-	/** The store the key is limited to; `null` for an organization-wide key. */
+	/** The store the key is limited to; `null` for a tenant-wide key. */
 	readonly apiKeyLocationId: string | null;
 	readonly userId: null;
 	readonly bypass: false;
@@ -59,7 +59,7 @@ export interface AnonymousRlsContext extends RlsContextBase {
 
 /**
  * Per-request / per-job RLS context for the pool checkout path — a
- * discriminated union, so "no user" and "no organization" are `null`, never
+ * discriminated union, so "no user" and "no tenant" are `null`, never
  * an empty-string sentinel. Authoritative isolation is enforced inside
  * `TenantTransactionService` transactions.
  */
@@ -71,16 +71,16 @@ export const rlsStorage: AsyncLocalStorage<RlsContext> = new AsyncLocalStorage<R
 const UNSCOPED_CONTEXT: AnonymousRlsContext = anonymousRlsContext(null);
 
 /** A non-bypass context for an authenticated user — the default role, no system operation. */
-export function userRlsContext(userId: string, organizationId: string | null, requireExplicitContext: boolean): UserRlsContext {
-	return { kind: "user", userId, bypass: false, organizationId, requireExplicitContext, systemOperation: null, role: DEFAULT_DATABASE_ROLE };
+export function userRlsContext(userId: string, tenantId: string | null, requireExplicitContext: boolean): UserRlsContext {
+	return { kind: "user", userId, bypass: false, tenantId, requireExplicitContext, systemOperation: null, role: DEFAULT_DATABASE_ROLE };
 }
 
-/** A verified merchant API key acting for its organization (and store, when store-scoped). */
-export function apiKeyRlsContext(apiKeyId: string, organizationId: string, apiKeyLocationId: string | null): ApiKeyRlsContext {
+/** A verified merchant API key acting for its tenant (and store, when store-scoped). */
+export function apiKeyRlsContext(apiKeyId: string, tenantId: string, apiKeyLocationId: string | null): ApiKeyRlsContext {
 	return {
 		kind: "api_key",
 		apiKeyId,
-		organizationId,
+		tenantId,
 		apiKeyLocationId,
 		userId: null,
 		bypass: false,
@@ -91,8 +91,8 @@ export function apiKeyRlsContext(apiKeyId: string, organizationId: string, apiKe
 }
 
 /** A context with no principal at all. */
-export function anonymousRlsContext(organizationId: string | null): AnonymousRlsContext {
-	return { kind: "anonymous", userId: null, bypass: false, organizationId, requireExplicitContext: false, systemOperation: null, role: DEFAULT_DATABASE_ROLE };
+export function anonymousRlsContext(tenantId: string | null): AnonymousRlsContext {
+	return { kind: "anonymous", userId: null, bypass: false, tenantId, requireExplicitContext: false, systemOperation: null, role: DEFAULT_DATABASE_ROLE };
 }
 
 /** Fail closed — callers must use tenant transactions or allowlisted system operations. */
@@ -118,13 +118,13 @@ export function currentRlsContextOrUnscoped(): RlsContext {
  * re-validated at runtime (callers can reach this with a configured string),
  * and the context carries the operation's role so the pool enforces it.
  */
-export function systemRlsContext(operation: SystemOperation, actorUserId: string | null = null, organizationId: string | null = null): SystemRlsContext {
+export function systemRlsContext(operation: SystemOperation, actorUserId: string | null = null, tenantId: string | null = null): SystemRlsContext {
 	const allowlisted: SystemOperation = parseSystemOperation(operation);
 	return {
 		kind: "system",
 		userId: actorUserId,
 		bypass: true,
-		organizationId,
+		tenantId,
 		requireExplicitContext: false,
 		systemOperation: allowlisted,
 		role: systemOperationDefinition(allowlisted).role,
@@ -133,14 +133,14 @@ export function systemRlsContext(operation: SystemOperation, actorUserId: string
 
 /**
  * The session variables the RLS policies read (prisma/rls.sql:
- * `app.current_user_id`, `app.current_organization_id`, …). SQL has no
- * "absent" for a GUC, so a missing user / organization is encoded as `''`
+ * `app.current_user_id`, `app.current_tenant_id`, …). SQL has no
+ * "absent" for a GUC, so a missing user / tenant is encoded as `''`
  * here — a database-encoding detail, not a domain value.
  */
 export interface RlsSessionVariables {
 	readonly role: DatabaseRole;
 	readonly currentUserId: string;
-	readonly currentOrganizationId: string;
+	readonly currentTenantId: string;
 	readonly rlsBypass: "true" | "false";
 	readonly systemOperation: string;
 	readonly currentApiKeyId: string;
@@ -153,7 +153,7 @@ export function rlsSessionVariables(context: RlsContext): RlsSessionVariables {
 	return {
 		role: context.role,
 		currentUserId: context.userId ?? UNSET_SESSION_VARIABLE,
-		currentOrganizationId: context.organizationId ?? UNSET_SESSION_VARIABLE,
+		currentTenantId: context.tenantId ?? UNSET_SESSION_VARIABLE,
 		rlsBypass: context.bypass ? "true" : "false",
 		systemOperation: context.systemOperation ?? UNSET_SESSION_VARIABLE,
 		currentApiKeyId: context.kind === "api_key" ? context.apiKeyId : UNSET_SESSION_VARIABLE,

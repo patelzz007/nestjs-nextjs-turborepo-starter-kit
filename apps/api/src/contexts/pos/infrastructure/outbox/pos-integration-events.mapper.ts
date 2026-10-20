@@ -16,7 +16,7 @@ export class PosIntegrationEventsMapper implements IntegrationEventMapper {
 				payload: RewardPlatformEventSchema.parse({
 					event: "merchant.redeem_reward",
 					actorUserId: null,
-					organizationId: event.organizationId,
+					tenantId: event.tenantId,
 					metadata: {
 						saleId: event.saleId,
 						customerUserId: event.customerUserId,

@@ -11,7 +11,7 @@ import { claimNeedsOtp, liveAttributionToken } from "../../../domain/policies/ph
 import type { ClaimsScope } from "../../claims-scope";
 import type { ClaimCodesPort } from "../../ports/claim-codes.port";
 import type { ClaimantProfile } from "../../ports/claims-transactional.ports";
-import { CLAIM_CODES, CLAIM_ID_GENERATOR, CLAIMS_UNIT_OF_WORK, ROUTE_RLS_BYPASS_OPERATION, type ClaimIdGenerator } from "../../ports/claims.tokens";
+import { CLAIM_CODES, CLAIM_ID_GENERATOR, CLAIMS_UNIT_OF_WORK, CLAIM_REWARD_OPERATION, type ClaimIdGenerator } from "../../ports/claims.tokens";
 import { actingUserId } from "../acting-user";
 import { ClaimRewardCommand } from "./claim-reward.command";
 
@@ -38,7 +38,7 @@ export class ClaimRewardHandler implements ICommandHandler<ClaimRewardCommand, R
 		const { actor, input } = command;
 		const userId = actingUserId(actor);
 
-		const outcome = await this.uow.runSystemOperation(ROUTE_RLS_BYPASS_OPERATION, actor, async (scope: ClaimsScope): Promise<ClaimOutcome> => {
+		const outcome = await this.uow.runSystemOperation(CLAIM_REWARD_OPERATION, actor, async (scope: ClaimsScope): Promise<ClaimOutcome> => {
 			const now = this.clock.now();
 			if (!(await scope.legal.hasAccepted(userId))) {
 				throw new LegalAcceptanceRequiredError();

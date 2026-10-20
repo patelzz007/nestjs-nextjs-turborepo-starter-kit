@@ -7,7 +7,7 @@ import { RequestContextService } from "../platform/infrastructure/context/reques
 import type { RlsTransactionScope } from "../platform/infrastructure/unit-of-work/actor-to-rls-context";
 import { DEFAULT_DATABASE_ROLE, parseSystemOperation, systemOperationDefinition, type SystemOperation, type SystemOperationDefinition } from "./system-operation.registry";
 import { MissingTenantContextError } from "./missing-tenant-context.error";
-import { rlsSessionVariables, rlsStorage, systemRlsContext, userRlsContext, type RlsContext, type RlsSessionVariables } from "./rls-context";
+import { currentRlsContext, rlsSessionVariables, rlsStorage, systemRlsContext, userRlsContext, type RlsContext, type RlsSessionVariables } from "./rls-context";
 import type { SystemDatabaseContext, TenantDatabaseContext } from "./tenant-context";
 import { PrismaService } from "./prisma.service";
 
@@ -43,7 +43,7 @@ async function applySessionVariables(tx: TransactionClient, session: Transaction
 	await tx.$executeRaw`SELECT
 		set_config('role', ${session.role}, true),
 		set_config('app.current_user_id', ${session.currentUserId}, true),
-		set_config('app.current_organization_id', ${session.currentOrganizationId}, true),
+		set_config('app.current_tenant_id', ${session.currentTenantId}, true),
 		set_config('app.rls_bypass', ${session.rlsBypass}, true),
 		set_config('app.system_operation', ${session.systemOperation}, true),
 		set_config('app.current_api_key_id', ${session.currentApiKeyId}, true),
@@ -54,13 +54,13 @@ async function applySessionVariables(tx: TransactionClient, session: Transaction
 }
 
 /**
- * A user scope that requires an explicit organization (`requireExplicitContext`)
+ * A user scope that requires an explicit tenant (`requireExplicitContext`)
  * but has none fails closed, exactly like the pool checkout (`rls-pool.ts`):
  * nothing is queried.
  */
 function assertExplicitContext(context: RlsContext): void {
-	if (context.kind === "user" && context.requireExplicitContext && context.organizationId === null) {
-		throw new MissingTenantContextError("This user's database access requires an organization context, and none is bound.");
+	if (context.kind === "user" && context.requireExplicitContext && context.tenantId === null) {
+		throw new MissingTenantContextError("This user's database access requires a tenant context, and none is bound.");
 	}
 }
 
@@ -76,7 +76,7 @@ export class TenantTransactionService {
 	public async withTenantTransaction<T>(context: TenantDatabaseContext, handler: (tx: TransactionClient) => Promise<T>): Promise<T> {
 		await this.prisma.ensureConnected();
 		const correlationId: string = this.correlationId();
-		return this.checkedOutAs(userRlsContext(context.userId, context.organizationId, true), () =>
+		return this.checkedOutAs(userRlsContext(context.userId, context.tenantId, true), () =>
 			this.prisma.$transaction(async (tx: TransactionClient): Promise<T> => {
 				await this.applyTenantSession(tx, context, correlationId);
 				return handler(tx);
@@ -86,11 +86,11 @@ export class TenantTransactionService {
 
 	/**
 	 * One transaction stamped with the actor's RLS session (`rlsSessionVariables`).
-	 * A user scope that requires an explicit organization and has none fails closed
+	 * A user scope that requires an explicit tenant and has none fails closed
 	 * ({@link MissingTenantContextError}) before any connection is used. `app.policy_version`
 	 * is cleared: an actor carries no encryption policy version.
 	 * System scopes also write the same audit line as {@link withSystemOperation}, and they keep the
-	 * actor's organization id. Encryption sessions stay on {@link withTenantTransaction} because they
+	 * actor's tenant id. Encryption sessions stay on {@link withTenantTransaction} because they
 	 * carry purpose and policy version, which an actor does not.
 	 */
 	public async withRlsContext<T>(scope: RlsTransactionScope, handler: (tx: TransactionClient) => Promise<T>): Promise<T> {
@@ -113,7 +113,7 @@ export class TenantTransactionService {
 			// scope is one system operation on the request's audit entry, not ten log lines. Outside a
 			// request (jobs, boot) every call is logged.
 			if (!this.isRecordedForThisRequest(operation)) {
-				this.logger.log(audit);
+				this.logAudit(definition, audit);
 				this.requestContext.recordSystemOperation(operation);
 			}
 			return this.checkedOutAs(scope.context, () =>
@@ -129,6 +129,24 @@ export class TenantTransactionService {
 				return handler(tx);
 			}),
 		);
+	}
+
+	/**
+	 * One transaction under the session already bound to this call (the request interceptor
+	 * or a job). A missing session fails closed. A system session records `reason`.
+	 */
+	public withBoundSession<T>(reason: string, handler: (tx: TransactionClient) => Promise<T>): Promise<T> {
+		const context: RlsContext = currentRlsContext();
+		return this.withRlsContext({ context, reason: context.kind === "system" ? reason : null }, handler);
+	}
+
+	/** The `rls.system_operation` line, at info — or at debug for a `routine` (polled) operation. */
+	private logAudit(definition: SystemOperationDefinition, audit: SystemOperationAuditEntry): void {
+		if (definition.audit === "routine") {
+			this.logger.debug(audit);
+			return;
+		}
+		this.logger.log(audit);
 	}
 
 	private isRecordedForThisRequest(operation: SystemOperation): boolean {
@@ -157,7 +175,7 @@ export class TenantTransactionService {
 			actorUserId: context.actorUserId,
 			correlationId,
 		};
-		this.logger.log(audit);
+		this.logAudit(definition, audit);
 		this.requestContext.recordSystemOperation(operation);
 		return this.checkedOutAs(systemRlsContext(operation, context.actorUserId), () =>
 			this.prisma.$transaction(async (tx: TransactionClient): Promise<T> => {
@@ -170,7 +188,7 @@ export class TenantTransactionService {
 	/**
 	 * Runs one transaction with its OWN scope bound for the connection checkout: the pool stamps a
 	 * new connection from the RLS context in scope (`RlsPool`), and the caller's scope — a tenant user
-	 * with no organization, in multi-tenant mode — would refuse a checkout this transaction is entitled
+	 * with no tenant, in multi-tenant mode — would refuse a checkout this transaction is entitled
 	 * to (a system operation, the audit write). The transaction then sets its session transaction-locally.
 	 */
 	private checkedOutAs<T>(context: RlsContext, transaction: () => Promise<T>): Promise<T> {
@@ -190,7 +208,7 @@ export class TenantTransactionService {
 		await applySessionVariables(tx, {
 			role: DEFAULT_DATABASE_ROLE,
 			currentUserId: context.userId,
-			currentOrganizationId: context.organizationId,
+			currentTenantId: context.tenantId,
 			rlsBypass: "false",
 			systemOperation: UNSET_SESSION_VALUE,
 			// A user's tenant transaction never carries an API-key principal (cleared, not inherited from the checkout).
@@ -217,7 +235,7 @@ export class TenantTransactionService {
 		await applySessionVariables(tx, {
 			role: definition.role,
 			currentUserId: context.actorUserId ?? UNSET_SESSION_VALUE,
-			currentOrganizationId: UNSET_SESSION_VALUE,
+			currentTenantId: UNSET_SESSION_VALUE,
 			rlsBypass: "true",
 			systemOperation: context.operation,
 			currentApiKeyId: UNSET_SESSION_VALUE,

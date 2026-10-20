@@ -47,13 +47,13 @@ describe("ExportPlatformReportHandler", () => {
 describe("GetAdminSalesAnalyticsHandler", () => {
 	it("names the top merchants through a system read recorded against the admin", async () => {
 		const harness = reportingHarness();
-		harness.sales.groups = [{ organizationId: HARNESS_ORG_ID, totalMinor: 5_000, bills: 2 }];
+		harness.sales.groups = [{ tenantId: HARNESS_ORG_ID, totalMinor: 5_000, bills: 2 }];
 		harness.sales.summaries = new Map([[HARNESS_ORG_ID, { name: "Brew & Bean", category: "cafe" }]]);
 
 		const sales = await new GetAdminSalesAnalyticsHandler(harness.weekly).execute(new GetAdminSalesAnalyticsQuery(userActor(ADMIN_ID), { query: {} }));
 
-		expect(harness.sales.summaryCalls).toEqual([{ organizationIds: [HARNESS_ORG_ID], actorUserId: ADMIN_ID }]);
-		expect(sales.topMerchants).toEqual([{ organizationId: HARNESS_ORG_ID, name: "Brew & Bean", category: "cafe", salesMinor: 5_000, bills: 2 }]);
+		expect(harness.sales.summaryCalls).toEqual([{ tenantIds: [HARNESS_ORG_ID], actorUserId: ADMIN_ID }]);
+		expect(sales.topMerchants).toEqual([{ tenantId: HARNESS_ORG_ID, name: "Brew & Bean", category: "cafe", salesMinor: 5_000, bills: 2 }]);
 		expect(sales.period.timeZone).toBe("UTC");
 	});
 });

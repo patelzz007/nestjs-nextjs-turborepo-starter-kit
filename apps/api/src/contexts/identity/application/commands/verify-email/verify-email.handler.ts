@@ -10,7 +10,7 @@ import { EmailAddress } from "../../../domain/value-objects/email-address.value-
 import type { IdentityScope } from "../../identity-scope";
 import type { AuthFlowSubjectPort } from "../../ports/auth-flow.port";
 import type { IdentityTokensPort } from "../../ports/identity-tokens.port";
-import { AUTH_FLOW_SUBJECT, IDENTITY_TOKENS, IDENTITY_UNIT_OF_WORK, PUBLIC_AUTH_FLOW_OPERATION } from "../../ports/identity.tokens";
+import { AUTH_FLOW_SUBJECT, IDENTITY_TOKENS, IDENTITY_UNIT_OF_WORK, EMAIL_VERIFICATION_CONFIRM_OPERATION } from "../../ports/identity.tokens";
 import { VerifyEmailCommand } from "./verify-email.command";
 
 const ALREADY_VERIFIED: VerifyEmailResponse = { message: "Email already verified", alreadyVerified: true };
@@ -28,7 +28,7 @@ export class VerifyEmailHandler implements ICommandHandler<VerifyEmailCommand, V
 	public async execute(command: VerifyEmailCommand): Promise<VerifyEmailResponse> {
 		const email: EmailAddress = EmailAddress.of(await this.tokens.verifyEmailToken(command.input.token));
 		try {
-			return await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, command.actor, async (scope: IdentityScope): Promise<VerifyEmailResponse> => {
+			return await this.uow.runSystemOperation(EMAIL_VERIFICATION_CONFIRM_OPERATION, command.actor, async (scope: IdentityScope): Promise<VerifyEmailResponse> => {
 				const account: UserAccount | null = await scope.accounts.findByEmail(email);
 				if (account === null) {
 					throw new AccountNotFoundError();

@@ -17,11 +17,13 @@ import {
 import { ZodListQuery, ZodParams } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
+import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { GetHttpAuditLogQuery } from "../../application/queries/get-http-audit-log/get-http-audit-log.query";
 import { ListHttpAuditLogsQuery } from "../../application/queries/list-http-audit-logs/list-http-audit-logs.query";
+import { AUDIT_READ_OPERATION } from "../../application/audit-read-operations";
 
 /**
  * Admin viewer for the global HTTP audit trail (`AuditLog`, ADR 025): every
@@ -35,6 +37,7 @@ import { ListHttpAuditLogsQuery } from "../../application/queries/list-http-audi
  */
 @ApiTags("Audit Log")
 @AdminAccessOnly("Admin access required to view the audit log.")
+@PlatformOperation(AUDIT_READ_OPERATION)
 @Controller(apiPath("/admin/audit-logs"))
 export class AuditLogsController {
 	public constructor(private readonly queryBus: QueryBus) {}

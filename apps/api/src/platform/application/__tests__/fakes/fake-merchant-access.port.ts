@@ -11,7 +11,7 @@ export interface RecordedMerchantAccessRequest {
 }
 
 /**
- * A real {@link MerchantAccessPort}: grants an organization-wide scope by
+ * A real {@link MerchantAccessPort}: grants a tenant-wide scope by
  * default, or denies the capabilities it was told to deny with the same
  * {@link AuthorizationDeniedError} the adapter throws. `grantLocations` narrows
  * the returned grant to specific locations. A request naming a `locationId` is
@@ -29,7 +29,7 @@ export class FakeMerchantAccessPort implements MerchantAccessPort {
 		return this;
 	}
 
-	/** Grant only these locations instead of the whole organization. */
+	/** Grant only these locations instead of the whole tenant. */
 	public grantLocations(locationIds: readonly string[]): this {
 		this.locationIds = [...locationIds];
 		return this;
@@ -38,18 +38,18 @@ export class FakeMerchantAccessPort implements MerchantAccessPort {
 	public assertCapability(actor: ActorContext, request: MerchantAccessRequest): Promise<MerchantAccessGrant> {
 		this.requests.push({ actor, request });
 		if (this.denied.has(request.capability)) {
-			return Promise.reject(new AuthorizationDeniedError(request.capability, "Organization"));
+			return Promise.reject(new AuthorizationDeniedError(request.capability, "Tenant"));
 		}
 		const locationId = request.locationId ?? null;
 		if (locationId !== null) {
 			if (this.locationIds !== null && !this.locationIds.includes(locationId)) {
 				return Promise.reject(new AuthorizationDeniedError(request.capability, "Location"));
 			}
-			return Promise.resolve({ organizationId: request.organizationId, locationScope: "SELECTED", locationIds: [locationId] });
+			return Promise.resolve({ tenantId: request.tenantId, locationScope: "SELECTED", locationIds: [locationId] });
 		}
 		if (this.locationIds === null) {
-			return Promise.resolve({ organizationId: request.organizationId, locationScope: "ALL_LOCATIONS", locationIds: [] });
+			return Promise.resolve({ tenantId: request.tenantId, locationScope: "ALL_LOCATIONS", locationIds: [] });
 		}
-		return Promise.resolve({ organizationId: request.organizationId, locationScope: "SELECTED", locationIds: this.locationIds });
+		return Promise.resolve({ tenantId: request.tenantId, locationScope: "SELECTED", locationIds: this.locationIds });
 	}
 }

@@ -20,7 +20,7 @@ export const RewardsDomainErrorCodeSchema = DomainErrorCodeSchema.extract([
 	"REWARD_IMAGES_INVALID",
 	"REWARD_IMAGE_NOT_FOUND",
 	"REWARD_LOCATION_INVALID",
-	"ORGANIZATION_LOCATION_FORBIDDEN",
+	"TENANT_LOCATION_FORBIDDEN",
 	"REWARD_EXPIRED",
 	"REWARD_OUT_OF_STOCK",
 	"REWARD_RESERVATION_MISSING",
@@ -30,7 +30,7 @@ export const RewardsDomainErrorCodeSchema = DomainErrorCodeSchema.extract([
 
 export type RewardsDomainErrorCode = (typeof RewardsDomainErrorCodeSchema)["options"][number];
 
-/** Missing, deleted, in another organization, or outside the caller's stores — all answered alike (no existence oracle). */
+/** Missing, deleted, in another tenant, or outside the caller's stores — all answered alike (no existence oracle). */
 export class RewardNotFoundError extends DomainError {
 	public readonly code = "REWARD_NOT_FOUND";
 
@@ -116,12 +116,12 @@ export class RewardRulesInvalidError extends DomainError {
 	}
 }
 
-/** An image a reward names is not one of the organization's ready, published reward images. */
+/** An image a reward names is not one of the tenant's ready, published reward images. */
 export class RewardImagesInvalidError extends DomainError {
 	public readonly code = "REWARD_IMAGES_INVALID";
 
 	public constructor(public readonly fileIds: readonly string[]) {
-		super("One or more images are not ready or do not belong to this organization. Upload them again.");
+		super("One or more images are not ready or do not belong to this tenant. Upload them again.");
 	}
 }
 
@@ -137,13 +137,13 @@ export class RewardLocationInvalidError extends DomainError {
 	public readonly code = "REWARD_LOCATION_INVALID";
 
 	public constructor() {
-		super("One or more selected stores are invalid for this organization");
+		super("One or more selected stores are invalid for this tenant");
 	}
 }
 
 /** A store-limited caller named a store it does not manage (or asked for every store). */
 export class RewardLocationForbiddenError extends DomainError {
-	public readonly code = "ORGANIZATION_LOCATION_FORBIDDEN";
+	public readonly code = "TENANT_LOCATION_FORBIDDEN";
 
 	public constructor() {
 		super("You can only offer rewards at the stores you manage — select one or more of your stores");

@@ -15,10 +15,12 @@ import type { ActorContext } from "../../../../platform/application/actor-contex
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { Authorize, self } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
 import { GetUser } from "../../../../platform/presentation/http/security/decorators/get-user.decorator";
+import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { SuperAdminOnly } from "../../../../platform/presentation/http/security/decorators/super-admin.decorator";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
 import { ZodBody, ZodListQuery } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
+import { MFA_RECOVERY_LIST_OPERATION, MFA_RECOVERY_REVIEW_OPERATION } from "../../application/ports/identity.tokens";
 import { RequestMfaRecoveryCommand } from "../../application/commands/request-mfa-recovery/request-mfa-recovery.command";
 import { ReviewMfaRecoveryCommand } from "../../application/commands/review-mfa-recovery/review-mfa-recovery.command";
 import { GetMyMfaRecoveryStatusQuery } from "../../application/queries/get-my-mfa-recovery-status/get-my-mfa-recovery-status.query";
@@ -58,6 +60,7 @@ export class MfaRecoveryController {
 	@RateLimit(RATE_LIMIT_POLICY.sessionIssue)
 	@ApiBearerAuth()
 	@SuperAdminOnly()
+	@PlatformOperation(MFA_RECOVERY_LIST_OPERATION)
 	@Get("/admin/mfa/recovery/requests")
 	@ApiOperation({ summary: "SuperAdmin: list MFA recovery requests" })
 	@ZodPaginatedResponse(AdminMfaRecoveryRequestSchema, { description: "Paginated MFA recovery requests" })
@@ -71,6 +74,7 @@ export class MfaRecoveryController {
 	@RateLimit(RATE_LIMIT_POLICY.sessionIssue)
 	@ApiBearerAuth()
 	@SuperAdminOnly()
+	@PlatformOperation(MFA_RECOVERY_REVIEW_OPERATION)
 	@Post("/admin/mfa/recovery/review")
 	@Authorize({
 		action: "UPDATE",

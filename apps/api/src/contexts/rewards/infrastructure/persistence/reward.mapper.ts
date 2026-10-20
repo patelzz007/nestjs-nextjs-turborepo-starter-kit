@@ -65,7 +65,7 @@ export function toRewardState(row: RewardAggregateRow): RewardState {
 	const child = row.referrerReward;
 	return {
 		...rowState(row),
-		organizationId: row.organizationId,
+		tenantId: row.tenantId,
 		rules: RewardRulesValue.fromStorage(storedRulesJson(row.rules), row.minSpendMinor),
 		rejectionReason: row.rejectionReason,
 		referralsEnabled: row.referralsEnabled,

@@ -140,7 +140,7 @@ describe('ZodValidationPipe ("ajv+zod" engine) — refinements JSON Schema canno
 	});
 
 	it("enforces exactly one of token / backupCode on POS redemption bodies", () => {
-		const pipe = new ZodValidationPipe(apiContract.redemptions.validate.input, { engine: "ajv+zod" });
+		const pipe = new ZodValidationPipe(apiContract.integration.validateRedemption.input, { engine: "ajv+zod" });
 
 		expect(() => pipe.transform({ token: "t".repeat(32), backupCode: "ABCD2345" })).toThrow(BadRequestException);
 		expect(pipe.transform({ backupCode: "ABCD2345" })).toEqual({ backupCode: "ABCD2345" });

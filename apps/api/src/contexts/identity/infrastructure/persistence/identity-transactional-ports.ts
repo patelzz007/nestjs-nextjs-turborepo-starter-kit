@@ -28,7 +28,7 @@ export interface IdentityTransactionalDependencies {
 
 /**
  * Build identity's transactional ports on `db`, the caller's transaction (authorization's RBAC unit of
- * work, organizations' invite registration, claims' OTP-backed claim). New instances every call.
+ * work, tenants' invite registration, claims' OTP-backed claim). New instances every call.
  * `events`, when given, receives `DeviceSessionsRevoked` so identity drops the revoked `sid`s on every
  * instance after the caller commits.
  */
@@ -78,6 +78,17 @@ export function createIdentityTransactionalPorts(
 				await createReferralsTransactionalPorts(db).signupReferrals.issueFirstCode(created.id, now);
 				await createAuthorizationTransactionalPorts(db).defaultRoleAssignment.assignDefaultRole(created.id);
 				return { kind: "created", userId: created.id };
+			},
+			async renameAccount(userId: string, fullName: string): Promise<void> {
+				const account: UserAccount | null = await accounts.findById(userId);
+				if (account === null) {
+					return;
+				}
+				account.rename(fullName, nowEpochMs());
+				if (account.pendingChanges.length > 0) {
+					await accounts.save(account);
+					events?.collectFrom(account);
+				}
 			},
 			async listProfiles(userIds: readonly string[]): Promise<readonly AccountProfile[]> {
 				const rows = await db.user.findMany({ where: { id: { in: [...userIds] }, isDeleted: false }, select: { id: true, email: true, fullName: true } });

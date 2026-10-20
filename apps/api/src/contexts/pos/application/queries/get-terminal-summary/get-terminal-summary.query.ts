@@ -3,11 +3,11 @@ import type { MerchantTerminalStatusSummary, MerchantTerminalStatusSummaryQuery 
 
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 
-/** `GET /orgs/:orgSlug/terminals/summary`. */
+/** `GET /tenants/:tenantSlug/terminals/summary`. */
 export class GetTerminalSummaryQuery extends Query<MerchantTerminalStatusSummary> {
 	public constructor(
 		public readonly actor: ActorContext,
-		public readonly input: MerchantTerminalStatusSummaryQuery & { readonly organizationId: string },
+		public readonly input: MerchantTerminalStatusSummaryQuery & { readonly tenantId: string },
 	) {
 		super();
 	}

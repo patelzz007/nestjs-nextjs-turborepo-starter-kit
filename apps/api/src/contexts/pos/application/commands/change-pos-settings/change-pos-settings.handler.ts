@@ -5,14 +5,14 @@ import { MERCHANT_CAPABILITY, type MerchantTerminalSettings } from "@workspace/s
 import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
-import { MERCHANT_ACCESS } from "../../../../organizations/public-api";
+import { MERCHANT_ACCESS } from "../../../../tenancy/public-api";
 import { MerchantProfileNotFoundError } from "../../../domain/errors/pos.errors";
-import { actingInOrganization, actingMemberId } from "../../acting-member";
+import { actingInTenant, actingMemberId } from "../../acting-member";
 import type { PosScope } from "../../pos-scope";
 import { POS_UNIT_OF_WORK } from "../../ports/pos.tokens";
 import { ChangePosSettingsCommand } from "./change-pos-settings.command";
 
-/** Writes the merchant profile's POS policy through organizations (it owns the column), with its audit row, in one transaction. */
+/** Writes the merchant profile's POS policy through tenants (it owns the column), with its audit row, in one transaction. */
 @CommandHandler(ChangePosSettingsCommand)
 export class ChangePosSettingsHandler implements ICommandHandler<ChangePosSettingsCommand, MerchantTerminalSettings> {
 	public constructor(
@@ -24,14 +24,14 @@ export class ChangePosSettingsHandler implements ICommandHandler<ChangePosSettin
 	public async execute(command: ChangePosSettingsCommand): Promise<MerchantTerminalSettings> {
 		const { actor, input } = command;
 		const memberId = actingMemberId(actor);
-		await this.merchantAccess.assertCapability(actor, { organizationId: input.organizationId, capability: MERCHANT_CAPABILITY.manageApiKeys });
-		const tenant = actingInOrganization(actor, input.organizationId);
+		await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageApiKeys });
+		const tenant = actingInTenant(actor, input.tenantId);
 		await this.uow.run(tenant, async (scope: PosScope): Promise<void> => {
-			if (!(await scope.posSettings.setRequireRegisteredTerminals(input.organizationId, input.requireRegisteredTerminals, this.clock.now()))) {
+			if (!(await scope.posSettings.setRequireRegisteredTerminals(input.tenantId, input.requireRegisteredTerminals, this.clock.now()))) {
 				throw new MerchantProfileNotFoundError();
 			}
 			await scope.rewardAudit.append({
-				organizationId: input.organizationId,
+				tenantId: input.tenantId,
 				actorUserId: memberId,
 				action: "merchant.terminal_settings_updated",
 				metadata: { requireRegisteredTerminals: input.requireRegisteredTerminals },

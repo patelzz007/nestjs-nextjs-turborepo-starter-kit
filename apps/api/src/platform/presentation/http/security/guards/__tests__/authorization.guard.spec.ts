@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UnauthorizedException, type ExecutionContext } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
+import { NotFoundError } from "../../../../../application/errors/app-error";
 import { Reflector } from "@nestjs/core";
 import type { AccessTokenPayload, AuthorizationRequest, AuthorizationResult } from "@workspace/shared";
 
@@ -17,7 +19,9 @@ import { REQUIRED_PERMISSION_KEY, REQUIRED_PERMISSIONS_KEY, REQUIRED_ROLES_KEY }
 import { AUTHORIZE_KEY, self, type AuthorizationRequirement } from "../../decorators/authorize.decorator";
 import { AuthorizationGuard } from "../authorization.guard";
 import { RequestContextService, type RequestTenant } from "../../../../../infrastructure/context/request-context";
+import { MembershipInactiveError, TENANT_LIFECYCLE_ROUTE_KEY, TenantSuspendedError } from "../../../../../../contexts/tenancy/public-api";
 import { createTestPrisma } from "../../../../../../../test/support/test-service-graph";
+import type { SystemDatabaseContext } from "../../../../../../prisma/tenant-context";
 
 const mocks = vi.hoisted(() => ({
 	authorize: vi.fn(),
@@ -46,7 +50,10 @@ const bypassAudit: SuperAdminBypassAuditPort = { recordBypass: mocks.recordBypas
 const tenantResolver: RequestTenantResolverPort = { resolve: mocks.resolve };
 
 function createGuard(): AuthorizationGuard {
-	return new AuthorizationGuard(new Reflector(), kernel, decisionAudit, bypassAudit, tenantResolver, createTestPrisma(), requestContext);
+	const prisma = createTestPrisma();
+	return new AuthorizationGuard(new Reflector(), kernel, decisionAudit, bypassAudit, tenantResolver, requestContext, {
+		withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
+	});
 }
 
 function contextFor(
@@ -58,7 +65,7 @@ function contextFor(
 	return { request, context: createHttpContext(request, metadata) };
 }
 
-const noTenant: RequestTenantContext = { verified: {}, requested: {} };
+const noTenant: RequestTenantContext = { verified: {}, requested: {}, target: null };
 
 function result(decision: "ALLOW" | "DENY", request: AuthorizationRequest): AuthorizationResult {
 	return { decision, request, evaluation: [] };
@@ -87,7 +94,11 @@ describe("AuthorizationGuard", () => {
 	});
 
 	it("binds the verified tenant into the request context (for RLS) on every authenticated request", async () => {
-		mocks.resolve.mockResolvedValue({ verified: { organizationId: "org-a" }, requested: { organizationId: "org-a", locationId: "loc-forged" } });
+		mocks.resolve.mockResolvedValue({
+			verified: { tenantId: "org-a" },
+			requested: { tenantId: "org-a", locationId: "loc-forged" },
+			target: { tenantId: "org-a", lifecycleState: "ACTIVE", membershipStatus: "ACTIVE" },
+		});
 		const { context } = contextFor(accessToken());
 
 		const tenant: RequestTenant | undefined = await requestContext.run(
@@ -99,7 +110,73 @@ describe("AuthorizationGuard", () => {
 		);
 
 		// Only the VERIFIED ids — a requested-but-unproven location never reaches the context.
-		expect(tenant).toEqual({ organizationId: "org-a", storeId: undefined, locationId: undefined });
+		expect(tenant).toEqual({ tenantId: "org-a", storeId: undefined, locationId: undefined });
+	});
+
+	it("rejects an active member of a suspended tenant on an ordinary route", async () => {
+		mocks.resolve.mockResolvedValue({
+			verified: { tenantId: "org-a" },
+			requested: { tenantId: "org-a" },
+			target: { tenantId: "org-a", lifecycleState: "SUSPENDED", membershipStatus: "ACTIVE" },
+		});
+
+		await expect(createGuard().canActivate(contextFor(accessToken()).context)).rejects.toBeInstanceOf(TenantSuspendedError);
+	});
+
+	it("allows an active member of a suspended tenant on a lifecycle route", async () => {
+		mocks.resolve.mockResolvedValue({
+			verified: { tenantId: "org-a" },
+			requested: { tenantId: "org-a" },
+			target: { tenantId: "org-a", lifecycleState: "SUSPENDED", membershipStatus: "ACTIVE" },
+		});
+
+		await expect(createGuard().canActivate(contextFor(accessToken(), { [TENANT_LIFECYCLE_ROUTE_KEY]: true }).context)).resolves.toBe(true);
+	});
+
+	it("LIFE-003: a deleted tenant is not found", async () => {
+		mocks.resolve.mockResolvedValue({
+			verified: { tenantId: "org-a" },
+			requested: { tenantId: "org-a" },
+			target: { tenantId: "org-a", lifecycleState: "DELETED", membershipStatus: "ACTIVE" },
+		});
+
+		await expect(createGuard().canActivate(contextFor(accessToken()).context)).rejects.toBeInstanceOf(NotFoundError);
+	});
+
+	it("rejects a member of a suspended tenant reached through a store, with no :tenantSlug on the route", async () => {
+		mocks.resolve.mockResolvedValue({
+			verified: { tenantId: "org-a", storeId: "store-1" },
+			requested: { storeId: "store-1" },
+			target: { tenantId: "org-a", lifecycleState: "SUSPENDED", membershipStatus: "ACTIVE" },
+		});
+
+		await expect(createGuard().canActivate(contextFor(accessToken()).context)).rejects.toBeInstanceOf(TenantSuspendedError);
+	});
+
+	it("rejects support access to a suspended tenant on an ordinary route (an approved grant is active access, not an exemption)", async () => {
+		mocks.resolve.mockResolvedValue({
+			verified: { tenantId: "org-a" },
+			requested: { tenantId: "org-a" },
+			target: { tenantId: "org-a", lifecycleState: "SUSPENDED", membershipStatus: "ACTIVE" },
+		});
+
+		await expect(createGuard().canActivate(contextFor(accessToken()).context)).rejects.toBeInstanceOf(TenantSuspendedError);
+	});
+
+	it("leaves a caller with no access to the ordinary authorization answer, revealing nothing about the tenant's state", async () => {
+		mocks.resolve.mockResolvedValue({ verified: {}, requested: { tenantId: "org-a" }, target: { tenantId: "org-a", lifecycleState: "SUSPENDED", membershipStatus: "none" } });
+
+		await expect(createGuard().canActivate(contextFor(accessToken()).context)).resolves.toBe(true);
+	});
+
+	it("rejects a suspended membership with MEMBERSHIP_INACTIVE", async () => {
+		mocks.resolve.mockResolvedValue({
+			verified: {},
+			requested: { tenantId: "org-a" },
+			target: { tenantId: "org-a", lifecycleState: "ACTIVE", membershipStatus: "SUSPENDED" },
+		});
+
+		await expect(createGuard().canActivate(contextFor(accessToken()).context)).rejects.toBeInstanceOf(MembershipInactiveError);
 	});
 
 	it("audits decisions with the request context's correlation id, not a raw header", async () => {
@@ -117,13 +194,17 @@ describe("AuthorizationGuard", () => {
 	});
 
 	it("enforces @RequirePermission through kernel.authorize with the verified subject and requested tenant attributes", async () => {
-		mocks.resolve.mockResolvedValue({ verified: { organizationId: "org-a" }, requested: { organizationId: "org-a" } });
+		mocks.resolve.mockResolvedValue({
+			verified: { tenantId: "org-a" },
+			requested: { tenantId: "org-a" },
+			target: { tenantId: "org-a", lifecycleState: "ACTIVE", membershipStatus: "ACTIVE" },
+		});
 		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: { action: "READ", resource: "ORDER" } });
 
 		await createGuard().canActivate(context);
 
 		expect(mocks.authorize).toHaveBeenCalledWith(
-			{ subject: { userId: "user-1", isSuperAdmin: false, organizationId: "org-a" }, action: "READ", resource: "ORDER", resourceAttributes: { organizationId: "org-a" } },
+			{ subject: { userId: "user-1", isSuperAdmin: false, tenantId: "org-a" }, action: "READ", resource: "ORDER", resourceAttributes: { tenantId: "org-a" } },
 			expect.objectContaining({ ipAddress: "127.0.0.1", userAgent: "vitest", requestId: "corr-1" }),
 		);
 	});
@@ -168,12 +249,12 @@ describe("AuthorizationGuard", () => {
 		});
 
 		it("never lets declared attributes override the routed tenant", async () => {
-			mocks.resolve.mockResolvedValue({ verified: {}, requested: { organizationId: "org-a" } });
-			const requirement: AuthorizationRequirement = { action: "UPDATE", resource: "ORDER", attributes: { organizationId: "org-evil", status: "PENDING" } };
+			mocks.resolve.mockResolvedValue({ verified: {}, requested: { tenantId: "org-a" }, target: { tenantId: "org-a", lifecycleState: "ACTIVE", membershipStatus: "none" } });
+			const requirement: AuthorizationRequirement = { action: "UPDATE", resource: "ORDER", attributes: { tenantId: "org-evil", status: "PENDING" } };
 
 			await createGuard().canActivate(contextFor(accessToken(), { [AUTHORIZE_KEY]: requirement }).context);
 
-			expect(mocks.authorize).toHaveBeenCalledWith(expect.objectContaining({ resourceAttributes: { organizationId: "org-a", status: "PENDING" } }), expect.anything());
+			expect(mocks.authorize).toHaveBeenCalledWith(expect.objectContaining({ resourceAttributes: { tenantId: "org-a", status: "PENDING" } }), expect.anything());
 		});
 	});
 

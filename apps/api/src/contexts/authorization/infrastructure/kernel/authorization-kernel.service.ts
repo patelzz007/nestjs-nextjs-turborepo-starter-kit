@@ -31,7 +31,7 @@ const ALL_ACTIONS: readonly PermissionAction[] = ["CREATE", "READ", "UPDATE", "D
 /** Tenant ids the subject claims — verified by `TenantMembershipService` before any use. */
 function requestedTenant(subject: AuthorizationContext): RequestedTenant {
 	return {
-		...(subject.organizationId === undefined ? {} : { organizationId: subject.organizationId }),
+		...(subject.tenantId === undefined ? {} : { tenantId: subject.tenantId }),
 		...(subject.storeId === undefined ? {} : { storeId: subject.storeId }),
 		...(subject.locationId === undefined ? {} : { locationId: subject.locationId }),
 	};
@@ -39,12 +39,12 @@ function requestedTenant(subject: AuthorizationContext): RequestedTenant {
 
 /** Replace claimed tenant ids with the verified ones (unverified ids are dropped). */
 function withVerifiedTenant(subject: AuthorizationContext, verified: VerifiedTenantContext): AuthorizationContext {
-	return { ...subject, organizationId: verified.organizationId, storeId: verified.storeId, locationId: verified.locationId };
+	return { ...subject, tenantId: verified.tenantId, storeId: verified.storeId, locationId: verified.locationId };
 }
 
 function tenantRejectionReason(tenant: TenantVerification): string | null {
-	if (tenant.organizationRejected) {
-		return "Subject is not an active member of the requested organization";
+	if (tenant.tenantRejected) {
+		return "Subject is not an active member of the requested tenant";
 	}
 	if (tenant.storeRejected) {
 		return "Subject cannot act in the requested store";
@@ -80,19 +80,19 @@ interface ScopeOutcome {
  *
  *  1. SuperAdmin platform bypass (explicit, audited by the guard)
  *  2. Unknown action/resource → DENY (fail closed)
- *  3. Tenant verification — a claimed organization/location the subject is not an
+ *  3. Tenant verification — a claimed tenant/location the subject is not an
  *     active member of → DENY (forged tenant ids never reach later steps)
  *  4. Explicit DENY — per-user override or ACL entry → DENY
  *  5. Explicit ACL ALLOW → ALLOW
  *  6. Grants (roles incl. hierarchy, user ALLOW overrides, implicit self grants)
  *     must match the action (MANAGE implies all) **and** satisfy their scope:
- *       GLOBAL · ORGANIZATION (verified membership, same-org resource)
+ *       GLOBAL · TENANT (verified membership, same-org resource)
  *       · LOCATION (verified location scope) · OWN (DB-resolved owner) · RESOURCE (ACL only)
  *  7. Conditional policies (ABAC) — a matching DENY or unmet conditional ALLOW → DENY
  *  8. Default → DENY
  *
- * Organization membership (ReBAC) never grants permissions on its own; it only
- * satisfies the ORGANIZATION / LOCATION scope of a permission the subject holds.
+ * Tenant membership (ReBAC) never grants permissions on its own; it only
+ * satisfies the TENANT / LOCATION scope of a permission the subject holds.
  * PostgreSQL RLS remains the final row boundary beneath every decision.
  */
 @Injectable()
@@ -136,7 +136,7 @@ export class AuthorizationKernelService implements AuthorizationKernelPort {
 			durationMs: Date.now() - startedAt,
 		});
 
-		if (request.subject.isSuperAdmin === true) {
+		if (request.subject.isSuperAdmin === true && request.subject.tenantId === undefined) {
 			evaluation.push({ source: "superadmin", effect: "ALLOW", reason: "Platform SuperAdmin bypass" });
 			return finish("ALLOW", request);
 		}
@@ -156,12 +156,12 @@ export class AuthorizationKernelService implements AuthorizationKernelPort {
 			return finish("DENY", request);
 		}
 		const evaluated: AuthorizationRequest = { ...request, subject: withVerifiedTenant(request.subject, tenant.context) };
-		if (tenant.context.organizationId !== undefined) {
+		if (tenant.context.tenantId !== undefined) {
 			evaluation.push({
 				source: "relationship",
 				effect: "NO_MATCH",
-				reason: "Verified active organization membership",
-				details: { organizationId: tenant.context.organizationId },
+				reason: tenant.supportAccessGrantId === undefined ? "Verified active tenant membership" : "Verified an approved support grant",
+				details: { tenantId: tenant.context.tenantId, ...(tenant.supportAccessGrantId === undefined ? {} : { supportAccessGrantId: tenant.supportAccessGrantId }) },
 			});
 		}
 
@@ -183,7 +183,7 @@ export class AuthorizationKernelService implements AuthorizationKernelPort {
 				action: required.action,
 				resource: required.resource,
 				resourceScope: request.resourceId === undefined ? { kind: "typeWide" } : { kind: "resource", id: request.resourceId },
-				organizationId: tenant.context.organizationId,
+				tenantId: tenant.context.tenantId,
 				locationId: tenant.context.locationId,
 			},
 			evaluated,
@@ -264,7 +264,7 @@ export class AuthorizationKernelService implements AuthorizationKernelPort {
 	/**
 	 * Translate the subject's grants into a Prisma WHERE fragment for list
 	 * endpoints (spec §32, §57). Conventions: tenant rows expose
-	 * `organizationId` / `locationId`, owned rows expose `userId` (the USER /
+	 * `tenantId` / `locationId`, owned rows expose `userId` (the USER /
 	 * PROFILE resources use their primary key). Row-level ABAC conditions are
 	 * enforced per operation via `authorize()`; an unconditional DENY policy
 	 * yields no rows. RLS still applies beneath this filter.
@@ -298,7 +298,7 @@ export class AuthorizationKernelService implements AuthorizationKernelPort {
 				action,
 				resource,
 				resourceScope: { kind: "everyResource" },
-				organizationId: tenant.context.organizationId,
+				tenantId: tenant.context.tenantId,
 				locationId: tenant.context.locationId,
 			},
 			request,
@@ -319,26 +319,26 @@ export class AuthorizationKernelService implements AuthorizationKernelPort {
 				case "GLOBAL":
 					unrestricted = true;
 					break;
-				case "ORGANIZATION":
-					if (tenant.context.organizationId !== undefined) {
-						alternatives.push({ organizationId: tenant.context.organizationId });
+				case "TENANT":
+					if (tenant.context.tenantId !== undefined) {
+						alternatives.push({ tenantId: tenant.context.tenantId });
 					}
 					break;
 				case "STORE": {
 					const store =
 						grant.store ??
-						(tenant.context.organizationId !== undefined && tenant.context.storeId !== undefined
-							? { organizationId: tenant.context.organizationId, storeId: tenant.context.storeId }
+						(tenant.context.tenantId !== undefined && tenant.context.storeId !== undefined
+							? { tenantId: tenant.context.tenantId, storeId: tenant.context.storeId }
 							: undefined);
 					// A store-bound grant only widens the filter for its own store (and only the active store, when one is selected).
 					if (store !== undefined && (tenant.context.storeId === undefined || tenant.context.storeId === store.storeId)) {
-						alternatives.push({ organizationId: store.organizationId, storeId: store.storeId });
+						alternatives.push({ tenantId: store.tenantId, storeId: store.storeId });
 					}
 					break;
 				}
 				case "LOCATION":
-					if (tenant.context.organizationId !== undefined && tenant.context.locationId !== undefined) {
-						alternatives.push({ organizationId: tenant.context.organizationId, locationId: tenant.context.locationId });
+					if (tenant.context.tenantId !== undefined && tenant.context.locationId !== undefined) {
+						alternatives.push({ tenantId: tenant.context.tenantId, locationId: tenant.context.locationId });
 					}
 					break;
 				case "OWN":
@@ -412,10 +412,10 @@ export class AuthorizationKernelService implements AuthorizationKernelPort {
 	}
 
 	private async evaluateScope(grant: SubjectGrant, request: AuthorizationRequest, resolveOwnership: () => Promise<OwnershipLookup>): Promise<ScopeOutcome> {
-		const organizationId = request.subject.organizationId;
+		const tenantId = request.subject.tenantId;
 		const storeId = request.subject.storeId;
 		const locationId = request.subject.locationId;
-		const resourceOrganizationId = readStringAttribute(request.resourceAttributes, "organizationId");
+		const resourceTenantId = readStringAttribute(request.resourceAttributes, "tenantId");
 		const resourceStoreId = readStringAttribute(request.resourceAttributes, "storeId");
 		const resourceLocationId = readStringAttribute(request.resourceAttributes, "locationId");
 		const targetsResource = request.resourceId !== undefined;
@@ -423,20 +423,20 @@ export class AuthorizationKernelService implements AuthorizationKernelPort {
 		switch (grant.scope) {
 			case "GLOBAL":
 				return { satisfied: true, reason: "GLOBAL grant" };
-			case "ORGANIZATION": {
-				if (organizationId === undefined) {
-					return { satisfied: false, reason: "ORGANIZATION grant requires a verified organization context" };
+			case "TENANT": {
+				if (tenantId === undefined) {
+					return { satisfied: false, reason: "TENANT grant requires a verified tenant context" };
 				}
-				if (targetsResource && resourceOrganizationId === undefined) {
-					return { satisfied: false, reason: "ORGANIZATION grant requires the resource's organization" };
+				if (targetsResource && resourceTenantId === undefined) {
+					return { satisfied: false, reason: "TENANT grant requires the resource's tenant" };
 				}
-				if (resourceOrganizationId !== undefined && resourceOrganizationId !== organizationId) {
-					return { satisfied: false, reason: "Resource belongs to another organization" };
+				if (resourceTenantId !== undefined && resourceTenantId !== tenantId) {
+					return { satisfied: false, reason: "Resource belongs to another tenant" };
 				}
-				return { satisfied: true, reason: "ORGANIZATION grant within verified organization" };
+				return { satisfied: true, reason: "TENANT grant within verified tenant" };
 			}
 			case "STORE": {
-				if (organizationId === undefined || storeId === undefined) {
+				if (tenantId === undefined || storeId === undefined) {
 					return { satisfied: false, reason: "STORE grant requires a verified store context" };
 				}
 				if (grant.store !== undefined && grant.store.storeId !== storeId) {
@@ -445,19 +445,19 @@ export class AuthorizationKernelService implements AuthorizationKernelPort {
 				if (targetsResource && resourceStoreId === undefined) {
 					return { satisfied: false, reason: "STORE grant requires the resource's store" };
 				}
-				if ((resourceStoreId !== undefined && resourceStoreId !== storeId) || (resourceOrganizationId !== undefined && resourceOrganizationId !== organizationId)) {
+				if ((resourceStoreId !== undefined && resourceStoreId !== storeId) || (resourceTenantId !== undefined && resourceTenantId !== tenantId)) {
 					return { satisfied: false, reason: "Resource belongs to another store" };
 				}
 				return { satisfied: true, reason: "STORE grant within verified store" };
 			}
 			case "LOCATION": {
-				if (organizationId === undefined || locationId === undefined) {
+				if (tenantId === undefined || locationId === undefined) {
 					return { satisfied: false, reason: "LOCATION grant requires a verified location context" };
 				}
 				if (targetsResource && resourceLocationId === undefined) {
 					return { satisfied: false, reason: "LOCATION grant requires the resource's location" };
 				}
-				if ((resourceLocationId !== undefined && resourceLocationId !== locationId) || (resourceOrganizationId !== undefined && resourceOrganizationId !== organizationId)) {
+				if ((resourceLocationId !== undefined && resourceLocationId !== locationId) || (resourceTenantId !== undefined && resourceTenantId !== tenantId)) {
 					return { satisfied: false, reason: "Resource belongs to another location" };
 				}
 				return { satisfied: true, reason: "LOCATION grant within verified location" };

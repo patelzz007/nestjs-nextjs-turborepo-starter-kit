@@ -17,12 +17,12 @@ import { CDN_CACHE_INVALIDATOR, MALWARE_SCANNER, OBJECT_STORAGE, PUBLIC_DELIVERY
 import { StorageModule } from "../../platform/infrastructure/storage/storage.module";
 import { SystemCommandModule } from "../../platform/infrastructure/system-command.module";
 import type { AfterCommitPublisher } from "../../platform/infrastructure/unit-of-work/after-commit-publisher";
+import { USER_OWNED_DATA_SCOPE } from "../../platform/infrastructure/unit-of-work/actor-to-rls-context";
 import { PrismaReadExecutor } from "../../platform/infrastructure/unit-of-work/prisma-read-executor";
 import { PrismaUnitOfWork } from "../../platform/infrastructure/unit-of-work/prisma-unit-of-work";
 import { TransactionalEventDispatcher } from "../../platform/infrastructure/unit-of-work/transactional-event-dispatcher";
 import { AFTER_COMMIT_PUBLISHER, UnitOfWorkModule } from "../../platform/infrastructure/unit-of-work/unit-of-work.module";
 import { PrismaModule } from "../../prisma/prisma.module";
-import { PrismaService } from "../../prisma/prisma.service";
 import { TenantTransactionService } from "../../prisma/tenant-transaction.service";
 import { ApplyFileProcessingResultHandler } from "./application/commands/apply-file-processing-result/apply-file-processing-result.handler";
 import { CleanUpStaleUploadsHandler } from "./application/commands/clean-up-stale-uploads/clean-up-stale-uploads.handler";
@@ -96,7 +96,7 @@ const storageTaskProviders: Provider[] = hasRedis
 
 /**
  * The files context (§6.1): generic file lifecycle — upload, scan, verdict,
- * renditions, delete. The owner of each category (organizations, rewards,
+ * renditions, delete. The owner of each category (tenants, rewards,
  * identity, integrations-github, catalog) plugs in through the access-rule and
  * reference-guard registries and the in-transaction event registry from its own
  * module; files never imports the contexts that use it.
@@ -118,13 +118,13 @@ const storageTaskProviders: Provider[] = hasRedis
 				guards: FileReferenceGuardRegistry<Prisma.TransactionClient>,
 				dispatcher: TransactionalEventDispatcher<Prisma.TransactionClient>,
 				publisher: AfterCommitPublisher,
-			): UnitOfWork<FilesScope> => new PrismaUnitOfWork(transactions, new FilesScopeFactory(guards), dispatcher, publisher),
+			): UnitOfWork<FilesScope> => new PrismaUnitOfWork(transactions, new FilesScopeFactory(guards), dispatcher, publisher, USER_OWNED_DATA_SCOPE),
 		},
 		{
 			provide: STORED_FILE_READS,
 			inject: [TenantTransactionService, TypedConfigService],
 			useFactory: (transactions: TenantTransactionService, config: TypedConfigService): PrismaStoredFileReadRepository =>
-				new PrismaStoredFileReadRepository(new PrismaReadExecutor<Prisma.TransactionClient>(transactions), config.http.publicUrl),
+				new PrismaStoredFileReadRepository(new PrismaReadExecutor<Prisma.TransactionClient>(transactions, USER_OWNED_DATA_SCOPE), config.http.publicUrl),
 		},
 		ImageRenditionService,
 		{
@@ -173,9 +173,13 @@ const storageTaskProviders: Provider[] = hasRedis
 		},
 		{
 			provide: LOCAL_STORAGE_TRANSFER,
-			inject: [TypedConfigService, PrismaService, LocalTransferTokenService, OBJECT_STORAGE],
-			useFactory: (config: TypedConfigService, prisma: PrismaService, tokens: LocalTransferTokenService, storage: ObjectStorage): LocalStorageTransferService =>
-				new LocalStorageTransferService(config, prisma, tokens, storage),
+			inject: [TypedConfigService, TenantTransactionService, LocalTransferTokenService, OBJECT_STORAGE],
+			useFactory: (
+				config: TypedConfigService,
+				transactions: TenantTransactionService,
+				tokens: LocalTransferTokenService,
+				storage: ObjectStorage,
+			): LocalStorageTransferService => new LocalStorageTransferService(config, transactions, tokens, storage),
 		},
 		...storageTaskProviders,
 		FileDeletion,
@@ -192,16 +196,15 @@ const storageTaskProviders: Provider[] = hasRedis
 		PurgeDeletedFileObjectsHandler,
 		{
 			provide: StoredFileAccess,
-			inject: [TypedConfigService, PrismaService, TenantTransactionService, FILE_OBJECT_STORAGE, OBJECT_STORAGE, StorageTaskDispatcher, FileDeletion],
+			inject: [TypedConfigService, TenantTransactionService, FILE_OBJECT_STORAGE, OBJECT_STORAGE, StorageTaskDispatcher, FileDeletion],
 			useFactory: (
 				config: TypedConfigService,
-				prisma: PrismaService,
 				transactions: TenantTransactionService,
 				storage: FileObjectStoragePort,
 				objects: ObjectStorage,
 				dispatcher: StorageTaskDispatcher,
 				deletion: FileDeletion,
-			): StoredFileAccess => new StoredFileAccess({ config, prisma, transactions, storage, objects, dispatcher, deletion }),
+			): StoredFileAccess => new StoredFileAccess({ config, transactions, storage, objects, dispatcher, deletion }),
 		},
 	],
 	exports: [FileCategoryAccessRegistry, FileReferenceGuardRegistry, StoredFileAccess, ImageRenditionService],

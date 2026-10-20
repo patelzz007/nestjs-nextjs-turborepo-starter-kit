@@ -2,30 +2,36 @@ import { randomUUID } from "node:crypto";
 
 import { CommandBus } from "@nestjs/cqrs";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import type { Prisma } from "@prisma/client";
 import {
 	API_VERSION_PREFIX,
 	RewardClaimCreatedResponseSchema,
 	RewardClaimQrResponseSchema,
 	RewardClaimResponseSchema,
-	ApiPaginatedMetaSchema,
 	RewardNotificationResponseSchema,
 } from "@workspace/shared";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
 import { ClaimRewardCommand } from "../src/contexts/claims/application/commands/claim-reward/claim-reward.command";
 import { createClaimsTransactionalPorts } from "../src/contexts/claims/public-api";
 import { ActorContextSchema } from "../src/platform/application/actor-context";
 import { TransactionalEventCollector } from "../src/platform/application/events/transactional-event-collector";
 import { RewardCodeHasher } from "../src/platform/infrastructure/crypto/reward-code-hasher";
-import { PrismaService } from "../src/prisma/prisma.service";
-import { runWithSystemRlsContext, systemRlsContext } from "../src/prisma/rls-context";
-import { TenantTransactionService } from "../src/prisma/tenant-transaction.service";
-import { createE2eApp, login, markSeedUserEmailVerified, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
+import {
+	createE2eApp,
+	login,
+	markSeedUserEmailVerified,
+	mutationHeaders,
+	parsePaginatedEnvelope,
+	parseSuccessEnvelope,
+	type InjectResponse,
+	type LoginResult,
+	uniqueClientIp,
+	withTenantMember,
+} from "./e2e-helpers";
 
 const DAY_MS = 86_400_000;
 const QUANTITY = 10;
@@ -56,6 +62,7 @@ describe("Consumer claims (e2e)", () => {
 	let claimId: string;
 	let firstBackupCode: string;
 	let rotatedBackupCode: string;
+	let merchantUserId: string;
 
 	function cookie(user: LoginResult): string {
 		return `accessToken=${user.accessToken}; refreshToken=${user.refreshToken}`;
@@ -82,17 +89,17 @@ describe("Consumer claims (e2e)", () => {
 		app = await createE2eApp();
 		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
 		rewardId = randomUUID();
-		const prisma = app.get(PrismaService);
-		await runWithSystemRlsContext("route.rls_bypass", async () =>
-			prisma.reward.create({
+		merchantUserId = z.object({ id: z.string() }).parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'brew.owner@kl-rewards.demo'`)).rows.at(0)).id;
+		await withTenantMember(app, merchantUserId, TENANT_SEED_IDS.klTenant, (tx) =>
+			tx.reward.create({
 				data: {
 					id: rewardId,
-					organizationId: ORGANIZATION_SEED_IDS.klOrganization,
+					tenantId: TENANT_SEED_IDS.klTenant,
 					title: "E2E consumer claim reward",
 					description: "Created by consumer-claims.e2e-spec.ts",
 					rewardType: "FREE_ITEM",
 					category: "cafe",
-					images: { create: [{ organizationId: ORGANIZATION_SEED_IDS.klOrganization, fileId: rewardCoverImageSeedId("free-coffee"), position: 0 }] },
+					images: { create: [{ fileId: rewardCoverImageSeedId("free-coffee"), position: 0 }] },
 					quantityTotal: QUANTITY,
 					quantityRemaining: QUANTITY,
 					expiryDate: Date.now() + 30 * DAY_MS,
@@ -181,15 +188,13 @@ describe("Consumer claims (e2e)", () => {
 		expect((await get(alice, `/claims/${claimId}/qr`)).statusCode).toBe(404);
 
 		const lookup = (backupCode: string): Promise<string | null> =>
-			app
-				.get(TenantTransactionService)
-				.withRlsContext({ context: systemRlsContext("route.rls_bypass"), reason: "consumer claims e2e" }, async (tx: Prisma.TransactionClient): Promise<string | null> => {
-					const found = await createClaimsTransactionalPorts(tx, app.get(RewardCodeHasher), new TransactionalEventCollector()).redemption.findMerchantClaim(
-						{ backupCode },
-						ORGANIZATION_SEED_IDS.klOrganization,
-					);
-					return found?.claim.id ?? null;
-				});
+			withTenantMember(app, merchantUserId, TENANT_SEED_IDS.klTenant, async (tx): Promise<string | null> => {
+				const found = await createClaimsTransactionalPorts(tx, app.get(RewardCodeHasher), new TransactionalEventCollector()).redemption.findMerchantClaim(
+					{ backupCode },
+					TENANT_SEED_IDS.klTenant,
+				);
+				return found?.claim.id ?? null;
+			});
 		expect(await lookup(firstBackupCode)).toBeNull();
 		expect(await lookup(rotatedBackupCode)).toBe(claimId);
 	});
@@ -230,7 +235,7 @@ describe("Consumer claims (e2e)", () => {
 			kind: "user",
 			userId: aliceId,
 			sessionId: randomUUID(),
-			organizationId: null,
+			tenantId: null,
 			isSuperAdmin: false,
 			accessScope: "tenant",
 			impersonatorUserId: null,
@@ -257,7 +262,7 @@ describe("Consumer claims (e2e)", () => {
 	async function unreadCount(): Promise<number> {
 		const response = await get(alice, "/reward-notifications?limit=1&filter[readAt][isNull]=true");
 		expect(response.statusCode, response.body).toBe(200);
-		return ApiPaginatedMetaSchema.parse(parseSuccessEnvelope(response, z.array(RewardNotificationResponseSchema)).meta).total;
+		return parsePaginatedEnvelope(response, RewardNotificationResponseSchema).meta.total;
 	}
 
 	it("lists the reward inbox, counts the unread ones with the same list, and marks everything read", async () => {

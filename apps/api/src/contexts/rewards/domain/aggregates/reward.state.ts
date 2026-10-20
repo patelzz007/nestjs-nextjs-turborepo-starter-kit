@@ -49,9 +49,9 @@ export interface RewardRowState {
 	readonly updatedAt: EpochMs;
 }
 
-/** A reward as loaded for a command: the row, its organization-level settings, and its referrer child. */
+/** A reward as loaded for a command: the row, its tenant-level settings, and its referrer child. */
 export interface RewardState extends RewardRowState {
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly rules: RewardRulesValue;
 	readonly rejectionReason: string | null;
 	readonly referralsEnabled: boolean;
@@ -60,7 +60,7 @@ export interface RewardState extends RewardRowState {
 	readonly locationScope: RewardLocationScope;
 	/** Live images in display order (position 0 is the cover). */
 	readonly imageFileIds: readonly string[];
-	/** Organization-wide, or at least one of its stores is live and active — otherwise nothing can be claimed. */
+	/** Tenant-wide, or at least one of its stores is live and active — otherwise nothing can be claimed. */
 	readonly availableAtActiveStore: boolean;
 	/** The referrer bonus a consumer reward's referrals earn; always null for a referrer row itself. */
 	readonly referrer: RewardRowState | null;
@@ -82,7 +82,7 @@ export interface ReferrerRewardSnapshot {
 export interface RewardSnapshot {
 	readonly id: string;
 	readonly kind: RewardKindValue;
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly title: string;
 	readonly description: string;
 	readonly offer: RewardOffer;
@@ -123,7 +123,7 @@ export interface NewRewardDefinition {
 	readonly id: string;
 	/** Id for the referrer child, used only when referrals are enabled with a pool. */
 	readonly referrerId: string;
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly title: string;
 	readonly description: string;
 	readonly offer: RewardOffer;
@@ -143,7 +143,7 @@ export interface NewRewardDefinition {
 /** What a claim needs to know about a claimable reward. */
 export interface ClaimableRewardFacts {
 	readonly rewardId: string;
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly title: string;
 	readonly expiryDate: EpochMs;
 	/** `rules.maxUsePerUser`; null = unlimited. */

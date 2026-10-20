@@ -16,7 +16,7 @@ interface CachedPolicyBundle {
 }
 
 /**
- * Evaluates Cedar decisions against each organization's published bundle,
+ * Evaluates Cedar decisions against each tenant's published bundle,
  * cached per process. Entries are dropped when a policy is published on any
  * instance (registered with `AuthorizationInvalidationService` by
  * `PolicyBundleCacheRegistration`) and expire after
@@ -31,15 +31,15 @@ export class CedarPolicyEvaluatorService implements CedarPolicyEvaluatorPort, Po
 		@Inject(POLICY_ENGINE) private readonly engine: PolicyEngine,
 	) {}
 
-	public async getActivePolicyVersion(organizationId: string): Promise<number> {
-		const bundle = await this.loadBundle(organizationId);
+	public async getActivePolicyVersion(tenantId: string): Promise<number> {
+		const bundle = await this.loadBundle(tenantId);
 		return bundle.version;
 	}
 
 	public async evaluate(input: CedarEvaluationInput): Promise<CedarAuthorizationDecision> {
-		const bundle = await this.loadBundle(input.organizationId);
+		const bundle = await this.loadBundle(input.tenantId);
 		const result: PolicyEngineDecision = this.engine.decide(bundle, {
-			organizationId: input.organizationId,
+			tenantId: input.tenantId,
 			principal: input.principal,
 			action: input.action,
 			...(input.locationId === undefined ? {} : { locationId: input.locationId }),
@@ -53,18 +53,18 @@ export class CedarPolicyEvaluatorService implements CedarPolicyEvaluatorPort, Po
 		};
 	}
 
-	/** Drops one organization's cached bundle (after a TENANT-scope publish). */
-	public invalidateOrganization(organizationId: string): void {
-		this.bundleCache.delete(organizationId);
+	/** Drops one tenant's cached bundle (after a TENANT-scope publish). */
+	public invalidateTenant(tenantId: string): void {
+		this.bundleCache.delete(tenantId);
 	}
 
-	/** Drops every cached bundle: a platform guardrail is part of every organization's bundle. */
+	/** Drops every cached bundle: a platform guardrail is part of every tenant's bundle. */
 	public invalidateAll(): void {
 		this.bundleCache.clear();
 	}
 
-	private async loadBundle(organizationId: string): Promise<PolicyBundle> {
-		const cached: CachedPolicyBundle | undefined = this.bundleCache.get(organizationId);
+	private async loadBundle(tenantId: string): Promise<PolicyBundle> {
+		const cached: CachedPolicyBundle | undefined = this.bundleCache.get(tenantId);
 		if (cached !== undefined && nowEpochMs() - cached.loadedAt < POLICY_BUNDLE_CACHE_TTL_MS) {
 			return cached.bundle;
 		}
@@ -78,7 +78,7 @@ export class CedarPolicyEvaluatorService implements CedarPolicyEvaluatorPort, Po
 			async (tx) => {
 				return tx.authorizationPolicyVersion.findMany({
 					where: {
-						OR: [{ organizationId }, { organizationId: null, scope: "PLATFORM_GUARDRAIL" }],
+						OR: [{ tenantId }, { tenantId: null, scope: "PLATFORM_GUARDRAIL" }],
 						supersededAt: null,
 					},
 					orderBy: { version: "desc" },
@@ -86,9 +86,9 @@ export class CedarPolicyEvaluatorService implements CedarPolicyEvaluatorPort, Po
 			},
 		);
 
-		// Same membership rule as `isVersionInOrganizationBundle` (the simulation uses that predicate).
+		// Same membership rule as `isVersionInTenantBundle` (the simulation uses that predicate).
 		const bundle = composePolicyBundle(versions);
-		this.bundleCache.set(organizationId, { bundle, loadedAt: nowEpochMs() });
+		this.bundleCache.set(tenantId, { bundle, loadedAt: nowEpochMs() });
 		return bundle;
 	}
 }

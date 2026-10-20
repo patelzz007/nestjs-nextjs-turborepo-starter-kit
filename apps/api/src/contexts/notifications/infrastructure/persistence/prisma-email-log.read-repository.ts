@@ -10,6 +10,7 @@ import { fieldWhere, toPrismaComparableFilter, toPrismaEqualityFilter, toPrismaS
 import { PrismaReadExecutor } from "../../../../platform/infrastructure/unit-of-work/prisma-read-executor";
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import type { EmailLogReadPort } from "../../application/ports/email-log-read.port";
+import { EMAIL_LOG_LIST_OPERATION } from "../../application/ports/notifications.tokens";
 import { toEmailLogEntry } from "./email-log.mapper";
 
 // ── List query → Prisma (explicit field → column mapping; see docs/technical/api/list-queries.md) ──
@@ -58,10 +59,9 @@ export function buildEmailLogListOrder(query: EmailLogListQuery): ListOrder<Pris
 }
 
 /**
- * The admin email log projection. Runs under the actor's RLS session
- * ({@link PrismaReadExecutor}): `EmailLog` SELECT is bypass-only, which the
- * admin's superadmin / single-tenant-staff session grants. One count + one page
- * query per request, whatever the page size (no N+1).
+ * The admin email log projection. `EmailLog` SELECT is bypass-only, so the list
+ * runs as `notifications.email_log.list` (that table alone) after the EMAIL
+ * permission check. One count + one page query per request, whatever the page size (no N+1).
  */
 @Injectable()
 export class PrismaEmailLogReadRepository implements EmailLogReadPort {
@@ -72,7 +72,7 @@ export class PrismaEmailLogReadRepository implements EmailLogReadPort {
 	}
 
 	public async list(actor: ActorContext, query: EmailLogListQuery): Promise<PaginatedServiceResult<EmailLogEntry>> {
-		const result = await this.reads.read(actor, async (db) =>
+		const result = await this.reads.readAsSystemOperation(EMAIL_LOG_LIST_OPERATION, actor, async (db) =>
 			fetchListPage(query, {
 				where: buildEmailLogListWhere(query),
 				order: buildEmailLogListOrder(query),

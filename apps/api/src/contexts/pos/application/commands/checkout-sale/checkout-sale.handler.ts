@@ -38,7 +38,7 @@ export class SaleRedemptionUnresolvedError extends Error {
  * A retried idempotency key replays the stored sale (only for the identical request). A concurrent
  * request with the same key, or a claim a concurrent checkout redeemed first, rolls this one back and
  * replays the winner when there is one; a winner the caller cannot read (another store's sale under the
- * organization-wide key) is answered 409 `IDEMPOTENCY_KEY_REUSED`.
+ * tenant-wide key) is answered 409 `IDEMPOTENCY_KEY_REUSED`.
  */
 @CommandHandler(CheckoutSaleCommand)
 export class CheckoutSaleHandler implements ICommandHandler<CheckoutSaleCommand, RedemptionCheckoutResponse> {
@@ -104,7 +104,7 @@ export class CheckoutSaleHandler implements ICommandHandler<CheckoutSaleCommand,
 		}
 		const stored = await scope.sales.add(sale);
 		await scope.rewardAudit.append({
-			organizationId: point.organizationId,
+			tenantId: point.tenantId,
 			actorUserId: null,
 			action: "merchant.checkout",
 			metadata: {
@@ -133,7 +133,7 @@ export class CheckoutSaleHandler implements ICommandHandler<CheckoutSaleCommand,
 	/** The stored sale under this key, replayed for the identical request; null when there is none. */
 	private async replay(actor: ActorContext, point: CheckoutPoint, idempotencyKey: string, requestHash: string): Promise<RedemptionCheckoutResponse | null> {
 		return this.uow.run(actor, async (scope: PosScope): Promise<RedemptionCheckoutResponse | null> => {
-			const stored = await scope.sales.findByIdempotencyKey(point.organizationId, idempotencyKey);
+			const stored = await scope.sales.findByIdempotencyKey(point.tenantId, idempotencyKey);
 			if (stored === null) {
 				return null;
 			}

@@ -4,13 +4,13 @@ import { MERCHANT_CAPABILITY, type MerchantTerminalSummary, type PaginatedServic
 
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
-import { MERCHANT_ACCESS } from "../../../../organizations/public-api";
-import { actingInOrganization } from "../../acting-member";
+import { MERCHANT_ACCESS } from "../../../../tenancy/public-api";
+import { actingInTenant } from "../../acting-member";
 import type { TerminalReadPort } from "../../ports/pos-read.port";
 import { TERMINAL_READS } from "../../ports/pos.tokens";
 import { ListTerminalsQuery } from "./list-terminals.query";
 
-/** The organization's live tills within the member's stores (one store when `locationId` narrows it). */
+/** The tenant's live tills within the member's stores (one store when `locationId` narrows it). */
 @QueryHandler(ListTerminalsQuery)
 export class ListTerminalsHandler implements IQueryHandler<ListTerminalsQuery, PaginatedServiceResult<MerchantTerminalSummary>> {
 	public constructor(
@@ -22,11 +22,11 @@ export class ListTerminalsHandler implements IQueryHandler<ListTerminalsQuery, P
 	public async execute(query: ListTerminalsQuery): Promise<PaginatedServiceResult<MerchantTerminalSummary>> {
 		const { actor, input } = query;
 		const grant = await this.merchantAccess.assertCapability(actor, {
-			organizationId: input.organizationId,
+			tenantId: input.tenantId,
 			capability: MERCHANT_CAPABILITY.manageApiKeys,
 			locationId: input.locationId ?? null,
 		});
-		const tenant = actingInOrganization(actor, input.organizationId);
+		const tenant = actingInTenant(actor, input.tenantId);
 		return this.reads.list(tenant, grant, input, this.clock.now());
 	}
 }

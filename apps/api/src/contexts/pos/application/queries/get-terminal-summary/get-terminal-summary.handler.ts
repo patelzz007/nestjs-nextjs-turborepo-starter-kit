@@ -4,8 +4,8 @@ import { MERCHANT_CAPABILITY, type MerchantTerminalStatusSummary } from "@worksp
 
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
-import { MERCHANT_ACCESS } from "../../../../organizations/public-api";
-import { actingInOrganization } from "../../acting-member";
+import { MERCHANT_ACCESS } from "../../../../tenancy/public-api";
+import { actingInTenant } from "../../acting-member";
 import type { TerminalReadPort } from "../../ports/pos-read.port";
 import { TERMINAL_READS } from "../../ports/pos.tokens";
 import { GetTerminalSummaryQuery } from "./get-terminal-summary.query";
@@ -22,11 +22,11 @@ export class GetTerminalSummaryHandler implements IQueryHandler<GetTerminalSumma
 	public async execute(query: GetTerminalSummaryQuery): Promise<MerchantTerminalStatusSummary> {
 		const { actor, input } = query;
 		const grant = await this.merchantAccess.assertCapability(actor, {
-			organizationId: input.organizationId,
+			tenantId: input.tenantId,
 			capability: MERCHANT_CAPABILITY.manageApiKeys,
 			locationId: input.locationId ?? null,
 		});
-		const tenant = actingInOrganization(actor, input.organizationId);
+		const tenant = actingInTenant(actor, input.tenantId);
 		return this.reads.summary(tenant, grant, this.clock.now());
 	}
 }

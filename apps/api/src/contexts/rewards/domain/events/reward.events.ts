@@ -5,19 +5,19 @@ import { DomainEvent } from "../../../../platform/domain/domain-event";
 /** Facts every reward event carries: which reward, whose, and its title at the time. */
 export interface RewardEventFacts {
 	readonly rewardId: string;
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly title: string;
 }
 
 export abstract class RewardDomainEvent extends DomainEvent {
 	public readonly rewardId: string;
-	public readonly organizationId: string;
+	public readonly tenantId: string;
 	public readonly title: string;
 
 	protected constructor(occurredAt: EpochMs, facts: RewardEventFacts) {
 		super(occurredAt);
 		this.rewardId = facts.rewardId;
-		this.organizationId = facts.organizationId;
+		this.tenantId = facts.tenantId;
 		this.title = facts.title;
 	}
 }

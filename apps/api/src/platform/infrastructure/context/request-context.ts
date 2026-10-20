@@ -30,7 +30,7 @@ import { correlationIdFor } from "./correlation-id";
 
 /** Server-verified tenant scope of the request. Absent ids were not requested or not proven. */
 export interface RequestTenant {
-	readonly organizationId: string | undefined;
+	readonly tenantId: string | undefined;
 	readonly storeId: string | undefined;
 	readonly locationId: string | undefined;
 }
@@ -57,11 +57,11 @@ export interface RequestPrincipal {
  */
 export interface RequestApiKeyPrincipal {
 	readonly apiKeyId: string;
-	/** The organization the key belongs to (server-verified by the key lookup). */
-	readonly organizationId: string;
+	/** The tenant the key belongs to (server-verified by the key lookup). */
+	readonly tenantId: string;
 	/** The POS terminal the key acts for, when known. */
 	readonly terminalId: string | undefined;
-	/** The store the key itself is limited to (`null` = organization-wide) — the database store scope of the request. */
+	/** The store the key itself is limited to (`null` = tenant-wide) — the database store scope of the request. */
 	readonly locationId: string | null;
 }
 
@@ -91,6 +91,8 @@ export interface RequestContext {
 	readonly tenant: RequestTenant;
 	/** Allowlisted system operations (RLS bypasses) used on behalf of this request, in first-use order, de-duplicated. */
 	readonly systemOperations: readonly SystemOperation[];
+	/** Approved support grant used because the caller has no membership in the request tenant. */
+	readonly supportAccessGrantId: string | undefined;
 	/** When the request arrived (epoch ms) — the audit entry's `occurredAt`. */
 	readonly receivedAtEpochMs: number;
 	/**
@@ -117,10 +119,10 @@ export interface RequestLogFields {
 	readonly correlationId: string;
 	readonly userId?: string;
 	readonly impersonatorId?: string;
-	readonly organizationId?: string;
+	readonly tenantId?: string;
 }
 
-const EMPTY_TENANT: RequestTenant = { organizationId: undefined, storeId: undefined, locationId: undefined };
+const EMPTY_TENANT: RequestTenant = { tenantId: undefined, storeId: undefined, locationId: undefined };
 
 /**
  * The ALS store holds a single mutable slot so later lifecycle phases can
@@ -172,6 +174,7 @@ export class RequestContextService {
 			apiKey: undefined,
 			tenant: EMPTY_TENANT,
 			systemOperations: [],
+			supportAccessGrantId: undefined,
 			receivedAtEpochMs: nowEpochMs(),
 			isAuditRecorded: false,
 			actor: undefined,
@@ -196,6 +199,11 @@ export class RequestContextService {
 	 */
 	public resolveCorrelationId(raw: IncomingMessage): string {
 		return this.correlationId() ?? correlationIdFor(raw);
+	}
+
+	/** Records the support grant that stood in for a membership. No-op outside a request. */
+	public bindSupportAccessGrant(grantId: string): void {
+		this.update((context: RequestContext): RequestContext => ({ ...context, supportAccessGrantId: grantId }));
 	}
 
 	/** Records the authenticated principal (after AuthGuard). No-op outside a request. */
@@ -233,7 +241,7 @@ export class RequestContextService {
 	public bindTenant(tenant: Partial<RequestTenant>): void {
 		this.update((context: RequestContext): RequestContext => ({
 			...context,
-			tenant: { organizationId: tenant.organizationId, storeId: tenant.storeId, locationId: tenant.locationId },
+			tenant: { tenantId: tenant.tenantId, storeId: tenant.storeId, locationId: tenant.locationId },
 		}));
 	}
 
@@ -247,7 +255,7 @@ export class RequestContextService {
 			correlationId: context.correlationId,
 			...(context.principal === undefined ? {} : { userId: context.principal.userId }),
 			...(context.principal?.impersonatorId === undefined ? {} : { impersonatorId: context.principal.impersonatorId }),
-			...(context.tenant.organizationId === undefined ? {} : { organizationId: context.tenant.organizationId }),
+			...(context.tenant.tenantId === undefined ? {} : { tenantId: context.tenant.tenantId }),
 		};
 	}
 

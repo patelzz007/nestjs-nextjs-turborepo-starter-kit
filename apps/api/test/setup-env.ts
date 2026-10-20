@@ -16,6 +16,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { BooleanFlagEnvSchema } from "@workspace/shared";
 import { config as loadEnv } from "dotenv";
 import { inject } from "vitest";
 
@@ -27,6 +28,14 @@ loadEnv({ path: path.join(apiRoot, ".env"), quiet: true });
 for (const [name, value] of Object.entries(TEST_API_INFRASTRUCTURE)) {
 	process.env[name] ??= value;
 }
+// EMAIL_TEST_TO is a developer's local redirect of every recipient to their own inbox: e2e asserts the
+// real recipients and sends nothing (EMAIL_MODE=noop), so a redirect in apps/api/.env never applies.
+delete process.env.EMAIL_TEST_TO;
+// Multi-tenant mode has no fallback tenant (D12) and refuses to boot with one: a DEFAULT_TENANT_ID
+// from the fixtures or a single-mode apps/api/.env does not apply to a multi-tenant run.
+if (BooleanFlagEnvSchema.parse(process.env.TENANCY_ENABLED)) {
+	delete process.env.DEFAULT_TENANT_ID;
+}
 for (const [name, value] of Object.entries({ ...TEST_API_SECRETS, ...TEST_API_SWITCHES, ...TEST_E2E_PROXY, ...TEST_E2E_STORAGE })) {
 	process.env[name] = value;
 }
@@ -37,3 +46,14 @@ process.env.BULLMQ_PREFIX = inject("bullMqPrefix");
 // throttler and login-verification keys): a dev API on the same Redis never
 // hears this run's invalidations, and the run never reads the dev API's keys.
 process.env.REDIS_NAMESPACE = inject("redisNamespace");
+
+// Tenancy suites share this loader (plan MT-26). `multi` must not keep a fallback tenant id.
+const tenancySuite = process.env.TENANCY_E2E_SUITE;
+if (tenancySuite === "multi") {
+	process.env.TENANCY_ENABLED = "true";
+	delete process.env.DEFAULT_TENANT_ID;
+}
+if (tenancySuite === "single") {
+	process.env.TENANCY_ENABLED = "false";
+	process.env.DEFAULT_TENANT_ID = "019b76da-a810-7000-8000-0000000000a1";
+}

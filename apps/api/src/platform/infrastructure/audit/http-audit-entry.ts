@@ -73,10 +73,11 @@ export interface HttpAuditEntry {
 	readonly actorUserId: string | null;
 	readonly impersonatorUserId: string | null;
 	readonly impersonationSessionId: string | null;
+	readonly supportAccessGrantId: string | null;
 	readonly authMethod: AuditAuthMethod | null;
 	readonly apiKeyId: string | null;
 	readonly terminalId: string | null;
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 	readonly storeId: string | null;
 	readonly locationId: string | null;
 	readonly ipAddress: string | null;
@@ -284,10 +285,11 @@ export function buildHttpAuditEntry(request: FastifyRequest, context: RequestCon
 		actorUserId: context.principal?.userId ?? null,
 		impersonatorUserId: context.principal?.impersonatorId ?? null,
 		impersonationSessionId: context.principal?.impersonationSessionId ?? null,
+		supportAccessGrantId: context.supportAccessGrantId ?? null,
 		authMethod: authMethodOf(context),
 		apiKeyId: context.apiKey?.apiKeyId ?? null,
 		terminalId: context.apiKey?.terminalId ?? null,
-		organizationId: context.tenant.organizationId ?? context.apiKey?.organizationId ?? null,
+		tenantId: context.tenant.tenantId ?? context.apiKey?.tenantId ?? null,
 		storeId: context.tenant.storeId ?? null,
 		locationId: context.tenant.locationId ?? null,
 		ipAddress,

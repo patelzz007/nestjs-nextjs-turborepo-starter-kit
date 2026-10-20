@@ -34,7 +34,19 @@ const SHELL_VARIABLES: Readonly<Record<string, string>> = {
 	github_credential_key: Buffer.alloc(SECRET_BYTES, 4).toString("base64"),
 };
 
-function workflowEnv(): Record<string, string> {
+/** The tenancy lines the action appends after the heredoc, per `tenancy-mode` (multi-tenancy plan MT-70). */
+const MULTI_TENANCY_APPEND = 'echo "TENANCY_ENABLED=true" >> apps/api/.env';
+const SINGLE_TENANCY_APPEND = "printf 'TENANCY_ENABLED=false\\nDEFAULT_TENANT_ID=%s\\n' \"$DEFAULT_TENANT_ID_INPUT\" >> apps/api/.env";
+/** The tenant `pnpm db:seed` creates, which the browser job serves in single mode. */
+const SEED_DEFAULT_TENANT_ID = "019b76da-a800-7a94-a198-23ad1b4cfdd9";
+
+type TenancyMode = "multi" | "single";
+
+function tenancyLines(mode: TenancyMode): Record<string, string> {
+	return mode === "multi" ? { TENANCY_ENABLED: "true" } : { TENANCY_ENABLED: "false", DEFAULT_TENANT_ID: SEED_DEFAULT_TENANT_ID };
+}
+
+function workflowEnv(mode: TenancyMode = "multi"): Record<string, string> {
 	const heredoc = ENV_HEREDOC_PATTERN.exec(readFileSync(WORKFLOW_PATH, "utf8"))?.groups?.body;
 	if (heredoc === undefined) {
 		throw new Error("The write-api-ci-env action no longer writes apps/api/.env with a heredoc — update this test.");
@@ -48,12 +60,21 @@ function workflowEnv(): Record<string, string> {
 		}
 		env[line.slice(0, separator)] = line.slice(separator + 1).replace(SHELL_VARIABLE_PATTERN, (_match: string, name: string): string => SHELL_VARIABLES[name] ?? "");
 	}
-	return env;
+	return { ...env, ...tenancyLines(mode) };
 }
 
 describe(".github/actions/write-api-ci-env — CI API env", () => {
-	it("passes the API config schema", () => {
+	it("passes the API config schema in both tenancy modes", () => {
+		expect(parseApiConfig(workflowEnv("multi")).tenancy.mode).toBe("multi");
+		expect(parseApiConfig(workflowEnv("single")).tenancy.mode).toBe("single");
 		expect(parseApiConfig(workflowEnv()).runtime.nodeEnv).toBe("test");
+	});
+
+	it("appends exactly the tenancy lines this test models, and never a default tenant in multi mode", () => {
+		const action = readFileSync(WORKFLOW_PATH, "utf8");
+		expect(action).toContain(MULTI_TENANCY_APPEND);
+		expect(action).toContain(SINGLE_TENANCY_APPEND);
+		expect(ENV_HEREDOC_PATTERN.exec(action)?.groups?.body).not.toMatch(/TENANCY_ENABLED|DEFAULT_TENANT_ID/);
 	});
 
 	it("turns GitHub pull requests on, so the seed fills github_account_links for the seed coverage check", () => {

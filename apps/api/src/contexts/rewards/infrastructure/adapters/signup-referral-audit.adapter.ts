@@ -14,7 +14,7 @@ export class RewardAuditSignupReferralAudit implements SignupReferralAuditPort {
 	/** The owner and the new row id, never the code value (operators read that from the code row). */
 	public async recordCodeIssued(issued: IssuedSignupReferralCode): Promise<void> {
 		await this.audit.append({
-			organizationId: null,
+			tenantId: null,
 			actorUserId: null,
 			action: SIGNUP_REFERRAL_CODE_ISSUED_AUDIT_ACTION,
 			metadata: { actor: "system", ownerUserId: issued.ownerUserId, referralCodeId: issued.referralCodeId, successor: issued.successor },

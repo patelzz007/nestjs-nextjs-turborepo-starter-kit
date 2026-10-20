@@ -27,8 +27,8 @@ import { ZodBody, ZodParams } from "../../../../platform/presentation/http/valid
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
+import { PublicOperation } from "../../../../platform/presentation/http/security/decorators/public-operation.decorator";
 import { Public } from "../../../../platform/presentation/http/security/decorators/public.decorator";
-import { RlsBypass } from "../../../../platform/presentation/http/security/decorators/rls-bypass.decorator";
 import { SkipMutationIntent } from "../../../../platform/presentation/http/security/decorators/skip-mutation-intent.decorator";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
 import { ApplyFileProcessingResultCommand } from "../../application/commands/apply-file-processing-result/apply-file-processing-result.command";
@@ -37,6 +37,7 @@ import { DeleteFileCommand } from "../../application/commands/delete-file/delete
 import { RequestFileUploadCommand } from "../../application/commands/request-file-upload/request-file-upload.command";
 import { GetFileDownloadUrlQuery } from "../../application/queries/get-file-download-url/get-file-download-url.query";
 import { GetFileQuery } from "../../application/queries/get-file/get-file.query";
+import { FILES_SCAN_VERDICT_OPERATION } from "../../application/ports/files.tokens";
 
 const FileIdParamSchema = z.object({ fileId: UuidParamSchema }).strict();
 
@@ -80,7 +81,7 @@ export class FilesController {
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@Public()
-	@RlsBypass()
+	@PublicOperation(FILES_SCAN_VERDICT_OPERATION)
 	// Server-to-server integration (the processing worker sends no Origin); authenticated by the shared secret.
 	@SkipMutationIntent()
 	@Post("processing-callback")

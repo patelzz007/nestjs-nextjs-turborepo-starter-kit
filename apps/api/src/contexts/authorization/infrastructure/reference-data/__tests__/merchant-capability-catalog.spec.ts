@@ -8,7 +8,7 @@ describe("MERCHANT_CAPABILITY_CATALOG (seeded capability_definitions rows)", () 
 		expect(MERCHANT_CAPABILITY_CATALOG.map((entry) => entry.slug)).toEqual(MerchantCapabilitySchema.options);
 	});
 
-	it("seeds the organization-management capabilities that gate Team, Locations and Verification", () => {
+	it("seeds the tenant-management capabilities that gate Team, Locations and Verification", () => {
 		const slugs = MERCHANT_CAPABILITY_CATALOG.map((entry) => entry.slug);
 
 		expect(slugs).toEqual(

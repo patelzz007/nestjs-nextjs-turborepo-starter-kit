@@ -19,7 +19,7 @@ function setup(): { readonly exporter: AnalyticsReportExporter; readonly rendere
 }
 
 describe("AnalyticsReportExporter", () => {
-	it("names the file after the organization, the range's local first and last day, the interval and the format", async () => {
+	it("names the file after the tenant, the range's local first and last day, the interval and the format", async () => {
 		const { exporter, renderers } = setup();
 
 		const file = await exporter.exportMerchant(MERCHANT_DASHBOARD_FIXTURE, SUBJECT, "xlsx", await captureFastifyRequest({ headers: {} }));

@@ -6,7 +6,7 @@ import { PolicyPublished } from "../../../domain/events/policy-published.event";
 import type { AuthorizationCacheInvalidationPort } from "../../ports/authorization-cache-invalidation.port";
 import { AUTHORIZATION_CACHE_INVALIDATION } from "../../ports/authorization.tokens";
 
-/** After commit: drop the stale compiled bundles on every instance (a platform slot is in every organization's bundle). */
+/** After commit: drop the stale compiled bundles on every instance (a platform slot is in every tenant's bundle). */
 @EventsHandler(PolicyPublished)
 export class InvalidatePolicyBundlesOnPolicyPublished implements IEventHandler<PolicyPublished> {
 	private readonly logger: Logger = new Logger(InvalidatePolicyBundlesOnPolicyPublished.name);
@@ -15,7 +15,7 @@ export class InvalidatePolicyBundlesOnPolicyPublished implements IEventHandler<P
 
 	public async handle(event: PolicyPublished): Promise<void> {
 		try {
-			await this.invalidation.invalidatePolicyBundles(event.organizationId === null ? { kind: "all" } : { kind: "organization", organizationId: event.organizationId });
+			await this.invalidation.invalidatePolicyBundles(event.tenantId === null ? { kind: "all" } : { kind: "tenant", tenantId: event.tenantId });
 		} catch (error) {
 			const thrown = ThrownErrorSchema.safeParse(error);
 			this.logger.error(`Policy bundle invalidation failed; bundles converge at their TTL: ${thrown.success ? thrown.data.message : "unknown error"}`);

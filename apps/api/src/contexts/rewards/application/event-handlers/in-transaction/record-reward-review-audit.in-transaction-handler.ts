@@ -9,17 +9,17 @@ type RewardReviewDecision = RewardApproved | RewardRejected | RewardAutoPublishe
 
 function auditEntryFor(event: RewardReviewDecision): RewardAuditEntry {
 	if (event instanceof RewardApproved) {
-		return { organizationId: event.organizationId, actorUserId: event.reviewerUserId, action: "reward.approved", metadata: { rewardId: event.rewardId } };
+		return { tenantId: event.tenantId, actorUserId: event.reviewerUserId, action: "reward.approved", metadata: { rewardId: event.rewardId } };
 	}
 	if (event instanceof RewardRejected) {
 		return {
-			organizationId: event.organizationId,
+			tenantId: event.tenantId,
 			actorUserId: event.reviewerUserId,
 			action: "reward.rejected",
 			metadata: { rewardId: event.rewardId, reason: event.reason },
 		};
 	}
-	return { organizationId: event.organizationId, actorUserId: null, action: "reward.auto_published", metadata: { rewardId: event.rewardId } };
+	return { tenantId: event.tenantId, actorUserId: null, action: "reward.auto_published", metadata: { rewardId: event.rewardId } };
 }
 
 /** Writes the reward audit row of every review decision in the decision's own transaction. */

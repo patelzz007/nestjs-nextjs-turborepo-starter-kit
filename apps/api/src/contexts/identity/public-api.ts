@@ -4,16 +4,16 @@
  * `IdentityModule` (identity.module.ts) is a global composition module mounted by `AppModule` only;
  * it is deliberately not exported here (contexts reach identity's providers by token, which keeps the
  * module graph acyclic). It provides:
- * - `ACCOUNT_PROVISIONING` (`AccountProvisioningPort`, platform port): organizations' invite
+ * - `ACCOUNT_PROVISIONING` (`AccountProvisioningPort`, platform port): tenants' invite
  *   registration and merchant onboarding.
- * - `REGISTRATION_SIGN_IN` (`RegistrationSignInPort`): the first sign-in of an account organizations
+ * - `REGISTRATION_SIGN_IN` (`RegistrationSignInPort`): the first sign-in of an account tenants
  *   just registered from a team invite (login-verification policy applies).
  * - `IDENTITY_SESSIONS` (`IdentitySessionsPortFactory`, platform port): authorization revokes sessions
  *   and bumps `tokenVersion` inside its RBAC transaction.
  * - The security kit's ports (`ACCESS_TOKEN_VERIFIER`, `ACCESS_TOKEN_STATE`, `IMPERSONATION_TOKEN_CHECK`,
  *   `AUTH_FLOW_RECORDER`, platform `access-token.port.ts`).
  *
- * Identity consumes `MERCHANT_PORTAL_ACCESS` (`MerchantPortalAccessPort`), which organizations implements.
+ * Identity consumes `MERCHANT_PORTAL_ACCESS` (`MerchantPortalAccessPort`), which tenants implements.
  * `createIdentityTransactionalPorts(db, …)` binds identity's ports to another context's transaction
  * (only that context's `infrastructure/` may call it).
  */

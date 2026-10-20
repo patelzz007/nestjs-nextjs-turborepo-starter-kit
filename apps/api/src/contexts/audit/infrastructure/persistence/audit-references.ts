@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import type { AuditLogOrganization, AuditLogUser } from "@workspace/shared";
+import type { AuditLogTenant, AuditLogUser } from "@workspace/shared";
 
 // ── The people and tenants an audit record names ──────────────────────────
 // Both audit trails (HTTP requests — ADR 025; row changes — ADR 051) store
@@ -10,19 +10,19 @@ import type { AuditLogOrganization, AuditLogUser } from "@workspace/shared";
 /** A user an audit record names, as the viewer shows it. */
 export type AuditLogUserRow = Prisma.UserGetPayload<{ select: { id: true; email: true; fullName: true } }>;
 
-/** An organization an audit record is scoped to, as the viewer shows it. */
-export type AuditLogOrganizationRow = Prisma.OrganizationGetPayload<{ select: { id: true; displayName: true } }>;
+/** A tenant an audit record is scoped to, as the viewer shows it. */
+export type AuditLogTenantRow = Prisma.TenantGetPayload<{ select: { id: true; displayName: true } }>;
 
-/** The user and organization rows a page of audit records references, keyed by id. */
+/** The user and tenant rows a page of audit records references, keyed by id. */
 export interface AuditLogReferences {
 	readonly users: ReadonlyMap<string, AuditLogUserRow>;
-	readonly organizations: ReadonlyMap<string, AuditLogOrganizationRow>;
+	readonly tenants: ReadonlyMap<string, AuditLogTenantRow>;
 }
 
 /** The ids a page of records names — what {@link AuditLogReferences} are loaded for. */
 export interface AuditLogReferenceIds {
 	readonly userIds: readonly string[];
-	readonly organizationIds: readonly string[];
+	readonly tenantIds: readonly string[];
 }
 
 /** The distinct, non-null ids, in first-seen order. */
@@ -31,10 +31,10 @@ export function distinctReferenceIds(ids: readonly (string | null)[]): string[] 
 }
 
 /** Index looked-up rows by id. */
-export function toAuditLogReferences(users: readonly AuditLogUserRow[], organizations: readonly AuditLogOrganizationRow[]): AuditLogReferences {
+export function toAuditLogReferences(users: readonly AuditLogUserRow[], tenants: readonly AuditLogTenantRow[]): AuditLogReferences {
 	return {
 		users: new Map(users.map((user): [string, AuditLogUserRow] => [user.id, user])),
-		organizations: new Map(organizations.map((organization): [string, AuditLogOrganizationRow] => [organization.id, organization])),
+		tenants: new Map(tenants.map((tenant): [string, AuditLogTenantRow] => [tenant.id, tenant])),
 	};
 }
 
@@ -47,10 +47,10 @@ export function toAuditLogUser(id: string | null, references: AuditLogReferences
 	return { id, email: user?.email ?? null, fullName: user?.fullName ?? null };
 }
 
-/** The organization a record is scoped to; `name` is `null` when the id no longer resolves. `null` when the record names none. */
-export function toAuditLogOrganization(id: string | null, references: AuditLogReferences): AuditLogOrganization | null {
+/** The tenant a record is scoped to; `name` is `null` when the id no longer resolves. `null` when the record names none. */
+export function toAuditLogTenant(id: string | null, references: AuditLogReferences): AuditLogTenant | null {
 	if (id === null) {
 		return null;
 	}
-	return { id, name: references.organizations.get(id)?.displayName ?? null };
+	return { id, name: references.tenants.get(id)?.displayName ?? null };
 }

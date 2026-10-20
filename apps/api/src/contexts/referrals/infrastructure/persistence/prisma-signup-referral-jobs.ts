@@ -1,15 +1,12 @@
 import type { Prisma } from "@prisma/client";
 
-import type { SystemOperationName } from "../../../../platform/application/system-operation-names";
 import type { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import type { SignupReferralAuditPort } from "../../application/ports/signup-referral-audit.port";
 import type { CodeMaintenanceOutcome, SignupReferralCodeMaintenancePort } from "../../application/ports/signup-referral-maintenance.port";
 import { isSignupReferralCodeDue } from "../../domain/policies/signup-referral-dashboard.policy";
 import { LATEST_CODE_ORDER } from "./signup-referral.queries";
 import { issueSignupReferralCode } from "./signup-referral-code.issuer";
-
-/** The code job's allowlisted system operation (it reads and locks every user's row). */
-const CODE_MAINTENANCE_OPERATION: SystemOperationName = "maintenance.signup_referral_codes";
+import { MAINTENANCE_SIGNUP_REFERRAL_CODES_OPERATION } from "../../application/ports/referrals.tokens";
 
 /** The code job's audit trail bound to its transaction (rewards provides it under `SIGNUP_REFERRAL_AUDIT_FACTORY`). */
 export interface SignupReferralAuditFactory {
@@ -32,7 +29,7 @@ export class PrismaSignupReferralCodeMaintenance implements SignupReferralCodeMa
 	 */
 	public listUserIdsNeedingCode(now: number, limit: number, cursorId: string | null): Promise<readonly string[]> {
 		return this.transactions.withSystemOperation(
-			{ operation: CODE_MAINTENANCE_OPERATION, reason: "Find users whose signup referral code is missing or expired", actorUserId: null },
+			{ operation: MAINTENANCE_SIGNUP_REFERRAL_CODES_OPERATION, reason: "Find users whose signup referral code is missing or expired", actorUserId: null },
 			async (tx): Promise<readonly string[]> => {
 				const rows = await tx.user.findMany({
 					where: {
@@ -51,7 +48,7 @@ export class PrismaSignupReferralCodeMaintenance implements SignupReferralCodeMa
 
 	public issueCodeIfDue(userId: string, now: number): Promise<CodeMaintenanceOutcome> {
 		return this.transactions.withSystemOperation(
-			{ operation: CODE_MAINTENANCE_OPERATION, reason: "Issue a signup referral code", actorUserId: null },
+			{ operation: MAINTENANCE_SIGNUP_REFERRAL_CODES_OPERATION, reason: "Issue a signup referral code", actorUserId: null },
 			async (tx): Promise<CodeMaintenanceOutcome> => {
 				// FOR UPDATE: two job runs (one per replica) serialize on the user and the second re-reads the code the first inserted.
 				if ((await tx.$executeRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`) !== 1) {

@@ -111,12 +111,12 @@ describe("LogService", () => {
 
 			requestContext.run({ correlationId: "corr-log-2", ip: undefined, userAgent: undefined, edgeLocation: undefined }, () => {
 				requestContext.bindPrincipal({ userId: "user-7", impersonatorId: "admin-1", impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
-				requestContext.bindTenant({ organizationId: "org-9" });
+				requestContext.bindTenant({ tenantId: "org-9" });
 				logger.warn("quota near limit", { metadata: { remaining: 3 } });
 			});
 
 			expect(spy).toHaveBeenCalledWith(
-				'quota near limit | {"correlationId":"corr-log-2","userId":"user-7","impersonatorId":"admin-1","organizationId":"org-9","remaining":3}',
+				'quota near limit | {"correlationId":"corr-log-2","userId":"user-7","impersonatorId":"admin-1","tenantId":"org-9","remaining":3}',
 				"LogService",
 			);
 		});

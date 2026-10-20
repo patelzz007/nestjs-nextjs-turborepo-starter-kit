@@ -88,7 +88,7 @@ function grant(action: PermissionAction, resource: PermissionResource, scope: Pe
 }
 
 function storeGrant(action: PermissionAction, resource: PermissionResource, storeId: string): SubjectGrant {
-	return { action, resource, scope: "STORE", source: "store", sourceId: "sm-1", store: { storeId, organizationId: ORG_A }, conditions: null };
+	return { action, resource, scope: "STORE", source: "store", sourceId: "sm-1", store: { storeId, tenantId: ORG_A }, conditions: null };
 }
 
 function subjectGrants(overrides: Partial<SubjectGrants> = {}): SubjectGrants {
@@ -96,7 +96,7 @@ function subjectGrants(overrides: Partial<SubjectGrants> = {}): SubjectGrants {
 }
 
 function tenant(overrides: Partial<TenantVerification> = {}): TenantVerification {
-	return { context: {}, organizationRejected: false, storeRejected: false, locationRejected: false, ...overrides };
+	return { context: {}, target: null, tenantRejected: false, storeRejected: false, locationRejected: false, ...overrides };
 }
 
 function acl(effect: "ALLOW" | "DENY", resourceId: string | null, id = `acl-${effect}`): ResourceAcl {
@@ -110,7 +110,7 @@ function acl(effect: "ALLOW" | "DENY", resourceId: string | null, id = `acl-${ef
 		resourceId,
 		effect,
 		scope: null,
-		organizationId: null,
+		tenantId: null,
 		locationId: null,
 		conditions: null,
 		expiresAt: null,
@@ -164,6 +164,16 @@ describe("AuthorizationKernelService", () => {
 			expect(result.decision).toBe("ALLOW");
 			expect(mocks.load).not.toHaveBeenCalled();
 			expect(mocks.verify).not.toHaveBeenCalled();
+		});
+
+		it("does not bypass a SuperAdmin who named a tenant they do not belong to", async () => {
+			mocks.verify.mockResolvedValue(tenant({ tenantRejected: true }));
+
+			const result = await createKernel().explain(request({ subject: subject({ isSuperAdmin: true, tenantId: ORG_A }) }));
+
+			expect(result.decision).toBe("DENY");
+			expect(mocks.verify).toHaveBeenCalled();
+			expect(result.evaluation.at(-1)?.source).toBe("tenant");
 		});
 
 		it("fails closed on unknown actions or resources", async () => {
@@ -224,13 +234,13 @@ describe("AuthorizationKernelService", () => {
 		});
 
 		it("passes the verified tenant and role ids to the ACL lookup", async () => {
-			mocks.verify.mockResolvedValue(tenant({ context: { organizationId: ORG_A } }));
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A } }));
 
-			await createKernel().can(request({ subject: subject({ organizationId: ORG_A }), resourceId: "order-1" }));
-			expect(mocks.verify).toHaveBeenCalledWith(USER_ID, { organizationId: ORG_A });
+			await createKernel().can(request({ subject: subject({ tenantId: ORG_A }), resourceId: "order-1" }));
+			expect(mocks.verify).toHaveBeenCalledWith(USER_ID, { tenantId: ORG_A });
 
 			expect(mocks.findApplicable).toHaveBeenCalledWith(
-				expect.objectContaining({ userId: USER_ID, roleIds: ["role-1"], resourceScope: { kind: "resource", id: "order-1" }, organizationId: ORG_A }),
+				expect.objectContaining({ userId: USER_ID, roleIds: ["role-1"], resourceScope: { kind: "resource", id: "order-1" }, tenantId: ORG_A }),
 				expect.objectContaining({ action: "READ" }),
 			);
 		});
@@ -251,11 +261,11 @@ describe("AuthorizationKernelService", () => {
 	});
 
 	describe("tenant isolation and relationships", () => {
-		it("rejects a claimed organization the subject is not a member of (forged tenant id)", async () => {
+		it("rejects a claimed tenant the subject is not a member of (forged tenant id)", async () => {
 			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER")] }));
-			mocks.verify.mockResolvedValue(tenant({ organizationRejected: true }));
+			mocks.verify.mockResolvedValue(tenant({ tenantRejected: true }));
 
-			const result = await createKernel().explain(request({ subject: subject({ organizationId: ORG_B }) }));
+			const result = await createKernel().explain(request({ subject: subject({ tenantId: ORG_B }) }));
 
 			expect(result.decision).toBe("DENY");
 			expect(result.evaluation.at(-1)).toEqual(expect.objectContaining({ source: "tenant", effect: "DENY" }));
@@ -263,75 +273,73 @@ describe("AuthorizationKernelService", () => {
 		});
 
 		it("rejects a location outside the membership scope", async () => {
-			mocks.verify.mockResolvedValue(tenant({ context: { organizationId: ORG_A }, locationRejected: true }));
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A }, locationRejected: true }));
 
-			expect(await createKernel().can(request({ subject: subject({ organizationId: ORG_A, locationId: "loc-x" }) }))).toBe("DENY");
+			expect(await createKernel().can(request({ subject: subject({ tenantId: ORG_A, locationId: "loc-x" }) }))).toBe("DENY");
 		});
 
-		it("organization membership alone never grants a permission", async () => {
-			mocks.verify.mockResolvedValue(tenant({ context: { organizationId: ORG_A } }));
+		it("tenant membership alone never grants a permission", async () => {
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A } }));
 
 			for (const action of ["READ", "UPDATE", "DELETE", "MANAGE"] satisfies PermissionAction[]) {
-				expect(await createKernel().can(request({ action, subject: subject({ organizationId: ORG_A }) }))).toBe("DENY");
+				expect(await createKernel().can(request({ action, subject: subject({ tenantId: ORG_A }) }))).toBe("DENY");
 			}
 		});
 
-		it("ORGANIZATION grants require a verified organization", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "ORGANIZATION")] }));
+		it("TENANT grants require a verified tenant", async () => {
+			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "TENANT")] }));
 
 			expect(await createKernel().can(request())).toBe("DENY");
 		});
 
-		it("ORGANIZATION grants allow same-organization resources", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("UPDATE", "ORDER", "ORGANIZATION")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { organizationId: ORG_A } }));
+		it("TENANT grants allow same-tenant resources", async () => {
+			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("UPDATE", "ORDER", "TENANT")] }));
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A } }));
 
 			const decision = await createKernel().can(
-				request({ action: "UPDATE", subject: subject({ organizationId: ORG_A }), resourceId: "order-1", resourceAttributes: { organizationId: ORG_A } }),
+				request({ action: "UPDATE", subject: subject({ tenantId: ORG_A }), resourceId: "order-1", resourceAttributes: { tenantId: ORG_A } }),
 			);
 
 			expect(decision).toBe("ALLOW");
 		});
 
-		it.each(["READ", "UPDATE", "DELETE", "LIST", "CREATE"] satisfies PermissionAction[])("ORGANIZATION grants deny cross-tenant %s", async (action) => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant(action, "ORDER", "ORGANIZATION")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { organizationId: ORG_A } }));
+		it.each(["READ", "UPDATE", "DELETE", "LIST", "CREATE"] satisfies PermissionAction[])("TENANT grants deny cross-tenant %s", async (action) => {
+			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant(action, "ORDER", "TENANT")] }));
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A } }));
 
-			const decision = await createKernel().can(
-				request({ action, subject: subject({ organizationId: ORG_A }), resourceId: "order-b", resourceAttributes: { organizationId: ORG_B } }),
-			);
+			const decision = await createKernel().can(request({ action, subject: subject({ tenantId: ORG_A }), resourceId: "order-b", resourceAttributes: { tenantId: ORG_B } }));
 
 			expect(decision).toBe("DENY");
 		});
 
-		it("ORGANIZATION grants deny a specific resource whose organization is unknown", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "ORGANIZATION")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { organizationId: ORG_A } }));
+		it("TENANT grants deny a specific resource whose tenant is unknown", async () => {
+			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "TENANT")] }));
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A } }));
 
-			expect(await createKernel().can(request({ subject: subject({ organizationId: ORG_A }), resourceId: "order-1" }))).toBe("DENY");
+			expect(await createKernel().can(request({ subject: subject({ tenantId: ORG_A }), resourceId: "order-1" }))).toBe("DENY");
 		});
 
 		it("LOCATION grants apply only inside the verified location", async () => {
 			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "LOCATION")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { organizationId: ORG_A, locationId: LOCATION_A1 } }));
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, locationId: LOCATION_A1 } }));
 			const kernel = createKernel();
-			const scoped = subject({ organizationId: ORG_A, locationId: LOCATION_A1 });
+			const scoped = subject({ tenantId: ORG_A, locationId: LOCATION_A1 });
 
-			expect(await kernel.can(request({ subject: scoped, resourceId: "o1", resourceAttributes: { organizationId: ORG_A, locationId: LOCATION_A1 } }))).toBe("ALLOW");
-			expect(await kernel.can(request({ subject: scoped, resourceId: "o2", resourceAttributes: { organizationId: ORG_A, locationId: "loc-a2" } }))).toBe("DENY");
+			expect(await kernel.can(request({ subject: scoped, resourceId: "o1", resourceAttributes: { tenantId: ORG_A, locationId: LOCATION_A1 } }))).toBe("ALLOW");
+			expect(await kernel.can(request({ subject: scoped, resourceId: "o2", resourceAttributes: { tenantId: ORG_A, locationId: "loc-a2" } }))).toBe("DENY");
 		});
 	});
 
 	describe("stores (STORE scope)", () => {
-		const inStore = (storeId: string): AuthorizationContext => subject({ organizationId: ORG_A, storeId });
+		const inStore = (storeId: string): AuthorizationContext => subject({ tenantId: ORG_A, storeId });
 
 		it("forwards the requested store to tenant verification and rejects a forged store", async () => {
 			mocks.load.mockResolvedValue(subjectGrants({ grants: [storeGrant("READ", "REWARD", "store-1")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { organizationId: ORG_A }, storeRejected: true }));
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A }, storeRejected: true }));
 
 			const result = await createKernel().explain(request({ resource: "REWARD", subject: inStore("store-9") }));
 
-			expect(mocks.verify).toHaveBeenCalledWith(USER_ID, { organizationId: ORG_A, storeId: "store-9" });
+			expect(mocks.verify).toHaveBeenCalledWith(USER_ID, { tenantId: ORG_A, storeId: "store-9" });
 			expect(result.decision).toBe("DENY");
 			expect(result.evaluation.at(-1)).toEqual(expect.objectContaining({ source: "tenant" }));
 		});
@@ -340,10 +348,10 @@ describe("AuthorizationKernelService", () => {
 			mocks.load.mockResolvedValue(subjectGrants({ grants: [storeGrant("CREATE", "REDEMPTION", "store-1")] }));
 			const kernel = createKernel();
 
-			mocks.verify.mockResolvedValue(tenant({ context: { organizationId: ORG_A, storeId: "store-1" } }));
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, storeId: "store-1" } }));
 			expect(await kernel.can(request({ action: "CREATE", resource: "REDEMPTION", subject: inStore("store-1") }))).toBe("ALLOW");
 
-			mocks.verify.mockResolvedValue(tenant({ context: { organizationId: ORG_A, storeId: "store-2" } }));
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, storeId: "store-2" } }));
 			expect(await kernel.can(request({ action: "CREATE", resource: "REDEMPTION", subject: inStore("store-2") }))).toBe("DENY");
 		});
 
@@ -355,7 +363,7 @@ describe("AuthorizationKernelService", () => {
 
 		it("denies a store resource belonging to another store", async () => {
 			mocks.load.mockResolvedValue(subjectGrants({ grants: [storeGrant("READ", "REWARD", "store-1")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { organizationId: ORG_A, storeId: "store-1" } }));
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, storeId: "store-1" } }));
 			const kernel = createKernel();
 
 			expect(await kernel.can(request({ resource: "REWARD", subject: inStore("store-1"), resourceId: "r1", resourceAttributes: { storeId: "store-1" } }))).toBe("ALLOW");
@@ -370,14 +378,14 @@ describe("AuthorizationKernelService", () => {
 			const everyStore = await kernel.filter(subject(), "LIST", "REDEMPTION");
 			expect(everyStore).toEqual({
 				OR: [
-					{ organizationId: ORG_A, storeId: "store-1" },
-					{ organizationId: ORG_A, storeId: "store-2" },
+					{ tenantId: ORG_A, storeId: "store-1" },
+					{ tenantId: ORG_A, storeId: "store-2" },
 				],
 			});
 			expect(AuthorizationRowFilterSchema.safeParse(everyStore).success).toBe(true);
 
-			mocks.verify.mockResolvedValue(tenant({ context: { organizationId: ORG_A, storeId: "store-2" } }));
-			expect(await kernel.filter(inStore("store-2"), "LIST", "REDEMPTION")).toEqual({ organizationId: ORG_A, storeId: "store-2" });
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, storeId: "store-2" } }));
+			expect(await kernel.filter(inStore("store-2"), "LIST", "REDEMPTION")).toEqual({ tenantId: ORG_A, storeId: "store-2" });
 		});
 	});
 
@@ -437,7 +445,7 @@ describe("AuthorizationKernelService", () => {
 	});
 
 	describe("filter()", () => {
-		const context = subject({ organizationId: ORG_A });
+		const context = subject({ tenantId: ORG_A });
 
 		it("returns no restriction for SuperAdmin", async () => {
 			expect(await createKernel().filter(subject({ isSuperAdmin: true }), "READ", "ORDER")).toEqual({});
@@ -450,9 +458,9 @@ describe("AuthorizationKernelService", () => {
 			expect(AuthorizationRowFilterSchema.safeParse(filter).success).toBe(true);
 		});
 
-		it("matches no rows for a forged organization", async () => {
+		it("matches no rows for a forged tenant", async () => {
 			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER")] }));
-			mocks.verify.mockResolvedValue(tenant({ organizationRejected: true }));
+			mocks.verify.mockResolvedValue(tenant({ tenantRejected: true }));
 
 			expect(await createKernel().filter(context, "READ", "ORDER")).toEqual({ id: { in: [] } });
 		});
@@ -463,20 +471,20 @@ describe("AuthorizationKernelService", () => {
 			expect(await createKernel().filter(context, "READ", "ORDER")).toEqual({});
 		});
 
-		it("scopes ORGANIZATION grants to the verified organization", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "ORGANIZATION")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { organizationId: ORG_A } }));
+		it("scopes TENANT grants to the verified tenant", async () => {
+			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "TENANT")] }));
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A } }));
 
-			expect(await createKernel().filter(context, "READ", "ORDER")).toEqual({ organizationId: ORG_A });
+			expect(await createKernel().filter(context, "READ", "ORDER")).toEqual({ tenantId: ORG_A });
 		});
 
 		it("combines tenant and ownership alternatives with OR", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "ORGANIZATION"), grant("READ", "ORDER", "OWN")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { organizationId: ORG_A } }));
+			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "TENANT"), grant("READ", "ORDER", "OWN")] }));
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A } }));
 
 			const filter = await createKernel().filter(context, "READ", "ORDER");
 
-			expect(filter).toEqual({ OR: [{ organizationId: ORG_A }, { userId: USER_ID }] });
+			expect(filter).toEqual({ OR: [{ tenantId: ORG_A }, { userId: USER_ID }] });
 			expect(AuthorizationRowFilterSchema.safeParse(filter).success).toBe(true);
 		});
 
@@ -487,13 +495,13 @@ describe("AuthorizationKernelService", () => {
 		});
 
 		it("applies ACL allow-lists and explicit resource denials", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "ORGANIZATION")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { organizationId: ORG_A } }));
+			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "TENANT")] }));
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A } }));
 			mocks.findApplicable.mockResolvedValue({ denies: [acl("DENY", "order-9")], allows: [acl("ALLOW", "order-7")] });
 
 			const filter = await createKernel().filter(context, "READ", "ORDER");
 
-			expect(filter).toEqual({ AND: [{ OR: [{ organizationId: ORG_A }, { id: { in: ["order-7"] } }] }, { NOT: { id: { in: ["order-9"] } } }] });
+			expect(filter).toEqual({ AND: [{ OR: [{ tenantId: ORG_A }, { id: { in: ["order-7"] } }] }, { NOT: { id: { in: ["order-9"] } } }] });
 			expect(AuthorizationRowFilterSchema.safeParse(filter).success).toBe(true);
 		});
 

@@ -23,7 +23,7 @@ function build(seed: number, sizes: EnterpriseDatasetSizes = SMALL_SIZES): Enter
 
 function structuralKeys(dataset: EnterpriseDataset): readonly string[] {
 	return [
-		dataset.organization.id,
+		dataset.tenant.id,
 		...dataset.locations.map((location) => `${location.id}|${location.code}|${location.status}|${String(location.isPrimary)}`),
 		...dataset.members.map((member) => `${member.userId}|${member.membershipId}|${member.email}|${member.role}|${JSON.stringify(member.scope)}`),
 		...dataset.products.map((product) => `${product.id}|${product.sku}`),
@@ -108,7 +108,7 @@ describe("buildEnterpriseDataset", () => {
 	it("derives every timestamp from the fixed epoch, never the wall clock", () => {
 		const dataset = build(5);
 		const timestamps = [
-			dataset.organization.createdAt,
+			dataset.tenant.createdAt,
 			...dataset.locations.map((location) => location.createdAt),
 			...dataset.members.map((member) => member.joinedAt),
 			...dataset.products.flatMap((product) => [product.createdAt, product.updatedAt]),

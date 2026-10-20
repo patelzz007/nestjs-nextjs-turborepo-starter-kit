@@ -55,7 +55,7 @@ export function storedFile(overrides: Partial<StoredFile> = {}): StoredFile {
 		scannedAt: null,
 		scanResult: null,
 		uploadedById: UPLOADER_ID,
-		organizationId: ORG_ID,
+		tenantId: ORG_ID,
 		productId: null,
 		isDeleted: false,
 		deletedAt: null,

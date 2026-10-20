@@ -9,12 +9,13 @@ import { apiContract, apiPath, EmailLogEntrySchema, nowEpochMs, type EmailLogEnt
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
+import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import { ApiEventStreamResponse } from "../../../../platform/presentation/http/validation/decorators/api-event-stream.decorator";
 import { ZodListQuery } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodPaginatedResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import type { EmailLogSignalPort } from "../../application/ports/email-log-signal.port";
-import { EMAIL_LOG_SIGNAL } from "../../application/ports/notifications.tokens";
+import { EMAIL_LOG_LIST_OPERATION, EMAIL_LOG_SIGNAL } from "../../application/ports/notifications.tokens";
 import { ListEmailLogQuery } from "../../application/queries/list-email-log/list-email-log.query";
 
 /** Keep-alive ping interval of the SSE stream, below common proxy idle timeouts (30 s+). */
@@ -50,6 +51,7 @@ export class EmailLogController {
 	 * search follow the shared list grammar (docs/technical/api/list-queries.md).
 	 */
 	@RequirePermission("LIST", "EMAIL")
+	@PlatformOperation(EMAIL_LOG_LIST_OPERATION)
 	@Get()
 	@ApiOperation({ summary: "List sent emails" })
 	@ZodPaginatedResponse(EmailLogEntrySchema, { description: "Paginated EmailLog rows; pagination is in `meta`" })
@@ -74,6 +76,7 @@ export class EmailLogController {
 	 * only supported auth transport for SSE).
 	 */
 	@RequirePermission("LIST", "EMAIL")
+	@PlatformOperation(EMAIL_LOG_LIST_OPERATION)
 	@Sse("events")
 	@ApiOperation({ summary: "Live EmailLog update stream (SSE)" })
 	@ApiEventStreamResponse("One `{ updatedAt }` frame per EmailLog write (pass-through: no envelope, no response contract)")

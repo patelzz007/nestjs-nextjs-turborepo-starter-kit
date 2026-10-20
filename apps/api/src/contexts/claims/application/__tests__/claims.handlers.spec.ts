@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { DAY_MS, epochMs, type RewardClaimListQuery, type RewardClaimResponse, type PaginatedServiceResult } from "@workspace/shared";
 
 import { systemActor, type ActorContext } from "../../../../platform/application/actor-context";
-import type { OrganizationDisplayData, OrganizationReadPort } from "../../../organizations/public-api";
+import type { TenantDisplayData, TenantReadPort } from "../../../tenancy/public-api";
 import { ReferrerCredited } from "../../../referrals/public-api";
 import { RewardApproved, RewardRejected } from "../../../rewards/public-api";
 import {
@@ -178,7 +178,7 @@ describe("Claim expiry", () => {
 		expect(store.claims.rows.get("claim-1")?.status).toBe("EXPIRED");
 		expect(store.claims.rows.get("claim-2")?.status).toBe("PENDING");
 		expect(store.inventory).toMatchObject({ remaining: 9, reserved: 1 });
-		expect(store.rewardAudit.entries.map((entry) => [entry.action, entry.organizationId])).toEqual([["reward.claim_expired", "org-1"]]);
+		expect(store.rewardAudit.entries.map((entry) => [entry.action, entry.tenantId])).toEqual([["reward.claim_expired", "org-1"]]);
 	});
 });
 
@@ -192,7 +192,7 @@ describe("ClaimRedemptionApplicationService", () => {
 
 		await expect(service().findMerchantClaim({ token: "qr-x" }, "org-1")).resolves.toMatchObject({
 			claim: { id: "claim-1", status: "PENDING" },
-			reward: { organizationId: "org-1" },
+			reward: { tenantId: "org-1" },
 		});
 		await expect(service().findMerchantClaim({ backupCode: "BACKUPXX" }, "org-1")).resolves.toMatchObject({ claim: { id: "claim-1" } });
 		await expect(service().findMerchantClaim({ token: "qr-x" }, "org-2")).resolves.toBeNull();
@@ -227,14 +227,14 @@ describe("Reward inbox", () => {
 	});
 
 	it("writes the review decision to every owner, and the referrer-credit notice to the referrer", async () => {
-		const organizations: OrganizationReadPort = {
-			getDisplayData: (): Promise<ReadonlyMap<string, OrganizationDisplayData>> => Promise.resolve(new Map()),
+		const tenants: TenantReadPort = {
+			getDisplayData: (): Promise<ReadonlyMap<string, TenantDisplayData>> => Promise.resolve(new Map()),
 			listOwnerUserIds: (): Promise<readonly string[]> => Promise.resolve(["owner-1", "owner-2"]),
 		};
-		const facts = { rewardId: REWARD, organizationId: "org-1", title: "Free latte" };
+		const facts = { rewardId: REWARD, tenantId: "org-1", title: "Free latte" };
 
-		await new RecordOwnerNoticesOnRewardReview(organizations).handle(new RewardApproved(NOW, facts, "admin-1"), store.scope);
-		await new RecordOwnerNoticesOnRewardReview(organizations).handle(new RewardRejected(NOW, facts, "admin-1", "Blurry photo"), store.scope);
+		await new RecordOwnerNoticesOnRewardReview(tenants).handle(new RewardApproved(NOW, facts, "admin-1"), store.scope);
+		await new RecordOwnerNoticesOnRewardReview(tenants).handle(new RewardRejected(NOW, facts, "admin-1", "Blurry photo"), store.scope);
 		await new RecordNotificationOnReferrerCredited().handle(
 			new ReferrerCredited(NOW, "referral-1", "referrer-1", "reward-2", "Free cake", epochMs(NOW + DAY_MS), 7),
 			store.scope,

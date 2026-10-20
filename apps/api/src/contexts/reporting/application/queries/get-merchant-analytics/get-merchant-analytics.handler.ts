@@ -18,7 +18,7 @@ export class GetMerchantAnalyticsHandler implements IQueryHandler<GetMerchantAna
 
 	public async execute(query: GetMerchantAnalyticsQuery): Promise<MerchantAnalyticsResponse> {
 		const { actor, input } = query;
-		const scope = await authorizeMerchantAnalytics(this.merchantAccess, actor, { organizationId: input.organizationId, locationId: input.query.locationId });
-		return this.weekly.merchantAnalytics(input.organizationId, scope, input.query);
+		const scope = await authorizeMerchantAnalytics(this.merchantAccess, actor, { tenantId: input.tenantId, locationId: input.query.locationId });
+		return this.weekly.merchantAnalytics(input.tenantId, scope, input.query);
 	}
 }

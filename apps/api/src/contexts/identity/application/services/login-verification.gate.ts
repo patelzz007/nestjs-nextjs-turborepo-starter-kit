@@ -15,7 +15,7 @@ import { LoginVerificationSessionInvalidError } from "../../domain/errors/identi
 import type { IdentityScope } from "../identity-scope";
 import type { CredentialCryptoPort } from "../ports/credential-crypto.port";
 import type { IdentitySettings } from "../ports/identity-settings.port";
-import { CREDENTIAL_CRYPTO, IDENTITY_SETTINGS, IDENTITY_UNIT_OF_WORK, LOGIN_VERIFICATION_STORE, PUBLIC_AUTH_FLOW_OPERATION } from "../ports/identity.tokens";
+import { CREDENTIAL_CRYPTO, IDENTITY_SETTINGS, IDENTITY_UNIT_OF_WORK, LOGIN_DEVICE_CODE_OPERATION, LOGIN_VERIFICATION_STORE } from "../ports/identity.tokens";
 import type { LoginVerificationRecord, LoginVerificationStorePort } from "../ports/login-verification-store.port";
 import type { PendingLoginContext } from "./pending-sign-in";
 import { SessionIssuer } from "./session-issuer";
@@ -96,7 +96,7 @@ export class LoginVerificationGate {
 		};
 		const verificationId: string = this.crypto.generateRandomToken();
 
-		const emailResult: EmailSendResult = await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, actor, async (scope: IdentityScope): Promise<EmailSendResult> => {
+		const emailResult: EmailSendResult = await this.uow.runSystemOperation(LOGIN_DEVICE_CODE_OPERATION, actor, async (scope: IdentityScope): Promise<EmailSendResult> => {
 			const account: UserAccount | null = await scope.accounts.findById(context.userId);
 			if (account === null) {
 				throw new LoginVerificationSessionInvalidError();

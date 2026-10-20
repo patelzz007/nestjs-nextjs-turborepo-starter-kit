@@ -65,7 +65,7 @@ export async function seedOwnProfileHistory(actors: OwnProfileSeedActors): Promi
 		{
 			correlationId: seedAuditCorrelationId(OWN_PROFILE_EDIT_REQUEST),
 			actorUserId: customerId,
-			organizationId: null,
+			tenantId: null,
 			apiKeyId: null,
 			systemOperation: OWN_PROFILE_UPDATE_OPERATION,
 			actorPurpose: OWN_PROFILE_UPDATE_REASON,
@@ -152,6 +152,8 @@ async function seedImpersonationSession(sessionId: string, superAdminId: string,
 		endReason: "STOPPED",
 		ipAddress: null,
 		userAgent: null,
+		// The demo customer holds no tenant membership: no support grant is needed (D21).
+		supportAccessGrantIds: [],
 		createdAt: startedAt,
 		updatedAt: endedAt,
 	} satisfies Omit<Prisma.ImpersonationSessionUncheckedCreateInput, "id">;

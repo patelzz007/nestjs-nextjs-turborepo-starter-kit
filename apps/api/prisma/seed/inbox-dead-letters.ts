@@ -70,7 +70,7 @@ const SPECS: readonly DeadLetterSeedSpec[] = [
 			type: "reward.platform",
 			correlationId: "seed-dead-letter",
 			occurredAt: 1_790_812_800_000,
-			payload: { event: "reward.auto_published", actorUserId: null, organizationId: null, metadata: {} },
+			payload: { event: "reward.auto_published", actorUserId: null, tenantId: null, metadata: {} },
 		}),
 		daysAgo: 1,
 	},

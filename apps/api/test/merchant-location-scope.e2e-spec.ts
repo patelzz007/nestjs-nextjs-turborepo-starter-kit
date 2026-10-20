@@ -13,23 +13,22 @@ import {
 	MerchantRedemptionListItemSchema,
 	MerchantTerminalStatusSummarySchema,
 	MerchantTerminalSummarySchema,
-	ApiPaginatedMetaSchema,
 	MerchantRewardSummarySchema,
 	RewardResponseSchema,
 } from "@workspace/shared";
 
-import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
 import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
 import { sha256Hex } from "../src/platform/infrastructure/crypto/sha256";
-import { createE2eApp, login, type InjectResponse, type LoginResult, mutationHeaders, parseSuccessEnvelope } from "./e2e-helpers";
+import { createE2eApp, login, mutationHeaders, parsePaginatedEnvelope, parseSuccessEnvelope, type InjectResponse, type LoginResult } from "./e2e-helpers";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
 
-const KATIL = ORGANIZATION_SEED_IDS.mlkLocationKatil;
-const BERUANG = ORGANIZATION_SEED_IDS.mlkLocationBeruang;
-const ORG_PATH = `${API_VERSION_PREFIX}/orgs/${ORGANIZATION_SEED_SLUGS.mlk}`;
+const KATIL = TENANT_SEED_IDS.mlkLocationKatil;
+const BERUANG = TENANT_SEED_IDS.mlkLocationBeruang;
+const ORG_PATH = `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.mlk}`;
 /** Distinctive bill totals, so a leak of the other store's bill is visible in every total. */
 const KATIL_BILL_MINOR = 777_777;
 const BERUANG_BILL_MINOR = 3_333;
@@ -92,14 +91,14 @@ describe("Merchant store scope (e2e)", () => {
 			[claimId, aliceId, rewardId, sha256Hex(randomBytes(TOKEN_BYTES).toString("base64url")), sha256Hex(randomUUID()), now, now + DAY_MS],
 		);
 		await query(
-			`INSERT INTO public."RewardSale" (id, "organizationId", "locationId", "userId", "terminalId", "billTotalMinor", currency, "idempotencyKey", "requestHash", "paidAt")
+			`INSERT INTO public."RewardSale" (id, "tenantId", "locationId", "userId", "terminalId", "billTotalMinor", currency, "idempotencyKey", "requestHash", "paidAt")
        VALUES ($1, $2, $3, $4, 'E2E-SCOPE-TILL', $5, 'MYR', $6, $7, $8)`,
-			[saleId, ORGANIZATION_SEED_IDS.mlkOrganization, locationId, aliceId, billTotalMinor, randomUUID(), sha256Hex(saleId), now],
+			[saleId, TENANT_SEED_IDS.mlkTenant, locationId, aliceId, billTotalMinor, randomUUID(), sha256Hex(saleId), now],
 		);
 		await query(
-			`INSERT INTO public."RewardRedemption" (id, "claimId", "organizationId", "locationId", "userId", "terminalId", "redemptionMethod", "saleId", "redeemedAt")
+			`INSERT INTO public."RewardRedemption" (id, "claimId", "tenantId", "locationId", "userId", "terminalId", "redemptionMethod", "saleId", "redeemedAt")
        VALUES ($1, $2, $3, $4, $5, 'E2E-SCOPE-TILL', 'SCAN', $6, $7)`,
-			[redemptionId, claimId, ORGANIZATION_SEED_IDS.mlkOrganization, locationId, aliceId, saleId, now],
+			[redemptionId, claimId, TENANT_SEED_IDS.mlkTenant, locationId, aliceId, saleId, now],
 		);
 	}
 
@@ -115,8 +114,9 @@ describe("Merchant store scope (e2e)", () => {
 		return app.inject({ method: "POST", url: `${ORG_PATH}${path}`, headers: mutationHeaders(merchantHeaders(session)), payload });
 	}
 
+	/** A machine route: the key names its own tenant and store, so the path carries no slug (D6). */
 	function withKey(apiKey: string, path: string): Promise<InjectResponse> {
-		return app.inject({ method: "GET", url: `${ORG_PATH}${path}`, headers: { "x-api-key": apiKey } });
+		return app.inject({ method: "GET", url: `${API_VERSION_PREFIX}${path}`, headers: { "x-api-key": apiKey } });
 	}
 
 	function errorCodeOf(response: InjectResponse): string {
@@ -134,22 +134,24 @@ describe("Merchant store scope (e2e)", () => {
 		storeAdminId = await userIdFor("alice.kl@kl-rewards.demo");
 
 		// A store-limited ADMIN (may manage API keys and terminals, but only at Bukit Beruang).
-		await query(`INSERT INTO public."OrganizationMembership" (id, "organizationId", "userId", role, status) VALUES ($1, $2, $3, 'ADMIN', 'ACTIVE')`, [
+		await query(`INSERT INTO public."Membership" (id, "tenantId", "userId", role, status) VALUES ($1, $2, $3, 'ADMIN', 'ACTIVE')`, [
 			adminMembershipId,
-			ORGANIZATION_SEED_IDS.mlkOrganization,
+			TENANT_SEED_IDS.mlkTenant,
 			storeAdminId,
 		]);
-		await query(
-			`INSERT INTO public."OrganizationMembershipLocationScope" (id, "organizationId", "membershipId", "scopeType", "locationId") VALUES ($1, $2, $3, 'SELECTED', $4)`,
-			[randomUUID(), ORGANIZATION_SEED_IDS.mlkOrganization, adminMembershipId, BERUANG],
-		);
+		await query(`INSERT INTO public."MembershipLocationScope" (id, "tenantId", "membershipId", "scopeType", "locationId") VALUES ($1, $2, $3, 'SELECTED', $4)`, [
+			randomUUID(),
+			TENANT_SEED_IDS.mlkTenant,
+			adminMembershipId,
+			BERUANG,
+		]);
 
 		await query(
-			`INSERT INTO public."Reward" (id, "organizationId", title, description, "rewardType", "rewardValue", category, "quantityTotal", "quantityRemaining", "expiryDate", status, "referralsEnabled")
+			`INSERT INTO public."Reward" (id, "tenantId", title, description, "rewardType", "rewardValue", category, "quantityTotal", "quantityRemaining", "expiryDate", status, "referralsEnabled")
        VALUES ($1, $2, 'E2E store-scope reward', 'Created by merchant-location-scope.e2e-spec.ts', 'DISCOUNT', 10, 'restaurant', 10, 10, $3, 'PUBLISHED', false)`,
-			[rewardId, ORGANIZATION_SEED_IDS.mlkOrganization, Date.now() + 30 * DAY_MS],
+			[rewardId, TENANT_SEED_IDS.mlkTenant, Date.now() + 30 * DAY_MS],
 		);
-		await query(INSERT_REWARD_COVER_SQL, [...rewardCoverParams(rewardId, ORGANIZATION_SEED_IDS.mlkOrganization, "weekend-dinner")]);
+		await query(INSERT_REWARD_COVER_SQL, [...rewardCoverParams(rewardId, TENANT_SEED_IDS.mlkTenant, "weekend-dinner")]);
 		await insertRedemption(katilRedemptionId, KATIL, KATIL_BILL_MINOR);
 		await insertRedemption(beruangRedemptionId, BERUANG, BERUANG_BILL_MINOR);
 
@@ -163,9 +165,9 @@ describe("Merchant store scope (e2e)", () => {
 		await query(`DELETE FROM public."RewardSale" WHERE id = ANY($1::text[])`, [`{${saleIds.join(",")}}`]);
 		await query(`DELETE FROM public."RewardClaim" WHERE id = ANY($1::text[])`, [`{${claimIds.join(",")}}`]);
 		await query(`DELETE FROM public."Reward" WHERE id = $1`, [rewardId]);
-		await query(`DELETE FROM public."OrganizationApiKey" WHERE name LIKE $1`, [`${KEY_NAME_PREFIX}%`]);
-		await query(`DELETE FROM public."OrganizationMembershipLocationScope" WHERE "membershipId" = $1`, [adminMembershipId]);
-		await query(`DELETE FROM public."OrganizationMembership" WHERE id = $1`, [adminMembershipId]);
+		await query(`DELETE FROM public."TenantApiKey" WHERE name LIKE $1`, [`${KEY_NAME_PREFIX}%`]);
+		await query(`DELETE FROM public."MembershipLocationScope" WHERE "membershipId" = $1`, [adminMembershipId]);
+		await query(`DELETE FROM public."Membership" WHERE id = $1`, [adminMembershipId]);
 		await pool.end();
 		await app.close();
 	});
@@ -184,7 +186,7 @@ describe("Merchant store scope (e2e)", () => {
 			const response = await get(cashier, `/redemptions?locationId=${KATIL}`);
 
 			expect(response.statusCode).toBe(403);
-			expect(errorCodeOf(response)).toBe("ORGANIZATION_LOCATION_FORBIDDEN");
+			expect(errorCodeOf(response)).toBe("TENANT_LOCATION_FORBIDDEN");
 		});
 
 		it("still shows an all-stores member every store", async () => {
@@ -210,7 +212,7 @@ describe("Merchant store scope (e2e)", () => {
 	});
 
 	describe("rewards", () => {
-		it("lists organization-wide rewards and the member's stores' rewards, not another store's", async () => {
+		it("lists tenant-wide rewards and the member's stores' rewards, not another store's", async () => {
 			// One page as large as the grammar allows: the assertion is about scope, not paging.
 			const response = await get(cashier, "/rewards?limit=100");
 
@@ -224,8 +226,8 @@ describe("Merchant store scope (e2e)", () => {
 		it("pages the same scope and summarizes it: the status counts add up to the list's total", async () => {
 			const page = await get(cashier, "/rewards?limit=1");
 			expect(page.statusCode, page.body).toBe(200);
-			const { meta, data } = parseSuccessEnvelope(page, z.array(RewardResponseSchema));
-			const total = ApiPaginatedMetaSchema.parse(meta).total;
+			const { meta, data } = parsePaginatedEnvelope(page, RewardResponseSchema);
+			const { total } = meta;
 			expect(data).toHaveLength(1);
 
 			const summary = await get(cashier, "/rewards/summary");
@@ -234,7 +236,7 @@ describe("Merchant store scope (e2e)", () => {
 			expect(Object.values(figures.countsByStatus).reduce((sum, count) => sum + count, 0)).toBe(total);
 
 			const published = await get(cashier, "/rewards?limit=1&filter[status][in]=PUBLISHED");
-			expect(ApiPaginatedMetaSchema.parse(parseSuccessEnvelope(published, z.array(RewardResponseSchema)).meta).total).toBe(figures.countsByStatus.PUBLISHED);
+			expect(parsePaginatedEnvelope(published, RewardResponseSchema).meta.total).toBe(figures.countsByStatus.PUBLISHED);
 		});
 
 		it("refuses the summary of another store named explicitly", async () => {
@@ -255,12 +257,12 @@ describe("Merchant store scope (e2e)", () => {
 
 			const orgWide = await post(storeAdmin, "/rewards", base);
 			expect(orgWide.statusCode).toBe(403);
-			expect(errorCodeOf(orgWide)).toBe("ORGANIZATION_LOCATION_FORBIDDEN");
+			expect(errorCodeOf(orgWide)).toBe("TENANT_LOCATION_FORBIDDEN");
 
 			const otherStore = await post(storeAdmin, "/rewards", { ...base, locationScopeType: "SELECTED", locationIds: [KATIL] });
 			expect(otherStore.statusCode).toBe(403);
 
-			// Its own store, but one of the images belongs to another organization: refused before anything is written.
+			// Its own store, but one of the images belongs to another tenant: refused before anything is written.
 			const foreignCover = await post(storeAdmin, "/rewards", {
 				...base,
 				imageFileIds: [rewardCoverImageSeedId("weekend-dinner"), rewardCoverImageSeedId("free-coffee")],
@@ -271,7 +273,7 @@ describe("Merchant store scope (e2e)", () => {
 			expect(errorCodeOf(foreignCover)).toBe("REWARD_IMAGES_INVALID");
 		});
 
-		it("hides an organization-wide reward from a store-limited member's edits (404)", async () => {
+		it("hides a tenant-wide reward from a store-limited member's edits (404)", async () => {
 			const response = await app.inject({
 				method: "PATCH",
 				url: `${ORG_PATH}/rewards/${rewardId}`,
@@ -317,8 +319,8 @@ describe("Merchant store scope (e2e)", () => {
 			expect(listed.length).toBeGreaterThan(0);
 			expect(listed.every((terminal) => terminal.locationId === BERUANG)).toBe(true);
 
-			const [katilTill] = await query(`SELECT id FROM public."OrganizationTerminal" WHERE "organizationId" = $1 AND "locationId" = $2 AND "isDeleted" = false LIMIT 1`, [
-				ORGANIZATION_SEED_IDS.mlkOrganization,
+			const [katilTill] = await query(`SELECT id FROM public."TenantTerminal" WHERE "tenantId" = $1 AND "locationId" = $2 AND "isDeleted" = false LIMIT 1`, [
+				TENANT_SEED_IDS.mlkTenant,
 				KATIL,
 			]);
 			const katilTillId = String(katilTill?.id);
@@ -332,21 +334,104 @@ describe("Merchant store scope (e2e)", () => {
 		it("keep a store-scoped integration key on its own store", async () => {
 			const key = parseSuccessEnvelope(await createKey(owner, { locationId: KATIL, scope: "INTEGRATION" }), MerchantApiKeyCreatedSchema).data;
 
-			const own = await withKey(key.apiKey, "/redemptions");
+			const own = await withKey(key.apiKey, "/integration/redemptions");
 			expect(own.statusCode, own.body).toBe(200);
 			expect(parseSuccessEnvelope(own, RedemptionListSchema).data.some((item) => item.redemptionId === beruangRedemptionId)).toBe(false);
 
-			const other = await withKey(key.apiKey, `/redemptions?locationId=${BERUANG}`);
+			const other = await withKey(key.apiKey, `/integration/redemptions?locationId=${BERUANG}`);
 			expect(other.statusCode).toBe(403);
 			expect(errorCodeOf(other)).toBe("API_KEY_LOCATION_FORBIDDEN");
 		});
 
-		it("refuse a POS key on the organization API", async () => {
+		it("refuse a POS key on the integration history", async () => {
 			const key = parseSuccessEnvelope(await createKey(owner, { locationId: KATIL, scope: "POS" }), MerchantApiKeyCreatedSchema).data;
 
-			const response = await withKey(key.apiKey, "/redemptions");
+			const response = await withKey(key.apiKey, "/integration/redemptions");
 			expect(response.statusCode).toBe(403);
 			expect(errorCodeOf(response)).toBe("API_KEY_SCOPE_FORBIDDEN");
+		});
+
+		it("MACH-002: refuse a key that also names a tenant, by slug or id, in the query or the body", async () => {
+			const key = parseSuccessEnvelope(await createKey(owner, { scope: "INTEGRATION" }), MerchantApiKeyCreatedSchema).data;
+
+			for (const path of [`/integration/redemptions?tenantSlug=${TENANT_SEED_SLUGS.mlk}`, `/integration/redemptions?tenantId=${TENANT_SEED_IDS.mlkTenant}`]) {
+				const response = await withKey(key.apiKey, path);
+				expect(response.statusCode, path).toBe(400);
+				expect(errorCodeOf(response)).toBe("TENANT_SELECTOR_NOT_ALLOWED");
+			}
+			const created = await app.inject({
+				method: "POST",
+				url: `${API_VERSION_PREFIX}/integration/rewards`,
+				headers: { "x-api-key": key.apiKey },
+				payload: { tenantSlug: TENANT_SEED_SLUGS.mlk },
+			});
+			expect(created.statusCode).toBe(400);
+			expect(errorCodeOf(created)).toBe("TENANT_SELECTOR_NOT_ALLOWED");
+		});
+
+		it("accept the informational x-tenant-id and x-location-id headers on a key's call, and answer exactly as without them", async () => {
+			const key = parseSuccessEnvelope(await createKey(owner, { locationId: KATIL, scope: "INTEGRATION" }), MerchantApiKeyCreatedSchema).data;
+
+			const plain = await withKey(key.apiKey, "/integration/redemptions");
+			// Even a store outside the key's scope (Beruang): the headers select nothing, so the key's own scope answers.
+			const informed = await app.inject({
+				method: "GET",
+				url: `${API_VERSION_PREFIX}/integration/redemptions`,
+				headers: { "x-api-key": key.apiKey, "x-tenant-id": TENANT_SEED_IDS.mlkTenant, "x-location-id": BERUANG },
+			});
+
+			expect(informed.statusCode, informed.body).toBe(200);
+			expect(parseSuccessEnvelope(informed, RedemptionListSchema).data).toEqual(parseSuccessEnvelope(plain, RedemptionListSchema).data);
+		});
+
+		it("serve an integration key its own tenant's rewards, reward summary and analytics under /integration", async () => {
+			const key = parseSuccessEnvelope(await createKey(owner, { scope: "INTEGRATION" }), MerchantApiKeyCreatedSchema).data;
+
+			for (const path of [
+				"/integration/rewards?limit=5",
+				"/integration/rewards/summary",
+				"/integration/analytics",
+				`/integration/rewards/${REWARD_SEED_IDS.mlkRewardBeruangOnly}`,
+			]) {
+				const response = await withKey(key.apiKey, path);
+				expect(response.statusCode, `${path}: ${response.body}`).toBe(200);
+			}
+		});
+
+		it("let an integration key write server to server, with no Origin or mutation-intent header", async () => {
+			const key = parseSuccessEnvelope(await createKey(owner, { scope: "INTEGRATION" }), MerchantApiKeyCreatedSchema).data;
+
+			const response = await app.inject({
+				method: "PATCH",
+				url: `${API_VERSION_PREFIX}/integration/rewards/${randomUUID()}`,
+				headers: { "x-api-key": key.apiKey },
+				payload: { quantityTotal: 5 },
+			});
+
+			// Past every guard to the handler, which finds no such reward.
+			expect(response.statusCode, response.body).toBe(404);
+		});
+
+		it("keep a store-scoped integration key's rewards on its own store", async () => {
+			const key = parseSuccessEnvelope(await createKey(owner, { locationId: KATIL, scope: "INTEGRATION" }), MerchantApiKeyCreatedSchema).data;
+
+			expect((await withKey(key.apiKey, `/integration/rewards/${REWARD_SEED_IDS.mlkRewardKatilOnly}`)).statusCode).toBe(200);
+			expect((await withKey(key.apiKey, `/integration/rewards/${REWARD_SEED_IDS.mlkRewardBeruangOnly}`)).statusCode).toBe(404);
+		});
+
+		it("do not authenticate a key on a members-only tenant route (401)", async () => {
+			const key = parseSuccessEnvelope(await createKey(owner, { scope: "INTEGRATION" }), MerchantApiKeyCreatedSchema).data;
+
+			for (const path of ["/redemptions", "/rewards", "/analytics"]) {
+				const response = await app.inject({ method: "GET", url: `${ORG_PATH}${path}`, headers: { "x-api-key": key.apiKey } });
+				expect(response.statusCode, path).toBe(401);
+			}
+		});
+
+		it("refuse a signed-in member on the integration routes, which name no tenant (401)", async () => {
+			const response = await app.inject({ method: "GET", url: `${API_VERSION_PREFIX}/integration/rewards`, headers: merchantHeaders(owner) });
+
+			expect(response.statusCode).toBe(401);
 		});
 	});
 
@@ -371,8 +456,8 @@ describe("Merchant store scope (e2e)", () => {
 			expect(read.statusCode, read.body).toBe(200);
 			expect(parseSuccessEnvelope(read, MerchantTerminalSummarySchema).data.id).toBe(ownId);
 
-			const [katilTill] = await query(`SELECT id FROM public."OrganizationTerminal" WHERE "organizationId" = $1 AND "locationId" = $2 AND "isDeleted" = false LIMIT 1`, [
-				ORGANIZATION_SEED_IDS.mlkOrganization,
+			const [katilTill] = await query(`SELECT id FROM public."TenantTerminal" WHERE "tenantId" = $1 AND "locationId" = $2 AND "isDeleted" = false LIMIT 1`, [
+				TENANT_SEED_IDS.mlkTenant,
 				KATIL,
 			]);
 			expect((await get(storeAdmin, `/terminals/${String(katilTill?.id)}`)).statusCode).toBe(404);

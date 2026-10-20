@@ -17,7 +17,7 @@ export interface FileAccessSubject {
 	readonly id: string;
 	readonly category: FileCategory;
 	readonly uploadedById: string;
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 	readonly productId: string | null;
 }
 

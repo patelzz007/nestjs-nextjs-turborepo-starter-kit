@@ -8,21 +8,20 @@ export function userActor(userId: string): ActorContext {
 		kind: "user",
 		userId,
 		sessionId: "session-1",
-		organizationId: null,
+		tenantId: null,
 		isSuperAdmin: false,
 		accessScope: "tenant",
 		impersonatorUserId: null,
 		request: REQUEST,
-		routeRlsBypass: false,
 	};
 }
 
-/** A merchant API key of `organizationId`. */
-export function apiKeyActor(apiKeyId: string, organizationId: string): ActorContext {
-	return { kind: "api_key", apiKeyId, organizationId, locationId: null, terminalId: null, request: REQUEST, routeRlsBypass: false };
+/** A merchant API key of `tenantId`. */
+export function apiKeyActor(apiKeyId: string, tenantId: string): ActorContext {
+	return { kind: "api_key", apiKeyId, tenantId, locationId: null, terminalId: null, request: REQUEST };
 }
 
 /** An anonymous caller (no analytics of its own). */
 export function anonymousActor(): ActorContext {
-	return { kind: "anonymous", organizationId: null, request: REQUEST, routeRlsBypass: false };
+	return { kind: "anonymous", tenantId: null, request: REQUEST };
 }

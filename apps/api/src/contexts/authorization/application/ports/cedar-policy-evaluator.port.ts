@@ -2,9 +2,9 @@ import type { CedarAuthorizationDecision } from "@workspace/shared";
 
 import type { PolicyPrincipal } from "./policy-engine.port";
 
-/** One runtime authorization question: may this member perform `action` on the organization? */
+/** One runtime authorization question: may this member perform `action` on the tenant? */
 export interface CedarEvaluationInput {
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly principal: PolicyPrincipal;
 	/** Bare action id declared in the Cedar schema, e.g. `tenant:manage_team`. */
 	readonly action: string;
@@ -13,11 +13,11 @@ export interface CedarEvaluationInput {
 }
 
 /**
- * Cedar decisions against each organization's published policy bundle (cached per process, dropped on
- * every instance when a policy is published). Used by organizations (merchant capabilities, membership,
+ * Cedar decisions against each tenant's published policy bundle (cached per process, dropped on
+ * every instance when a policy is published). Used by tenants (merchant capabilities, membership,
  * locations), encryption (the policy version stamped on tenant keys) and support access.
  */
 export interface CedarPolicyEvaluatorPort {
-	getActivePolicyVersion(organizationId: string): Promise<number>;
+	getActivePolicyVersion(tenantId: string): Promise<number>;
 	evaluate(input: CedarEvaluationInput): Promise<CedarAuthorizationDecision>;
 }

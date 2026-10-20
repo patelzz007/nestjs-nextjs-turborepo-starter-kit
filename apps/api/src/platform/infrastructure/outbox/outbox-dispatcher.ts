@@ -34,7 +34,8 @@ export type OutboxClaimRoute = "any" | "kafka" | "email";
 /** Row-state transitions the dispatcher drives. Implemented by `OutboxDispatchRepository`. */
 export interface OutboxDispatchStore {
 	claimDue(limit: number, nowMs: number, leaseMs: number, route?: OutboxClaimRoute): Promise<readonly ClaimedOutboxRow[]>;
-	markPublished(id: string, nowMs: number): Promise<void>;
+	/** Marks every row in `ids` published, in one transaction (a sweep marks its whole batch at once). */
+	markPublished(ids: readonly string[], nowMs: number): Promise<void>;
 	scheduleRetry(id: string, attempts: number, error: string, availableAtMs: number, nowMs: number): Promise<void>;
 	release(ids: readonly string[], availableAtMs: number, nowMs: number): Promise<void>;
 	markDeadLettered(id: string, attempts: number, error: string, nowMs: number): Promise<void>;
@@ -188,11 +189,15 @@ export class OutboxDispatcher {
 		const claimedAt = this.clock.nowEpochMs();
 		const rows = await this.store.claimDue(this.limits.batchSize, claimedAt, this.limits.claimLeaseMs, "kafka");
 		const summary = { claimed: rows.length, published: 0, retried: 0, deadLettered: 0, released: 0 };
+		// Published rows are marked together once the sweep ends: one transaction per sweep, not per row.
+		// A crash before the mark leaves them leased; they are published again (at-least-once, ADR 015).
+		const publishedIds: string[] = [];
 
 		for (const [index, row] of rows.entries()) {
 			const outcome = await this.dispatchRow(row);
 			if (outcome.kind === "published") {
 				summary.published += 1;
+				publishedIds.push(row.id);
 				continue;
 			}
 			if (outcome.kind === "dead_lettered") {
@@ -214,6 +219,9 @@ export class OutboxDispatcher {
 			break;
 		}
 
+		if (publishedIds.length > 0) {
+			await this.store.markPublished(publishedIds, this.clock.nowEpochMs());
+		}
 		if (summary.claimed > 0) {
 			this.logger.log({ event: "outbox.dispatch_summary", ...summary });
 		}
@@ -247,7 +255,6 @@ export class OutboxDispatcher {
 		}
 
 		const publishedAt = this.clock.nowEpochMs();
-		await this.store.markPublished(row.id, publishedAt);
 		this.logger.log({
 			event: "outbox.published",
 			eventId: row.id,

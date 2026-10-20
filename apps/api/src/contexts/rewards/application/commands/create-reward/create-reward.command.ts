@@ -3,8 +3,8 @@ import type { MerchantCreateRewardInput, RewardResponse } from "@workspace/share
 
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 
-/** `POST /orgs/:orgSlug/rewards`: the body plus the organization the merchant caller was resolved to. */
-export type CreateRewardInput = MerchantCreateRewardInput & { readonly organizationId: string };
+/** `POST /tenants/:tenantSlug/rewards`: the body plus the tenant the merchant caller was resolved to. */
+export type CreateRewardInput = MerchantCreateRewardInput & { readonly tenantId: string };
 
 export class CreateRewardCommand extends Command<RewardResponse> {
 	public constructor(

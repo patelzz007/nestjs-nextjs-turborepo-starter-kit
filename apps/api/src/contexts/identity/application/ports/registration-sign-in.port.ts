@@ -12,7 +12,7 @@ export interface RegistrationSignIn {
 }
 
 /**
- * The post-credential step of a registration flow owned by another context (organizations' team
+ * The post-credential step of a registration flow owned by another context (tenants' team
  * invite registration): the same session issue as a login, under the login-verification policy, so a
  * new device may still have to confirm an emailed code. The plaintext password is never replayed
  * through the login path.

@@ -41,7 +41,38 @@ interface RewardImageRow {
 	};
 }
 
-type RewardWithLocationScopes = Reward & {
+/** Fields the public reward response reads. A marketplace query selects these and nothing else. */
+export type RewardResponseSource = Pick<
+	Reward,
+	| "id"
+	| "tenantId"
+	| "title"
+	| "description"
+	| "rewardType"
+	| "rewardValue"
+	| "termsConditions"
+	| "rewardKind"
+	| "category"
+	| "rules"
+	| "minSpendMinor"
+	| "quantityTotal"
+	| "quantityRemaining"
+	| "quantityReserved"
+	| "startDate"
+	| "expiryDate"
+	| "status"
+	| "claimCount"
+	| "redemptionCount"
+	| "referralsEnabled"
+	| "referralPoolTotal"
+	| "referralPoolRemaining"
+	| "referrerRewardId"
+	| "locationScopeType"
+	| "createdAt"
+	| "updatedAt"
+	| "isDeleted"
+	| "deletedAt"
+> & {
 	readonly locationScopes?: readonly RewardLocationScopeRow[];
 	/** The live images in display order — every reward query that builds a response selects them. */
 	readonly images: readonly RewardImageRow[];
@@ -83,15 +114,15 @@ export function mapRewardImage(rewardId: string, image: RewardImageRow, resolve:
 }
 
 /** All of a reward's images, in display order; a reward without any is a broken invariant. */
-export function mapRewardImages(reward: Pick<RewardWithLocationScopes, "id" | "images">, resolve: PublicUrlResolve): RewardImageResponse[] {
+export function mapRewardImages(reward: Pick<RewardResponseSource, "id" | "images">, resolve: PublicUrlResolve): RewardImageResponse[] {
 	if (reward.images.length === 0) {
 		throw new RewardImageUnavailableError(reward.id, null);
 	}
 	return reward.images.map((image) => mapRewardImage(reward.id, image, resolve));
 }
 
-/** The merchant's name and logo a reward response shows (from the organizations context, batched per page). */
-export interface RewardOrganizationDisplay {
+/** The merchant's name and logo a reward response shows (from the tenants context, batched per page). */
+export interface RewardTenantDisplay {
 	readonly displayName: string;
 	/** The logo's public URL, or null (clients render a name monogram). */
 	readonly logoUrl: string | null;
@@ -100,19 +131,19 @@ export interface RewardOrganizationDisplay {
 }
 
 /** The response contract's own rule for a logo URL — the value is re-checked against it. */
-const OrganizationLogoUrlSchema = RewardResponseSchema.shape.organizationLogoUrl;
+const TenantLogoUrlSchema = RewardResponseSchema.shape.tenantLogoUrl;
 
 /**
  * The merchant logo URL for a reward response, or `null`. A value that does not satisfy the
  * contract (not an absolute http(s) URL) degrades to `null`, deliberately: a bad logo must cost
  * the merchant their logo, not fail the whole reward list.
  */
-export function rewardLogoUrl(organization: RewardOrganizationDisplay | undefined): string | null {
-	const logoUrl = organization?.logoUrl ?? null;
+export function rewardLogoUrl(tenant: RewardTenantDisplay | undefined): string | null {
+	const logoUrl = tenant?.logoUrl ?? null;
 	if (logoUrl === null) {
 		return null;
 	}
-	const parsed = OrganizationLogoUrlSchema.safeParse(logoUrl);
+	const parsed = TenantLogoUrlSchema.safeParse(logoUrl);
 	return parsed.success ? parsed.data : null;
 }
 
@@ -120,7 +151,7 @@ export function rewardLogoUrl(organization: RewardOrganizationDisplay | undefine
  * A reward as the API returns it. `resolve` turns each stored image reference
  * (its photos, the merchant logo) into the URL a client opens.
  */
-export function mapRewardToResponse(reward: RewardWithLocationScopes, organization: RewardOrganizationDisplay | undefined, resolve: PublicUrlResolve): RewardResponse {
+export function mapRewardToResponse(reward: RewardResponseSource, tenant: RewardTenantDisplay | undefined, resolve: PublicUrlResolve): RewardResponse {
 	const locationScopes = reward.locationScopes ?? [];
 	const resolvedScopes = locationScopes.flatMap((scope) => {
 		if (scope.location === null) {
@@ -131,15 +162,15 @@ export function mapRewardToResponse(reward: RewardWithLocationScopes, organizati
 	});
 	const locationIds = resolvedScopes.map((scope) => scope.locationId);
 	const locationNames = resolvedScopes.map((scope) => scope.name);
-	const logoUrl = rewardLogoUrl(organization);
+	const logoUrl = rewardLogoUrl(tenant);
 
 	return {
 		id: reward.id,
-		organizationId: reward.organizationId,
-		organizationName: organization?.displayName,
-		organizationLogoUrl: logoUrl,
+		tenantId: reward.tenantId,
+		tenantName: tenant?.displayName,
+		tenantLogoUrl: logoUrl,
 		// The logo's renditions go with its URL: no logo, no sources.
-		organizationLogoSources: logoUrl === null || organization === undefined ? [] : [...organization.logoSources],
+		tenantLogoSources: logoUrl === null || tenant === undefined ? [] : [...tenant.logoSources],
 		title: reward.title,
 		description: reward.description,
 		rewardType: reward.rewardType,

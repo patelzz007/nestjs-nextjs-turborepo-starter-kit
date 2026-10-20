@@ -12,9 +12,9 @@ import { ValidateRedemptionCodesCommand } from "../commands/validate-redemption-
 import { ValidateRedemptionCodesHandler } from "../commands/validate-redemption-codes/validate-redemption-codes.handler";
 import type { StoredSale } from "../../domain/repositories/pos.repositories";
 import { RedemptionCodeResolver } from "../services/redemption-code-resolver";
-import { apiKeyActor, CUSTOMER, FIXTURE_CLAIM_TTL_MS, InMemoryPosStore, JoinedFingerprint, NOW, ORGANIZATION_ID, SequentialIds, STORE_A, STORE_B } from "./fakes/pos.fakes";
+import { apiKeyActor, CUSTOMER, FIXTURE_CLAIM_TTL_MS, InMemoryPosStore, JoinedFingerprint, NOW, TENANT_ID, SequentialIds, STORE_A, STORE_B } from "./fakes/pos.fakes";
 
-const POINT: CheckoutPoint = { organizationId: ORGANIZATION_ID, locationId: STORE_A, terminalId: "TERM-AAAA2222", apiKeyId: "key-1" };
+const POINT: CheckoutPoint = { tenantId: TENANT_ID, locationId: STORE_A, terminalId: "TERM-AAAA2222", apiKeyId: "key-1" };
 
 function bill(codes: RedemptionCheckoutInput["codes"], patch: Partial<RedemptionCheckoutInput> = {}): RedemptionCheckoutInput {
 	return { billTotalMinor: 5_000, currency: "MYR", idempotencyKey: "idem-1", codes, ...patch };
@@ -43,7 +43,7 @@ describe("ValidateRedemptionCodesHandler", () => {
 		});
 		expect(store.audit.entries).toEqual([
 			{
-				organizationId: ORGANIZATION_ID,
+				tenantId: TENANT_ID,
 				actorUserId: null,
 				action: "merchant.scan_qr",
 				metadata: { claimId: "claim-01", terminalId: POINT.terminalId, apiKeyId: "key-1", locationId: STORE_A },
@@ -62,7 +62,7 @@ describe("ValidateRedemptionCodesHandler", () => {
 	});
 
 	it("answers an unknown code (and another merchant's) as not valid for this merchant, counting an unknown backup code", async () => {
-		store.claims.seed("claim-01", { reward: { organizationId: "another-org" } });
+		store.claims.seed("claim-01", { reward: { tenantId: "another-org" } });
 
 		await expect(handler.execute(new ValidateRedemptionCodesCommand(apiKeyActor(), POINT, { backupCode: "BACKUP01" }))).rejects.toBeInstanceOf(RedemptionCodeNotFoundError);
 		await expect(handler.execute(new ValidateRedemptionCodesCommand(apiKeyActor(), POINT, { token: "nope" }))).rejects.toBeInstanceOf(RedemptionCodeNotFoundError);
@@ -133,7 +133,7 @@ describe("CheckoutSaleHandler", () => {
 		expect(store.rewards.redemptions).toEqual(["reward-1", "reward-2"]);
 		expect(store.audit.entries).toEqual([
 			{
-				organizationId: ORGANIZATION_ID,
+				tenantId: TENANT_ID,
 				actorUserId: null,
 				action: "merchant.checkout",
 				metadata: {
@@ -226,7 +226,7 @@ describe("CheckoutSaleHandler", () => {
 		expect(store.lockout.failures.get("key-1")).toBe(2);
 		expect(store.audit.entries).toEqual([
 			{
-				organizationId: ORGANIZATION_ID,
+				tenantId: TENANT_ID,
 				actorUserId: null,
 				action: "pos.backup_code_rejected",
 				metadata: { apiKeyId: "key-1", terminalId: POINT.terminalId, locationId: STORE_A, unknownBackupCodes: 2, failuresInWindow: 2 },
@@ -367,8 +367,8 @@ describe("CheckoutSaleHandler", () => {
 		expect(store.claims.claims.get("claim-01")?.claim.status).toBe("PENDING");
 	});
 
-	it("answers another organization's code as not valid for this merchant, saving nothing", async () => {
-		const { token } = store.claims.seed("claim-01", { reward: { organizationId: "another-org" } });
+	it("answers another tenant's code as not valid for this merchant, saving nothing", async () => {
+		const { token } = store.claims.seed("claim-01", { reward: { tenantId: "another-org" } });
 
 		await expect(handler.execute(new CheckoutSaleCommand(apiKeyActor(), POINT, bill([{ token }])))).rejects.toBeInstanceOf(RedemptionCodeNotFoundError);
 		expect(store.sales.rows.size).toBe(0);

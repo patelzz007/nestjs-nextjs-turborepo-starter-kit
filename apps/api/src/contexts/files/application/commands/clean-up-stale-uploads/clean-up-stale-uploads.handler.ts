@@ -65,7 +65,7 @@ export class CleanUpStaleUploadsHandler implements ICommandHandler<CleanUpStaleU
 			return { done: 0, failed: 0 };
 		}
 		return this.each(await this.reads.listExpiredStaging(actor, policy.category, policy.stagingRetentionMs), `unused ${policy.category}`, async (file) => {
-			await this.deletion.delete(actor, { fileId: file.id, category: file.category, organizationId: file.organizationId }, STORAGE_CLEANUP_ACTOR);
+			await this.deletion.delete(actor, { fileId: file.id, category: file.category, tenantId: file.tenantId }, STORAGE_CLEANUP_ACTOR);
 			this.logger.log(`Cleaned unused ${policy.category} file ${file.id}`);
 			return true;
 		});

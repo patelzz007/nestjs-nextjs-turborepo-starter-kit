@@ -7,32 +7,32 @@ import type { WrappedDataKey } from "./kms/tenant-key-management.port";
 export type TenantEncryptionKeyDbClient = Pick<Prisma.TransactionClient, "tenantEncryptionKey" | "user">;
 
 export interface NewTenantKeyRecord extends WrappedDataKey {
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly keyVersion: number;
 }
 
 /** Prisma access for wrapped tenant data keys. */
 @Injectable()
 export class TenantEncryptionKeyRepository {
-	public async findActiveKey(organizationId: string, db: TenantEncryptionKeyDbClient): Promise<TenantEncryptionKey | null> {
-		return db.tenantEncryptionKey.findFirst({ where: { organizationId, status: "ACTIVE" }, orderBy: { keyVersion: "desc" } });
+	public async findActiveKey(tenantId: string, db: TenantEncryptionKeyDbClient): Promise<TenantEncryptionKey | null> {
+		return db.tenantEncryptionKey.findFirst({ where: { tenantId, status: "ACTIVE" }, orderBy: { keyVersion: "desc" } });
 	}
 
 	/**
 	 * `INSERT ... ON CONFLICT DO NOTHING`: two concurrent creators race on the
-	 * (organization, keyVersion) unique key and the one-ACTIVE-key-per-organization
+	 * (tenant, keyVersion) unique key and the one-ACTIVE-key-per-tenant
 	 * partial unique index; exactly one row wins, the loser inserts nothing (0).
 	 */
 	public async insertKeyIfAbsent(record: NewTenantKeyRecord, db: TenantEncryptionKeyDbClient): Promise<number> {
 		const created = await db.tenantEncryptionKey.createMany({
-			data: [{ organizationId: record.organizationId, keyVersion: record.keyVersion, wrappedKey: record.wrappedKey, kmsKeyId: record.kmsKeyId, status: "ACTIVE" }],
+			data: [{ tenantId: record.tenantId, keyVersion: record.keyVersion, wrappedKey: record.wrappedKey, kmsKeyId: record.kmsKeyId, status: "ACTIVE" }],
 			skipDuplicates: true,
 		});
 		return created.count;
 	}
 
-	public async findKey(organizationId: string, keyVersion: number, db: TenantEncryptionKeyDbClient): Promise<TenantEncryptionKey | null> {
-		return db.tenantEncryptionKey.findUnique({ where: { organizationId_keyVersion: { organizationId, keyVersion } } });
+	public async findKey(tenantId: string, keyVersion: number, db: TenantEncryptionKeyDbClient): Promise<TenantEncryptionKey | null> {
+		return db.tenantEncryptionKey.findUnique({ where: { tenantId_keyVersion: { tenantId, keyVersion } } });
 	}
 
 	/** One keyset page of keys wrapped with any KEK other than `currentKmsKeyId`. */

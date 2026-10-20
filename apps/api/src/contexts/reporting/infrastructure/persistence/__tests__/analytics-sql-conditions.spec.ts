@@ -20,11 +20,11 @@ function sqlOf(conditions: Parameters<typeof allOf>[0]): { readonly text: string
 }
 
 describe("analytics scope filters", () => {
-	const allStores: AnalyticsScope = { kind: "organization", organizationId: ORG, locationScope: ALL_ANALYTICS_LOCATIONS };
-	const oneStore: AnalyticsScope = { kind: "organization", organizationId: ORG, locationScope: selectedAnalyticsLocations([STORE]) };
-	const noStores: AnalyticsScope = { kind: "organization", organizationId: ORG, locationScope: selectedAnalyticsLocations([]) };
+	const allStores: AnalyticsScope = { kind: "tenant", tenantId: ORG, locationScope: ALL_ANALYTICS_LOCATIONS };
+	const oneStore: AnalyticsScope = { kind: "tenant", tenantId: ORG, locationScope: selectedAnalyticsLocations([STORE]) };
+	const noStores: AnalyticsScope = { kind: "tenant", tenantId: ORG, locationScope: selectedAnalyticsLocations([]) };
 
-	it("limits a store-scoped merchant's bills and redemptions to its stores, an all-stores one only to the organization", () => {
+	it("limits a store-scoped merchant's bills and redemptions to its stores, an all-stores one only to the tenant", () => {
 		expect(sqlOf(salesConditions(allStores)).text).not.toContain('"locationId"');
 		const sales = sqlOf(salesConditions(oneStore));
 		expect(sales.text).toContain('s."locationId" = ANY(');

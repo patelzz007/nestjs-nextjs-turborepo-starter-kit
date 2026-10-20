@@ -4,7 +4,7 @@ import type { RewardResponse } from "@workspace/shared";
 
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
-import { REWARDS_UNIT_OF_WORK, ROUTE_RLS_BYPASS_OPERATION } from "../../ports/rewards.tokens";
+import { REWARDS_UNIT_OF_WORK, REWARDS_ADMIN_REVIEW_OPERATION } from "../../ports/rewards.tokens";
 import type { RewardsScope } from "../../rewards-scope";
 import { actingUserId } from "../acting-user";
 import { ApproveRewardCommand } from "./approve-reward.command";
@@ -25,7 +25,7 @@ export class ApproveRewardHandler implements ICommandHandler<ApproveRewardComman
 		const { actor, input } = command;
 		const reviewerUserId = actingUserId(actor);
 
-		return this.uow.runSystemOperation(ROUTE_RLS_BYPASS_OPERATION, actor, async (scope: RewardsScope): Promise<RewardResponse> => {
+		return this.uow.runSystemOperation(REWARDS_ADMIN_REVIEW_OPERATION, actor, async (scope: RewardsScope): Promise<RewardResponse> => {
 			const reward = await scope.rewards.getConsumer(input.rewardId);
 			reward.approve(reviewerUserId, this.clock.now());
 			await scope.rewards.save(reward);

@@ -31,8 +31,8 @@ import type { ActorContext } from "../../../../platform/application/actor-contex
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { Authorize, self } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
 import { GetUser } from "../../../../platform/presentation/http/security/decorators/get-user.decorator";
+import { PublicOperation } from "../../../../platform/presentation/http/security/decorators/public-operation.decorator";
 import { Public } from "../../../../platform/presentation/http/security/decorators/public.decorator";
-import { RlsBypass } from "../../../../platform/presentation/http/security/decorators/rls-bypass.decorator";
 import { SetAuthCookiesInterceptor } from "../../../../platform/presentation/http/security/interceptors/set-auth-cookies.interceptor";
 import { readSessionDeviceContext } from "../../../../platform/presentation/http/security/session-device-context";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
@@ -46,6 +46,7 @@ import { StartTwoFactorSetupCommand } from "../../application/commands/start-two
 import { CheckBackupCodeQuery } from "../../application/queries/check-backup-code/check-backup-code.query";
 import { CountRemainingBackupCodesQuery } from "../../application/queries/count-remaining-backup-codes/count-remaining-backup-codes.query";
 import { TOKEN_DELIVERY_DESCRIPTION } from "./token-delivery.constants";
+import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../platform/application/shared-system-operations";
 
 const PUBLIC_ACTOR = { allowAnonymous: true };
 
@@ -131,7 +132,7 @@ export class TwoFactorController {
 
 	@RateLimit(RATE_LIMIT_POLICY.sessionIssue)
 	@Public()
-	@RlsBypass()
+	@PublicOperation(PRINCIPAL_LOOKUP_OPERATION)
 	@Post("/login/2fa")
 	@ApiOperation({ summary: "Complete login with a TOTP code" })
 	@ZodResponse(LoginClientResponseSchema, { description: "Login result" + TOKEN_DELIVERY_DESCRIPTION })
@@ -146,7 +147,7 @@ export class TwoFactorController {
 
 	@RateLimit(RATE_LIMIT_POLICY.sessionIssue)
 	@Public()
-	@RlsBypass()
+	@PublicOperation(PRINCIPAL_LOOKUP_OPERATION)
 	@Post("/login/backup-code")
 	@ApiOperation({ summary: "Complete login with a one-time backup code" })
 	@ZodResponse(LoginClientResponseSchema, { description: "Login result" + TOKEN_DELIVERY_DESCRIPTION })

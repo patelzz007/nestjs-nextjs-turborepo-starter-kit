@@ -5,7 +5,7 @@ import { FixedClock } from "../../../../platform/application/__tests__/fixed-clo
 import type { MerchantApiKeyAuthContext } from "../../../../platform/application/ports/api-key-verification.port";
 import type { RegisteredTill, TillTerminalsPort } from "../ports/till-terminals.port";
 import { TillAuthenticationService } from "../services/till-authentication.service";
-import { NOW, ORGANIZATION_ID, STORE_A, STORE_B } from "./fakes/pos.fakes";
+import { NOW, TENANT_ID, STORE_A, STORE_B } from "./fakes/pos.fakes";
 
 /** Registered tills by terminal id, recording every `lastSeenAt` touch. */
 class InMemoryTills implements TillTerminalsPort {
@@ -13,7 +13,7 @@ class InMemoryTills implements TillTerminalsPort {
 
 	public constructor(private readonly tills: ReadonlyMap<string, RegisteredTill>) {}
 
-	public findLive(_organizationId: string, terminalId: string): Promise<RegisteredTill | null> {
+	public findLive(_tenantId: string, terminalId: string): Promise<RegisteredTill | null> {
 		return Promise.resolve(this.tills.get(terminalId) ?? null);
 	}
 
@@ -27,7 +27,7 @@ function key(patch: Partial<MerchantApiKeyAuthContext> = {}): MerchantApiKeyAuth
 	return {
 		provider: "merchant",
 		apiKeyId: "key-1",
-		organizationId: ORGANIZATION_ID,
+		tenantId: TENANT_ID,
 		locationId: null,
 		terminal: null,
 		requireRegisteredTerminals: false,
@@ -51,7 +51,7 @@ describe("TillAuthenticationService", () => {
 		for (const requested of [undefined, PAIRED.terminalId]) {
 			await expect(tillService.resolve(key({ terminal: PAIRED }), requested)).resolves.toEqual({
 				kind: "resolved",
-				point: { organizationId: ORGANIZATION_ID, terminalId: PAIRED.terminalId, apiKeyId: "key-1", locationId: STORE_A },
+				point: { tenantId: TENANT_ID, terminalId: PAIRED.terminalId, apiKeyId: "key-1", locationId: STORE_A },
 			});
 		}
 		expect(tills.touched).toEqual([
@@ -73,7 +73,7 @@ describe("TillAuthenticationService", () => {
 
 		await expect(tillService.resolve(key(), "KL-REGISTER-01")).resolves.toEqual({
 			kind: "resolved",
-			point: { organizationId: ORGANIZATION_ID, terminalId: "KL-REGISTER-01", apiKeyId: "key-1", locationId: null },
+			point: { tenantId: TENANT_ID, terminalId: "KL-REGISTER-01", apiKeyId: "key-1", locationId: null },
 		});
 		expect(tills.touched).toEqual([]);
 	});
@@ -85,7 +85,7 @@ describe("TillAuthenticationService", () => {
 		});
 	});
 
-	it("uses a registered till's store for an organization-wide key, and touches its lastSeenAt", async () => {
+	it("uses a registered till's store for a tenant-wide key, and touches its lastSeenAt", async () => {
 		const { tills, service: tillService } = service(new Map([["KL-REGISTER-01", { id: "row-2", locationId: STORE_B }]]));
 
 		await expect(tillService.resolve(key(), "KL-REGISTER-01")).resolves.toMatchObject({ point: { locationId: STORE_B } });

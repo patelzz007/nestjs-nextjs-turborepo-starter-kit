@@ -162,7 +162,8 @@ describe("Transactional outbox (integration)", () => {
 			[first, second],
 		]);
 
-		const store = new OutboxDispatchRepository(prisma);
+		// The real transaction service: it stamps the dispatcher's operation on each transaction (D22).
+		const store = new OutboxDispatchRepository(transactions);
 		const nowMs = Date.now();
 
 		const claimed = await runWithSystemRlsContext(OUTBOX_PUBLISH_OPERATION, async () => store.claimDue(2, nowMs, CLAIM_LEASE_MS));
@@ -174,7 +175,7 @@ describe("Transactional outbox (integration)", () => {
 		expect(reclaimed.map((row) => row.id)).not.toContain(second);
 
 		await runWithSystemRlsContext(OUTBOX_PUBLISH_OPERATION, async () => {
-			await store.markPublished(first, nowMs);
+			await store.markPublished([first], nowMs);
 			await store.scheduleRetry(second, 1, "broker unavailable", nowMs + CLAIM_LEASE_MS, nowMs);
 		});
 

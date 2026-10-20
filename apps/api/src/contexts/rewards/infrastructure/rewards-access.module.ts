@@ -7,7 +7,7 @@ import { REWARD_AUDIT_SIGNUP_REFERRAL_AUDIT_FACTORY } from "./adapters/signup-re
  * What rewards provides to code that must not import it (a leaf: platform and referrals' token only):
  * referrals' code-job audit writer (`SIGNUP_REFERRAL_AUDIT_FACTORY`). Global, like `PosAccessModule`, so
  * referrals never imports rewards and the graph stays acyclic (identity depends on referrals, and
- * rewards depends on organizations, which depends on identity).
+ * rewards depends on tenants, which depends on identity).
  */
 @Global()
 @Module({

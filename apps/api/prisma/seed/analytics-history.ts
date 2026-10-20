@@ -28,7 +28,7 @@ import { sha256Hex } from "../../src/platform/infrastructure/crypto/sha256";
 import { API_KEY_PREFIX_LENGTH } from "../../src/contexts/pos/public-api";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
-import { ORGANIZATION_SEED_IDS } from "./organization-seed-ids";
+import { TENANT_SEED_IDS } from "./tenant-seed-ids";
 import type { SeededRandom } from "./prng";
 import { seedCodeHash } from "./reward-code-hashing";
 
@@ -76,7 +76,7 @@ const BERUANG_POS_KEY_PLAINTEXT = "mk_live_seedMlkBukitBeruangPosHistoryKey3Hq8V
 /** A store the history sells at. */
 export interface HistoryStore {
 	readonly key: string;
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly locationId: string;
 	readonly terminalId: string;
 	readonly apiKeyId: string;
@@ -90,7 +90,7 @@ export interface HistoryStore {
 /** A campaign reward the history redeems. Its window is relative to "now". */
 export interface HistoryReward {
 	readonly key: string;
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly title: string;
 	readonly description: string;
 	readonly rewardType: RewardType;
@@ -98,7 +98,7 @@ export interface HistoryReward {
 	readonly category: string;
 	/** The seeded photo set (reward-images.ts) the reward shows. */
 	readonly imageSet: RewardImageSetSlug;
-	/** `null` = offered at every store of the organization. */
+	/** `null` = offered at every store of the tenant. */
 	readonly locationIds: readonly string[] | null;
 	readonly minSpendMinor: number;
 	readonly startDaysAgo: number;
@@ -110,8 +110,8 @@ export interface HistoryReward {
 export const HISTORY_STORES: readonly HistoryStore[] = [
 	{
 		key: "kl",
-		organizationId: ORGANIZATION_SEED_IDS.klOrganization,
-		locationId: ORGANIZATION_SEED_IDS.klLocation,
+		tenantId: TENANT_SEED_IDS.klTenant,
+		locationId: TENANT_SEED_IDS.klLocation,
 		terminalId: "KL-REGISTER-01",
 		apiKeyId: deterministicUuid("reward-seed-api-key", "kl-pos-simulator"),
 		billsPerDay: 3,
@@ -120,8 +120,8 @@ export const HISTORY_STORES: readonly HistoryStore[] = [
 	},
 	{
 		key: "mlk-katil",
-		organizationId: ORGANIZATION_SEED_IDS.mlkOrganization,
-		locationId: ORGANIZATION_SEED_IDS.mlkLocationKatil,
+		tenantId: TENANT_SEED_IDS.mlkTenant,
+		locationId: TENANT_SEED_IDS.mlkLocationKatil,
 		terminalId: "MLK-KATIL-01",
 		apiKeyId: deterministicUuid("reward-seed-api-key", "mlk-katil-pos"),
 		billsPerDay: 2.2,
@@ -130,8 +130,8 @@ export const HISTORY_STORES: readonly HistoryStore[] = [
 	},
 	{
 		key: "mlk-beruang",
-		organizationId: ORGANIZATION_SEED_IDS.mlkOrganization,
-		locationId: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+		tenantId: TENANT_SEED_IDS.mlkTenant,
+		locationId: TENANT_SEED_IDS.mlkLocationBeruang,
 		terminalId: "MLK-BERUANG-01",
 		apiKeyId: deterministicUuid("reward-seed-api-key", "mlk-beruang-pos"),
 		billsPerDay: 1.5,
@@ -143,7 +143,7 @@ export const HISTORY_STORES: readonly HistoryStore[] = [
 export const HISTORY_REWARDS: readonly HistoryReward[] = [
 	{
 		key: "kl-morning-brew",
-		organizationId: ORGANIZATION_SEED_IDS.klOrganization,
+		tenantId: TENANT_SEED_IDS.klTenant,
 		title: "Morning brew club — free refill",
 		description: "A free refill with any hot drink before 11am.",
 		rewardType: "FREE_ITEM",
@@ -157,7 +157,7 @@ export const HISTORY_REWARDS: readonly HistoryReward[] = [
 	},
 	{
 		key: "kl-pastry-autumn",
-		organizationId: ORGANIZATION_SEED_IDS.klOrganization,
+		tenantId: TENANT_SEED_IDS.klTenant,
 		// Mandarin (Simplified Chinese): exercises the CJK font in dashboards and PDF exports.
 		title: "糕点配咖啡 — 八折优惠",
 		description: "点咖啡时任何糕点享八折。",
@@ -172,7 +172,7 @@ export const HISTORY_REWARDS: readonly HistoryReward[] = [
 	},
 	{
 		key: "kl-latte-weekend",
-		organizationId: ORGANIZATION_SEED_IDS.klOrganization,
+		tenantId: TENANT_SEED_IDS.klTenant,
 		// Malay.
 		title: "Istimewa latte seni hujung minggu",
 		description: "Potongan RM3 untuk latte istimewa pada hujung minggu.",
@@ -187,21 +187,21 @@ export const HISTORY_REWARDS: readonly HistoryReward[] = [
 	},
 	{
 		key: "mlk-heritage-set",
-		organizationId: ORGANIZATION_SEED_IDS.mlkOrganization,
+		tenantId: TENANT_SEED_IDS.mlkTenant,
 		title: "Jonker heritage set — 12% off",
 		description: "12% off the Nyonya heritage lunch set at both stores.",
 		rewardType: "DISCOUNT",
 		rewardValue: 12,
 		category: "restaurant",
 		imageSet: "heritage-set",
-		locationIds: [ORGANIZATION_SEED_IDS.mlkLocationKatil, ORGANIZATION_SEED_IDS.mlkLocationBeruang],
+		locationIds: [TENANT_SEED_IDS.mlkLocationKatil, TENANT_SEED_IDS.mlkLocationBeruang],
 		minSpendMinor: 3_500,
 		startDaysAgo: 375,
 		endDaysAgo: -45,
 	},
 	{
 		key: "mlk-katil-family",
-		organizationId: ORGANIZATION_SEED_IDS.mlkOrganization,
+		tenantId: TENANT_SEED_IDS.mlkTenant,
 		// Tamil: exercises Tamil shaping (two-part vowels, pulli) in dashboards and PDF exports.
 		title: "குடும்ப இரவு உணவுடன் இலவச இனிப்பு",
 		description: "புக்கிட் கட்டில் கிளையில் குடும்ப இரவு உணவுடன் இலவச இனிப்புத் தட்டு.",
@@ -209,14 +209,14 @@ export const HISTORY_REWARDS: readonly HistoryReward[] = [
 		rewardValue: 1,
 		category: "restaurant",
 		imageSet: "family-dessert",
-		locationIds: [ORGANIZATION_SEED_IDS.mlkLocationKatil],
+		locationIds: [TENANT_SEED_IDS.mlkLocationKatil],
 		minSpendMinor: 6_000,
 		startDaysAgo: 300,
 		endDaysAgo: 35,
 	},
 	{
 		key: "mlk-beruang-brunch",
-		organizationId: ORGANIZATION_SEED_IDS.mlkOrganization,
+		tenantId: TENANT_SEED_IDS.mlkTenant,
 		// Hindi: exercises Devanagari shaping (conjuncts, reordered i-sign) in dashboards and PDF exports.
 		title: "सप्ताहांत ब्रंच के साथ मुफ़्त पेय",
 		description: "बुकित बेरुआंग में सप्ताहांत ब्रंच के साथ एक मुफ़्त ठंडा पेय।",
@@ -224,7 +224,7 @@ export const HISTORY_REWARDS: readonly HistoryReward[] = [
 		rewardValue: 1,
 		category: "beverage",
 		imageSet: "brunch-drink",
-		locationIds: [ORGANIZATION_SEED_IDS.mlkLocationBeruang],
+		locationIds: [TENANT_SEED_IDS.mlkLocationBeruang],
 		minSpendMinor: 3_500,
 		startDaysAgo: 240,
 		endDaysAgo: -20,
@@ -266,7 +266,7 @@ export function rewardWindow(reward: HistoryReward, nowMs: number): { readonly s
 }
 
 function offeredAt(reward: HistoryReward, store: HistoryStore): boolean {
-	return reward.organizationId === store.organizationId && (reward.locationIds === null || reward.locationIds.includes(store.locationId));
+	return reward.tenantId === store.tenantId && (reward.locationIds === null || reward.locationIds.includes(store.locationId));
 }
 
 /** Local midnight (UTC+8) of the day `daysAgo` days before `nowMs`, as epoch ms. */
@@ -410,11 +410,11 @@ export async function seedAnalyticsHistory(input: AnalyticsHistoryPlanInput & { 
 		return store;
 	};
 
-	await prisma.organizationApiKey.create({
+	await prisma.tenantApiKey.create({
 		data: {
 			id: deterministicUuid("reward-seed-api-key", "mlk-beruang-pos"),
-			organizationId: ORGANIZATION_SEED_IDS.mlkOrganization,
-			locationId: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+			tenantId: TENANT_SEED_IDS.mlkTenant,
+			locationId: TENANT_SEED_IDS.mlkLocationBeruang,
 			name: "Melaka Bukit Beruang POS",
 			keyHash: sha256Hex(BERUANG_POS_KEY_PLAINTEXT),
 			keyPrefix: BERUANG_POS_KEY_PLAINTEXT.slice(0, API_KEY_PREFIX_LENGTH),
@@ -431,7 +431,7 @@ export async function seedAnalyticsHistory(input: AnalyticsHistoryPlanInput & { 
 		await prisma.reward.create({
 			data: {
 				id: rewardId(reward.key),
-				organizationId: reward.organizationId,
+				tenantId: reward.tenantId,
 				title: reward.title,
 				description: reward.description,
 				rewardType: reward.rewardType,
@@ -454,10 +454,10 @@ export async function seedAnalyticsHistory(input: AnalyticsHistoryPlanInput & { 
 				createdAt: window.startMs - DAY_MS,
 			},
 		});
-		await linkRewardImages([{ rewardId: rewardId(reward.key), organizationId: reward.organizationId, slug: reward.imageSet }]);
+		await linkRewardImages([{ rewardId: rewardId(reward.key), tenantId: reward.tenantId, slug: reward.imageSet }]);
 		if (reward.locationIds !== null) {
 			await prisma.rewardLocationScope.createMany({
-				data: reward.locationIds.map((locationId) => ({ rewardId: rewardId(reward.key), organizationId: reward.organizationId, locationId })),
+				data: reward.locationIds.map((locationId) => ({ rewardId: rewardId(reward.key), tenantId: reward.tenantId, locationId })),
 			});
 		}
 	}
@@ -478,7 +478,7 @@ export async function seedAnalyticsHistory(input: AnalyticsHistoryPlanInput & { 
 	const redeemed = plan.claims.flatMap((claim) => (claim.checkout === null ? [] : [{ claim, checkout: claim.checkout, store: requireStore(claim.checkout.storeKey) }]));
 	const saleRows: Prisma.RewardSaleCreateManyInput[] = redeemed.map(({ claim, checkout, store }) => ({
 		id: deterministicUuid("reward-seed-history-sale", claim.key),
-		organizationId: store.organizationId,
+		tenantId: store.tenantId,
 		locationId: store.locationId,
 		userId: claim.userId,
 		terminalId: store.terminalId,
@@ -494,7 +494,7 @@ export async function seedAnalyticsHistory(input: AnalyticsHistoryPlanInput & { 
 	const redemptionRows: Prisma.RewardRedemptionCreateManyInput[] = redeemed.map(({ claim, checkout, store }) => ({
 		id: deterministicUuid("reward-seed-history-redemption", claim.key),
 		claimId: deterministicUuid("reward-seed-history-claim", claim.key),
-		organizationId: store.organizationId,
+		tenantId: store.tenantId,
 		locationId: store.locationId,
 		userId: claim.userId,
 		terminalId: store.terminalId,
@@ -506,7 +506,7 @@ export async function seedAnalyticsHistory(input: AnalyticsHistoryPlanInput & { 
 	}));
 	const auditRows: Prisma.RewardAuditLogCreateManyInput[] = redeemed.map(({ claim, checkout, store }) => ({
 		id: deterministicUuid("reward-seed-history-audit-checkout", claim.key),
-		organizationId: store.organizationId,
+		tenantId: store.tenantId,
 		action: "merchant.checkout",
 		metadata: {
 			saleId: deterministicUuid("reward-seed-history-sale", claim.key),

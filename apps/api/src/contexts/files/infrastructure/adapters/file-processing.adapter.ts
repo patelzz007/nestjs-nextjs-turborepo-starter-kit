@@ -253,7 +253,7 @@ export class FileProcessingAdapter implements FileProcessingPort {
 	/** The resource a READY file's keys are namespaced under must be on the row; otherwise the upload fails, never READY. */
 	private unbindableReason(file: StoredFile): string | null {
 		try {
-			resolveFileOwnerId({ category: file.category, productId: file.productId, organizationId: file.organizationId, userId: file.uploadedById });
+			resolveFileOwnerId({ category: file.category, productId: file.productId, tenantId: file.tenantId, userId: file.uploadedById });
 			return null;
 		} catch (error) {
 			if (error instanceof FileOwnerUnresolvedError) {
@@ -328,7 +328,7 @@ export class FileProcessingAdapter implements FileProcessingPort {
 	private pathInput(file: StoredFile): BuildFileObjectPathInput {
 		return {
 			category: file.category,
-			ownerId: resolveFileOwnerId({ category: file.category, productId: file.productId, organizationId: file.organizationId, userId: file.uploadedById }),
+			ownerId: resolveFileOwnerId({ category: file.category, productId: file.productId, tenantId: file.tenantId, userId: file.uploadedById }),
 			fileId: file.id,
 			fileName: file.originalName,
 			mimeType: file.mimeType,

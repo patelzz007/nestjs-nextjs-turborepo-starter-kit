@@ -153,7 +153,7 @@ describe("FileProcessingAdapter.scan", () => {
 	});
 
 	it("fails (never READY) a product image without a product", async () => {
-		const { adapter, rows } = setup({ category: "PRODUCT_IMAGE", visibility: "PUBLIC", productId: null, organizationId: null });
+		const { adapter, rows } = setup({ category: "PRODUCT_IMAGE", visibility: "PUBLIC", productId: null, tenantId: null });
 
 		await expect(adapter.scan(scanActor(), FILE_ID, false)).resolves.toBe("FAILED");
 		expect(rows.row(FILE_ID)?.status).toBe("FAILED");
@@ -166,7 +166,7 @@ describe("FileProcessingAdapter verdict transaction", () => {
 
 		await adapter.scan(scanActor(), FILE_ID, false);
 
-		expect(kyb.received.map((event) => [event.fileId, event.outcome, event.organizationId, event.uploadedById])).toEqual([[FILE_ID, "READY", ORG_ID, UPLOADER_ID]]);
+		expect(kyb.received.map((event) => [event.fileId, event.outcome, event.tenantId, event.uploadedById])).toEqual([[FILE_ID, "READY", ORG_ID, UPLOADER_ID]]);
 		expect(kyb.transactions).toHaveLength(1);
 		expect(harness.runner.scopes.at(-1)?.reason).toBe("Malware-scan a file in a test");
 		expect(harness.publisher.published).toEqual(kyb.received);
@@ -188,7 +188,7 @@ describe("FileProcessingAdapter verdict transaction", () => {
 			category: "PRODUCT_IMAGE",
 			visibility: "PUBLIC",
 			productId: PRODUCT_ID,
-			organizationId: null,
+			tenantId: null,
 			storagePath: productPath,
 			mimeType: "image/png",
 		});
@@ -210,7 +210,7 @@ describe("FileProcessingAdapter verdict transaction", () => {
 			category: "PRODUCT_IMAGE",
 			visibility: "PUBLIC",
 			productId: PRODUCT_ID,
-			organizationId: null,
+			tenantId: null,
 			storagePath: productPath,
 			mimeType: "image/png",
 		});

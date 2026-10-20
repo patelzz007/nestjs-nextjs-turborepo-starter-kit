@@ -3,7 +3,7 @@ import type { PosPairedTerminal, PosPairTerminalInput } from "@workspace/shared"
 
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 
-/** `POST /pos/terminals/pair`: a till exchanges its one-time code for its own API key. */
+/** `POST /integration/terminals/pair`: a till exchanges its one-time code for its own API key. */
 export class PairTerminalCommand extends Command<PosPairedTerminal> {
 	public constructor(
 		/** The (anonymous) caller: the till has no credential yet. */

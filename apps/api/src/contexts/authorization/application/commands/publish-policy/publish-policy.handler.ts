@@ -64,7 +64,7 @@ export class PublishPolicyHandler implements ICommandHandler<PublishPolicyComman
 			});
 			await scope.policyAudit.append({
 				draftId: input.draftId,
-				organizationId: state.organizationId,
+				tenantId: state.tenantId,
 				scope: state.scope,
 				action: POLICY_AUDIT_ACTIONS.draftPublished,
 				actorUserId: approverUserId,

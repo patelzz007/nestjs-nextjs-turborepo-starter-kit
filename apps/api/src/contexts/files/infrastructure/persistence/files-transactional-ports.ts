@@ -16,10 +16,10 @@ class PrismaFileReferencePort implements FileReferencePort {
 				id: { in: ids },
 				category: request.category,
 				isDeleted: false,
-				...(request.organizationId === null ? {} : { organizationId: request.organizationId }),
+				...(request.tenantId === null ? {} : { tenantId: request.tenantId }),
 				...(request.uploadedById === null ? {} : { uploadedById: request.uploadedById }),
 			},
-			select: { id: true, category: true, status: true, organizationId: true, uploadedById: true, originalName: true },
+			select: { id: true, category: true, status: true, tenantId: true, uploadedById: true, originalName: true },
 		});
 		const byId = new Map(rows.map((row): [string, BindableFile] => [row.id, row]));
 		return ids.flatMap((id: string): BindableFile[] => {

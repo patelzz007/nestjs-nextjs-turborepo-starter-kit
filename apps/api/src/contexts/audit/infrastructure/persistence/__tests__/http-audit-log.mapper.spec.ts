@@ -9,7 +9,7 @@ const OCCURRED_AT = 1_790_812_800_000;
 const DURATION_MS = 37;
 const ACTOR_ID = "11111111-1111-4111-8111-111111111111";
 const IMPERSONATOR_ID = "22222222-2222-4222-8222-222222222222";
-const ORGANIZATION_ID = "33333333-3333-4333-8333-333333333333";
+const TENANT_ID = "33333333-3333-4333-8333-333333333333";
 const UNKNOWN_USER_ID = "44444444-4444-4444-8444-444444444444";
 
 function auditRow(overrides: Partial<AuditLog> = {}): AuditLog {
@@ -30,10 +30,11 @@ function auditRow(overrides: Partial<AuditLog> = {}): AuditLog {
 		actorUserId: ACTOR_ID,
 		impersonatorUserId: IMPERSONATOR_ID,
 		impersonationSessionId: "session-1",
+		supportAccessGrantId: null,
 		authMethod: "SESSION_COOKIE",
 		apiKeyId: null,
 		terminalId: null,
-		organizationId: ORGANIZATION_ID,
+		tenantId: TENANT_ID,
 		storeId: null,
 		locationId: null,
 		ipAddress: "203.0.113.24",
@@ -73,25 +74,25 @@ const REFERENCES: AuditLogReferences = toAuditLogReferences(
 		{ id: ACTOR_ID, email: "user@example.com", fullName: "Demo Customer" },
 		{ id: IMPERSONATOR_ID, email: "superadmin@example.com", fullName: "Super Admin" },
 	],
-	[{ id: ORGANIZATION_ID, displayName: "Kopi Corner" }],
+	[{ id: TENANT_ID, displayName: "Kopi Corner" }],
 );
 
 describe("httpAuditLogReferenceIds", () => {
-	it("collects each distinct non-null actor / impersonator and organization id once", () => {
-		const rows = [auditRow(), auditRow({ impersonatorUserId: null }), auditRow({ actorUserId: null, organizationId: null })];
+	it("collects each distinct non-null actor / impersonator and tenant id once", () => {
+		const rows = [auditRow(), auditRow({ impersonatorUserId: null }), auditRow({ actorUserId: null, tenantId: null })];
 
-		expect(httpAuditLogReferenceIds(rows)).toEqual({ userIds: [ACTOR_ID, IMPERSONATOR_ID], organizationIds: [ORGANIZATION_ID] });
+		expect(httpAuditLogReferenceIds(rows)).toEqual({ userIds: [ACTOR_ID, IMPERSONATOR_ID], tenantIds: [TENANT_ID] });
 	});
 
 	it("returns nothing for anonymous, untenanted rows", () => {
-		const rows = [auditRow({ actorUserId: null, impersonatorUserId: null, organizationId: null })];
+		const rows = [auditRow({ actorUserId: null, impersonatorUserId: null, tenantId: null })];
 
-		expect(httpAuditLogReferenceIds(rows)).toEqual({ userIds: [], organizationIds: [] });
+		expect(httpAuditLogReferenceIds(rows)).toEqual({ userIds: [], tenantIds: [] });
 	});
 });
 
 describe("toHttpAuditLogSummary", () => {
-	it("maps epochs to numbers, derives the duration and resolves actor, impersonator and organization", () => {
+	it("maps epochs to numbers, derives the duration and resolves actor, impersonator and tenant", () => {
 		const summary = toHttpAuditLogSummary(auditRow(), REFERENCES);
 
 		expect(summary).toMatchObject({
@@ -103,7 +104,7 @@ describe("toHttpAuditLogSummary", () => {
 			authMethod: "SESSION_COOKIE",
 			actor: { id: ACTOR_ID, email: "user@example.com", fullName: "Demo Customer" },
 			impersonator: { id: IMPERSONATOR_ID, email: "superadmin@example.com", fullName: "Super Admin" },
-			organization: { id: ORGANIZATION_ID, name: "Kopi Corner" },
+			tenant: { id: TENANT_ID, name: "Kopi Corner" },
 			clientType: "admin",
 			browserName: "Safari",
 			osName: "iOS",
@@ -117,11 +118,11 @@ describe("toHttpAuditLogSummary", () => {
 	});
 
 	it("keeps the id of a reference that no longer resolves (no foreign keys: the id is the forensic fact)", () => {
-		const summary = toHttpAuditLogSummary(auditRow({ actorUserId: UNKNOWN_USER_ID, impersonatorUserId: null, organizationId: null }), REFERENCES);
+		const summary = toHttpAuditLogSummary(auditRow({ actorUserId: UNKNOWN_USER_ID, impersonatorUserId: null, tenantId: null }), REFERENCES);
 
 		expect(summary.actor).toEqual({ id: UNKNOWN_USER_ID, email: null, fullName: null });
 		expect(summary.impersonator).toBeNull();
-		expect(summary.organization).toBeNull();
+		expect(summary.tenant).toBeNull();
 	});
 
 	it("never reports a negative duration for a clock-skewed row", () => {
@@ -148,6 +149,7 @@ describe("toHttpAuditLogDetail", () => {
 		expect(detail).toMatchObject({
 			traceId: "corr-1",
 			impersonationSessionId: "session-1",
+			supportAccessGrantId: null,
 			httpVersion: "1.1",
 			host: "api.example.com",
 			origin: "https://admin.example.com",
@@ -168,6 +170,7 @@ describe("toHttpAuditLogDetail", () => {
 		const legacy = auditRow({
 			traceId: null,
 			impersonationSessionId: null,
+			supportAccessGrantId: null,
 			authMethod: null,
 			clientType: null,
 			httpVersion: null,

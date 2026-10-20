@@ -26,7 +26,7 @@ export async function requestFileUpload(
 			category: parsed.category,
 			visibility: policy.visibility,
 			uploadedById: uploaderId,
-			organizationId: parsed.organizationId ?? null,
+			tenantId: parsed.tenantId ?? null,
 			productId: parsed.category === "PRODUCT_IMAGE" ? (parsed.productId ?? null) : null,
 			expectedChecksum: parsed.checksumSha256,
 			original: { slot: "ORIGINAL", locator, publicPath: null },

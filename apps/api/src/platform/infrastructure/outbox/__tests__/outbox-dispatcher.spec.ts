@@ -42,6 +42,8 @@ interface StoredRow {
 class InMemoryOutboxStore implements OutboxDispatchStore {
 	public readonly rows: StoredRow[] = [];
 	public failNextMarkPublished = false;
+	/** The id batches `markPublished` received, one entry per call. */
+	public readonly markPublishedCalls: (readonly string[])[] = [];
 
 	public add(id: string, overrides: Partial<Pick<StoredRow, "topic" | "payload">> = {}): void {
 		this.rows.push({
@@ -76,12 +78,15 @@ class InMemoryOutboxStore implements OutboxDispatchStore {
 		return Promise.resolve(due.map((row) => ({ id: row.id, topic: row.topic, partitionKey: row.partitionKey, attempts: row.attempts, payload: row.payload })));
 	}
 
-	public markPublished(id: string): Promise<void> {
+	public markPublished(ids: readonly string[]): Promise<void> {
 		if (this.failNextMarkPublished) {
 			this.failNextMarkPublished = false;
 			return Promise.reject(new Error("database connection lost after publish"));
 		}
-		this.get(id).status = "PUBLISHED";
+		this.markPublishedCalls.push(ids);
+		for (const id of ids) {
+			this.get(id).status = "PUBLISHED";
+		}
 		return Promise.resolve();
 	}
 
@@ -120,9 +125,11 @@ class RecordingPublisher implements OutboxPublisher {
 	public failuresRemaining = 0;
 	/** Broker not connected: nothing is sent (KafkaProducerNotConnectedError upstream). */
 	public isUnavailable = false;
+	/** When set, the broker becomes unavailable once this many messages were sent. */
+	public unavailableAfter: number | null = null;
 
 	public publish(topic: KafkaTopic, message: PlatformEventMessage, partitionKey: string | null): Promise<void> {
-		if (this.isUnavailable) {
+		if (this.isUnavailable || (this.unavailableAfter !== null && this.published.length >= this.unavailableAfter)) {
 			return Promise.reject(new OutboxPublisherUnavailableError("Kafka producer is connecting, not connected"));
 		}
 		if (this.failuresRemaining > 0) {
@@ -210,6 +217,27 @@ describe("OutboxDispatcher", () => {
 		});
 		expect(store.get(EVENT_A).status).toBe("PUBLISHED");
 		expect(logger.events()).toContain("outbox.published");
+	});
+
+	it("marks the whole published batch in one store call, not one per row", async () => {
+		store.add(EVENT_A);
+		store.add(EVENT_B);
+
+		await dispatcher.dispatchDue();
+
+		expect(store.markPublishedCalls).toEqual([[EVENT_A, EVENT_B]]);
+	});
+
+	it("still marks the rows published before the publisher became unavailable", async () => {
+		store.add(EVENT_A);
+		store.add(EVENT_B);
+		publisher.unavailableAfter = 1;
+
+		const summary = await dispatcher.dispatchDue();
+
+		expect(summary).toMatchObject({ published: 1, released: 1 });
+		expect(store.markPublishedCalls).toEqual([[EVENT_A]]);
+		expect(store.get(EVENT_B).status).toBe("PENDING");
 	});
 
 	it("republishes the SAME eventId when a crash hits between publish and mark (at-least-once, idempotent downstream)", async () => {

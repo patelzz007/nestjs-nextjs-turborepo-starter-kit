@@ -5,10 +5,10 @@ import { epochMs, MERCHANT_CAPABILITY, POS_PAIRING_CODE_TTL_MS, type EpochMs, ty
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
-import { MERCHANT_ACCESS } from "../../../../organizations/public-api";
-import { OrganizationTerminal } from "../../../domain/aggregates/organization-terminal.aggregate";
+import { MERCHANT_ACCESS } from "../../../../tenancy/public-api";
+import { TenantTerminal } from "../../../domain/aggregates/tenant-terminal.aggregate";
 import { TerminalIdUnavailableError, TerminalStoreNotActiveError } from "../../../domain/errors/pos.errors";
-import { actingInOrganization, actingMemberId } from "../../acting-member";
+import { actingInTenant, actingMemberId } from "../../acting-member";
 import type { PosScope } from "../../pos-scope";
 import type { PosCredentialsPort } from "../../ports/pos-credentials.port";
 import { POS_CREDENTIALS, POS_ID_GENERATOR, POS_UNIT_OF_WORK, type PosIdGenerator } from "../../ports/pos.tokens";
@@ -20,7 +20,7 @@ const TERMINAL_ID_ATTEMPTS = 3;
 /**
  * Registers a till at one of the member's stores, with its first pairing code (shown once). Same
  * capability as API keys (`merchant:manage_api_keys`): a terminal is how a key reaches a till. A live
- * till of the organization with the same terminal id is refused by the database (409 `TERMINAL_ID_TAKEN`).
+ * till of the tenant with the same terminal id is refused by the database (409 `TERMINAL_ID_TAKEN`).
  * The store is locked `FOR SHARE` first: a concurrent store closure either committed (409
  * `TERMINAL_STORE_NOT_ACTIVE`) or waits for this till and then removes it with the store's others (D27).
  */
@@ -37,19 +37,19 @@ export class RegisterTerminalHandler implements ICommandHandler<RegisterTerminal
 	public async execute(command: RegisterTerminalCommand): Promise<MerchantTerminalPairing> {
 		const { actor, input } = command;
 		const memberId = actingMemberId(actor);
-		await this.merchantAccess.assertCapability(actor, { organizationId: input.organizationId, capability: MERCHANT_CAPABILITY.manageApiKeys, locationId: input.locationId });
-		const tenant = actingInOrganization(actor, input.organizationId);
+		await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageApiKeys, locationId: input.locationId });
+		const tenant = actingInTenant(actor, input.tenantId);
 		const secret = this.credentials.newPairingCode();
 		return this.uow.run(tenant, async (scope: PosScope): Promise<MerchantTerminalPairing> => {
-			if (!(await scope.posSettings.lockOpenStore(input.organizationId, input.locationId))) {
+			if (!(await scope.posSettings.lockOpenStore(input.tenantId, input.locationId))) {
 				throw new TerminalStoreNotActiveError();
 			}
 			const now = this.clock.now();
 			const expiresAt: EpochMs = epochMs(now + POS_PAIRING_CODE_TTL_MS);
-			const terminalId = input.terminalId ?? (await this.freeTerminalId(scope, input.organizationId));
-			const terminal = OrganizationTerminal.register({
+			const terminalId = input.terminalId ?? (await this.freeTerminalId(scope, input.tenantId));
+			const terminal = TenantTerminal.register({
 				id: this.ids.next(),
-				organizationId: input.organizationId,
+				tenantId: input.tenantId,
 				locationId: input.locationId,
 				terminalId,
 				name: input.name,
@@ -58,7 +58,7 @@ export class RegisterTerminalHandler implements ICommandHandler<RegisterTerminal
 			});
 			await scope.terminals.add(terminal);
 			await scope.rewardAudit.append({
-				organizationId: input.organizationId,
+				tenantId: input.tenantId,
 				actorUserId: memberId,
 				action: "merchant.terminal_created",
 				metadata: { terminalId: terminal.id, terminalLabel: terminalId, locationId: input.locationId },
@@ -67,10 +67,10 @@ export class RegisterTerminalHandler implements ICommandHandler<RegisterTerminal
 		});
 	}
 
-	private async freeTerminalId(scope: PosScope, organizationId: string): Promise<string> {
+	private async freeTerminalId(scope: PosScope, tenantId: string): Promise<string> {
 		for (let attempt = 0; attempt < TERMINAL_ID_ATTEMPTS; attempt += 1) {
 			const candidate = this.credentials.newTerminalId();
-			if (!(await scope.terminals.terminalIdExists(organizationId, candidate))) {
+			if (!(await scope.terminals.terminalIdExists(tenantId, candidate))) {
 				return candidate;
 			}
 		}

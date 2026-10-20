@@ -9,7 +9,7 @@ import {
 import type { FastifyRequest } from "fastify";
 
 import { CLOCK, type Clock } from "../../../../platform/application/clock.port";
-import type { MerchantDashboardSubject } from "../ports/analytics-organization-read.port";
+import type { MerchantDashboardSubject } from "../ports/analytics-tenant-read.port";
 import type { ReportExportAuditPort } from "../ports/report-export-audit.port";
 import type { ReportFile } from "../ports/report-file.port";
 import type { ReportRendererPort } from "../ports/report-renderer.port";

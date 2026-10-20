@@ -27,7 +27,7 @@ export class ClaimRedemptionApplicationService implements ClaimRedemptionPort {
 		private readonly events: TransactionalEventCollector,
 	) {}
 
-	public async findMerchantClaim(code: RedemptionCode, organizationId: string): Promise<ClaimRedemptionLookup | null> {
+	public async findMerchantClaim(code: RedemptionCode, tenantId: string): Promise<ClaimRedemptionLookup | null> {
 		const claimId =
 			code.token !== undefined
 				? await this.lookups.findByRedemptionTokenHash(this.codes.lookupCandidates(code.token))
@@ -39,7 +39,7 @@ export class ClaimRedemptionApplicationService implements ClaimRedemptionPort {
 			return null;
 		}
 		const reward = await this.rewards.factsFor(claim.rewardId);
-		if (reward?.organizationId !== organizationId) {
+		if (reward?.tenantId !== tenantId) {
 			return null;
 		}
 		return { claim: { id: claim.id, userId: claim.userId, rewardId: claim.rewardId, status: claim.currentStatus, claimExpiresAt: claim.claimExpiresAt }, reward };

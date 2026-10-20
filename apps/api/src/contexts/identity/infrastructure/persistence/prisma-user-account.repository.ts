@@ -10,12 +10,10 @@ import type { UserAccountRepository } from "../../domain/repositories/user-accou
 import { EmailAddress } from "../../domain/value-objects/email-address.value-object";
 import { LockoutState, MAX_FAILED_SIGN_IN_ATTEMPTS, type FailedSignInOutcome } from "../../domain/value-objects/lockout-state.value-object";
 import { epochOrNull, toUserAccount, USER_ACCOUNT_SELECT } from "./identity-row.mappers";
+import { SUPERADMIN_BOOTSTRAP_OPERATION } from "../../application/ports/identity.tokens";
 
 /** Unique index on `User.email`: a violation means a concurrent signup took the address first. */
 export const USERS_EMAIL_UNIQUE_INDEX = "User_email_key";
-
-/** `pg_advisory_xact_lock(hashtextextended(<key>, 0))` key serializing every SuperAdmin bootstrap run. */
-const SUPERADMIN_BOOTSTRAP_LOCK_KEY = "auth.superadmin.bootstrap";
 
 /** The row the atomic failed-attempt statement returns. */
 const FailedAttemptRowSchema = z.object({
@@ -141,7 +139,7 @@ export class PrismaUserAccountRepository implements UserAccountRepository {
 	}
 
 	public async lockSuperAdminBootstrap(): Promise<void> {
-		await this.db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${SUPERADMIN_BOOTSTRAP_LOCK_KEY}, 0))`;
+		await this.db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${SUPERADMIN_BOOTSTRAP_OPERATION}, 0))`;
 	}
 
 	public async countActiveSuperAdmins(superAdminRoleName: string): Promise<number> {

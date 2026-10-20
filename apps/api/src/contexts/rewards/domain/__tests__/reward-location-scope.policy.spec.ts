@@ -9,14 +9,14 @@ const STORE_C = "77777777-7777-4777-8777-777777777777";
 
 describe("decideRewardLocationScope", () => {
 	describe("an all-stores merchant", () => {
-		it("makes every reward organization-wide in an organization with at most one store", () => {
+		it("makes every reward tenant-wide in a tenant with at most one store", () => {
 			for (const activeLocationCount of [0, 1]) {
 				const scope = decideRewardLocationScope(null, { activeLocationCount, activeRequestedLocationIds: [STORE_A] }, { scopeType: "SELECTED", locationIds: [STORE_A] });
 				expect(scope.equals(RewardLocationScope.allLocations())).toBe(true);
 			}
 		});
 
-		it("keeps an organization-wide request organization-wide", () => {
+		it("keeps a tenant-wide request tenant-wide", () => {
 			const scope = decideRewardLocationScope(null, { activeLocationCount: 3, activeRequestedLocationIds: [] }, { scopeType: "ALL_LOCATIONS", locationIds: [] });
 			expect(scope.type).toBe("ALL_LOCATIONS");
 		});
@@ -30,7 +30,7 @@ describe("decideRewardLocationScope", () => {
 			expect(scope.equals(RewardLocationScope.selected([STORE_A, STORE_B]))).toBe(true);
 		});
 
-		it("refuses a store that is not an active store of the organization (400)", () => {
+		it("refuses a store that is not an active store of the tenant (400)", () => {
 			expect(() =>
 				decideRewardLocationScope(null, { activeLocationCount: 3, activeRequestedLocationIds: [STORE_A] }, { scopeType: "SELECTED", locationIds: [STORE_A, STORE_C] }),
 			).toThrow(RewardLocationInvalidError);
@@ -45,7 +45,7 @@ describe("decideRewardLocationScope", () => {
 			expect(scope.equals(RewardLocationScope.selected([STORE_A]))).toBe(true);
 		});
 
-		it("is selected even in a one-store organization", () => {
+		it("is selected even in a one-store tenant", () => {
 			const scope = decideRewardLocationScope([STORE_A], { activeLocationCount: 1, activeRequestedLocationIds: [STORE_A] }, { scopeType: "SELECTED", locationIds: [STORE_A] });
 			expect(scope.type).toBe("SELECTED");
 		});
@@ -72,8 +72,8 @@ describe("decideRewardLocationScope", () => {
 
 describe("RewardLocationScope.isManageableBy", () => {
 	it.each([
-		["an all-stores merchant, organization-wide reward", RewardLocationScope.allLocations(), null, true],
-		["a store-limited merchant, organization-wide reward", RewardLocationScope.allLocations(), [STORE_A], false],
+		["an all-stores merchant, tenant-wide reward", RewardLocationScope.allLocations(), null, true],
+		["a store-limited merchant, tenant-wide reward", RewardLocationScope.allLocations(), [STORE_A], false],
 		["a store-limited merchant, reward inside its stores", RewardLocationScope.selected([STORE_A]), [STORE_A, STORE_B], true],
 		["a store-limited merchant, reward also at another store", RewardLocationScope.selected([STORE_A, STORE_C]), [STORE_A, STORE_B], false],
 		["a store-limited merchant, selected reward with no stores left", RewardLocationScope.selected([]), [STORE_A], false],
@@ -81,7 +81,7 @@ describe("RewardLocationScope.isManageableBy", () => {
 		expect(scope.isManageableBy(manager)).toBe(expected);
 	});
 
-	it("reads storage: organization-wide drops stored store ids", () => {
+	it("reads storage: tenant-wide drops stored store ids", () => {
 		expect(RewardLocationScope.fromStorage("ALL_LOCATIONS", [STORE_A]).locationIds).toEqual([]);
 		expect(RewardLocationScope.fromStorage("SELECTED", [STORE_A]).locationIds).toEqual([STORE_A]);
 	});

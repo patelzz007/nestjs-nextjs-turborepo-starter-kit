@@ -22,7 +22,7 @@ export interface SeedSessionAttribution {
 	/** The seeded `AuditLog` row's correlation id (`seedAuditCorrelationId`). */
 	readonly correlationId: string;
 	readonly actorUserId: string | null;
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 	readonly apiKeyId: string | null;
 	readonly systemOperation: SystemOperation | null;
 	/** `app.actor_purpose`: the system operation's reason, as the API passes it. */
@@ -37,7 +37,7 @@ export async function withSeedAttribution<T>(attribution: SeedSessionAttribution
 	return prisma.$transaction(async (tx: Prisma.TransactionClient): Promise<T> => {
 		await tx.$executeRaw`SELECT set_config('app.correlation_id', ${attribution.correlationId}, true),
 			set_config('app.current_user_id', ${attribution.actorUserId ?? UNSET}, true),
-			set_config('app.current_organization_id', ${attribution.organizationId ?? UNSET}, true),
+			set_config('app.current_tenant_id', ${attribution.tenantId ?? UNSET}, true),
 			set_config('app.current_api_key_id', ${attribution.apiKeyId ?? UNSET}, true),
 			set_config('app.system_operation', ${attribution.systemOperation ?? UNSET}, true),
 			set_config('app.actor_purpose', ${attribution.actorPurpose ?? UNSET}, true)`;

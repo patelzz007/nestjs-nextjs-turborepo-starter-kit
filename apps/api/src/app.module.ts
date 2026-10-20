@@ -11,7 +11,6 @@ import { ActorContextSecurityModule } from "./platform/presentation/http/securit
 import { HttpSecurityModule } from "./platform/presentation/http/security/http-security.module";
 import { SystemCommandModule } from "./platform/infrastructure/system-command.module";
 import { RequestContextMiddleware } from "./platform/presentation/http/middleware/request-context.middleware";
-import { RlsPreHandlerMiddleware } from "./platform/presentation/http/middleware/rls-pre-handler.middleware";
 import { getApiConfig } from "./config/api-config";
 import type { ObserveConfig } from "./config/api-config.schema";
 import { ConfigModule } from "./config/config.module";
@@ -39,7 +38,7 @@ import { IdempotencyModule } from "./platform/infrastructure/idempotency/idempot
 import { FilesModule } from "./contexts/files/public-api";
 import { StorageModule } from "./platform/infrastructure/storage/storage.module";
 import { EncryptionModule } from "./platform/infrastructure/encryption/encryption.module";
-import { OrganizationsModule } from "./contexts/organizations/organizations.module";
+import { TenantsModule } from "./contexts/tenancy/tenants.module";
 import { ReferralsModule } from "./contexts/referrals/public-api";
 import { RewardsAccessModule, RewardsModule } from "./contexts/rewards/public-api";
 import { ClaimsModule } from "./contexts/claims/claims.module";
@@ -99,7 +98,7 @@ if (observeConfig !== null) {
 		IdempotencyModule.register(),
 		StorageModule,
 		FilesModule,
-		OrganizationsModule,
+		TenantsModule,
 		EncryptionModule,
 		RewardsModule,
 		ClaimsModule,
@@ -149,8 +148,8 @@ if (observeConfig !== null) {
 })
 export class AppModule implements NestModule {
 	public configure(consumer: MiddlewareConsumer): void {
-		// Request context first (ADR 017): everything after it — including the
-		// RLS pre-handler scope and every guard — runs inside it.
-		consumer.apply(RequestContextMiddleware, RlsPreHandlerMiddleware).forRoutes("*");
+		// Request context first (ADR 017): every guard and the handler run inside it.
+		// Guards open their own auth lookups. There is no request-wide table bypass.
+		consumer.apply(RequestContextMiddleware).forRoutes("*");
 	}
 }

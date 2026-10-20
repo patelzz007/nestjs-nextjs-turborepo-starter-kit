@@ -76,12 +76,11 @@ describe("ListHttpAuditLogsHandler", () => {
 			kind: "user",
 			userId: VIEWER_ID,
 			sessionId: "session-2",
-			organizationId: null,
+			tenantId: null,
 			isSuperAdmin: true,
-			accessScope: "superadmin",
+			accessScope: "tenant",
 			impersonatorUserId: null,
 			request: { requestId: "corr-super", ip: null, userAgent: null, deviceLabel: null, endpoint: null },
-			routeRlsBypass: false,
 		};
 
 		await handler.execute(new ListHttpAuditLogsQuery(superAdmin, HttpAuditLogListQuerySchema.parse({})));

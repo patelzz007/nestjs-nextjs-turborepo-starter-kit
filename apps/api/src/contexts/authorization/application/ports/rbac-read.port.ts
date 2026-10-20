@@ -67,7 +67,7 @@ export interface CapabilityCatalogReadPort {
 
 /** The tenant `AuthorizationGuard` verified for this request (ADR 017), never ids from the query string. */
 export interface VerifiedRequestTenant {
-	readonly organizationId?: string;
+	readonly tenantId?: string;
 	readonly storeId?: string;
 	readonly locationId?: string;
 }

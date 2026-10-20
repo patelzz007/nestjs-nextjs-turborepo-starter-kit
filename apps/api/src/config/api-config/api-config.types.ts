@@ -243,11 +243,11 @@ export interface ObservabilityConfig {
 }
 
 /**
- * Tenancy mode. Single-tenant mode serves exactly one REAL organization
- * (verified to exist at boot by `DefaultOrganizationService`); multi-tenant
- * mode scopes every request to its guard-verified organization only.
+ * Tenancy mode. Single mode serves exactly one real tenant
+ * (verified to exist at boot by `DefaultTenantService`); multi mode
+ * scopes every request to its guard-verified tenant only.
  */
-export type TenancyConfig = { readonly enabled: false; readonly singleTenantOrganizationId: string } | { readonly enabled: true };
+export type TenancyConfig = { readonly mode: "single"; readonly defaultTenantId: string } | { readonly mode: "multi" };
 
 /** The API's complete, validated configuration. Built once at startup. */
 export interface ApiConfig {

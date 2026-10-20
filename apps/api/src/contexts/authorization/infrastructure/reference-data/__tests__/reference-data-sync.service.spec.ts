@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import type { OperatorIdentityProvider } from "../../../../../platform/infrastructure/operator-identity";
 import { createTestPrisma } from "../../../../../../test/support/test-service-graph";
 import type { PermissionAuditEntry, PermissionAuditWriter } from "../../../application/ports/permission-audit.port";
-import { REFERENCE_DATA_SYNC_OPERATION, ReferenceDataSyncService } from "../reference-data-sync.service";
+import { REFERENCE_DATA_SYNC_OPERATION } from "../../../application/ports/authorization.tokens";
+import { ReferenceDataSyncService } from "../reference-data-sync.service";
 import { NO_CHANGE, type ReferenceDataSection, type SectionChange } from "../reference-data.types";
 
 const OPERATOR = { osUser: "deploy", host: "api-1" };

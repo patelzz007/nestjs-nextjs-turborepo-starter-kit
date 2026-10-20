@@ -17,8 +17,8 @@ import {
 import type { ObjectStorage } from "../../../../platform/infrastructure/storage/domain/object-storage.port";
 import { assertAllowedUploadMime, UploadContentRejectedError } from "../../../../platform/infrastructure/storage/utils/magic-bytes.util";
 import { locatorFromFileVariant, locatorFromStoredFile } from "../../../../platform/infrastructure/storage/utils/storage-locator.util";
+import type { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import type { LocalObjectDownload, LocalStorageTransferPort } from "../../application/ports/local-storage-transfer.port";
-import type { StoredFileDbClient } from "../persistence/stored-file.mapper";
 
 /** Largest object any category accepts — the hard multipart limit before the ticket's own limit is known. */
 const LARGEST_UPLOAD_BYTES: number = Math.max(...Object.values(FILE_CATEGORY_POLICIES).map((policy: FileCategoryPolicy): number => policy.maxBytes));
@@ -29,14 +29,15 @@ const FormFieldValueSchema = z.string().max(4_096);
 
 /**
  * {@link LocalStorageTransferPort} for the local driver (see
- * LocalTransferTokenService for the capability tokens). The routes are
- * `@RlsBypass` (the browser calls them with a signed ticket, like a presigned
- * URL), so the rows are read on the request's own session. Built by FilesModule.
+ * LocalTransferTokenService for the capability tokens). The routes name
+ * `files.local_object.read` or `files.local_variant.read` (the browser calls
+ * them with a signed ticket, like a presigned URL), so the rows are read on
+ * the request's own session. Built by FilesModule.
  */
 export class LocalStorageTransferService implements LocalStorageTransferPort {
 	public constructor(
 		private readonly config: TypedConfigService,
-		private readonly db: StoredFileDbClient,
+		private readonly transactions: TenantTransactionService,
 		private readonly tokens: LocalTransferTokenService,
 		private readonly storage: ObjectStorage,
 	) {}
@@ -55,7 +56,9 @@ export class LocalStorageTransferService implements LocalStorageTransferPort {
 	/** Serves a READY public asset by id (what `publishAsset` links to). */
 	public async downloadPublic(fileId: string): Promise<LocalObjectDownload> {
 		this.assertEnabled();
-		const file = await this.db.storedFile.findFirst({ where: { id: fileId, isDeleted: false, status: "READY", visibility: "PUBLIC" } });
+		const file = await this.transactions.withBoundSession("Read a public stored file", (tx) =>
+			tx.storedFile.findFirst({ where: { id: fileId, isDeleted: false, status: "READY", visibility: "PUBLIC" } }),
+		);
 		if (file === null) {
 			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
 		}
@@ -65,9 +68,11 @@ export class LocalStorageTransferService implements LocalStorageTransferPort {
 	/** A published rendition of a READY public file (e.g. a reward image's 1280-wide WebP). */
 	public async downloadPublicVariant(fileId: string, kind: FileVariantKind): Promise<LocalObjectDownload> {
 		this.assertEnabled();
-		const variant: FileVariant | null = await this.db.fileVariant.findFirst({
-			where: { fileId, kind, isDeleted: false, file: { isDeleted: false, status: "READY", visibility: "PUBLIC" } },
-		});
+		const variant: FileVariant | null = await this.transactions.withBoundSession("Read a public file rendition", (tx) =>
+			tx.fileVariant.findFirst({
+				where: { fileId, kind, isDeleted: false, file: { isDeleted: false, status: "READY", visibility: "PUBLIC" } },
+			}),
+		);
 		if (variant === null) {
 			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
 		}
@@ -175,7 +180,7 @@ export class LocalStorageTransferService implements LocalStorageTransferPort {
 	}
 
 	private async findLive(fileId: string): Promise<StoredFile | null> {
-		return this.db.storedFile.findFirst({ where: { id: fileId, isDeleted: false } });
+		return this.transactions.withBoundSession("Read a live stored file for a local transfer", (tx) => tx.storedFile.findFirst({ where: { id: fileId, isDeleted: false } }));
 	}
 
 	private isAtLocation(file: StoredFile, container: string, path: string): boolean {

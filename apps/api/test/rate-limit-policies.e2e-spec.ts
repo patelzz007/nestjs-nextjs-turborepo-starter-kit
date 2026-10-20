@@ -121,13 +121,13 @@ describe("Rate-limit policies (e2e)", () => {
 			name: "TERMINAL_PAIRING — unknown pairing code",
 			limit: TERMINAL_PAIRING_LIMIT,
 			limitHeader: STRICT_LIMIT_HEADER,
-			send: (ip) => post(`${API_VERSION_PREFIX}/pos/terminals/pair`, ip, {}),
+			send: (ip) => post(`${API_VERSION_PREFIX}/integration/terminals/pair`, ip, {}),
 		},
 		{
 			name: "ONBOARDING_STATUS — unknown invite token",
 			limit: ONBOARDING_STATUS_LIMIT,
 			limitHeader: STRICT_LIMIT_HEADER,
-			send: (ip) => post(`${API_VERSION_PREFIX}/orgs/onboarding/documents/status`, ip, {}),
+			send: (ip) => post(`${API_VERSION_PREFIX}/tenants/onboarding/documents/status`, ip, {}),
 		},
 	];
 

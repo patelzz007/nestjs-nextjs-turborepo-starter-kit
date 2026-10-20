@@ -132,12 +132,12 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 	private constructor(
 		public readonly id: string,
 		public readonly kind: RewardKindValue,
-		public readonly organizationId: string,
+		public readonly tenantId: string,
 		private readonly locationScope: RewardLocationScope,
 		private readonly availableAtActiveStore: boolean,
 		private readonly referrer: ReferrerReward | null,
 		private readonly loaded: { readonly token: RewardConcurrencyToken; readonly inventory: RewardInventoryCounts; readonly referralPoolRemaining: number | null } | null,
-		state: Omit<RewardSnapshot, "id" | "kind" | "organizationId" | "locationScope" | "referrer">,
+		state: Omit<RewardSnapshot, "id" | "kind" | "tenantId" | "locationScope" | "referrer">,
 	) {
 		super();
 		this.title = state.title;
@@ -182,7 +182,7 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 						review,
 						now,
 					);
-		const reward = new Reward(definition.id, "CONSUMER", definition.organizationId, definition.locationScope, true, referrer, null, {
+		const reward = new Reward(definition.id, "CONSUMER", definition.tenantId, definition.locationScope, true, referrer, null, {
 			title: definition.title,
 			description: definition.description,
 			offer: definition.offer,
@@ -216,7 +216,7 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 		return new Reward(
 			state.id,
 			state.kind,
-			state.organizationId,
+			state.tenantId,
 			state.locationScope,
 			state.availableAtActiveStore,
 			referrer,
@@ -322,7 +322,7 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 		return {
 			id: this.id,
 			kind: this.kind,
-			organizationId: this.organizationId,
+			tenantId: this.tenantId,
 			title: this.title,
 			description: this.description,
 			offer: this.offer,
@@ -470,7 +470,7 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 		if (this.inventory.quantityRemaining <= 0) {
 			throw new RewardSoldOutError();
 		}
-		return { rewardId: this.id, organizationId: this.organizationId, title: this.title, expiryDate: this.expiryDate, maxClaimsPerUser: this.rules.maxUsePerUser() };
+		return { rewardId: this.id, tenantId: this.tenantId, title: this.title, expiryDate: this.expiryDate, maxClaimsPerUser: this.rules.maxUsePerUser() };
 	}
 
 	/** Takes one unit for a claim: remaining −1, reserved +1, claims +1. */
@@ -487,7 +487,7 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 			claimCount: this.inventory.claimCount + 1,
 		};
 		this.touch(now);
-		return { rewardId: this.id, organizationId: this.organizationId, title: this.title, expiryDate: this.expiryDate, maxClaimsPerUser: this.rules.maxUsePerUser() };
+		return { rewardId: this.id, tenantId: this.tenantId, title: this.title, expiryDate: this.expiryDate, maxClaimsPerUser: this.rules.maxUsePerUser() };
 	}
 
 	/** Returns an expired claim's unit: reserved −1, remaining +1. */
@@ -577,6 +577,6 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 	}
 
 	private facts(): RewardEventFacts {
-		return { rewardId: this.id, organizationId: this.organizationId, title: this.title };
+		return { rewardId: this.id, tenantId: this.tenantId, title: this.title };
 	}
 }

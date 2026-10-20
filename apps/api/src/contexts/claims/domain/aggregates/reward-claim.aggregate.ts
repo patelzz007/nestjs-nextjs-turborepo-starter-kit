@@ -171,12 +171,12 @@ export class RewardClaim extends AggregateRoot<ClaimDomainEvent> {
 	}
 
 	/** PENDING → EXPIRED once overdue; the caller returns the unit to the reward in the same transaction. */
-	public expire(organizationId: string, now: EpochMs): void {
+	public expire(tenantId: string, now: EpochMs): void {
 		if (!this.isOverdue(now)) {
 			throw new ClaimNotActiveError(this.id);
 		}
 		this.status = "EXPIRED";
-		this.record(new ClaimExpired(now, this.facts(), organizationId));
+		this.record(new ClaimExpired(now, this.facts(), tenantId));
 	}
 
 	/** Whether a checkout paid at `now` may redeem it: still PENDING and not past its expiry. */

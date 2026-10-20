@@ -15,7 +15,7 @@ import type { z } from "zod";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
-import { RlsBypass } from "../../../../platform/presentation/http/security/decorators/rls-bypass.decorator";
+import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { ZodQuery } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodFileResponse, ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { ExportPlatformReportQuery } from "../../application/queries/export-platform-report/export-platform-report.query";
@@ -24,10 +24,11 @@ import { GetAdminSalesAnalyticsQuery } from "../../application/queries/get-admin
 import { ANALYTICS_DASHBOARD_OPERATION_DESCRIPTION, ANALYTICS_EXPORT_OPERATION_DESCRIPTION } from "./analytics-api-docs";
 import { AnalyticsExportRateLimitGuard } from "./analytics-export-rate-limit.guard";
 import { sendReportFile } from "./report-file.reply";
+import { PLATFORM_ANALYTICS_READ_OPERATION } from "../../application/ports/reporting.tokens";
 
 @ApiTags("Rewards Admin")
 @ApiBearerAuth()
-@RlsBypass()
+@PlatformOperation(PLATFORM_ANALYTICS_READ_OPERATION)
 @Controller(apiPath("/admin/analytics"))
 export class RewardsAdminAnalyticsController {
 	public constructor(private readonly queryBus: QueryBus) {}

@@ -29,12 +29,12 @@ import {
 import { TERMINAL_SUMMARY_INCLUDE, terminalStatusWhere, toTerminalSummary, type TerminalSummaryRow } from "./terminal-row.mapper";
 
 /** Keyset for the default terminal order (`createdAt desc, id desc`). */
-const TERMINAL_LIST_KEYSET: ListKeyset<TerminalSummaryRow, Prisma.OrganizationTerminalWhereInput> = timestampIdKeyset(
+const TERMINAL_LIST_KEYSET: ListKeyset<TerminalSummaryRow, Prisma.TenantTerminalWhereInput> = timestampIdKeyset(
 	(row: TerminalSummaryRow) => ({ at: Number(row.createdAt), id: row.id }),
-	({ at, id }): Prisma.OrganizationTerminalWhereInput => ({ OR: [{ createdAt: { lt: at } }, { createdAt: at, id: { lt: id } }] }),
+	({ at, id }): Prisma.TenantTerminalWhereInput => ({ OR: [{ createdAt: { lt: at } }, { createdAt: at, id: { lt: id } }] }),
 );
 
-/** Live terminals of the organization within the caller's granted stores, read under the caller's RLS session. */
+/** Live terminals of the tenant within the caller's granted stores, read under the caller's RLS session. */
 export class PrismaTerminalReadRepository implements TerminalReadPort {
 	public constructor(private readonly reads: PrismaReadExecutor<Prisma.TransactionClient>) {}
 
@@ -49,9 +49,9 @@ export class PrismaTerminalReadRepository implements TerminalReadPort {
 				where: buildTerminalListWhere(grant),
 				order: buildTerminalListOrder(query),
 				keyset: TERMINAL_LIST_KEYSET,
-				and: (left: Prisma.OrganizationTerminalWhereInput, right: Prisma.OrganizationTerminalWhereInput): Prisma.OrganizationTerminalWhereInput => ({ AND: [left, right] }),
-				count: (where: Prisma.OrganizationTerminalWhereInput): Promise<number> => db.organizationTerminal.count({ where }),
-				findMany: (args): Promise<TerminalSummaryRow[]> => db.organizationTerminal.findMany({ ...args, include: TERMINAL_SUMMARY_INCLUDE }),
+				and: (left: Prisma.TenantTerminalWhereInput, right: Prisma.TenantTerminalWhereInput): Prisma.TenantTerminalWhereInput => ({ AND: [left, right] }),
+				count: (where: Prisma.TenantTerminalWhereInput): Promise<number> => db.tenantTerminal.count({ where }),
+				findMany: (args): Promise<TerminalSummaryRow[]> => db.tenantTerminal.findMany({ ...args, include: TERMINAL_SUMMARY_INCLUDE }),
 			});
 			return toPaginatedServiceResult(
 				mapListResult(page, (row: TerminalSummaryRow): MerchantTerminalSummary => toTerminalSummary(row, now)),
@@ -63,10 +63,10 @@ export class PrismaTerminalReadRepository implements TerminalReadPort {
 	public async summary(actor: ActorContext, grant: MerchantAccessGrant, now: EpochMs): Promise<MerchantTerminalStatusSummary> {
 		return this.reads.read(actor, async (db: Prisma.TransactionClient): Promise<MerchantTerminalStatusSummary> => {
 			const live = buildTerminalListWhere(grant);
-			const total = await db.organizationTerminal.count({ where: live });
-			const awaitingPairing = await db.organizationTerminal.count({ where: { AND: [live, terminalStatusWhere("AWAITING_PAIRING", now)] } });
-			const active = await db.organizationTerminal.count({ where: { AND: [live, terminalStatusWhere("ACTIVE", now)] } });
-			const stores = await db.organizationTerminal.groupBy({ by: ["locationId"], where: live });
+			const total = await db.tenantTerminal.count({ where: live });
+			const awaitingPairing = await db.tenantTerminal.count({ where: { AND: [live, terminalStatusWhere("AWAITING_PAIRING", now)] } });
+			const active = await db.tenantTerminal.count({ where: { AND: [live, terminalStatusWhere("ACTIVE", now)] } });
+			const stores = await db.tenantTerminal.groupBy({ by: ["locationId"], where: live });
 			return {
 				total,
 				byStatus: { AWAITING_PAIRING: awaitingPairing, ACTIVE: active, UNPAIRED: total - awaitingPairing - active },
@@ -75,29 +75,29 @@ export class PrismaTerminalReadRepository implements TerminalReadPort {
 		});
 	}
 
-	public async find(actor: ActorContext, organizationId: string, id: string, now: EpochMs): Promise<MerchantTerminalSummary | null> {
+	public async find(actor: ActorContext, tenantId: string, id: string, now: EpochMs): Promise<MerchantTerminalSummary | null> {
 		return this.reads.read(actor, async (db: Prisma.TransactionClient): Promise<MerchantTerminalSummary | null> => {
-			const row = await db.organizationTerminal.findFirst({ where: { id, organizationId, isDeleted: false }, include: TERMINAL_SUMMARY_INCLUDE });
+			const row = await db.tenantTerminal.findFirst({ where: { id, tenantId, isDeleted: false }, include: TERMINAL_SUMMARY_INCLUDE });
 			return row === null ? null : toTerminalSummary(row, now);
 		});
 	}
 }
 
-const API_KEY_LIST_INCLUDE = { location: { select: { name: true } } } satisfies Prisma.OrganizationApiKeyInclude;
+const API_KEY_LIST_INCLUDE = { location: { select: { name: true } } } satisfies Prisma.TenantApiKeyInclude;
 
-type ApiKeyListRow = Prisma.OrganizationApiKeyGetPayload<{ include: typeof API_KEY_LIST_INCLUDE }>;
+type ApiKeyListRow = Prisma.TenantApiKeyGetPayload<{ include: typeof API_KEY_LIST_INCLUDE }>;
 
 /** Keyset for the default key order (`createdAt desc, id desc`). */
-const API_KEY_LIST_KEYSET: ListKeyset<ApiKeyListRow, Prisma.OrganizationApiKeyWhereInput> = timestampIdKeyset(
+const API_KEY_LIST_KEYSET: ListKeyset<ApiKeyListRow, Prisma.TenantApiKeyWhereInput> = timestampIdKeyset(
 	(row: ApiKeyListRow) => ({ at: Number(row.createdAt), id: row.id }),
-	({ at, id }): Prisma.OrganizationApiKeyWhereInput => ({ OR: [{ createdAt: { lt: at } }, { createdAt: at, id: { lt: id } }] }),
+	({ at, id }): Prisma.TenantApiKeyWhereInput => ({ OR: [{ createdAt: { lt: at } }, { createdAt: at, id: { lt: id } }] }),
 );
 
 function epochOrNull(value: bigint | null): EpochMs | null {
 	return value === null ? null : epochMs(Number(value));
 }
 
-/** Live keys of the organization within the caller's granted stores, read under the caller's RLS session. */
+/** Live keys of the tenant within the caller's granted stores, read under the caller's RLS session. */
 export class PrismaApiKeyReadRepository implements ApiKeyReadPort {
 	public constructor(private readonly reads: PrismaReadExecutor<Prisma.TransactionClient>) {}
 
@@ -107,9 +107,9 @@ export class PrismaApiKeyReadRepository implements ApiKeyReadPort {
 				where: buildApiKeyListWhere(grant, query),
 				order: buildApiKeyListOrder(query),
 				keyset: API_KEY_LIST_KEYSET,
-				and: (left: Prisma.OrganizationApiKeyWhereInput, right: Prisma.OrganizationApiKeyWhereInput): Prisma.OrganizationApiKeyWhereInput => ({ AND: [left, right] }),
-				count: (where: Prisma.OrganizationApiKeyWhereInput): Promise<number> => db.organizationApiKey.count({ where }),
-				findMany: (args): Promise<ApiKeyListRow[]> => db.organizationApiKey.findMany({ ...args, include: API_KEY_LIST_INCLUDE }),
+				and: (left: Prisma.TenantApiKeyWhereInput, right: Prisma.TenantApiKeyWhereInput): Prisma.TenantApiKeyWhereInput => ({ AND: [left, right] }),
+				count: (where: Prisma.TenantApiKeyWhereInput): Promise<number> => db.tenantApiKey.count({ where }),
+				findMany: (args): Promise<ApiKeyListRow[]> => db.tenantApiKey.findMany({ ...args, include: API_KEY_LIST_INCLUDE }),
 			});
 			return toPaginatedServiceResult(
 				mapListResult(page, (row: ApiKeyListRow): MerchantApiKeySummary => ({
@@ -140,7 +140,7 @@ const REDEMPTION_LIST_KEYSET: ListKeyset<RedemptionListRow, Prisma.RewardRedempt
 	({ at, id }): Prisma.RewardRedemptionWhereInput => ({ OR: [{ redeemedAt: { lt: at } }, { redeemedAt: at, id: { lt: id } }] }),
 );
 
-/** The organization's redemption history within the caller's granted stores, read under the caller's RLS session (one query per page). */
+/** The tenant's redemption history within the caller's granted stores, read under the caller's RLS session (one query per page). */
 export class PrismaRedemptionReadRepository implements RedemptionReadPort {
 	public constructor(private readonly reads: PrismaReadExecutor<Prisma.TransactionClient>) {}
 

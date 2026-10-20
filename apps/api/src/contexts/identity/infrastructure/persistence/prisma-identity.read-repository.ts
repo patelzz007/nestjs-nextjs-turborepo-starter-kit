@@ -24,6 +24,7 @@ import {
 
 import { PublicUrlResolver } from "../../../../config/public-url.resolver";
 import { actingUserId, type ActorContext } from "../../../../platform/application/actor-context";
+import type { SystemOperationName } from "../../../../platform/application/system-operation-names";
 import { fetchListPage, mapListResult, toPaginatedServiceResult } from "../../../../platform/infrastructure/persistence/list-page";
 import { timestampIdKeyset, type ListKeyset } from "../../../../platform/infrastructure/persistence/list-query/keyset-cursor";
 import { buildListOrder, type ListOrder, type SortColumns } from "../../../../platform/infrastructure/persistence/list-query/list-order";
@@ -32,7 +33,7 @@ import { toRlsTransactionScope, USER_OWNED_DATA_SCOPE } from "../../../../platfo
 import { systemRlsContext } from "../../../../prisma/rls-context";
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import type { AccountView, AdminAccountView, IdentityReadPort } from "../../application/ports/identity-read.port";
-import { PUBLIC_AUTH_FLOW_OPERATION } from "../../application/ports/identity.tokens";
+import { ACCOUNT_LOOKUP_OPERATION, ADMIN_USERS_READ_OPERATION, MFA_RECOVERY_LIST_OPERATION, PASSWORD_RESET_LOOKUP_OPERATION } from "../../application/ports/identity.tokens";
 import { toMfaRecoveryStatusResponse } from "../../application/services/mfa-recovery-status";
 import { buildSessionDeviceLabel } from "../../domain/value-objects/session-device.value-object";
 import { ACCOUNT_VIEW_SELECT, epochOrNull, toAccountView, toAdminAccountView, type AccountViewRow } from "./identity-row.mappers";
@@ -201,8 +202,7 @@ function toSession(row: DeviceSessionRow, currentSessionId: string | null): Sess
 
 /**
  * Identity's read side. Every read runs in a short transaction stamped with the actor's RLS session
- * (`PrismaReadExecutor` semantics); the public credential flows read under the `@RlsBypass()` route
- * operation they run in.
+ * (`PrismaReadExecutor` semantics). A public credential read names its own operation.
  */
 @Injectable()
 export class PrismaIdentityReadRepository implements IdentityReadPort {
@@ -219,14 +219,14 @@ export class PrismaIdentityReadRepository implements IdentityReadPort {
 	}
 
 	public findAccountByEmail(actor: ActorContext, email: string): Promise<AccountView | null> {
-		return this.asPublicFlow(actor, async (db) => {
+		return this.asNamedRead(actor, ACCOUNT_LOOKUP_OPERATION, async (db) => {
 			const row = await db.user.findUnique({ where: { email }, select: ACCOUNT_VIEW_SELECT });
 			return row === null ? null : toAccountView(row);
 		});
 	}
 
 	public listAdminAccounts(actor: ActorContext, query: AdminUserListQuery): Promise<PaginatedServiceResult<AdminAccountView>> {
-		return this.asActor(actor, async (db) => {
+		return this.asNamedRead(actor, ADMIN_USERS_READ_OPERATION, async (db) => {
 			const result = await fetchListPage(query, {
 				where: buildAdminUserListWhere(query, BigInt(nowEpochMs())),
 				order: buildAdminUserListOrder(query),
@@ -240,7 +240,7 @@ export class PrismaIdentityReadRepository implements IdentityReadPort {
 	}
 
 	public findAdminAccount(actor: ActorContext, userId: string): Promise<AdminAccountView | null> {
-		return this.asActor(actor, async (db) => {
+		return this.asNamedRead(actor, ADMIN_USERS_READ_OPERATION, async (db) => {
 			const row = await db.user.findUnique({ where: { id: userId }, select: ACCOUNT_VIEW_SELECT });
 			return row === null ? null : toAdminAccountView(row);
 		});
@@ -285,7 +285,7 @@ export class PrismaIdentityReadRepository implements IdentityReadPort {
 	}
 
 	public listMfaRecoveries(actor: ActorContext, query: AdminMfaRecoveryListQuery): Promise<PaginatedServiceResult<AdminMfaRecoveryRequest>> {
-		return this.asActor(actor, async (db) => {
+		return this.asNamedRead(actor, MFA_RECOVERY_LIST_OPERATION, async (db) => {
 			const result = await fetchListPage(query, {
 				where: buildMfaRecoveryListWhere(query),
 				order: buildMfaRecoveryListOrder(query),
@@ -299,7 +299,7 @@ export class PrismaIdentityReadRepository implements IdentityReadPort {
 	}
 
 	public findUsableResetTokenHash(actor: ActorContext, tokenDigest: string, now: EpochMs): Promise<{ readonly userId: string; readonly tokenHash: string } | null> {
-		return this.asPublicFlow(actor, async (db) => {
+		return this.asNamedRead(actor, PASSWORD_RESET_LOOKUP_OPERATION, async (db) => {
 			const row = await db.passwordResetToken.findFirst({
 				where: { tokenDigest, usedAt: null, expiresAt: { gte: now }, isDeleted: false },
 				select: { userId: true, token: true },
@@ -309,15 +309,12 @@ export class PrismaIdentityReadRepository implements IdentityReadPort {
 	}
 
 	private asActor<TResult>(actor: ActorContext, work: (db: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> {
-		// Identity reads the user's own rows (scoped by user id): no organization is needed.
+		// Identity reads the user's own rows (scoped by user id): no tenant is needed.
 		return this.transactions.withRlsContext(toRlsTransactionScope(actor, USER_OWNED_DATA_SCOPE), work);
 	}
 
-	private asPublicFlow<TResult>(actor: ActorContext, work: (db: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> {
+	private asNamedRead<TResult>(actor: ActorContext, operation: SystemOperationName, work: (db: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> {
 		const actorUserId: string | null = actingUserId(actor);
-		return this.transactions.withRlsContext(
-			{ context: systemRlsContext(PUBLIC_AUTH_FLOW_OPERATION, actorUserId, actor.organizationId), reason: PUBLIC_AUTH_FLOW_OPERATION },
-			work,
-		);
+		return this.transactions.withRlsContext({ context: systemRlsContext(operation, actorUserId, actor.tenantId), reason: operation }, work);
 	}
 }

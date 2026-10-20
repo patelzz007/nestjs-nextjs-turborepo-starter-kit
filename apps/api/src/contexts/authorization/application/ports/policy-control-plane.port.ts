@@ -1,10 +1,10 @@
-import type { EpochMs, JsonValue, OrganizationMembershipRole, PolicyBuilderPayload, PolicySimulationResult } from "@workspace/shared";
+import type { EpochMs, JsonValue, MembershipRole, PolicyBuilderPayload, PolicySimulationResult } from "@workspace/shared";
 
 import type { AuthorizationPolicyScope, PolicySimulationSnapshot, PolicySlot } from "../../domain/aggregates/authorization-policy-draft.aggregate";
 
 /** One published (or candidate) policy version that contributes to runtime bundles. */
 export interface PolicyBundleSource {
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 	readonly scope: AuthorizationPolicyScope;
 	readonly version: number;
 	readonly cedarSource: string;
@@ -18,9 +18,9 @@ export interface ActivePolicyVersion extends PolicyBundleSource {
 /** An active membership: a principal the runtime evaluates, with the same location scope the runtime reads. */
 export interface SimulationPrincipal {
 	readonly id: string;
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly userId: string;
-	readonly role: OrganizationMembershipRole;
+	readonly role: MembershipRole;
 	readonly locationScope: string;
 	readonly locationIds: readonly string[];
 }
@@ -39,7 +39,7 @@ export interface NewPolicyVersion extends PolicySlot {
 export interface PolicyVersionStore {
 	/**
 	 * Transaction-scoped advisory locks serializing publishes: the global key (shared for a tenant slot,
-	 * exclusive for a platform slot, which changes every organization's bundle), then the slot key.
+	 * exclusive for a platform slot, which changes every tenant's bundle), then the slot key.
 	 * The fixed order rules out lock-order deadlocks.
 	 */
 	lockSlotForPublish(slot: PolicySlot): Promise<void>;
@@ -47,10 +47,10 @@ export interface PolicyVersionStore {
 	maxVersion(slot: PolicySlot): Promise<number>;
 	supersedeActive(slot: PolicySlot, now: EpochMs): Promise<void>;
 	create(version: NewPolicyVersion): Promise<{ readonly id: string; readonly version: number }>;
-	/** Ids of the active versions a simulation's decisions depend on: one organization's bundle, or (`null`) every bundle. */
-	baselineVersionIds(organizationId: string | null): Promise<string[]>;
-	/** Active versions in the bundles of `organizationIds` (their own plus the platform guardrails). */
-	activeVersionsForOrganizations(organizationIds: readonly string[]): Promise<ActivePolicyVersion[]>;
+	/** Ids of the active versions a simulation's decisions depend on: one tenant's bundle, or (`null`) every bundle. */
+	baselineVersionIds(tenantId: string | null): Promise<string[]>;
+	/** Active versions in the bundles of `tenantIds` (their own plus the platform guardrails). */
+	activeVersionsForTenants(tenantIds: readonly string[]): Promise<ActivePolicyVersion[]>;
 }
 
 export interface NewPolicySimulation {
@@ -66,16 +66,16 @@ export interface PolicySimulationStore {
 	latestFor(draftId: string): Promise<PolicySimulationSnapshot | null>;
 }
 
-/** The principals a simulation evaluates: active organization memberships, read in keyset pages. */
+/** The principals a simulation evaluates: active tenant memberships, read in keyset pages. */
 export interface PolicyPrincipalReader {
-	countActive(organizationId: string | null): Promise<number>;
-	listActive(organizationId: string | null, afterMembershipId: string | null, take: number): Promise<SimulationPrincipal[]>;
+	countActive(tenantId: string | null): Promise<number>;
+	listActive(tenantId: string | null, afterMembershipId: string | null, take: number): Promise<SimulationPrincipal[]>;
 }
 
 /** One `AuthorizationAudit` row (bypass-only) for a control-plane change. */
 export interface PolicyAuditRecord {
 	readonly draftId: string;
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 	readonly scope: AuthorizationPolicyScope;
 	readonly action: string;
 	readonly actorUserId: string;
@@ -101,7 +101,7 @@ export const POLICY_AUDIT_ACTIONS = {
 
 /** The fields of a draft the simulation reads. */
 export interface SimulatedDraft {
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 	readonly scope: AuthorizationPolicyScope;
 	readonly cedarSource: string;
 }
@@ -135,5 +135,5 @@ export type PolicyCompilation = { readonly kind: "compiled"; readonly policy: Co
 
 /** Compiles constrained builder templates to Cedar source and SQL visibility predicates. */
 export interface PolicyTemplateCompilerPort {
-	compile(payload: PolicyBuilderPayload, organizationId: string | null): PolicyCompilation;
+	compile(payload: PolicyBuilderPayload, tenantId: string | null): PolicyCompilation;
 }

@@ -4,6 +4,7 @@ import type { FastifyRequest } from "fastify";
 
 import { API_KEY_VERIFICATION, type ApiKeyAuthContext, type ApiKeyProvider, type ApiKeyVerificationPort } from "../../../../application/ports/api-key-verification.port";
 import { RequestContextService } from "../../../../infrastructure/context/request-context";
+import { rejectMachineTenantSelector } from "../../../../infrastructure/tenancy/machine-tenant-selector";
 import { ALLOW_API_KEY_AUTH_KEY, extractApiKeyFromRequest, hasApiKeyAuthOnRequest, isJwtShapedToken, setApiKeyAuthOnRequest } from "../api-keys/api-key-request";
 import { DEFAULT_ALLOWED_API_KEY_SCOPES, type AllowApiKeyAuthOptions } from "../decorators/allow-api-key-auth.decorator";
 import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
@@ -65,10 +66,11 @@ export class ApiKeyAuthGuard implements CanActivate {
 		}
 
 		setApiKeyAuthOnRequest(request, authContext);
+		rejectMachineTenantSelector(request);
 		// The key is the request's principal (ADR 017): idempotency scoping and the audit trail read it here.
 		this.requestContext.bindApiKey({
 			apiKeyId: authContext.apiKeyId,
-			organizationId: authContext.organizationId,
+			tenantId: authContext.tenantId,
 			terminalId: authContext.terminal?.terminalId,
 			locationId: authContext.locationId,
 		});

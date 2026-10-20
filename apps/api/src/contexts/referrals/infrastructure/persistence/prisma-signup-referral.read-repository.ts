@@ -14,15 +14,18 @@ import { fetchListPage, mapListResult, toPaginatedServiceResult } from "../../..
 import { timestampIdKeyset, type ListKeyset } from "../../../../platform/infrastructure/persistence/list-query/keyset-cursor";
 import { buildListOrder, type SortColumns } from "../../../../platform/infrastructure/persistence/list-query/list-order";
 import type { PrismaReadExecutor } from "../../../../platform/infrastructure/unit-of-work/prisma-read-executor";
-import type { PrismaService } from "../../../../prisma/prisma.service";
 import type { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import type { SignupReferralSummary } from "../../application/ports/signup-referral.port";
 import type { SignupReferralDashboardFacts, SignupReferralReadPort } from "../../application/ports/signup-referral-read.port";
 import type { SignupReferralCodeForValidation } from "../../domain/policies/signup-referral-code-validity.policy";
 import { findCodeForValidation, LATEST_CODE_ORDER } from "./signup-referral.queries";
 
+/** Read a code and its owner before signup accepts it. */
+const VALIDATE_CODE_OPERATION: SystemOperationName = "auth.signup_referrals.validate_code";
 /** Allowlisted system operation that reads referees' `fullName` for the referrer list (users cannot read other users under RLS). */
 const REFEREE_PROFILES_OPERATION: SystemOperationName = "auth.signup_referrals.list_referees";
+/** Referral status shown beside each account on the admin user list. */
+const ADMIN_REFERRAL_SUMMARY_OPERATION: SystemOperationName = "auth.signup_referrals.admin_summary";
 
 type SignupReferralRefereeListSortField = "createdAt";
 
@@ -52,7 +55,6 @@ export class PrismaSignupReferralReadRepository implements SignupReferralReadPor
 	public constructor(
 		private readonly reads: PrismaReadExecutor<Prisma.TransactionClient>,
 		private readonly transactions: TenantTransactionService,
-		private readonly prisma: PrismaService,
 	) {}
 
 	public dashboardFacts(actor: ActorContext, userId: string): Promise<SignupReferralDashboardFacts> {
@@ -98,14 +100,24 @@ export class PrismaSignupReferralReadRepository implements SignupReferralReadPor
 	}
 
 	public findCodeForValidation(canonical: string): Promise<SignupReferralCodeForValidation | null> {
-		return findCodeForValidation(this.prisma, canonical);
+		return this.transactions.withSystemOperation(
+			{ operation: VALIDATE_CODE_OPERATION, reason: "Read a signup referral code and its owner before signup", actorUserId: null },
+			(tx) => findCodeForValidation(tx, canonical),
+		);
 	}
 
 	public async summariesForReferees(refereeUserIds: readonly string[]): Promise<ReadonlyMap<string, SignupReferralSummary>> {
-		const rows = await this.prisma.signupReferral.findMany({
-			where: { refereeUserId: { in: [...refereeUserIds] }, isDeleted: false },
-			select: { refereeUserId: true, successfulAt: true, referrerUser: { select: { id: true, fullName: true } } },
-		});
+		if (refereeUserIds.length === 0) {
+			return new Map();
+		}
+		const rows = await this.transactions.withSystemOperation(
+			{ operation: ADMIN_REFERRAL_SUMMARY_OPERATION, reason: "Read referral status for a page of admin accounts", actorUserId: null },
+			(tx) =>
+				tx.signupReferral.findMany({
+					where: { refereeUserId: { in: [...refereeUserIds] }, isDeleted: false },
+					select: { refereeUserId: true, successfulAt: true, referrerUser: { select: { id: true, fullName: true } } },
+				}),
+		);
 		return new Map(
 			rows.map((row): [string, SignupReferralSummary] => [
 				row.refereeUserId,

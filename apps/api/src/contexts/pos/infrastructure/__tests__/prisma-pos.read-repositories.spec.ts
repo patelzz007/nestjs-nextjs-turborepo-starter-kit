@@ -19,13 +19,13 @@ const MEMBER: ActorContext = {
 	kind: "user",
 	userId: "member-1",
 	sessionId: "session-1",
-	organizationId: "org-1",
+	tenantId: "org-1",
 	isSuperAdmin: false,
 	accessScope: "tenant",
 	impersonatorUserId: null,
 	request: REQUEST,
 };
-const STORE_GRANT: MerchantAccessGrant = { organizationId: "org-1", locationScope: "SELECTED", locationIds: ["store-a"] };
+const STORE_GRANT: MerchantAccessGrant = { tenantId: "org-1", locationScope: "SELECTED", locationIds: ["store-a"] };
 
 /** Runs every read on the fake client, recording the RLS scope it was asked for. */
 class RecordingRunner implements RlsTransactionRunner<Prisma.TransactionClient> {
@@ -59,16 +59,16 @@ describe("PrismaRedemptionReadRepository", () => {
 		expect(findMany).toHaveBeenCalledOnce();
 		expect(findMany.mock.calls.at(0)?.at(0)).toMatchObject({ include: { claim: { select: { reward: { select: { title: true } } } } }, take: 10 });
 		expect(count.mock.calls.at(0)?.at(0)?.where).toEqual({
-			AND: [{ organizationId: "org-1", isDeleted: false, claim: { isDeleted: false, reward: { isDeleted: false } } }, { locationId: { in: ["store-a"] } }],
+			AND: [{ tenantId: "org-1", isDeleted: false, claim: { isDeleted: false, reward: { isDeleted: false } } }, { locationId: { in: ["store-a"] } }],
 		});
 		expect(runner.scopes).toHaveLength(1);
 	});
 });
 
 describe("PrismaApiKeyReadRepository", () => {
-	it("maps each key with its store's name, and excludes organization-wide keys from a store-limited grant", async () => {
-		const count = vi.fn<(args: Prisma.OrganizationApiKeyCountArgs) => Promise<number>>().mockResolvedValue(1);
-		const findMany = vi.fn<(args: Prisma.OrganizationApiKeyFindManyArgs) => Promise<readonly object[]>>().mockResolvedValue([
+	it("maps each key with its store's name, and excludes tenant-wide keys from a store-limited grant", async () => {
+		const count = vi.fn<(args: Prisma.TenantApiKeyCountArgs) => Promise<number>>().mockResolvedValue(1);
+		const findMany = vi.fn<(args: Prisma.TenantApiKeyFindManyArgs) => Promise<readonly object[]>>().mockResolvedValue([
 			{
 				id: "key-1",
 				name: "Front till",
@@ -82,29 +82,27 @@ describe("PrismaApiKeyReadRepository", () => {
 				deletedAt: null,
 			},
 		]);
-		const runner = new RecordingRunner(Object.assign(new PrismaService(createTestTypedConfig()), { organizationApiKey: { count, findMany } }));
+		const runner = new RecordingRunner(Object.assign(new PrismaService(createTestTypedConfig()), { tenantApiKey: { count, findMany } }));
 
 		await expect(new PrismaApiKeyReadRepository(new PrismaReadExecutor(runner)).list(MEMBER, STORE_GRANT, MerchantApiKeyListQuerySchema.parse({}))).resolves.toMatchObject({
 			items: [{ id: "key-1", locationName: "Store A", scope: "POS", revokedAt: null, createdAt: NOW }],
 		});
-		expect(count.mock.calls.at(0)?.at(0)?.where).toEqual({ AND: [{ organizationId: "org-1", isDeleted: false }, { locationId: { in: ["store-a"] } }] });
+		expect(count.mock.calls.at(0)?.at(0)?.where).toEqual({ AND: [{ tenantId: "org-1", isDeleted: false }, { locationId: { in: ["store-a"] } }] });
 	});
 });
 
 describe("PrismaTerminalReadRepository.summary", () => {
 	it("counts the live tills per derived status and the stores they cover, the rest being unpaired", async () => {
-		const count: Mock<(args: Prisma.OrganizationTerminalCountArgs) => Promise<number>> = vi.fn<(args: Prisma.OrganizationTerminalCountArgs) => Promise<number>>();
+		const count: Mock<(args: Prisma.TenantTerminalCountArgs) => Promise<number>> = vi.fn<(args: Prisma.TenantTerminalCountArgs) => Promise<number>>();
 		count.mockResolvedValueOnce(5).mockResolvedValueOnce(1).mockResolvedValueOnce(3);
-		const groupBy = vi
-			.fn<(args: Prisma.OrganizationTerminalGroupByArgs) => Promise<readonly object[]>>()
-			.mockResolvedValue([{ locationId: "store-a" }, { locationId: "store-b" }]);
-		const runner = new RecordingRunner(Object.assign(new PrismaService(createTestTypedConfig()), { organizationTerminal: { count, groupBy } }));
+		const groupBy = vi.fn<(args: Prisma.TenantTerminalGroupByArgs) => Promise<readonly object[]>>().mockResolvedValue([{ locationId: "store-a" }, { locationId: "store-b" }]);
+		const runner = new RecordingRunner(Object.assign(new PrismaService(createTestTypedConfig()), { tenantTerminal: { count, groupBy } }));
 
 		await expect(new PrismaTerminalReadRepository(new PrismaReadExecutor(runner)).summary(MEMBER, STORE_GRANT, NOW)).resolves.toEqual({
 			total: 5,
 			byStatus: { AWAITING_PAIRING: 1, ACTIVE: 3, UNPAIRED: 1 },
 			storesWithTerminals: 2,
 		});
-		expect(count.mock.calls.at(0)?.at(0)?.where).toEqual({ AND: [{ organizationId: "org-1", isDeleted: false }, { locationId: { in: ["store-a"] } }] });
+		expect(count.mock.calls.at(0)?.at(0)?.where).toEqual({ AND: [{ tenantId: "org-1", isDeleted: false }, { locationId: { in: ["store-a"] } }] });
 	});
 });

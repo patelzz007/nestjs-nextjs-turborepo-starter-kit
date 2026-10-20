@@ -31,7 +31,7 @@ function storedFile(overrides: Partial<StoredFile>): StoredFile {
 		uploadedById: "user-1",
 		productId: null,
 		deletedBy: null,
-		organizationId: null,
+		tenantId: null,
 		isDeleted: false,
 		deletedAt: null,
 		createdAt: 0n,

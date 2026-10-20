@@ -35,8 +35,8 @@ describe("till point and headers", () => {
 		const tillRequest = request();
 		expect(() => getTillPointFromRequest(tillRequest)).toThrow(TillPointMissingError);
 
-		setTillPointOnRequest(tillRequest, { organizationId: "org-1", locationId: null, terminalId: "TERM-AAAA2222", apiKeyId: "key-1" });
-		expect(getTillPointFromRequest(tillRequest)).toEqual({ organizationId: "org-1", locationId: null, terminalId: "TERM-AAAA2222", apiKeyId: "key-1" });
+		setTillPointOnRequest(tillRequest, { tenantId: "org-1", locationId: null, terminalId: "TERM-AAAA2222", apiKeyId: "key-1" });
+		expect(getTillPointFromRequest(tillRequest)).toEqual({ tenantId: "org-1", locationId: null, terminalId: "TERM-AAAA2222", apiKeyId: "key-1" });
 	});
 
 	it("reads a header's first value", () => {

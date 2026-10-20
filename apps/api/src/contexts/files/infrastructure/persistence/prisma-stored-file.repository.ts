@@ -40,7 +40,7 @@ export class PrismaStoredFileRepository implements StoredFileRepository {
 					...legacyBucketFieldsFromLocator(file.original.locator),
 					storagePath: file.original.locator.path,
 					uploadedById: file.uploadedById,
-					organizationId: file.organizationId,
+					tenantId: file.tenantId,
 					productId: file.productId,
 					status: "PENDING",
 				},

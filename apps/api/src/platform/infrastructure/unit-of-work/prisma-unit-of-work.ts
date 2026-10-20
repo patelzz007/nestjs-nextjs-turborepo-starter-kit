@@ -23,7 +23,7 @@ export class PrismaUnitOfWork<TScope, TDb extends OutboxTransaction> implements 
 		private readonly scopeFactory: ScopeFactory<TScope, TDb>,
 		private readonly dispatcher: TransactionalEventDispatcher<TDb>,
 		private readonly publisher: AfterCommitPublisher,
-		/** Whether this context's work needs the actor's organization (see {@link RlsScopeOptions}). */
+		/** Whether this context's work needs the actor's tenant (see {@link RlsScopeOptions}). */
 		private readonly scopeOptions: RlsScopeOptions = TENANT_DATA_SCOPE,
 	) {}
 
@@ -34,7 +34,7 @@ export class PrismaUnitOfWork<TScope, TDb extends OutboxTransaction> implements 
 	public async runSystemOperation<TResult>(operation: SystemOperationName, actor: ActorContext, work: (scope: TScope) => Promise<TResult>): Promise<TResult> {
 		const actorUserId: string | null = actingUserId(actor);
 		const reason: string = actor.kind === "system" ? actor.reason : operation;
-		return this.execute({ context: systemRlsContext(operation, actorUserId, actor.organizationId), reason }, actor, work);
+		return this.execute({ context: systemRlsContext(operation, actorUserId, actor.tenantId), reason }, actor, work);
 	}
 
 	private async execute<TResult>(scope: RlsTransactionScope, actor: ActorContext, work: (scope: TScope) => Promise<TResult>): Promise<TResult> {

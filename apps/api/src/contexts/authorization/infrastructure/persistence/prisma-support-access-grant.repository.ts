@@ -6,7 +6,7 @@ import type { SupportAccessGrantRepository } from "../../domain/repositories/sup
 function stateOf(row: SupportAccessGrant): SupportAccessGrantState {
 	return {
 		id: row.id,
-		organizationId: row.organizationId,
+		tenantId: row.tenantId,
 		supportUserId: row.supportUserId,
 		mode: row.mode,
 		status: row.status,
@@ -33,7 +33,7 @@ export class PrismaSupportAccessGrantRepository implements SupportAccessGrantRep
 		const created: SupportAccessGrant = await this.db.supportAccessGrant.create({
 			data: {
 				id: state.id,
-				organizationId: state.organizationId,
+				tenantId: state.tenantId,
 				supportUserId: state.supportUserId,
 				mode: state.mode,
 				status: state.status,

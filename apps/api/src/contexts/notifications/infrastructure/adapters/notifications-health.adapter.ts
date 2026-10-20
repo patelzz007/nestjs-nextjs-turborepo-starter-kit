@@ -1,6 +1,13 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 
-import { PrismaService } from "../../../../prisma/prisma.service";
+import type { SystemDatabaseContext } from "../../../../prisma/tenant-context";
+import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
+
+/** Readiness probe for the email log. */
+interface EmailLogHealthLookup {
+	withSystemOperation<TResult>(context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult>;
+}
 
 /**
  * Health check for the notifications system.
@@ -11,7 +18,7 @@ import { PrismaService } from "../../../../prisma/prisma.service";
 export class NotificationsHealthIndicator {
 	private readonly logger: Logger = new Logger(NotificationsHealthIndicator.name);
 
-	public constructor(private readonly prisma: PrismaService) {}
+	public constructor(@Inject(TenantTransactionService) private readonly transactions: EmailLogHealthLookup) {}
 
 	/**
 	 * Check that the notifications system is operational.
@@ -20,7 +27,10 @@ export class NotificationsHealthIndicator {
 	 */
 	public async isHealthy(): Promise<boolean> {
 		try {
-			const email = await this.prisma.emailLog.findFirst({ select: { id: true } });
+			const email = await this.transactions.withSystemOperation(
+				{ operation: "notifications.health.email_log", reason: "Readiness: the email log is reachable", actorUserId: null },
+				(tx) => tx.emailLog.findFirst({ select: { id: true } }),
+			);
 			return email !== null;
 		} catch {
 			this.logger.warn("Notifications health check failed");
@@ -38,14 +48,18 @@ export class NotificationsHealthIndicator {
 		readonly lastEmail: bigint | null;
 	}> {
 		try {
-			const [totalEmails, failedEmails, lastEmail] = await Promise.all([
-				this.prisma.emailLog.count(),
-				this.prisma.emailLog.count({ where: { status: "failed" } }),
-				this.prisma.emailLog.findFirst({
-					orderBy: { createdAt: "desc" },
-					select: { createdAt: true },
-				}),
-			]);
+			const [totalEmails, failedEmails, lastEmail] = await this.transactions.withSystemOperation(
+				{ operation: "notifications.health.email_log", reason: "Readiness: email log counts", actorUserId: null },
+				(tx) =>
+					Promise.all([
+						tx.emailLog.count(),
+						tx.emailLog.count({ where: { status: "failed" } }),
+						tx.emailLog.findFirst({
+							orderBy: { createdAt: "desc" },
+							select: { createdAt: true },
+						}),
+					]),
+			);
 
 			return {
 				healthy: true,

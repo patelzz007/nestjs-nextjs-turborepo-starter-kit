@@ -21,9 +21,11 @@ import {
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { Idempotent } from "../../../../platform/presentation/http/idempotency/idempotent.decorator";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
+import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import { ZodBody, ZodListQuery, ZodParams } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
+import { CATALOG_READ_OPERATION, CATALOG_WRITE_OPERATION } from "../../application/catalog.tokens";
 import { ProductApplicationService } from "../../application/services/product.application-service";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
 
@@ -33,6 +35,7 @@ export class ProductController {
 	public constructor(private readonly service: ProductApplicationService) {}
 
 	@RequirePermission("LIST", "PRODUCT")
+	@PlatformOperation(CATALOG_READ_OPERATION)
 	@Get()
 	@ApiOperation({ summary: "List Products" })
 	@ZodPaginatedResponse(ProductSchema, { description: "Paginated list of products" })
@@ -42,6 +45,7 @@ export class ProductController {
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@RequirePermission("CREATE", "PRODUCT")
+	@PlatformOperation(CATALOG_WRITE_OPERATION)
 	@Post("bulk")
 	@ApiOperation({ summary: "Bulk create products" })
 	@ZodResponse(BulkCreateProductResponseSchema, { status: HttpStatus.CREATED, description: "Created products" })
@@ -54,6 +58,7 @@ export class ProductController {
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@RequirePermission("DELETE", "PRODUCT")
+	@PlatformOperation(CATALOG_WRITE_OPERATION)
 	@Post("bulk-delete")
 	@ApiOperation({ summary: "Bulk soft delete products" })
 	@ZodResponse(BulkDeleteResultSchema, { status: HttpStatus.CREATED, description: "Bulk delete result" })
@@ -62,6 +67,7 @@ export class ProductController {
 	}
 
 	@RequirePermission("READ", "PRODUCT")
+	@PlatformOperation(CATALOG_READ_OPERATION)
 	@Get(":id")
 	@ApiOperation({ summary: "Get Product by id" })
 	@ZodResponse(ProductSchema, { description: "Product detail" })
@@ -71,6 +77,7 @@ export class ProductController {
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@RequirePermission("CREATE", "PRODUCT")
+	@PlatformOperation(CATALOG_WRITE_OPERATION)
 	@Idempotent()
 	@Post()
 	@ApiOperation({ summary: "Create Product (send an Idempotency-Key header to make retries safe)" })
@@ -84,6 +91,7 @@ export class ProductController {
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@RequirePermission("UPDATE", "PRODUCT")
+	@PlatformOperation(CATALOG_WRITE_OPERATION)
 	@Patch(":id")
 	@ApiOperation({ summary: "Update Product" })
 	@ZodResponse(ProductSchema, { description: "Updated product" })
@@ -97,6 +105,7 @@ export class ProductController {
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@RequirePermission("DELETE", "PRODUCT")
+	@PlatformOperation(CATALOG_WRITE_OPERATION)
 	@Delete(":id")
 	@ApiOperation({ summary: "Soft delete Product" })
 	@ZodResponse(DeleteSuccessDataSchema, { description: "Product deleted" })
@@ -107,6 +116,7 @@ export class ProductController {
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@RequirePermission("UPDATE", "PRODUCT")
+	@PlatformOperation(CATALOG_WRITE_OPERATION)
 	@Post(":id/restore")
 	@ApiOperation({ summary: "Restore Product" })
 	@ZodResponse(ProductSchema, { status: HttpStatus.CREATED, description: "Restored product" })

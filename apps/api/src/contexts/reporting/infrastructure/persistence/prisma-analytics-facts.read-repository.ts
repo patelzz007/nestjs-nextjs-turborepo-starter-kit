@@ -71,8 +71,8 @@ const ReferralTotalsRowSchema = z.object({
 /**
  * Time-bucketed and whole-range activity aggregates (paid bills, claims,
  * redemptions, customer cohorts), computed in Postgres — never one row per
- * bill in JS. Indexes: `"RewardSale" ("organizationId", "paidAt")` /
- * `(user_id, paid_at)` / `(paid_at)`, `reward_redemptions (organization_id)` /
+ * bill in JS. Indexes: `"RewardSale" ("tenantId", "paidAt")` /
+ * `(user_id, paid_at)` / `(paid_at)`, `reward_redemptions (tenant_id)` /
  * `(user_id)` / `(redeemed_at)`, `reward_claims (reward_id)` / `(user_id)`.
  */
 export class PrismaAnalyticsFactsReadRepository implements AnalyticsFactsReadPort {
@@ -80,7 +80,8 @@ export class PrismaAnalyticsFactsReadRepository implements AnalyticsFactsReadPor
 
 	/** Every bucket of `window` (empty ones as zero), with the scope's bills, claims and redemptions. */
 	public async activitySeries(scope: AnalyticsScope, window: AnalyticsWindow): Promise<ActivityBucket[]> {
-		const rows = await this.sql.rows(
+		const rows = await this.sql.rowsFor(
+			scope,
 			ActivityBucketRowSchema,
 			Prisma.sql`
 			WITH ${bucketsCte(window)},
@@ -131,18 +132,19 @@ export class PrismaAnalyticsFactsReadRepository implements AnalyticsFactsReadPor
 		const span: AnalyticsTimeRange = { fromMs: previous.fromMs, toMs: range.toMs };
 		const isCurrent = (column: Prisma.Sql): Prisma.Sql => withinRange(column, range);
 		const isPrevious = (column: Prisma.Sql): Prisma.Sql => withinRange(column, previous);
-		const row = await this.sql.row(
+		const row = await this.sql.rowFor(
+			scope,
 			ActivityTotalsRowSchema,
 			Prisma.sql`
 			WITH sales AS (
 				SELECT COALESCE(SUM(s."billTotalMinor") FILTER (WHERE ${isCurrent(Prisma.sql`s."paidAt"`)}), 0) AS sales_minor,
 				       COUNT(*) FILTER (WHERE ${isCurrent(Prisma.sql`s."paidAt"`)}) AS bills,
 				       COUNT(DISTINCT s."userId") FILTER (WHERE ${isCurrent(Prisma.sql`s."paidAt"`)}) AS customers,
-				       COUNT(DISTINCT s."organizationId") FILTER (WHERE ${isCurrent(Prisma.sql`s."paidAt"`)}) AS merchants,
+				       COUNT(DISTINCT s."tenantId") FILTER (WHERE ${isCurrent(Prisma.sql`s."paidAt"`)}) AS merchants,
 				       COALESCE(SUM(s."billTotalMinor") FILTER (WHERE ${isPrevious(Prisma.sql`s."paidAt"`)}), 0) AS previous_sales_minor,
 				       COUNT(*) FILTER (WHERE ${isPrevious(Prisma.sql`s."paidAt"`)}) AS previous_bills,
 				       COUNT(DISTINCT s."userId") FILTER (WHERE ${isPrevious(Prisma.sql`s."paidAt"`)}) AS previous_customers,
-				       COUNT(DISTINCT s."organizationId") FILTER (WHERE ${isPrevious(Prisma.sql`s."paidAt"`)}) AS previous_merchants
+				       COUNT(DISTINCT s."tenantId") FILTER (WHERE ${isPrevious(Prisma.sql`s."paidAt"`)}) AS previous_merchants
 				FROM "RewardSale" s
 				WHERE ${allOf([...salesConditions(scope), withinRange(Prisma.sql`s."paidAt"`, span)])}
 			),
@@ -198,7 +200,8 @@ export class PrismaAnalyticsFactsReadRepository implements AnalyticsFactsReadPor
 
 	/** When the first live bill in `scope` was paid (all time), or `null` before any. Served by the `(scope, paid_at)` indexes. */
 	public async firstBillAt(scope: AnalyticsScope): Promise<number | null> {
-		const row = await this.sql.row(
+		const row = await this.sql.rowFor(
+			scope,
 			z.object({ first_paid_at: BigIntColumn.nullable() }),
 			Prisma.sql`SELECT MIN(s."paidAt") AS first_paid_at FROM "RewardSale" s WHERE ${allOf(salesConditions(scope))}`,
 		);
@@ -213,7 +216,8 @@ export class PrismaAnalyticsFactsReadRepository implements AnalyticsFactsReadPor
 	 * history.
 	 */
 	public async customerCohortSeries(scope: AnalyticsScope, window: AnalyticsWindow): Promise<CustomerCohortBucket[]> {
-		const rows = await this.sql.rows(
+		const rows = await this.sql.rowsFor(
+			scope,
 			CustomerCohortBucketRowSchema,
 			Prisma.sql`
 			WITH ${bucketsCte(window)},
@@ -249,7 +253,8 @@ export class PrismaAnalyticsFactsReadRepository implements AnalyticsFactsReadPor
 		previous: AnalyticsTimeRange,
 	): Promise<{ readonly current: CustomerCohort; readonly previous: CustomerCohort }> {
 		const span: AnalyticsTimeRange = { fromMs: previous.fromMs, toMs: range.toMs };
-		const row = await this.sql.row(
+		const row = await this.sql.rowFor(
+			scope,
 			CustomerCohortTotalsRowSchema,
 			Prisma.sql`
 			WITH buyers AS (

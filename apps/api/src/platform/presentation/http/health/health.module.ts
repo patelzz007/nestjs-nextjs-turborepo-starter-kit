@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { DatabaseSafetyModule } from "../../../infrastructure/database/database-safety.module";
 import { GracefulShutdownService } from "../../../infrastructure/lifecycle/graceful-shutdown.service";
 import { PrismaModule } from "../../../../prisma/prisma.module";
 
@@ -15,7 +16,7 @@ import { VersionController } from "./version.controller";
  * and aggregated in the HealthService via optional injection.
  */
 @Module({
-	imports: [PrismaModule],
+	imports: [PrismaModule, DatabaseSafetyModule],
 	controllers: [HealthController, VersionController],
 	providers: [HealthService, GracefulShutdownService, moduleHealthIndicatorsProvider],
 	exports: [HealthService],

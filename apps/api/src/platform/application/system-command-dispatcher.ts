@@ -13,7 +13,7 @@ import { SystemOperationNameSchema } from "./system-operation-names";
 const CommandActorSchema = z.object({
 	kind: z.literal("system"),
 	operation: SystemOperationNameSchema,
-	organizationId: z.string().min(1).nullable(),
+	tenantId: z.string().min(1).nullable(),
 	actorUserId: z.string().min(1).nullable(),
 });
 
@@ -104,7 +104,7 @@ export class SystemCommandDispatcher {
 		readonly commandName: string;
 		readonly input: JsonValue;
 		readonly operation: string | null;
-		readonly organizationId: string | null;
+		readonly tenantId: string | null;
 		readonly actorUserId: string | null;
 	} {
 		const actor = CommandWithActorSchema.safeParse(command);
@@ -114,7 +114,7 @@ export class SystemCommandDispatcher {
 			commandName: command.constructor.name,
 			input: commandInput(command),
 			operation: actor.success ? actor.data.actor.operation : null,
-			organizationId: actor.success ? actor.data.actor.organizationId : null,
+			tenantId: actor.success ? actor.data.actor.tenantId : null,
 			actorUserId: actor.success ? actor.data.actor.actorUserId : null,
 		};
 	}

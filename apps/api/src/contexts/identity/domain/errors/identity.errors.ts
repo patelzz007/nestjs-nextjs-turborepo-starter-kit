@@ -86,7 +86,7 @@ export class MerchantAccessRequiredError extends DomainError {
 	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.merchantAccessRequired;
 
 	public constructor() {
-		super("Merchant access required. This account is not linked to a merchant organization.");
+		super("Merchant access required. This account is not linked to a merchant tenant.");
 	}
 }
 
@@ -505,6 +505,15 @@ export class ImpersonationTargetSuperAdminError extends DomainError {
 
 	public constructor() {
 		super("Cannot impersonate another super administrator");
+	}
+}
+
+/** The target belongs to a tenant for which the administrator has no approved support grant. */
+export class ImpersonationGrantRequiredError extends DomainError {
+	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.forbidden;
+
+	public constructor() {
+		super("Impersonating a tenant member requires an approved support grant for each of their tenants");
 	}
 }
 

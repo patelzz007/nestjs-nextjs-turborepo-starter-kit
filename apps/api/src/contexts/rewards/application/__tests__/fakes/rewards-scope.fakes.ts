@@ -3,33 +3,33 @@ import { epochMs, RewardStatusSchema, type RewardResponse } from "@workspace/sha
 import { RecordingEventCollector } from "../../../../../platform/application/__tests__/fakes/recording-event-collector";
 import type { LegalAcceptance } from "../../../domain/aggregates/legal-acceptance.aggregate";
 import { RewardImagesInvalidError } from "../../../domain/errors/reward.errors";
-import type { OrganizationStoreFacts } from "../../../domain/policies/reward-location-scope.policy";
+import type { TenantStoreFacts } from "../../../domain/policies/reward-location-scope.policy";
 import type { LegalAcceptanceRepository } from "../../../domain/repositories/legal-acceptance.repository";
-import type { OrganizationStoresPort, RewardAuditEntry, RewardAuditPort, RewardImageFilesPort, RewardViewPort } from "../../ports/rewards-transactional.ports";
+import type { TenantStoresPort, RewardAuditEntry, RewardAuditPort, RewardImageFilesPort, RewardViewPort } from "../../ports/rewards-transactional.ports";
 import type { IdGenerator } from "../../ports/rewards.tokens";
 import type { RewardsScope } from "../../rewards-scope";
 import { InMemoryRewardRepository } from "./in-memory-reward.repository";
 
 /** Files that are usable reward images; anything else is refused like the files adapter refuses it. */
 export class FakeRewardImageFiles implements RewardImageFilesPort {
-	public readonly locks: { readonly organizationId: string; readonly fileIds: readonly string[] }[] = [];
+	public readonly locks: { readonly tenantId: string; readonly fileIds: readonly string[] }[] = [];
 	public readonly usable: Set<string> = new Set<string>();
 
-	public lockUsable(organizationId: string, fileIds: readonly string[]): Promise<void> {
+	public lockUsable(tenantId: string, fileIds: readonly string[]): Promise<void> {
 		if (fileIds.length === 0) {
 			return Promise.resolve();
 		}
-		this.locks.push({ organizationId, fileIds });
+		this.locks.push({ tenantId, fileIds });
 		const unusable = fileIds.filter((fileId) => !this.usable.has(fileId));
 		return unusable.length === 0 ? Promise.resolve() : Promise.reject(new RewardImagesInvalidError(unusable));
 	}
 }
 
 /** A fixed set of active stores. */
-export class FakeOrganizationStores implements OrganizationStoresPort {
+export class FakeTenantStores implements TenantStoresPort {
 	public constructor(private readonly activeLocationIds: readonly string[] = []) {}
 
-	public factsFor(_organizationId: string, requestedLocationIds: readonly string[]): Promise<OrganizationStoreFacts> {
+	public factsFor(_tenantId: string, requestedLocationIds: readonly string[]): Promise<TenantStoreFacts> {
 		return Promise.resolve({
 			activeLocationCount: this.activeLocationIds.length,
 			activeRequestedLocationIds: requestedLocationIds.filter((locationId) => this.activeLocationIds.includes(locationId)),
@@ -46,18 +46,18 @@ export class FakeRewardViews implements RewardViewPort {
 		if (row === undefined) {
 			return Promise.reject(new Error(`No reward ${rewardId}`));
 		}
-		return Promise.resolve(fakeRewardResponse(row.id, row.organizationId, row.status, row.title));
+		return Promise.resolve(fakeRewardResponse(row.id, row.tenantId, row.status, row.title));
 	}
 }
 
 /** A contract-shaped reward response for handler tests (only identity, status and title matter there). */
-export function fakeRewardResponse(id: string, organizationId: string, status: string, title: string): RewardResponse {
+export function fakeRewardResponse(id: string, tenantId: string, status: string, title: string): RewardResponse {
 	return {
 		id,
-		organizationId,
-		organizationName: undefined,
-		organizationLogoUrl: null,
-		organizationLogoSources: [],
+		tenantId,
+		tenantName: undefined,
+		tenantLogoUrl: null,
+		tenantLogoSources: [],
 		title,
 		description: "",
 		rewardType: "FREE_ITEM",
@@ -132,7 +132,7 @@ export function fakeRewardsScope(activeLocationIds: readonly string[] = []): Fak
 		rewards,
 		legalAcceptances: new InMemoryLegalAcceptances(),
 		imageFiles: new FakeRewardImageFiles(),
-		stores: new FakeOrganizationStores(activeLocationIds),
+		stores: new FakeTenantStores(activeLocationIds),
 		views: new FakeRewardViews(rewards),
 		audit: new RecordingRewardAudit(),
 		events: new RecordingEventCollector(),

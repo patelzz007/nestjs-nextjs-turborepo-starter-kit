@@ -55,7 +55,7 @@ describe("PrismaRbacGraphReader (e2e)", () => {
 	async function onGraph<Result>(read: (graph: PrismaRbacGraphReader) => Promise<Result>): Promise<Result> {
 		return app
 			.get(TenantTransactionService)
-			.withRlsContext({ context: systemRlsContext("route.rls_bypass"), reason: "rbac graph reader e2e" }, (tx: Prisma.TransactionClient): Promise<Result> =>
+			.withRlsContext({ context: systemRlsContext("authorization.rbac.mutate"), reason: "Read who an RBAC change touches" }, (tx: Prisma.TransactionClient): Promise<Result> =>
 				read(new PrismaRbacGraphReader(tx)),
 			);
 	}

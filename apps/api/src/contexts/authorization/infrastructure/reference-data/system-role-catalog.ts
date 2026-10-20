@@ -28,7 +28,7 @@ export interface SystemRoleDefinition {
 
 /**
  * The platform roles the code depends on by name. Created `isSystem` (API callers can never change them)
- * and flat (no parent): hierarchy is for extension patterns, never organisational rank.
+ * and flat (no parent): hierarchy is for extension patterns, never a tenant rank.
  *
  * - SuperAdmin: the full matrix (the `isSuperAdmin` flag on the user row still bypasses checks; the role is for assigned operators).
  * - Admin: the admin panel except DELETE:USER and MANAGE:SYSTEM_SETTINGS (granted directly where needed), plus

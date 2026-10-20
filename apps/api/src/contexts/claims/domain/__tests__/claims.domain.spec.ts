@@ -81,8 +81,8 @@ describe("RewardClaim lifecycle", () => {
 		}).toThrow(ClaimNotActiveError);
 		overdue.expire("org-1", NOW);
 		expect(overdue.currentStatus).toBe("EXPIRED");
-		expect(overdue.pullEvents()).toEqual([expect.objectContaining({ organizationId: "org-1" })]);
-		expect(new ClaimExpired(NOW, { claimId: "c", userId: "u", rewardId: "r", isReferrerCredit: false }, "org-1").organizationId).toBe("org-1");
+		expect(overdue.pullEvents()).toEqual([expect.objectContaining({ tenantId: "org-1" })]);
+		expect(new ClaimExpired(NOW, { claimId: "c", userId: "u", rewardId: "r", isReferrerCredit: false }, "org-1").tenantId).toBe("org-1");
 	});
 
 	it("refuses a stored row whose status and redemption stamp disagree, or an unknown status", () => {

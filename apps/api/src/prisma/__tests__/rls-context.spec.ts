@@ -15,12 +15,12 @@ import {
 import { isAllowlistedSystemOperation, parseSystemOperation, SystemOperationNotAllowlistedError } from "../system-operation.registry";
 
 describe("rls-context", () => {
-	it("fails closed outside any scope: no bypass, no user, no organization, the default role", () => {
+	it("fails closed outside any scope: no bypass, no user, no tenant, the default role", () => {
 		expect(currentRlsContextOrUnscoped()).toEqual({
 			kind: "anonymous",
 			userId: null,
 			bypass: false,
-			organizationId: null,
+			tenantId: null,
 			requireExplicitContext: false,
 			systemOperation: null,
 			role: "app_runtime",
@@ -41,11 +41,11 @@ describe("rls-context", () => {
 		expect(systemRlsContext("tenant.enumerate")).toEqual(expect.objectContaining({ bypass: true, systemOperation: "tenant.enumerate", role: "app_enumerator" }));
 	});
 
-	it("encodes a missing user / organization as '' only at the SQL session-variable layer", () => {
+	it("encodes a missing user / tenant as '' only at the SQL session-variable layer", () => {
 		expect(rlsSessionVariables(anonymousRlsContext(null))).toEqual({
 			role: "app_runtime",
 			currentUserId: "",
-			currentOrganizationId: "",
+			currentTenantId: "",
 			rlsBypass: "false",
 			systemOperation: "",
 			currentApiKeyId: "",
@@ -54,7 +54,7 @@ describe("rls-context", () => {
 		expect(rlsSessionVariables(systemRlsContext("queue.email.send"))).toEqual({
 			role: "app_runtime",
 			currentUserId: "",
-			currentOrganizationId: "",
+			currentTenantId: "",
 			rlsBypass: "true",
 			systemOperation: "queue.email.send",
 			currentApiKeyId: "",
@@ -63,7 +63,7 @@ describe("rls-context", () => {
 		expect(rlsSessionVariables(userRlsContext("user-1", "org-a", true))).toEqual({
 			role: "app_runtime",
 			currentUserId: "user-1",
-			currentOrganizationId: "org-a",
+			currentTenantId: "org-a",
 			rlsBypass: "false",
 			systemOperation: "",
 			currentApiKeyId: "",
@@ -72,11 +72,11 @@ describe("rls-context", () => {
 		expect(systemRlsContext("queue.email.send").userId).toBeNull();
 	});
 
-	it("makes a verified API key a machine principal of its own organization (and store): no user, no bypass", () => {
+	it("makes a verified API key a machine principal of its own tenant (and store): no user, no bypass", () => {
 		expect(apiKeyRlsContext("key-1", "org-a", "store-1")).toEqual({
 			kind: "api_key",
 			apiKeyId: "key-1",
-			organizationId: "org-a",
+			tenantId: "org-a",
 			apiKeyLocationId: "store-1",
 			userId: null,
 			bypass: false,
@@ -87,13 +87,13 @@ describe("rls-context", () => {
 		expect(rlsSessionVariables(apiKeyRlsContext("key-1", "org-a", "store-1"))).toEqual({
 			role: "app_runtime",
 			currentUserId: "",
-			currentOrganizationId: "org-a",
+			currentTenantId: "org-a",
 			rlsBypass: "false",
 			systemOperation: "",
 			currentApiKeyId: "key-1",
 			currentApiKeyLocationId: "store-1",
 		});
-		// An organization-wide key has no store scope.
+		// A tenant-wide key has no store scope.
 		expect(rlsSessionVariables(apiKeyRlsContext("key-2", "org-a", null)).currentApiKeyLocationId).toBe("");
 	});
 

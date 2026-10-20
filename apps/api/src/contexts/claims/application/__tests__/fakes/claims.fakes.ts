@@ -62,10 +62,10 @@ export class SequentialIds {
 /** Claims as stored rows; writes compare-and-set on the loaded status (and the expiry when asked), as in Postgres. */
 export class InMemoryClaims implements RewardClaimRepository, ClaimCodeLookup {
 	public readonly rows = new Map<string, RewardClaimSnapshot>();
-	public readonly organizations = new Map<string, string>();
+	public readonly tenants = new Map<string, string>();
 	private race: { readonly claimId: string; readonly status: RewardClaimSnapshot["status"] } | null = null;
 
-	public seed(state: Partial<RewardClaimState> & Pick<RewardClaimState, "id" | "userId" | "rewardId">, organizationId = "org-1"): void {
+	public seed(state: Partial<RewardClaimState> & Pick<RewardClaimState, "id" | "userId" | "rewardId">, tenantId = "org-1"): void {
 		const claim = RewardClaim.rehydrate({
 			referralId: null,
 			status: "PENDING",
@@ -77,7 +77,7 @@ export class InMemoryClaims implements RewardClaimRepository, ClaimCodeLookup {
 			...state,
 		});
 		this.rows.set(state.id, claim.snapshot());
-		this.organizations.set(state.id, organizationId);
+		this.tenants.set(state.id, tenantId);
 	}
 
 	public add(claim: RewardClaim): Promise<void> {
@@ -125,7 +125,7 @@ export class InMemoryClaims implements RewardClaimRepository, ClaimCodeLookup {
 			[...this.rows.values()]
 				.filter((row): boolean => row.status === "PENDING" && row.isReferrerCredit === isReferrerCredit && row.claimExpiresAt < now)
 				.slice(0, take)
-				.map((row): OverdueClaim => ({ claimId: row.id, organizationId: this.organizations.get(row.id) ?? "org-1" })),
+				.map((row): OverdueClaim => ({ claimId: row.id, tenantId: this.tenants.get(row.id) ?? "org-1" })),
 		);
 	}
 
@@ -291,7 +291,7 @@ export class InMemoryInventory implements RewardInventoryPort, RewardRedemptionF
 
 	public constructor(quantity: number, overrides: Partial<ClaimableRewardFacts> = {}) {
 		this.remaining = quantity;
-		this.facts = { rewardId: "reward-1", organizationId: "org-1", title: "Free latte", expiryDate: epochMs(NOW + 30 * 86_400_000), maxClaimsPerUser: null, ...overrides };
+		this.facts = { rewardId: "reward-1", tenantId: "org-1", title: "Free latte", expiryDate: epochMs(NOW + 30 * 86_400_000), maxClaimsPerUser: null, ...overrides };
 	}
 
 	public assertClaimable(): Promise<ClaimableRewardFacts> {
@@ -341,7 +341,7 @@ export class InMemoryInventory implements RewardInventoryPort, RewardRedemptionF
 				? null
 				: {
 						id: rewardId,
-						organizationId: this.facts.organizationId,
+						tenantId: this.facts.tenantId,
 						title: this.facts.title,
 						rewardType: "FREE_ITEM",
 						expiryDate: this.facts.expiryDate,
@@ -601,7 +601,7 @@ export class InMemoryClaimsUnitOfWork implements UnitOfWork<ClaimsScope> {
 const REQUEST = { requestId: "req-1", ip: null, userAgent: null, deviceLabel: null, endpoint: null };
 
 export function customer(userId: string): ActorContext {
-	return { kind: "user", userId, sessionId: "session-1", organizationId: null, isSuperAdmin: false, accessScope: "tenant", impersonatorUserId: null, request: REQUEST };
+	return { kind: "user", userId, sessionId: "session-1", tenantId: null, isSuperAdmin: false, accessScope: "tenant", impersonatorUserId: null, request: REQUEST };
 }
 
 export function claimantProfile(overrides: Partial<ClaimantProfile> = {}): ClaimantProfile {

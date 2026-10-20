@@ -55,7 +55,7 @@ export class RedemptionCodeResolver {
 		const resolved: ResolvedCode[] = [];
 		let unknownBackupCodes = 0;
 		for (const code of codes) {
-			const lookup = await scope.claims.findMerchantClaim(code, point.organizationId);
+			const lookup = await scope.claims.findMerchantClaim(code, point.tenantId);
 			if (lookup !== null) {
 				resolved.push({ lookup, claim: toRedeemableClaim(lookup), method: methodOf(code) });
 			} else if (code.backupCode !== undefined) {
@@ -76,7 +76,7 @@ export class RedemptionCodeResolver {
 		}
 		const failuresInWindow = await scope.lockout.addFailures(point.apiKeyId, unknownBackupCodes, now, POS_CODE_FAILURE_WINDOW_MS);
 		await scope.rewardAudit.append({
-			organizationId: point.organizationId,
+			tenantId: point.tenantId,
 			actorUserId: null,
 			action: "pos.backup_code_rejected",
 			metadata: { apiKeyId: point.apiKeyId, terminalId: point.terminalId, locationId: point.locationId, unknownBackupCodes, failuresInWindow },
@@ -87,14 +87,14 @@ export class RedemptionCodeResolver {
 		}
 		if (await scope.lockout.lock(point.apiKeyId, now, lockedUntil)) {
 			await scope.rewardAudit.append({
-				organizationId: point.organizationId,
+				tenantId: point.tenantId,
 				actorUserId: null,
 				action: "pos.api_key_code_locked",
 				metadata: { apiKeyId: point.apiKeyId, terminalId: point.terminalId, locationId: point.locationId, failuresInWindow, lockedUntil },
 			});
 			this.logger.warn({
 				event: "pos.api_key_code_locked",
-				organizationId: point.organizationId,
+				tenantId: point.tenantId,
 				apiKeyId: point.apiKeyId,
 				terminalId: point.terminalId,
 				failuresInWindow,

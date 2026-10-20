@@ -8,8 +8,8 @@ import { z } from "zod";
 import { SkipEnvelope } from "../../../../platform/presentation/http/validation/decorators/skip-envelope.decorator";
 import { ZodParams, ZodQuery } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
+import { PublicOperation } from "../../../../platform/presentation/http/security/decorators/public-operation.decorator";
 import { Public } from "../../../../platform/presentation/http/security/decorators/public.decorator";
-import { RlsBypass } from "../../../../platform/presentation/http/security/decorators/rls-bypass.decorator";
 import { SkipMutationIntent } from "../../../../platform/presentation/http/security/decorators/skip-mutation-intent.decorator";
 import {
 	LOCAL_DOWNLOAD_TOKEN_QUERY_PARAM,
@@ -59,7 +59,7 @@ export class LocalStorageTransferController {
 	public constructor(@Inject(LOCAL_STORAGE_TRANSFER) private readonly transfers: LocalStorageTransferPort) {}
 
 	@Public()
-	@RlsBypass()
+	@PublicOperation("files.local_object.read")
 	@SkipEnvelope()
 	@Get("local-download")
 	@ApiOperation({ summary: "Download a private object through a signed, expiring local-storage link (development only)" })
@@ -69,7 +69,7 @@ export class LocalStorageTransferController {
 	}
 
 	@Public()
-	@RlsBypass()
+	@PublicOperation("files.local_object.read")
 	@SkipEnvelope()
 	// Plays the CDN's role: a page shows many public images (reward covers), so browsers cache them like
 	// the CDN copy, and the credential-guarding `strict` limit does not apply (the `default` one still does).
@@ -82,7 +82,7 @@ export class LocalStorageTransferController {
 	}
 
 	@Public()
-	@RlsBypass()
+	@PublicOperation("files.local_variant.read")
 	@SkipEnvelope()
 	// A rendition of a public image — cached and throttled exactly like the file itself (above).
 	@SkipThrottle({ strict: true })
@@ -95,7 +95,7 @@ export class LocalStorageTransferController {
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@Public()
-	@RlsBypass()
+	@PublicOperation("files.local_object.read")
 	// Not a cookie-authenticated mutation: the browser posts the form straight from the ticket (like an S3
 	// presigned POST) and the only credential is the signed upload token in the body, so there is no ambient
 	// authority for a cross-site request to ride on.

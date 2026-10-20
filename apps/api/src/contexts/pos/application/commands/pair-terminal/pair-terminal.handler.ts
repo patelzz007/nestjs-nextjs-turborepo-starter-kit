@@ -4,7 +4,7 @@ import { PosTerminalIdSchema, type PosPairedTerminal } from "@workspace/shared";
 
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
-import { OrganizationNotActiveError, PairingCodeInvalidError } from "../../../domain/errors/pos.errors";
+import { TenantNotActiveError, PairingCodeInvalidError } from "../../../domain/errors/pos.errors";
 import type { PosScope } from "../../pos-scope";
 import type { PosCredentialsPort } from "../../ports/pos-credentials.port";
 import { POS_CREDENTIALS, POS_ID_GENERATOR, POS_UNIT_OF_WORK, TERMINAL_PAIRING_OPERATION, type PosIdGenerator } from "../../ports/pos.tokens";
@@ -43,10 +43,10 @@ export class PairTerminalHandler implements ICommandHandler<PairTerminalCommand,
 			if (terminal === null) {
 				throw new PairingCodeInvalidError();
 			}
-			const { organizationId, locationId, terminalId } = terminal.snapshot();
-			const organization = await scope.posSettings.tillOrganization(organizationId);
-			if (organization?.operating !== true) {
-				throw new OrganizationNotActiveError();
+			const { tenantId, locationId, terminalId } = terminal.snapshot();
+			const tenant = await scope.posSettings.tillTenant(tenantId);
+			if (tenant?.operating !== true) {
+				throw new TenantNotActiveError();
 			}
 			const issuedByUserId = terminal.consumedCodeIssuer();
 			if (issuedByUserId === null) {
@@ -55,12 +55,12 @@ export class PairTerminalHandler implements ICommandHandler<PairTerminalCommand,
 			const apiKeyId = this.ids.next();
 			await scope.apiKeys.add({
 				id: apiKeyId,
-				organizationId,
+				tenantId,
 				locationId,
 				name: terminal.displayName,
 				keyHash: key.hash,
 				keyPrefix: key.prefix,
-				// A till's key may only call the POS redemption routes, never the organization API.
+				// A till's key may only call the POS redemption routes, never the tenant API.
 				scope: "POS",
 				createdByUserId: issuedByUserId,
 			});
@@ -71,7 +71,7 @@ export class PairTerminalHandler implements ICommandHandler<PairTerminalCommand,
 			}
 			await scope.terminals.save(terminal);
 			await scope.rewardAudit.append({
-				organizationId,
+				tenantId,
 				actorUserId: issuedByUserId,
 				action: "pos.terminal_paired",
 				metadata: { terminalId: terminal.id, apiKeyId, replacedApiKeyId },
@@ -84,7 +84,7 @@ export class PairTerminalHandler implements ICommandHandler<PairTerminalCommand,
 				apiKey: key.plaintext,
 				terminalId: PosTerminalIdSchema.parse(terminalId),
 				terminalName: terminal.displayName,
-				organization: { slug: organization.slug, displayName: organization.displayName },
+				tenant: { id: tenantId, slug: tenant.slug, displayName: tenant.displayName },
 				location: { id: locationId, name: storeName },
 			};
 		});

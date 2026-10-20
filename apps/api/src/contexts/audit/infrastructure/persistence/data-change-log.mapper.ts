@@ -1,14 +1,14 @@
 import type { DataChangeLog } from "@prisma/client";
 import { DataChangeLogDetailSchema, DataChangeLogSummarySchema, epochMs, type DataChangeLogDetail, type DataChangeLogSummary } from "@workspace/shared";
 
-import { distinctReferenceIds, toAuditLogOrganization, toAuditLogUser, type AuditLogReferenceIds, type AuditLogReferences } from "./audit-references";
+import { distinctReferenceIds, toAuditLogTenant, toAuditLogUser, type AuditLogReferenceIds, type AuditLogReferences } from "./audit-references";
 import type { DataChangeLogSummaryRow } from "./prisma-data-change-log.read-repository";
 
-/** Every distinct actor and organization id the rows name. */
-export function dataChangeLogReferenceIds(rows: readonly Pick<DataChangeLogSummaryRow, "actorUserId" | "organizationId">[]): AuditLogReferenceIds {
+/** Every distinct actor and tenant id the rows name. */
+export function dataChangeLogReferenceIds(rows: readonly Pick<DataChangeLogSummaryRow, "actorUserId" | "tenantId">[]): AuditLogReferenceIds {
 	return {
 		userIds: distinctReferenceIds(rows.map((row) => row.actorUserId)),
-		organizationIds: distinctReferenceIds(rows.map((row) => row.organizationId)),
+		tenantIds: distinctReferenceIds(rows.map((row) => row.tenantId)),
 	};
 }
 
@@ -25,7 +25,7 @@ export function toDataChangeLogSummary(row: DataChangeLogSummaryRow, references:
 		changedColumns: row.changedColumns,
 		actorKind: row.actorKind,
 		actor: toAuditLogUser(row.actorUserId, references),
-		organization: toAuditLogOrganization(row.organizationId, references),
+		tenant: toAuditLogTenant(row.tenantId, references),
 		apiKeyId: row.apiKeyId,
 		systemOperation: row.systemOperation,
 		correlationId: row.correlationId,

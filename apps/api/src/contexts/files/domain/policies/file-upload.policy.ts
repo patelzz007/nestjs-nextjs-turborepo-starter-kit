@@ -6,11 +6,11 @@ import { FileMimeTypeNotAllowedError, FileOwnerUnresolvedError, FileTooLargeErro
 export interface FileOwnerFields {
 	readonly category: FileCategory;
 	readonly productId: string | null;
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 	readonly userId: string | null;
 }
 
-/** Categories whose files belong to a person (their avatar, the pictures they attach to GitHub comments), not to an organization. */
+/** Categories whose files belong to a person (their avatar, the pictures they attach to GitHub comments), not to a tenant. */
 const USER_OWNED_CATEGORIES: ReadonlySet<FileCategory> = new Set<FileCategory>(["USER_AVATAR", "GITHUB_COMMENT_IMAGE"]);
 
 /**
@@ -30,9 +30,9 @@ export function assertUploadWithinCategoryPolicy(input: Pick<CreateFileUploadUrl
 	return policy;
 }
 
-/** Object keys are namespaced by the resource that owns the file: product, organization, or user. */
+/** Object keys are namespaced by the resource that owns the file: product, tenant, or user. */
 export function resolveFileOwnerId(fields: FileOwnerFields): string {
-	const owner = fields.category === "PRODUCT_IMAGE" ? fields.productId : USER_OWNED_CATEGORIES.has(fields.category) ? fields.userId : fields.organizationId;
+	const owner = fields.category === "PRODUCT_IMAGE" ? fields.productId : USER_OWNED_CATEGORIES.has(fields.category) ? fields.userId : fields.tenantId;
 	if (owner === null) {
 		throw new FileOwnerUnresolvedError(fields.category);
 	}
@@ -40,11 +40,11 @@ export function resolveFileOwnerId(fields: FileOwnerFields): string {
 }
 
 /** Owner namespace of a new upload request. */
-export function resolveUploadOwnerId(input: Pick<CreateFileUploadUrlInput, "category" | "productId" | "organizationId" | "userId">): string {
+export function resolveUploadOwnerId(input: Pick<CreateFileUploadUrlInput, "category" | "productId" | "tenantId" | "userId">): string {
 	return resolveFileOwnerId({
 		category: input.category,
 		productId: input.productId ?? null,
-		organizationId: input.organizationId ?? null,
+		tenantId: input.tenantId ?? null,
 		userId: input.userId ?? null,
 	});
 }

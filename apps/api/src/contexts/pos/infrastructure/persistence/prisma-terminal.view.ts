@@ -9,7 +9,7 @@ export class PrismaTerminalView implements TerminalViewPort {
 	public constructor(private readonly db: Prisma.TransactionClient) {}
 
 	public async getSummary(id: string, now: EpochMs): Promise<MerchantTerminalSummary> {
-		const row = await this.db.organizationTerminal.findUniqueOrThrow({ where: { id }, include: TERMINAL_SUMMARY_INCLUDE });
+		const row = await this.db.tenantTerminal.findUniqueOrThrow({ where: { id }, include: TERMINAL_SUMMARY_INCLUDE });
 		return toTerminalSummary(row, now);
 	}
 }

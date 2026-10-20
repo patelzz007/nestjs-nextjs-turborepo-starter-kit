@@ -7,7 +7,7 @@ import { SystemCommandModule } from "../../../platform/infrastructure/system-com
 import { PrismaReadExecutor } from "../../../platform/infrastructure/unit-of-work/prisma-read-executor";
 import { PrismaModule } from "../../../prisma/prisma.module";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
-import { API_KEY_CAPABILITIES, STORE_CLOSURE_FACTORY, type ApiKeyCapabilitiesPort } from "../../organizations/public-api";
+import { API_KEY_CAPABILITIES, STORE_CLOSURE_FACTORY, type ApiKeyCapabilitiesPort } from "../../tenancy/public-api";
 import { TILL_TERMINALS } from "../application/ports/pos.tokens";
 import { TillAuthenticationService } from "../application/services/till-authentication.service";
 import { ApiKeyCapabilitiesAdapter } from "./adapters/api-key-capabilities.adapter";
@@ -16,10 +16,10 @@ import { PRISMA_STORE_CLOSURE_FACTORY } from "./adapters/prisma-store-closure";
 import { PrismaTillTerminals } from "./adapters/prisma-till-terminals";
 
 /**
- * What pos provides to code that must not import it (a leaf: platform and organizations' tokens only):
+ * What pos provides to code that must not import it (a leaf: platform and tenants' tokens only):
  * the merchant key verification and till resolution the security kit's guards use
  * (`API_KEY_VERIFICATION`, `TILL_RESOLVER`), and the two
- * ports organizations consumes — an API key's capabilities (`API_KEY_CAPABILITIES`) and store closure
+ * ports tenants consumes — an API key's capabilities (`API_KEY_CAPABILITIES`) and store closure
  * (`STORE_CLOSURE_FACTORY`). Global, like identity's security kit, so neither side imports the other's
  * module and the graph stays acyclic without `forwardRef`.
  */

@@ -6,7 +6,7 @@ import type { RedeemableClaim } from "../policies/redemption-eligibility.policy"
 /** A fixed instant every pos domain test measures from. */
 export const NOW: EpochMs = epochMs(1_792_195_200_000);
 
-export const ORGANIZATION_ID = "org-1";
+export const TENANT_ID = "org-1";
 export const STORE_A = "store-a";
 export const STORE_B = "store-b";
 export const CUSTOMER = "customer-1";
@@ -33,7 +33,7 @@ export function presented(patch: Partial<RedeemableClaim> = {}, method: Presente
 	return { claim: redeemableClaim(patch), method };
 }
 
-export const POINT: CheckoutPoint = { organizationId: ORGANIZATION_ID, locationId: STORE_A, terminalId: "TERM-AAAA2222", apiKeyId: "key-1" };
+export const POINT: CheckoutPoint = { tenantId: TENANT_ID, locationId: STORE_A, terminalId: "TERM-AAAA2222", apiKeyId: "key-1" };
 
 export function newSale(presentedClaims: readonly PresentedClaim[], patch: Partial<NewSale> = {}): NewSale {
 	return {

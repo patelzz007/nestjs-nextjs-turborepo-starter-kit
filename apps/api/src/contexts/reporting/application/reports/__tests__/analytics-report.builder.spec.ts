@@ -99,7 +99,7 @@ describe("buildPlatformReport", () => {
 		series: [
 			{ start: START, end: END, isPartial: false, salesMinor: 5_000, bills: 2, averageBillMinor: 2_500, claims: 4, redemptions: 2, newCustomers: 1, returningCustomers: 1 },
 		],
-		topMerchants: [{ organizationId: "5c1f7a9e-2b4d-4e8f-a1b2-c3d4e5f60718", name: "Jonker", category: null, salesMinor: 5_000, bills: 2, averageBillMinor: 2_500 }],
+		topMerchants: [{ tenantId: "5c1f7a9e-2b4d-4e8f-a1b2-c3d4e5f60718", name: "Jonker", category: null, salesMinor: 5_000, bills: 2, averageBillMinor: 2_500 }],
 		byCategory: [{ category: "cafe", salesMinor: 5_000, bills: 2, merchants: 1 }],
 		byCity: [{ city: null, salesMinor: 5_000, bills: 2, merchants: 1 }],
 	};

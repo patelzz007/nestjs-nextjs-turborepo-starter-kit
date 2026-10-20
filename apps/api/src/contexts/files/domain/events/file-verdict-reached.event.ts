@@ -19,7 +19,7 @@ export class FileVerdictReached extends DomainEvent {
 		occurredAt: EpochMs,
 		public readonly fileId: string,
 		public readonly category: FileCategory,
-		public readonly organizationId: string | null,
+		public readonly tenantId: string | null,
 		public readonly uploadedById: string,
 		public readonly outcome: FileVerdictOutcome,
 		/** The product a PRODUCT_IMAGE was uploaded for; null for every other category. */
@@ -32,11 +32,11 @@ export class FileVerdictReached extends DomainEvent {
 export function fileVerdictReached(input: {
 	readonly fileId: string;
 	readonly category: FileCategory;
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 	readonly uploadedById: string;
 	readonly outcome: FileVerdictOutcome;
 	readonly productId: string | null;
 	readonly occurredAt: EpochMs;
 }): FileVerdictReached {
-	return new FileVerdictReached(input.occurredAt, input.fileId, input.category, input.organizationId, input.uploadedById, input.outcome, input.productId);
+	return new FileVerdictReached(input.occurredAt, input.fileId, input.category, input.tenantId, input.uploadedById, input.outcome, input.productId);
 }

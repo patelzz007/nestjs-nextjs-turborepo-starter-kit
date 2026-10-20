@@ -57,25 +57,25 @@ const MERCHANT_CAPABILITY_CATALOG_DETAILS: Readonly<Record<MerchantCapability, M
 	"merchant:manage_team": {
 		label: "Manage team",
 		description: "View the member roster, invite members, and revoke pending invitations.",
-		groupName: "Organization",
+		groupName: "Tenant",
 		sortOrder: 40,
 	},
 	"merchant:view_locations": {
 		label: "View store locations",
-		description: "See every store location of the organization and your own location access scope.",
-		groupName: "Organization",
+		description: "See every store location of the tenant and your own location access scope.",
+		groupName: "Tenant",
 		sortOrder: 41,
 	},
 	"merchant:manage_locations": {
 		label: "Manage store locations",
 		description: "Request new stores, resubmit rejected requests, and change store branding.",
-		groupName: "Organization",
+		groupName: "Tenant",
 		sortOrder: 42,
 	},
 	"merchant:manage_verification": {
 		label: "Manage business verification",
 		description: "Read and submit business verification (KYB) details and documents.",
-		groupName: "Organization",
+		groupName: "Tenant",
 		sortOrder: 43,
 	},
 };

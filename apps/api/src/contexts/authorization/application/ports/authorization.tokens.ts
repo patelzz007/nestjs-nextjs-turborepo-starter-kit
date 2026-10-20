@@ -5,6 +5,10 @@ export const RBAC_MUTATE_OPERATION: SystemOperationName = "authorization.rbac.mu
 
 /** Dry-run reads of another user's assignments (validate-assignment, preview). */
 export const RBAC_INSPECT_OPERATION: SystemOperationName = "authorization.rbac.inspect";
+/** Role and permission catalog lists. */
+export const RBAC_CATALOG_READ_OPERATION: SystemOperationName = "authorization.rbac.catalog.read";
+/** The admin capability catalog. */
+export const CAPABILITY_CATALOG_READ_OPERATION: SystemOperationName = "authorization.capability_catalog.read";
 
 /** `GET /admin/audit`. */
 export const AUDIT_LOG_READ_OPERATION: SystemOperationName = "authorization.audit_log.read";
@@ -57,4 +61,3 @@ export const ACCOUNT_DEFAULT_ROLE = Symbol("ACCOUNT_DEFAULT_ROLE");
 export const AUTHORIZATION_HEALTH_INDICATOR = Symbol("AUTHORIZATION_HEALTH_INDICATOR");
 export const REFERENCE_DATA_SYNC = Symbol("REFERENCE_DATA_SYNC");
 export const POLICY_SIMULATOR = Symbol("POLICY_SIMULATOR");
-export const SUPPORT_ACCESS_VERIFY_OPERATION: SystemOperationName = "support_access.verify";

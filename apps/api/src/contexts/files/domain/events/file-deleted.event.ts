@@ -24,7 +24,7 @@ export class FileDeleted extends DomainEvent {
 		occurredAt: EpochMs,
 		public readonly fileId: string,
 		public readonly category: FileCategory,
-		public readonly organizationId: string | null,
+		public readonly tenantId: string | null,
 		/** User id, or a `system:` marker for background cleanup. Written to every released row's `deletedBy`. */
 		public readonly deletedBy: string,
 		public readonly objects: readonly DeletedFileObject[],

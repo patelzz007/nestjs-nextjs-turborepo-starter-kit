@@ -128,12 +128,11 @@ describe("GeoController delegation", () => {
 		kind: "user",
 		userId: "11111111-1111-4111-8111-111111111111",
 		sessionId: "session-1",
-		organizationId: null,
+		tenantId: null,
 		isSuperAdmin: true,
-		accessScope: "superadmin",
+		accessScope: "tenant",
 		impersonatorUserId: null,
 		request: { requestId: "req-1", ip: null, userAgent: null, deviceLabel: null, endpoint: null },
-		routeRlsBypass: false,
 	};
 
 	function controller(): { readonly geo: GeoController; readonly reads: InMemoryGeographyRead; readonly unitOfWork: InMemoryUnitOfWork<ReferenceDataScope> } {

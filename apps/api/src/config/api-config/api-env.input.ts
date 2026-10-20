@@ -247,8 +247,8 @@ export const ApiEnvInputSchema = z.object({
 
 	// Tenancy
 	TENANCY_ENABLED: BooleanFlagEnvSchema,
-	/** Id of the real organization a single-tenant deployment serves (required when TENANCY_ENABLED is off). */
-	DEFAULT_ORGANIZATION_ID: z.uuid({ error: "must be the id (uuid) of an existing organization" }).optional(),
+	/** Id of the real tenant a single-tenant deployment serves (required when TENANCY_ENABLED is off). */
+	DEFAULT_TENANT_ID: z.uuid({ error: "must be the id (uuid) of an existing tenant" }).optional(),
 });
 
 /** The validated flat environment, before grouping. */

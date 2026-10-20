@@ -5,7 +5,7 @@ import { redemptionInvalidReason, storeEligibility } from "../policies/redemptio
 import { NOW, redeemableClaim, STORE_A, STORE_B } from "./pos-domain.fixture";
 
 describe("storeEligibility", () => {
-	it("accepts an organization-wide reward at any store, even an unknown one", () => {
+	it("accepts a tenant-wide reward at any store, even an unknown one", () => {
 		expect(storeEligibility({ locationScopeType: "ALL_LOCATIONS", locationIds: [] }, null)).toBe("VALID");
 		expect(storeEligibility({ locationScopeType: "ALL_LOCATIONS", locationIds: [] }, STORE_B)).toBe("VALID");
 	});

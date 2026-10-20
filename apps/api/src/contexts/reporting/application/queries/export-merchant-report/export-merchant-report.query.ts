@@ -6,12 +6,12 @@ import type { ActorContext } from "../../../../../platform/application/actor-con
 import type { ReportFile } from "../../ports/report-file.port";
 
 export interface ExportMerchantReportInput {
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly query: MerchantAnalyticsExportQuery;
 	readonly request: FastifyRequest;
 }
 
-/** The merchant dashboard's report file (`GET /orgs/:orgSlug/analytics/export`); same authorization and store scope as the dashboard. `request` is the HTTP request the audit row describes. */
+/** The merchant dashboard's report file (`GET /tenants/:tenantSlug/analytics/export`); same authorization and store scope as the dashboard. `request` is the HTTP request the audit row describes. */
 export class ExportMerchantReportQuery extends Query<ReportFile> {
 	public constructor(
 		public readonly actor: ActorContext,

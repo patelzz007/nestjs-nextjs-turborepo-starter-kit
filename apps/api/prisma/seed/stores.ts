@@ -1,6 +1,6 @@
-import type { OrganizationMembershipRole, Role } from "@prisma/client";
+import type { MembershipRole, Role } from "@prisma/client";
 
-import { syncStoreForLocation } from "../../src/contexts/organizations/infrastructure/persistence/store-sync";
+import { syncStoreForLocation } from "../../src/contexts/tenancy/infrastructure/persistence/store-sync";
 import { prisma } from "./client";
 import { seedStoreClosureAndRemoval } from "./store-closure";
 
@@ -9,8 +9,8 @@ export interface StoreSeedSummary {
 	readonly memberships: number;
 }
 
-/** Organization roles that run every store their location scope covers. */
-const STORE_MANAGER_ORGANIZATION_ROLES: ReadonlySet<OrganizationMembershipRole> = new Set<OrganizationMembershipRole>(["OWNER", "ADMIN"]);
+/** Tenant roles that run every store their location scope covers. */
+const STORE_MANAGER_TENANT_ROLES: ReadonlySet<MembershipRole> = new Set<MembershipRole>(["OWNER", "ADMIN"]);
 
 function requireRole(roles: readonly Role[], name: string): Role {
 	const role = roles.find((candidate) => candidate.name === name);
@@ -21,8 +21,8 @@ function requireRole(roles: readonly Role[], name: string): Role {
 }
 
 /**
- * Stores (spec §35–§36): one store per organization location, plus store
- * memberships derived from the seeded organization memberships —
+ * Stores (spec §35–§36): one store per tenant location, plus store
+ * memberships derived from the seeded tenant memberships —
  * OWNER / ADMIN → "Store Manager" in every store their location scope covers,
  * other members → "Store Staff" in their SELECTED stores.
  */
@@ -30,26 +30,26 @@ export async function seedStores(roles: readonly Role[]): Promise<StoreSeedSumma
 	const storeManagerRole = requireRole(roles, "Store Manager");
 	const storeStaffRole = requireRole(roles, "Store Staff");
 
-	const locations = await prisma.organizationLocation.findMany({ orderBy: { createdAt: "asc" } });
+	const locations = await prisma.location.findMany({ orderBy: { createdAt: "asc" } });
 	const storeIdByLocationId = new Map<string, string>();
 	for (const location of locations) {
 		const store = await syncStoreForLocation(prisma, location);
 		storeIdByLocationId.set(location.id, store.id);
 	}
 
-	const memberships = await prisma.organizationMembership.findMany({
+	const memberships = await prisma.membership.findMany({
 		where: { status: "ACTIVE", isDeleted: false },
-		select: { organizationId: true, userId: true, role: true, locationScopes: { where: { isDeleted: false }, select: { scopeType: true, locationId: true } } },
+		select: { tenantId: true, userId: true, role: true, locationScopes: { where: { isDeleted: false }, select: { scopeType: true, locationId: true } } },
 	});
 
 	let membershipCount = 0;
 	for (const membership of memberships) {
 		const coversAll = membership.locationScopes.some((scope) => scope.scopeType === "ALL_LOCATIONS");
 		const coveredLocationIds = locations
-			.filter((location) => location.organizationId === membership.organizationId && !location.isDeleted)
+			.filter((location) => location.tenantId === membership.tenantId && !location.isDeleted)
 			.filter((location) => coversAll || membership.locationScopes.some((scope) => scope.locationId === location.id))
 			.map((location) => location.id);
-		const roleId = STORE_MANAGER_ORGANIZATION_ROLES.has(membership.role) ? storeManagerRole.id : storeStaffRole.id;
+		const roleId = STORE_MANAGER_TENANT_ROLES.has(membership.role) ? storeManagerRole.id : storeStaffRole.id;
 
 		for (const locationId of coveredLocationIds) {
 			const storeId = storeIdByLocationId.get(locationId);
@@ -58,7 +58,7 @@ export async function seedStores(roles: readonly Role[]): Promise<StoreSeedSumma
 			}
 			await prisma.storeMembership.upsert({
 				where: { storeId_userId: { storeId, userId: membership.userId } },
-				create: { organizationId: membership.organizationId, storeId, userId: membership.userId, roleId },
+				create: { tenantId: membership.tenantId, storeId, userId: membership.userId, roleId },
 				update: { roleId, status: "ACTIVE", isDeleted: false, deletedAt: null, deletedBy: null },
 			});
 			membershipCount += 1;

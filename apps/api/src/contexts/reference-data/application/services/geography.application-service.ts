@@ -78,8 +78,8 @@ function deletedMessage(entity: GeoEntityKind, id: number): MessageResponse {
  * Geography reference data (the simple path, plan §4.4): regions, subregions,
  * countries, states and cities.
  *
- * - Reads need `GEO:READ` (controller) and run under the caller's own RLS
- *   session; they never return soft-deleted rows.
+ * - Reads need `GEO:READ` (controller) and run as `geo.reference_data.read`;
+ *   they never return soft-deleted rows.
  * - Every write is SuperAdmin-only (controller) and runs in ONE transaction
  *   under the `geo.reference_data.write` system operation, with the request's
  *   audit row appended in that same transaction — it commits or rolls back

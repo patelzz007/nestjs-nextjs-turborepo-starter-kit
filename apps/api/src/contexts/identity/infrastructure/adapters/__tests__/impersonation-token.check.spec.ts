@@ -1,9 +1,10 @@
-import type { ImpersonationSession } from "@prisma/client";
+import type { ImpersonationSession, Prisma } from "@prisma/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { accessToken } from "../../../../../../test/support/http-execution-context";
 import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
 import { PrismaService } from "../../../../../prisma/prisma.service";
+import type { SystemDatabaseContext } from "../../../../../prisma/tenant-context";
 import { ImpersonationTokenCheck } from "../impersonation-token.check";
 import { LIVE_ROW_FIELDS } from "../../../../../platform/infrastructure/persistence/__tests__/base-row-fields";
 
@@ -24,6 +25,7 @@ function liveSession(): ImpersonationSession {
 		endReason: null,
 		ipAddress: null,
 		userAgent: null,
+		supportAccessGrantIds: [],
 		createdAt: STARTED_AT,
 		updatedAt: STARTED_AT,
 	};
@@ -40,19 +42,23 @@ describe("ImpersonationTokenCheck", () => {
 		vi.restoreAllMocks();
 	});
 
+	function check(): ImpersonationTokenCheck {
+		return new ImpersonationTokenCheck({
+			withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
+		});
+	}
+
 	it("does not consult impersonation sessions for a regular token", async () => {
 		const findFirst = vi.spyOn(prisma.impersonationSession, "findFirst");
 
-		await expect(new ImpersonationTokenCheck(prisma).assertLiveIfImpersonating(accessToken({}))).resolves.toBeUndefined();
+		await expect(check().assertLiveIfImpersonating(accessToken({}))).resolves.toBeUndefined();
 		expect(findFirst).not.toHaveBeenCalled();
 	});
 
 	it("rejects an impersonation token that carries no session id (issued before sessions were tracked)", async () => {
 		const findFirst = vi.spyOn(prisma.impersonationSession, "findFirst");
 
-		await expect(
-			new ImpersonationTokenCheck(prisma).assertLiveIfImpersonating(accessToken({ ...IMPERSONATION_CLAIMS, impersonationSessionId: undefined })),
-		).rejects.toMatchObject({
+		await expect(check().assertLiveIfImpersonating(accessToken({ ...IMPERSONATION_CLAIMS, impersonationSessionId: undefined }))).rejects.toMatchObject({
 			response: { error: "IMPERSONATION_SESSION_INVALID" },
 		});
 		expect(findFirst).not.toHaveBeenCalled();
@@ -61,7 +67,7 @@ describe("ImpersonationTokenCheck", () => {
 	it("accepts a live session for the same impersonator and target, still a SuperAdmin", async () => {
 		const findFirst = vi.spyOn(prisma.impersonationSession, "findFirst").mockResolvedValue(liveSession());
 
-		await new ImpersonationTokenCheck(prisma).assertLiveIfImpersonating(accessToken(IMPERSONATION_CLAIMS));
+		await check().assertLiveIfImpersonating(accessToken(IMPERSONATION_CLAIMS));
 
 		const [firstCall] = findFirst.mock.calls;
 		const [query] = firstCall ?? [];
@@ -77,7 +83,7 @@ describe("ImpersonationTokenCheck", () => {
 	it("rejects a session that ended, expired or is unknown", async () => {
 		vi.spyOn(prisma.impersonationSession, "findFirst").mockResolvedValue(null);
 
-		await expect(new ImpersonationTokenCheck(prisma).assertLiveIfImpersonating(accessToken(IMPERSONATION_CLAIMS))).rejects.toMatchObject({
+		await expect(check().assertLiveIfImpersonating(accessToken(IMPERSONATION_CLAIMS))).rejects.toMatchObject({
 			response: { error: "IMPERSONATION_SESSION_INVALID" },
 		});
 	});

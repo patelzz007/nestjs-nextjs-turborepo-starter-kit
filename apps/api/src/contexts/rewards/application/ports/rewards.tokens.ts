@@ -15,12 +15,11 @@ export const LEGAL_ACCEPTANCE_READS = Symbol("LEGAL_ACCEPTANCE_READS");
 /** {@link IdGenerator}. */
 export const REWARD_ID_GENERATOR = Symbol("REWARD_ID_GENERATOR");
 
-/**
- * The operation `@RlsBypass()` routes run under. Admin review and the public marketplace work
- * across tenants; their commands and reads open their transactions as this allowlisted operation,
- * the same one the route's interceptor names.
- */
-export const ROUTE_RLS_BYPASS_OPERATION: SystemOperationName = "route.rls_bypass";
+/** Admin moderation of consumer rewards, across tenants. */
+export const REWARDS_ADMIN_REVIEW_OPERATION: SystemOperationName = "rewards.admin_review";
+
+/** Published consumer rewards on the public marketplace. */
+export const MARKETPLACE_REWARDS_READ_OPERATION: SystemOperationName = "marketplace.published_rewards.read";
 
 /** Generates ids for new aggregates (a fake makes them deterministic in tests). */
 export interface IdGenerator {

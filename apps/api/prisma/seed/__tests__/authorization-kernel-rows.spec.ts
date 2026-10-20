@@ -1,4 +1,4 @@
-import type { PolicyDefinition, ResourceAcl } from "@prisma/client";
+import type { PolicyDefinition, Prisma, ResourceAcl } from "@prisma/client";
 import { isArrayValue, isJsonPrimitive, isNumberPrimitive, isStringPrimitive } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -6,9 +6,10 @@ import { z } from "zod";
 import { AclService } from "../../../src/contexts/authorization/infrastructure/kernel/acl.service";
 import { PolicyEngineService } from "../../../src/contexts/authorization/infrastructure/kernel/policy-engine.service";
 import { PrismaService } from "../../../src/prisma/prisma.service";
+import type { SystemDatabaseContext } from "../../../src/prisma/tenant-context";
 import { createTestTypedConfig } from "../../../test/support/test-api-env";
 import { buildKernelSeedRows, KERNEL_SEED_IDS } from "../authorization-kernel-rows";
-import { ORGANIZATION_SEED_IDS } from "../organization-seed-ids";
+import { TENANT_SEED_IDS } from "../tenant-seed-ids";
 import { REWARD_SEED_IDS } from "../rewards";
 import { LIVE_ROW_FIELDS } from "../../../src/platform/infrastructure/persistence/__tests__/base-row-fields";
 
@@ -50,8 +51,8 @@ function view(input: object, columns: readonly string[]): Row {
 	return { ...parsed, ...complete };
 }
 
-const ACL_COLUMNS: readonly string[] = ["resourceId", "scope", "organizationId", "locationId", "conditions", "expiresAt", "assignedBy", "reason", "deletedAt"];
-const POLICY_COLUMNS: readonly string[] = ["description", "organizationId", "locationId", "conditions", "publishedAt", "publishedBy", "supersededBy", "deletedAt"];
+const ACL_COLUMNS: readonly string[] = ["resourceId", "scope", "tenantId", "locationId", "conditions", "expiresAt", "assignedBy", "reason", "deletedAt"];
+const POLICY_COLUMNS: readonly string[] = ["description", "tenantId", "locationId", "conditions", "publishedAt", "publishedBy", "supersededBy", "deletedAt"];
 
 const AclModelSchema = z.object({ id: z.string() }).loose();
 const PolicyModelSchema = z.object({ id: z.string() }).loose();
@@ -84,7 +85,7 @@ function aclModel(row: Row): ResourceAcl {
 		resourceId: text("resourceId"),
 		effect: row.effect === "DENY" ? "DENY" : "ALLOW",
 		scope: null,
-		organizationId: text("organizationId"),
+		tenantId: text("tenantId"),
 		locationId: text("locationId"),
 		conditions: row.conditions ?? null,
 		expiresAt: number("expiresAt"),
@@ -121,7 +122,7 @@ function policyModel(row: Row): PolicyDefinition {
 		scope: "GLOBAL",
 		actions: strings("actions"),
 		resources: strings("resources"),
-		organizationId: text("organizationId"),
+		tenantId: text("tenantId"),
 		locationId: text("locationId"),
 		conditions: row.conditions ?? null,
 		isActive: row.isActive === true,
@@ -146,8 +147,17 @@ function createPrisma(): PrismaService {
 	return Object.assign(new PrismaService(createTestTypedConfig()), prismaFake);
 }
 
-const engine = new PolicyEngineService(createPrisma());
-const acl = new AclService(createPrisma(), engine);
+function lookupOf(prisma: PrismaService): {
+	withSystemOperation<TResult>(context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult>;
+} {
+	return {
+		withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
+	};
+}
+
+const seededPrisma = createPrisma();
+const engine = new PolicyEngineService(lookupOf(seededPrisma));
+const acl = new AclService(engine, lookupOf(createPrisma()));
 
 const CASHIER_UPDATE_PRODUCT: Parameters<AclService["findApplicable"]>[0] = {
 	userId: REWARD_SEED_IDS.mlkCashierUser,
@@ -155,13 +165,13 @@ const CASHIER_UPDATE_PRODUCT: Parameters<AclService["findApplicable"]>[0] = {
 	action: "UPDATE",
 	resource: "PRODUCT",
 	resourceScope: { kind: "resource", id: KERNEL_SEED_IDS.productTarget },
-	organizationId: ORGANIZATION_SEED_IDS.mlkOrganization,
-	locationId: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+	tenantId: TENANT_SEED_IDS.mlkTenant,
+	locationId: TENANT_SEED_IDS.mlkLocationBeruang,
 };
 
 function productRequest(status: string): Parameters<AclService["findApplicable"]>[1] {
 	return {
-		subject: { userId: REWARD_SEED_IDS.mlkCashierUser, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization, locationId: ORGANIZATION_SEED_IDS.mlkLocationBeruang },
+		subject: { userId: REWARD_SEED_IDS.mlkCashierUser, tenantId: TENANT_SEED_IDS.mlkTenant, locationId: TENANT_SEED_IDS.mlkLocationBeruang },
 		action: "UPDATE",
 		resource: "PRODUCT",
 		resourceId: KERNEL_SEED_IDS.productTarget,
@@ -179,7 +189,7 @@ describe("seeded kernel rows are matched by the kernel services", () => {
 	});
 
 	it("the tenant-, location- and resource-bound ACL does not apply elsewhere, and the retired ACL never matches", async () => {
-		const otherStore = await acl.findApplicable({ ...CASHIER_UPDATE_PRODUCT, locationId: ORGANIZATION_SEED_IDS.mlkLocationKatil }, productRequest("ARCHIVED"));
+		const otherStore = await acl.findApplicable({ ...CASHIER_UPDATE_PRODUCT, locationId: TENANT_SEED_IDS.mlkLocationKatil }, productRequest("ARCHIVED"));
 		expect(otherStore.denies).toEqual([]);
 		const otherProduct = await acl.findApplicable({ ...CASHIER_UPDATE_PRODUCT, resourceScope: { kind: "resource", id: "another-product" } }, productRequest("ARCHIVED"));
 		expect(otherProduct.denies).toEqual([]);
@@ -191,7 +201,7 @@ describe("seeded kernel rows are matched by the kernel services", () => {
 				action: "READ",
 				resource: "PAYMENT",
 				resourceScope: { kind: "typeWide" },
-				organizationId: ORGANIZATION_SEED_IDS.klOrganization,
+				tenantId: TENANT_SEED_IDS.klTenant,
 			},
 			{ subject: { userId: REWARD_SEED_IDS.klOwnerUser }, action: "READ", resource: "PAYMENT" },
 		);
@@ -199,7 +209,7 @@ describe("seeded kernel rows are matched by the kernel services", () => {
 	});
 
 	it("PolicyEngineService applies the published v2 cap inside Bukit Beruang, never the superseded or deleted rows", async () => {
-		const subject = { userId: "u", organizationId: ORGANIZATION_SEED_IDS.mlkOrganization, locationId: ORGANIZATION_SEED_IDS.mlkLocationBeruang };
+		const subject = { userId: "u", tenantId: TENANT_SEED_IDS.mlkTenant, locationId: TENANT_SEED_IDS.mlkLocationBeruang };
 		const policyIds = async (amount: number): Promise<Record<string, string>> => {
 			const result = await engine.evaluate({ subject, action: "UPDATE", resource: "PAYMENT", resourceAttributes: { status: "PAID", amount } });
 			const byPolicy: Record<string, string> = {};
@@ -220,7 +230,7 @@ describe("seeded kernel rows are matched by the kernel services", () => {
 		}
 
 		const elsewhere = await engine.evaluate({
-			subject: { ...subject, locationId: ORGANIZATION_SEED_IDS.mlkLocationKatil },
+			subject: { ...subject, locationId: TENANT_SEED_IDS.mlkLocationKatil },
 			action: "UPDATE",
 			resource: "PAYMENT",
 			resourceAttributes: { status: "PAID", amount: 150 },

@@ -6,10 +6,11 @@ import { apiContract, apiPath, RewardResponseSchema, type PaginatedServiceResult
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
+import { PublicOperation } from "../../../../platform/presentation/http/security/decorators/public-operation.decorator";
 import { Public } from "../../../../platform/presentation/http/security/decorators/public.decorator";
-import { RlsBypass } from "../../../../platform/presentation/http/security/decorators/rls-bypass.decorator";
 import { ZodListQuery, ZodParams } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
+import { MARKETPLACE_REWARDS_READ_OPERATION } from "../../application/ports/rewards.tokens";
 import { GetPublishedRewardQuery } from "../../application/queries/get-published-reward/get-published-reward.query";
 import { ListMarketplaceRewardsQuery } from "../../application/queries/list-marketplace-rewards/list-marketplace-rewards.query";
 
@@ -22,7 +23,7 @@ export class ConsumerRewardsController {
 	public constructor(private readonly queryBus: QueryBus) {}
 
 	@Public()
-	@RlsBypass()
+	@PublicOperation(MARKETPLACE_REWARDS_READ_OPERATION)
 	@Get()
 	@Header("Cache-Control", "public, max-age=60")
 	@ApiOperation({ summary: "Browse published consumer rewards" })
@@ -35,7 +36,7 @@ export class ConsumerRewardsController {
 	}
 
 	@Public()
-	@RlsBypass()
+	@PublicOperation(MARKETPLACE_REWARDS_READ_OPERATION)
 	@Get(":rewardId")
 	@Header("Cache-Control", "public, max-age=60")
 	@ApiOperation({ summary: "Get published reward detail" })

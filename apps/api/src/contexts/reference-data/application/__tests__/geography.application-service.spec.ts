@@ -29,16 +29,15 @@ const SUPERADMIN: ActorContext = {
 	kind: "user",
 	userId: SUPERADMIN_ID,
 	sessionId: "session-1",
-	organizationId: null,
+	tenantId: null,
 	isSuperAdmin: true,
-	accessScope: "superadmin",
+	accessScope: "tenant",
 	impersonatorUserId: null,
 	request: REQUEST,
-	routeRlsBypass: false,
 };
-const API_KEY: ActorContext = { kind: "api_key", apiKeyId: "key-1", organizationId: "org-1", locationId: null, terminalId: null, request: REQUEST, routeRlsBypass: false };
-const ANONYMOUS: ActorContext = { kind: "anonymous", organizationId: null, request: REQUEST, routeRlsBypass: false };
-const SYSTEM: ActorContext = { kind: "system", operation: GEO_WRITE_OPERATION, origin: "cli", organizationId: null, actorUserId: SUPERADMIN_ID, reason: "seed" };
+const API_KEY: ActorContext = { kind: "api_key", apiKeyId: "key-1", tenantId: "org-1", locationId: null, terminalId: null, request: REQUEST };
+const ANONYMOUS: ActorContext = { kind: "anonymous", tenantId: null, request: REQUEST };
+const SYSTEM: ActorContext = { kind: "system", operation: GEO_WRITE_OPERATION, origin: "cli", tenantId: null, actorUserId: SUPERADMIN_ID, reason: "seed" };
 
 const REGION_INPUT: CreateRegionInput = { name: " <b>Asia</b> ", flag: true };
 

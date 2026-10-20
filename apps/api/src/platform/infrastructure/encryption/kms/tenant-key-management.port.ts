@@ -1,6 +1,6 @@
 /**
  * Key-management port for tenant envelope encryption: a provider wraps and
- * unwraps organization data keys (DEKs) with a key-encryption key (KEK) it
+ * unwraps tenant data keys (DEKs) with a key-encryption key (KEK) it
  * holds. The service never sees KEK material — only the provider's key id,
  * which is stored with every wrapped DEK so a later KEK rotation can still
  * unwrap it and `rewrap` can move it to the current KEK.

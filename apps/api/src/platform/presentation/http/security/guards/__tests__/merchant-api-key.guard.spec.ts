@@ -11,7 +11,7 @@ import { MerchantApiKeyGuard } from "../merchant-api-key.guard";
 const KEY: MerchantApiKeyAuthContext = {
 	provider: "merchant",
 	apiKeyId: "key-1",
-	organizationId: "org-1",
+	tenantId: "org-1",
 	locationId: "store-a",
 	terminal: null,
 	requireRegisteredTerminals: false,
@@ -44,7 +44,7 @@ const REFUSAL_CASES: readonly (readonly [TillRefusal, number, string])[] = [
 	["TERMINAL_LOCATION_MISMATCH", 403, "This API key belongs to a different store than this terminal"],
 ];
 
-const RESOLVED: TillResolution = { kind: "resolved", point: { organizationId: "org-1", locationId: "store-a", terminalId: "TERM-AAAA2222", apiKeyId: "key-1" } };
+const RESOLVED: TillResolution = { kind: "resolved", point: { tenantId: "org-1", locationId: "store-a", terminalId: "TERM-AAAA2222", apiKeyId: "key-1" } };
 
 describe("MerchantApiKeyGuard", () => {
 	it("authenticates the key, resolves the till, attaches it and binds the key as the request's principal", async () => {
@@ -60,7 +60,7 @@ describe("MerchantApiKeyGuard", () => {
 		expect(getTillPointFromRequest(context.switchToHttp().getRequest<FastifyRequest>())).toEqual(RESOLVED.point);
 		expect(tills.asked).toEqual(["TERM-AAAA2222"]);
 		// The key's own store (not the till's) is the request's database store scope.
-		expect(bound).toEqual({ apiKeyId: "key-1", organizationId: "org-1", terminalId: "TERM-AAAA2222", locationId: "store-a" });
+		expect(bound).toEqual({ apiKeyId: "key-1", tenantId: "org-1", terminalId: "TERM-AAAA2222", locationId: "store-a" });
 	});
 
 	it("passes no terminal id when the header is absent", async () => {

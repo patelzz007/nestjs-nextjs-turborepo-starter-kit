@@ -1,4 +1,4 @@
-import { OrganizationLocationScopeTypeSchema, OrganizationMembershipRoleSchema, type OrganizationMembershipRole, type PolicyBuilderPayload } from "@workspace/shared";
+import { LocationScopeTypeSchema, MembershipRoleSchema, type MembershipRole, type PolicyBuilderPayload } from "@workspace/shared";
 import { z } from "zod";
 
 import type { CompiledPolicy, PolicyCompilation, PolicyTemplateCompilerPort } from "../../application/ports/policy-control-plane.port";
@@ -22,16 +22,16 @@ export const POLICY_TEMPLATE_IDS = {
 } satisfies Record<string, string>;
 
 /** Roles a role-capability template may name — validated, never interpolated unchecked. */
-const AllowedRolesSchema = z.array(OrganizationMembershipRoleSchema).min(1);
-const DEFAULT_ALLOWED_ROLES: readonly OrganizationMembershipRole[] = [OrganizationMembershipRoleSchema.enum.OWNER, OrganizationMembershipRoleSchema.enum.ADMIN];
-const OWNER_ROLE: OrganizationMembershipRole = OrganizationMembershipRoleSchema.enum.OWNER;
-const ALL_LOCATIONS = OrganizationLocationScopeTypeSchema.enum.ALL_LOCATIONS;
+const AllowedRolesSchema = z.array(MembershipRoleSchema).min(1);
+const DEFAULT_ALLOWED_ROLES: readonly MembershipRole[] = [MembershipRoleSchema.enum.OWNER, MembershipRoleSchema.enum.ADMIN];
+const OWNER_ROLE: MembershipRole = MembershipRoleSchema.enum.OWNER;
+const ALL_LOCATIONS = LocationScopeTypeSchema.enum.ALL_LOCATIONS;
 
 /** Only an owner may transfer ownership — part of every tenant role-capability policy. */
 const OWNER_TRANSFER_GUARD = `forbid(principal, action == ${cedarActionLiteral(CEDAR_GUARDRAIL_ACTIONS.transferOwnership)}, resource) when { principal.role != ${JSON.stringify(OWNER_ROLE)} };`;
 
-function organizationPredicate(organizationId: string | null): string | null {
-	return organizationId === null ? null : `"organizationId" = '${organizationId}'`;
+function tenantPredicate(tenantId: string | null): string | null {
+	return tenantId === null ? null : `"tenantId" = '${tenantId}'`;
 }
 
 /**
@@ -40,33 +40,33 @@ function organizationPredicate(organizationId: string | null): string | null {
  * predicates. Every value placed in policy text is validated or a constant.
  */
 export class PolicyTemplateCompiler {
-	public compile(payload: PolicyBuilderPayload, organizationId: string | null): CompiledPolicy {
+	public compile(payload: PolicyBuilderPayload, tenantId: string | null): CompiledPolicy {
 		switch (payload.templateId) {
 			case POLICY_TEMPLATE_IDS.tenantRoleCapability:
-				return this.compileRoleCapability(payload, organizationId);
+				return this.compileRoleCapability(payload, tenantId);
 			case POLICY_TEMPLATE_IDS.platformNoEscalation:
 				return this.compileNoEscalationGuardrail();
 			case POLICY_TEMPLATE_IDS.tenantLocationScopeRead:
-				return this.compileLocationScopeRead(payload, organizationId);
+				return this.compileLocationScopeRead(payload, tenantId);
 			default:
 				throw new PolicyTemplateError(`Unknown policy template "${payload.templateId}"`);
 		}
 	}
 
-	private compileRoleCapability(payload: PolicyBuilderPayload, organizationId: string | null): CompiledPolicy {
+	private compileRoleCapability(payload: PolicyBuilderPayload, tenantId: string | null): CompiledPolicy {
 		const requested = payload.parameters.allowedRoles;
-		let roles: readonly OrganizationMembershipRole[] = DEFAULT_ALLOWED_ROLES;
+		let roles: readonly MembershipRole[] = DEFAULT_ALLOWED_ROLES;
 		if (requested !== undefined) {
 			const parsed = AllowedRolesSchema.safeParse(requested);
 			if (!parsed.success) {
-				throw new PolicyTemplateError(`allowedRoles must be a non-empty list of: ${OrganizationMembershipRoleSchema.options.join(", ")}`);
+				throw new PolicyTemplateError(`allowedRoles must be a non-empty list of: ${MembershipRoleSchema.options.join(", ")}`);
 			}
 			roles = parsed.data;
 		}
-		const roleCheck = roles.map((role: OrganizationMembershipRole): string => `principal.role == ${JSON.stringify(role)}`).join(" || ");
+		const roleCheck = roles.map((role: MembershipRole): string => `principal.role == ${JSON.stringify(role)}`).join(" || ");
 		return {
 			cedarSource: `${OWNER_TRANSFER_GUARD}\npermit(principal, action, resource) when { ${roleCheck} };`,
-			sqlPredicate: organizationPredicate(organizationId),
+			sqlPredicate: tenantPredicate(tenantId),
 		};
 	}
 
@@ -80,14 +80,10 @@ export class PolicyTemplateCompiler {
 		};
 	}
 
-	private compileLocationScopeRead(payload: PolicyBuilderPayload, organizationId: string | null): CompiledPolicy {
+	private compileLocationScopeRead(payload: PolicyBuilderPayload, tenantId: string | null): CompiledPolicy {
 		const requireScope = payload.parameters.requireLocationScope === true;
 		const sql =
-			organizationId !== null
-				? requireScope
-					? `"organizationId" = '${organizationId}' AND ("locationId" IS NULL OR "locationId" = ANY($locationIds))`
-					: `"organizationId" = '${organizationId}'`
-				: null;
+			tenantId !== null ? (requireScope ? `"tenantId" = '${tenantId}' AND ("locationId" IS NULL OR "locationId" = ANY($locationIds))` : `"tenantId" = '${tenantId}'`) : null;
 		return {
 			cedarSource: `permit(principal, action, resource) when { principal.locationScope == ${JSON.stringify(ALL_LOCATIONS)} || (resource has locationId && principal.locationIds.contains(resource.locationId)) };`,
 			sqlPredicate: sql,
@@ -99,9 +95,9 @@ export class PolicyTemplateCompiler {
 export class PolicyTemplateCompilerAdapter implements PolicyTemplateCompilerPort {
 	private readonly compiler: PolicyTemplateCompiler = new PolicyTemplateCompiler();
 
-	public compile(payload: PolicyBuilderPayload, organizationId: string | null): PolicyCompilation {
+	public compile(payload: PolicyBuilderPayload, tenantId: string | null): PolicyCompilation {
 		try {
-			return { kind: "compiled", policy: this.compiler.compile(payload, organizationId) };
+			return { kind: "compiled", policy: this.compiler.compile(payload, tenantId) };
 		} catch (error) {
 			if (error instanceof PolicyTemplateError) {
 				return { kind: "invalid", message: error.message };

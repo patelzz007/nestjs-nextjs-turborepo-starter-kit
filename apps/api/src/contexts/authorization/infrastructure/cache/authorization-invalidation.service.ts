@@ -53,8 +53,8 @@ const InvalidationMessageSchema = z.discriminatedUnion("type", [
 		.object({
 			type: z.literal("policy_bundles"),
 			origin: z.string().max(MAX_ID_LENGTH),
-			/** The organization whose bundle changed; `null` = every bundle (a platform-scope policy changed). */
-			organizationId: z.string().min(1).max(MAX_ID_LENGTH).nullable(),
+			/** The tenant whose bundle changed; `null` = every bundle (a platform-scope policy changed). */
+			tenantId: z.string().min(1).max(MAX_ID_LENGTH).nullable(),
 		})
 		.strict(),
 ]);
@@ -68,7 +68,7 @@ type InvalidationMessage = z.output<typeof InvalidationMessageSchema>;
  * imports the policy engine).
  */
 export interface PolicyBundleCacheTarget {
-	invalidateOrganization(organizationId: string): void;
+	invalidateTenant(tenantId: string): void;
 	invalidateAll(): void;
 }
 
@@ -187,17 +187,17 @@ export class AuthorizationInvalidationService implements AuthorizationCacheInval
 
 	/** Drop stale compiled policy bundles on every instance — call AFTER the publish transaction committed. */
 	public async invalidatePolicyBundles(scope: PolicyBundleInvalidationScope): Promise<void> {
-		const organizationId: string | null = scope.kind === "organization" ? scope.organizationId : null;
-		this.applyPolicyBundles(organizationId);
-		await this.publish({ type: "policy_bundles", origin: this.instanceId, organizationId });
+		const tenantId: string | null = scope.kind === "tenant" ? scope.tenantId : null;
+		this.applyPolicyBundles(tenantId);
+		await this.publish({ type: "policy_bundles", origin: this.instanceId, tenantId });
 	}
 
-	private applyPolicyBundles(organizationId: string | null): void {
+	private applyPolicyBundles(tenantId: string | null): void {
 		for (const target of this.policyBundleCaches) {
-			if (organizationId === null) {
+			if (tenantId === null) {
 				target.invalidateAll();
 			} else {
-				target.invalidateOrganization(organizationId);
+				target.invalidateTenant(tenantId);
 			}
 		}
 	}
@@ -252,7 +252,7 @@ export class AuthorizationInvalidationService implements AuthorizationCacheInval
 			return;
 		}
 		if (message.type === "policy_bundles") {
-			this.applyPolicyBundles(message.organizationId);
+			this.applyPolicyBundles(message.tenantId);
 			return;
 		}
 		this.applyClear(origin);

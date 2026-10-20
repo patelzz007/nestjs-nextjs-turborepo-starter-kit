@@ -1,14 +1,14 @@
 import type { AuditLog } from "@prisma/client";
 import { epochMs, HttpAuditLogDetailSchema, HttpAuditLogSummarySchema, type HttpAuditLogDetail, type HttpAuditLogSummary } from "@workspace/shared";
 
-import { distinctReferenceIds, toAuditLogOrganization, toAuditLogUser, type AuditLogReferenceIds, type AuditLogReferences } from "./audit-references";
+import { distinctReferenceIds, toAuditLogTenant, toAuditLogUser, type AuditLogReferenceIds, type AuditLogReferences } from "./audit-references";
 import type { AuditLogSummaryRow } from "./prisma-http-audit-log.read-repository";
 
-/** Every distinct actor / impersonator and organization id the rows name. */
-export function httpAuditLogReferenceIds(rows: readonly Pick<AuditLogSummaryRow, "actorUserId" | "impersonatorUserId" | "organizationId">[]): AuditLogReferenceIds {
+/** Every distinct actor / impersonator and tenant id the rows name. */
+export function httpAuditLogReferenceIds(rows: readonly Pick<AuditLogSummaryRow, "actorUserId" | "impersonatorUserId" | "tenantId">[]): AuditLogReferenceIds {
 	return {
 		userIds: distinctReferenceIds(rows.flatMap((row) => [row.actorUserId, row.impersonatorUserId])),
-		organizationIds: distinctReferenceIds(rows.map((row) => row.organizationId)),
+		tenantIds: distinctReferenceIds(rows.map((row) => row.tenantId)),
 	};
 }
 
@@ -34,7 +34,7 @@ export function toHttpAuditLogSummary(row: AuditLogSummaryRow, references: Audit
 		impersonator: toAuditLogUser(row.impersonatorUserId, references),
 		apiKeyId: row.apiKeyId,
 		terminalId: row.terminalId,
-		organization: toAuditLogOrganization(row.organizationId, references),
+		tenant: toAuditLogTenant(row.tenantId, references),
 		storeId: row.storeId,
 		locationId: row.locationId,
 		ipAddress: row.ipAddress,
@@ -61,6 +61,7 @@ export function toHttpAuditLogDetail(row: AuditLog, references: AuditLogReferenc
 		...toHttpAuditLogSummary(row, references),
 		traceId: row.traceId,
 		impersonationSessionId: row.impersonationSessionId,
+		supportAccessGrantId: row.supportAccessGrantId,
 		httpVersion: row.httpVersion,
 		host: row.host,
 		origin: row.origin,

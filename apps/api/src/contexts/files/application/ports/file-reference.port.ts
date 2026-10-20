@@ -19,12 +19,12 @@ export type FileDeletionScope = "actor" | "system-operation";
 export interface FileReferenceSubject {
 	readonly fileId: string;
 	readonly category: FileCategory;
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 }
 
 /**
  * "May this file be deleted?" — registered by the context that binds files of a
- * category (organizations, catalog, identity, rewards). It runs inside the
+ * category (tenants, catalog, identity, rewards). It runs inside the
  * deletion transaction, after the file row is locked, through the owner's own
  * scope bound to the same transaction.
  */

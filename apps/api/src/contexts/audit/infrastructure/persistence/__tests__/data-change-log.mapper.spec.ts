@@ -8,7 +8,7 @@ import { LIVE_ROW_FIELDS } from "../../../../../platform/infrastructure/persiste
 const OCCURRED_AT = 1_790_812_800_000;
 const RECORD_ID = "55555555-5555-4555-8555-555555555555";
 const ACTOR_ID = "11111111-1111-4111-8111-111111111111";
-const ORGANIZATION_ID = "33333333-3333-4333-8333-333333333333";
+const TENANT_ID = "33333333-3333-4333-8333-333333333333";
 const UNKNOWN_USER_ID = "44444444-4444-4444-8444-444444444444";
 
 function changeRow(overrides: Partial<DataChangeLog> = {}): DataChangeLog {
@@ -27,7 +27,7 @@ function changeRow(overrides: Partial<DataChangeLog> = {}): DataChangeLog {
 		newData: { id: ACTOR_ID, fullName: "[PII]", passwordHash: "[REDACTED]" },
 		actorKind: "USER",
 		actorUserId: ACTOR_ID,
-		organizationId: ORGANIZATION_ID,
+		tenantId: TENANT_ID,
 		apiKeyId: null,
 		systemOperation: null,
 		actorPurpose: "profile update",
@@ -43,19 +43,19 @@ function changeRow(overrides: Partial<DataChangeLog> = {}): DataChangeLog {
 
 const REFERENCES: AuditLogReferences = toAuditLogReferences(
 	[{ id: ACTOR_ID, email: "user@example.com", fullName: "Demo Customer" }],
-	[{ id: ORGANIZATION_ID, displayName: "Kopi Corner" }],
+	[{ id: TENANT_ID, displayName: "Kopi Corner" }],
 );
 
 describe("dataChangeLogReferenceIds", () => {
-	it("collects each distinct non-null actor and organization id once", () => {
-		const rows = [changeRow(), changeRow(), changeRow({ actorUserId: null, organizationId: null })];
+	it("collects each distinct non-null actor and tenant id once", () => {
+		const rows = [changeRow(), changeRow(), changeRow({ actorUserId: null, tenantId: null })];
 
-		expect(dataChangeLogReferenceIds(rows)).toEqual({ userIds: [ACTOR_ID], organizationIds: [ORGANIZATION_ID] });
+		expect(dataChangeLogReferenceIds(rows)).toEqual({ userIds: [ACTOR_ID], tenantIds: [TENANT_ID] });
 	});
 });
 
 describe("toDataChangeLogSummary", () => {
-	it("maps bigints to numbers and resolves the actor and organization names", () => {
+	it("maps bigints to numbers and resolves the actor and tenant names", () => {
 		expect(toDataChangeLogSummary(changeRow(), REFERENCES)).toEqual({
 			id: RECORD_ID,
 			changeSequence: 42,
@@ -67,7 +67,7 @@ describe("toDataChangeLogSummary", () => {
 			changedColumns: ["fullName", "passwordHash"],
 			actorKind: "USER",
 			actor: { id: ACTOR_ID, email: "user@example.com", fullName: "Demo Customer" },
-			organization: { id: ORGANIZATION_ID, name: "Kopi Corner" },
+			tenant: { id: TENANT_ID, name: "Kopi Corner" },
 			apiKeyId: null,
 			systemOperation: null,
 			correlationId: "corr-1",
@@ -77,9 +77,9 @@ describe("toDataChangeLogSummary", () => {
 
 	it("keeps an actor id that no longer resolves, and an unattributed change has no actor at all", () => {
 		expect(toDataChangeLogSummary(changeRow({ actorUserId: UNKNOWN_USER_ID }), REFERENCES).actor).toEqual({ id: UNKNOWN_USER_ID, email: null, fullName: null });
-		expect(toDataChangeLogSummary(changeRow({ actorKind: "UNATTRIBUTED", actorUserId: null, organizationId: null }), REFERENCES)).toMatchObject({
+		expect(toDataChangeLogSummary(changeRow({ actorKind: "UNATTRIBUTED", actorUserId: null, tenantId: null }), REFERENCES)).toMatchObject({
 			actor: null,
-			organization: null,
+			tenant: null,
 		});
 	});
 

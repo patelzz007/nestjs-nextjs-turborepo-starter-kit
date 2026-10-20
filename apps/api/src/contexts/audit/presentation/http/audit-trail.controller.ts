@@ -10,10 +10,12 @@ import { ZodListQuery } from "../../../../platform/presentation/http/validation/
 import { ZodPaginatedResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
+import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AUDIT_TRAIL_SIGNALS, type AuditTrailSignalsPort } from "../../application/ports/audit-trail-signals.port";
 import { ListAuditTrailQuery } from "../../application/queries/list-audit-trail/list-audit-trail.query";
+import { AUDIT_TRAIL_READ_OPERATION } from "../../application/audit-read-operations";
 
 /** At most one signal per this window: a burst of activity is one refetch, not one per request. Leading and trailing, so the first and the last change both land. */
 export const AUDIT_TRAIL_SIGNAL_THROTTLE_MS = 2_000;
@@ -39,6 +41,7 @@ export class AuditTrailController {
 	) {}
 
 	@RequirePermission("LIST", "AUDIT_LOG")
+	@PlatformOperation(AUDIT_TRAIL_READ_OPERATION)
 	@Get()
 	@ApiOperation({
 		summary: "List the audit trail (newest first)",

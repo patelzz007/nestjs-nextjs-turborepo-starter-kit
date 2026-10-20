@@ -31,11 +31,12 @@ import {
 	buildAdminLocationRequestListWhere,
 	buildAdminMerchantListOrder,
 	buildAdminMerchantListWhere,
-} from "../organizations/infrastructure/persistence/prisma-merchant-admin.read-repository";
+} from "../tenancy/infrastructure/persistence/prisma-merchant-admin.read-repository";
 import { buildProductListOrder, buildProductListWhere } from "../catalog/infrastructure/persistence/prisma-product.repository";
 import { buildRewardClaimListOrder, buildRewardClaimListWhere, buildRewardNotificationListWhere } from "../claims/infrastructure/persistence/claim-list-queries";
 import { buildRedemptionListOrder, buildRedemptionListWhere } from "../pos/infrastructure/persistence/pos-list-queries";
 import { buildMarketplaceOrder, buildMarketplaceWhere } from "../rewards/public-api";
+import { MARKETPLACE_REWARD_SELECT } from "../rewards/infrastructure/persistence/reward-list-queries";
 import type { MerchantAccessGrant } from "../../platform/application/ports/authorization.port";
 import { buildSampleCategoryListOrder } from "../catalog/infrastructure/persistence/prisma-sample-category.repository";
 
@@ -45,11 +46,11 @@ const ORG_ID = "7a2d3b63-0b4f-4e49-8b66-1e2f3a4b5c6d";
 const CATEGORY_ID = "8b3e4c74-1c50-4f5a-9c77-2f3a4b5c6d7e";
 
 /** A merchant grant over every store of {@link ORG_ID}. */
-const ALL_STORES: MerchantAccessGrant = { organizationId: ORG_ID, locationScope: "ALL_LOCATIONS", locationIds: [] };
+const ALL_STORES: MerchantAccessGrant = { tenantId: ORG_ID, locationScope: "ALL_LOCATIONS", locationIds: [] };
 
 /** A merchant grant over exactly these stores of {@link ORG_ID}. */
 function selectedStores(locationIds: readonly string[]): MerchantAccessGrant {
-	return { organizationId: ORG_ID, locationScope: "SELECTED", locationIds };
+	return { tenantId: ORG_ID, locationScope: "SELECTED", locationIds };
 }
 
 describe("product", () => {
@@ -172,11 +173,29 @@ describe("rewards", () => {
 			AND: [
 				{ isDeleted: false, status: "PUBLISHED", rewardKind: "CONSUMER", quantityRemaining: { gt: 0 }, expiryDate: { gte: NOW } },
 				{ category: { equals: "cafe" } },
-				{ organization: { merchantProfile: { city: { in: ["MELAKA"] } } } },
+				{ tenant: { merchantProfile: { city: { in: ["MELAKA"] } } } },
 			],
 		});
-		expect(buildMarketplaceWhere(RewardListQuerySchema.parse({ filter: { organizationId: ORG_ID } }), NOW).AND).toContainEqual({ organizationId: { equals: ORG_ID } });
+		expect(buildMarketplaceWhere(RewardListQuerySchema.parse({ filter: { tenantId: ORG_ID } }), NOW).AND).toContainEqual({ tenantId: { equals: ORG_ID } });
 		expect(buildMarketplaceOrder(RewardListQuerySchema.parse({ sort: "expiryDate" })).orderBy).toEqual([{ expiryDate: "asc" }, { id: "asc" }]);
+		const selected = Object.keys(MARKETPLACE_REWARD_SELECT);
+		expect(selected).toContain("title");
+		expect(selected).toContain("images");
+		expect(selected).toContain("locationScopes");
+		for (const column of [
+			"createdBy",
+			"updatedBy",
+			"deletedBy",
+			"metadata",
+			"parentConsumerRewardId",
+			"submittedForReviewAt",
+			"autoPublishAt",
+			"reviewedAt",
+			"reviewedByUserId",
+			"rejectionReason",
+		]) {
+			expect(selected).not.toContain(column);
+		}
 	});
 
 	it("scopes claims, notifications and redemptions to their owner", () => {
@@ -188,7 +207,7 @@ describe("rewards", () => {
 			AND: [{ userId: USER_ID, isDeleted: false }, { readAt: { equals: null } }],
 		});
 		expect(buildRedemptionListWhere(ALL_STORES, MerchantRedemptionListQuerySchema.parse({}))).toEqual({
-			AND: [{ organizationId: ORG_ID, isDeleted: false, claim: { isDeleted: false, reward: { isDeleted: false } } }],
+			AND: [{ tenantId: ORG_ID, isDeleted: false, claim: { isDeleted: false, reward: { isDeleted: false } } }],
 		});
 		expect(buildRedemptionListWhere(selectedStores([CATEGORY_ID]), MerchantRedemptionListQuerySchema.parse({})).AND).toContainEqual({
 			locationId: { in: [CATEGORY_ID] },

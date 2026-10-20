@@ -20,10 +20,10 @@ export const CEDAR_NAMESPACE = "App";
 
 /** Entity type names (unqualified) and their fully qualified Cedar names. */
 export const CEDAR_ENTITY_TYPES = {
-	/** An organization member acting on the organization (the principal). */
+	/** A tenant member acting on the tenant (the principal). */
 	member: "Member",
-	/** The organization a decision is about (the resource). */
-	organization: "Organization",
+	/** The tenant a decision is about (the resource). */
+	tenant: "Tenant",
 	action: "Action",
 } satisfies Record<string, string>;
 
@@ -61,7 +61,7 @@ export const CEDAR_SCHEMA_NAME = "dashboard";
  * The Cedar schema (JSON form).
  * - `Member`: `role` (membership role), `locationScope` (`ALL_LOCATIONS` | `SELECTED`),
  *   `locationIds` (stores a SELECTED member reaches).
- * - `Organization`: `organizationId`, optional `locationId` (the store a request is about).
+ * - `Tenant`: `tenantId`, optional `locationId` (the store a request is about).
  */
 export const TENANT_CEDAR_SCHEMA: SchemaJson<string> = {
 	[CEDAR_NAMESPACE]: {
@@ -76,18 +76,18 @@ export const TENANT_CEDAR_SCHEMA: SchemaJson<string> = {
 					},
 				},
 			},
-			[CEDAR_ENTITY_TYPES.organization]: {
+			[CEDAR_ENTITY_TYPES.tenant]: {
 				shape: {
 					type: "Record",
 					attributes: {
-						organizationId: { type: "String" },
+						tenantId: { type: "String" },
 						locationId: { type: "String", required: false },
 					},
 				},
 			},
 		},
 		actions: Object.fromEntries(
-			CEDAR_ACTIONS.map((action: string) => [action, { appliesTo: { principalTypes: [CEDAR_ENTITY_TYPES.member], resourceTypes: [CEDAR_ENTITY_TYPES.organization] } }]),
+			CEDAR_ACTIONS.map((action: string) => [action, { appliesTo: { principalTypes: [CEDAR_ENTITY_TYPES.member], resourceTypes: [CEDAR_ENTITY_TYPES.tenant] } }]),
 		),
 	},
 };

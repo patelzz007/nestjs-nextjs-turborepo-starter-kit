@@ -7,15 +7,16 @@ import type { UnitOfWork } from "../../../../../platform/application/unit-of-wor
 import type { UserAccount } from "../../../domain/aggregates/user-account.aggregate";
 import { AccountNotFoundError } from "../../../domain/errors/identity.errors";
 import type { IdentityScope } from "../../identity-scope";
-import { IDENTITY_UNIT_OF_WORK } from "../../ports/identity.tokens";
+import { ADMIN_USERS_UNLOCK_OPERATION, IDENTITY_UNIT_OF_WORK } from "../../ports/identity.tokens";
 import { UnlockAccountCommand } from "./unlock-account.command";
 
 const UNLOCKED_RESPONSE: MessageResponse = { message: "User account has been unlocked successfully." };
 
 /**
- * D18: the unlock runs in the administrator's own RLS session, so the database change trail
- * (`DataChangeLog`) attributes it to them and joins it to the request's HTTP audit row; after
- * commit the account's cached state is dropped on every instance (`UserCredentialsChanged`).
+ * D18: the unlock runs as `auth.admin_users.unlock` on behalf of the administrator, so the
+ * database change trail (`DataChangeLog`) attributes it to them and joins it to the request's
+ * HTTP audit row; after commit the account's cached state is dropped on every instance
+ * (`UserCredentialsChanged`).
  */
 @CommandHandler(UnlockAccountCommand)
 export class UnlockAccountHandler implements ICommandHandler<UnlockAccountCommand, MessageResponse> {
@@ -27,7 +28,7 @@ export class UnlockAccountHandler implements ICommandHandler<UnlockAccountComman
 	) {}
 
 	public async execute(command: UnlockAccountCommand): Promise<MessageResponse> {
-		await this.uow.run(command.actor, async (scope: IdentityScope): Promise<void> => {
+		await this.uow.runSystemOperation(ADMIN_USERS_UNLOCK_OPERATION, command.actor, async (scope: IdentityScope): Promise<void> => {
 			const account: UserAccount | null = await scope.accounts.findById(command.input.userId);
 			if (account === null) {
 				throw new AccountNotFoundError();

@@ -5,7 +5,7 @@ import { MERCHANT_CAPABILITY, type RewardResponse } from "@workspace/shared";
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
-import { MERCHANT_ACCESS } from "../../../../organizations/public-api";
+import { MERCHANT_ACCESS } from "../../../../tenancy/public-api";
 import { REWARDS_UNIT_OF_WORK } from "../../ports/rewards.tokens";
 import type { RewardsScope } from "../../rewards-scope";
 import { rewardManager } from "../merchant-manager-scope";
@@ -22,10 +22,10 @@ export class SubmitRewardForReviewHandler implements ICommandHandler<SubmitRewar
 
 	public async execute(command: SubmitRewardForReviewCommand): Promise<RewardResponse> {
 		const { actor, input } = command;
-		const grant = await this.merchantAccess.assertCapability(actor, { organizationId: input.organizationId, capability: MERCHANT_CAPABILITY.manageRewards });
+		const grant = await this.merchantAccess.assertCapability(actor, { tenantId: input.tenantId, capability: MERCHANT_CAPABILITY.manageRewards });
 
 		return this.uow.run(actor, async (scope: RewardsScope): Promise<RewardResponse> => {
-			const reward = await scope.rewards.getConsumerInOrganization(input.organizationId, input.rewardId);
+			const reward = await scope.rewards.getConsumerInTenant(input.tenantId, input.rewardId);
 			reward.submitForReview(rewardManager(actor, grant), this.clock.now());
 			await scope.rewards.save(reward);
 			scope.events.collectFrom(reward);

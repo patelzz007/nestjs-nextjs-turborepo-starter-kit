@@ -16,11 +16,12 @@ export const CLAIM_CODES = Symbol("CLAIM_CODES");
 export const CLAIM_ID_GENERATOR = Symbol("CLAIM_ID_GENERATOR");
 
 /**
- * The operation the `@RlsBypass()` claim routes (request OTP, claim) run under: a claim reserves
- * stock on a reward the customer cannot update under RLS, so their transaction is an allowlisted
- * system operation, exactly as the route's interceptor already names it.
+ * A claim reserves stock on a reward the customer cannot update under RLS, so the checkout
+ * transactions are named operations rather than the route-wide bypass.
  */
-export const ROUTE_RLS_BYPASS_OPERATION: SystemOperationName = "route.rls_bypass";
+export const CLAIM_OTP_REQUEST_OPERATION: SystemOperationName = "claims.otp.request";
+/** Reserve one unit and store the claim. */
+export const CLAIM_REWARD_OPERATION: SystemOperationName = "claims.reward.claim";
 
 /** Generates ids for new claims and challenges. */
 export interface ClaimIdGenerator {

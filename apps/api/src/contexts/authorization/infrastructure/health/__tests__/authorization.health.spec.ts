@@ -1,9 +1,10 @@
-import type { Role } from "@prisma/client";
+import type { Role, Prisma } from "@prisma/client";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
 import { PrismaService } from "../../../../../prisma/prisma.service";
+import type { SystemDatabaseContext } from "../../../../../prisma/tenant-context";
 import { SYSTEM_ROLE_CATALOG } from "../../reference-data/system-role-catalog";
 
 import { AuthorizationHealthIndicator } from "../authorization.health";
@@ -44,7 +45,9 @@ describe("AuthorizationHealthIndicator", () => {
 
 	it("is healthy when every catalog system role exists", async () => {
 		rolesInDatabase(SYSTEM_ROLE_CATALOG.map((role) => role.name));
-		const indicator = new AuthorizationHealthIndicator(prisma);
+		const indicator = new AuthorizationHealthIndicator({
+			withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
+		});
 
 		await expect(indicator.isHealthy()).resolves.toBe(true);
 		await expect(indicator.getReport()).resolves.toEqual({ systemRolesExpected: SYSTEM_ROLE_CATALOG.length, systemRolesMissing: null });
@@ -52,7 +55,9 @@ describe("AuthorizationHealthIndicator", () => {
 
 	it("is unhealthy and names the missing roles when reference data was never loaded", async () => {
 		rolesInDatabase(["SuperAdmin"]);
-		const indicator = new AuthorizationHealthIndicator(prisma);
+		const indicator = new AuthorizationHealthIndicator({
+			withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
+		});
 		const missing: string = SYSTEM_ROLE_CATALOG.map((role) => role.name)
 			.filter((name) => name !== "SuperAdmin")
 			.join(", ");
@@ -63,7 +68,9 @@ describe("AuthorizationHealthIndicator", () => {
 
 	it("only counts live system roles", async () => {
 		const findMany = vi.spyOn(prisma.role, "findMany").mockResolvedValue([]);
-		await new AuthorizationHealthIndicator(prisma).isHealthy();
+		await new AuthorizationHealthIndicator({
+			withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
+		}).isHealthy();
 
 		const where = findMany.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first]?.where;
 		expect(where?.isSystem).toBe(true);
@@ -73,6 +80,10 @@ describe("AuthorizationHealthIndicator", () => {
 	it("lets a database error propagate (the health service reports the probe as down)", async () => {
 		vi.spyOn(prisma.role, "findMany").mockRejectedValue(new Error("connection refused"));
 
-		await expect(new AuthorizationHealthIndicator(prisma).isHealthy()).rejects.toThrow("connection refused");
+		await expect(
+			new AuthorizationHealthIndicator({
+				withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
+			}).isHealthy(),
+		).rejects.toThrow("connection refused");
 	});
 });

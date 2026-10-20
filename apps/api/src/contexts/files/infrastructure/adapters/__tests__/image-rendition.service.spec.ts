@@ -8,7 +8,7 @@ import { ImageObjectMissingError, ImageRulesViolationError } from "../image-rend
 const SOURCE: StorageObjectLocator = { provider: "local", container: "private", path: `stores/${ORG_ID}/reward-images/${FILE_ID}.webp` };
 
 function rewardImage(): ReturnType<typeof storedFile> {
-	return storedFile({ category: "REWARD_IMAGE", visibility: "PUBLIC", mimeType: "image/webp", originalName: "kuih.webp", organizationId: ORG_ID });
+	return storedFile({ category: "REWARD_IMAGE", visibility: "PUBLIC", mimeType: "image/webp", originalName: "kuih.webp", tenantId: ORG_ID });
 }
 
 function setup(processor: FakeImageProcessor = new FakeImageProcessor()): {

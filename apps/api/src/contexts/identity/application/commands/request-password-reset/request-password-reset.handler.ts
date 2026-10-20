@@ -11,7 +11,7 @@ import type { IdentityScope } from "../../identity-scope";
 import type { AuthFlowSubjectPort } from "../../ports/auth-flow.port";
 import type { CredentialCryptoPort } from "../../ports/credential-crypto.port";
 import type { IdGeneratorPort } from "../../ports/id-generator.port";
-import { AUTH_FLOW_SUBJECT, CREDENTIAL_CRYPTO, ID_GENERATOR, IDENTITY_UNIT_OF_WORK, PUBLIC_AUTH_FLOW_OPERATION } from "../../ports/identity.tokens";
+import { AUTH_FLOW_SUBJECT, CREDENTIAL_CRYPTO, ID_GENERATOR, IDENTITY_UNIT_OF_WORK, PASSWORD_RESET_REQUEST_OPERATION } from "../../ports/identity.tokens";
 import { RequestPasswordResetCommand } from "./request-password-reset.command";
 
 /** The same answer whether or not the email exists (no account enumeration). */
@@ -33,7 +33,7 @@ export class RequestPasswordResetHandler implements ICommandHandler<RequestPassw
 		const tokenHash: string = await this.crypto.hash(rawToken);
 		const tokenDigest: string = this.crypto.hashTokenDigest(rawToken);
 
-		await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, command.actor, async (scope: IdentityScope): Promise<void> => {
+		await this.uow.runSystemOperation(PASSWORD_RESET_REQUEST_OPERATION, command.actor, async (scope: IdentityScope): Promise<void> => {
 			const account: UserAccount | null = await scope.accounts.findByEmail(email);
 			if (account !== null) {
 				this.flowSubject.identify(account.id);

@@ -7,7 +7,7 @@ import { ProductImageFileAccessRule, type KernelAuthorizeCheck } from "../produc
 
 const ACTOR: FileActor = { userId: "user-1", isSuperAdmin: false };
 const UPLOAD: CreateFileUploadUrlInput = { category: "PRODUCT_IMAGE", fileName: "p.png", mimeType: "image/png", sizeBytes: 10, checksumSha256: "a".repeat(64) };
-const IMAGE: FileAccessSubject = { id: "file-1", category: "PRODUCT_IMAGE", uploadedById: "user-1", organizationId: null, productId: "p-1" };
+const IMAGE: FileAccessSubject = { id: "file-1", category: "PRODUCT_IMAGE", uploadedById: "user-1", tenantId: null, productId: "p-1" };
 
 /** Records kernel checks and denies when told to. */
 class RecordingKernel implements KernelAuthorizeCheck {

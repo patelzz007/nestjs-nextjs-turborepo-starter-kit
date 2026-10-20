@@ -27,7 +27,7 @@ import { PosRateLimitGuard } from "./guards/pos-rate-limit.guard";
 
 /** OpenAPI note shared by every POS route. */
 const TERMINAL_ID_HEADER_DESCRIPTION =
-	"Terminal id. Optional for a key issued by pairing (POST /pos/terminals/pair); required for a manually created key (e.g. KL-REGISTER-01).";
+	"Terminal id. Optional for a key issued by pairing (POST /integration/terminals/pair); required for a manually created key (e.g. KL-REGISTER-01).";
 
 /**
  * POS (machine-to-machine) endpoints. Every route authenticates with a merchant API key header only —
@@ -38,12 +38,12 @@ const TERMINAL_ID_HEADER_DESCRIPTION =
  * key. Unknown backup codes additionally count toward the key's lockout.
  *
  * Database scope: no RLS bypass. After `MerchantApiKeyGuard` verifies the key, the request runs as the `api_key`
- * principal (prisma/rls/40-api-key-principal.sql): only the key's organization — and, for a
+ * principal (prisma/rls/40-api-key-principal.sql): only the key's tenant — and, for a
  * store-scoped key, its store's redemptions and sales — are visible or writable.
  */
 @ApiTags("Redemptions")
 @SkipMutationIntent()
-@Controller(apiPath("/redemptions"))
+@Controller(apiPath("/integration/redemptions"))
 export class RedemptionsController {
 	public constructor(private readonly commandBus: CommandBus) {}
 
@@ -58,7 +58,7 @@ export class RedemptionsController {
 	public validate(
 		@CurrentActor() actor: ActorContext,
 		@TillPoint() till: CheckoutPoint,
-		@ZodBody(apiContract.redemptions.validate.input) body: z.output<typeof apiContract.redemptions.validate.input>,
+		@ZodBody(apiContract.integration.validateRedemption.input) body: z.output<typeof apiContract.integration.validateRedemption.input>,
 	): Promise<RedemptionPreviewResponse> {
 		return this.commandBus.execute(new ValidateRedemptionCodesCommand(actor, till, body));
 	}
@@ -78,7 +78,7 @@ export class RedemptionsController {
 	public checkout(
 		@CurrentActor() actor: ActorContext,
 		@TillPoint() till: CheckoutPoint,
-		@ZodBody(apiContract.redemptions.checkout.input) body: z.output<typeof apiContract.redemptions.checkout.input>,
+		@ZodBody(apiContract.integration.checkoutRedemption.input) body: z.output<typeof apiContract.integration.checkoutRedemption.input>,
 	): Promise<RedemptionCheckoutResponse> {
 		return this.commandBus.execute(new CheckoutSaleCommand(actor, till, body));
 	}

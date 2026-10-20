@@ -196,7 +196,7 @@ export const EMAIL_TEMPLATE_REGISTRY: Readonly<Record<EmailTemplateKey, EmailTem
 	"team-member-invite": registerTemplate(
 		"team-member-invite",
 		"Team Member Invite",
-		"Invitation sent when an organization owner or admin invites a colleague.",
+		"Invitation sent when a tenant owner or admin invites a colleague.",
 		TeamMemberInviteEmailTemplate,
 		TeamMemberInviteEmailPropsSchema,
 	),

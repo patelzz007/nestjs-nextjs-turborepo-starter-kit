@@ -5,7 +5,7 @@ import type { RewardImageFileScope } from "../ports/reward-image-files.port";
 import { REWARD_IMAGE_CAPABILITIES } from "../services/reward-image-file-capabilities";
 import { RewardImageInUseGuard } from "../services/reward-image-in-use.guard";
 
-const SUBJECT: FileReferenceSubject = { fileId: "file-1", category: "REWARD_IMAGE", organizationId: "org-1" };
+const SUBJECT: FileReferenceSubject = { fileId: "file-1", category: "REWARD_IMAGE", tenantId: "org-1" };
 
 function scope(liveUses: number): RewardImageFileScope {
 	return { rewardImages: { countLiveUses: (): Promise<number> => Promise.resolve(liveUses) } };

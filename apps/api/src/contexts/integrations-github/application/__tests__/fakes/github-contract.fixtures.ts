@@ -43,7 +43,7 @@ export function userActor(userId: string = USER_ID): ActorContext {
 		kind: "user",
 		userId,
 		sessionId: "session-1",
-		organizationId: null,
+		tenantId: null,
 		isSuperAdmin: false,
 		accessScope: "tenant",
 		impersonatorUserId: null,
@@ -55,7 +55,7 @@ export function userActor(userId: string = USER_ID): ActorContext {
 export function anonymousActor(): ActorContext {
 	return {
 		kind: "anonymous",
-		organizationId: null,
+		tenantId: null,
 		request: { requestId: "req-2", ip: "140.82.112.1", userAgent: "GitHub-Hookshot", deviceLabel: null, endpoint: "/api/v1/github/webhook" },
 	};
 }

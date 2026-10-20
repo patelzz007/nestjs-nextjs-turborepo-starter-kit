@@ -5,7 +5,7 @@ import { bindInTransactionHandler } from "../../../platform/application/events/i
 import { InTransactionEventRegistry } from "../../../platform/application/events/in-transaction-event-registry";
 import { IntegrationEventMapperRegistry } from "../../../platform/application/events/integration-event-mapper";
 import { NotificationsTransactionalPortsFactory } from "../../notifications/public-api";
-import { ORGANIZATION_READ, type OrganizationReadPort } from "../../organizations/public-api";
+import { TENANT_READ, type TenantReadPort } from "../../tenancy/public-api";
 import { IssueReferrerCreditClaimOnReferrerCredited } from "../application/event-handlers/in-transaction/issue-referrer-credit-claim.in-transaction-handler";
 import {
 	RecordNotificationOnReferrerCredited,
@@ -26,7 +26,7 @@ export class ClaimsRegistrations implements OnModuleInit {
 	public constructor(
 		@Inject(InTransactionEventRegistry) private readonly handlers: InTransactionEventRegistry<Prisma.TransactionClient>,
 		private readonly notifications: NotificationsTransactionalPortsFactory,
-		@Inject(ORGANIZATION_READ) private readonly organizations: OrganizationReadPort,
+		@Inject(TENANT_READ) private readonly tenants: TenantReadPort,
 		private readonly mappers: IntegrationEventMapperRegistry,
 		@Inject(CLAIM_CODES) private readonly codes: ClaimCodesPort,
 		@Inject(CLAIM_ID_GENERATOR) private readonly ids: ClaimIdGenerator,
@@ -34,7 +34,7 @@ export class ClaimsRegistrations implements OnModuleInit {
 
 	public onModuleInit(): void {
 		const scopes = new ClaimsScopeFactory(this.notifications);
-		this.handlers.register(bindInTransactionHandler(new RecordOwnerNoticesOnRewardReview(this.organizations), scopes));
+		this.handlers.register(bindInTransactionHandler(new RecordOwnerNoticesOnRewardReview(this.tenants), scopes));
 		this.handlers.register(bindInTransactionHandler(new RecordNotificationOnReferrerCredited(), scopes));
 		this.handlers.register(bindInTransactionHandler(new IssueReferrerCreditClaimOnReferrerCredited(this.codes, this.ids), scopes));
 		this.mappers.register(new ClaimsIntegrationEventsMapper());

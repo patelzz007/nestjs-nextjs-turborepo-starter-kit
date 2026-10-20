@@ -11,7 +11,7 @@ export class RequestTenantAdapter implements RequestTenantPort {
 	public current(): VerifiedRequestTenant {
 		const tenant = this.requestContext.current()?.tenant;
 		return {
-			...(tenant?.organizationId === undefined ? {} : { organizationId: tenant.organizationId }),
+			...(tenant?.tenantId === undefined ? {} : { tenantId: tenant.tenantId }),
 			...(tenant?.storeId === undefined ? {} : { storeId: tenant.storeId }),
 			...(tenant?.locationId === undefined ? {} : { locationId: tenant.locationId }),
 		};

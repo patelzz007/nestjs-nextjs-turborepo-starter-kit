@@ -9,7 +9,7 @@ export const NOW: EpochMs = epochMs(1_792_195_200_000);
 
 export const REWARD_ID = "7a2b3c4d-5e6f-4a1b-8c9d-0e1f2a3b4c5d";
 export const REFERRER_ID = "11111111-1111-4111-8111-111111111111";
-export const ORGANIZATION_ID = "22222222-2222-4222-8222-222222222222";
+export const TENANT_ID = "22222222-2222-4222-8222-222222222222";
 export const REVIEWER_ID = "33333333-3333-4333-8333-333333333333";
 export const STORE_A = "44444444-4444-4444-8444-444444444444";
 export const STORE_B = "55555555-5555-4555-8555-555555555555";
@@ -44,7 +44,7 @@ export function rewardState(status: string, patch: Partial<RewardState> = {}): R
 	return {
 		id: REWARD_ID,
 		kind: "CONSUMER",
-		organizationId: ORGANIZATION_ID,
+		tenantId: TENANT_ID,
 		status,
 		title: "Free coffee",
 		description: "One free coffee",
@@ -74,7 +74,7 @@ export function newReward(patch: Partial<NewRewardDefinition> = {}): NewRewardDe
 	return {
 		id: REWARD_ID,
 		referrerId: REFERRER_ID,
-		organizationId: ORGANIZATION_ID,
+		tenantId: TENANT_ID,
 		title: "Free coffee",
 		description: "One free coffee",
 		offer: { rewardType: "FREE_ITEM", rewardValue: 0, termsConditions: null, category: "cafe" },

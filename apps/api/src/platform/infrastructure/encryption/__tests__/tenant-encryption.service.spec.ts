@@ -7,7 +7,7 @@ import { createTestPrisma } from "../../../../../test/support/test-service-graph
 import { RequestContextService } from "../../context/request-context";
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import { createCedarPolicyEvaluator } from "../../../../contexts/authorization/public-api";
-import { createOrganizationAuditPort } from "../../../../contexts/organizations/public-api";
+import { createTenantAuditPort } from "../../../../contexts/tenancy/public-api";
 import { formatGcmEnvelope, GCM_AUTH_TAG_BYTES, gcmEncrypt, GcmEnvelopeError, parseGcmEnvelope } from "../aes-256-gcm";
 import { LEGACY_PILOT_KEK_ID, LocalDevelopmentKeyManagementService, localKekId } from "../kms/local-development-key-management.service";
 import { TenantKekUnavailableError } from "../kms/tenant-key-management.port";
@@ -16,7 +16,7 @@ import { TENANT_KEY_AUDIT_ACTIONS, TenantEncryptionService, TenantKeyMaintenance
 import { LIVE_ROW_FIELDS } from "../../persistence/__tests__/base-row-fields";
 
 interface AuditRow {
-	readonly data: { readonly organizationId: string; readonly actorUserId: string; readonly action: string; readonly policyVersion: number; readonly metadata?: object };
+	readonly data: { readonly tenantId: string; readonly actorUserId: string; readonly action: string; readonly policyVersion: number; readonly metadata?: object };
 }
 
 const db = vi.hoisted(() => {
@@ -31,7 +31,7 @@ vi.mock("../../../../prisma/tenant-transaction.service", () => ({
 		public readonly withSystemOperation = async <T>(context: { readonly operation: string }, work: (tx: object) => Promise<T>): Promise<T> => {
 			db.operations.push(context.operation);
 			return work({
-				organizationAuditLog: {
+				tenantAuditLog: {
 					create: (row: AuditRow): Promise<AuditRow> => {
 						db.auditRows.push(row);
 						return Promise.resolve(row);
@@ -53,12 +53,12 @@ const KEK_V2 = Buffer.alloc(32, 2);
 class InMemoryKeyRepository extends TenantEncryptionKeyRepository {
 	public rows: TenantEncryptionKey[] = [];
 
-	public override findActiveKey(organizationId: string): Promise<TenantEncryptionKey | null> {
-		return Promise.resolve(this.rows.find((row) => row.organizationId === organizationId && row.status === "ACTIVE") ?? null);
+	public override findActiveKey(tenantId: string): Promise<TenantEncryptionKey | null> {
+		return Promise.resolve(this.rows.find((row) => row.tenantId === tenantId && row.status === "ACTIVE") ?? null);
 	}
 
 	public override insertKeyIfAbsent(record: NewTenantKeyRecord): Promise<number> {
-		const conflict = this.rows.some((row) => row.organizationId === record.organizationId && (row.keyVersion === record.keyVersion || row.status === "ACTIVE"));
+		const conflict = this.rows.some((row) => row.tenantId === record.tenantId && (row.keyVersion === record.keyVersion || row.status === "ACTIVE"));
 		if (conflict) {
 			return Promise.resolve(0);
 		}
@@ -66,8 +66,8 @@ class InMemoryKeyRepository extends TenantEncryptionKeyRepository {
 		return Promise.resolve(1);
 	}
 
-	public override findKey(organizationId: string, keyVersion: number): Promise<TenantEncryptionKey | null> {
-		return Promise.resolve(this.rows.find((row) => row.organizationId === organizationId && row.keyVersion === keyVersion) ?? null);
+	public override findKey(tenantId: string, keyVersion: number): Promise<TenantEncryptionKey | null> {
+		return Promise.resolve(this.rows.find((row) => row.tenantId === tenantId && row.keyVersion === keyVersion) ?? null);
 	}
 
 	public override listKeysNotWrappedWith(currentKmsKeyId: string, afterId: string | null, take: number): Promise<TenantEncryptionKey[]> {
@@ -107,7 +107,7 @@ function service(kms: LocalDevelopmentKeyManagementService): TenantEncryptionSer
 	const tenantTx = new TenantTransactionService(createTestPrisma(), new RequestContextService());
 	const cedar = createCedarPolicyEvaluator(tenantTx);
 	vi.spyOn(cedar, "getActivePolicyVersion").mockResolvedValue(POLICY_VERSION);
-	return new TenantEncryptionService(tenantTx, keys, createOrganizationAuditPort(), cedar, new RequestContextService(), kms);
+	return new TenantEncryptionService(tenantTx, keys, createTenantAuditPort(), cedar, new RequestContextService(), kms);
 }
 
 const kekV1 = (): LocalDevelopmentKeyManagementService => new LocalDevelopmentKeyManagementService(1, KEK_V1, new Map());
@@ -142,7 +142,7 @@ describe("TenantEncryptionService", () => {
 		expect(onlyRow().kmsKeyId).toBe(localKekId(1));
 		expect(db.auditRows.map((row) => row.data.action)).toEqual([TENANT_KEY_AUDIT_ACTIONS.created, TENANT_KEY_AUDIT_ACTIONS.decrypted]);
 		expect(db.auditRows[LIST_SLOT_INDEX.second]?.data).toMatchObject({
-			organizationId: ORG,
+			tenantId: ORG,
 			actorUserId: ACTOR,
 			policyVersion: POLICY_VERSION,
 			metadata: { purpose: "kyb.review", keyVersion: 1 },
@@ -187,7 +187,7 @@ describe("TenantEncryptionService", () => {
 		keys.rows.push({
 			...LIVE_ROW_FIELDS,
 			id: randomUUID(),
-			organizationId: ORG,
+			tenantId: ORG,
 			keyVersion: 1,
 			wrappedKey: formatGcmEnvelope(gcmEncrypt(randomBytes(32), randomBytes(32))),
 			kmsKeyId: localKekId(1),
@@ -200,7 +200,7 @@ describe("TenantEncryptionService", () => {
 		const summary = await service(kekV2WithRetiredV1()).rewrapToCurrentKek(ACTOR);
 
 		expect(summary.rewrapped).toBe(0);
-		expect(summary.failures).toEqual([expect.objectContaining({ organizationId: ORG, kmsKeyId: localKekId(1) })]);
+		expect(summary.failures).toEqual([expect.objectContaining({ tenantId: ORG, kmsKeyId: localKekId(1) })]);
 		await expect(service(kekV2WithRetiredV1()).rewrapToCurrentKek(NOT_SUPERADMIN)).rejects.toBeInstanceOf(TenantKeyMaintenanceActorError);
 	});
 
@@ -212,7 +212,7 @@ describe("TenantEncryptionService", () => {
 		keys.rows.push({
 			...LIVE_ROW_FIELDS,
 			id: randomUUID(),
-			organizationId: ORG,
+			tenantId: ORG,
 			keyVersion: 1,
 			wrappedKey: formatGcmEnvelope(gcmEncrypt(legacyKek(), dataKey)),
 			kmsKeyId: LEGACY_PILOT_KEK_ID,
@@ -248,7 +248,7 @@ describe("TenantEncryptionService", () => {
 	it("creates exactly one data key when two requests race to create the first one", async () => {
 		const encryption = service(kekV1());
 
-		const versions = await Promise.all([encryption.ensureOrganizationKey(ORG, ACTOR), encryption.ensureOrganizationKey(ORG, ACTOR)]);
+		const versions = await Promise.all([encryption.ensureTenantKey(ORG, ACTOR), encryption.ensureTenantKey(ORG, ACTOR)]);
 
 		expect(versions).toEqual([1, 1]);
 		expect(keys.rows).toHaveLength(1);

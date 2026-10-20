@@ -20,7 +20,7 @@ const REVOCABLE_STATUSES: ReadonlySet<SupportAccessGrantStatus> = new Set<Suppor
 
 const SupportAccessGrantStateSchema = z.object({
 	id: z.string().min(1),
-	organizationId: z.string().min(1),
+	tenantId: z.string().min(1),
 	supportUserId: z.string().min(1),
 	mode: SupportAccessGrantModeSchema,
 	status: SupportAccessGrantStatusSchema,
@@ -36,7 +36,7 @@ export type SupportAccessGrantState = z.output<typeof SupportAccessGrantStateSch
 
 export interface NewSupportAccessGrant {
 	readonly id: string;
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly supportUserId: string;
 	readonly mode: SupportAccessGrantMode;
 	readonly reason: string;
@@ -45,9 +45,9 @@ export interface NewSupportAccessGrant {
 }
 
 /**
- * Just-in-time support access to one organization.
+ * Just-in-time support access to one tenant.
  *
- * A SuperAdmin requests a grant (PENDING_TENANT_APPROVAL); an active owner of the grant's organization
+ * A SuperAdmin requests a grant (PENDING_TENANT_APPROVAL); an active owner of the grant's tenant
  * approves it (ACTIVE); a SuperAdmin revokes it (REVOKED). Every transition is compared-and-set on the
  * status the grant was loaded with, so a revoked or expired grant can never be revived.
  */
@@ -60,7 +60,7 @@ export class SupportAccessGrantAggregate {
 	public static request(grant: NewSupportAccessGrant, now: EpochMs): SupportAccessGrantAggregate {
 		const state: SupportAccessGrantState = SupportAccessGrantStateSchema.parse({
 			id: grant.id,
-			organizationId: grant.organizationId,
+			tenantId: grant.tenantId,
 			supportUserId: grant.supportUserId,
 			mode: grant.mode,
 			status: "PENDING_TENANT_APPROVAL",
@@ -87,8 +87,8 @@ export class SupportAccessGrantAggregate {
 	}
 
 	/** Always read from the grant record, never from the request. */
-	public get organizationId(): string {
-		return this.state.organizationId;
+	public get tenantId(): string {
+		return this.state.tenantId;
 	}
 
 	/** Status the grant was loaded with; the repository compares it (CAS). */

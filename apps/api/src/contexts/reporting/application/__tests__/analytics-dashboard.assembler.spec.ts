@@ -2,9 +2,9 @@ import { DAY_MS, EpochMsSchema } from "@workspace/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { selectedAnalyticsLocations } from "../../domain/value-objects/analytics-scope.value-object";
-import { AnalyticsDashboardAssembler, AnalyticsMerchantSummaryMissingError, AnalyticsOrganizationMissingError } from "../assemblers/analytics-dashboard.assembler";
+import { AnalyticsDashboardAssembler, AnalyticsMerchantSummaryMissingError, AnalyticsTenantMissingError } from "../assemblers/analytics-dashboard.assembler";
 import type { ActivityBucket, ActivityTotals } from "../ports/analytics-facts.port";
-import { FrozenClock, InMemoryAnalyticsBreakdowns, InMemoryAnalyticsFacts, InMemoryAnalyticsOrganizations, InMemorySales } from "./fakes/analytics-read-fakes";
+import { FrozenClock, InMemoryAnalyticsBreakdowns, InMemoryAnalyticsFacts, InMemoryAnalyticsTenants, InMemorySales } from "./fakes/analytics-read-fakes";
 
 const NOW = Date.UTC(2026, 9, 5, 12);
 const ORG_ID = "5c1f7a9e-2b4d-4e8f-a1b2-c3d4e5f60718";
@@ -23,16 +23,16 @@ function bucket(startMs: number, values: Partial<ActivityBucket> = {}): Activity
 describe("AnalyticsDashboardAssembler", () => {
 	let facts: InMemoryAnalyticsFacts;
 	let breakdowns: InMemoryAnalyticsBreakdowns;
-	let organizations: InMemoryAnalyticsOrganizations;
+	let tenants: InMemoryAnalyticsTenants;
 	let sales: InMemorySales;
 	let assembler: AnalyticsDashboardAssembler;
 
 	beforeEach(() => {
 		facts = new InMemoryAnalyticsFacts();
 		breakdowns = new InMemoryAnalyticsBreakdowns();
-		organizations = new InMemoryAnalyticsOrganizations();
+		tenants = new InMemoryAnalyticsTenants();
 		sales = new InMemorySales();
-		organizations.rows.set(ORG_ID, { slug: "brew-and-bean", displayName: "Brew & Bean", timeZone: "Asia/Kuala_Lumpur" });
+		tenants.rows.set(ORG_ID, { slug: "brew-and-bean", displayName: "Brew & Bean", timeZone: "Asia/Kuala_Lumpur" });
 		facts.series = [bucket(NOW - 2 * DAY_MS, { salesMinor: 1_000, bills: 1, claims: 2, redemptions: 1 }), bucket(NOW - DAY_MS)];
 		facts.totals = {
 			current: { ...EMPTY_TOTALS, salesMinor: 1_000, bills: 1, averageBillMinor: 1_000, customers: 1, merchants: 1, claims: 4, redemptions: 1 },
@@ -42,7 +42,7 @@ describe("AnalyticsDashboardAssembler", () => {
 		facts.cohortTotals = { current: { newCustomers: 1, returningCustomers: 0 }, previous: { newCustomers: 0, returningCustomers: 1 } };
 		breakdowns.rewards = [{ rewardId: "r", title: "Coffee", claims: 4, redemptions: 1 }];
 		breakdowns.methods = [{ method: "MANUAL", redemptions: 1 }];
-		assembler = new AnalyticsDashboardAssembler(facts, breakdowns, organizations, sales, new FrozenClock(EpochMsSchema.parse(NOW)));
+		assembler = new AnalyticsDashboardAssembler(facts, breakdowns, tenants, sales, new FrozenClock(EpochMsSchema.parse(NOW)));
 	});
 
 	describe("merchant", () => {
@@ -50,7 +50,7 @@ describe("AnalyticsDashboardAssembler", () => {
 			const locationScope = selectedAnalyticsLocations([STORE_ID]);
 			await assembler.merchantDashboard(ORG_ID, locationScope, {});
 
-			const scope = { kind: "organization", organizationId: ORG_ID, locationScope };
+			const scope = { kind: "tenant", tenantId: ORG_ID, locationScope };
 			const window = { fromMs: NOW - DEFAULT_RANGE_DAYS * DAY_MS, toMs: NOW, timeZone: "Asia/Kuala_Lumpur", interval: "day" };
 			expect(facts.seriesCalls).toEqual([{ scope, window }]);
 			expect(facts.totalsCalls).toEqual([{ scope, range: window, previous: { fromMs: NOW - 2 * DEFAULT_RANGE_DAYS * DAY_MS, toMs: NOW - DEFAULT_RANGE_DAYS * DAY_MS } }]);
@@ -72,8 +72,8 @@ describe("AnalyticsDashboardAssembler", () => {
 			expect(dashboard.series.map((point) => point.start)).toEqual([NOW - 2 * DAY_MS, NOW - DAY_MS]);
 		});
 
-		it("fails loudly, reading no aggregate, when the organization is gone", async () => {
-			await expect(assembler.merchantDashboard(OTHER_ORG_ID, selectedAnalyticsLocations([]), {})).rejects.toBeInstanceOf(AnalyticsOrganizationMissingError);
+		it("fails loudly, reading no aggregate, when the tenant is gone", async () => {
+			await expect(assembler.merchantDashboard(OTHER_ORG_ID, selectedAnalyticsLocations([]), {})).rejects.toBeInstanceOf(AnalyticsTenantMissingError);
 			expect(facts.seriesCalls).toHaveLength(0);
 			expect(breakdowns.calls).toBe(0);
 		});
@@ -95,8 +95,8 @@ describe("AnalyticsDashboardAssembler", () => {
 	describe("customer", () => {
 		it("reads only the caller's own rows and folds merchants into categories, each with a value per bucket", async () => {
 			breakdowns.merchantBuckets = [
-				{ organizationId: ORG_ID, startMs: NOW - 2 * DAY_MS, salesMinor: 1_000, bills: 1 },
-				{ organizationId: OTHER_ORG_ID, startMs: NOW - DAY_MS, salesMinor: 3_000, bills: 2 },
+				{ tenantId: ORG_ID, startMs: NOW - 2 * DAY_MS, salesMinor: 1_000, bills: 1 },
+				{ tenantId: OTHER_ORG_ID, startMs: NOW - DAY_MS, salesMinor: 3_000, bills: 2 },
 			];
 			sales.summaries = new Map([
 				[ORG_ID, { name: "Brew & Bean", category: "cafe" }],
@@ -106,8 +106,8 @@ describe("AnalyticsDashboardAssembler", () => {
 			const dashboard = await assembler.customerDashboard(USER_ID, {});
 
 			expect(facts.seriesCalls.map((call) => [call.scope, call.window.timeZone])).toEqual([[{ kind: "customer", userId: USER_ID }, "UTC"]]);
-			expect(sales.summaryCalls).toEqual([{ organizationIds: [ORG_ID, OTHER_ORG_ID], actorUserId: USER_ID }]);
-			expect(dashboard.spendingByMerchant.map((merchant) => merchant.organizationId)).toEqual([OTHER_ORG_ID, ORG_ID]);
+			expect(sales.summaryCalls).toEqual([{ tenantIds: [ORG_ID, OTHER_ORG_ID], actorUserId: USER_ID }]);
+			expect(dashboard.spendingByMerchant.map((merchant) => merchant.tenantId)).toEqual([OTHER_ORG_ID, ORG_ID]);
 			expect(dashboard.spendingByCategory).toEqual([
 				{
 					category: "cafe",
@@ -146,7 +146,7 @@ describe("AnalyticsDashboardAssembler", () => {
 		});
 
 		it("fails loudly when a merchant the customer paid cannot be named", async () => {
-			breakdowns.merchantBuckets = [{ organizationId: ORG_ID, startMs: NOW - DAY_MS, salesMinor: 1_000, bills: 1 }];
+			breakdowns.merchantBuckets = [{ tenantId: ORG_ID, startMs: NOW - DAY_MS, salesMinor: 1_000, bills: 1 }];
 
 			await expect(assembler.customerDashboard(USER_ID, {})).rejects.toBeInstanceOf(AnalyticsMerchantSummaryMissingError);
 		});

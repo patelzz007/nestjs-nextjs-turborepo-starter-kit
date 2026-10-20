@@ -16,9 +16,9 @@ const ACTOR: ActorContext = ActorContextSchema.parse({
 	kind: "user",
 	userId: "user-1",
 	sessionId: "session-1",
-	organizationId: "org-1",
+	tenantId: "org-1",
 	isSuperAdmin: true,
-	accessScope: "superadmin",
+	accessScope: "tenant",
 	impersonatorUserId: null,
 	request: { requestId: "corr-1", ip: null, userAgent: null, deviceLabel: null, endpoint: null },
 });

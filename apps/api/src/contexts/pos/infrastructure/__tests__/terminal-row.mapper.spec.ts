@@ -10,7 +10,7 @@ function row(patch: Partial<TerminalSummaryRow> = {}): TerminalSummaryRow {
 	return {
 		...LIVE_ROW_FIELDS,
 		id: "terminal-1",
-		organizationId: "org-1",
+		tenantId: "org-1",
 		locationId: "store-a",
 		terminalId: "TERM-AAAA2222",
 		label: null,

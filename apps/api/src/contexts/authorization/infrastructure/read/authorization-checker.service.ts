@@ -16,10 +16,11 @@ import {
 	toPlatformCapabilitySlug,
 } from "@workspace/shared";
 
-import { PrismaService } from "../../../../prisma/prisma.service";
+import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import { AuthorizationCacheService, type CachedAuthorization, type CachedPermission } from "../cache/authorization-cache.service";
 import { collectRoleHierarchy } from "../kernel/subject-grants.loader";
 import type { SubjectAuthorizationReadPort } from "../../application/ports/subject-authorization-read.port";
+import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../platform/application/shared-system-operations";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -48,40 +49,48 @@ interface GrantRows {
  * A future extension could support `users.*` string patterns; for now the
  * enum-based model handles this natively via the `MANAGE` action.
  */
+
 @Injectable()
 export class AuthorizationCheckerService implements SubjectAuthorizationReadPort {
 	public constructor(
 		private readonly cache: AuthorizationCacheService,
-		private readonly prisma: PrismaService,
+		private readonly transactions: TenantTransactionService,
 	) {}
 
 	/** Flat capability slug list for FE gating (`GET /auth/permissions`). */
 	public async getUserCapabilitySlugs(userId: string): Promise<readonly CapabilitySlug[]> {
-		// Platform SuperAdmins bypass every backend check, so the UI must not hide what they can do.
-		const user = await this.prisma.user.findFirst({ where: { id: userId, isDeleted: false }, select: { isSuperAdmin: true } });
-		if (user?.isSuperAdmin === true) {
-			return allPlatformCapabilitySlugs();
+		const cached: CachedAuthorization | null = this.cache.get(userId);
+		if (cached !== null) {
+			return capabilitySlugsOf(cached);
 		}
-		const auth: CachedAuthorization = await this.resolve(userId);
-		const slugs: CapabilitySlug[] = [];
-		for (const entry of auth.capabilities) {
-			const parsed = CapabilitySlugSchema.safeParse(entry);
-			if (parsed.success) {
-				slugs.push(parsed.data);
-			}
-		}
-		return slugs;
+		return this.transactions.withSystemOperation(
+			{ operation: PRINCIPAL_LOOKUP_OPERATION, reason: "Read capability slugs for a session", actorUserId: userId },
+			async (tx): Promise<readonly CapabilitySlug[]> => {
+				const user = await tx.user.findFirst({ where: { id: userId, isDeleted: false }, select: { isSuperAdmin: true } });
+				if (user?.isSuperAdmin === true) {
+					return allPlatformCapabilitySlugs();
+				}
+				const auth: CachedAuthorization = await this.loadFromDatabase(tx, userId);
+				this.cache.set(userId, auth);
+				return capabilitySlugsOf(auth);
+			},
+		);
 	}
 
 	// ── Full permission details ──────────────────────────────────────────
 
 	/** Ids of the user's live direct ALLOW grants. */
 	public async getUserDirectPermissionIds(userId: string): Promise<readonly string[]> {
-		const rows = await this.prisma.userPermission.findMany({
-			where: liveUserPermissionWhere(userId, "ALLOW", nowEpochMs()),
-			select: { permissionId: true },
-		});
-		return rows.map((row) => row.permissionId);
+		return this.transactions.withSystemOperation(
+			{ operation: PRINCIPAL_LOOKUP_OPERATION, reason: "Read a user's direct permission ids", actorUserId: userId },
+			async (tx): Promise<readonly string[]> => {
+				const rows = await tx.userPermission.findMany({
+					where: liveUserPermissionWhere(userId, "ALLOW", nowEpochMs()),
+					select: { permissionId: true },
+				});
+				return rows.map((row) => row.permissionId);
+			},
+		);
 	}
 
 	/**
@@ -93,26 +102,28 @@ export class AuthorizationCheckerService implements SubjectAuthorizationReadPort
 	 * `UserPermissions` shape expected by `buildUserResponse()`.
 	 */
 	public async getUserPermissionDetails(userId: string): Promise<UserPermissions> {
-		const { userRoles, rolePermissions, userPermissions } = await this.loadGrantRows(userId, nowEpochMs());
-
-		const roles: SlimRoleResponse[] = userRoles.map((ur) => ({
-			id: ur.role.id,
-			name: ur.role.name,
-			description: ur.role.description,
-		}));
-
-		const permissionMap: Map<string, PermissionDetailsResponse> = new Map<string, PermissionDetailsResponse>();
-		for (const { permission } of [...rolePermissions, ...userPermissions]) {
-			permissionMap.set(`${permission.action}:${permission.resource}`, {
-				id: permission.id,
-				action: permission.action,
-				resource: permission.resource,
-				description: permission.description,
-				group: permission.group ?? null,
-			});
-		}
-
-		return { roles, permissions: Array.from(permissionMap.values()) };
+		return this.transactions.withSystemOperation(
+			{ operation: PRINCIPAL_LOOKUP_OPERATION, reason: "Read roles and permissions for a session", actorUserId: userId },
+			async (tx): Promise<UserPermissions> => {
+				const { userRoles, rolePermissions, userPermissions } = await this.loadGrantRows(tx, userId, nowEpochMs());
+				const roles: SlimRoleResponse[] = userRoles.map((ur) => ({
+					id: ur.role.id,
+					name: ur.role.name,
+					description: ur.role.description,
+				}));
+				const permissionMap: Map<string, PermissionDetailsResponse> = new Map<string, PermissionDetailsResponse>();
+				for (const { permission } of [...rolePermissions, ...userPermissions]) {
+					permissionMap.set(`${permission.action}:${permission.resource}`, {
+						id: permission.id,
+						action: permission.action,
+						resource: permission.resource,
+						description: permission.description,
+						group: permission.group ?? null,
+					});
+				}
+				return { roles, permissions: Array.from(permissionMap.values()) };
+			},
+		);
 	}
 
 	/**
@@ -121,7 +132,13 @@ export class AuthorizationCheckerService implements SubjectAuthorizationReadPort
 	 * Used by the admin inspector (`POST /admin/permissions/check`).
 	 */
 	public async checkPermissionWithGrants(userId: string, action: PermissionAction, resource: PermissionResource): Promise<CheckPermissionResponse> {
-		const user = await this.prisma.user.findFirst({
+		return this.transactions.withSystemOperation({ operation: PRINCIPAL_LOOKUP_OPERATION, reason: "Explain which grants satisfy a permission", actorUserId: userId }, (tx) =>
+			this.explainPermission(tx, userId, action, resource),
+		);
+	}
+
+	private async explainPermission(db: Prisma.TransactionClient, userId: string, action: PermissionAction, resource: PermissionResource): Promise<CheckPermissionResponse> {
+		const user = await db.user.findFirst({
 			where: { id: userId, isDeleted: false },
 			select: { isSuperAdmin: true },
 		});
@@ -149,7 +166,7 @@ export class AuthorizationCheckerService implements SubjectAuthorizationReadPort
 			grants.push(detail !== undefined ? { via, detail } : { via });
 		};
 
-		const { userRoles, roleIds, rolePermissions, userPermissions } = await this.loadGrantRows(userId, nowEpochMs());
+		const { userRoles, roleIds, rolePermissions, userPermissions } = await this.loadGrantRows(db, userId, nowEpochMs());
 
 		for (const up of userPermissions) {
 			if (matchesPermission([{ action: up.permission.action, resource: up.permission.resource }], action, resource)) {
@@ -161,7 +178,7 @@ export class AuthorizationCheckerService implements SubjectAuthorizationReadPort
 		const directRoleIds: Set<string> = new Set<string>(userRoles.map((ur) => ur.role.id));
 		const directRoleNames: string[] = userRoles.map((ur) => ur.role.name);
 
-		const rolesById = await this.prisma.role.findMany({
+		const rolesById = await db.role.findMany({
 			where: { id: { in: roleIds }, isDeleted: false },
 			select: { id: true, name: true },
 		});
@@ -200,7 +217,10 @@ export class AuthorizationCheckerService implements SubjectAuthorizationReadPort
 			return cached;
 		}
 
-		const auth: CachedAuthorization = await this.loadFromDatabase(userId);
+		const auth: CachedAuthorization = await this.transactions.withSystemOperation(
+			{ operation: PRINCIPAL_LOOKUP_OPERATION, reason: "Load a user's authorization state", actorUserId: userId },
+			(tx) => this.loadFromDatabase(tx, userId),
+		);
 		this.cache.set(userId, auth);
 		return auth;
 	}
@@ -209,23 +229,23 @@ export class AuthorizationCheckerService implements SubjectAuthorizationReadPort
 	 * The user's active direct roles, every role id in their hierarchy, the
 	 * live permissions of those roles, and the user's live direct ALLOW grants.
 	 */
-	private async loadGrantRows(userId: string, nowMs: EpochMs): Promise<GrantRows> {
-		const userRoles = await this.prisma.userRole.findMany({
+	private async loadGrantRows(db: Prisma.TransactionClient, userId: string, nowMs: EpochMs): Promise<GrantRows> {
+		const userRoles = await db.userRole.findMany({
 			where: { userId, isDeleted: false, role: { isDeleted: false, isActive: true } },
 			include: { role: { select: { id: true, name: true, description: true, parentId: true } } },
 		});
 
 		const roleIds: string[] = await collectRoleHierarchy(
-			this.prisma,
+			db,
 			userRoles.map((ur) => ({ id: ur.role.id, parentId: ur.role.parentId })),
 		);
 
-		const rolePermissions = await this.prisma.rolePermission.findMany({
+		const rolePermissions = await db.rolePermission.findMany({
 			where: { roleId: { in: roleIds }, isDeleted: false, permission: { isDeleted: false } },
 			include: { permission: { select: GRANT_PERMISSION_SELECT } },
 		});
 
-		const userPermissions = await this.prisma.userPermission.findMany({
+		const userPermissions = await db.userPermission.findMany({
 			where: liveUserPermissionWhere(userId, "ALLOW", nowMs),
 			include: { permission: { select: GRANT_PERMISSION_SELECT } },
 		});
@@ -239,9 +259,9 @@ export class AuthorizationCheckerService implements SubjectAuthorizationReadPort
 	 * Walks the role hierarchy to collect inherited permissions, merges
 	 * direct user permissions, and deduplicates by action+resource.
 	 */
-	private async loadFromDatabase(userId: string): Promise<CachedAuthorization> {
+	private async loadFromDatabase(db: Prisma.TransactionClient, userId: string): Promise<CachedAuthorization> {
 		const nowMs: EpochMs = nowEpochMs();
-		const { userRoles, rolePermissions, userPermissions } = await this.loadGrantRows(userId, nowMs);
+		const { userRoles, rolePermissions, userPermissions } = await this.loadGrantRows(db, userId, nowMs);
 
 		// Deduplicate role + direct grants into a flat set
 		const permissionMap: Map<string, CachedPermission> = new Map<string, CachedPermission>();
@@ -250,7 +270,7 @@ export class AuthorizationCheckerService implements SubjectAuthorizationReadPort
 		}
 
 		// Explicit DENY overrides remove the permission (DENY on MANAGE removes the whole resource).
-		const deniedOverrides = await this.prisma.userPermission.findMany({
+		const deniedOverrides = await db.userPermission.findMany({
 			where: liveUserPermissionWhere(userId, "DENY", nowMs),
 			select: { permission: { select: { action: true, resource: true } } },
 		});
@@ -292,6 +312,18 @@ function liveUserPermissionWhere(userId: string, effect: AclEffect, nowMs: Epoch
 		permission: { isDeleted: false },
 		OR: [{ expiresAt: null }, { expiresAt: { gt: nowMs } }],
 	};
+}
+
+/** Parsed platform capability slugs from a cached authorization snapshot. */
+function capabilitySlugsOf(auth: CachedAuthorization): CapabilitySlug[] {
+	const slugs: CapabilitySlug[] = [];
+	for (const entry of auth.capabilities) {
+		const parsed = CapabilitySlugSchema.safeParse(entry);
+		if (parsed.success) {
+			slugs.push(parsed.data);
+		}
+	}
+	return slugs;
 }
 
 /** Every platform capability (`resource × action`) — the SuperAdmin capability set. */

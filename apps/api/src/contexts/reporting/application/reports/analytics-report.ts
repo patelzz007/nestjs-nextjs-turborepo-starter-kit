@@ -75,7 +75,7 @@ export interface AnalyticsReport {
 	readonly title: string;
 	/** Whose report: the merchant's display name, or "All merchants". */
 	readonly subjectName: string;
-	/** File-name subject: the organization slug, or `platform`. */
+	/** File-name subject: the tenant slug, or `platform`. */
 	readonly subjectKey: string;
 	readonly generatedAt: number;
 	readonly range: AnalyticsReportRange;

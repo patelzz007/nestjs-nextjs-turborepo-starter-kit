@@ -7,6 +7,7 @@ import { systemActor } from "../../../../platform/application/actor-context";
 import { SystemCommandDispatcher } from "../../../../platform/application/system-command-dispatcher";
 import { DeliverEmailCommand, type DeliverEmailResult } from "../../application/commands/deliver-email/deliver-email.command";
 import { EmailDeliveryAbandonedError, EmailLogMissingError } from "../../application/commands/deliver-email/deliver-email.errors";
+import { QUEUE_EMAIL_SEND_OPERATION } from "../../application/ports/notifications.tokens";
 
 /** The job fields the processor reads (a BullMQ `Job<EmailSendJob>` satisfies it). */
 export type EmailSendJobExecution = Pick<Job<EmailSendJob>, "id" | "data" | "attemptsMade" | "opts">;
@@ -35,7 +36,7 @@ export class EmailSendProcessor extends WorkerHost {
 	public async process(job: EmailSendJobExecution): Promise<DeliverEmailResult> {
 		const parsed = EmailSendJobSchema.parse(job.data);
 		const attemptNumber = job.attemptsMade + 1;
-		const actor = systemActor("queue.email.send", "job", null, "Deliver one queued email", null);
+		const actor = systemActor(QUEUE_EMAIL_SEND_OPERATION, "job", null, "Deliver one queued email", null);
 		try {
 			return await this.commands.dispatch(new DeliverEmailCommand(actor, { ...parsed, attemptNumber, maxAttempts: job.opts.attempts ?? DEFAULT_JOB_ATTEMPTS }), {
 				kind: "job",

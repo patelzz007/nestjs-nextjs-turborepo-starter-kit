@@ -1,22 +1,19 @@
 import { randomUUID } from "node:crypto";
 
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import type { Prisma } from "@prisma/client";
 import { epochMs } from "@workspace/shared";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
 import { Reward } from "../src/contexts/rewards/domain/aggregates/reward.aggregate";
 import type { ReferrerRewardSnapshot, RewardSnapshot } from "../src/contexts/rewards/domain/aggregates/reward.state";
 import { RewardLocationScope } from "../src/contexts/rewards/domain/value-objects/reward-location-scope.value-object";
 import { RewardRulesValue } from "../src/contexts/rewards/domain/value-objects/reward-rules.value-object";
 import { PrismaRewardRepository } from "../src/contexts/rewards/infrastructure/persistence/prisma-reward.repository";
-import { systemRlsContext } from "../src/prisma/rls-context";
-import { TenantTransactionService } from "../src/prisma/tenant-transaction.service";
-import { createE2eApp } from "./e2e-helpers";
+import { createE2eApp, withTenantMember } from "./e2e-helpers";
 
 const DAY_MS = 86_400_000;
 
@@ -33,10 +30,12 @@ class FailingReferrerRepository extends PrismaRewardRepository {
 describe("Reward creation atomicity (e2e)", () => {
 	let app: NestFastifyApplication;
 	let pool: Pool;
+	let merchantUserId: string;
 
 	beforeAll(async () => {
 		app = await createE2eApp();
 		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
+		merchantUserId = z.object({ id: z.string() }).parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'brew.owner@kl-rewards.demo'`)).rows.at(0)).id;
 	});
 
 	afterAll(async () => {
@@ -51,7 +50,7 @@ describe("Reward creation atomicity (e2e)", () => {
 			{
 				id: rewardId,
 				referrerId,
-				organizationId: ORGANIZATION_SEED_IDS.klOrganization,
+				tenantId: TENANT_SEED_IDS.klTenant,
 				title: "E2E atomic reward",
 				description: "Created by reward-create-atomicity.e2e-spec.ts",
 				offer: { rewardType: "FREE_ITEM", rewardValue: 0, termsConditions: null, category: "cafe" },
@@ -69,13 +68,9 @@ describe("Reward creation atomicity (e2e)", () => {
 			epochMs(Date.now()),
 		);
 
-		await expect(
-			app
-				.get(TenantTransactionService)
-				.withRlsContext({ context: systemRlsContext("route.rls_bypass"), reason: "reward create atomicity e2e" }, async (tx: Prisma.TransactionClient): Promise<void> =>
-					new FailingReferrerRepository(tx).add(reward),
-				),
-		).rejects.toBeInstanceOf(ReferrerInsertFailed);
+		await expect(withTenantMember(app, merchantUserId, TENANT_SEED_IDS.klTenant, (tx) => new FailingReferrerRepository(tx).add(reward))).rejects.toBeInstanceOf(
+			ReferrerInsertFailed,
+		);
 
 		const remaining = await pool.query(`SELECT count(*)::int AS count FROM public."Reward" WHERE id = ANY($1)`, [[rewardId, referrerId]]);
 		expect(z.object({ count: z.number() }).parse(remaining.rows.at(0)).count).toBe(0);

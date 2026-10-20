@@ -34,7 +34,7 @@ export const DATA_CHANGE_LOG_SUMMARY_SELECT = {
 	changedColumns: true,
 	actorKind: true,
 	actorUserId: true,
-	organizationId: true,
+	tenantId: true,
 	apiKeyId: true,
 	systemOperation: true,
 	correlationId: true,
@@ -70,7 +70,7 @@ const DATA_CHANGE_LOG_LIST_KEYSET: ListKeyset<DataChangeLogSummaryRow, Prisma.Da
  * Identifiers (table name, system operation, correlation id, row id) are
  * compared EXACTLY — a case-insensitive comparison could not use the btree
  * indexes (`table_name, row_id`, `correlationId`, `actorUserId`,
- * `organizationId`, `actorKind`, `transactionId`, `occurredAt`).
+ * `tenantId`, `actorKind`, `transactionId`, `occurredAt`).
  */
 export function buildDataChangeLogListWhere(query: DataChangeLogListQuery): Prisma.DataChangeLogWhereInput {
 	const filter = query.filter;
@@ -80,7 +80,7 @@ export function buildDataChangeLogListWhere(query: DataChangeLogListQuery): Pris
 			...fieldWhere(toPrismaEqualityFilter(filter?.operation), (operation) => ({ operation })),
 			...fieldWhere(toPrismaEqualityFilter(filter?.actorKind), (actorKind) => ({ actorKind })),
 			...fieldWhere(toPrismaNullableEqualityFilter(filter?.actorUserId), (actorUserId) => ({ actorUserId })),
-			...fieldWhere(toPrismaNullableEqualityFilter(filter?.organizationId), (organizationId) => ({ organizationId })),
+			...fieldWhere(toPrismaNullableEqualityFilter(filter?.tenantId), (tenantId) => ({ tenantId })),
 			...fieldWhere(toPrismaNullableEqualityFilter(filter?.apiKeyId), (apiKeyId) => ({ apiKeyId })),
 			...fieldWhere(toPrismaNullableEqualityFilter(filter?.systemOperation), (systemOperation) => ({ systemOperation })),
 			...fieldWhere(toPrismaNullableEqualityFilter(filter?.correlationId), (correlationId) => ({ correlationId })),
@@ -119,7 +119,7 @@ export class PrismaDataChangeLogReadRepository implements DataChangeLogReader {
 		private readonly references: PrismaAuditReferenceReader,
 	) {}
 
-	/** One page of rows matching the (already validated) list query, row images excluded, actor and organization names resolved. */
+	/** One page of rows matching the (already validated) list query, row images excluded, actor and tenant names resolved. */
 	public async list(query: DataChangeLogListQuery): Promise<PaginatedServiceResult<DataChangeLogSummary>> {
 		const rows = await fetchListPage(query, {
 			where: buildDataChangeLogListWhere(query),

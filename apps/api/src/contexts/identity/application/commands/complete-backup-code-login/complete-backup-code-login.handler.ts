@@ -7,7 +7,7 @@ import type { UnitOfWork } from "../../../../../platform/application/unit-of-wor
 import type { IdentityScope } from "../../identity-scope";
 import type { CredentialCryptoPort } from "../../ports/credential-crypto.port";
 import type { VerifiedChallengeRef } from "../../ports/identity-tokens.port";
-import { CREDENTIAL_CRYPTO, IDENTITY_UNIT_OF_WORK, PUBLIC_AUTH_FLOW_OPERATION } from "../../ports/identity.tokens";
+import { CREDENTIAL_CRYPTO, IDENTITY_UNIT_OF_WORK, LOGIN_MFA_COMPLETE_OPERATION } from "../../ports/identity.tokens";
 import { MfaLoginCompletion } from "../../services/mfa-login-completion";
 import { findMatchingBackupCode } from "../../services/two-factor-setup.factory";
 import { CompleteBackupCodeLoginCommand } from "./complete-backup-code-login.command";
@@ -29,7 +29,7 @@ export class CompleteBackupCodeLoginHandler implements ICommandHandler<CompleteB
 	public async execute(command: CompleteBackupCodeLoginCommand): Promise<MfaLoginResult> {
 		const { actor, input } = command;
 		const ref: VerifiedChallengeRef = await this.completion.verifyLoginRef(input.tempToken);
-		await this.uow.runSystemOperation(PUBLIC_AUTH_FLOW_OPERATION, actor, async (scope: IdentityScope): Promise<void> => {
+		await this.uow.runSystemOperation(LOGIN_MFA_COMPLETE_OPERATION, actor, async (scope: IdentityScope): Promise<void> => {
 			const now: EpochMs = this.clock.now();
 			const parts = await this.completion.loadParts(scope, ref, now);
 			const matchedCodeId: string | null = await findMatchingBackupCode(this.crypto, parts.enrollment.activeBackupCodes, input.backupCode);

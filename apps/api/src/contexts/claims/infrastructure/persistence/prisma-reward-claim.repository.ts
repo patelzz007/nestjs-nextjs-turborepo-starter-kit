@@ -60,9 +60,9 @@ export class PrismaRewardClaimRepository implements RewardClaimRepository, Claim
 			where: { status: "PENDING", isReferrerCredit, isDeleted: false, claimExpiresAt: { lt: now } },
 			orderBy: [{ claimExpiresAt: "asc" }, { id: "asc" }],
 			take,
-			select: { id: true, reward: { select: { organizationId: true } } },
+			select: { id: true, reward: { select: { tenantId: true } } },
 		});
-		return rows.map((row): OverdueClaim => ({ claimId: row.id, organizationId: row.reward.organizationId }));
+		return rows.map((row): OverdueClaim => ({ claimId: row.id, tenantId: row.reward.tenantId }));
 	}
 
 	/** Writes the claim, or refuses (`ClaimNotActiveError`) when it moved meanwhile (redeemed, expired). */

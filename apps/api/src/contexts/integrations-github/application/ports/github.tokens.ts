@@ -1,3 +1,5 @@
+import type { SystemOperationName } from "../../../../platform/application/system-operation-names";
+
 /** Injection tokens of the integrations-github ports. */
 export const GITHUB_CONTRIBUTIONS = Symbol("GITHUB_CONTRIBUTIONS");
 export const GITHUB_TOKEN_CIPHER = Symbol("GITHUB_TOKEN_CIPHER");
@@ -14,3 +16,6 @@ export const GITHUB_WEBHOOKS = Symbol("GITHUB_WEBHOOKS");
 export const GITHUB_WEBHOOK_STORE = Symbol("GITHUB_WEBHOOK_STORE");
 export const GITHUB_CHANGE_SIGNALS = Symbol("GITHUB_CHANGE_SIGNALS");
 export const GITHUB_CLOCK = Symbol("GITHUB_CLOCK");
+
+/** The `github.webhook.deliveries` system operation, named once for every route and adapter that runs under it. */
+export const GITHUB_WEBHOOK_DELIVERIES_OPERATION: SystemOperationName = "github.webhook.deliveries";

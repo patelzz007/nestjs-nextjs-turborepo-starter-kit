@@ -7,12 +7,12 @@ import { RequestContextService } from "../context/request-context";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import type { SystemOperation } from "../../../prisma/system-operation.registry";
 import { CEDAR_POLICY_EVALUATOR, type CedarPolicyEvaluatorPort } from "../../../contexts/authorization/public-api";
-import { ORGANIZATION_AUDIT, type OrganizationAuditEntry, type OrganizationAuditPort, type OrganizationAuditTransaction } from "../../../contexts/organizations/public-api";
+import { TENANT_AUDIT, type TenantAuditEntry, type TenantAuditPort, type TenantAuditTransaction } from "../../../contexts/tenancy/public-api";
 import { AES_256_KEY_BYTES, formatGcmEnvelope, gcmDecrypt, gcmEncrypt, parseGcmEnvelope } from "./aes-256-gcm";
 import { TENANT_KEY_MANAGEMENT, type TenantKeyManagementPort, type WrappedDataKey } from "./kms/tenant-key-management.port";
 import { TenantEncryptionKeyRepository, type TenantEncryptionKeyDbClient } from "./tenant-encryption-key.repository";
 
-/** First data-key version of an organization. */
+/** First data-key version of a tenant. */
 const INITIAL_DATA_KEY_VERSION = 1;
 /** Data-key version prefix of a tenant ciphertext: `<keyVersion>:<iv>:<tag>:<data>`. */
 const CIPHERTEXT_PATTERN = /^(?<keyVersion>[1-9]\d*):(?<envelope>.+)$/;
@@ -34,10 +34,10 @@ export class TenantCiphertextError extends Error {
 	}
 }
 
-/** The ciphertext (or encrypt) names a data-key version the organization does not have. */
+/** The ciphertext (or encrypt) names a data-key version the tenant does not have. */
 export class TenantKeyNotFoundError extends Error {
-	public constructor(organizationId: string, keyVersion: number) {
-		super(`Tenant encryption key not found: organization ${organizationId} v${String(keyVersion)}`);
+	public constructor(tenantId: string, keyVersion: number) {
+		super(`Tenant encryption key not found: tenant ${tenantId} v${String(keyVersion)}`);
 		this.name = "TenantKeyNotFoundError";
 	}
 }
@@ -52,7 +52,7 @@ export class TenantKeyMaintenanceActorError extends Error {
 
 export interface TenantKeyRewrapFailure {
 	readonly tenantKeyId: string;
-	readonly organizationId: string;
+	readonly tenantId: string;
 	readonly kmsKeyId: string;
 	readonly reason: string;
 }
@@ -66,7 +66,7 @@ export interface TenantKeyRewrapSummary {
 }
 
 /**
- * Envelope encryption per organization: each organization has a random
+ * Envelope encryption per tenant: each tenant has a random
  * AES-256 data key (DEK) wrapped by the configured key-management provider's
  * key-encryption key (KEK). The provider key id stored with every wrapped DEK
  * keeps old DEKs readable after a KEK rotation; {@link rewrapToCurrentKek}
@@ -80,32 +80,32 @@ export class TenantEncryptionService {
 	public constructor(
 		private readonly tenantTx: TenantTransactionService,
 		private readonly keys: TenantEncryptionKeyRepository,
-		@Inject(ORGANIZATION_AUDIT) private readonly audit: OrganizationAuditPort<OrganizationAuditTransaction>,
+		@Inject(TENANT_AUDIT) private readonly audit: TenantAuditPort<TenantAuditTransaction>,
 		@Inject(CEDAR_POLICY_EVALUATOR) private readonly cedar: CedarPolicyEvaluatorPort,
 		private readonly requestContext: RequestContextService,
 		@Inject(TENANT_KEY_MANAGEMENT) private readonly kms: TenantKeyManagementPort,
 	) {}
 
-	/** The organization's active DEK version, creating (and auditing) the first one race-free. */
-	public async ensureOrganizationKey(organizationId: string, actorUserId: string): Promise<number> {
+	/** The tenant's active DEK version, creating (and auditing) the first one race-free. */
+	public async ensureTenantKey(tenantId: string, actorUserId: string): Promise<number> {
 		const existing: TenantEncryptionKey | null = await this.system("encryption.tenant_key.provision", "Read the active tenant key", actorUserId, (db) =>
-			this.keys.findActiveKey(organizationId, db),
+			this.keys.findActiveKey(tenantId, db),
 		);
 		if (existing !== null) {
 			return existing.keyVersion;
 		}
 
 		const wrapped: WrappedDataKey = await this.kms.wrapDataKey(randomBytes(AES_256_KEY_BYTES));
-		const policyVersion: number = await this.cedar.getActivePolicyVersion(organizationId);
+		const policyVersion: number = await this.cedar.getActivePolicyVersion(tenantId);
 		const created: { readonly row: TenantEncryptionKey; readonly inserted: boolean } = await this.system(
 			"encryption.tenant_key.provision",
 			"Create the tenant key",
 			actorUserId,
 			async (db) => {
-				const inserted: number = await this.keys.insertKeyIfAbsent({ organizationId, keyVersion: INITIAL_DATA_KEY_VERSION, ...wrapped }, db);
-				const row: TenantEncryptionKey | null = await this.keys.findActiveKey(organizationId, db);
+				const inserted: number = await this.keys.insertKeyIfAbsent({ tenantId, keyVersion: INITIAL_DATA_KEY_VERSION, ...wrapped }, db);
+				const row: TenantEncryptionKey | null = await this.keys.findActiveKey(tenantId, db);
 				if (row === null) {
-					throw new TenantKeyNotFoundError(organizationId, INITIAL_DATA_KEY_VERSION);
+					throw new TenantKeyNotFoundError(tenantId, INITIAL_DATA_KEY_VERSION);
 				}
 				if (inserted === 1) {
 					await this.audit.recordInTx(db, this.auditEntry(row, actorUserId, policyVersion, TENANT_KEY_AUDIT_ACTIONS.created, { kmsKeyId: row.kmsKeyId }));
@@ -114,20 +114,20 @@ export class TenantEncryptionService {
 			},
 		);
 		if (created.inserted) {
-			this.logger.log(`Created tenant DEK v${String(created.row.keyVersion)} for organization ${organizationId} (${created.row.kmsKeyId})`);
+			this.logger.log(`Created tenant DEK v${String(created.row.keyVersion)} for tenant ${tenantId} (${created.row.kmsKeyId})`);
 		}
 		return created.row.keyVersion;
 	}
 
-	public async encrypt(organizationId: string, plaintext: string, actorUserId: string): Promise<string> {
-		const keyVersion: number = await this.ensureOrganizationKey(organizationId, actorUserId);
-		const row: TenantEncryptionKey = await this.requireKey(organizationId, keyVersion, actorUserId);
+	public async encrypt(tenantId: string, plaintext: string, actorUserId: string): Promise<string> {
+		const keyVersion: number = await this.ensureTenantKey(tenantId, actorUserId);
+		const row: TenantEncryptionKey = await this.requireKey(tenantId, keyVersion, actorUserId);
 		const dataKey: Buffer = await this.kms.unwrapDataKey(row);
 		return `${String(keyVersion)}:${formatGcmEnvelope(gcmEncrypt(dataKey, Buffer.from(plaintext, "utf8")))}`;
 	}
 
 	/** Decrypts and authenticates; the decrypt is audited (with its purpose) before key material is used. */
-	public async decrypt(organizationId: string, payload: string, actorUserId: string, purpose: string): Promise<string> {
+	public async decrypt(tenantId: string, payload: string, actorUserId: string, purpose: string): Promise<string> {
 		const match = CIPHERTEXT_PATTERN.exec(payload);
 		const keyVersionText: string | undefined = match?.groups?.keyVersion;
 		const envelopeText: string | undefined = match?.groups?.envelope;
@@ -136,12 +136,12 @@ export class TenantEncryptionService {
 		}
 		const keyVersion = Number(keyVersionText);
 		const envelope = parseGcmEnvelope(envelopeText);
-		const policyVersion: number = await this.cedar.getActivePolicyVersion(organizationId);
+		const policyVersion: number = await this.cedar.getActivePolicyVersion(tenantId);
 
 		const row: TenantEncryptionKey = await this.system("encryption.tenant_key.unwrap", "Audit and read the tenant key for decrypt", actorUserId, async (db) => {
-			const key: TenantEncryptionKey | null = await this.keys.findKey(organizationId, keyVersion, db);
+			const key: TenantEncryptionKey | null = await this.keys.findKey(tenantId, keyVersion, db);
 			if (key === null) {
-				throw new TenantKeyNotFoundError(organizationId, keyVersion);
+				throw new TenantKeyNotFoundError(tenantId, keyVersion);
 			}
 			await this.audit.recordInTx(db, this.auditEntry(key, actorUserId, policyVersion, TENANT_KEY_AUDIT_ACTIONS.decrypted, { purpose }));
 			return key;
@@ -183,7 +183,7 @@ export class TenantEncryptionService {
 				} else if (outcome === "concurrently-updated") {
 					concurrentlyUpdated += 1;
 				} else {
-					failures.push({ tenantKeyId: row.id, organizationId: row.organizationId, kmsKeyId: row.kmsKeyId, reason: outcome.reason });
+					failures.push({ tenantKeyId: row.id, tenantId: row.tenantId, kmsKeyId: row.kmsKeyId, reason: outcome.reason });
 				}
 			}
 			const last: TenantEncryptionKey | undefined = page.at(-1);
@@ -205,7 +205,7 @@ export class TenantEncryptionService {
 			}
 			throw error;
 		}
-		const policyVersion: number = await this.cedar.getActivePolicyVersion(row.organizationId);
+		const policyVersion: number = await this.cedar.getActivePolicyVersion(row.tenantId);
 		return this.system("encryption.tenant_key.rewrap", "Swap in the re-wrapped tenant key", actorUserId, async (db) => {
 			const swapped: number = await this.keys.swapWrappedKey(row.id, row, next, nowEpochMs(), db);
 			if (swapped !== 1) {
@@ -219,12 +219,12 @@ export class TenantEncryptionService {
 		});
 	}
 
-	private async requireKey(organizationId: string, keyVersion: number, actorUserId: string): Promise<TenantEncryptionKey> {
+	private async requireKey(tenantId: string, keyVersion: number, actorUserId: string): Promise<TenantEncryptionKey> {
 		const row: TenantEncryptionKey | null = await this.system("encryption.tenant_key.unwrap", "Read the tenant key for encrypt", actorUserId, (db) =>
-			this.keys.findKey(organizationId, keyVersion, db),
+			this.keys.findKey(tenantId, keyVersion, db),
 		);
 		if (row === null) {
-			throw new TenantKeyNotFoundError(organizationId, keyVersion);
+			throw new TenantKeyNotFoundError(tenantId, keyVersion);
 		}
 		return row;
 	}
@@ -233,21 +233,15 @@ export class TenantEncryptionService {
 		operation: SystemOperation,
 		reason: string,
 		actorUserId: string,
-		work: (db: TenantEncryptionKeyDbClient & OrganizationAuditTransaction) => Promise<T>,
+		work: (db: TenantEncryptionKeyDbClient & TenantAuditTransaction) => Promise<T>,
 	): Promise<T> {
 		return this.tenantTx.withSystemOperation({ operation, reason, actorUserId }, work);
 	}
 
-	private auditEntry(
-		row: TenantEncryptionKey,
-		actorUserId: string,
-		policyVersion: number,
-		action: string,
-		metadata: Readonly<Record<string, string>>,
-	): OrganizationAuditEntry {
+	private auditEntry(row: TenantEncryptionKey, actorUserId: string, policyVersion: number, action: string, metadata: Readonly<Record<string, string>>): TenantAuditEntry {
 		const correlationId: string | undefined = this.requestContext.correlationId();
 		return {
-			organizationId: row.organizationId,
+			tenantId: row.tenantId,
 			actorUserId,
 			policyVersion,
 			action,

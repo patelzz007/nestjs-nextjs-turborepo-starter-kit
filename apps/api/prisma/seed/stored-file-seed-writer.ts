@@ -48,7 +48,7 @@ export interface SeedObject {
 	readonly mimeType: SeedFileMimeType;
 	readonly bytes: Buffer;
 	readonly uploadedById: string;
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 	readonly uploadedDaysAgo: number;
 }
 
@@ -168,7 +168,7 @@ export function createSeedFileWriter(): SeedFileWriter {
 			scannedAt: daysAgo(object.uploadedDaysAgo),
 			scanResult: scan.scanResult,
 			uploadedById: object.uploadedById,
-			organizationId: object.organizationId,
+			tenantId: object.tenantId,
 			productId: object.category === "PRODUCT_IMAGE" ? object.ownerId : null,
 			createdAt: daysAgo(object.uploadedDaysAgo),
 			updatedAt: daysAgo(object.uploadedDaysAgo),
@@ -196,7 +196,7 @@ export function createSeedFileWriter(): SeedFileWriter {
 		const softDelete = { isDeleted: true, deletedAt, deletedBy, updatedAt: deletedAt };
 		await prisma.storedFile.update({ where: { id: fileId }, data: { status: "DELETED", ...softDelete } });
 		await prisma.productImage.updateMany({ where: { fileId }, data: { ...softDelete, isPrimary: false } });
-		await prisma.organizationAsset.updateMany({ where: { fileId }, data: softDelete });
+		await prisma.tenantAsset.updateMany({ where: { fileId }, data: softDelete });
 		await prisma.userAvatar.updateMany({ where: { fileId }, data: softDelete });
 		await prisma.fileVariant.updateMany({ where: { fileId }, data: softDelete });
 		await storage.deleteObject(locatorFor(stored.storagePath));

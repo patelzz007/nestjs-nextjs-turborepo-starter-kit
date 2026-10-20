@@ -10,7 +10,7 @@ import { withSeedAttribution } from "./attributed-session";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
 import { SEED_DEVICE_PROFILES } from "./device-sessions";
-import { ORGANIZATION_SEED_IDS } from "./organizations";
+import { TENANT_SEED_IDS } from "./tenants";
 
 // ---------------------------------------------------------------------------
 // Global HTTP audit trail + geo soft delete — demo rows.
@@ -78,8 +78,8 @@ async function findPairedTill(): Promise<{
 	readonly locationId: string;
 	readonly storeId: string | null;
 } | null> {
-	const till = await prisma.organizationTerminal.findFirst({
-		where: { organizationId: ORGANIZATION_SEED_IDS.klOrganization, isDeleted: false, apiKeyId: { not: null } },
+	const till = await prisma.tenantTerminal.findFirst({
+		where: { tenantId: TENANT_SEED_IDS.klTenant, isDeleted: false, apiKeyId: { not: null } },
 		orderBy: { createdAt: "asc" },
 	});
 	if (till?.apiKeyId === undefined || till.apiKeyId === null) {
@@ -125,9 +125,10 @@ async function ensureIdempotencyRecord(adminId: string, row: HttpAuditEntry, res
 		edgeLocation: undefined,
 		principal: { userId: adminId, impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" },
 		apiKey: undefined,
-		tenant: { organizationId: undefined, storeId: undefined, locationId: undefined },
+		tenant: { tenantId: undefined, storeId: undefined, locationId: undefined },
 		systemOperations: [],
 		receivedAtEpochMs: row.occurredAt,
+		supportAccessGrantId: undefined,
 		isAuditRecorded: false,
 		actor: undefined,
 	};
@@ -187,6 +188,7 @@ type SeedRequestMetadata = Pick<
 	| "geoCity"
 	| "geoTimeZone"
 	| "impersonationSessionId"
+	| "supportAccessGrantId"
 	| "authMethod"
 	| "clientType"
 	| "httpVersion"
@@ -219,6 +221,7 @@ function defaultRequestMetadata(fields: SeedAuditFields): SeedRequestMetadata {
 		userAgent: SEED_USER_AGENT,
 		...(isBrowser ? SEED_EDGE_LOCATION : NO_EDGE_LOCATION),
 		impersonationSessionId: null,
+		supportAccessGrantId: null,
 		authMethod: isBrowser ? "SESSION_COOKIE" : fields.apiKeyId === null ? null : "API_KEY",
 		clientType: isBrowser ? "admin" : null,
 		httpVersion: SEED_HTTP_VERSION,
@@ -275,13 +278,13 @@ async function recordPosTerminalCall(till: { readonly id: string; readonly apiKe
 		{
 			correlationId: seedAuditCorrelationId(requestIndex),
 			actorUserId: null,
-			organizationId: ORGANIZATION_SEED_IDS.klOrganization,
+			tenantId: TENANT_SEED_IDS.klTenant,
 			apiKeyId: till.apiKeyId,
 			systemOperation: null,
 			actorPurpose: null,
 		},
 		async (tx) =>
-			tx.organizationTerminal.updateMany({
+			tx.tenantTerminal.updateMany({
 				where: { id: till.id, OR: [{ lastSeenAt: null }, { lastSeenAt: { not: BigInt(lastSeenAt) } }] },
 				data: { lastSeenAt: BigInt(lastSeenAt) },
 			}),
@@ -289,7 +292,7 @@ async function recordPosTerminalCall(till: { readonly id: string; readonly apiKe
 }
 
 /** Audit columns of a request with no tenant scope. */
-export const NO_TENANT = { organizationId: null, storeId: null, locationId: null };
+export const NO_TENANT = { tenantId: null, storeId: null, locationId: null };
 /** Audit columns of a request made by a user (no API key / POS terminal). */
 export const NO_MACHINE_PRINCIPAL = { apiKeyId: null, terminalId: null };
 
@@ -313,7 +316,7 @@ export async function seedHttpAuditTrail(actors: HttpAuditSeedActors): Promise<H
 			requestParams: toAuditPayload({ params: { id: String(cityId ?? 0) }, query: {} }),
 			requestBody: null,
 			responseBody: toAuditPayload({ message: `City #${String(cityId ?? 0)} deleted` }),
-			systemOperations: ["platform.superadmin", "geo.reference_data.write"],
+			systemOperations: ["geo.reference_data.write"],
 		}),
 		entry(1, {
 			method: "POST",
@@ -503,8 +506,8 @@ export async function seedHttpAuditTrail(actors: HttpAuditSeedActors): Promise<H
 		rows.push(
 			entry(POS_CHECKOUT_REQUEST, {
 				method: "POST",
-				endpoint: `${API_VERSION_PREFIX}/redemptions/checkout`,
-				path: `${API_VERSION_PREFIX}/redemptions/checkout`,
+				endpoint: `${API_VERSION_PREFIX}/integration/redemptions/checkout`,
+				path: `${API_VERSION_PREFIX}/integration/redemptions/checkout`,
 				outcome: "SUCCEEDED",
 				responseStatus: 201,
 				errorCode: null,
@@ -512,13 +515,13 @@ export async function seedHttpAuditTrail(actors: HttpAuditSeedActors): Promise<H
 				impersonatorUserId: null,
 				apiKeyId: till.apiKeyId,
 				terminalId: till.terminalId,
-				organizationId: ORGANIZATION_SEED_IDS.klOrganization,
+				tenantId: TENANT_SEED_IDS.klTenant,
 				storeId: till.storeId,
 				locationId: till.locationId,
 				requestParams: toAuditPayload({ params: {}, query: {} }),
 				requestBody: toAuditPayload({ idempotencyKey: "seed-pos-checkout-0001", billTotalMinor: 4590, codes: ["QR-SEED-0001"] }),
 				responseBody: toAuditPayload({ success: true, data: { saleId: "seed-sale", redeemed: 1 } }),
-				systemOperations: ["route.rls_bypass"],
+				systemOperations: [],
 			}),
 		);
 		await recordPosTerminalCall(till, POS_CHECKOUT_REQUEST);

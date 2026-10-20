@@ -10,7 +10,7 @@ import {
 	PolicySimulationFailedError,
 	PolicySimulationRequiredError,
 	PolicySimulationStaleError,
-	TenantPolicyDraftOrganizationRequiredError,
+	TenantPolicyDraftTenantRequiredError,
 } from "../errors/authorization.errors";
 import { PolicyPublished } from "../events/policy-published.event";
 
@@ -28,7 +28,7 @@ export type AuthorizationPolicyScope = z.output<typeof AuthorizationPolicyScopeS
 const PolicyDraftStateSchema = z
 	.object({
 		id: z.string().min(1),
-		organizationId: z.string().min(1).nullable(),
+		tenantId: z.string().min(1).nullable(),
 		scope: AuthorizationPolicyScopeSchema,
 		name: z.string().min(1).max(POLICY_DRAFT_NAME_MAX_LENGTH),
 		description: z.string().nullable(),
@@ -41,14 +41,14 @@ const PolicyDraftStateSchema = z
 		createdAt: z.number().int().nonnegative(),
 		updatedAt: z.number().int().nonnegative(),
 	})
-	// A TENANT draft always names its organization.
-	.refine((draft): boolean => draft.scope !== "TENANT" || draft.organizationId !== null);
+	// A TENANT draft always names its tenant.
+	.refine((draft): boolean => draft.scope !== "TENANT" || draft.tenantId !== null);
 
 export type PolicyDraftState = z.output<typeof PolicyDraftStateSchema>;
 
-/** The (organization, scope) slot a draft publishes into: at most one active version per slot. */
+/** The (tenant, scope) slot a draft publishes into: at most one active version per slot. */
 export interface PolicySlot {
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 	readonly scope: AuthorizationPolicyScope;
 }
 
@@ -72,7 +72,7 @@ export interface NewPolicyDraft {
 	readonly id: string;
 	readonly scope: AuthorizationPolicyScope;
 	/** Required for TENANT, ignored (stored as `null`) for platform scopes. */
-	readonly organizationId: string | null;
+	readonly tenantId: string | null;
 	readonly name: string;
 	readonly description: string | null;
 	readonly builderPayload: z.output<typeof JsonValueSchema>;
@@ -103,22 +103,22 @@ export class AuthorizationPolicyDraftAggregate extends AggregateRoot<PolicyPubli
 		}
 	}
 
-	/** The organization a draft of `scope` belongs to. @throws TenantPolicyDraftOrganizationRequiredError for a TENANT draft without one. */
-	public static organizationFor(scope: AuthorizationPolicyScope, requestedOrganizationId: string | null): string | null {
+	/** The tenant a draft of `scope` belongs to. @throws TenantPolicyDraftTenantRequiredError for a TENANT draft without one. */
+	public static tenantFor(scope: AuthorizationPolicyScope, requestedTenantId: string | null): string | null {
 		if (scope !== "TENANT") {
 			return null;
 		}
-		if (requestedOrganizationId === null) {
-			throw new TenantPolicyDraftOrganizationRequiredError();
+		if (requestedTenantId === null) {
+			throw new TenantPolicyDraftTenantRequiredError();
 		}
-		return requestedOrganizationId;
+		return requestedTenantId;
 	}
 
 	public static create(draft: NewPolicyDraft, now: EpochMs): AuthorizationPolicyDraftAggregate {
-		const organizationId: string | null = AuthorizationPolicyDraftAggregate.organizationFor(draft.scope, draft.organizationId);
+		const tenantId: string | null = AuthorizationPolicyDraftAggregate.tenantFor(draft.scope, draft.tenantId);
 		const state: PolicyDraftState = PolicyDraftStateSchema.parse({
 			id: draft.id,
-			organizationId,
+			tenantId,
 			scope: draft.scope,
 			name: draft.name,
 			description: draft.description,
@@ -147,7 +147,7 @@ export class AuthorizationPolicyDraftAggregate extends AggregateRoot<PolicyPubli
 	}
 
 	public get slot(): PolicySlot {
-		return { organizationId: this.state.organizationId, scope: this.state.scope };
+		return { tenantId: this.state.tenantId, scope: this.state.scope };
 	}
 
 	/** Status the draft was loaded with; publish compares it (CAS). */
@@ -192,6 +192,6 @@ export class AuthorizationPolicyDraftAggregate extends AggregateRoot<PolicyPubli
 			throw new PolicySimulationStaleError();
 		}
 		this.state = { ...this.state, status: "PUBLISHED", approvedById: approverUserId, updatedAt: now };
-		this.record(new PolicyPublished(now, this.state.id, this.state.organizationId, version));
+		this.record(new PolicyPublished(now, this.state.id, this.state.tenantId, version));
 	}
 }

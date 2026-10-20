@@ -1,12 +1,12 @@
-import type { OrganizationLocationScopeType } from "@workspace/shared";
+import type { LocationScopeType } from "@workspace/shared";
 
 /**
- * Where a reward can be claimed and redeemed: every store of the organization, or exactly the
+ * Where a reward can be claimed and redeemed: every store of the tenant, or exactly the
  * listed stores (unique ids, in the order they were chosen).
  */
 export class RewardLocationScope {
 	private constructor(
-		public readonly type: OrganizationLocationScopeType,
+		public readonly type: LocationScopeType,
 		public readonly locationIds: readonly string[],
 	) {}
 
@@ -19,13 +19,13 @@ export class RewardLocationScope {
 	}
 
 	/** Stored columns: a `SELECTED` reward lists its stores; an `ALL_LOCATIONS` reward has none. */
-	public static fromStorage(type: OrganizationLocationScopeType, locationIds: readonly string[]): RewardLocationScope {
+	public static fromStorage(type: LocationScopeType, locationIds: readonly string[]): RewardLocationScope {
 		return type === "ALL_LOCATIONS" ? RewardLocationScope.allLocations() : RewardLocationScope.selected(locationIds);
 	}
 
 	/**
 	 * Whether a caller limited to `managerLocationIds` (null = every store) may manage this reward:
-	 * an organization-wide reward, or one that names another store, would reach stores it may not manage.
+	 * a tenant-wide reward, or one that names another store, would reach stores it may not manage.
 	 */
 	public isManageableBy(managerLocationIds: readonly string[] | null): boolean {
 		if (managerLocationIds === null) {

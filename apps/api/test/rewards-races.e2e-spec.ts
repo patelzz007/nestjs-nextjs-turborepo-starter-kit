@@ -6,7 +6,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
+import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
 import { ApproveRewardCommand } from "../src/contexts/rewards/application/commands/approve-reward/approve-reward.command";
 import { AutoPublishDueRewardsCommand } from "../src/contexts/rewards/application/commands/auto-publish-due-rewards/auto-publish-due-rewards.command";
@@ -14,12 +14,10 @@ import { RejectRewardCommand } from "../src/contexts/rewards/application/command
 import { ReviseRewardCommand } from "../src/contexts/rewards/application/commands/revise-reward/revise-reward.command";
 import { SubmitRewardForReviewCommand } from "../src/contexts/rewards/application/commands/submit-reward-for-review/submit-reward-for-review.command";
 import { ActorContextSchema, systemActor, type ActorContext } from "../src/platform/application/actor-context";
-import { PrismaService } from "../src/prisma/prisma.service";
-import { runWithSystemRlsContext } from "../src/prisma/rls-context";
-import { createE2eApp } from "./e2e-helpers";
+import { createE2eApp, withTenantMember } from "./e2e-helpers";
 
 const DAY_MS = 86_400_000;
-const ORGANIZATION: string = ORGANIZATION_SEED_IDS.klOrganization;
+const TENANT: string = TENANT_SEED_IDS.klTenant;
 
 const IdRowSchema = z.object({ id: z.string() });
 const RewardRowSchema = z.object({ status: z.string(), title: z.string(), reviewedBy: z.string().nullable(), rejectionReason: z.string().nullable() });
@@ -37,6 +35,7 @@ describe("Reward review races (e2e)", () => {
 	let pool: Pool;
 	let reviewer: ActorContext;
 	let owner: ActorContext;
+	let merchantUserId: string;
 	const rewardIds: string[] = [];
 
 	function userActor(userId: string, isSuperAdmin: boolean): ActorContext {
@@ -44,9 +43,9 @@ describe("Reward review races (e2e)", () => {
 			kind: "user",
 			userId,
 			sessionId: randomUUID(),
-			organizationId: isSuperAdmin ? null : ORGANIZATION,
+			tenantId: isSuperAdmin ? null : TENANT,
 			isSuperAdmin,
-			accessScope: isSuperAdmin ? "superadmin" : "tenant",
+			accessScope: "tenant",
 			impersonatorUserId: null,
 			request: { requestId: randomUUID(), ip: null, userAgent: null, deviceLabel: null, endpoint: null },
 		});
@@ -54,16 +53,16 @@ describe("Reward review races (e2e)", () => {
 
 	async function createReward(status: "DRAFT" | "PENDING_REVIEW", autoPublishAt: number | null = null): Promise<string> {
 		const id = randomUUID();
-		await runWithSystemRlsContext("route.rls_bypass", async () =>
-			app.get(PrismaService).reward.create({
+		await withTenantMember(app, merchantUserId, TENANT, (tx) =>
+			tx.reward.create({
 				data: {
 					id,
-					organizationId: ORGANIZATION,
+					tenantId: TENANT,
 					title: `E2E race ${id}`,
 					description: "Created by rewards-races.e2e-spec.ts",
 					rewardType: "FREE_ITEM",
 					category: "cafe",
-					images: { create: [{ organizationId: ORGANIZATION, fileId: rewardCoverImageSeedId("free-coffee"), position: 0 }] },
+					images: { create: [{ fileId: rewardCoverImageSeedId("free-coffee"), position: 0 }] },
 					quantityTotal: 5,
 					quantityRemaining: 5,
 					expiryDate: Date.now() + 30 * DAY_MS,
@@ -108,7 +107,8 @@ describe("Reward review races (e2e)", () => {
 		app = await createE2eApp();
 		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
 		reviewer = userActor(IdRowSchema.parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'superadmin@example.com'`)).rows.at(0)).id, true);
-		owner = userActor(IdRowSchema.parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'brew.owner@kl-rewards.demo'`)).rows.at(0)).id, false);
+		merchantUserId = IdRowSchema.parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'brew.owner@kl-rewards.demo'`)).rows.at(0)).id;
+		owner = userActor(merchantUserId, false);
 	});
 
 	afterAll(async () => {
@@ -142,8 +142,8 @@ describe("Reward review races (e2e)", () => {
 		const bus = app.get(CommandBus);
 
 		const outcomes = await Promise.all([
-			outcome(bus.execute(new SubmitRewardForReviewCommand(owner, { organizationId: ORGANIZATION, rewardId }))),
-			outcome(bus.execute(new SubmitRewardForReviewCommand(owner, { organizationId: ORGANIZATION, rewardId }))),
+			outcome(bus.execute(new SubmitRewardForReviewCommand(owner, { tenantId: TENANT, rewardId }))),
+			outcome(bus.execute(new SubmitRewardForReviewCommand(owner, { tenantId: TENANT, rewardId }))),
 		]);
 
 		expect(outcomes.filter((result) => result.ok)).toHaveLength(1);
@@ -156,7 +156,7 @@ describe("Reward review races (e2e)", () => {
 		const bus = app.get(CommandBus);
 
 		const [revised, approved] = await Promise.all([
-			outcome(bus.execute(new ReviseRewardCommand(owner, { organizationId: ORGANIZATION, rewardId, title: revisedTitle }))),
+			outcome(bus.execute(new ReviseRewardCommand(owner, { tenantId: TENANT, rewardId, title: revisedTitle }))),
 			outcome(bus.execute(new ApproveRewardCommand(reviewer, { rewardId }))),
 		]);
 

@@ -12,7 +12,7 @@ const UNSAFE_METHODS: readonly string[] = ["POST", "PUT", "PATCH", "DELETE"];
 
 /**
  * Enforces same-origin mutation intent for cookie-authenticated unsafe requests.
- * Bearer requests and client type `mobile` (no ambient credential) are exempt.
+ * Bearer requests, `X-API-Key` requests and client type `mobile` (no ambient credential) are exempt.
  *
  * Validates `Origin` or `Referer` against the configured CORS allowlist and
  * requires the fixed `X-Mutation-Intent: same-origin` header from first-party clients.
@@ -39,6 +39,13 @@ export class MutationIntentGuard implements CanActivate {
 
 		const authorization: string | undefined = readFirstHeader(request.headers.authorization);
 		if (authorization?.toLowerCase().startsWith("bearer ")) {
+			return true;
+		}
+
+		// An integration or till sends its key in `X-API-Key`: an explicit credential like a Bearer token,
+		// which a cross-site page cannot attach (a custom header needs a CORS preflight the allowlist
+		// refuses), and a server-to-server caller sends no Origin.
+		if (readFirstHeader(request.headers["x-api-key"]) !== undefined) {
 			return true;
 		}
 

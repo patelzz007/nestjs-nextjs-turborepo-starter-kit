@@ -17,11 +17,13 @@ import {
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { AdminAccessOnly } from "../../../../platform/presentation/http/security/decorators/admin-access.decorator";
+import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
 import { ZodParam } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { SendTestEmailCommand } from "../../application/commands/send-test-email/send-test-email.command";
+import { EMAIL_LOG_WRITE_OPERATION } from "../../application/notifications-scope";
 import { ListEmailTemplatesQuery } from "../../application/queries/list-email-templates/list-email-templates.query";
 import { PreviewEmailTemplateQuery } from "../../application/queries/preview-email-template/preview-email-template.query";
 import { EMAIL_TEMPLATE_REGISTRY } from "../../domain/templates/email-template.registry";
@@ -81,6 +83,7 @@ export class EmailPreviewController {
 	 */
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@RequirePermission("CREATE", "EMAIL")
+	@PlatformOperation(EMAIL_LOG_WRITE_OPERATION)
 	@Post(":key/send")
 	@ApiOperation({ summary: "Send one email template (sample props)" })
 	@ZodResponse(EmailSendResultSchema, { status: HttpStatus.CREATED, description: "Outcome of the send attempt" })

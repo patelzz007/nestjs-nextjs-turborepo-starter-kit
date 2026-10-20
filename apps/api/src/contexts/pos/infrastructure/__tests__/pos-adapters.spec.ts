@@ -11,7 +11,7 @@ import { PosCredentialsAdapter } from "../adapters/pos-credentials.adapter";
 import { PosIntegrationEventsMapper } from "../outbox/pos-integration-events.mapper";
 
 const NOW = epochMs(1_792_195_200_000);
-const ORGANIZATION_ID = "22222222-2222-4222-8222-222222222222";
+const TENANT_ID = "22222222-2222-4222-8222-222222222222";
 const SALE_ID = "33333333-3333-4333-8333-333333333333";
 const CUSTOMER_ID = "44444444-4444-4444-8444-444444444444";
 const STORE_ID = "55555555-5555-4555-8555-555555555555";
@@ -72,14 +72,14 @@ describe("PosCredentialsAdapter", () => {
 
 describe("PosIntegrationEventsMapper", () => {
 	it("feeds every paid bill to the analytics stream as merchant.redeem_reward, byte-compatible with the legacy payload", () => {
-		const event = new SaleCheckedOut(NOW, SALE_ID, ORGANIZATION_ID, CUSTOMER_ID, STORE_ID, "TERM-AAAA2222", 5_000, "MYR", CLAIM_IDS);
+		const event = new SaleCheckedOut(NOW, SALE_ID, TENANT_ID, CUSTOMER_ID, STORE_ID, "TERM-AAAA2222", 5_000, "MYR", CLAIM_IDS);
 
 		expect(new PosIntegrationEventsMapper().map(event)).toEqual({
 			type: "reward.platform",
 			payload: {
 				event: "merchant.redeem_reward",
 				actorUserId: null,
-				organizationId: ORGANIZATION_ID,
+				tenantId: TENANT_ID,
 				metadata: {
 					saleId: SALE_ID,
 					customerUserId: CUSTOMER_ID,

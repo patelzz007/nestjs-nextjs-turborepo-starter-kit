@@ -25,8 +25,12 @@ import { seedLog } from "./seed-log";
 // PUBLISHED outbox row (the seeded ones, shaped by `PlatformOutboxService`) through the same handler and
 // the same SQL, as the `analytics-warehouse` consumer. The row id is the outbox row id, so a re-run is a
 // duplicate delivery (a no-op) — idempotent by the consumer's own guarantee. It connects with the seed's
-// owner connection; the production `analytics_consumer` login (provisioned separately) is not needed.
+// login and acts as the `analytics_consumer` role (`SET ROLE`), so the consumer's RLS policies apply to it
+// exactly as to the production consumer login (every table forces RLS); that login is not needed.
 // ---------------------------------------------------------------------------
+
+/** The database role the analytics consumer runs as (prisma/rls/90-analytics-consumer.sql). */
+const ANALYTICS_CONSUMER_ROLE = "analytics_consumer";
 
 const POOL_SETTINGS = { max: 1, connectionTimeoutMs: 10_000, idleTimeoutMs: 1_000, statementTimeoutMs: 30_000 };
 /** The seed never retries: a failure is a seed bug and must surface. */
@@ -49,6 +53,14 @@ export interface AnalyticsIngestSummary {
 	readonly duplicates: number;
 }
 
+/** Fails with the first refused `SET ROLE analytics_consumer`: the replay did not run as the consumer. */
+async function assertActedAsConsumer(roleSwitches: readonly Promise<Error | null>[]): Promise<void> {
+	const refused: Error | undefined = (await Promise.all(roleSwitches)).find((outcome): outcome is Error => outcome !== null);
+	if (refused !== undefined) {
+		throw new Error(`The analytics ingest could not act as ${ANALYTICS_CONSUMER_ROLE}: ${refused.message}`);
+	}
+}
+
 /** Replays every PUBLISHED outbox event through the analytics consumer's own handler. */
 export async function seedAnalyticsIngest(): Promise<AnalyticsIngestSummary> {
 	const databaseUrl: string | undefined = process.env.DATABASE_URL;
@@ -57,6 +69,17 @@ export async function seedAnalyticsIngest(): Promise<AnalyticsIngestSummary> {
 	}
 	const published = await prisma.outboxEvent.findMany({ where: { status: "PUBLISHED" }, orderBy: [{ topic: "asc" }, { createdAt: "asc" }, { id: "asc" }] });
 	const pool = createConsumerPool(databaseUrl, POOL_SETTINGS);
+	// Queued before any query the handler issues on the new connection. A refused switch is kept (never an
+	// unhandled rejection) and reported as the seed's failure below: it is the cause of whatever failed next.
+	const roleSwitches: Promise<Error | null>[] = [];
+	pool.on("connect", (client): void => {
+		roleSwitches.push(
+			client
+				.query(`SET ROLE ${ANALYTICS_CONSUMER_ROLE}`)
+				.then((): null => null)
+				.catch((error: unknown): Error => (error instanceof Error ? error : new Error(String(error)))),
+		);
+	});
 	const controller = new AbortController();
 	const deps: MessageHandlerDeps = {
 		store: new PgInboxStore(pool),
@@ -97,6 +120,7 @@ export async function seedAnalyticsIngest(): Promise<AnalyticsIngestSummary> {
 		}
 	} finally {
 		await pool.end();
+		await assertActedAsConsumer(roleSwitches);
 	}
 	seedLog(`✅ analytics ingest: ${String(processed)} event(s) applied, ${String(duplicates)} already ingested`);
 	return { processed, duplicates };

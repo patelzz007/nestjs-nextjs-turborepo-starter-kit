@@ -1,8 +1,15 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 
-import { PrismaService } from "../../../../prisma/prisma.service";
 import type { ModuleHealthIndicator, ModuleHealthReport } from "../../../../platform/presentation/http/health/health.service";
+import type { SystemDatabaseContext } from "../../../../prisma/tenant-context";
+import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import { SYSTEM_ROLE_CATALOG } from "../reference-data/system-role-catalog";
+
+/** Readiness probe for the platform role catalog. */
+interface SystemRoleHealthLookup {
+	withSystemOperation<TResult>(context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult>;
+}
 
 /**
  * Readiness of the authorization system: every platform role the code depends on by
@@ -16,7 +23,7 @@ import { SYSTEM_ROLE_CATALOG } from "../reference-data/system-role-catalog";
  */
 @Injectable()
 export class AuthorizationHealthIndicator implements ModuleHealthIndicator {
-	public constructor(private readonly prisma: PrismaService) {}
+	public constructor(@Inject(TenantTransactionService) private readonly transactions: SystemRoleHealthLookup) {}
 
 	public async isHealthy(): Promise<boolean> {
 		return (await this.missingSystemRoles()).length === 0;
@@ -33,10 +40,14 @@ export class AuthorizationHealthIndicator implements ModuleHealthIndicator {
 	/** Names from the catalog with no live system role, in catalog order. */
 	private async missingSystemRoles(): Promise<readonly string[]> {
 		const expected: readonly string[] = SYSTEM_ROLE_CATALOG.map((role) => role.name);
-		const present = await this.prisma.role.findMany({
-			where: { name: { in: [...expected] }, isSystem: true, isDeleted: false },
-			select: { name: true },
-		});
+		const present = await this.transactions.withSystemOperation(
+			{ operation: "authorization.health.system_roles", reason: "Readiness: live platform system roles", actorUserId: null },
+			(tx) =>
+				tx.role.findMany({
+					where: { name: { in: [...expected] }, isSystem: true, isDeleted: false },
+					select: { name: true },
+				}),
+		);
 		const presentNames: ReadonlySet<string> = new Set(present.map((role) => role.name));
 		return expected.filter((name) => !presentNames.has(name));
 	}

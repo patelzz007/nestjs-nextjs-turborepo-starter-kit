@@ -22,12 +22,11 @@ const VIEWER: ActorContext = {
 	kind: "user",
 	userId: "99999999-9999-4999-8999-999999999999",
 	sessionId: "session-1",
-	organizationId: null,
+	tenantId: null,
 	isSuperAdmin: true,
-	accessScope: "superadmin",
+	accessScope: "tenant",
 	impersonatorUserId: null,
 	request: { requestId: "corr-view", ip: null, userAgent: null, deviceLabel: null, endpoint: null },
-	routeRlsBypass: false,
 };
 
 type HandlerName = "list" | "stream";

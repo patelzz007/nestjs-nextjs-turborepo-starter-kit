@@ -40,7 +40,7 @@ export const AUDIT_LOG_SUMMARY_SELECT = {
 	impersonatorUserId: true,
 	apiKeyId: true,
 	terminalId: true,
-	organizationId: true,
+	tenantId: true,
 	storeId: true,
 	locationId: true,
 	ipAddress: true,
@@ -96,7 +96,7 @@ export function buildHttpAuditLogListWhere(query: HttpAuditLogListQuery): Prisma
 			...fieldWhere(toPrismaNullableStringFilter(filter?.errorCode), (errorCode) => ({ errorCode })),
 			...fieldWhere(toPrismaNullableEqualityFilter(filter?.actorUserId), (actorUserId) => ({ actorUserId })),
 			...fieldWhere(toPrismaNullableEqualityFilter(filter?.impersonatorUserId), (impersonatorUserId) => ({ impersonatorUserId })),
-			...fieldWhere(toPrismaNullableEqualityFilter(filter?.organizationId), (organizationId) => ({ organizationId })),
+			...fieldWhere(toPrismaNullableEqualityFilter(filter?.tenantId), (tenantId) => ({ tenantId })),
 			...fieldWhere(toPrismaNullableEqualityFilter(filter?.apiKeyId), (apiKeyId) => ({ apiKeyId })),
 			...fieldWhere(toPrismaNullableStringFilter(filter?.ipAddress), (ipAddress) => ({ ipAddress })),
 			...fieldWhere(toPrismaNullableEqualityFilter(filter?.ipScope), (ipScope) => ({ ipScope })),
@@ -144,7 +144,7 @@ export class PrismaHttpAuditLogReadRepository implements HttpAuditLogReader {
 		private readonly references: PrismaAuditReferenceReader,
 	) {}
 
-	/** One page of rows matching the (already validated) list query, payloads excluded, actor and organization names resolved. */
+	/** One page of rows matching the (already validated) list query, payloads excluded, actor and tenant names resolved. */
 	public async list(query: HttpAuditLogListQuery): Promise<PaginatedServiceResult<HttpAuditLogSummary>> {
 		const rows = await fetchListPage(query, {
 			where: buildHttpAuditLogListWhere(query),
