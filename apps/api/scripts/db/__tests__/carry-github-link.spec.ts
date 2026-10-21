@@ -1,10 +1,18 @@
 import { mkdtempSync, statSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { exportGithubLink, importGithubLink, parseCarryArguments, type CarryIo, type GithubLinkCarryRow, type GithubLinkCarryStore } from "../carry-github-link";
+import {
+	DEFAULT_CARRY_PATH,
+	exportGithubLink,
+	importGithubLink,
+	parseCarryArguments,
+	type CarryIo,
+	type GithubLinkCarryRow,
+	type GithubLinkCarryStore,
+} from "../carry-github-link";
 
 const CIPHERTEXT = "iv:tag:ciphertext-do-not-log";
 
@@ -86,6 +94,12 @@ describe("carry-github-link", () => {
 		const result = await importGithubLink(store, "/tmp/link.json", io);
 		expect(result).toEqual({ kind: "missing_user", email: "missing@example.com" });
 		expect(store.upserts).toEqual([]);
+	});
+
+	it("writes the export to ~/.starter-kit/github-link.json when no --out is given", () => {
+		const command = parseCarryArguments(["export"]);
+		expect(command).toEqual({ kind: "export", out: join(homedir(), ".starter-kit", "github-link.json") });
+		expect(DEFAULT_CARRY_PATH).toBe(join(homedir(), ".starter-kit", "github-link.json"));
 	});
 
 	it("accepts the pnpm argument separator before export", () => {

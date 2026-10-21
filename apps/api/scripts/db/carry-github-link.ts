@@ -1,7 +1,7 @@
 /**
  * Carries the superadmin's GitHub account link across a baseline reset (multi-tenancy plan MT-02).
  *
- *   pnpm db:carry-github-link -- export [--out <file>]
+ *   pnpm db:carry-github-link -- export [--out <file>]   (default ~/.starter-kit/github-link.json)
  *   pnpm db:carry-github-link -- import --in <file>
  *
  * The file holds the row exactly as stored (ciphertext, never decrypted) plus the user's email,
@@ -23,7 +23,11 @@ const CARRY_FILE_MODE = 0o600;
 /** The directory that holds the default carry file. */
 const CARRY_DIRECTORY_MODE = 0o700;
 
-const DEFAULT_CARRY_PATH = resolve(homedir(), ".rewardhub", "github-link.json");
+/** The per-user folder (in the home directory) for files the kit's scripts keep outside the repository. */
+const CARRY_DIRECTORY_NAME = ".starter-kit";
+
+/** Where `export` writes when no `--out` is given: `~/.starter-kit/github-link.json`. */
+export const DEFAULT_CARRY_PATH = resolve(homedir(), CARRY_DIRECTORY_NAME, "github-link.json");
 
 const EXIT_OK = 0;
 const EXIT_FAILED = 1;

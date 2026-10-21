@@ -44,7 +44,7 @@
 		"@workspace/eslint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
 		"eslint": "^9.39.5",
-		"expo": "~57.0.30",
+		"expo": "~57.0.31",
 		"expo-camera": "~57.0.6",
 		"expo-constants": "~57.0.22",
 		"expo-haptics": "~57.0.3",

@@ -157,7 +157,7 @@ Run these from the repository root, with the dev servers stopped. The GitHub tok
 ```bash
 pnpm kill:all                                   # 1. stop the dev servers (ports 3000–3003, 8080)
 
-pnpm db:carry-github-link -- export             # 2. save the superadmin's GitHub link to ~/.rewardhub/github-link.json
+pnpm db:carry-github-link -- export             # 2. save the superadmin's GitHub link to ~/.starter-kit/github-link.json
                                                 #    (skip when no token is linked yet)
 
 # 3. drop and rebuild — pick ONE:
@@ -166,7 +166,7 @@ pnpm db:reset                                   #    a. drop every table, re-app
 # dropdb <db-name> && createdb <db-name>        #    b. <db-name> is the database in DATABASE_URL (apps/api/.env)
 # pnpm setup:db                                 #       then build shared → generate → deploy → RLS → seed
 
-pnpm db:carry-github-link -- import --in ~/.rewardhub/github-link.json
+pnpm db:carry-github-link -- import --in ~/.starter-kit/github-link.json
                                                 # 4. put the GitHub link back on the superadmin (matched by email)
 
 pnpm dev                                        # 5. start everything again

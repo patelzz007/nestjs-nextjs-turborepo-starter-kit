@@ -457,7 +457,7 @@ Every ID below is a real automated test against Postgres as `app_runtime`, in `a
 
 - **Read first:** the `GithubAccountLink` model, the GitHub token encryption code (`rg "GithubAccountLink" apps/api/src`) and `docs/technical/` on encryption keys.
 - **Do:** add `apps/api/scripts/db/carry-github-link.ts`, with a `db:carry-github-link` script in `apps/api/package.json`:
-  - `export --out <file>` writes the superadmin's `GithubAccountLink` row exactly as stored (ciphertext, never decrypted) to a JSON file with mode `0600`, outside the repo (default `~/.rewardhub/github-link.json`). It also writes the user's email so the link can be matched after a reseed.
+  - `export --out <file>` writes the superadmin's `GithubAccountLink` row exactly as stored (ciphertext, never decrypted) to a JSON file with mode `0600`, outside the repo (default `~/.starter-kit/github-link.json`). It also writes the user's email so the link can be matched after a reseed.
   - `import --in <file>` finds the user by email and upserts the row, keeping every column.
   - It writes through a new operation, `seed.github_link.carry` (`GithubAccountLink`, `User`).
   - It never logs the token.
