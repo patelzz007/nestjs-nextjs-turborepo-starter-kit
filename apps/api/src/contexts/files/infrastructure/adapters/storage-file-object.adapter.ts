@@ -2,7 +2,7 @@ import { HttpStatus } from "@nestjs/common";
 import {
 	EpochMsSchema,
 	getFileCategoryPolicy,
-	type CreateFileUploadUrlInput,
+	type FileUploadRequest,
 	type CreateFileUploadUrlResponse,
 	type FileDownloadDisposition,
 	type FileDownloadResponse,
@@ -48,7 +48,7 @@ export class StorageFileObjectAdapter implements FileObjectStoragePort {
 		private readonly renditions: ImageRenditionService,
 	) {}
 
-	public stagingLocator(input: CreateFileUploadUrlInput, fileId: string, ownerId: string): StorageObjectLocator {
+	public stagingLocator(input: FileUploadRequest, fileId: string, ownerId: string): StorageObjectLocator {
 		const path = buildStagingPath({ category: input.category, ownerId, fileId, fileName: input.fileName, mimeType: input.mimeType });
 		return toStorageObjectLocator(this.config.storage.provider, this.config.storage.privateContainer, path);
 	}

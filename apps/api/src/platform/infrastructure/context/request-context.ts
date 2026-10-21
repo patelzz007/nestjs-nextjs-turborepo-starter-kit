@@ -31,7 +31,6 @@ import { correlationIdFor } from "./correlation-id";
 /** Server-verified tenant scope of the request. Absent ids were not requested or not proven. */
 export interface RequestTenant {
 	readonly tenantId: string | undefined;
-	readonly storeId: string | undefined;
 	readonly locationId: string | undefined;
 }
 
@@ -61,7 +60,7 @@ export interface RequestApiKeyPrincipal {
 	readonly tenantId: string;
 	/** The POS terminal the key acts for, when known. */
 	readonly terminalId: string | undefined;
-	/** The store the key itself is limited to (`null` = tenant-wide) — the database store scope of the request. */
+	/** The location the key itself is limited to (`null` = tenant-wide) — the database location scope of the request. */
 	readonly locationId: string | null;
 }
 
@@ -122,7 +121,7 @@ export interface RequestLogFields {
 	readonly tenantId?: string;
 }
 
-const EMPTY_TENANT: RequestTenant = { tenantId: undefined, storeId: undefined, locationId: undefined };
+const EMPTY_TENANT: RequestTenant = { tenantId: undefined, locationId: undefined };
 
 /**
  * The ALS store holds a single mutable slot so later lifecycle phases can
@@ -241,7 +240,7 @@ export class RequestContextService {
 	public bindTenant(tenant: Partial<RequestTenant>): void {
 		this.update((context: RequestContext): RequestContext => ({
 			...context,
-			tenant: { tenantId: tenant.tenantId, storeId: tenant.storeId, locationId: tenant.locationId },
+			tenant: { tenantId: tenant.tenantId, locationId: tenant.locationId },
 		}));
 	}
 

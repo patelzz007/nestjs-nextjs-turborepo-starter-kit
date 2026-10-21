@@ -19,6 +19,9 @@ export function formatClaimApiError(error: Error): string {
 		if (error.error === "OTP_REQUIRED") {
 			return "Verify your phone with an OTP before claiming.";
 		}
+		if (error.error === "CLAIM_CUSTOMER_BANNED") {
+			return "This business no longer offers you its rewards.";
+		}
 		if (error.error === "LEGAL_ACCEPTANCE_REQUIRED") {
 			return `Accept the ${BRAND_NAME} terms before claiming.`;
 		}

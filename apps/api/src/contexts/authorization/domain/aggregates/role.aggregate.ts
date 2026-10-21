@@ -1,7 +1,8 @@
 import type { EpochMs } from "@workspace/shared";
 import { z } from "zod";
 
-import { CorruptAuthorizationStateError, DeletedRoleNotFoundError, RoleHierarchyCycleError, SystemRoleImmutableError } from "../errors/authorization.errors";
+import { DeletedRoleNotFoundError, RoleHierarchyCycleError, SystemRoleImmutableError } from "../errors/authorization.errors";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** `Role.name` column width. */
 export const ROLE_NAME_MAX_LENGTH = 100;
@@ -80,7 +81,7 @@ export class RoleAggregate {
 	public static rehydrate(state: RoleState): RoleAggregate {
 		const parsed = RoleStateSchema.safeParse(state);
 		if (!parsed.success) {
-			throw new CorruptAuthorizationStateError("Role", state.id);
+			throw new CorruptAggregateStateError("Role", state.id);
 		}
 		return new RoleAggregate(parsed.data);
 	}

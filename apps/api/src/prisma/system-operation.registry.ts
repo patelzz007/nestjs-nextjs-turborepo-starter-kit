@@ -132,8 +132,6 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 			"RewardLocationScope",
 			"RewardRedemption",
 			"RewardSale",
-			"Store",
-			"StoreMembership",
 			"TenantApiKey",
 			"TenantInvitationLocationScope",
 			"TenantTerminal",
@@ -141,8 +139,8 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	),
 	"tenancy.default_tenant.verify": runtime("Boot check: the single-tenant DEFAULT_TENANT_ID names a live tenant", tables("Tenant")),
 	"auth.membership.lookup": runtime(
-		"Resolve a tenant from its slug, a previous slug, or its id, and verify the caller's membership, store, and location",
-		tables("Membership", "MembershipLocationScope", "Tenant", "TenantSlugHistory", "Store", "StoreMembership", "Location"),
+		"Resolve a tenant from its slug, a previous slug, or its id, and verify the caller's membership and location",
+		tables("Membership", "MembershipLocationScope", "Tenant", "TenantSlugHistory", "Location"),
 	),
 	"auth.api_key.lookup": runtime(
 		"Authenticate a merchant API key, confirm its terminal and the tenant's operating state, and record last use",
@@ -219,8 +217,20 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 		tables("Reward", "RewardImage", "RewardLocationScope", "Location", "User", "RewardOtpChallenge", "EmailLog", "OutboxEvent"),
 	),
 	"claims.reward.claim": runtime(
-		"Lock the customer, spend the claim code, reserve one unit, attach a referral, and store the claim with the verified phone",
-		tables("RewardLegalAcceptance", "User", "RewardOtpChallenge", "Reward", "RewardImage", "RewardLocationScope", "Location", "RewardReferral", "RewardClaim"),
+		"Lock the customer, spend the claim code, check the merchant operates and has not banned the customer, reserve one unit, attach a referral, and store the claim with the verified phone",
+		tables(
+			"RewardLegalAcceptance",
+			"User",
+			"RewardOtpChallenge",
+			"Reward",
+			"RewardImage",
+			"RewardLocationScope",
+			"Location",
+			"RewardReferral",
+			"RewardClaim",
+			"Tenant",
+			"TenantCustomerBan",
+		),
 	),
 	"rewards.referral_credit.deliver": runtime(
 		"Read a credited referral's referrer email and mark it notified — whoever triggered the delivery (the POS checkout right after commit, or the retry job)",
@@ -261,9 +271,27 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	"auth.account.lookup": runtime("Read an account by email or id, including the check that an email is already registered", tables("User")),
 	"auth.admin_users.read": runtime("Read the platform admin user list and one account's security fields after the USER permission check", tables("User")),
 	"auth.admin_users.unlock": runtime("Clear a locked account's failed-attempt counter for a platform administrator", tables("User")),
+	"auth.admin_users.ban": runtime(
+		"A platform admin bans an account (deactivate + ban columns, compare-and-set on tokenVersion) and revokes every device session, after the DELETE USER check",
+		tables("User", "RefreshToken", "OutboxEvent"),
+	),
+	"auth.admin_users.unban": runtime("A platform admin lifts an account's ban (compare-and-set on the ban), after the DELETE USER check", tables("User")),
 	"auth.principal.lookup": runtime(
-		"Read an account, its roles, grants, store-membership roles, and recently revoked sessions, or whether an impersonation session is still live",
-		tables("User", "UserRole", "Role", "RolePermission", "Permission", "UserPermission", "Store", "StoreMembership", "RefreshToken", "ImpersonationSession"),
+		"Read an account, its roles, grants, location roles, and recently revoked sessions, or whether an impersonation session is still live",
+		tables(
+			"User",
+			"UserRole",
+			"Role",
+			"RolePermission",
+			"Permission",
+			"UserPermission",
+			"Membership",
+			"MembershipLocationScope",
+			"Location",
+			"Tenant",
+			"RefreshToken",
+			"ImpersonationSession",
+		),
 	),
 	"auth.merchant_portal.lookup": runtime(
 		"Read whether a signing-in account belongs to a merchant tenant or has a pending team invite",
@@ -386,9 +414,9 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 		tables("User", "Membership", "Location", "TenantInvitation", "TenantInvitationLocationScope", "TenantAuditLog", "EmailLog", "OutboxEvent"),
 	),
 	"tenant.invitation.revoke": runtime("Revoke a team member invitation", tables("TenantInvitation", "TenantInvitationLocationScope", "TenantAuditLog")),
-	"tenant.membership.remove_from_store": runtime(
-		"Remove a team member from one store: store membership soft delete + location scope row removal",
-		tables("Membership", "MembershipLocationScope", "StoreMembership", "Store", "TenantAuditLog"),
+	"tenant.membership.remove_from_location": runtime(
+		"Remove a team member from one location: soft-delete its location scope row (and the location role it carries)",
+		tables("Membership", "MembershipLocationScope", "TenantAuditLog"),
 	),
 	"tenant.invitation.resolve_token": runtime(
 		"Resolve a team invitation from its token",
@@ -412,7 +440,6 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 			"TenantAuditLog",
 			"TenantMerchantProfile",
 			"Location",
-			"Store",
 			"TenantLifecycleEvent",
 		),
 	),
@@ -440,19 +467,64 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 		),
 	),
 
-	"tenant.location.admin_create": runtime(
-		"A platform admin creates a tenant store location",
-		tables("Tenant", "TenantMerchantProfile", "Location", "Store", "TenantAuditLog"),
-	),
-	"tenant.location.admin_review": runtime("A platform admin approves or rejects a store location request", tables("Location", "Store", "TenantAuditLog")),
+	"tenant.location.admin_create": runtime("A platform admin creates a tenant store location", tables("Tenant", "TenantMerchantProfile", "Location", "TenantAuditLog")),
+	"tenant.location.admin_review": runtime("A platform admin approves or rejects a store location request", tables("Location", "TenantAuditLog")),
 	"tenant.location.admin_list": runtime("A platform admin lists pending store location requests", tables("Location", "Tenant")),
 	"tenant.merchant.admin_read": runtime(
 		"A platform admin reads merchant tenants (list, detail, KYB evidence with its stored-file metadata and download) across tenants, after the LIST MERCHANT_ORG check",
 		tables("Tenant", "TenantMerchantProfile", "Membership", "User", "TenantKybFile", "StoredFile", "Location"),
 	),
 	"tenant.location.close": runtime(
-		"A merchant closes one of its stores: soft-deletes the store and revokes its memberships, terminals and keys in one transaction",
-		tables("Location", "Store", "StoreMembership", "MembershipLocationScope", "TenantTerminal", "TenantApiKey", "TenantAuditLog"),
+		"A merchant closes one of its locations: soft-deletes it and its member scope rows, terminals and keys in one transaction",
+		tables("Location", "MembershipLocationScope", "TenantTerminal", "TenantApiKey", "TenantAuditLog"),
+	),
+	"tenant.lifecycle.read": runtime(
+		"Read a tenant's lifecycle state, current suspension and appeals (and resolve a lifecycle route's tenant for an active member), after the route's membership or MERCHANT_ORG check",
+		tables("Tenant", "TenantSlugHistory", "Membership", "TenantLifecycleEvent", "TenantSuspensionAppeal", "User"),
+	),
+	"tenant.lifecycle.appeal": runtime(
+		"A suspended tenant's owner appeals the suspension: the PENDING appeal plus its tenant audit row, after the manage_verification check",
+		tables("Tenant", "TenantSuspensionAppeal", "TenantAuditLog", "AuthorizationPolicyVersion"),
+	),
+	"tenant.lifecycle.reactivate": runtime(
+		"The owner reactivates a tenant pending deletion within its grace period: compare-and-set on the lifecycle state, lifecycle event and tenant audit row",
+		tables("Tenant", "TenantSlugHistory", "Membership", "TenantLifecycleEvent", "TenantAuditLog", "AuthorizationPolicyVersion"),
+	),
+	"tenant.membership.leave": runtime(
+		"A member leaves a tenant (any membership status): soft-delete the membership and its location scope rows, with the tenant audit row",
+		tables("Tenant", "TenantSlugHistory", "Membership", "MembershipLocationScope", "TenantAuditLog", "AuthorizationPolicyVersion"),
+	),
+	"tenant.lifecycle.admin_suspend": runtime(
+		"A platform admin suspends a tenant: compare-and-set on the lifecycle state, lifecycle event and tenant audit row, after the MANAGE MERCHANT_ORG check",
+		tables("Tenant", "TenantLifecycleEvent", "TenantAuditLog", "AuthorizationPolicyVersion"),
+	),
+	"tenant.lifecycle.admin_ban": runtime(
+		"A super admin bans a tenant and closes its pending suspension appeal: compare-and-set on the lifecycle state, lifecycle event and tenant audit row, after the super-admin check",
+		tables("Tenant", "TenantLifecycleEvent", "TenantSuspensionAppeal", "TenantAuditLog", "AuthorizationPolicyVersion"),
+	),
+	"tenant.lifecycle.admin_unban": runtime(
+		"A super admin lifts a tenant's ban: compare-and-set on the lifecycle state, lifecycle event and tenant audit row, after the super-admin check",
+		tables("Tenant", "TenantLifecycleEvent", "TenantAuditLog", "AuthorizationPolicyVersion"),
+	),
+	"tenant.customer_ban.create": runtime(
+		"A merchant bans the customer behind one of its redemptions at the caller's stores: the active ban plus its tenant audit row, after the manage_rewards check",
+		tables("RewardRedemption", "RewardClaim", "Reward", "TenantCustomerBan", "TenantAuditLog", "AuthorizationPolicyVersion"),
+	),
+	"tenant.customer_ban.lift": runtime(
+		"A merchant lifts one of its customer bans (compare-and-set on the ban still being active) with its tenant audit row, after the manage_rewards check",
+		tables("TenantCustomerBan", "TenantAuditLog", "AuthorizationPolicyVersion"),
+	),
+	"tenant.customer_ban.read": runtime(
+		"Read a tenant's customer bans with the member who made each and the redemption it was made from, after the manage_rewards check",
+		tables("TenantCustomerBan", "User", "RewardRedemption", "RewardClaim", "Reward"),
+	),
+	"tenant.lifecycle.admin_reinstate": runtime(
+		"A platform admin reinstates a suspended tenant and accepts its pending appeal, with the lifecycle event and tenant audit row, after the MANAGE MERCHANT_ORG check",
+		tables("Tenant", "TenantLifecycleEvent", "TenantSuspensionAppeal", "TenantAuditLog", "AuthorizationPolicyVersion"),
+	),
+	"tenant.lifecycle.admin_reject_appeal": runtime(
+		"A platform admin rejects a tenant's pending appeal (compare-and-set on PENDING) with the tenant audit row, after the MANAGE MERCHANT_ORG check",
+		tables("TenantSuspensionAppeal", "TenantAuditLog", "AuthorizationPolicyVersion"),
 	),
 	"tenant.kyb.admin_decide": runtime(
 		"A platform admin decides a merchant's KYB review: locked compare-and-set on the merchant profile plus the tenant audit row, after the MANAGE MERCHANT_ORG check",
@@ -464,10 +536,6 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	),
 
 	"encryption.tenant_key.provision": runtime("Create or ensure a tenant's tenant encryption key", tables("TenantEncryptionKey", "TenantAuditLog")),
-	"encryption.tenant_key.unwrap": runtime(
-		"Read the wrapped tenant data-encryption key (and append the decrypt audit row) to unwrap it",
-		tables("TenantEncryptionKey", "TenantAuditLog"),
-	),
 	"encryption.tenant_key.rewrap": runtime(
 		"Maintenance: re-wrap tenant data keys to the current key-encryption key (compare-and-swap + audit row); SuperAdmin actor only",
 		tables("TenantEncryptionKey", "TenantAuditLog", "User"),
@@ -480,14 +548,34 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	),
 	"support_access.revoke": runtime("Revoke a support access grant", tables("SupportAccessGrant", "TenantAuditLog")),
 	"support_access.verify": runtime("Verify an active support access grant", tables("SupportAccessGrant")),
+	"support_access.admin_read": runtime(
+		"List support access grants with their tenants and people for a platform SuperAdmin, after the READ USER check",
+		tables("SupportAccessGrant", "Tenant", "User"),
+	),
+	"support_access.tenant_read": runtime(
+		"List one tenant's support access grants for its active owner (the owner check runs in the same read)",
+		tables("SupportAccessGrant", "Tenant", "TenantSlugHistory", "Membership", "User"),
+	),
+	"referrals.reward_link.create": runtime(
+		"Lock the signed-in referrer, check the reward can be shared, count their unused links and insert one PENDING reward referral",
+		tables("User", "Reward", "RewardReferral"),
+	),
+	"referrals.attribution.record": runtime(
+		"Read a PENDING reward referral by the link's token and store it as the signed-in referee's pending attribution",
+		tables("RewardReferral", "User"),
+	),
+	"maintenance.support_access_expiry": runtime(
+		"Maintenance: mark non-terminal support access grants past their expiry EXPIRED (compare-and-set on the loaded status)",
+		tables("SupportAccessGrant"),
+	),
 
 	"authorization.rbac.mutate": runtime(
 		"One RBAC change (roles, permissions, assignments) with its session revocation and permission audit row, in one transaction — only after the route permission + privilege-escalation checks; catalog tables are bypass-write",
-		tables("Role", "RolePermission", "Permission", "UserRole", "UserPermission", "User", "StoreMembership", "PermissionAuditLog", "RefreshToken"),
+		tables("Role", "RolePermission", "Permission", "UserRole", "UserPermission", "User", "Membership", "MembershipLocationScope", "PermissionAuditLog", "RefreshToken"),
 	),
 	"authorization.rbac.inspect": runtime(
 		"Read a target user's role assignments and direct grants (own-row RLS) for an RBAC preview or conflict check — only after the route permission check",
-		tables("UserRole", "Role", "RolePermission", "Permission", "UserPermission"),
+		tables("UserRole", "Role", "RolePermission", "Permission", "UserPermission", "Membership", "MembershipLocationScope"),
 	),
 	"authorization.rbac.catalog.read": runtime(
 		"Read the role and permission catalog for the admin lists — only after the ROLE or PERMISSION permission check",

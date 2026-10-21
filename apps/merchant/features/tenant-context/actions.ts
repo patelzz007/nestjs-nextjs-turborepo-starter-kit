@@ -4,7 +4,7 @@ export type TenantContextAction =
 	| { readonly type: "[ Tenant Context ] Initialized"; readonly selectedLocationId: string | null }
 	/** The member picked one store in the location switcher. */
 	| { readonly type: "[ Tenant Context ] Location Selected"; readonly locationId: string }
-	/** The member picked "All locations" (org-wide rollups). */
+	/** The member picked "All locations" (tenant-wide rollups). */
 	| { readonly type: "[ Tenant Context ] All Locations Selected" }
 	/** The API refused a store as outside the member's scope (403 `TENANT_LOCATION_FORBIDDEN`) — e.g. a stale choice. */
 	| { readonly type: "[ Tenant Context ] Location Rejected"; readonly locationId: string };

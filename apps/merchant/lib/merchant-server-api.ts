@@ -11,10 +11,10 @@ import { cache } from "react";
 import { readSidebarOpenCookie } from "@workspace/client/lib/features/sidebar/open-cookie";
 
 import { MERCHANT_SIDEBAR_STORAGE_KEY } from "@/lib/navigation/sidebar-menu";
-import { locationCookieName } from "@/contexts/tenancy/lib/org/location";
-import { SWITCHER_MEMBERSHIPS_QUERY } from "@/contexts/tenancy/lib/org/memberships-query";
-import { isCanonicalTenantSlug, isTenantRouteKey } from "@/contexts/tenancy/lib/org/resolve-slug";
-import { TENANT_SLUG_COOKIE_NAME } from "@/contexts/tenancy/lib/org/slug";
+import { locationCookieName } from "@/contexts/tenancy/lib/tenant/location";
+import { SWITCHER_MEMBERSHIPS_QUERY } from "@/contexts/tenancy/lib/tenant/memberships-query";
+import { isCanonicalTenantSlug, isTenantRouteKey } from "@/contexts/tenancy/lib/tenant/resolve-slug";
+import { TENANT_SLUG_COOKIE_NAME } from "@/contexts/tenancy/lib/tenant/slug";
 import { ROUTES } from "@/lib/routes";
 
 export type MerchantServerCaller = ServerCaller;
@@ -29,7 +29,7 @@ export function createMerchantServerCaller(): MerchantServerCaller {
  * `/auth/permissions`), asked once per request (`React.cache`). The root
  * layout starts the auth store from it, so the first paint already knows who
  * is signed in (the super-admin impersonation panel, the session's scope). An
- * outage only leaves the store to the browser's session check: the org layout
+ * outage only leaves the store to the browser's session check: the tenant layout
  * renders it through its own memberships call.
  */
 export const loadMerchantServerSession = cache((): Promise<ServerSessionOutcome> => loadServerSessionOutcome(createMerchantServerCaller()));
@@ -65,8 +65,8 @@ export async function readTenantSlugCookie(): Promise<string | undefined> {
 }
 
 /**
- * The member's chosen store in `orgSlug`, from that tenant's
- * `tenantLocationId.<orgSlug>` cookie, or `null` when absent or not a
+ * The member's chosen store in `tenantSlug`, from that tenant's
+ * `tenantLocationId.<tenantSlug>` cookie, or `null` when absent or not a
  * location id. A cookie is client input: this only checks its shape — whether
  * the member may use that store is decided by `loadServerLocationScope`
  * (against the membership's accessible locations).
@@ -78,8 +78,8 @@ export async function readLocationCookie(tenantSlug: string): Promise<string | n
 }
 
 /**
- * The tenant context (membership + locations) for `orgSlug`, memoized per
- * request (`React.cache`) so the org layout and the page share one call.
+ * The tenant context (membership + locations) for `tenantSlug`, memoized per
+ * request (`React.cache`) so the tenant layout and the page share one call.
  * `undefined` when the API answers that the user may not read it (not signed
  * in, not a member, no such tenant) — the page guard then denies. Any
  * other failure (API down, timeout, 5xx) is logged and rethrown to `error.tsx`.
@@ -109,7 +109,7 @@ export const loadPreferredTenantSlug = cache(async (): Promise<string | undefine
 
 /**
  * Loads the first page of memberships + the entry tenant for SSR panel routes. Memoized per request
- * (`React.cache`), so the org layout and the page share one memberships call. Only a CONFIRMED answer leaves
+ * (`React.cache`), so the tenant layout and the page share one memberships call. Only a CONFIRMED answer leaves
  * here: a session the API no longer accepts goes to sign-in, and every other failure (outage, timeout, 5xx,
  * an unexpected 403) is logged and rethrown to `error.tsx` — an outage must never read as "this merchant has
  * no tenant" (which would send an existing merchant to onboarding).

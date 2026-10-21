@@ -16,6 +16,8 @@ export interface RedeemableClaim {
 	readonly locationIds: readonly string[];
 	/** Minimum bill in minor units; `null` = no minimum. */
 	readonly minSpendMinor: number | null;
+	/** The merchant banned this customer from its rewards. */
+	readonly customerBanned: boolean;
 }
 
 /**
@@ -44,6 +46,9 @@ export function redemptionInvalidReason(claim: RedeemableClaim, locationId: stri
 	}
 	if (claim.claimStatus === "EXPIRED" || claim.claimExpiresAt < now) {
 		return "EXPIRED";
+	}
+	if (claim.customerBanned) {
+		return "CUSTOMER_BANNED";
 	}
 	const store: StoreEligibility = storeEligibility(claim, locationId);
 	return store === "VALID" ? null : store;

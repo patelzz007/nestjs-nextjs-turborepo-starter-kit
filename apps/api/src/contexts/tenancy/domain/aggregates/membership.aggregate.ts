@@ -1,9 +1,10 @@
 import { MembershipRoleSchema, MembershipStatusSchema, type EpochMs, type MembershipRole, type MembershipStatus } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
-import { MemberCoversAllStoresError, MemberLastStoreError, TenantsCorruptStateError, OwnerProtectedError } from "../errors/tenants.errors";
+import { MemberCoversAllStoresError, MemberLastStoreError, TenantOwnerCannotLeaveError, OwnerProtectedError } from "../errors/tenants.errors";
 import { MembershipChanged, type TenantsDomainEvent } from "../events/tenants.events";
 import { LocationScope, type LocationScopeRow } from "../value-objects/location-scope.value-object";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 export interface MembershipState {
 	readonly id: string;
@@ -19,7 +20,9 @@ export interface MembershipState {
 export type MembershipChange =
 	| { readonly kind: "created" }
 	| { readonly kind: "renamed"; readonly displayName: string | null }
-	| { readonly kind: "removed_from_store"; readonly locationId: string; readonly removedAt: EpochMs; readonly removedByUserId: string };
+	| { readonly kind: "removed_from_location"; readonly locationId: string; readonly removedAt: EpochMs; readonly removedByUserId: string }
+	/** The member left: the membership and its location scope rows are soft-deleted by the member. */
+	| { readonly kind: "left"; readonly leftAt: EpochMs };
 
 /** One person's membership of one tenant: role, store scope and per-tenant display name. */
 export class Membership extends AggregateRoot<TenantsDomainEvent> {
@@ -41,7 +44,7 @@ export class Membership extends AggregateRoot<TenantsDomainEvent> {
 		const role = MembershipRoleSchema.safeParse(state.role);
 		const status = MembershipStatusSchema.safeParse(state.status);
 		if (!role.success || !status.success) {
-			throw new TenantsCorruptStateError(state.id);
+			throw new CorruptAggregateStateError("tenant", state.id);
 		}
 		return new Membership(state.id, state.tenantId, state.userId, role.data, status.data, state.displayName, LocationScope.fromRows(state.scopeRows));
 	}
@@ -83,10 +86,10 @@ export class Membership extends AggregateRoot<TenantsDomainEvent> {
 	/**
 	 * Take one store out of this member's SELECTED scope. The OWNER is
 	 * protected, a member covering every store cannot be trimmed to one, and
-	 * removing the last store needs `allowNoStores`. Returns `false` when the
+	 * removing the last store needs `allowNoLocations`. Returns `false` when the
 	 * store is not in the member's scope (nothing changes).
 	 */
-	public removeFromStore(locationId: string, allowNoStores: boolean, removedByUserId: string, now: EpochMs): boolean {
+	public removeFromLocation(locationId: string, allowNoLocations: boolean, removedByUserId: string, now: EpochMs): boolean {
 		if (this.role === "OWNER") {
 			throw new OwnerProtectedError();
 		}
@@ -97,12 +100,24 @@ export class Membership extends AggregateRoot<TenantsDomainEvent> {
 			return false;
 		}
 		const remaining = this.locationScope.without(locationId);
-		if (remaining.locationIds.length === 0 && !allowNoStores) {
+		if (remaining.locationIds.length === 0 && !allowNoLocations) {
 			throw new MemberLastStoreError();
 		}
 		this.locationScope = remaining;
-		this.pendingChanges.push({ kind: "removed_from_store", locationId, removedAt: now, removedByUserId });
+		this.pendingChanges.push({ kind: "removed_from_location", locationId, removedAt: now, removedByUserId });
 		this.record(new MembershipChanged(now, this.tenantId, this.id));
 		return true;
+	}
+
+	/**
+	 * The member leaves the tenant, whatever their membership status (a suspended or pending member
+	 * may leave too). The owner cannot leave: ownership is never left without an owner.
+	 */
+	public leave(now: EpochMs): void {
+		if (this.role === "OWNER") {
+			throw new TenantOwnerCannotLeaveError();
+		}
+		this.pendingChanges.push({ kind: "left", leftAt: now });
+		this.record(new MembershipChanged(now, this.tenantId, this.id));
 	}
 }

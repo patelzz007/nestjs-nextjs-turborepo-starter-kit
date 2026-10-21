@@ -1,4 +1,4 @@
-import type { CreateFileUploadUrlInput, FileCategory } from "@workspace/shared";
+import type { FileUploadRequest, FileCategory } from "@workspace/shared";
 
 import type { AuthorizationKernelPort } from "../../../authorization/public-api";
 import {
@@ -20,7 +20,7 @@ export class GithubCommentImageFileAccessRule implements FileCategoryAccessRule 
 
 	public constructor(private readonly kernel: KernelAuthorizeCheck) {}
 
-	public async assertCanUpload(actor: FileActor, request: CreateFileUploadUrlInput): Promise<void> {
+	public async assertCanUpload(actor: FileActor, request: FileUploadRequest): Promise<void> {
 		if (!isOwnPersonalUpload(actor.userId, request)) {
 			throw fileForbidden("upload", "Cannot upload an image for another user");
 		}

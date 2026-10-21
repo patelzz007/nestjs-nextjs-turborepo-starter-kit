@@ -39,7 +39,6 @@ export function systemCommandAuditEntry(entry: SystemCommandAuditEntry): HttpAud
 		apiKeyId: null,
 		terminalId: null,
 		tenantId: entry.tenantId,
-		storeId: null,
 		locationId: null,
 		ipAddress: null,
 		userAgent: null,

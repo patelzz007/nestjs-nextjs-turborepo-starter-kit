@@ -1,5 +1,5 @@
-import { TenantBrandingPageView } from "@/contexts/tenancy/components/org/tenant-branding-page-view";
-import { guardOrgPage } from "@/contexts/tenancy/lib/org/org-page-guard";
+import { TenantBrandingPageView } from "@/contexts/tenancy/components/tenant/tenant-branding-page-view";
+import { guardTenantPage } from "@/contexts/tenancy/lib/tenant/tenant-page-guard";
 import * as React from "react";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ interface TenantBrandingPageProps {
 /** Store branding — the logo is readable with `merchant:view_locations`; changing it needs `merchant:manage_locations` (enforced by the API). */
 export default async function TenantBrandingPage({ params }: TenantBrandingPageProps): Promise<React.JSX.Element> {
 	const { tenantSlug } = await params;
-	const denied = await guardOrgPage(tenantSlug, "/settings/branding");
+	const denied = await guardTenantPage(tenantSlug, "/settings/branding");
 	if (denied !== null) {
 		return denied;
 	}

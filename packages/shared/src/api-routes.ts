@@ -15,7 +15,7 @@
 //   apiRoutes.geo.countryDetail  // "/geo/countries/:id"
 
 import { authRoutes } from "./contexts/identity/routes";
-import { signupReferralsAuthRoutes } from "./contexts/referrals/routes";
+import { rewardReferralsRoutes, signupReferralsAuthRoutes } from "./contexts/referrals/routes";
 import { adminRbacRoutes, capabilitiesRoutes, supportAccessRoutes } from "./contexts/authorization/routes";
 import { emailRoutes, merchantInviteEmailPreviewRoutes } from "./contexts/notifications/routes";
 import { auditLogsRoutes, auditTrailRoutes, dataChangesRoutes } from "./contexts/audit/routes";
@@ -74,6 +74,7 @@ export const apiRoutes = {
 	},
 	adminTenants: adminTenantsRoutes,
 	supportAccess: supportAccessRoutes,
+	referrals: rewardReferralsRoutes,
 	rewardsAdmin: {
 		...rewardsAdminTenantRoutes,
 		...merchantInviteEmailPreviewRoutes,

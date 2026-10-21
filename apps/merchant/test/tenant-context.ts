@@ -47,7 +47,7 @@ export interface TenantContextFixture {
 	readonly locationIds?: readonly string[];
 }
 
-/** `GET /t/:orgSlug/context` for an active member of the test tenant. */
+/** `GET /t/:tenantSlug/context` for an active member of the test tenant. */
 export function tenantContextFixture({ locations, locationScopeType = "ALL_LOCATIONS", locationIds = [] }: TenantContextFixture): TenantContextResponse {
 	return TenantContextResponseSchema.parse({
 		tenant: {
@@ -96,7 +96,7 @@ export const STORE_B_LOCATION: LocationResponse = locationFixture(STORE_B);
 /** An all-locations member of a tenant with stores A and B. */
 export const TWO_STORE_CONTEXT: TenantContextResponse = tenantContextFixture({ locations: [STORE_A_LOCATION, STORE_B_LOCATION] });
 
-/** The org layout's seed for a two-store member whose cookie holds `selectedLocationId`. */
+/** The tenant layout's seed for a two-store member whose cookie holds `selectedLocationId`. */
 export function twoStoreSeed(selectedLocationId: string | null): TenantContextSeed {
 	return { initialLocationId: selectedLocationId, initialTenantContext: testEnvelope(TWO_STORE_CONTEXT) };
 }

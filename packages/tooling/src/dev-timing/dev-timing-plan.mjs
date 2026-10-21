@@ -66,7 +66,7 @@ export const PAGE_TARGETS = [
 	{
 		id: "merchant",
 		port: 3003,
-		path: `/orgs/${SEEDED_MERCHANT_SLUG}/dashboard`,
+		path: `/t/${SEEDED_MERCHANT_SLUG}/dashboard`,
 		account: { email: "brew.owner@kl-rewards.demo", password: "BrewOwner@123", clientType: "merchant", origin: "http://localhost:3003" },
 	},
 ];

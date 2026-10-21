@@ -1,5 +1,5 @@
 import { EmailVerificationGateDialog } from "@/contexts/identity/components/email-verification-gate-dialog";
-import { guardOrgPage } from "@/contexts/tenancy/lib/org/org-page-guard";
+import { guardTenantPage } from "@/contexts/tenancy/lib/tenant/tenant-page-guard";
 import { SecuritySettingsPanel } from "@workspace/client/lib/contexts/identity/mfa/security-settings-panel";
 import { AnalyticsPageHeader } from "@workspace/ui/components/analytics-page-header";
 import * as React from "react";
@@ -17,7 +17,7 @@ interface MerchantAccountPageProps {
  */
 export default async function MerchantAccountPage({ params }: MerchantAccountPageProps): Promise<React.JSX.Element> {
 	const { tenantSlug } = await params;
-	const denied = await guardOrgPage(tenantSlug, "/account");
+	const denied = await guardTenantPage(tenantSlug, "/account");
 	if (denied !== null) {
 		return denied;
 	}

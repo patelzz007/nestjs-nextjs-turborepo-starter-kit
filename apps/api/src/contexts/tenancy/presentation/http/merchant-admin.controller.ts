@@ -3,6 +3,14 @@ import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	AdminKybUpdateSchema,
+	AdminTenantAppealParamSchema,
+	AdminTenantAppealRejectSchema,
+	AdminTenantLifecycleChangeSchema,
+	TenantLifecycleResponseSchema,
+	type AdminTenantAppealParam,
+	type AdminTenantAppealRejectInput,
+	type AdminTenantLifecycleChangeInput,
+	type TenantLifecycleResponse,
 	AdminLocationRequestResponseSchema,
 	AdminMerchantDetailResponseSchema,
 	AdminMerchantInviteAvailabilitySchema,
@@ -15,7 +23,7 @@ import {
 	EmailPreviewSchema,
 	FileDownloadDispositionSchema,
 	MerchantKybDocumentDownloadResponseSchema,
-	MerchantOrgResponseSchema,
+	MerchantTenantResponseSchema,
 	OkResponseSchema,
 	LocationResponseSchema,
 	UuidParamSchema,
@@ -24,7 +32,7 @@ import {
 	type AdminMerchantDetailResponse,
 	type EmailPreview,
 	type MerchantKybDocumentDownloadResponse,
-	type MerchantOrgResponse,
+	type MerchantTenantResponse,
 	type LocationResponse,
 	type PaginatedServiceResult,
 } from "@workspace/shared";
@@ -33,6 +41,7 @@ import { z } from "zod";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
 import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
+import { SuperAdminOnly } from "../../../../platform/presentation/http/security/decorators/super-admin.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
 import { ZodBody, ZodListQuery, ZodParams, ZodQuery } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
@@ -44,6 +53,12 @@ import {
 	type MerchantInviteCreated,
 } from "../../application/commands/provision-merchant-from-admin-invite/provision-merchant-from-admin-invite.command";
 import { ReviewLocationCommand } from "../../application/commands/review-location/review-location.command";
+import { RejectSuspensionAppealCommand } from "../../application/commands/reject-suspension-appeal/reject-suspension-appeal.command";
+import { ReinstateTenantCommand } from "../../application/commands/reinstate-tenant/reinstate-tenant.command";
+import { SuspendTenantCommand } from "../../application/commands/suspend-tenant/suspend-tenant.command";
+import { BanTenantCommand } from "../../application/commands/ban-tenant/ban-tenant.command";
+import { UnbanTenantCommand } from "../../application/commands/unban-tenant/unban-tenant.command";
+import { GetTenantLifecycleForAdminQuery } from "../../application/queries/get-tenant-lifecycle-for-admin/get-tenant-lifecycle-for-admin.query";
 import { GetKybDocumentDownloadUrlQuery } from "../../application/queries/get-kyb-document-download-url/get-kyb-document-download-url.query";
 import { GetMerchantInviteAvailabilityQuery } from "../../application/queries/get-merchant-invite-availability/get-merchant-invite-availability.query";
 import { GetMerchantDetailQuery } from "../../application/queries/get-merchant-detail/get-merchant-detail.query";
@@ -57,6 +72,12 @@ import {
 	LOCATION_ADMIN_REVIEW_OPERATION,
 	MERCHANT_ADMIN_READ_OPERATION,
 	PROVISION_ADMIN_MERCHANT_INVITE_OPERATION,
+	TENANT_LIFECYCLE_ADMIN_BAN_OPERATION,
+	TENANT_LIFECYCLE_ADMIN_REINSTATE_OPERATION,
+	TENANT_LIFECYCLE_ADMIN_UNBAN_OPERATION,
+	TENANT_LIFECYCLE_ADMIN_REJECT_APPEAL_OPERATION,
+	TENANT_LIFECYCLE_ADMIN_SUSPEND_OPERATION,
+	TENANT_LIFECYCLE_READ_OPERATION,
 } from "../../application/ports/tenants.tokens";
 
 @ApiTags("Rewards Admin")
@@ -142,11 +163,11 @@ export class RewardsAdminMerchantsController {
 	@PlatformOperation(MERCHANT_ADMIN_READ_OPERATION)
 	@Get()
 	@ApiOperation({ summary: "List merchant tenants" })
-	@ZodPaginatedResponse(MerchantOrgResponseSchema, { description: "Paginated merchant org list" })
+	@ZodPaginatedResponse(MerchantTenantResponseSchema, { description: "Paginated merchant org list" })
 	public listMerchants(
 		@CurrentActor() actor: ActorContext,
 		@ZodListQuery(apiContract.rewardsAdmin.listTenants.input) query: z.output<typeof apiContract.rewardsAdmin.listTenants.input>,
-	): Promise<PaginatedServiceResult<MerchantOrgResponse>> {
+	): Promise<PaginatedServiceResult<MerchantTenantResponse>> {
 		return this.queryBus.execute(new ListMerchantsQuery(actor, query));
 	}
 
@@ -223,5 +244,93 @@ export class RewardsAdminMerchantsController {
 		@ZodBody(AdminLocationReviewSchema) body: z.output<typeof AdminLocationReviewSchema>,
 	): Promise<LocationResponse> {
 		return this.commandBus.execute(new ReviewLocationCommand(actor, { ...body, ...params }));
+	}
+
+	@RequirePermission("LIST", "MERCHANT_ORG")
+	@PlatformOperation(TENANT_LIFECYCLE_READ_OPERATION)
+	@Get(":tenantId/lifecycle")
+	@ApiOperation({ summary: "Read a tenant's lifecycle state, current suspension and appeals" })
+	@ZodResponse(TenantLifecycleResponseSchema, { description: "Tenant lifecycle" })
+	public getLifecycle(
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(apiContract.rewardsAdmin.getTenant.input) params: { tenantId: string },
+	): Promise<TenantLifecycleResponse> {
+		return this.queryBus.execute(new GetTenantLifecycleForAdminQuery(actor, params));
+	}
+
+	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
+	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@PlatformOperation(TENANT_LIFECYCLE_ADMIN_SUSPEND_OPERATION)
+	@Post(":tenantId/suspend")
+	@ApiOperation({ summary: "Suspend an active or restricted tenant: only its lifecycle routes keep working" })
+	@ZodResponse(TenantLifecycleResponseSchema, { status: HttpStatus.CREATED, description: "Tenant suspended" })
+	public suspend(
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(apiContract.rewardsAdmin.getTenant.input) params: { tenantId: string },
+		@ZodBody(AdminTenantLifecycleChangeSchema) body: AdminTenantLifecycleChangeInput,
+	): Promise<TenantLifecycleResponse> {
+		return this.commandBus.execute(new SuspendTenantCommand(actor, { tenantId: params.tenantId, reason: body.reason }));
+	}
+
+	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
+	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@PlatformOperation(TENANT_LIFECYCLE_ADMIN_REINSTATE_OPERATION)
+	@Post(":tenantId/reinstate")
+	@ApiOperation({ summary: "Reinstate a suspended tenant (its pending appeal is accepted with this reason)" })
+	@ZodResponse(TenantLifecycleResponseSchema, { status: HttpStatus.CREATED, description: "Tenant reinstated" })
+	public reinstate(
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(apiContract.rewardsAdmin.getTenant.input) params: { tenantId: string },
+		@ZodBody(AdminTenantLifecycleChangeSchema) body: AdminTenantLifecycleChangeInput,
+	): Promise<TenantLifecycleResponse> {
+		return this.commandBus.execute(new ReinstateTenantCommand(actor, { tenantId: params.tenantId, reason: body.reason }));
+	}
+
+	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
+	@SuperAdminOnly()
+	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@PlatformOperation(TENANT_LIFECYCLE_ADMIN_BAN_OPERATION)
+	@Post(":tenantId/ban")
+	@ApiOperation({
+		summary: "SuperAdmin: ban an active, restricted or suspended tenant",
+		description:
+			"Harder than a suspension: the tenant cannot appeal or be reactivated by its owner, and its pending appeal is closed. Only its lifecycle routes keep working (read the status, leave).",
+	})
+	@ZodResponse(TenantLifecycleResponseSchema, { status: HttpStatus.CREATED, description: "Tenant banned" })
+	public ban(
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(apiContract.rewardsAdmin.getTenant.input) params: { tenantId: string },
+		@ZodBody(AdminTenantLifecycleChangeSchema) body: AdminTenantLifecycleChangeInput,
+	): Promise<TenantLifecycleResponse> {
+		return this.commandBus.execute(new BanTenantCommand(actor, { tenantId: params.tenantId, reason: body.reason }));
+	}
+
+	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
+	@SuperAdminOnly()
+	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@PlatformOperation(TENANT_LIFECYCLE_ADMIN_UNBAN_OPERATION)
+	@Post(":tenantId/unban")
+	@ApiOperation({ summary: "SuperAdmin: lift a tenant's ban (it is active again)" })
+	@ZodResponse(TenantLifecycleResponseSchema, { status: HttpStatus.CREATED, description: "Tenant unbanned" })
+	public unban(
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(apiContract.rewardsAdmin.getTenant.input) params: { tenantId: string },
+		@ZodBody(AdminTenantLifecycleChangeSchema) body: AdminTenantLifecycleChangeInput,
+	): Promise<TenantLifecycleResponse> {
+		return this.commandBus.execute(new UnbanTenantCommand(actor, { tenantId: params.tenantId, reason: body.reason }));
+	}
+
+	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
+	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@PlatformOperation(TENANT_LIFECYCLE_ADMIN_REJECT_APPEAL_OPERATION)
+	@Post(":tenantId/appeals/:appealId/reject")
+	@ApiOperation({ summary: "Reject a tenant's pending appeal against its suspension" })
+	@ZodResponse(TenantLifecycleResponseSchema, { status: HttpStatus.CREATED, description: "Appeal rejected" })
+	public rejectAppeal(
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(AdminTenantAppealParamSchema) params: AdminTenantAppealParam,
+		@ZodBody(AdminTenantAppealRejectSchema) body: AdminTenantAppealRejectInput,
+	): Promise<TenantLifecycleResponse> {
+		return this.commandBus.execute(new RejectSuspensionAppealCommand(actor, { ...params, note: body.note }));
 	}
 }

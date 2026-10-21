@@ -10,14 +10,14 @@ import type { RlsTransactionRunner } from "../../../../platform/infrastructure/u
 import { PrismaService } from "../../../../prisma/prisma.service";
 import type { SystemDatabaseContext } from "../../../../prisma/tenant-context";
 import { ApiKeyCapabilitiesAdapter } from "../adapters/api-key-capabilities.adapter";
-import { PRISMA_STORE_CLOSURE_FACTORY } from "../adapters/prisma-store-closure";
+import { PRISMA_LOCATION_CLOSURE_FACTORY } from "../adapters/prisma-location-closure";
 import { PrismaTillTerminals } from "../adapters/prisma-till-terminals";
 
 vi.mock("../../../../prisma/prisma.service", () => ({ PrismaService: class {} }));
 
 const NOW = epochMs(1_800_000_000_000);
 
-describe("PrismaStoreClosure (D27)", () => {
+describe("PrismaLocationClosure (D27)", () => {
 	type FindTerminals = (args: Prisma.TenantTerminalFindManyArgs) => Promise<readonly { readonly id: string; readonly apiKeyId: string | null }[]>;
 	type UpdateTerminals = (args: Prisma.TenantTerminalUpdateManyArgs) => Promise<Prisma.BatchPayload>;
 	type UpdateKeys = (args: Prisma.TenantApiKeyUpdateManyArgs) => Promise<Prisma.BatchPayload>;
@@ -45,7 +45,7 @@ describe("PrismaStoreClosure (D27)", () => {
 		const db = closureDatabase();
 
 		await expect(
-			PRISMA_STORE_CLOSURE_FACTORY.forTransaction(db.prisma).closeStore({ tenantId: "org-1", locationId: "store-a", closedByUserId: "owner-1", closedAt: NOW }),
+			PRISMA_LOCATION_CLOSURE_FACTORY.forTransaction(db.prisma).closeLocation({ tenantId: "org-1", locationId: "store-a", closedByUserId: "owner-1", closedAt: NOW }),
 		).resolves.toEqual({ terminalsRemoved: 2, apiKeysRevoked: 3 });
 
 		expect(db.findTerminals.mock.calls.at(0)?.at(0)?.where).toEqual({ tenantId: "org-1", locationId: "store-a", isDeleted: false });

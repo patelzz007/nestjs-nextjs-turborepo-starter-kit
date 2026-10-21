@@ -46,7 +46,7 @@ export interface SelectContextValue {
 	readonly loading: boolean;
 	/** Accessible name for the trigger when there is no visible label (improvement 3). */
 	readonly ariaLabel: string | undefined;
-	/** Validation state — threads to the trigger as `aria-invalid` (RHF/zod rule 18). */
+	/** Validation state — threads to the trigger as `aria-invalid` (form validation, rule 18). */
 	readonly invalid: boolean;
 	/** The Root's resolved copy (provider family + its `labels` override) for every part. */
 	readonly labels: SelectLabels;

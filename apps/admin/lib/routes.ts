@@ -49,11 +49,15 @@ export interface UsersRoutes {
 	readonly detail: RouteBuilder;
 	/** Super-admin MFA-recovery queue (linked from API emails). */
 	readonly mfaRecovery: string;
+	/** Super-admin just-in-time support access: request, list and revoke grants. */
+	readonly supportAccess: string;
 }
 
 export interface MerchantsRoutes {
 	/** Section prefix — the merchant list is the section index. */
 	readonly list: string;
+	/** One merchant's page: its lifecycle (suspend / reinstate) and appeals. */
+	readonly detail: RouteBuilder;
 	readonly invites: string;
 	readonly verification: string;
 	/** Verification queue with one merchant selected in the side panel. */
@@ -118,6 +122,8 @@ export interface AccountRoutes {
 	/** The signed-in admin's own profile (`GET`/`PATCH /auth/profile`). */
 	readonly profile: string;
 	readonly security: string;
+	/** The signed-in admin's own GitHub token (`GET`/`PUT`/`DELETE /github/account`). */
+	readonly github: string;
 }
 
 export interface AdminRoutes {
@@ -209,9 +215,11 @@ export const ROUTES: AdminRoutes = {
 		list: USERS,
 		detail: (id: string): string => childPath(USERS, id),
 		mfaRecovery: APP_LINKS.admin.mfaRecoveryQueue,
+		supportAccess: `${USERS}/support-access`,
 	},
 	merchants: {
 		list: MERCHANTS,
+		detail: (id: string): string => childPath(MERCHANTS, id),
 		invites: `${MERCHANTS}/invites`,
 		verification: MERCHANT_VERIFICATION,
 		verificationFor: (tenantId: string): string => withQuery(MERCHANT_VERIFICATION, MERCHANT_VERIFICATION_TENANT_PARAM, tenantId),
@@ -253,6 +261,7 @@ export const ROUTES: AdminRoutes = {
 		index: ACCOUNT,
 		profile: `${ACCOUNT}/profile`,
 		security: `${ACCOUNT}/security`,
+		github: `${ACCOUNT}/github`,
 	},
 };
 
@@ -264,6 +273,7 @@ export interface CrudRoutePatterns {
 
 export interface AdminRoutePatterns {
 	readonly users: { readonly detail: string };
+	readonly merchants: { readonly detail: string };
 	readonly auditLogs: { readonly detail: string; readonly change: string };
 	readonly rewards: { readonly reviewDetail: string };
 	readonly catalog: {
@@ -287,6 +297,7 @@ function crudRoutePatterns(list: string): CrudRoutePatterns {
  */
 export const ROUTE_PATTERNS: AdminRoutePatterns = {
 	users: { detail: `${USERS}/${routeParam(ID_PARAM)}` },
+	merchants: { detail: `${MERCHANTS}/${routeParam(ID_PARAM)}` },
 	auditLogs: { detail: `${AUDIT_LOGS}/${routeParam(ID_PARAM)}`, change: `${AUDIT_LOG_CHANGES}/${routeParam(ID_PARAM)}` },
 	rewards: { reviewDetail: `${REWARDS_REVIEW}/${routeParam(ID_PARAM)}` },
 	catalog: {

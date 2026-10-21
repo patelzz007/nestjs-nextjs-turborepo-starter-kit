@@ -13,6 +13,7 @@
 		"test": "vitest run"
 	},
 	"dependencies": {
+		"@tanstack/react-form": "^1.33.5",
 		"@tanstack/react-query": "^5.104.1",
 		"@workspace/client": "workspace:*",
 		"@workspace/shared": "workspace:*",
@@ -21,8 +22,6 @@
 		"lucide-react": "^1.52.0",
 		"next": "16.3.8",
 		"next-themes": "^0.4.6",
-		"react-hook-form": "^7.89.0",
-		"@hookform/resolvers": "^5.9.1",
 		"react": "19.3.0",
 		"react-dom": "19.3.0",
 		"zod": "4.6.5",

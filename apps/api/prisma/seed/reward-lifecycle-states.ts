@@ -11,6 +11,7 @@ import { deterministicUuid } from "./deterministic-uuid";
 import { TENANT_SEED_IDS } from "./tenants";
 import { POS_CODE_LOCKOUT_MS } from "../../src/contexts/pos/public-api";
 import { seedCheckout } from "./reward-checkout";
+import { seedAttributionToken } from "./referral-tokens";
 
 // ---------------------------------------------------------------------------
 // Rewards / POS rows in their LATER lifecycle states — the states the app
@@ -310,7 +311,7 @@ async function seedReferralStates(context: RewardLifecycleSeedContext): Promise<
 				referrerUserId: context.carol.id,
 				refereeUserId: context.alice.id,
 				rewardId,
-				attributionToken: "seed_ref_token_carol_alice_kl_blocked",
+				attributionToken: seedAttributionToken("carol_alice_kl_blocked"),
 				status: "BLOCKED",
 				refereeDeviceHash: sha256Hex("seed-device:carol-iphone"),
 				refereeIp: "203.176.12.31",
@@ -321,7 +322,7 @@ async function seedReferralStates(context: RewardLifecycleSeedContext): Promise<
 				referrerUserId: context.bob.id,
 				refereeUserId: null,
 				rewardId,
-				attributionToken: "seed_ref_token_bob_withdrawn",
+				attributionToken: seedAttributionToken("bob_withdrawn"),
 				status: "PENDING",
 				refereeDeviceHash: sha256Hex("seed-device:unknown-android"),
 				refereeIp: "203.176.12.44",

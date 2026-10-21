@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { isTenantOperating } from "../policies/tenant-operating.policy";
 
 /** Every lifecycle state but ACTIVE. */
-const NOT_OPERATING: readonly TenantLifecycleState[] = ["PROVISIONING", "RESTRICTED", "SUSPENDED", "PENDING_DELETION", "DELETED"];
+const NOT_OPERATING: readonly TenantLifecycleState[] = ["PROVISIONING", "RESTRICTED", "SUSPENDED", "BANNED", "PENDING_DELETION", "DELETED"];
 
 describe("isTenantOperating", () => {
 	it("lets only an ACTIVE, live tenant operate", () => {

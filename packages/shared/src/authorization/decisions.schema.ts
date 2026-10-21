@@ -53,7 +53,6 @@ export const AuthorizationExplainQuerySchema = z
 		resourceId: ResourceIdSchema.optional(),
 		userId: ResourceIdSchema.optional(),
 		tenantId: ResourceIdSchema.optional(),
-		storeId: ResourceIdSchema.optional(),
 		locationId: ResourceIdSchema.optional(),
 	})
 	.strict();

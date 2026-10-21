@@ -41,8 +41,8 @@ export type PasswordInputProps = InputProps & {
  * Pure presentational: value/onChange flow in via props, exactly like the base
  * `Input`. Both apps use it on their login forms.
  *
- * Ref forwarding (rule 20): the ref lands on the inner `<input>` so RHF
- * `register()` and focus management work.
+ * Ref forwarding (rule 20): the ref lands on the inner `<input>` so a form library's
+ * focus-on-error and other focus management work.
  *
  * Event contract (rule 21): `onChange`/`onBlur`/`onFocus` pass straight
  * through to the input. `onKeyDown`/`onKeyUp` are *composed* with the internal

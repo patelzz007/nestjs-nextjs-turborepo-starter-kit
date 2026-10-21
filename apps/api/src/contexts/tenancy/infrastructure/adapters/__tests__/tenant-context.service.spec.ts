@@ -23,7 +23,17 @@ const POLICY_VERSION = 5;
 type ScopeRow = Parameters<typeof mapMembershipLocationScope>[0]["locationScopes"][number];
 
 function scopeRow(scopeType: ScopeRow["scopeType"], locationId: string | null): ScopeRow {
-	return { ...LIVE_ROW_FIELDS, id: `scope-${locationId ?? "all"}`, tenantId: ORG_ID, membershipId: "membership-1", scopeType, locationId, createdAt: 0n, updatedAt: 0n };
+	return {
+		...LIVE_ROW_FIELDS,
+		id: `scope-${locationId ?? "all"}`,
+		tenantId: ORG_ID,
+		membershipId: "membership-1",
+		scopeType,
+		locationId,
+		roleId: null,
+		createdAt: 0n,
+		updatedAt: 0n,
+	};
 }
 
 function membershipRow(locationScopes: readonly ScopeRow[]): Parameters<typeof mapMembershipLocationScope>[0] {

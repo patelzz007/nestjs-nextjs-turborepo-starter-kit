@@ -8,14 +8,14 @@ import type { UnitOfWork } from "../../../../../platform/application/unit-of-wor
 import { LocationScope } from "../../../domain/value-objects/location-scope.value-object";
 import { requireUserActor } from "../../tenant-actor";
 import type { TenantsScope } from "../../tenants-scope";
-import type { MerchantAccessPort } from "../../ports/merchant-access.port";
+import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { TenantDirectoryPort } from "../../ports/tenant-directory.port";
 import { MERCHANT_ACCESS, TENANT_DIRECTORY, TENANTS_UNIT_OF_WORK } from "../../ports/tenants.tokens";
 import { CloseLocationCommand } from "./close-location.command";
 
 /**
- * Soft-deletes the location and its store mirror, its store memberships and
- * member scope rows, and (through the pos `StoreClosurePort`, D27) its
+ * Soft-deletes the location, the member scope rows pointing at it (with the
+ * location roles they carry), and (through the pos `LocationClosurePort`, D27) its
  * terminals and store API keys, in ONE transaction with the audit row, under
  * the tenant's location lock. Sales and redemption history stay
  * readable. Needs `merchant:manage_locations` and a scope covering the store.
@@ -45,15 +45,13 @@ export class CloseLocationHandler implements ICommandHandler<CloseLocationComman
 			const closedAt = this.clock.now();
 			location.close(input.reason, user.userId, closedAt);
 			await scope.locations.save(location);
-			const removed = await scope.locations.removeStoreAccess(location, user.userId, closedAt);
-			const pos = await scope.storeClosure.closeStore({ tenantId: member.tenantId, locationId: location.id, closedByUserId: user.userId, closedAt });
+			const memberScopesRemoved = await scope.locations.removeMemberScopes(location, user.userId, closedAt);
+			const pos = await scope.locationClosure.closeLocation({ tenantId: member.tenantId, locationId: location.id, closedByUserId: user.userId, closedAt });
 			const result: LocationCloseResponse = {
 				locationId: location.id,
-				storeId: removed.storeId,
 				closedAt,
 				reason: input.reason,
-				storeMembershipsRemoved: removed.storeMembershipsRemoved,
-				memberScopesRemoved: removed.memberScopesRemoved,
+				memberScopesRemoved,
 				terminalsRemoved: pos.terminalsRemoved,
 				apiKeysRevoked: pos.apiKeysRevoked,
 			};
@@ -66,9 +64,7 @@ export class CloseLocationHandler implements ICommandHandler<CloseLocationComman
 				resourceId: location.id,
 				metadata: {
 					reason: input.reason,
-					storeId: removed.storeId,
-					storeMembershipsRemoved: removed.storeMembershipsRemoved,
-					memberScopesRemoved: removed.memberScopesRemoved,
+					memberScopesRemoved,
 					terminalsRemoved: pos.terminalsRemoved,
 					apiKeysRevoked: pos.apiKeysRevoked,
 				},

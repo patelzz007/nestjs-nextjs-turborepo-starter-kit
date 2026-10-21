@@ -18,8 +18,10 @@ import type {
 	EmailLogStatus,
 	IpAddressScope,
 	KybStatus,
-	MerchantOrgStatus,
+	MerchantTenantStatus,
 	SignupReferralStatus,
+	TenantAppealStatus,
+	TenantLifecycleState,
 } from "@workspace/shared";
 
 /** One option of a data-table select filter. */
@@ -40,16 +42,36 @@ export const KYB_STATUS_LABELS: Readonly<Record<KybStatus, string>> = {
 	ACTION_REQUIRED: "Action required",
 };
 
-export const MERCHANT_ORG_STATUS_LABELS: Readonly<Record<MerchantOrgStatus, string>> = {
+/** A tenant's full lifecycle state (the merchant page's lifecycle card). */
+export const TENANT_LIFECYCLE_STATE_LABELS: Readonly<Record<TenantLifecycleState, string>> = {
+	PROVISIONING: "Provisioning",
+	ACTIVE: "Active",
+	RESTRICTED: "Restricted",
+	SUSPENDED: "Suspended",
+	BANNED: "Banned",
+	PENDING_DELETION: "Pending deletion",
+	DELETED: "Deleted",
+};
+
+/** A suspension appeal's review state. */
+export const TENANT_APPEAL_STATUS_LABELS: Readonly<Record<TenantAppealStatus, string>> = {
+	PENDING: "Waiting for review",
+	ACCEPTED: "Accepted",
+	REJECTED: "Rejected",
+};
+
+export const MERCHANT_TENANT_STATUS_LABELS: Readonly<Record<MerchantTenantStatus, string>> = {
 	ONBOARDING: "Onboarding",
 	ACTIVE: "Active",
 	SUSPENDED: "Suspended",
+	BANNED: "Banned",
 };
 
 export const ADMIN_USER_STATUS_LABELS: Readonly<Record<AdminUserStatus, string>> = {
 	active: "Active",
 	inactive: "Inactive",
 	locked: "Locked",
+	banned: "Banned",
 };
 
 /** ADR 035 labels: the signup-referral state, never the account-status labels. */

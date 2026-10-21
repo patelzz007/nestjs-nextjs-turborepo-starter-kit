@@ -23,10 +23,11 @@ function methodOf(code: RedemptionCode): RedemptionMethod {
 	return code.backupCode !== undefined ? "MANUAL" : "SCAN";
 }
 
-/** The claim and reward facts the sale's eligibility rules read. */
-export function toRedeemableClaim(lookup: ClaimRedemptionLookup): RedeemableClaim {
+/** The claim and reward facts the sale's eligibility rules read; `customerBanned` is the merchant's ban on the claim's customer. */
+export function toRedeemableClaim(lookup: ClaimRedemptionLookup, customerBanned: boolean): RedeemableClaim {
 	const { claim, reward } = lookup;
 	return {
+		customerBanned,
 		claimId: claim.id,
 		customerUserId: claim.userId,
 		claimStatus: claim.status,
@@ -52,16 +53,26 @@ export class RedemptionCodeResolver {
 	public async resolve(scope: PosScope, point: CheckoutPoint, codes: readonly RedemptionCode[], now: EpochMs): Promise<CodeResolution> {
 		assertCodeRedemptionUnlocked(await scope.lockout.lockedUntil(point.apiKeyId), now);
 
-		const resolved: ResolvedCode[] = [];
+		const found: { readonly lookup: ClaimRedemptionLookup; readonly method: RedemptionMethod }[] = [];
 		let unknownBackupCodes = 0;
 		for (const code of codes) {
 			const lookup = await scope.claims.findMerchantClaim(code, point.tenantId);
 			if (lookup !== null) {
-				resolved.push({ lookup, claim: toRedeemableClaim(lookup), method: methodOf(code) });
+				found.push({ lookup, method: methodOf(code) });
 			} else if (code.backupCode !== undefined) {
 				unknownBackupCodes += 1;
 			}
 		}
+		// One query for every presented customer: which of them did this merchant ban.
+		const banned = await scope.customerStanding.bannedCustomers(
+			point.tenantId,
+			found.map(({ lookup }): string => lookup.claim.userId),
+		);
+		const resolved: readonly ResolvedCode[] = found.map(({ lookup, method }): ResolvedCode => ({
+			lookup,
+			claim: toRedeemableClaim(lookup, banned.has(lookup.claim.userId)),
+			method,
+		}));
 
 		const lockedUntil = await this.recordUnknownBackupCodes(scope, point, unknownBackupCodes, now);
 		if (lockedUntil !== null) {

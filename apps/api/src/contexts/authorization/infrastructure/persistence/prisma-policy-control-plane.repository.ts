@@ -21,10 +21,11 @@ import {
 	type PolicySimulationSnapshot,
 	type PolicySlot,
 } from "../../domain/aggregates/authorization-policy-draft.aggregate";
-import { CorruptAuthorizationStateError, PolicyDraftNotPublishableError } from "../../domain/errors/authorization.errors";
+import { PolicyDraftNotPublishableError } from "../../domain/errors/authorization.errors";
 import type { PolicyDraftRepository } from "../../domain/repositories/policy-draft.repository";
 // Memberships belong to tenants: their location scope is read through its public mapper.
 import { mapMembershipLocationScope } from "../../../tenancy/public-api";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** Advisory-lock namespace shared by every policy publish (taken shared by tenant slots, exclusive by platform slots). */
 export const POLICY_PUBLISH_GLOBAL_LOCK_KEY = "authorization_policy_publish:all";
@@ -39,7 +40,7 @@ const ACTIVE_VERSION_SELECT = { id: true, tenantId: true, scope: true, version: 
 function draftStateOf(row: AuthorizationPolicyDraft): PolicyDraftState {
 	const builderPayload = JsonValueSchema.safeParse(row.builderPayload);
 	if (!builderPayload.success) {
-		throw new CorruptAuthorizationStateError("AuthorizationPolicyDraft", row.id);
+		throw new CorruptAggregateStateError("AuthorizationPolicyDraft", row.id);
 	}
 	return {
 		id: row.id,

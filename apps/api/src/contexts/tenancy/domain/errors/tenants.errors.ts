@@ -40,9 +40,19 @@ export const TenantsDomainErrorCodeSchema = DomainErrorCodeSchema.extract([
 	"TENANT_NOT_PROVISIONING",
 	"TENANT_NOT_ACTIVE",
 	"TENANT_SUSPENDED",
+	"TENANT_BANNED",
+	"TENANT_CUSTOMER_ALREADY_BANNED",
+	"TENANT_CUSTOMER_BAN_NOT_FOUND",
+	"TENANT_REDEMPTION_NOT_FOUND",
 	"MEMBERSHIP_INACTIVE",
 	"TENANT_SLUG_TAKEN",
 	"TENANT_PROVISIONING_DISABLED",
+	"TENANT_LIFECYCLE_TRANSITION_NOT_ALLOWED",
+	"TENANT_DELETION_GRACE_OVER",
+	"TENANT_OWNER_REQUIRED",
+	"TENANT_OWNER_CANNOT_LEAVE",
+	"TENANT_APPEAL_PENDING",
+	"TENANT_APPEAL_NOT_PENDING",
 	"KYB_REVIEW_CLOSED",
 	"KYB_DOCUMENT_INVALID",
 	"KYB_DOCUMENT_INCOMPLETE",
@@ -119,7 +129,7 @@ export class MemberLastStoreError extends DomainError {
 	public readonly code: DomainErrorCode = "TENANT_MEMBER_LAST_STORE";
 
 	public constructor() {
-		super("This is the member's last store; set allowNoStores to remove them from it anyway");
+		super("This is the member's last store; set allowNoLocations to remove them from it anyway");
 	}
 }
 
@@ -351,6 +361,69 @@ export class TenantSuspendedError extends DomainError {
 	}
 }
 
+/** An ordinary route was called while the tenant is banned. */
+export class TenantBannedError extends DomainError {
+	public readonly code: DomainErrorCode = "TENANT_BANNED";
+
+	public constructor() {
+		super("This tenant is banned");
+	}
+}
+
+/** The tenant is not in a state this lifecycle change starts from (e.g. reinstating a tenant that is not suspended). */
+export class TenantLifecycleTransitionError extends DomainError {
+	public readonly code: DomainErrorCode = "TENANT_LIFECYCLE_TRANSITION_NOT_ALLOWED";
+
+	public constructor(message: string) {
+		super(message);
+	}
+}
+
+/** The owner asked to reactivate a tenant whose deletion grace period is over. */
+export class TenantDeletionGraceOverError extends DomainError {
+	public readonly code: DomainErrorCode = "TENANT_DELETION_GRACE_OVER";
+
+	public constructor() {
+		super("The deletion grace period is over; the tenant can no longer be reactivated");
+	}
+}
+
+/** Only the tenant's owner may do this (reactivate the tenant). */
+export class TenantOwnerRequiredError extends DomainError {
+	public readonly code: DomainErrorCode = "TENANT_OWNER_REQUIRED";
+
+	public constructor() {
+		super("Only the tenant owner can do this");
+	}
+}
+
+/** The owner cannot leave their own tenant. */
+export class TenantOwnerCannotLeaveError extends DomainError {
+	public readonly code: DomainErrorCode = "TENANT_OWNER_CANNOT_LEAVE";
+
+	public constructor() {
+		super("The tenant owner cannot leave the tenant");
+	}
+}
+
+/** The tenant already has an appeal waiting for review. */
+export class TenantAppealPendingError extends DomainError {
+	public readonly code: DomainErrorCode = "TENANT_APPEAL_PENDING";
+
+	public constructor() {
+		super("An appeal is already waiting for review");
+	}
+}
+
+/** The appeal was already reviewed (accepted or rejected). */
+export class TenantAppealNotPendingError extends DomainError {
+	public readonly code: DomainErrorCode = "TENANT_APPEAL_NOT_PENDING";
+
+	public constructor() {
+		super("This appeal was already reviewed");
+	}
+}
+
 /** A membership is suspended or still pending, and this route is not leave-tenant. */
 export class MembershipInactiveError extends DomainError {
 	public readonly code: DomainErrorCode = "MEMBERSHIP_INACTIVE";
@@ -362,11 +435,29 @@ export class MembershipInactiveError extends DomainError {
 
 // ── Persistence integrity ────────────────────────────────────────────────────
 
-/** Stored tenant data violates an aggregate invariant; never loaded silently. */
-export class TenantsCorruptStateError extends DomainError {
-	public readonly code: DomainErrorCode = "CORRUPT_AGGREGATE_STATE";
+/** The customer behind that redemption is already banned by this tenant (one active ban per customer). */
+export class TenantCustomerAlreadyBannedError extends DomainError {
+	public readonly code: DomainErrorCode = "TENANT_CUSTOMER_ALREADY_BANNED";
 
-	public constructor(aggregateId: string) {
-		super("Stored tenant state cannot be loaded.", { aggregateId });
+	public constructor() {
+		super("This customer is already banned");
+	}
+}
+
+/** No active ban with that id in this tenant (lifted already, or another tenant's). */
+export class TenantCustomerBanNotFoundError extends DomainError {
+	public readonly code: DomainErrorCode = "TENANT_CUSTOMER_BAN_NOT_FOUND";
+
+	public constructor() {
+		super("Customer ban not found");
+	}
+}
+
+/** No redemption with that id at the caller's stores of this tenant (another tenant's is answered alike). */
+export class TenantRedemptionNotFoundError extends DomainError {
+	public readonly code: DomainErrorCode = "TENANT_REDEMPTION_NOT_FOUND";
+
+	public constructor() {
+		super("Redemption not found");
 	}
 }

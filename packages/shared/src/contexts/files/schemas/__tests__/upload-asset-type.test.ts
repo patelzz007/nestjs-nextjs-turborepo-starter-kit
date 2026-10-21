@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { CreateFileUploadUrlSchema } from "../storage";
+import { CreateFileUploadUrlSchema, CreateTenantFileUploadUrlSchema } from "../storage";
 
 const TENANT_ID = "0b6a3c55-2f1d-4e8a-a7b9-5c4d3e2f1a10";
+const USER_ID = "1c7b4d66-3e2f-4f9b-b8ca-6d5e4f3a2b21";
 const CHECKSUM = "a".repeat(64);
 
 function ticket(category: "STORE_LOGO" | "STORE_BANNER" | "REWARD_IMAGE", assetType?: "LOGO" | "BANNER"): object {
 	return {
 		category,
-		tenantId: TENANT_ID,
 		fileName: "logo.png",
 		mimeType: "image/png",
 		sizeBytes: 2048,
@@ -18,9 +18,25 @@ function ticket(category: "STORE_LOGO" | "STORE_BANNER" | "REWARD_IMAGE", assetT
 }
 
 function issues(input: object): readonly string[] {
-	const parsed = CreateFileUploadUrlSchema.safeParse(input);
+	const parsed = CreateTenantFileUploadUrlSchema.safeParse(input);
 	return parsed.success ? [] : parsed.error.issues.map((issue) => issue.message);
 }
+
+describe("upload ticket routes (D23: the tenant comes from the route, never the body)", () => {
+	it("refuses a tenantId in either upload body", () => {
+		const avatar = { category: "USER_AVATAR", userId: USER_ID, fileName: "me.png", mimeType: "image/png", sizeBytes: 2048, checksumSha256: CHECKSUM };
+		expect(CreateFileUploadUrlSchema.safeParse(avatar).success).toBe(true);
+		expect(CreateFileUploadUrlSchema.safeParse({ ...avatar, tenantId: TENANT_ID }).success).toBe(false);
+		expect(CreateTenantFileUploadUrlSchema.safeParse({ ...ticket("STORE_LOGO", "LOGO"), tenantId: TENANT_ID }).success).toBe(false);
+	});
+
+	it("takes each category on exactly one route", () => {
+		expect(CreateFileUploadUrlSchema.safeParse(ticket("REWARD_IMAGE")).success).toBe(false);
+		expect(
+			CreateTenantFileUploadUrlSchema.safeParse({ category: "USER_AVATAR", fileName: "me.png", mimeType: "image/png", sizeBytes: 2048, checksumSha256: CHECKSUM }).success,
+		).toBe(false);
+	});
+});
 
 describe("upload ticket asset type", () => {
 	it("accepts a logo labelled LOGO and a banner labelled BANNER", () => {

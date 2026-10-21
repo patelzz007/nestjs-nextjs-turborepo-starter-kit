@@ -1,23 +1,24 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import type { MerchantRewardFormValues } from "@workspace/shared";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
-import { useForm } from "react-hook-form";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { MerchantRewardPreview } from "@/contexts/rewards/components/merchant-reward-preview";
+import { RewardEditorTextFieldSchema, useRewardEditorForm, type RewardEditorInput } from "@/contexts/rewards/lib/reward-editor-form";
 import { REWARD_FIXTURE_COVER_URL, REWARD_FIXTURE_IMAGE } from "@/test/rewards";
 
-const COMPLETE_DRAFT: MerchantRewardFormValues = {
+const COMPLETE_DRAFT: RewardEditorInput = {
 	rewardType: "DISCOUNT",
 	title: "20% off nasi lemak",
 	description: "Any nasi lemak set.",
 	imageFileIds: [REWARD_FIXTURE_IMAGE.fileId],
-	rewardValue: 20,
+	rewardValue: "20",
+	minPurchase: "",
+	termsConditions: "",
 	startDate: "2026-11-01",
 	expiryDate: "2026-11-14",
-	quantityTotal: 40,
+	quantityTotal: "40",
 	maxClaimsPerUser: 1,
 	locationScopeType: "ALL_LOCATIONS",
 	locationIds: [],
@@ -27,18 +28,33 @@ const ALL_STORES = { label: "All stores", fullLabel: "All stores" };
 const NO_ACTIVITY = { claimCount: 0, redemptionCount: 0 };
 
 interface PreviewHarnessProps {
-	readonly defaults: MerchantRewardFormValues;
+	readonly defaults: RewardEditorInput;
 	readonly withCover: boolean;
+}
+
+/** The preview never saves. */
+function ignoreSave(): void {
+	return undefined;
 }
 
 /** The editor's form reduced to the preview, with one field to type into. */
 function PreviewHarness({ defaults, withCover }: PreviewHarnessProps): React.JSX.Element {
-	const { control, register } = useForm<MerchantRewardFormValues>({ defaultValues: defaults });
+	const { editor } = useRewardEditorForm<null>({ defaultValues: defaults, defaultMeta: null, onValid: ignoreSave });
+	const { setField } = editor;
+	const handleChange = React.useCallback(
+		(event: React.ChangeEvent<HTMLInputElement>): void => {
+			const field = RewardEditorTextFieldSchema.safeParse(event.currentTarget.name);
+			if (field.success) {
+				setField(field.data, event.currentTarget.value);
+			}
+		},
+		[setField],
+	);
 	return (
 		<UiKitTestProviders>
-			<input aria-label="Title" {...register("title")} />
+			<input aria-label="Title" name="title" value={editor.values.title} onChange={handleChange} />
 			<MerchantRewardPreview
-				control={control}
+				values={editor.values}
 				category="cafe"
 				status={undefined}
 				cover={withCover ? REWARD_FIXTURE_IMAGE : undefined}

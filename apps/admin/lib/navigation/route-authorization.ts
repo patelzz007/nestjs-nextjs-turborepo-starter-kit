@@ -119,6 +119,8 @@ const EXPLICIT_ROUTE_RULES: readonly RouteAuthorizationRule[] = [
 	{ prefix: ROUTES.users.list, superAdminOnly: true },
 	// GET /auth/admin/mfa/recovery/requests — @SuperAdminOnly
 	{ prefix: ROUTES.users.mfaRecovery, superAdminOnly: true },
+	// GET /support-access (and request / revoke) — @SuperAdminOnly
+	{ prefix: ROUTES.users.supportAccess, superAdminOnly: true },
 	// The product form searches categories (GET /sample-category, LIST) and labels the
 	// selected one (GET /sample-category/:id, READ) — so every product form page needs
 	// those besides its own write permission ("all": each call must be allowed).
@@ -136,6 +138,9 @@ const EXPLICIT_ROUTE_RULES: readonly RouteAuthorizationRule[] = [
 	// GET /admin/audit-logs/:id (READ AUDIT_LOG) — one complete record, payloads included —
 	// plus GET /admin/data-changes (LIST AUDIT_LOG): the rows the request changed.
 	{ prefix: ROUTE_PATTERNS.auditLogs.detail, authorization: { permissions: [PERMISSION.AUDIT_LOG.READ, PERMISSION.AUDIT_LOG.LIST], mode: "all" } },
+	// GET /admin/merchants/:tenantId + /lifecycle (LIST MERCHANT_ORG); suspend, reinstate and appeal
+	// review are shown only with MANAGE MERCHANT_ORG.
+	{ prefix: ROUTE_PATTERNS.merchants.detail, authorization: { permissions: [PERMISSION.MERCHANT_ORG.LIST] } },
 	// GET /product/:id, GET /sample-category/:id (READ)
 	{ prefix: ROUTE_PATTERNS.catalog.products.detail, authorization: { permissions: [PERMISSION.PRODUCT.READ] } },
 	{ prefix: ROUTE_PATTERNS.catalog.categories.detail, authorization: { permissions: [PERMISSION.SAMPLE_CATEGORY.READ] } },

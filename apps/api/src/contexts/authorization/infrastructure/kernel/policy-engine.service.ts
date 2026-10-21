@@ -40,8 +40,6 @@ function readSubjectField(subject: AuthorizationContext, key: string): Authoriza
 			return subject.userId;
 		case "tenantId":
 			return subject.tenantId ?? null;
-		case "storeId":
-			return subject.storeId ?? null;
 		case "locationId":
 			return subject.locationId ?? null;
 		case "isSuperAdmin":

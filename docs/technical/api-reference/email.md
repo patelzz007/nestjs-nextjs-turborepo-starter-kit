@@ -3,7 +3,7 @@ title: "API reference — Email log, templates and delivery webhooks"
 description: "The outbound email log, template previews and test sends, and the Resend delivery webhook."
 order: 9
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792454400000
+lastUpdated: 1792540800000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -85,22 +85,22 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "01a15a8b-2a7a-7e68-91ad-14738902ae46",
+      "id": "01a15e74-4d36-7351-8157-6312c39f5d69",
       "templateKey": "admin-alert",
-      "to": "david.lee@example.com",
+      "to": "recipient@example.com",
       "subject": "[Admin] MFA Recovery Denied",
       "status": "sent",
-      "createdAt": 1792520432230,
-      "updatedAt": 1792520432230
+      "createdAt": 1792586042659,
+      "updatedAt": 1792586042659
     },
     {
-      "id": "01a15a8b-29f7-7cd5-a937-b7cd89e66756",
+      "id": "01a15e74-4caa-7088-aab1-9a6ef179e925",
       "templateKey": "admin-alert",
-      "to": "superadmin@example.com",
+      "to": "recipient@example.com",
       "subject": "[Admin] MFA Recovery Review Required",
       "status": "sent",
-      "createdAt": 1792520432100,
-      "updatedAt": 1792520432100
+      "createdAt": 1792586042514,
+      "updatedAt": 1792586042514
     }
   ],
   "meta": {
@@ -108,11 +108,11 @@ Response `200 OK` (application/json):
     "total": 16,
     "page": 1,
     "totalPages": 8,
-    "nextCursor": "eyJhdCI6MTc5MjUyMDQzMjEwMCwiaWQiOiIwMWExNWE4Yi0yOWY3LTdjZDUtYTkzNy1iN2NkODllNjY3NTYifQ",
+    "nextCursor": "eyJhdCI6MTc5MjU4NjA0MjUxNCwiaWQiOiIwMWExNWU3NC00Y2FhLTcwODgtYWFiMS05YTZlZjE3OWU5MjUifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "juVdCzid1d57AzBc5I4Mw",
-    "timestamp": 1792520437576
+    "correlationId": "n1mc63vHe0MMDehoFarlg",
+    "timestamp": 1792586048689
   }
 }
 ```
@@ -203,8 +203,8 @@ Response `200 OK` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "ZezHIDoYICwJtBtsP2udc",
-    "timestamp": 1792520437610
+    "correlationId": "Jx9r2RsPW7L_czkkP8XeL",
+    "timestamp": 1792586048736
   }
 }
 ```
@@ -278,8 +278,8 @@ Response `200 OK` (application/json):
     }
   },
   "meta": {
-    "correlationId": "puC5rZzRyC1ieOlAXbQOM",
-    "timestamp": 1792520437646
+    "correlationId": "xp05U9cLZxKxcCsmyrPRo",
+    "timestamp": 1792586048806
   }
 }
 ```
@@ -339,12 +339,12 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "ok": true,
-    "id": "01a15a8b-3fb1-70f1-b8c1-c8484e1c7fe5",
+    "id": "01a15e74-655d-79a0-9951-2afb8d63adcb",
     "mode": "log-only"
   },
   "meta": {
-    "correlationId": "tnk60SdBSLkflZ6_GyoJI",
-    "timestamp": 1792520437687
+    "correlationId": "8pQnsZn0X8Pfhqw09Ug6l",
+    "timestamp": 1792586048872
   }
 }
 ```
@@ -393,8 +393,8 @@ Response `200 OK` (application/json):
     "path": "/notifications/email-webhook"
   },
   "meta": {
-    "correlationId": "PZWVjcvxqosgYoQ7Bq_o7",
-    "timestamp": 1792520437703
+    "correlationId": "3XFdXeUsvtjECYwFqBpxZ",
+    "timestamp": 1792586048894
   }
 }
 ```
@@ -459,17 +459,17 @@ Receives delivery events from Resend and updates EmailLog. Only accepts requests
 
 ```http
 POST /notifications/email-webhook
-svix-id: msg_bd1480e1f48f409c81ce1c7abcda6b77
-svix-timestamp: 1792520437
+svix-id: msg_89e684b1397e4cf88275a0615b3dcd60
+svix-timestamp: 1792586048
 Content-Type: application/json
 
 {
   "type": "email.delivered",
-  "created_at": "2026-10-20T18:20:37.758Z",
+  "created_at": "2026-10-21T12:34:08.954Z",
   "data": {
     "email_id": "seed",
     "to": [
-      "jamie@example.com"
+      "recipient@example.com"
     ]
   }
 }
@@ -485,8 +485,8 @@ Response `403 Forbidden` (application/json):
     "message": "Missing webhook signature header(s): webhook-signature/svix-signature. Resend signs every webhook with these headers — a browser/curl request without them is rejected by design."
   },
   "meta": {
-    "correlationId": "9nsCfANdMQOCcFBV6OwBb",
-    "timestamp": 1792520437767
+    "correlationId": "omp3yvC2O5BMh7JuQNjjG",
+    "timestamp": 1792586048969
   }
 }
 ```

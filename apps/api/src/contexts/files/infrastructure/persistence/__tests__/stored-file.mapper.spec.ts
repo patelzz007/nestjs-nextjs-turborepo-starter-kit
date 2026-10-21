@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { FILE_ID, storedFile } from "../../../../../../test/support/file-lifecycle-fakes";
-import { CorruptStoredFileStateError } from "../../../domain/errors/files.errors";
 import { storedLocatorOf, toStoredFileAggregate, toStoredFileView } from "../stored-file.mapper";
+import { CorruptAggregateStateError } from "../../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 describe("stored-file mapper", () => {
 	it("reads the neutral location columns first, then the legacy bucket", () => {
@@ -17,7 +17,7 @@ describe("stored-file mapper", () => {
 	});
 
 	it("rejects a corrupt row instead of loading it (§spec-7.3)", () => {
-		expect(() => toStoredFileAggregate(storedFile({ status: "DELETED", isDeleted: false }))).toThrow(CorruptStoredFileStateError);
+		expect(() => toStoredFileAggregate(storedFile({ status: "DELETED", isDeleted: false }))).toThrow(CorruptAggregateStateError);
 	});
 
 	it("maps the public record with its public URL resolved against the API address", () => {

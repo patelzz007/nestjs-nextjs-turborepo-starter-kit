@@ -11,6 +11,7 @@ const REFUSAL_CASES: readonly (readonly [RedemptionInvalidReason, string, number
 	["EXPIRED", "CLAIM_EXPIRED", 422, "Claim expired"],
 	["NOT_VALID_AT_STORE", "REWARD_NOT_VALID_AT_STORE", 422, "This reward is not valid at this store"],
 	["STORE_REQUIRED", "STORE_REQUIRED", 422, "This reward is only valid at selected stores; register this terminal to its store before redeeming it"],
+	["CUSTOMER_BANNED", "CUSTOMER_BANNED", 403, "This merchant has banned this customer from its rewards"],
 ];
 
 describe("pos refusal wire errors", () => {

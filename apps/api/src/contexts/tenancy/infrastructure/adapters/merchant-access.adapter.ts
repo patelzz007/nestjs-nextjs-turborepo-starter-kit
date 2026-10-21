@@ -2,7 +2,7 @@ import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import type { ApiKeyCapabilitiesPort } from "../../application/ports/api-key-capabilities.port";
-import type { MerchantAccessGrant, MerchantAccessPort, MerchantAccessRequest } from "../../application/ports/merchant-access.port";
+import type { MerchantAccessGrant, MerchantAccessPort, MerchantAccessRequest } from "../../../../platform/application/ports/authorization.port";
 import type { TenantContextService } from "./tenant-context.service";
 import type { TenantRewardAuthService } from "./tenant-reward-auth.service";
 

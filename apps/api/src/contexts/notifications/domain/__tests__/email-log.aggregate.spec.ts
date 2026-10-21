@@ -2,8 +2,8 @@ import { EmailLogStatusSchema, epochMs, type EmailLogStatus, type EpochMs } from
 import { describe, expect, it } from "vitest";
 
 import { ALLOWED_FROM, EmailLog } from "../aggregates/email-log.aggregate";
-import { CorruptEmailLogStateError } from "../errors/notifications.errors";
 import { EmailAttemptFinalized } from "../events/email-log-updated.event";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 const ID = "6b1f3e2a-9c4d-4e5f-8a7b-1c2d3e4f5a6b";
 const NOW: EpochMs = epochMs(1_800_000_000_000);
@@ -13,6 +13,18 @@ function log(status: string): EmailLog {
 	return EmailLog.rehydrate({ id: ID, templateKey: "welcome", to: "a@example.com", status });
 }
 
+/** The error `run` throws (the test fails when it throws nothing). */
+function thrownBy(run: () => void): Error {
+	try {
+		run();
+	} catch (error) {
+		if (error instanceof Error) {
+			return error;
+		}
+	}
+	throw new Error("expected the call to throw");
+}
+
 describe("EmailLog.rehydrate (D32)", () => {
 	it.each(STATUSES)("loads a stored %s row", (status: EmailLogStatus) => {
 		expect(log(status).status).toBe(status);
@@ -20,8 +32,10 @@ describe("EmailLog.rehydrate (D32)", () => {
 	});
 
 	it.each(["queued", "", "SENT", "delivered "])("refuses an unknown stored status %j with CORRUPT_AGGREGATE_STATE — never a guess", (status: string) => {
-		expect(() => log(status)).toThrow(CorruptEmailLogStateError);
-		expect(() => EmailLog.parseStoredStatus(ID, status)).toThrow(expect.objectContaining({ code: "CORRUPT_AGGREGATE_STATE", details: { aggregateId: ID } }));
+		expect(() => log(status)).toThrow(CorruptAggregateStateError);
+		const error = thrownBy(() => EmailLog.parseStoredStatus(ID, status));
+		expect(error).toBeInstanceOf(CorruptAggregateStateError);
+		expect(error instanceof CorruptAggregateStateError ? error.details.aggregateId : undefined).toBe(ID);
 	});
 });
 

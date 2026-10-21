@@ -8,9 +8,10 @@ import type { SavedRewardImage } from "@/contexts/rewards/components/merchant-re
 import { MerchantRewardPreview } from "@/contexts/rewards/components/merchant-reward-preview";
 import { MerchantRewardUnavailable } from "@/contexts/rewards/components/merchant-reward-unavailable";
 import type { RewardVoucherCover } from "@/contexts/rewards/components/reward-voucher";
-import { useActiveTenantId, useMerchantLocation } from "@/features/tenant-context/facade";
+import { useMerchantLocation } from "@/features/tenant-context/facade";
 import { describeRewardStores } from "@/contexts/rewards/lib/presentation";
 import { applyMerchantRewardChange } from "@/contexts/rewards/lib/query-cache";
+import { toRewardEditorInput, useRewardEditorForm, type RewardEditorInput } from "@/contexts/rewards/lib/reward-editor-form";
 import { isRewardEditable, useMerchantReward } from "@/contexts/rewards/lib/use-merchant-reward";
 import { tenantRoutes } from "@/lib/routes";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,7 +20,6 @@ import {
 	MERCHANT_CAPABILITY,
 	mapMerchantUpdateRewardFormToInput,
 	mapRewardResponseToFormValues,
-	MerchantUpdateRewardFormSchema,
 	type Envelope,
 	type MerchantRewardFormValues,
 	type RewardResponse,
@@ -29,16 +29,14 @@ import { Spinner } from "@workspace/ui/components/spinner";
 import { toastMessage } from "@workspace/ui/components/toast";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { Card } from "@workspace/ui/components/card";
-import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { useForm } from "react-hook-form";
 
 export interface MerchantEditRewardPageViewProps {
 	readonly tenantSlug: string;
 	readonly rewardId: string;
-	/** The reward as the server fetched it (`GET /t/:orgSlug/rewards/:rewardId`, the API's own envelope). */
+	/** The reward as the server fetched it (`GET /t/:tenantSlug/rewards/:rewardId`, the API's own envelope). */
 	readonly initialReward?: Envelope<RewardResponse> | undefined;
 }
 
@@ -96,28 +94,15 @@ function MerchantRewardEditForm({ tenantSlug, reward }: MerchantRewardEditFormPr
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const router = useRouter();
-	const tenantId = useActiveTenantId();
 	const { accessibleLocations } = useMerchantLocation();
 	const routes = tenantRoutes(tenantSlug);
 	const detailHref = routes.rewards.detail(reward.id);
 	// The photos as the editor holds them: the first is the cover the preview draws.
 	const [images, setImages] = React.useState<readonly RewardVoucherCover[]>(reward.images);
 	const [cover] = images;
-	const formValues = React.useMemo((): MerchantRewardFormValues => mapRewardResponseToFormValues(reward), [reward]);
-
-	const {
-		register,
-		handleSubmit,
-		setValue,
-		control,
-		formState: { errors },
-	} = useForm<MerchantRewardFormValues>({
-		resolver: zodResolver(MerchantUpdateRewardFormSchema),
-		// The form follows the server's reward (no effect + reset): a refetch updates the fields the
-		// merchant has not touched and keeps every unsaved edit.
-		values: formValues,
-		resetOptions: { keepDirtyValues: true },
-	});
+	// The form follows the server's reward: a refetch is taken over while the merchant has not
+	// touched the form, and every unsaved edit is kept once they have.
+	const defaultValues = React.useMemo((): RewardEditorInput => toRewardEditorInput(mapRewardResponseToFormValues(reward)), [reward]);
 
 	const updateMutation = api.tenants.rewards.update.useMutation({
 		onSuccess: (response): void => {
@@ -130,26 +115,33 @@ function MerchantRewardEditForm({ tenantSlug, reward }: MerchantRewardEditFormPr
 		},
 	});
 
+	const { mutate } = updateMutation;
+	const handleValid = React.useCallback(
+		(form: MerchantRewardFormValues): void => {
+			mutate({ tenantSlug, rewardId: reward.id, ...mapMerchantUpdateRewardFormToInput(form) });
+		},
+		[mutate, tenantSlug, reward.id],
+	);
+	const { editor, submit } = useRewardEditorForm<null>({ defaultValues, defaultMeta: null, onValid: handleValid });
+	const { setField } = editor;
+
 	const handleImagesChange = React.useCallback(
 		(nextImages: readonly SavedRewardImage[]): void => {
-			setValue(
+			setField(
 				"imageFileIds",
 				nextImages.map((image) => image.fileId),
-				{ shouldValidate: true, shouldDirty: true },
 			);
 			setImages(nextImages);
 		},
-		[setValue],
+		[setField],
 	);
 
-	const { mutate } = updateMutation;
 	const handleFormSubmit = React.useCallback(
 		(event: React.SubmitEvent<HTMLFormElement>): void => {
-			void handleSubmit((form): void => {
-				mutate({ tenantSlug, rewardId: reward.id, ...mapMerchantUpdateRewardFormToInput(form) });
-			})(event);
+			event.preventDefault();
+			void submit(null);
 		},
-		[handleSubmit, mutate, tenantSlug, reward.id],
+		[submit],
 	);
 
 	const stores = describeRewardStores(reward);
@@ -164,11 +156,8 @@ function MerchantRewardEditForm({ tenantSlug, reward }: MerchantRewardEditFormPr
 			onSubmit={handleFormSubmit}
 			fields={
 				<MerchantRewardFormFields
-					register={register}
-					control={control}
-					errors={errors}
-					setValue={setValue}
-					tenantId={tenantId}
+					editor={editor}
+					tenantSlug={tenantSlug}
 					initialImages={reward.images}
 					onImagesChange={handleImagesChange}
 					stores={
@@ -186,7 +175,7 @@ function MerchantRewardEditForm({ tenantSlug, reward }: MerchantRewardEditFormPr
 			}
 			preview={
 				<MerchantRewardPreview
-					control={control}
+					values={editor.values}
 					category={reward.category}
 					status={reward.status}
 					cover={cover}

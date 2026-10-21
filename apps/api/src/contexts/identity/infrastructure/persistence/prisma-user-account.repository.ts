@@ -183,6 +183,33 @@ export class PrismaUserAccountRepository implements UserAccountRepository {
 			case "mfa_assured":
 				await this.db.user.update({ where: { id: userId }, data: { mfaAssuredAt: change.at, updatedAt: change.at } });
 				return;
+			case "banned": {
+				const written = await this.db.user.updateMany({
+					where: { id: userId, tokenVersion: change.previousTokenVersion.value, bannedAt: null },
+					data: {
+						isActive: false,
+						bannedAt: change.ban.bannedAt,
+						bannedByUserId: change.ban.bannedByUserId,
+						banReason: change.ban.reason,
+						tokenVersion: { increment: 1 },
+						updatedAt: change.ban.bannedAt,
+					},
+				});
+				if (written.count !== 1) {
+					throw new ConcurrentModificationError(userId);
+				}
+				return;
+			}
+			case "unbanned": {
+				const written = await this.db.user.updateMany({
+					where: { id: userId, bannedAt: change.bannedAt },
+					data: { isActive: true, bannedAt: null, bannedByUserId: null, banReason: null, updatedAt: change.at },
+				});
+				if (written.count !== 1) {
+					throw new ConcurrentModificationError(userId);
+				}
+				return;
+			}
 			case "renamed":
 				// A profile field changed: move the profile's optimistic-lock token (PATCH /auth/profile).
 				await this.db.user.update({ where: { id: userId }, data: { fullName: change.fullName, profileVersion: { increment: 1 }, updatedAt: change.at } });

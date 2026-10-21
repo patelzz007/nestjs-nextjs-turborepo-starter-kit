@@ -8,7 +8,7 @@ import { Location } from "../../../domain/aggregates/location.aggregate";
 import { actingInTenant, notFound, requireUserActor } from "../../tenant-actor";
 import { toLocationResponse } from "../../tenant-responses";
 import type { TenantsScope } from "../../tenants-scope";
-import type { MerchantAccessPort } from "../../ports/merchant-access.port";
+import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { TenantDirectoryPort } from "../../ports/tenant-directory.port";
 import { MERCHANT_ACCESS, TENANT_DIRECTORY, TENANTS_UNIT_OF_WORK } from "../../ports/tenants.tokens";
 import { ProposeLocationCommand } from "./propose-location.command";

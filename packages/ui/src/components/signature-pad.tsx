@@ -468,7 +468,7 @@ function samePoint(a: SignaturePadPoint | undefined, b: SignaturePadPoint | unde
 	return a?.join() === b?.join();
 }
 
-/* Structural, not identity: react-hook-form and other stores hand back a
+/* Structural, not identity: form libraries and other stores hand back a
    deep copy of the value, and identity alone read every copy as an outside
    change and voided undo. First and last point are enough to tell a copy from
    a real edit. */

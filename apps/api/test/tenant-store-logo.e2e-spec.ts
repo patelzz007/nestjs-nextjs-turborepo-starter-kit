@@ -24,8 +24,9 @@ import { AVATAR_PNG_BYTES } from "./support/avatar-png-fixture";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
 const FILES = `${API_VERSION_PREFIX}/files`;
-const ORG_SLUG = "jonker-street-kitchen";
-const CONTEXT_URL = `${API_VERSION_PREFIX}/tenants/${ORG_SLUG}/context`;
+const TENANT_SLUG = "jonker-street-kitchen";
+const CONTEXT_URL = `${API_VERSION_PREFIX}/tenants/${TENANT_SLUG}/context`;
+const TENANT_UPLOAD_URL = `${API_VERSION_PREFIX}/tenants/${TENANT_SLUG}/files/upload-url`;
 const VERDICT_POLL_ATTEMPTS = 100;
 const VERDICT_POLL_INTERVAL_MS = 100;
 const TERMINAL_STATUSES: ReadonlySet<FileStatus> = new Set<FileStatus>(["READY", "QUARANTINED", "FAILED"]);
@@ -58,6 +59,7 @@ describe("Store logo (e2e)", () => {
 	let pool: Pool;
 	let owner: LoginResult;
 	let cashier: LoginResult;
+	let otherTenantOwner: LoginResult;
 	let tenantId: string;
 
 	async function send(
@@ -77,11 +79,10 @@ describe("Store logo (e2e)", () => {
 	async function requestTicket(session: LoginResult, bytes: Buffer, assetType: "LOGO" | "BANNER" = "LOGO"): Promise<InjectResponse> {
 		return send(session, {
 			method: "POST",
-			url: `${FILES}/upload-url`,
+			url: TENANT_UPLOAD_URL,
 			mutation: true,
 			payload: {
 				category: "STORE_LOGO",
-				tenantId,
 				assetType,
 				fileName: "logo.png",
 				mimeType: "image/png",
@@ -134,7 +135,8 @@ describe("Store logo (e2e)", () => {
 		pool = new Pool({ connectionString: DATABASE_URL });
 		owner = await login(app, "jonker.owner@melaka-rewards.demo", "JonkerOwner@123", "merchant");
 		cashier = await login(app, "jonker.cashier@melaka-rewards.demo", "JonkerCashier@123", "merchant");
-		const result = await pool.query<{ id: string }>('SELECT id FROM public."Tenant" WHERE slug = $1', [ORG_SLUG]);
+		otherTenantOwner = await login(app, "brew.owner@kl-rewards.demo", "BrewOwner@123", "merchant");
+		const result = await pool.query<{ id: string }>('SELECT id FROM public."Tenant" WHERE slug = $1', [TENANT_SLUG]);
 		tenantId = z.uuid().parse(result.rows.at(0)?.id);
 	});
 
@@ -157,6 +159,64 @@ describe("Store logo (e2e)", () => {
 		const removed = await send(owner, { method: "DELETE", url: `${FILES}/${fileId}`, mutation: true });
 		expect(removed.statusCode, removed.body).toBe(200);
 		expect(await contextLogo()).toBeNull();
+	});
+
+	it("files the logo under the route's tenant and refuses a tenantId in the body (D23)", async () => {
+		const ticketResponse = await requestTicket(owner, AVATAR_PNG_BYTES);
+		expect(ticketResponse.statusCode, ticketResponse.body).toBe(201);
+		const { fileId } = parseSuccessEnvelope(ticketResponse, CreateFileUploadUrlResponseSchema).data;
+		const stored = await pool.query<{ tenantId: string | null }>('SELECT "tenantId" FROM public."StoredFile" WHERE id = $1', [fileId]);
+		expect(stored.rows.at(0)?.tenantId).toBe(tenantId);
+
+		const withTenant = await send(owner, {
+			method: "POST",
+			url: TENANT_UPLOAD_URL,
+			mutation: true,
+			payload: {
+				category: "STORE_LOGO",
+				assetType: "LOGO",
+				tenantId,
+				fileName: "logo.png",
+				mimeType: "image/png",
+				sizeBytes: AVATAR_PNG_BYTES.length,
+				checksumSha256: sha256(AVATAR_PNG_BYTES),
+			},
+		});
+		expect(withTenant.statusCode, withTenant.body).toBe(400);
+
+		const onPlatformRoute = await send(owner, {
+			method: "POST",
+			url: `${FILES}/upload-url`,
+			mutation: true,
+			payload: {
+				category: "STORE_LOGO",
+				assetType: "LOGO",
+				fileName: "logo.png",
+				mimeType: "image/png",
+				sizeBytes: AVATAR_PNG_BYTES.length,
+				checksumSha256: sha256(AVATAR_PNG_BYTES),
+			},
+		});
+		expect(onPlatformRoute.statusCode, onPlatformRoute.body).toBe(400);
+	});
+
+	it("answers another tenant's owner completing this tenant's upload as an unknown file, and leaves it pending", async () => {
+		const ticketResponse = await requestTicket(owner, AVATAR_PNG_BYTES);
+		expect(ticketResponse.statusCode, ticketResponse.body).toBe(201);
+		const { fileId } = parseSuccessEnvelope(ticketResponse, CreateFileUploadUrlResponseSchema).data;
+
+		const completed = await send(otherTenantOwner, {
+			method: "POST",
+			url: `${FILES}/${fileId}/complete`,
+			mutation: true,
+			payload: { checksumSha256: sha256(AVATAR_PNG_BYTES) },
+		});
+
+		// Row-level security hides the file from another tenant entirely, so it is not even known to exist.
+		expect(completed.statusCode, completed.body).toBe(404);
+		expect(JSON.parse(completed.body)).toMatchObject({ success: false, error: { code: "FILE_NOT_FOUND" } });
+		const stored = await pool.query<{ status: string }>('SELECT status::text AS status FROM public."StoredFile" WHERE id = $1', [fileId]);
+		expect(stored.rows.at(0)?.status).toBe("PENDING");
 	});
 
 	it("refuses a logo that is not square at complete, in the shared words", async () => {

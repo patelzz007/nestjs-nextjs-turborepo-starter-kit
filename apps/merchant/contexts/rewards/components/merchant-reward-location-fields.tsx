@@ -1,13 +1,12 @@
 "use client";
 
+import type { RewardEditorState } from "@/contexts/rewards/lib/reward-editor-form";
 import { useMerchantLocation } from "@/features/tenant-context/facade";
-import { LocationScopeTypeSchema, type MerchantRewardFormValues, type LocationScopeType } from "@workspace/shared";
+import { LocationScopeTypeSchema, type LocationScopeType } from "@workspace/shared";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Label } from "@workspace/ui/components/label";
 import { RadioGroup, RadioGroupItem } from "@workspace/ui/components/radio-group";
 import * as React from "react";
-import type { Control, FieldErrors, UseFormSetValue } from "react-hook-form";
-import { useWatch } from "react-hook-form";
 
 interface LocationScopeOption {
 	readonly value: LocationScopeType;
@@ -54,9 +53,8 @@ function MerchantRewardLocationCheckbox({ locationId, name, addressText, checked
 }
 
 export interface MerchantRewardLocationFieldsProps {
-	readonly control: Control<MerchantRewardFormValues>;
-	readonly errors: FieldErrors<MerchantRewardFormValues>;
-	readonly setValue: UseFormSetValue<MerchantRewardFormValues>;
+	/** The editor's values, its messages and its setter (`useRewardEditorForm`). */
+	readonly editor: RewardEditorState;
 	readonly disabled?: boolean;
 }
 
@@ -65,10 +63,11 @@ export interface MerchantRewardLocationFieldsProps {
  * only the field's body (the editor's "Where" section carries the heading) and
  * nothing at all for a single-store tenant — there is nothing to choose.
  */
-export function MerchantRewardLocationFields({ control, errors, setValue, disabled = false }: MerchantRewardLocationFieldsProps): React.JSX.Element | null {
+export function MerchantRewardLocationFields({ editor, disabled = false }: MerchantRewardLocationFieldsProps): React.JSX.Element | null {
 	const { accessibleLocations } = useMerchantLocation();
-	const locationScopeType = useWatch({ control, name: "locationScopeType" }) ?? "ALL_LOCATIONS";
-	const watchedLocationIds = useWatch({ control, name: "locationIds" });
+	const { values, errors, setField } = editor;
+	const locationScopeType = values.locationScopeType ?? "ALL_LOCATIONS";
+	const watchedLocationIds = values.locationIds;
 	const locationIds = React.useMemo((): readonly string[] => watchedLocationIds ?? [], [watchedLocationIds]);
 
 	const handleScopeChange = React.useCallback(
@@ -77,20 +76,20 @@ export function MerchantRewardLocationFields({ control, errors, setValue, disabl
 			if (!parsed.success) {
 				return;
 			}
-			setValue("locationScopeType", parsed.data, { shouldValidate: true, shouldDirty: true });
+			setField("locationScopeType", parsed.data);
 			if (parsed.data === "ALL_LOCATIONS") {
-				setValue("locationIds", [], { shouldValidate: true, shouldDirty: true });
+				setField("locationIds", []);
 			}
 		},
-		[setValue],
+		[setField],
 	);
 
 	const handleLocationToggle = React.useCallback(
 		(locationId: string, checked: boolean): void => {
 			const nextIds = checked ? [...locationIds, locationId] : locationIds.filter((id) => id !== locationId);
-			setValue("locationIds", nextIds, { shouldValidate: true, shouldDirty: true });
+			setField("locationIds", nextIds);
 		},
-		[locationIds, setValue],
+		[locationIds, setField],
 	);
 
 	if (accessibleLocations.length <= 1) {
@@ -129,7 +128,7 @@ export function MerchantRewardLocationFields({ control, errors, setValue, disabl
 					</div>
 					{errors.locationIds !== undefined ? (
 						<p role="alert" className="text-sm text-destructive">
-							{errors.locationIds.message}
+							{errors.locationIds}
 						</p>
 					) : null}
 				</fieldset>

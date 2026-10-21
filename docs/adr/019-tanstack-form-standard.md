@@ -12,7 +12,7 @@ order: 19
 
 ## Status
 
-Accepted (2026-10-01). Migration incomplete as of 2026-10-04: `react-hook-form` is still a dependency of `apps/admin`, `apps/merchant` and `packages/ui`. (The "roadmap" this ADR originally referenced was retired; open work is tracked in [known gaps](../technical/README.md#known-gaps) and the issue tracker.)
+Accepted (2026-10-01). The `react-hook-form` migration finished on 2026-10-21: the merchant reward editor (`contexts/rewards/lib/reward-editor-form.ts`) and the admin select showcase moved to TanStack Form, and `react-hook-form` / `@hookform/resolvers` were removed from `apps/admin`, `apps/merchant` and `packages/ui`. (The "roadmap" this ADR originally referenced was retired; open work is tracked in [known gaps](../technical/README.md#known-gaps) and the issue tracker.)
 
 ## Context
 
@@ -36,6 +36,6 @@ with `FormShell`. `packages/ui` already ships data-agnostic `Field*` primitives.
 
 - One mental model and one set of primitives for every form; client and server validate with the
   same schema.
-- The `packages/ui` README's react-hook-form guidance is superseded once the migration lands.
+- The `packages/ui` README's react-hook-form guidance was replaced by the TanStack Form section (2026-10-21).
 - Migration touches auth, onboarding, KYB and reward forms, so it ships with Phase G's frontend
   error-policy work and is covered by the existing form tests plus new ones.

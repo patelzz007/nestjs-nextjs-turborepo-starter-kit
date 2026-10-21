@@ -3,7 +3,7 @@ title: "6. POS pairing and checkout"
 description: "Pair a till with the merchant portal, then validate a customer's QR or backup code before payment and record the bill after payment."
 order: 7
 author: "Product & Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1792540800000
 coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
 tags: ["user-guide", "pos", "checkout", "terminals"]
 ---
@@ -50,7 +50,7 @@ sequenceDiagram
 flowchart TD
     A[Customer shows QR<br/>or reads backup code] --> B[Till: validate]
     B --> C{Valid here and now?}
-    C -- ALREADY_REDEEMED / EXPIRED /<br/>NOT_VALID_AT_STORE / STORE_REQUIRED --> D[Tell the customer,<br/>do not apply the reward]
+    C -- ALREADY_REDEEMED / EXPIRED /<br/>NOT_VALID_AT_STORE / STORE_REQUIRED /<br/>CUSTOMER_BANNED --> D[Tell the customer,<br/>do not apply the reward]
     C -- yes, shows reward + minimum spend --> E[Apply the reward,<br/>take payment]
     E --> F[Till: checkout<br/>bill total + all codes + new idempotency key]
     F --> G{All codes OK?}
@@ -78,6 +78,11 @@ backup code `ABCD2345`).
 ## Afterwards
 
 - **Redemptions** in the merchant portal lists every redemption (limited to the member's stores).
+- **Banning a customer:** a member who manages rewards can press **Ban this customer** on a
+  redemption, with a reason only staff see. From then on that customer cannot claim the merchant's
+  rewards, and the till refuses their codes (`CUSTOMER_BANNED`). Merchants never see who the
+  customer is; **Settings → Banned customers** lists each ban by the reward and time of the
+  redemption it was made from, and **Lift ban** undoes it.
 - **Analytics → Sales** shows the bills ([Analytics](./08-analytics.md)).
 - The customer sees the visit under **My Activity**.
 

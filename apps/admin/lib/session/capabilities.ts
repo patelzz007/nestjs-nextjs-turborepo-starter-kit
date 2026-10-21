@@ -5,9 +5,9 @@ import type { CapabilitySlug, Envelope, SessionPermissionsResponse } from "@work
 import * as React from "react";
 
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
+import { resolveSessionCapabilities, SESSION_PERMISSIONS_QUERY_OPTIONS } from "@workspace/client/lib/contexts/authorization/session-permissions";
 
-/** Re-checks revocations promptly without hammering the API. */
-export const SESSION_PERMISSIONS_REFETCH_INTERVAL_MS = 60_000;
+export { SESSION_PERMISSIONS_REFETCH_INTERVAL_MS } from "@workspace/client/lib/contexts/authorization/session-permissions";
 
 /**
  * Whether the session's permissions are known:
@@ -36,18 +36,6 @@ export function resolveSessionPermissionsStatus(hasLiveAnswer: boolean, hasPrelo
 }
 
 /**
- * Picks the capability list to trust. The live query wins whenever it has
- * data — **even an empty list**, so permissions revoked to zero disappear —
- * and the server-preloaded list is used only before the first live answer.
- */
-export function resolveSessionCapabilities(live: SessionPermissionsResponse | undefined, preloaded: SessionPermissionsResponse | undefined): readonly CapabilitySlug[] {
-	if (live !== undefined) {
-		return live.capabilities;
-	}
-	return preloaded?.capabilities ?? [];
-}
-
-/**
  * Owns `GET /auth/permissions` for the admin panel. Mounted once by
  * `DashboardLayout`, which feeds the result into `CapabilitiesProvider`;
  * every other consumer reads through `useAuthorization()`.
@@ -56,10 +44,7 @@ export function useSessionPermissionsQuery(initialSessionPermissions?: Envelope<
 	const { api } = useAuth();
 
 	const permissionsQuery = api.auth.permissions.useQuery(undefined, {
-		retry: 1,
-		staleTime: 30_000,
-		refetchOnWindowFocus: true,
-		refetchInterval: SESSION_PERMISSIONS_REFETCH_INTERVAL_MS,
+		...SESSION_PERMISSIONS_QUERY_OPTIONS,
 		...initialDataOption(initialSessionPermissions),
 	});
 

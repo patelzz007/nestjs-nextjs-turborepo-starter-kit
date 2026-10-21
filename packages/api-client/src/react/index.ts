@@ -16,3 +16,4 @@ export {
 	type ClientRouterTree,
 	type IdempotentMutationCall,
 } from "./hooks";
+export { applyOwnProfileUpdated, applyOwnProfileUpdateFailed, isStaleProfileVersionError } from "./own-profile-cache";

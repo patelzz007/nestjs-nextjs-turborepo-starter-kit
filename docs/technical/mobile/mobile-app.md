@@ -1054,6 +1054,11 @@ See [section 19, piece 5](#piece-5-appsmobile).
   `QueryClient` context), and `@workspace/*` resolve through their `development` export (TypeScript
   source, like the Next apps and `tsc`), so no stale `dist/` is bundled. `jest.resolver.cjs` mirrors
   both rules.
+- **`inlineRequires` on.** `metro.config.js` sets `transformer.getTransformOptions` to
+  `inlineRequires: true`, so a module runs when first used rather than when its importer loads;
+  cold start runs only what the first screen needs. App modules must stay side-effect free on
+  import. Checked by `packages/tooling/src/mobile-metro/__tests__/metro-config.test.mjs`; confirm
+  start-up on a device after Expo upgrades.
 - **URL polyfill.** React Native's built-in `URL` concatenates a base with a path instead of
   resolving it and implements `URLSearchParams` only partly; `react-native-url-polyfill` (4.0) is
   imported first in `index.ts` so the api-client and zod's URL checks see the WHATWG behaviour.

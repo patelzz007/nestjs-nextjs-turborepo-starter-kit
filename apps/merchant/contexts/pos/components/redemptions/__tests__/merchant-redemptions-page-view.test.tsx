@@ -21,14 +21,21 @@ interface RedemptionsQueryOptions {
 	readonly initialData?: Envelope<MerchantRedemptionListItem[]>;
 }
 
-const { redemptionsQuery, contextQuery } = vi.hoisted(() => ({
+const { redemptionsQuery, contextQuery, banCustomer } = vi.hoisted(() => ({
 	redemptionsQuery: vi.fn<(input: RedemptionsInput, options?: RedemptionsQueryOptions) => object>(),
 	contextQuery: vi.fn<() => ContextQueryState>(),
+	banCustomer: vi.fn<(input: object) => void>(),
 }));
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
-		api: { tenants: { redemptions: { useQuery: redemptionsQuery }, context: { useQuery: contextQuery } } },
+		api: {
+			tenants: {
+				redemptions: { useQuery: redemptionsQuery },
+				context: { useQuery: contextQuery },
+				banCustomer: { useMutation: (): object => ({ mutate: banCustomer, isPending: false }) },
+			},
+		},
 	}),
 }));
 
@@ -54,6 +61,7 @@ const LATTE_REDEMPTION: MerchantRedemptionListItem = MerchantRedemptionListItemS
 	redeemedAt: TERMINAL_FIXTURE_NOW,
 	terminalId: "TERM-7F3K9QX2",
 	redemptionMethod: "SCAN",
+	customerBanned: false,
 });
 
 function paginatedMeta(page: number, totalPages: number): ApiPaginatedMeta {
@@ -84,6 +92,7 @@ afterEach((): void => {
 	cleanup();
 	redemptionsQuery.mockReset();
 	contextQuery.mockReset();
+	banCustomer.mockReset();
 	vi.restoreAllMocks();
 	window.history.replaceState(null, "", "/");
 });
@@ -278,5 +287,40 @@ describe("MerchantRedemptionsPageView today count", () => {
 		const card = screen.getByText("Today").parentElement;
 		expect(card?.textContent).toContain("—");
 		expect(card?.textContent).toContain("Couldn't load today's count");
+	});
+});
+
+describe("MerchantRedemptionsPageView customer bans", () => {
+	function showRows(rows: readonly MerchantRedemptionListItem[]): void {
+		redemptionsQuery.mockReturnValue({ data: testEnvelope([...rows], paginatedMeta(1, 1)), isLoading: false });
+	}
+
+	it("lets a member who manages rewards ban the customer behind a redemption, with the trimmed reason", () => {
+		showRows([LATTE_REDEMPTION]);
+		renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "OWNER" });
+
+		fireEvent.click(screen.getByRole("button", { name: "Ban this customer" }));
+		const confirm = screen.getByRole("button", { name: "Ban customer" });
+		expect(confirm.hasAttribute("disabled")).toBe(true);
+		fireEvent.change(screen.getByLabelText(/Why is this customer banned/), { target: { value: "  Screenshot of a used voucher  " } });
+		fireEvent.click(confirm);
+
+		expect(banCustomer).toHaveBeenCalledWith({ tenantSlug: TEST_ORG_SLUG, redemptionId: LATTE_REDEMPTION.redemptionId, reason: "Screenshot of a used voucher" });
+	});
+
+	it("marks a banned customer's redemption, offering no second ban", () => {
+		showRows([{ ...LATTE_REDEMPTION, customerBanned: true }]);
+		renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "OWNER" });
+
+		expect(screen.getByText("Customer banned")).toBeTruthy();
+		expect(screen.queryByRole("button", { name: "Ban this customer" })).toBeNull();
+	});
+
+	it("offers no ban to a cashier, who cannot manage rewards", () => {
+		showRows([LATTE_REDEMPTION]);
+		renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
+
+		expect(screen.getByText("Free latte")).toBeTruthy();
+		expect(screen.queryByRole("button", { name: "Ban this customer" })).toBeNull();
 	});
 });

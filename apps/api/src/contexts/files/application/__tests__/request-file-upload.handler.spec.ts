@@ -1,5 +1,6 @@
-import type { CreateFileUploadUrlInput } from "@workspace/shared";
+import type { FileUploadRequest } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
+import { ZodError } from "zod";
 
 import { InMemoryUnitOfWork } from "../../../../platform/application/__tests__/fakes/in-memory-unit-of-work";
 import { AuthorizationError } from "../../../../platform/application/errors/app-error";
@@ -37,7 +38,7 @@ function setup(): {
 	return { handler: new RequestFileUploadHandler(uow, access, storage), files, uow, storage, rule };
 }
 
-const KYB_REQUEST: CreateFileUploadUrlInput = {
+const KYB_REQUEST: FileUploadRequest = {
 	category: "MERCHANT_KYB",
 	fileName: "licence.pdf",
 	mimeType: "application/pdf",
@@ -70,6 +71,25 @@ describe("RequestFileUploadHandler", () => {
 		expect(storage.tickets).toEqual([]);
 	});
 
+	it("refuses a tenant category with no route-bound tenant, and a platform category that names one (D23)", async () => {
+		const { handler, files, storage } = setup();
+		const withoutTenant: FileUploadRequest = { category: "MERCHANT_KYB", fileName: "licence.pdf", mimeType: "application/pdf", sizeBytes: 10, checksumSha256: CHECKSUM };
+		const avatarForTenant: FileUploadRequest = {
+			category: "USER_AVATAR",
+			userId: UPLOADER_ID,
+			fileName: "me.png",
+			mimeType: "image/png",
+			sizeBytes: 10,
+			checksumSha256: CHECKSUM,
+			tenantId: ORG_ID,
+		};
+
+		await expect(handler.execute(new RequestFileUploadCommand(userActor(), withoutTenant))).rejects.toBeInstanceOf(ZodError);
+		await expect(handler.execute(new RequestFileUploadCommand(userActor(), avatarForTenant))).rejects.toBeInstanceOf(ZodError);
+		expect(files.added).toEqual([]);
+		expect(storage.tickets).toEqual([]);
+	});
+
 	it("refuses a request outside the category policy before anything is saved", async () => {
 		const { handler, files } = setup();
 
@@ -79,7 +99,7 @@ describe("RequestFileUploadHandler", () => {
 
 	it("refuses an avatar for another user even when the rule would allow it (a SuperAdmin too)", async () => {
 		const { handler, files } = setup();
-		const avatar: CreateFileUploadUrlInput = {
+		const avatar: FileUploadRequest = {
 			category: "USER_AVATAR",
 			fileName: "a.png",
 			mimeType: "image/png",

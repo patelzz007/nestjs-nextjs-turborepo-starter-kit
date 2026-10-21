@@ -169,7 +169,7 @@ export const LoginRestrictedEnrollmentResponseSchema = z
 		enrollmentReason: EnrollmentReasonSchema,
 		message: z.string(),
 		user: UserResponseSchema.optional(),
-		/** Present for merchant portal logins so the client can route to org-scoped settings. */
+		/** Present for merchant portal logins so the client can route to tenant-scoped settings. */
 		tenantSlug: TenantSlugSchema.optional(),
 		accessToken: z.string(),
 		refreshToken: z.string(),
@@ -184,7 +184,7 @@ export const LoginRestrictedEnrollmentClientResponseSchema = z.object({
 	enrollmentReason: EnrollmentReasonSchema,
 	message: z.string(),
 	user: UserResponseSchema.optional(),
-	/** Present for merchant portal logins so the client can route to org-scoped settings. */
+	/** Present for merchant portal logins so the client can route to tenant-scoped settings. */
 	tenantSlug: TenantSlugSchema.optional(),
 });
 

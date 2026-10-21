@@ -12,7 +12,7 @@ import {
 	type KybStatus,
 	MerchantBusinessCategorySchema,
 	MerchantMemberRoleSchema,
-	MerchantOrgStatusSchema,
+	MerchantTenantStatusSchema,
 	PilotCitySchema,
 } from "./tenant-enums";
 
@@ -252,7 +252,7 @@ export const MerchantKybProfileResponseSchema = z.object({
 	kybStatus: KybStatusSchema,
 	kybFields: JsonObjectSchema.nullable(),
 	documents: z.array(MerchantKybDocumentRecordSchema),
-	status: MerchantOrgStatusSchema,
+	status: MerchantTenantStatusSchema,
 });
 
 export type MerchantKybProfileResponse = z.output<typeof MerchantKybProfileResponseSchema>;

@@ -5,18 +5,18 @@ import { Card } from "@workspace/ui/components/card";
 import type { RewardStores } from "@/contexts/rewards/lib/presentation";
 import { describeRewardDraftGaps, formatDraftRewardEnd } from "@/contexts/rewards/lib/reward-draft";
 import { formatRewardOffer } from "@workspace/client/lib/contexts/rewards/reward-offer";
-import type { MerchantRewardFormValues, RewardStatus } from "@workspace/shared";
+import type { RewardEditorInput } from "@/contexts/rewards/lib/reward-editor-form";
+import type { RewardStatus } from "@workspace/shared";
 import { CircleCheck } from "lucide-react";
 import * as React from "react";
-import type { Control } from "react-hook-form";
-import { useWatch } from "react-hook-form";
 
 /** The preview is about a quarter of the page wide on large screens and the full width below. */
 const PREVIEW_COVER_SIZES = "(min-width: 1024px) 24rem, 100vw";
 
-/** A number field the merchant has cleared reads as zero in the preview (the form itself reports it as missing). */
-function countOrZero(value: number | undefined): number {
-	return value === undefined || Number.isNaN(value) ? 0 : value;
+/** A number field's text as the preview counts it: cleared or not a number reads as zero (the form itself reports it as missing). */
+function countOrZero(text: string): number {
+	const value = Number(text);
+	return text.trim().length === 0 || Number.isNaN(value) ? 0 : value;
 }
 
 export interface MerchantRewardPreviewActivity {
@@ -25,7 +25,8 @@ export interface MerchantRewardPreviewActivity {
 }
 
 export interface MerchantRewardPreviewProps {
-	readonly control: Control<MerchantRewardFormValues>;
+	/** What the merchant has typed so far (`useRewardEditorForm`). */
+	readonly values: RewardEditorInput;
 	/** The line above the offer — the reward's category. */
 	readonly category: string;
 	/** The saved reward's status, or none for a reward not created yet. */
@@ -46,12 +47,11 @@ export interface MerchantRewardPreviewProps {
  * schema still wants, each item a link to the section that fixes it; then the
  * save buttons. Sticky on wide screens, after the form on narrow ones.
  */
-export function MerchantRewardPreview({ control, category, status, cover, stores, activity, actions }: MerchantRewardPreviewProps): React.JSX.Element {
-	const values = useWatch({ control });
+export function MerchantRewardPreview({ values, category, status, cover, stores, activity, actions }: MerchantRewardPreviewProps): React.JSX.Element {
 	const gaps = React.useMemo(() => describeRewardDraftGaps(values), [values]);
 	const quantityTotal = countOrZero(values.quantityTotal);
-	const title = values.title?.trim() ?? "";
-	const description = values.description?.trim() ?? "";
+	const title = values.title.trim();
+	const description = values.description.trim();
 
 	return (
 		<aside aria-labelledby="reward-preview-heading" data-slot="reward-preview" className="flex flex-col gap-4 lg:sticky lg:top-20 lg:self-start">
@@ -63,7 +63,7 @@ export function MerchantRewardPreview({ control, category, status, cover, stores
 				coverSizes={PREVIEW_COVER_SIZES}
 				category={category}
 				status={status}
-				offer={values.rewardType === undefined ? "" : formatRewardOffer(values.rewardType, countOrZero(values.rewardValue))}
+				offer={formatRewardOffer(values.rewardType, countOrZero(values.rewardValue))}
 				title={title.length > 0 ? title : <span className="text-muted-foreground">Your reward title</span>}
 				description={description.length > 0 ? description : "What customers get will show here."}
 				remaining={quantityTotal}

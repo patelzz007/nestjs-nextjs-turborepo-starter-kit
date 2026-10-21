@@ -18,11 +18,11 @@ import type {
 	JsonObject,
 	KybStatus,
 	MerchantKybDocumentRecord,
-	MerchantOrgResponse,
+	MerchantTenantResponse,
 	LocationResponse,
 	LocationStatus,
 } from "@workspace/shared";
-import { EpochMsSchema, JsonPrimitiveSchema, MerchantOrgResponseSchema, nowEpochMs, PERMISSION } from "@workspace/shared";
+import { EpochMsSchema, JsonPrimitiveSchema, MerchantTenantResponseSchema, nowEpochMs, PERMISSION } from "@workspace/shared";
 import { z } from "zod";
 import { Badge } from "@workspace/ui/components/badge";
 import { buttonVariants } from "@workspace/ui/components/button";
@@ -151,7 +151,7 @@ function DetailField({ label, value, mono = false, className }: DetailFieldProps
 }
 
 interface MerchantQueueItemProps {
-	readonly merchant: MerchantOrgResponse;
+	readonly merchant: MerchantTenantResponse;
 	readonly selected: boolean;
 	readonly onSelect: (tenantId: string) => void;
 }
@@ -187,7 +187,7 @@ function MerchantQueueItem({ merchant, selected, onSelect }: MerchantQueueItemPr
 
 export interface KybReviewPanelProps {
 	/** The API's own envelope (real pagination meta) of the pending KYB queue, prefetched on the server. */
-	readonly initialPendingMerchants?: Envelope<MerchantOrgResponse[]> | undefined;
+	readonly initialPendingMerchants?: Envelope<MerchantTenantResponse[]> | undefined;
 }
 
 /**
@@ -221,9 +221,9 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 	const merchant = merchantDetailQuery.data?.data ?? null;
 
 	const invalidateMerchantQueries = React.useCallback(
-		async (targetTenantOrgId: string): Promise<void> => {
+		async (targetTenantId: string): Promise<void> => {
 			await Promise.all([
-				queryClient.invalidateQueries({ queryKey: apiRouter.rewardsAdmin.getTenant.scopeKey({ tenantId: targetTenantOrgId }) }),
+				queryClient.invalidateQueries({ queryKey: apiRouter.rewardsAdmin.getTenant.scopeKey({ tenantId: targetTenantId }) }),
 				// Every merchant list (the pending queue and the "all merchants" list alike).
 				queryClient.invalidateQueries({ queryKey: apiRouter.rewardsAdmin.listTenants.scopeKey(undefined) }),
 			]);
@@ -329,7 +329,7 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 	const handleMerchantSelect = React.useCallback(
 		function handleMerchantSelect(value: string | null): void {
 			// A cleared picker clears the selection; anything else must be a merchant id.
-			const parsed = MerchantOrgResponseSchema.shape.id.safeParse(value);
+			const parsed = MerchantTenantResponseSchema.shape.id.safeParse(value);
 			updateSelection({ tenantId: parsed.success ? parsed.data : undefined });
 		},
 		[updateSelection],
@@ -409,7 +409,7 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 
 					{tenantId.length > 0 && merchantDetailQuery.isError ? (
 						<Card>
-							<CardContent className="py-10 text-center text-sm text-destructive">Could not load merchant details. Check the org ID and try again.</CardContent>
+							<CardContent className="py-10 text-center text-sm text-destructive">Could not load merchant details. Check the tenant ID and try again.</CardContent>
 						</Card>
 					) : null}
 

@@ -503,13 +503,13 @@ describe("@Idempotent() over HTTP (global interceptor)", () => {
 
 	it("namespaces keys by the verified tenant: the same user and key in another tenant runs again", async () => {
 		await post("/things", { name: "a" }, { "idempotency-key": "key-00000001", "x-test-org": "org-a" });
-		const otherOrg = await post("/things", { name: "a" }, { "idempotency-key": "key-00000001", "x-test-org": "org-b" });
+		const otherTenant = await post("/things", { name: "a" }, { "idempotency-key": "key-00000001", "x-test-org": "org-b" });
 
-		expect(otherOrg.headers[IDEMPOTENT_REPLAYED_HEADER.toLowerCase()]).toBeUndefined();
+		expect(otherTenant.headers[IDEMPOTENT_REPLAYED_HEADER.toLowerCase()]).toBeUndefined();
 		expect(handlerState.calls).toBe(2);
 		expect([...records.rows.keys()].sort()).toEqual([
-			"http:user:user-1|org:org-a:store:-:loc:-|POST /things|key-00000001",
-			"http:user:user-1|org:org-b:store:-:loc:-|POST /things|key-00000001",
+			"http:user:user-1|org:org-a:loc:-|POST /things|key-00000001",
+			"http:user:user-1|org:org-b:loc:-|POST /things|key-00000001",
 		]);
 	});
 

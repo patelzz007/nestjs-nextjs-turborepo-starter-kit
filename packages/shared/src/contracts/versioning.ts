@@ -53,6 +53,7 @@ export const UNVERSIONED_ROUTE_PREFIXES: readonly UnversionedRoutePrefix[] = Unv
 export const VersionedRoutePrefixSchema = z.enum([
 	"/auth",
 	"/auth/signup-referrals",
+	"/referrals",
 	"/session",
 	"/notifications/email-preview",
 	"/notifications/email-log",

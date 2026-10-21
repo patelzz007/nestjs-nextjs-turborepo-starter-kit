@@ -8,7 +8,7 @@ import { applyEnrollmentNavLock } from "@/lib/navigation/apply-enrollment-nav-lo
 import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
 import { useMerchantSessionProfile } from "@/lib/session/profile";
 import type { ServerUser } from "@/contexts/identity/lib/server";
-import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
+import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveMerchantPinnedMenuItems } from "@/lib/navigation/pinned-items";
 import { MERCHANT_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
@@ -26,7 +26,7 @@ import { buildSidebarView } from "@workspace/ui/lib/sidebar/menu-view";
 import { withResolvedSidebarMenuUrls } from "@workspace/ui/lib/sidebar/resolve-menu-hrefs";
 import { AppShellSidebarAccount } from "@workspace/ui/components/app-shell-sidebar-account";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
-import { useTenantPath } from "@/contexts/tenancy/lib/org/use-tenant-path";
+import { useTenantPath } from "@/contexts/tenancy/lib/tenant/use-tenant-path";
 import { TENANT_ROUTES } from "@/lib/routes";
 import { useMerchantLogout } from "@/lib/session/use-merchant-logout";
 import { AlertCircle } from "lucide-react";
@@ -36,6 +36,7 @@ import { useActiveMembership } from "@/features/tenant-context/facade";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
+import { menuIconResolver } from "@workspace/ui/lib/sidebar/navigation/menu-icon";
 
 export interface MerchantSidebarPanelProps {
 	/** The first page of the member's stores (the switcher's list). */
@@ -52,8 +53,11 @@ function renderMerchantLink(href: string): React.ReactElement<PanelSidebarLinkPr
 	return <Link href={href} />;
 }
 
+/** Sidebar icons from the app's map; an unknown name shows an alert so the typo is visible. */
+const resolveMenuIcon = menuIconResolver(MERCHANT_MENU_ICON_MAP, AlertCircle);
+
 function renderMerchantMenuIcon(iconName: string | undefined, className: string): React.ReactNode {
-	const Icon = iconName !== undefined ? (MERCHANT_MENU_ICON_MAP[iconName] ?? AlertCircle) : AlertCircle;
+	const Icon = resolveMenuIcon(iconName);
 	return <Icon className={className} aria-hidden="true" />;
 }
 

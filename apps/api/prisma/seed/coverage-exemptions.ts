@@ -87,6 +87,8 @@ export const SEED_COVERAGE_EXEMPTIONS: readonly SeedCoverageExemption[] = [
 		"An MFA recovery request ends through its status (reviewedAt, completedAt) and is kept for the recovery audit; nothing soft-deletes one.",
 	),
 	neverSoftDeleted("TenantAccessRequest", "An access request ends through its status and reviewedAt, and is kept as the decision record; nothing soft-deletes one."),
+	neverSoftDeleted("TenantSuspensionAppeal", "An appeal ends through its status and reviewedAt, and is kept as the decision record; nothing soft-deletes one."),
+	neverSoftDeleted("TenantCustomerBan", "A ban ends through liftedAt and is kept as the merchant's history; nothing soft-deletes one."),
 	neverSoftDeleted(
 		"TenantInvitation",
 		"An invitation ends through its status (accepted, revoked or expired via expiresAt) and is kept as the onboarding record; nothing soft-deletes one.",

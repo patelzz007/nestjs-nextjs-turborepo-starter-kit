@@ -7,14 +7,14 @@ import { useTree } from "@headless-tree/react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar";
 
-interface OrgItem {
+interface TenantItem {
 	name: string;
 	role?: string;
 	avatar?: string;
 	children?: string[];
 }
 
-const items: Record<string, OrgItem> = {
+const items: Record<string, TenantItem> = {
 	company: { name: "Acme Inc.", children: ["ceo"] },
 	ceo: {
 		name: "Sarah Chen",
@@ -79,7 +79,7 @@ const items: Record<string, OrgItem> = {
 };
 
 /** The sample data for an id. Every id the tree asks for comes from `items` itself, so a miss is a typo in the data. */
-function lookupItem(itemId: string): OrgItem {
+function lookupItem(itemId: string): TenantItem {
 	const item = items[itemId];
 	if (item === undefined) {
 		throw new Error(`Unknown tree item: ${itemId}`);
@@ -90,7 +90,7 @@ function lookupItem(itemId: string): OrgItem {
 const indent = 24;
 
 export function Tree6Example(): React.JSX.Element {
-	const tree = useTree<OrgItem>({
+	const tree = useTree<TenantItem>({
 		initialState: {
 			expandedItems: ["ceo", "cto"],
 		},

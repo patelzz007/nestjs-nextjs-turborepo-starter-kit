@@ -4,7 +4,9 @@ import type { Prisma } from "@prisma/client";
 import { epochMs } from "@workspace/shared";
 import { describe, expect, it, vi, type Mock } from "vitest";
 
+import { SERVES_EVERY_TENANT, servesOnly } from "../../../../../test/support/served-tenants";
 import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import type { ServedTenantPolicy } from "../../../../platform/application/tenancy/served-tenant.port";
 import { FixedClock } from "../../../../platform/application/__tests__/fixed-clock";
 import { PrismaService } from "../../../../prisma/prisma.service";
 import type { SystemDatabaseContext } from "../../../../prisma/tenant-context";
@@ -55,12 +57,13 @@ function database(): FakeDatabase {
 
 const CLOCK = new FixedClock(epochMs(1_800_000_000_000));
 
-function verifier(db: FakeDatabase): PrismaApiKeyVerifier {
+function verifier(db: FakeDatabase, servedTenants: ServedTenantPolicy = SERVES_EVERY_TENANT): PrismaApiKeyVerifier {
 	return new PrismaApiKeyVerifier(
 		{
 			withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(db.prisma),
 		},
 		CLOCK,
+		servedTenants,
 	);
 }
 
@@ -96,6 +99,15 @@ describe("PrismaApiKeyVerifier", () => {
 		await expect(subject.verify("mk_live_x")).resolves.toBeNull();
 		await expect(subject.verify("mk_live_x")).resolves.toBeNull();
 		expect(db.touchKey).not.toHaveBeenCalled();
+	});
+
+	it("knows no key of a tenant a single-tenant deployment does not serve, and authenticates the served tenant's key", async () => {
+		const db = database();
+
+		await expect(verifier(db, servesOnly("org-2")).verify("mk_live_x")).resolves.toBeNull();
+		expect(db.findTenant).not.toHaveBeenCalled();
+		expect(db.touchKey).not.toHaveBeenCalled();
+		await expect(verifier(db, servesOnly("org-1")).verify("mk_live_x")).resolves.toMatchObject({ tenantId: "org-1" });
 	});
 
 	it.each(["SUSPENDED", "RESTRICTED", "PROVISIONING", "PENDING_DELETION", "DELETED"])(

@@ -57,10 +57,12 @@ async function main() {
 	}
 
 	const runs = [];
+	// One sign-in per demo account for every run of this invocation.
+	const sessions = new Map();
 	for (let run = 1; run <= args.runs && !interrupted.signal.aborted; run += 1) {
 		console.log(`dev:timing — ${args.mode} run ${String(run)}/${String(args.runs)} in ${repoRoot}`);
 		const logPath = path.join(outputDirectory, `${args.mode}-run-${String(run)}.log`);
-		const result = await runDevTiming({ repoRoot, mode: args.mode, logPath, signal: interrupted.signal });
+		const result = await runDevTiming({ repoRoot, mode: args.mode, logPath, signal: interrupted.signal, sessions });
 		for (const error of result.errors) {
 			console.error(`  ✗ ${error}`);
 		}

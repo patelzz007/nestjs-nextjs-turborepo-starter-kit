@@ -13,6 +13,9 @@
  *   referrer's notice after commit, claiming it through `signupSuccessNotices`).
  * - `SIGNUP_REFERRAL_AUDIT_FACTORY` (`SignupReferralAuditFactory`): the code job's audit trail, which
  *   referrals CONSUMES and rewards provides (referrals imports no context).
+ * - `REFERABLE_REWARD_LOOKUP_FACTORY` (rewards provides: may this reward be shared?) and
+ *   `REFEREE_ATTRIBUTION_FACTORY` (identity provides: store a user's pending attribution), both
+ *   consumed by the reward-referral link commands, bound to their transaction.
  */
 export type { AcceptedSignupReferral, SignupReferralPort, SignupReferralSummary, TransactionalSignupReferralPort } from "./application/ports/signup-referral.port";
 export type { ReferralBonusStockPort, ReferralCreditPort, ReferrerBonus } from "./application/ports/referral-credit.port";
@@ -21,7 +24,9 @@ export type { RewardReferralAttributionPort } from "./application/ports/reward-r
 export type { IssuedSignupReferralCode, SignupReferralAuditPort } from "./application/ports/signup-referral-audit.port";
 export type { ClaimedSignupSuccessNotice, OwedSignupSuccessNotice, SignupSuccessNoticesPort } from "./application/ports/signup-success-notices.port";
 export type { SignupReferralAuditFactory } from "./infrastructure/persistence/prisma-signup-referral-jobs";
-export { SIGNUP_REFERRAL_AUDIT_FACTORY, SIGNUP_REFERRALS } from "./application/ports/referrals.tokens";
+export type { ReferableRewardLookupPort, RefereeAttributionPort } from "./application/ports/reward-referral-links.port";
+export type { ReferableRewardLookupFactory, RefereeAttributionFactory } from "./infrastructure/persistence/prisma-reward-referral-links";
+export { REFERABLE_REWARD_LOOKUP_FACTORY, REFEREE_ATTRIBUTION_FACTORY, SIGNUP_REFERRAL_AUDIT_FACTORY, SIGNUP_REFERRALS } from "./application/ports/referrals.tokens";
 export { createReferralCreditPort, createReferralsTransactionalPorts, type ReferralsTransactionalPorts } from "./infrastructure/persistence/referrals-transactional-ports";
 export { ReferrerCredited, SignupReferralSucceeded } from "./domain/events/referral.events";
 export { REFERRER_CLAIM_TTL_DAYS } from "./domain/policies/referrer-credit.policy";

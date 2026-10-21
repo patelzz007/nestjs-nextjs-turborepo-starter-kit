@@ -2,9 +2,9 @@ import { MerchantApiKeysPageView, type ApiKeysPagePrefetch } from "@/contexts/po
 import { toLocationQueryInput } from "@/features/tenant-context/selectors";
 import { API_KEY_COUNT_PAGE_SIZE, toApiKeyListQuery } from "@/contexts/pos/lib/api-keys/api-key-summary";
 import { loadMerchantServerContext } from "@/lib/merchant-server-api";
-import type { LocationScopedPrefetch } from "@/contexts/tenancy/lib/org/location-prefetch";
-import { guardOrgPage } from "@/contexts/tenancy/lib/org/org-page-guard";
-import { loadServerLocationScope } from "@/contexts/tenancy/lib/org/server-location-scope";
+import type { LocationScopedPrefetch } from "@/contexts/tenancy/lib/tenant/location-prefetch";
+import { guardTenantPage } from "@/contexts/tenancy/lib/tenant/tenant-page-guard";
+import { loadServerLocationScope } from "@/contexts/tenancy/lib/tenant/server-location-scope";
 import { prefetchedDataOrUndefined, rethrowUnexpectedFailure } from "@/lib/server/server-query-outcome";
 import { API_KEYS_URL_STATE } from "@/contexts/pos/url-state/api-keys";
 import { toPrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
@@ -24,11 +24,11 @@ interface MerchantApiKeysPageProps {
  */
 export default async function MerchantApiKeysPage({ params, searchParams }: MerchantApiKeysPageProps): Promise<React.JSX.Element> {
 	const { tenantSlug } = await params;
-	const denied = await guardOrgPage(tenantSlug, "/api-keys");
+	const denied = await guardTenantPage(tenantSlug, "/api-keys");
 	if (denied !== null) {
 		return denied;
 	}
-	// `guardOrgPage` already denied any role without `merchant:manage_api_keys`.
+	// `guardTenantPage` already denied any role without `merchant:manage_api_keys`.
 	const { server } = await loadMerchantServerContext();
 	// The same store filter the client's first render derives, so the data lands under its query keys.
 	const locationId = toLocationQueryInput((await loadServerLocationScope(tenantSlug)).effectiveLocationId);

@@ -13,7 +13,7 @@ const { merchantCapabilities } = vi.hoisted(() => ({
 	merchantCapabilities: vi.fn(),
 }));
 
-vi.mock("@/contexts/tenancy/lib/org/capabilities", () => ({
+vi.mock("@/contexts/tenancy/lib/tenant/capabilities", () => ({
 	useMerchantCapabilities: merchantCapabilities,
 }));
 

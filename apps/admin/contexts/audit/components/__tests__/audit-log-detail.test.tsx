@@ -35,7 +35,6 @@ const RECORD: HttpAuditLogDetail = HttpAuditLogDetailSchema.parse({
 	apiKeyId: null,
 	terminalId: null,
 	tenant: { id: TENANT_ID, name: "Kopi Corner" },
-	storeId: null,
 	locationId: null,
 	ipAddress: "203.0.113.24",
 	userAgent: "curl/8.7.1",

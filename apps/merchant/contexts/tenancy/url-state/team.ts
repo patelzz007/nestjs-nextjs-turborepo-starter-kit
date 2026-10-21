@@ -12,7 +12,7 @@ export const TEAM_LIST_PAGE_SIZE = LIST_DEFAULT_LIMIT;
 
 const TEAM_PAGE_SIZES: readonly number[] = [TEAM_LIST_PAGE_SIZE];
 
-/** `?membersPage=&membersCursor=&membersSort=` — the list keys of `GET /t/:orgSlug/members`. */
+/** `?membersPage=&membersCursor=&membersSort=` — the list keys of `GET /t/:tenantSlug/members`. */
 export const TEAM_MEMBERS_URL_STATE = defineUrlState(
 	{ ...listUrlParams(tenantMemberListQuery, { pageSizes: TEAM_PAGE_SIZES, defaultLimit: TEAM_LIST_PAGE_SIZE }) },
 	{ urlKeys: { page: "membersPage", limit: "membersLimit", cursor: "membersCursor", sort: "membersSort" } },
@@ -20,7 +20,7 @@ export const TEAM_MEMBERS_URL_STATE = defineUrlState(
 
 export type TeamMembersUrlState = typeof TEAM_MEMBERS_URL_STATE.defaults;
 
-/** `?invitesPage=&invitesCursor=&invitesSort=` — the list keys of `GET /t/:orgSlug/members/invites`. */
+/** `?invitesPage=&invitesCursor=&invitesSort=` — the list keys of `GET /t/:tenantSlug/members/invites`. */
 export const TEAM_INVITES_URL_STATE = defineUrlState(
 	{ ...listUrlParams(tenantMemberInviteListQuery, { pageSizes: TEAM_PAGE_SIZES, defaultLimit: TEAM_LIST_PAGE_SIZE }) },
 	{ urlKeys: { page: "invitesPage", limit: "invitesLimit", cursor: "invitesCursor", sort: "invitesSort" } },

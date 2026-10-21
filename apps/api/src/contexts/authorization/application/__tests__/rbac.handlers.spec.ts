@@ -84,8 +84,8 @@ beforeEach(() => {
 	store.rbac.seedRole({ id: "role-viewer", name: "Viewer" }, ["p-read"]);
 	store.rbac.seedRole({ id: "role-child", name: "Junior Viewer", parentId: "role-viewer" });
 	store.rbac.seedRole({ id: "role-deleter", name: "Deleter" }, ["p-delete"]);
-	store.rbac.seedRole({ id: "role-manager", name: "Store Manager" });
-	store.rbac.seedRole({ id: "role-staff", name: "Store Staff" });
+	store.rbac.seedRole({ id: "role-manager", name: "Location Manager" });
+	store.rbac.seedRole({ id: "role-staff", name: "Location Staff" });
 	store.rbac.seedRole({ id: "role-user", name: "User", isSystem: true });
 	store.rbac.seedUser(ADMIN, ["role-admin"]);
 	store.rbac.seedUser(ROOT, ["role-super"], [], { isSuperAdmin: true });

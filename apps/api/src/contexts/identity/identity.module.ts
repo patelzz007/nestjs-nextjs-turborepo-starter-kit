@@ -25,7 +25,8 @@ import { PrismaImpersonationTenantFacts } from "./infrastructure/adapters/prisma
 import { FilesModule } from "../files/public-api";
 import { NotificationsModule, NotificationsTransactionalPortsFactory } from "../notifications/public-api";
 import { TenantAccessModule } from "../tenancy/public-api";
-import { ReferralsModule } from "../referrals/public-api";
+import { REFEREE_ATTRIBUTION_FACTORY, ReferralsModule } from "../referrals/public-api";
+import { IDENTITY_REFEREE_ATTRIBUTION_FACTORY } from "./infrastructure/adapters/referee-attribution.adapter";
 import type { IdentityScope } from "./application/identity-scope";
 import {
 	ACCESS_TOKEN_INVALIDATION,
@@ -75,6 +76,8 @@ import { StartImpersonationHandler } from "./application/commands/start-imperson
 import { StartTwoFactorSetupHandler } from "./application/commands/start-two-factor-setup/start-two-factor-setup.handler";
 import { StopImpersonationHandler } from "./application/commands/stop-impersonation/stop-impersonation.handler";
 import { UnlockAccountHandler } from "./application/commands/unlock-account/unlock-account.handler";
+import { BanUserHandler } from "./application/commands/ban-user/ban-user.handler";
+import { UnbanUserHandler } from "./application/commands/unban-user/unban-user.handler";
 import { UpdateOwnProfileHandler } from "./application/commands/update-own-profile/update-own-profile.handler";
 import { VerifyEmailHandler } from "./application/commands/verify-email/verify-email.handler";
 import { VerifyNewDeviceLoginHandler } from "./application/commands/verify-new-device-login/verify-new-device-login.handler";
@@ -151,6 +154,8 @@ const HANDLERS = [
 	StartTwoFactorSetupHandler,
 	StopImpersonationHandler,
 	UnlockAccountHandler,
+	BanUserHandler,
+	UnbanUserHandler,
 	UpdateOwnProfileHandler,
 	VerifyEmailHandler,
 	VerifyNewDeviceLoginHandler,
@@ -200,6 +205,8 @@ const REDIS_USER_SESSION_CACHE = Symbol("REDIS_USER_SESSION_CACHE");
 	],
 	controllers: [AuthController, TwoFactorController, MfaRecoveryController, ProfileController, SessionsController, SessionStatusController, ImpersonationController],
 	providers: [
+		// Referrals' share-link attribution writer (identity owns `User`); global, so referrals imports no context.
+		{ provide: REFEREE_ATTRIBUTION_FACTORY, useValue: IDENTITY_REFEREE_ATTRIBUTION_FACTORY },
 		PublicUrlResolver,
 		PrismaImpersonationTenantFacts,
 		{ provide: IMPERSONATION_TENANT_FACTS, useExisting: PrismaImpersonationTenantFacts },
@@ -315,7 +322,16 @@ const REDIS_USER_SESSION_CACHE = Symbol("REDIS_USER_SESSION_CACHE");
 		AuthorizationChangeSweepScheduler,
 		...HANDLERS,
 	],
-	exports: [ACCESS_TOKEN_VERIFIER, ACCESS_TOKEN_STATE, IMPERSONATION_TOKEN_CHECK, AUTH_FLOW_RECORDER, ACCOUNT_PROVISIONING, REGISTRATION_SIGN_IN, IDENTITY_SESSIONS],
+	exports: [
+		ACCESS_TOKEN_VERIFIER,
+		ACCESS_TOKEN_STATE,
+		IMPERSONATION_TOKEN_CHECK,
+		AUTH_FLOW_RECORDER,
+		ACCOUNT_PROVISIONING,
+		REGISTRATION_SIGN_IN,
+		IDENTITY_SESSIONS,
+		REFEREE_ATTRIBUTION_FACTORY,
+	],
 })
 export class IdentityModule implements OnModuleInit {
 	public constructor(private readonly mappers: IntegrationEventMapperRegistry) {}

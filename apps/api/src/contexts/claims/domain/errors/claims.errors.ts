@@ -12,6 +12,8 @@ export const ClaimsDomainErrorCodeSchema = DomainErrorCodeSchema.extract([
 	"OTP_REQUIRED",
 	"OTP_INVALID",
 	"OTP_RATE_LIMITED",
+	"CLAIM_CUSTOMER_BANNED",
+	"REWARD_NOT_FOUND",
 	"USER_NOT_FOUND",
 	"CORRUPT_AGGREGATE_STATE",
 ]);
@@ -94,14 +96,6 @@ export class OtpAttemptsExhaustedError extends DomainError {
 	}
 }
 
-export class CorruptClaimStateError extends DomainError {
-	public readonly code = "CORRUPT_AGGREGATE_STATE";
-
-	public constructor(aggregateId: string) {
-		super("Stored claim state cannot be loaded.", { aggregateId });
-	}
-}
-
 /** The signed-in account no longer exists. */
 export class ClaimantNotFoundError extends DomainError {
 	public readonly code = "USER_NOT_FOUND";
@@ -117,5 +111,23 @@ export class ClaimNoLongerRedeemableError extends DomainError {
 
 	public constructor(public readonly claimId: string) {
 		super("Claim is not active");
+	}
+}
+
+/** The merchant banned this customer from its rewards: a new claim is refused (the customer is told, the reason is not). */
+export class ClaimCustomerBannedError extends DomainError {
+	public readonly code = "CLAIM_CUSTOMER_BANNED";
+
+	public constructor() {
+		super("This business no longer offers you its rewards");
+	}
+}
+
+/** The reward's merchant does not operate (suspended, banned or not yet live): answered like a missing reward, as the marketplace hides it. */
+export class ClaimRewardUnavailableError extends DomainError {
+	public readonly code = "REWARD_NOT_FOUND";
+
+	public constructor(public readonly rewardId: string) {
+		super("Reward not found");
 	}
 }

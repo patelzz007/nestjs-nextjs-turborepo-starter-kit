@@ -44,7 +44,7 @@ export interface TextFieldProps {
 	readonly onChange: (value: string) => void;
 	readonly onBlur: () => void;
 	readonly errors: readonly FormFieldError[];
-	readonly type?: "text" | "email" | "url";
+	readonly type?: "text" | "email" | "url" | "password";
 	readonly inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
 	readonly multiline?: boolean;
 	readonly placeholder?: string;

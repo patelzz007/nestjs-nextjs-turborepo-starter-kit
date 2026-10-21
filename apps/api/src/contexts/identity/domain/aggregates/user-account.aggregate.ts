@@ -1,12 +1,29 @@
 import type { EpochMs } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
-import { CorruptIdentityStateError, CredentialAccountMissingError, CurrentPasswordIncorrectError, InvalidOnboardingPasswordError } from "../errors/identity.errors";
+import {
+	AccountAlreadyBannedError,
+	AccountNotBannedError,
+	CannotBanSelfError,
+	CannotBanSuperAdminError,
+	CredentialAccountMissingError,
+	CurrentPasswordIncorrectError,
+	InvalidOnboardingPasswordError,
+} from "../errors/identity.errors";
 import { UserCredentialsChanged, UserProfileChanged, type IdentityEvent } from "../events/identity.events";
 import { EmailAddress } from "../value-objects/email-address.value-object";
 import { LockoutState } from "../value-objects/lockout-state.value-object";
 import { PasswordPolicy } from "../value-objects/password-policy.value-object";
 import { TokenVersion } from "../value-objects/token-version.value-object";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
+
+/** A platform ban: who banned the account, when, and why. */
+export interface AccountBan {
+	readonly bannedAt: EpochMs;
+	/** null when the banning admin's account no longer exists. */
+	readonly bannedByUserId: string | null;
+	readonly reason: string;
+}
 
 /** Everything the account row holds that identity's rules read. Mappers build it; nothing else does. */
 export interface UserAccountState {
@@ -24,6 +41,7 @@ export interface UserAccountState {
 	readonly twoFactorEnabled: boolean;
 	readonly mfaEnrollmentDeadline: EpochMs | null;
 	readonly mfaAssuredAt: EpochMs | null;
+	readonly ban: AccountBan | null;
 	readonly createdAt: EpochMs;
 	readonly updatedAt: EpochMs;
 }
@@ -53,7 +71,11 @@ export type UserAccountChange =
 	| { readonly kind: "lockout_cleared"; readonly at: EpochMs }
 	| { readonly kind: "mfa_assured"; readonly at: EpochMs }
 	/** A provisioning flow refreshed the name; the profile's optimistic-lock token moves too. */
-	| { readonly kind: "renamed"; readonly fullName: string; readonly at: EpochMs };
+	| { readonly kind: "renamed"; readonly fullName: string; readonly at: EpochMs }
+	/** Deactivates the account with the ban; compare-and-set on `previousTokenVersion` and on not being banned. */
+	| { readonly kind: "banned"; readonly ban: AccountBan; readonly previousTokenVersion: TokenVersion }
+	/** Re-activates the account; compare-and-set on the ban being the one that was loaded. */
+	| { readonly kind: "unbanned"; readonly bannedAt: EpochMs; readonly at: EpochMs };
 
 /**
  * The account aggregate: credentials, lockout, email verification and the token generation.
@@ -76,7 +98,7 @@ export class UserAccount extends AggregateRoot<IdentityEvent> {
 	/** A new account as signup, invite registration or the bootstrap creates it. */
 	public static register(input: NewUserAccount, now: EpochMs): UserAccount {
 		if (input.fullName.trim().length === 0) {
-			throw new CorruptIdentityStateError("user_account", "full name is empty");
+			throw new CorruptAggregateStateError("user_account", null, "full name is empty");
 		}
 		const state: UserAccountState = {
 			id: input.id,
@@ -93,6 +115,7 @@ export class UserAccount extends AggregateRoot<IdentityEvent> {
 			twoFactorEnabled: false,
 			mfaEnrollmentDeadline: input.mfaEnrollmentDeadline,
 			mfaAssuredAt: null,
+			ban: null,
 			createdAt: now,
 			updatedAt: now,
 		};
@@ -102,7 +125,10 @@ export class UserAccount extends AggregateRoot<IdentityEvent> {
 	/** Mapper-only: an account read back from storage. Refuses state that breaks an invariant. */
 	public static rehydrate(state: UserAccountState): UserAccount {
 		if (state.passwordHash.length === 0) {
-			throw new CorruptIdentityStateError("user_account", `account ${state.id} has no password hash`);
+			throw new CorruptAggregateStateError("user_account", null, `account ${state.id} has no password hash`);
+		}
+		if (state.ban !== null && state.isActive) {
+			throw new CorruptAggregateStateError("user_account", null, `account ${state.id} is banned but active`);
 		}
 		return new UserAccount(state, state.tokenVersion, false);
 	}
@@ -145,6 +171,10 @@ export class UserAccount extends AggregateRoot<IdentityEvent> {
 
 	public get twoFactorEnabled(): boolean {
 		return this.state.twoFactorEnabled;
+	}
+
+	public get ban(): AccountBan | null {
+		return this.state.ban;
 	}
 
 	public get snapshot(): UserAccountState {
@@ -250,13 +280,49 @@ export class UserAccount extends AggregateRoot<IdentityEvent> {
 		this.record(new UserCredentialsChanged(this.state.id, "account_unlocked", now));
 	}
 
+	/**
+	 * A platform admin bans the account: it is deactivated (no sign-in, no refresh) and its
+	 * `tokenVersion` moves, so every access token it holds stops working. An admin cannot ban
+	 * themselves or a SuperAdmin, and a banned account cannot be banned again.
+	 */
+	public banBy(adminUserId: string, reason: string, now: EpochMs): void {
+		if (adminUserId === this.state.id) {
+			throw new CannotBanSelfError();
+		}
+		if (this.state.isSuperAdmin) {
+			throw new CannotBanSuperAdminError();
+		}
+		if (this.state.ban !== null) {
+			throw new AccountAlreadyBannedError();
+		}
+		const trimmed = reason.trim();
+		if (trimmed.length === 0) {
+			throw new CorruptAggregateStateError("user_account", null, "the ban reason is empty");
+		}
+		const ban: AccountBan = { bannedAt: now, bannedByUserId: adminUserId, reason: trimmed };
+		this.changes.push({ kind: "banned", ban, previousTokenVersion: this.state.tokenVersion });
+		this.state = { ...this.state, isActive: false, ban, tokenVersion: this.state.tokenVersion.next(), updatedAt: now };
+		this.record(new UserCredentialsChanged(this.state.id, "account_banned", now));
+	}
+
+	/** A platform admin lifts the ban: the account is active again (its old sessions stay revoked). */
+	public unban(now: EpochMs): void {
+		const ban = this.state.ban;
+		if (ban === null) {
+			throw new AccountNotBannedError();
+		}
+		this.changes.push({ kind: "unbanned", bannedAt: ban.bannedAt, at: now });
+		this.state = { ...this.state, isActive: true, ban: null, updatedAt: now };
+		this.record(new UserCredentialsChanged(this.state.id, "account_unbanned", now));
+	}
+
 	/** A provisioning flow (merchant onboarding of an existing account) refreshes the name. No change, no write. */
 	public rename(fullName: string, now: EpochMs): void {
 		if (fullName === this.state.fullName) {
 			return;
 		}
 		if (fullName.trim().length === 0) {
-			throw new CorruptIdentityStateError("user_account", "full name is empty");
+			throw new CorruptAggregateStateError("user_account", null, "full name is empty");
 		}
 		this.state = { ...this.state, fullName, updatedAt: now };
 		this.changes.push({ kind: "renamed", fullName, at: now });
@@ -279,7 +345,7 @@ export class UserAccount extends AggregateRoot<IdentityEvent> {
 	private replacePassword(newPasswordHash: string, matchedRecentPassword: boolean, now: EpochMs, reason: "password_changed" | "password_reset"): void {
 		PasswordPolicy.assertNotReused(matchedRecentPassword);
 		if (newPasswordHash.length === 0) {
-			throw new CorruptIdentityStateError("user_account", "the new password hash is empty");
+			throw new CorruptAggregateStateError("user_account", null, "the new password hash is empty");
 		}
 		this.changes.push({ kind: "password_replaced", passwordHash: newPasswordHash, previousTokenVersion: this.state.tokenVersion, at: now });
 		this.state = { ...this.state, passwordHash: newPasswordHash, tokenVersion: this.state.tokenVersion.next(), updatedAt: now };

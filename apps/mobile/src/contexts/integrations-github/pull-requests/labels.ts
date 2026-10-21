@@ -5,6 +5,7 @@
 
 import {
 	assertNever,
+	GITHUB_TOKEN_REQUIRED_PERMISSIONS,
 	type GithubAccountStatus,
 	type GithubChecks,
 	type GithubMergeability,
@@ -202,12 +203,8 @@ export function accountRowValue(status: GithubAccountStatus): string | undefined
 }
 
 /** The fine-grained token permissions the API needs (ADR 052), as GitHub's settings page names them. */
-export const REQUIRED_TOKEN_PERMISSIONS: readonly string[] = [
-	"Pull requests: Read and write",
-	"Contents: Read and write (to attach pictures)",
-	"Metadata: Read-only",
-	"Webhooks: Read and write (for live updates)",
-];
+/** What a token needs: the list the admin panel shows too. */
+export const REQUIRED_TOKEN_PERMISSIONS: readonly string[] = GITHUB_TOKEN_REQUIRED_PERMISSIONS;
 
 export const NO_PULL_REQUESTS_MESSAGE = "No pull requests here.";
 export const INVALID_PULL_REQUEST_LINK_MESSAGE = "This link doesn't point to a pull request. Go back and pick one from the list.";

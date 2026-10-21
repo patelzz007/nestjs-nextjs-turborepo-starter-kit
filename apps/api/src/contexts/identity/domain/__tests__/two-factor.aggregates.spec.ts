@@ -16,7 +16,6 @@ import {
 } from "../aggregates/two-factor-login-challenge.aggregate";
 import {
 	BackupCodeRejectedError,
-	CorruptIdentityStateError,
 	InvalidRotationPasswordError,
 	InvalidTotpTokenError,
 	MfaChallengeAlreadyUsedError,
@@ -31,6 +30,7 @@ import {
 } from "../errors/identity.errors";
 import { UserCredentialsChanged } from "../events/identity.events";
 import { TokenVersion } from "../value-objects/token-version.value-object";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 const NOW: EpochMs = epochMs(1_800_000_000_000);
 const SECRET: EncryptedTotpSecret = { ciphertext: "cipher", iv: "iv", keyVersion: 1 };
@@ -72,7 +72,7 @@ describe("TwoFactorEnrollment setup and enable", () => {
 		}).toThrow(TwoFactorAlreadyEnabledError);
 		expect(() => {
 			enrollment().startSetup(SECRET, [], NOW);
-		}).toThrow(CorruptIdentityStateError);
+		}).toThrow(CorruptAggregateStateError);
 	});
 
 	it("enables with a valid code: stores the secret and step, bumps the token generation in the same write (D16)", () => {
@@ -112,7 +112,7 @@ describe("TwoFactorEnrollment setup and enable", () => {
 	});
 
 	it("refuses a stored pending setup without backup codes as corrupt", () => {
-		expect(() => enrollment({ pendingSetup: { secret: SECRET, backupCodeHashes: [], expiresAt: NOW } })).toThrow(CorruptIdentityStateError);
+		expect(() => enrollment({ pendingSetup: { secret: SECRET, backupCodeHashes: [], expiresAt: NOW } })).toThrow(CorruptAggregateStateError);
 	});
 });
 
@@ -244,7 +244,7 @@ describe("TwoFactorLoginChallenge", () => {
 	});
 
 	it("refuses corrupt attempt counters", () => {
-		expect(() => challenge({ attemptCount: -1 })).toThrow(CorruptIdentityStateError);
-		expect(() => challenge({ maxAttempts: 0 })).toThrow(CorruptIdentityStateError);
+		expect(() => challenge({ attemptCount: -1 })).toThrow(CorruptAggregateStateError);
+		expect(() => challenge({ maxAttempts: 0 })).toThrow(CorruptAggregateStateError);
 	});
 });

@@ -10,14 +10,7 @@ import {
 } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
-import {
-	AlreadyMemberError,
-	InviteEmailMismatchError,
-	InviteNoLongerPendingError,
-	InvitePendingError,
-	MerchantInviteUnavailableError,
-	TenantsCorruptStateError,
-} from "../errors/tenants.errors";
+import { AlreadyMemberError, InviteEmailMismatchError, InviteNoLongerPendingError, InvitePendingError, MerchantInviteUnavailableError } from "../errors/tenants.errors";
 import { InvitationStatusChanged, type TenantsDomainEvent } from "../events/tenants.events";
 import {
 	assertDocumentsWindowOpen,
@@ -30,6 +23,7 @@ import {
 	type DocumentsWindowFacts,
 } from "../policies/invitation-validity.policy";
 import { LocationScope, type LocationScopeRow } from "../value-objects/location-scope.value-object";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 export interface InvitationState {
 	readonly id: string;
@@ -91,7 +85,7 @@ export class Invitation extends AggregateRoot<TenantsDomainEvent> {
 		const status = TenantInvitationStatusSchema.safeParse(state.status);
 		const role = MembershipRoleSchema.safeParse(state.intendedRole);
 		if (!kind.success || !status.success || !role.success) {
-			throw new TenantsCorruptStateError(state.id);
+			throw new CorruptAggregateStateError("tenant", state.id);
 		}
 		const scopeRows: readonly LocationScopeRow[] =
 			state.locationScopeType === "ALL_LOCATIONS"

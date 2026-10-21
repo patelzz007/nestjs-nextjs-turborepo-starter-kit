@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { AuthorizationRequest, CreateFileUploadUrlInput, FileCategory } from "@workspace/shared";
+import type { AuthorizationRequest, FileUploadRequest, FileCategory } from "@workspace/shared";
 
 import { AuthorizationError } from "../../../../platform/application/errors/app-error";
 import type { FileAccessSubject, FileActor } from "../../../files/public-api";
 import { GithubCommentImageFileAccessRule, type KernelAuthorizeCheck } from "../services/github-comment-image-file-access.rule";
 
 const ACTOR: FileActor = { userId: "user-1", isSuperAdmin: false };
-const UPLOAD: Omit<CreateFileUploadUrlInput, "userId"> = {
+const UPLOAD: Omit<FileUploadRequest, "userId"> = {
 	category: "GITHUB_COMMENT_IMAGE",
 	fileName: "shot.png",
 	mimeType: "image/png",

@@ -1,4 +1,5 @@
 import type {
+	AdminUserBanState,
 	AdminMfaRecoveryListQuery,
 	AdminMfaRecoveryRequest,
 	AdminUserListQuery,
@@ -32,6 +33,7 @@ export interface AccountView {
 export interface AdminAccountView extends AccountView {
 	readonly failedLoginAttempts: number;
 	readonly lockedUntil: EpochMs | null;
+	readonly ban: AdminUserBanState | null;
 }
 
 /**

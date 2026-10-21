@@ -11,8 +11,10 @@ import {
 	decideTenantLifecycle,
 	MembershipInactiveError,
 	TENANT_LIFECYCLE_ROUTE_KEY,
+	TenantBannedError,
 	TenantRouteNotActiveError,
 	TenantSuspendedError,
+	type TenantLifecycleRouteKind,
 } from "../../../../../contexts/tenancy/public-api";
 import { RequestContextService } from "../../../../infrastructure/context/request-context";
 import { MAX_USER_AGENT_LENGTH } from "../../../../infrastructure/http/user-agent-header";
@@ -78,7 +80,7 @@ interface GuardPrincipalLookup {
  *
  * Flow:
  * 1. Authenticated requests: validate token version, then resolve and verify the
- *    tenant context (a forged `x-store-id` → 403; `x-tenant-id` and `x-location-id` select nothing). The
+ *    tenant context (`x-tenant-id` and `x-location-id` select nothing). The
  *    verified context is bound into the request context (ADR 017) for RLS.
  * 2. Routes without requirements only compute `hasAdminAccess`.
  * 3. SuperAdmin → explicit, audited platform bypass.
@@ -135,7 +137,7 @@ export class AuthorizationGuard implements CanActivate {
 	}
 
 	/**
-	 * C1 for the tenant the request targets, however it was reached (`:tenantSlug`, a store or a
+	 * C1 for the tenant the request targets, however it was reached (`:tenantSlug` or a
 	 * location), with the caller's real access status. A caller without access is left to the
 	 * ordinary authorization answer (`no_membership`).
 	 */
@@ -144,12 +146,12 @@ export class AuthorizationGuard implements CanActivate {
 		if (target === null) {
 			return;
 		}
-		const lifecycleRoute = this.reflector.getAllAndOverride<boolean | undefined>(TENANT_LIFECYCLE_ROUTE_KEY, [context.getHandler(), context.getClass()]) === true;
+		const route = this.reflector.getAllAndOverride<TenantLifecycleRouteKind | undefined>(TENANT_LIFECYCLE_ROUTE_KEY, [context.getHandler(), context.getClass()]);
 		const decision = decideTenantLifecycle({
 			lifecycleState: target.lifecycleState,
 			// A target is only ever a live tenant: membership verification skips soft-deleted rows.
 			isDeleted: false,
-			route: lifecycleRoute ? "lifecycle" : "ordinary",
+			route: route ?? "ordinary",
 			membershipStatus: target.membershipStatus,
 		});
 		if (decision.kind === "allow" || decision.kind === "no_membership") {
@@ -160,6 +162,9 @@ export class AuthorizationGuard implements CanActivate {
 		}
 		if (decision.kind === "tenant_suspended") {
 			throw new TenantSuspendedError();
+		}
+		if (decision.kind === "tenant_banned") {
+			throw new TenantBannedError();
 		}
 		if (decision.kind === "membership_inactive") {
 			throw new MembershipInactiveError();
@@ -268,7 +273,6 @@ export class AuthorizationGuard implements CanActivate {
 			userId: user.id,
 			isSuperAdmin: false,
 			...(tenant.verified.tenantId === undefined ? {} : { tenantId: tenant.verified.tenantId }),
-			...(tenant.verified.storeId === undefined ? {} : { storeId: tenant.verified.storeId }),
 			...(tenant.verified.locationId === undefined ? {} : { locationId: tenant.verified.locationId }),
 		};
 	}
@@ -278,9 +282,6 @@ export class AuthorizationGuard implements CanActivate {
 		const attributes: AuthorizationAttributes = {};
 		if (tenant.requested.tenantId !== undefined) {
 			attributes.tenantId = tenant.requested.tenantId;
-		}
-		if (tenant.requested.storeId !== undefined) {
-			attributes.storeId = tenant.requested.storeId;
 		}
 		if (tenant.requested.locationId !== undefined) {
 			attributes.locationId = tenant.requested.locationId;

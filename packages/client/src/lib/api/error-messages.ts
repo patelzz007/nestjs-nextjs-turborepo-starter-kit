@@ -9,7 +9,7 @@
 // technical / inconsistent). This catalog is the single place the apps own the
 // wording, keyed by the stable code.
 
-import { ApiErrorBodySchema, AuthErrorCodeSchema, type CaughtValue } from "@workspace/shared";
+import { ApiErrorBodySchema, AuthErrorCodeSchema, TenantAccessErrorCodeSchema, type CaughtValue } from "@workspace/shared";
 import { z } from "zod";
 
 import { ApiError } from "./use-api";
@@ -44,6 +44,26 @@ const EN_MESSAGES: AuthMessageCatalog = {
 	ACCOUNT_IS_INACTIVE: "This account is inactive. Please contact support.",
 	ACCOUNT_DELETED: "This account has been deleted. Please contact support.",
 	SUPER_ADMIN_REQUIRED: "Super administrator access is required for this action.",
+};
+
+/** One locale's messages for the tenant-access codes (a suspended tenant, an inactive membership, the lifecycle routes). */
+export const TenantAccessMessageCatalogSchema = z.record(TenantAccessErrorCodeSchema, z.string());
+
+export type TenantAccessMessageCatalog = z.output<typeof TenantAccessMessageCatalogSchema>;
+
+const EN_TENANT_ACCESS_MESSAGES: TenantAccessMessageCatalog = {
+	TENANT_SUSPENDED: "This business is suspended. Only its status and appeal pages are available until it is reinstated.",
+	TENANT_BANNED: "The platform banned this business. Only its status page is available.",
+	MEMBERSHIP_INACTIVE: "Your membership in this business is not active. Ask its owner to reactivate it, or leave the business.",
+	TENANT_APPEAL_PENDING: "An appeal is already waiting for review.",
+	TENANT_OWNER_REQUIRED: "Only the business owner can do this.",
+	TENANT_OWNER_CANNOT_LEAVE: "The owner cannot leave the business.",
+	TENANT_DELETION_GRACE_OVER: "The deletion grace period is over; this business can no longer be reactivated.",
+};
+
+/** Tenant-access catalogs, keyed by locale. */
+export const TENANT_ACCESS_MESSAGE_CATALOGS: Readonly<Record<Locale, TenantAccessMessageCatalog>> = {
+	en: EN_TENANT_ACCESS_MESSAGES,
 };
 
 /** All available catalogs, keyed by locale. Adding `fr` = one more line here. */
@@ -95,7 +115,7 @@ export function extractAuthErrorMessage(error: CaughtValue): string | null {
  * Resolve the best user-facing message for a thrown API error.
  *
  * Priority:
- * 1. A known auth error `code` → friendly catalog string for the locale
+ * 1. A known auth or tenant-access error `code` → friendly catalog string for the locale
  * 2. The server's own `message` (or any `.message`)
  * 3. A generic fallback
  */
@@ -108,6 +128,10 @@ export function resolveAuthErrorMessage(error: CaughtValue, locale: Locale = DEF
 		const code = AuthErrorCodeSchema.safeParse(error.error);
 		if (code.success) {
 			return catalog[code.data];
+		}
+		const tenantAccessCode = TenantAccessErrorCodeSchema.safeParse(error.error);
+		if (tenantAccessCode.success) {
+			return TENANT_ACCESS_MESSAGE_CATALOGS[locale][tenantAccessCode.data];
 		}
 	}
 

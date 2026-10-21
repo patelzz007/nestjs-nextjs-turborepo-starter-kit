@@ -16,7 +16,7 @@ import {
 	NullableTextInputSchema,
 	OptionalNumberInputSchema,
 	RequiredNumberInputSchema,
-} from "@/lib/forms/contract-form-schema";
+} from "@workspace/client/lib/forms/contract-form-schema";
 
 /** The product form's raw values → `CreateProductSchema` (the `POST /product` contract). */
 export const ProductFormSchema = contractFormSchema(

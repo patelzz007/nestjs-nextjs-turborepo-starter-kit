@@ -2,8 +2,9 @@ import { epochMs, type EpochMs } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
 import type { DomainEvent } from "../../../../platform/domain/domain-event";
-import { CorruptClaimStateError, OtpAttemptsExhaustedError, OtpMissingError } from "../errors/claims.errors";
+import { OtpAttemptsExhaustedError, OtpMissingError } from "../errors/claims.errors";
 import { MAX_OTP_ATTEMPTS, OTP_TTL_MS } from "../value-objects/claim-rules.value-object";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 export interface OtpChallengeState {
 	readonly id: string;
@@ -42,7 +43,7 @@ export class OtpChallenge extends AggregateRoot<DomainEvent> {
 	public static rehydrate(state: OtpChallengeState): OtpChallenge {
 		const counters = [state.attempts, state.failedAttempts];
 		if (!counters.every((value) => Number.isSafeInteger(value) && value >= 0) || state.failedAttempts > state.attempts) {
-			throw new CorruptClaimStateError(state.id);
+			throw new CorruptAggregateStateError("claim", state.id);
 		}
 		return new OtpChallenge(state);
 	}

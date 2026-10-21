@@ -6,16 +6,19 @@ import {
 	CompleteFileUploadSchema,
 	CreateFileUploadUrlResponseSchema,
 	CreateFileUploadUrlSchema,
+	CreateTenantFileUploadUrlSchema,
 	DeleteSuccessDataSchema,
 	FileDetailResponseSchema,
 	FileDownloadResponseSchema,
 	FileProcessingResultSchema,
 	SuccessAckResponseSchema,
+	TenantSlugParamSchema,
 	UuidParamSchema,
 	apiContract,
 	apiPath,
 	type CompleteFileUploadResponse,
 	type CreateFileUploadUrlResponse,
+	type CreateTenantFileUploadUrlInput,
 	type DeleteSuccessData,
 	type FileDetailResponse,
 	type FileDownloadResponse,
@@ -38,6 +41,7 @@ import { RequestFileUploadCommand } from "../../application/commands/request-fil
 import { GetFileDownloadUrlQuery } from "../../application/queries/get-file-download-url/get-file-download-url.query";
 import { GetFileQuery } from "../../application/queries/get-file/get-file.query";
 import { FILES_SCAN_VERDICT_OPERATION } from "../../application/ports/files.tokens";
+import { FileUploadForbiddenError } from "../../domain/errors/files.errors";
 
 const FileIdParamSchema = z.object({ fileId: UuidParamSchema }).strict();
 
@@ -137,5 +141,33 @@ export class FilesController {
 	public async deleteFile(@CurrentActor() actor: ActorContext, @ZodParams(FileIdParamSchema) params: z.output<typeof FileIdParamSchema>): Promise<DeleteSuccessData> {
 		await this.commandBus.execute(new DeleteFileCommand(actor, params.fileId));
 		return { success: true };
+	}
+}
+
+/**
+ * Tenant-owned uploads (store logo and banner, reward images, KYB evidence): the tenant is the one
+ * `:tenantSlug` resolved and the guard verified for the caller (multi-tenancy plan D23), never a
+ * body field. A caller the route did not bind to the tenant (no membership, no support grant) is
+ * refused before any row or ticket exists; the category owner's access rule then checks the capability.
+ */
+@ApiTags("Files")
+@Controller(apiPath("/tenants"))
+export class TenantFilesController {
+	public constructor(@Inject(CommandBus) private readonly commandBus: FilesCommandDispatch) {}
+
+	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@Post(":tenantSlug/files/upload-url")
+	@ApiBearerAuth()
+	@ApiOperation({ summary: "Create a browser upload ticket for a tenant-owned file" })
+	@ZodResponse(CreateFileUploadUrlResponseSchema, { status: HttpStatus.CREATED, description: "Browser upload ticket created" })
+	public async createUploadUrl(
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(TenantSlugParamSchema) _params: z.output<typeof TenantSlugParamSchema>,
+		@ZodBody(CreateTenantFileUploadUrlSchema) body: CreateTenantFileUploadUrlInput,
+	): Promise<CreateFileUploadUrlResponse> {
+		if (actor.tenantId === null) {
+			throw new FileUploadForbiddenError("Not allowed to upload files for this tenant");
+		}
+		return this.commandBus.execute(new RequestFileUploadCommand(actor, { ...body, tenantId: actor.tenantId }));
 	}
 }

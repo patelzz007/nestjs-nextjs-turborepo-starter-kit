@@ -39,7 +39,8 @@ export const REFERENCE_PAGES: readonly ReferencePage[] = [
 	{
 		slug: "merchant-tenants",
 		title: "Merchant tenants (portal API)",
-		description: "Everything the merchant portal calls under /orgs/{orgSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics.",
+		description:
+			"Everything the merchant portal calls under /tenants/{tenantSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics.",
 		guide: { label: "Stores and team guide", href: "../../user-guide/03-stores-and-team.md" },
 		tags: [
 			"Tenants",
@@ -50,15 +51,17 @@ export const REFERENCE_PAGES: readonly ReferencePage[] = [
 			"Tenant POS Terminals",
 			"Tenant API Keys",
 			"Tenant Redemptions",
+			"Tenant Customer Bans",
 			"Tenant Analytics",
 		],
 	},
 	{
 		slug: "customer-rewards",
 		title: "Customer rewards and claims",
-		description: "The consumer app's API: browse rewards, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics.",
+		description:
+			"The consumer app's API: browse rewards, share them with friends, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics.",
 		guide: { label: "Customer claims guide", href: "../../user-guide/05-customer-claims.md" },
-		tags: ["Rewards", "Claims", "Legal", "Reward Notifications"],
+		tags: ["Rewards", "Referrals", "Claims", "Legal", "Reward Notifications"],
 	},
 	{
 		slug: "pos",

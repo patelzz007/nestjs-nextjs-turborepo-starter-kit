@@ -8,7 +8,7 @@ import { merchantNotFound } from "../../kyb-errors";
 import { actingInTenant, requireUserActor } from "../../tenant-actor";
 import type { TenantsScope } from "../../tenants-scope";
 import type { KybReadPort } from "../../ports/kyb-read.port";
-import type { MerchantAccessPort } from "../../ports/merchant-access.port";
+import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { TenantDirectoryPort } from "../../ports/tenant-directory.port";
 import { KYB_READ, MERCHANT_ACCESS, TENANT_DIRECTORY, TENANTS_UNIT_OF_WORK } from "../../ports/tenants.tokens";
 import { SubmitKybCommand } from "./submit-kyb.command";

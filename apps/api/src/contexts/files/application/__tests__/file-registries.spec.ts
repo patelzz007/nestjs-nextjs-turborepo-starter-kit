@@ -1,4 +1,4 @@
-import type { CreateFileUploadUrlInput } from "@workspace/shared";
+import type { FileUploadRequest } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { TransactionalEventCollector } from "../../../../platform/application/events/transactional-event-collector";
@@ -6,7 +6,7 @@ import { FileCategoryAccessRegistry, FileCategoryAccessUnregisteredError } from 
 import { bindFileReferenceGuard, FileReferenceGuardRegistry, type FileReferenceBlock, type FileReferenceGuard, type FileReferenceSubject } from "../ports/file-reference.port";
 import { CHECKSUM, FILE_ID, ORG_ID, RecordingAccessRule, UPLOADER_ID, cleanupActor, userActor } from "./fakes/files.fakes";
 
-const KYB: CreateFileUploadUrlInput = {
+const KYB: FileUploadRequest = {
 	category: "MERCHANT_KYB",
 	fileName: "f.pdf",
 	mimeType: "application/pdf",

@@ -1,4 +1,4 @@
-import type { CreateFileUploadUrlInput, FileCategory } from "@workspace/shared";
+import type { FileUploadRequest, FileCategory } from "@workspace/shared";
 
 import type { AuthorizationKernelPort } from "../../authorization/public-api";
 import { fileForbidden, uploaderOnly, type FileAccessAction, type FileAccessSubject, type FileActor, type FileCategoryAccessRule } from "../../files/public-api";
@@ -12,7 +12,7 @@ export class ProductImageFileAccessRule implements FileCategoryAccessRule {
 
 	public constructor(private readonly kernel: KernelAuthorizeCheck) {}
 
-	public async assertCanUpload(actor: FileActor, request: CreateFileUploadUrlInput): Promise<void> {
+	public async assertCanUpload(actor: FileActor, request: FileUploadRequest): Promise<void> {
 		if (request.productId === undefined) {
 			throw fileForbidden("upload", "A product is required for product images");
 		}

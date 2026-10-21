@@ -1,6 +1,5 @@
 import { epochMs, type EpochMs } from "@workspace/shared";
-
-import { CorruptIdentityStateError } from "../errors/identity.errors";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** Failed sign-in attempts after which the account locks. */
 export const MAX_FAILED_SIGN_IN_ATTEMPTS = 5;
@@ -38,7 +37,7 @@ export class LockoutState {
 
 	public static of(failedAttempts: number, lockedUntil: EpochMs | null): LockoutState {
 		if (!Number.isInteger(failedAttempts) || failedAttempts < 0) {
-			throw new CorruptIdentityStateError("lockout", "failed attempts must be a non-negative integer");
+			throw new CorruptAggregateStateError("lockout", null, "failed attempts must be a non-negative integer");
 		}
 		return new LockoutState(failedAttempts, lockedUntil);
 	}

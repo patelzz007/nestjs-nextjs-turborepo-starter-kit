@@ -281,7 +281,7 @@ Do not keep a database transaction open while calling external HTTP APIs, Kafka,
 
 Migrations are versioned production artifacts — never edit an already-applied migration casually, never hand-edit production schema outside the migration process, review destructive migrations carefully, and test rollback/forward recovery for risky ones (`13-ci-cd-and-quality-gates.md`).
 
-**Every schema change that adds or changes a column/table must update `packages/database/prisma/seed.ts` in the same PR.** This is non-negotiable, not optional housekeeping — full requirements and worked examples in `08-database-prisma.md`'s "Seed data" section. The short version: a migration PR that leaves `seed.ts` silently out of sync with the schema is treated the same as a migration PR with no migration file at all — see `16-code-review-checklist.md`.
+**Every schema change that adds or changes a column/table must update the seed (`apps/api/prisma/seed/`) in the same PR.** This is non-negotiable, not optional housekeeping — full requirements and worked examples in `08-database-prisma.md`'s "Seed data" section. The short version: a migration PR that leaves `seed.ts` silently out of sync with the schema is treated the same as a migration PR with no migration file at all — see `16-code-review-checklist.md`.
 
 ## Request lifecycle
 

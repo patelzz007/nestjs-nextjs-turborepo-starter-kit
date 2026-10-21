@@ -10,7 +10,7 @@ import { LocationScope } from "../../../domain/value-objects/location-scope.valu
 import { requireUserActor } from "../../tenant-actor";
 import type { TenantsScope } from "../../tenants-scope";
 import type { InviteTokenPort } from "../../ports/invite-tokens.port";
-import type { MerchantAccessPort } from "../../ports/merchant-access.port";
+import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { TenantDirectoryPort } from "../../ports/tenant-directory.port";
 import { INVITE_TOKENS, MERCHANT_ACCESS, TENANT_DIRECTORY, TENANTS_UNIT_OF_WORK } from "../../ports/tenants.tokens";
 import { InviteMemberCommand } from "./invite-member.command";

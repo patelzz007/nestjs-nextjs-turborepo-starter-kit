@@ -7,7 +7,6 @@ import { UserProfile } from "../aggregates/user-profile.aggregate";
 import { PASSWORD_RESET_TOKEN_TTL_MS, PasswordResetToken } from "../entities/password-reset-token.entity";
 import {
 	CannotImpersonateSelfError,
-	CorruptIdentityStateError,
 	ImpersonationAlreadyActiveError,
 	ImpersonationSessionInvalidError,
 	ImpersonationTargetInactiveError,
@@ -25,6 +24,7 @@ import {
 } from "../errors/identity.errors";
 import { ImpersonationStarted, ImpersonationStopped, UserCredentialsChanged, UserProfileChanged } from "../events/identity.events";
 import { BACKGROUND_AUDIT_ORIGIN, type AuditOrigin } from "../value-objects/audit-origin.value-object";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 const NOW: EpochMs = epochMs(1_800_000_000_000);
 const DELAY_MS = 86_400_000;
@@ -104,8 +104,8 @@ describe("MfaRecoveryRequest", () => {
 	});
 
 	it("refuses an APPROVED row without reviewer or unlock time as corrupt", () => {
-		expect(() => stored({ reviewedBy: null })).toThrow(CorruptIdentityStateError);
-		expect(() => stored({ scheduledUnlockAt: null })).toThrow(CorruptIdentityStateError);
+		expect(() => stored({ reviewedBy: null })).toThrow(CorruptAggregateStateError);
+		expect(() => stored({ scheduledUnlockAt: null })).toThrow(CorruptAggregateStateError);
 	});
 });
 
@@ -194,7 +194,7 @@ describe("ImpersonationSession", () => {
 	});
 
 	it("refuses a stored session that expires before it starts", () => {
-		expect(() => ImpersonationSession.rehydrate({ ...start().snapshot, expiresAt: epochMs(NOW - 1) })).toThrow(CorruptIdentityStateError);
+		expect(() => ImpersonationSession.rehydrate({ ...start().snapshot, expiresAt: epochMs(NOW - 1) })).toThrow(CorruptAggregateStateError);
 	});
 });
 
@@ -218,7 +218,7 @@ describe("UserProfile", () => {
 	});
 
 	it("refuses an invalid stored version", () => {
-		expect(() => UserProfile.rehydrate({ userId: "user-1", fullName: "Jane", version: -1 })).toThrow(CorruptIdentityStateError);
+		expect(() => UserProfile.rehydrate({ userId: "user-1", fullName: "Jane", version: -1 })).toThrow(CorruptAggregateStateError);
 	});
 });
 
@@ -238,7 +238,7 @@ describe("PasswordResetToken", () => {
 
 	it("refuses a stored token without its hashes", () => {
 		expect(() => PasswordResetToken.rehydrate({ id: "t-1", userId: "user-1", tokenHash: "", tokenDigest: "d", expiresAt: NOW, usedAt: null })).toThrow(
-			CorruptIdentityStateError,
+			CorruptAggregateStateError,
 		);
 	});
 });

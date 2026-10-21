@@ -5,14 +5,14 @@ import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href
 describe("createMerchantNavHrefResolver", () => {
 	const resolve = createMerchantNavHrefResolver("acme-coffee");
 
-	it("scopes org-relative menu URLs to the tenant", () => {
+	it("scopes tenant-relative menu URLs to the tenant", () => {
 		expect(resolve("/dashboard")).toBe("/t/acme-coffee/dashboard");
 		expect(resolve("/rewards/new")).toBe("/t/acme-coffee/rewards/new");
 		expect(resolve("/settings/team")).toBe("/t/acme-coffee/settings/team");
 		expect(resolve("/account")).toBe("/t/acme-coffee/account");
 	});
 
-	it("is idempotent for already org-scoped hrefs", () => {
+	it("is idempotent for already tenant-scoped hrefs", () => {
 		expect(resolve(resolve("/redemptions"))).toBe("/t/acme-coffee/redemptions");
 	});
 
@@ -22,9 +22,9 @@ describe("createMerchantNavHrefResolver", () => {
 	});
 
 	it("sends menu URLs to the server-side entry pages when no tenant is known", () => {
-		const resolveWithoutOrg = createMerchantNavHrefResolver(undefined);
+		const resolveWithoutTenant = createMerchantNavHrefResolver(undefined);
 
-		expect(resolveWithoutOrg("/rewards")).toBe("/");
-		expect(resolveWithoutOrg("/account")).toBe("/account");
+		expect(resolveWithoutTenant("/rewards")).toBe("/");
+		expect(resolveWithoutTenant("/account")).toBe("/account");
 	});
 });

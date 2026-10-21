@@ -28,11 +28,11 @@ describe("ROUTES", () => {
 		expect(tenantRoutes(SLUG).terminals).toBe(APP_LINKS.merchant.terminals(SLUG));
 	});
 
-	it("keeps the org-relative API keys path in sync with the shared email link", () => {
+	it("keeps the tenant-relative API keys path in sync with the shared email link", () => {
 		expect(tenantPath(SLUG, TENANT_ROUTES.apiKeys)).toBe(APP_LINKS.merchant.apiKeys(SLUG));
 	});
 
-	it("keeps the org-relative POS terminals path in sync with the shared app link", () => {
+	it("keeps the tenant-relative POS terminals path in sync with the shared app link", () => {
 		expect(tenantPath(SLUG, TENANT_ROUTES.terminals)).toBe(APP_LINKS.merchant.terminals(SLUG));
 	});
 
@@ -44,7 +44,7 @@ describe("ROUTES", () => {
 });
 
 describe("tenantRoutes", () => {
-	it("builds org-scoped hrefs for every section", () => {
+	it("builds tenant-scoped hrefs for every section", () => {
 		const routes = tenantRoutes(SLUG);
 
 		expect(routes.root).toBe("/t/acme-coffee");
@@ -65,7 +65,7 @@ describe("tenantRoutes", () => {
 		expect(routes.settings.verification).toBe("/t/acme-coffee/settings/verification");
 	});
 
-	it("maps the org-relative root to the tenant root without a trailing slash", () => {
+	it("maps the tenant-relative root to the tenant root without a trailing slash", () => {
 		expect(tenantPath(SLUG, "/")).toBe("/t/acme-coffee");
 	});
 
@@ -77,7 +77,7 @@ describe("tenantRoutes", () => {
 });
 
 describe("resolveTenantHref", () => {
-	it("scopes org-relative routes to the active tenant", () => {
+	it("scopes tenant-relative routes to the active tenant", () => {
 		expect(resolveTenantHref(SLUG, TENANT_ROUTES.rewards.list)).toBe("/t/acme-coffee/rewards");
 	});
 
@@ -111,13 +111,13 @@ describe("path helpers", () => {
 		expect(stripQueryAndHash("/t/acme")).toBe("/t/acme");
 	});
 
-	it("recognises org-scoped paths", () => {
+	it("recognises tenant-scoped paths", () => {
 		expect(isTenantScopedPath("/t/acme/rewards")).toBe(true);
 		expect(isTenantScopedPath("/t")).toBe(false);
 		expect(isTenantScopedPath("/tenants/acme")).toBe(false);
 	});
 
-	it("extracts the org-relative part of an org-scoped path", () => {
+	it("extracts the tenant-relative part of an tenant-scoped path", () => {
 		expect(toTenantRelativePath("/t/acme/rewards/1/edit")).toBe("/rewards/1/edit");
 		expect(toTenantRelativePath("/t/acme")).toBe("/");
 		expect(toTenantRelativePath("/account")).toBeUndefined();

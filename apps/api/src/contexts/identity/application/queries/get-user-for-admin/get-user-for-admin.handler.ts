@@ -38,6 +38,7 @@ export class GetUserForAdminHandler implements IQueryHandler<GetUserForAdminQuer
 			directPermissionIds: [...directPermissionIds],
 			signupReferrer: referral?.referrer ?? null,
 			signupReferralStatus: referral?.status ?? null,
+			ban: account.ban,
 		};
 	}
 }

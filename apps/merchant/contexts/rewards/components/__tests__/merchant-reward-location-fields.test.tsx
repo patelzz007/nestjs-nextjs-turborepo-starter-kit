@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import type { MerchantRewardFormValues, TenantContextResponse } from "@workspace/shared";
+import type { TenantContextResponse } from "@workspace/shared";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
-import { useForm } from "react-hook-form";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MerchantRewardLocationFields } from "@/contexts/rewards/components/merchant-reward-location-fields";
+import { useRewardEditorForm, type RewardEditorInput } from "@/contexts/rewards/lib/reward-editor-form";
 import { TenantContextProvider } from "@/features/tenant-context/facade";
 import { TEST_ORG_SLUG } from "@/test/authorization";
 import { testEnvelope } from "@/test/envelope";
@@ -35,12 +35,31 @@ class ResizeObserverStub {
 	}
 }
 
-const ALL_LOCATIONS_DEFAULTS: Partial<MerchantRewardFormValues> = { locationScopeType: "ALL_LOCATIONS", locationIds: [] };
+const ALL_LOCATIONS_DEFAULTS: RewardEditorInput = {
+	rewardType: "DISCOUNT",
+	title: "",
+	description: "",
+	imageFileIds: [],
+	rewardValue: "0",
+	minPurchase: "",
+	termsConditions: "",
+	startDate: "2026-11-01",
+	expiryDate: "2026-11-30",
+	quantityTotal: "100",
+	maxClaimsPerUser: 1,
+	locationScopeType: "ALL_LOCATIONS",
+	locationIds: [],
+};
 
-/** The editor's form, reduced to the fields this section owns. */
+/** This section never saves. */
+function ignoreSave(): void {
+	return undefined;
+}
+
+/** The editor's real form, around the section that owns the store fields. */
 function LocationFieldsHarness(): React.JSX.Element {
-	const { control, formState, setValue } = useForm<MerchantRewardFormValues>({ defaultValues: ALL_LOCATIONS_DEFAULTS });
-	return <MerchantRewardLocationFields control={control} errors={formState.errors} setValue={setValue} />;
+	const { editor } = useRewardEditorForm<null>({ defaultValues: ALL_LOCATIONS_DEFAULTS, defaultMeta: null, onValid: ignoreSave });
+	return <MerchantRewardLocationFields editor={editor} />;
 }
 
 function renderLocationFields(context: TenantContextResponse): void {

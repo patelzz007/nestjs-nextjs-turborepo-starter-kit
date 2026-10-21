@@ -9,6 +9,8 @@ import {
 	TenantMemberListQuerySchema,
 	TenantSlugParamSchema,
 	OwnMembershipListQuerySchema,
+	TENANT_CUSTOMER_BAN_LIST_DEFAULT_LIMIT,
+	TenantCustomerBanListQuerySchema,
 } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -19,11 +21,12 @@ import { STORE_A } from "@/test/terminals";
 
 import { API_KEYS_URL_STATE } from "../../../contexts/pos/url-state/api-keys";
 import { REDEMPTIONS_URL_STATE, toRedemptionsQuery } from "../../../contexts/pos/url-state/redemptions";
+import { BANNED_CUSTOMERS_URL_STATE, toBannedCustomersQuery } from "../../../contexts/tenancy/url-state/banned-customers";
 import { STORES_PAGE_SIZE, STORES_URL_STATE, toStoresQuery } from "../../../contexts/tenancy/url-state/stores";
 import { REWARD_CATALOG_PAGE_SIZE, REWARDS_URL_STATE, rewardsTabPatch, toRewardsQuery } from "../../../contexts/rewards/url-state/rewards";
 import { TEAM_INVITES_URL_STATE, TEAM_LIST_PAGE_SIZE, TEAM_MEMBERS_URL_STATE, toTeamInvitesQuery, toTeamMembersQuery } from "../../../contexts/tenancy/url-state/team";
 
-/** The contract input of `GET /t/:orgSlug/redemptions`. */
+/** The contract input of `GET /t/:tenantSlug/redemptions`. */
 const RedemptionsRequestSchema = z.intersection(TenantSlugParamSchema, MerchantRedemptionListQuerySchema);
 
 describe("API_KEYS_URL_STATE", () => {
@@ -61,6 +64,24 @@ describe("REDEMPTIONS_URL_STATE", () => {
 		const input = toRedemptionsQuery(TEST_ORG_SLUG, undefined, REDEMPTIONS_URL_STATE.parse({ page: "2", cursor: "abc", sort: "redeemedAt" }));
 
 		expect(input).toEqual({ tenantSlug: TEST_ORG_SLUG, page: 2, limit: MERCHANT_REDEMPTIONS_PAGE_SIZE, sort: "redeemedAt", locationId: undefined });
+	});
+});
+
+describe("BANNED_CUSTOMERS_URL_STATE", () => {
+	const BannedCustomersRequestSchema = z.intersection(TenantSlugParamSchema, TenantCustomerBanListQuerySchema);
+
+	it("maps a page URL to the input the contract accepts", () => {
+		const input = toBannedCustomersQuery(TEST_ORG_SLUG, BANNED_CUSTOMERS_URL_STATE.parse({ page: "2", cursor: "abc" }));
+
+		expect(input).toEqual({ tenantSlug: TEST_ORG_SLUG, page: 2, limit: TENANT_CUSTOMER_BAN_LIST_DEFAULT_LIMIT, cursor: "abc" });
+		expect(BannedCustomersRequestSchema.safeParse(input).success).toBe(true);
+	});
+
+	it("requests the newest page from an empty or hostile URL", () => {
+		const input = toBannedCustomersQuery(TEST_ORG_SLUG, BANNED_CUSTOMERS_URL_STATE.parse({ page: "-1", limit: "500", sort: "reason" }));
+
+		expect(input).toEqual({ tenantSlug: TEST_ORG_SLUG, page: 1, limit: TENANT_CUSTOMER_BAN_LIST_DEFAULT_LIMIT });
+		expect(BannedCustomersRequestSchema.safeParse(input).success).toBe(true);
 	});
 });
 

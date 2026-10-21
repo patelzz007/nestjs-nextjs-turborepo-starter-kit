@@ -78,8 +78,8 @@ describe("composite tenant foreign keys", () => {
 		}
 	}
 
-	it("covers the sixteen §7 relations", () => {
-		expect(TENANT_INTEGRITY_RELATIONS).toHaveLength(16);
+	it("covers the fourteen §7 relations", () => {
+		expect(TENANT_INTEGRITY_RELATIONS).toHaveLength(14);
 	});
 
 	for (const relation of TENANT_INTEGRITY_RELATIONS) {

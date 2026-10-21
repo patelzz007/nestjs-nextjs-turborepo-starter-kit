@@ -1,16 +1,11 @@
 // What the reward editor's live preview says about a reward that is still
 // being written: what is missing before it can be saved, and how its end date
-// reads. Pure functions over the form's values — the same shared schema that
+// reads. Pure functions over the editor's values — the same shared schema that
 // validates the form (and the API) decides what is missing, so the preview's
 // checklist can never disagree with the save.
 
-import {
-	MerchantRewardFormFieldsSchema,
-	parseRewardDateInputToEpochMs,
-	PLATFORM_DISPLAY_REGION,
-	type MerchantRewardFormValues,
-	type LocationResponse,
-} from "@workspace/shared";
+import { parseRewardDateInputToEpochMs, PLATFORM_DISPLAY_REGION, type LocationResponse, type MerchantRewardFormValues } from "@workspace/shared";
+import { rewardEditorErrors, type RewardEditorField, type RewardEditorInput } from "@/contexts/rewards/lib/reward-editor-form";
 import { describeRewardStores, type RewardStores } from "@/contexts/rewards/lib/presentation";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { z } from "zod";
@@ -20,9 +15,7 @@ export const RewardEditorSectionIdSchema = z.enum(["reward-offer", "reward-photo
 
 export type RewardEditorSectionId = z.output<typeof RewardEditorSectionIdSchema>;
 
-type RewardFormField = keyof MerchantRewardFormValues;
-
-const RewardFormFieldSchema = MerchantRewardFormFieldsSchema.keyof();
+type RewardFormField = RewardEditorField;
 
 /** One thing the reward still needs, in the merchant's words, and the section where it is fixed. */
 export interface RewardDraftGap {
@@ -53,29 +46,30 @@ const FIELD_GAPS: Readonly<Record<RewardFormField, FieldGapCopy>> = {
 	termsConditions: { label: "Shorten the terms", sectionId: "reward-terms" },
 };
 
-/** `FIELD_GAPS`' keys, read back as fields: the page order of the checklist. */
-const PAGE_ORDER: readonly RewardFormField[] = Object.keys(FIELD_GAPS).flatMap((key): RewardFormField[] => {
-	const parsed = RewardFormFieldSchema.safeParse(key);
-	return parsed.success ? [parsed.data] : [];
-});
+/** The checklist's page order: the order the fields appear in the editor. */
+const PAGE_ORDER: readonly RewardFormField[] = [
+	"rewardType",
+	"rewardValue",
+	"minPurchase",
+	"title",
+	"description",
+	"imageFileIds",
+	"startDate",
+	"expiryDate",
+	"quantityTotal",
+	"maxClaimsPerUser",
+	"locationScopeType",
+	"locationIds",
+	"termsConditions",
+];
 
 /**
  * What the reward still needs before it can be saved, one entry per field, in
  * page order. Empty once the shared schema accepts the values.
  */
-export function describeRewardDraftGaps(values: Readonly<Partial<MerchantRewardFormValues>>): readonly RewardDraftGap[] {
-	const result = MerchantRewardFormFieldsSchema.safeParse(values);
-	if (result.success) {
-		return [];
-	}
-	const failing = new Set<RewardFormField>(
-		result.error.issues.flatMap((issue): RewardFormField[] => {
-			const [field] = issue.path;
-			const parsed = RewardFormFieldSchema.safeParse(field);
-			return parsed.success ? [parsed.data] : [];
-		}),
-	);
-	return PAGE_ORDER.filter((field) => failing.has(field)).map((field): RewardDraftGap => ({ field, ...FIELD_GAPS[field] }));
+export function describeRewardDraftGaps(values: RewardEditorInput): readonly RewardDraftGap[] {
+	const errors = rewardEditorErrors(values);
+	return PAGE_ORDER.filter((field) => errors[field] !== undefined).map((field): RewardDraftGap => ({ field, ...FIELD_GAPS[field] }));
 }
 
 const DateInputSchema = z.iso.date();

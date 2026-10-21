@@ -1,9 +1,10 @@
 import { LocationStatusSchema, type EpochMs, type LocationStatus, type PilotCity } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
-import { LocationStatusConflictError, TenantsCorruptStateError, PrimaryLocationCloseRefusedError } from "../errors/tenants.errors";
+import { LocationStatusConflictError, PrimaryLocationCloseRefusedError } from "../errors/tenants.errors";
 import { LocationStatusChanged, type TenantsDomainEvent } from "../events/tenants.events";
 import { assertCanRequestLocation } from "../policies/location-request-quota.policy";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** The editable details of a store location. */
 export interface LocationDetails {
@@ -82,7 +83,7 @@ export class Location extends AggregateRoot<TenantsDomainEvent> {
 	public static rehydrate(state: LocationState): Location {
 		const status = LocationStatusSchema.safeParse(state.status);
 		if (!status.success) {
-			throw new TenantsCorruptStateError(state.id);
+			throw new CorruptAggregateStateError("tenant", state.id);
 		}
 		return new Location(state.id, state.tenantId, state.isPrimary, status.data, {
 			name: state.name,

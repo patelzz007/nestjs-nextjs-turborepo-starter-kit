@@ -26,6 +26,7 @@
 		"/[...slug]": 581632,
 		"/account": 581632,
 		"/account/profile": 666624,
+		"/account/github": 630784,
 		"/account/security": 604160,
 		"/analytics": 798720,
 		"/audit-logs": 671744,
@@ -51,6 +52,7 @@
 		"/emails/templates": 587776,
 		"/geography": 656384,
 		"/merchants": 653312,
+		"/merchants/[id]": 590848,
 		"/merchants/invites": 630784,
 		"/merchants/store-requests": 627712,
 		"/merchants/verification": 661504,
@@ -61,6 +63,7 @@
 		"/settings/access": 635904,
 		"/users": 678912,
 		"/users/[id]": 674816,
+		"/users/support-access": 720896,
 		"/users/mfa-recovery": 652288
 	},
 	"merchant": {
@@ -88,6 +91,7 @@
 		"/t/[tenantSlug]/settings/branding": 601088,
 		"/t/[tenantSlug]/settings/locations": 596992,
 		"/t/[tenantSlug]/settings/team": 615424,
+		"/t/[tenantSlug]/settings/banned-customers": 609280,
 		"/t/[tenantSlug]/settings/verification": 599040,
 		"/t/[tenantSlug]/stores": 598016,
 		"/t/[tenantSlug]/terminals": 637952,

@@ -9,9 +9,12 @@ import { IanaTimeZoneSchema } from "../../reporting/schemas/analytics-time-zone"
 import { KybStatusSchema, PilotCitySchema } from "./tenant-enums";
 
 /** Tenant lifecycle states — authoritative across API, workers, billing. */
-export const TenantLifecycleStateSchema = z.enum(["PROVISIONING", "ACTIVE", "RESTRICTED", "SUSPENDED", "PENDING_DELETION", "DELETED"]);
+export const TenantLifecycleStateSchema = z.enum(["PROVISIONING", "ACTIVE", "RESTRICTED", "SUSPENDED", "BANNED", "PENDING_DELETION", "DELETED"]);
 
 export type TenantLifecycleState = z.output<typeof TenantLifecycleStateSchema>;
+
+/** The only lifecycle state in which a merchant operates: its rewards are listed, claimed and redeemed. */
+export const TENANT_OPERATING_LIFECYCLE_STATE: TenantLifecycleState = TenantLifecycleStateSchema.enum.ACTIVE;
 
 export const MembershipRoleSchema = z.enum(["OWNER", "ADMIN", "MEMBER", "POLICY_ADMIN", "CASHIER"]);
 
@@ -163,10 +166,8 @@ export type LocationCloseInput = z.output<typeof LocationCloseSchema>;
 /** What closing a store took with it (the store itself stays readable as history). */
 export const LocationCloseResponseSchema = z.object({
 	locationId: z.uuid(),
-	storeId: z.uuid(),
 	closedAt: EpochMsSchema,
 	reason: z.string(),
-	storeMembershipsRemoved: z.number().int().nonnegative(),
 	memberScopesRemoved: z.number().int().nonnegative(),
 	terminalsRemoved: z.number().int().nonnegative(),
 	apiKeysRevoked: z.number().int().nonnegative(),
@@ -174,7 +175,7 @@ export const LocationCloseResponseSchema = z.object({
 
 export type LocationCloseResponse = z.output<typeof LocationCloseResponseSchema>;
 
-export const TenantMemberStoreParamSchema = z
+export const TenantMemberLocationParamSchema = z
 	.object({
 		tenantSlug: TenantSlugSchema,
 		membershipId: z.uuid(),
@@ -182,25 +183,25 @@ export const TenantMemberStoreParamSchema = z
 	})
 	.strict();
 
-export type TenantMemberStoreParam = z.output<typeof TenantMemberStoreParamSchema>;
+export type TenantMemberLocationParam = z.output<typeof TenantMemberLocationParamSchema>;
 
-/** Remove a team member from one store. A member left with no store at all is refused unless `allowNoStores` is set. */
-export const TenantMemberStoreRemoveSchema = z
+/** Remove a team member from one store. A member left with no store at all is refused unless `allowNoLocations` is set. */
+export const TenantMemberLocationRemoveSchema = z
 	.object({
-		allowNoStores: z.boolean().default(false),
+		allowNoLocations: z.boolean().default(false),
 	})
 	.strict();
 
-export type TenantMemberStoreRemoveInput = z.output<typeof TenantMemberStoreRemoveSchema>;
+export type TenantMemberLocationRemoveInput = z.output<typeof TenantMemberLocationRemoveSchema>;
 
-export const TenantMemberStoreRemoveResponseSchema = z.object({
+export const TenantMemberLocationRemoveResponseSchema = z.object({
 	membershipId: z.uuid(),
 	locationId: z.uuid(),
 	removedAt: EpochMsSchema,
 	remainingLocationIds: z.array(z.uuid()),
 });
 
-export type TenantMemberStoreRemoveResponse = z.output<typeof TenantMemberStoreRemoveResponseSchema>;
+export type TenantMemberLocationRemoveResponse = z.output<typeof TenantMemberLocationRemoveResponseSchema>;
 
 export const AdminLocationCreateSchema = z
 	.object({
@@ -633,6 +634,42 @@ export const SupportAccessGrantResponseSchema = z.object({
 });
 
 export type SupportAccessGrantResponse = z.output<typeof SupportAccessGrantResponseSchema>;
+
+const SupportAccessPersonSchema = z.object({ id: z.uuid(), fullName: z.string(), email: z.string() });
+
+/** One support access grant as the platform admin's list and the tenant owner's list show it. */
+export const SupportAccessGrantDetailSchema = SupportAccessGrantResponseSchema.extend({
+	tenant: z.object({ id: z.uuid(), slug: TenantSlugSchema, displayName: z.string() }),
+	/** The platform user the grant is for; null when that account no longer exists. */
+	supportUser: SupportAccessPersonSchema.nullable(),
+	/** The tenant owner who approved it; null while it waits (or when that account no longer exists). */
+	approvedBy: SupportAccessPersonSchema.nullable(),
+	reason: z.string(),
+	ticketRef: z.string().nullable(),
+	revokedAt: EpochMsSchema.nullable(),
+});
+
+export type SupportAccessGrantDetail = z.output<typeof SupportAccessGrantDetailSchema>;
+
+/** A tenant's grants (`GET /tenants/:tenantSlug/support-access`), newest first: one schema instance for the contract and the route. */
+export const SupportAccessGrantDetailListSchema = z.array(SupportAccessGrantDetailSchema);
+
+/** `GET /support-access` (platform admins): newest first; `filter[status]`, `filter[tenantId]`. */
+export const supportAccessGrantListQuery = defineListQuery({
+	sortable: ["createdAt"],
+	defaultSort: [{ field: "createdAt", direction: "desc" }],
+	filter: {
+		status: listFilter.enumeration(SupportAccessGrantStatusSchema, { eq: true, in: true }),
+		tenantId: listFilter.uuid({ eq: true }),
+	},
+	params: {},
+});
+export const SupportAccessGrantListQuerySchema = supportAccessGrantListQuery.schema;
+export type SupportAccessGrantListQuery = z.output<typeof SupportAccessGrantListQuerySchema>;
+export type SupportAccessGrantListSortField = (typeof supportAccessGrantListQuery.sortable)[number];
+
+/** How many grants the tenant owner's list shows (newest first). */
+export const TENANT_SUPPORT_ACCESS_LIST_LIMIT = 50;
 
 export const TenantDeletionRequestSchema = z
 	.object({

@@ -3,7 +3,7 @@ title: "API reference — Files and object storage"
 description: "Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback."
 order: 8
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792454400000
+lastUpdated: 1792540800000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -59,7 +59,7 @@ Get file metadata
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/files/01a15a8b-4023-78d9-9c8a-4221acf5c5f4
+GET /api/v1/files/01a15e74-65f3-72b2-9b47-dc2b68df560b
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -71,7 +71,7 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "file": {
-      "id": "01a15a8b-4023-78d9-9c8a-4221acf5c5f4",
+      "id": "01a15e74-65f3-72b2-9b47-dc2b68df560b",
       "category": "USER_AVATAR",
       "visibility": "PUBLIC",
       "originalName": "sample.png",
@@ -79,13 +79,13 @@ Response `200 OK` (application/json):
       "sizeBytes": 2004,
       "status": "READY",
       "scanStatus": "NOT_SCANNED",
-      "publicUrl": "http://192.168.100.23:8097/api/v1/files/01a15a8b-4023-78d9-9c8a-4221acf5c5f4/local-public",
-      "uploadedAt": 1792520437797
+      "publicUrl": "http://192.168.100.23:8097/api/v1/files/01a15e74-65f3-72b2-9b47-dc2b68df560b/local-public",
+      "uploadedAt": 1792586049019
     }
   },
   "meta": {
-    "correlationId": "AX3Sg4PzvMXfpbZ984Nee",
-    "timestamp": 1792520439564
+    "correlationId": "uJXH39CVAYv7WaW7oWAlD",
+    "timestamp": 1792586050834
   }
 }
 ```
@@ -123,7 +123,7 @@ Soft-delete a file and queue physical deletion
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-DELETE /api/v1/files/01a15a8b-47ce-797d-9138-fcc610491818
+DELETE /api/v1/files/01a15e74-6daf-7588-9cd9-de687eaf77f1
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -138,8 +138,8 @@ Response `200 OK` (application/json):
     "success": true
   },
   "meta": {
-    "correlationId": "pgr6YlJDkzU7maHhH9Kly",
-    "timestamp": 1792520441724
+    "correlationId": "4M_BoordRXXZIKdNGwWWl",
+    "timestamp": 1792586052972
   }
 }
 ```
@@ -193,7 +193,7 @@ Complete a direct upload after browser upload
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/files/01a15a8b-4023-78d9-9c8a-4221acf5c5f4/complete
+POST /api/v1/files/01a15e74-65f3-72b2-9b47-dc2b68df560b/complete
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -211,7 +211,7 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "file": {
-      "id": "01a15a8b-4023-78d9-9c8a-4221acf5c5f4",
+      "id": "01a15e74-65f3-72b2-9b47-dc2b68df560b",
       "category": "USER_AVATAR",
       "visibility": "PUBLIC",
       "originalName": "sample.png",
@@ -220,12 +220,12 @@ Response `201 Created` (application/json):
       "status": "SCANNING",
       "scanStatus": "SCANNING",
       "publicUrl": null,
-      "uploadedAt": 1792520437797
+      "uploadedAt": 1792586049019
     }
   },
   "meta": {
-    "correlationId": "hI3eW2SFU4enUvVr7Lc3n",
-    "timestamp": 1792520437982
+    "correlationId": "5PaZNe6jc30HVgZ9i7ZVT",
+    "timestamp": 1792586049255
   }
 }
 ```
@@ -264,7 +264,7 @@ Get a short-lived download URL for a private file
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/files/01a15a8b-4023-78d9-9c8a-4221acf5c5f4/download-url
+GET /api/v1/files/01a15e74-65f3-72b2-9b47-dc2b68df560b/download-url
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -275,14 +275,14 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "fileId": "01a15a8b-4023-78d9-9c8a-4221acf5c5f4",
+    "fileId": "01a15e74-65f3-72b2-9b47-dc2b68df560b",
     "status": "READY",
     "downloadUrl": "http://192.168.100.23:8097/api/v1/files/local-download?token=<redacted>",
-    "expiresAt": 1792520739642
+    "expiresAt": 1792586350887
   },
   "meta": {
-    "correlationId": "2AXAau3nnIItBQG8finfc",
-    "timestamp": 1792520439643
+    "correlationId": "7vlUyXHqDyIfAVBwOkWCH",
+    "timestamp": 1792586050887
   }
 }
 ```
@@ -313,7 +313,7 @@ Serve a READY public asset from local storage (development only)
 **Example** — called as no session.
 
 ```http
-GET /api/v1/files/01a15a8b-47ce-797d-9138-fcc610491818/local-public
+GET /api/v1/files/01a15e74-6daf-7588-9cd9-de687eaf77f1/local-public
 X-Client-Type: web
 ```
 
@@ -354,12 +354,12 @@ Receive a browser multipart upload for a signed local-storage ticket (developmen
 **Example** — called as the browser, posting to the upload ticket (no session needed).
 
 ```http
-POST /api/v1/files/01a15a8b-4023-78d9-9c8a-4221acf5c5f4/local-upload
+POST /api/v1/files/01a15e74-65f3-72b2-9b47-dc2b68df560b/local-upload
 Content-Type: multipart/form-data
 
 {
   "multipart/form-data": {
-    "key": "staging/users/01a15a89-6fe5-753f-8ef2-a28d8210e0e0/avatar/01a15a8b-4023-78d9-9c8a-4221acf5c5f4-sample.png",
+    "key": "staging/users/01a15e72-17fb-723a-bb91-d4b541411c4e/avatar/01a15e74-65f3-72b2-9b47-dc2b68df560b-sample.png",
     "token": "<redacted: one-time secret>",
     "file": "<the image bytes: sample.png, image/png>"
   }
@@ -375,8 +375,8 @@ Response `201 Created` (application/json):
     "success": true
   },
   "meta": {
-    "correlationId": "eN8oD7JeAnYVmG4TQ8bS1",
-    "timestamp": 1792520437853
+    "correlationId": "t74RpBtyXuMeOlbSMv_zX",
+    "timestamp": 1792586049094
   }
 }
 ```
@@ -490,7 +490,7 @@ POST /api/v1/files/processing-callback
 Content-Type: application/json
 
 {
-  "fileId": "01a15a8b-47ce-797d-9138-fcc610491818",
+  "fileId": "01a15e74-6daf-7588-9cd9-de687eaf77f1",
   "status": "READY",
   "scanStatus": "CLEAN"
 }
@@ -506,8 +506,8 @@ Response `401 Unauthorized` (application/json):
     "message": "Invalid processing callback secret"
   },
   "meta": {
-    "correlationId": "isE-9XVU2J6FIPKIDUp44",
-    "timestamp": 1792520441481
+    "correlationId": "90sEazRTBcq0msPgL2szH",
+    "timestamp": 1792586052753
   }
 }
 ```
@@ -526,14 +526,12 @@ Create a browser upload ticket
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `assetType` | "LOGO" \| "BANNER" | no |  |
-| `category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" \| "GITHUB_COMMENT_IMAGE" | yes |  |
+| `category` | "PRODUCT_IMAGE" \| "USER_AVATAR" \| "GITHUB_COMMENT_IMAGE" | yes |  |
 | `checksumSha256` | string | yes | exactly 64 characters |
 | `fileName` | string | yes | length 1–255 |
 | `mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
 | `productId` | string (uuid) | no |  |
 | `sizeBytes` | integer | yes |  |
-| `tenantId` | string (uuid) | no |  |
 | `userId` | string (uuid) | no |  |
 
 **Response 201 Created** (`application/json`) — Browser upload ticket created
@@ -571,7 +569,7 @@ Content-Type: application/json
   "mimeType": "image/png",
   "sizeBytes": 2004,
   "checksumSha256": "79dc184da4077faf9a1025d14d8cc30faceea511c4fee4ba4deb4de2d486a8a2",
-  "userId": "01a15a89-6fe5-753f-8ef2-a28d8210e0e0"
+  "userId": "01a15e72-17fb-723a-bb91-d4b541411c4e"
 }
 ```
 
@@ -581,19 +579,108 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "fileId": "01a15a8b-4023-78d9-9c8a-4221acf5c5f4",
-    "objectPath": "staging/users/01a15a89-6fe5-753f-8ef2-a28d8210e0e0/avatar/01a15a8b-4023-78d9-9c8a-4221acf5c5f4-sample.png",
+    "fileId": "01a15e74-65f3-72b2-9b47-dc2b68df560b",
+    "objectPath": "staging/users/01a15e72-17fb-723a-bb91-d4b541411c4e/avatar/01a15e74-65f3-72b2-9b47-dc2b68df560b-sample.png",
     "expiresIn": 300,
     "method": "POST_MULTIPART",
-    "uploadUrl": "http://192.168.100.23:8097/api/v1/files/01a15a8b-4023-78d9-9c8a-4221acf5c5f4/local-upload",
+    "uploadUrl": "http://192.168.100.23:8097/api/v1/files/01a15e74-65f3-72b2-9b47-dc2b68df560b/local-upload",
     "fields": {
-      "key": "staging/users/01a15a89-6fe5-753f-8ef2-a28d8210e0e0/avatar/01a15a8b-4023-78d9-9c8a-4221acf5c5f4-sample.png",
+      "key": "staging/users/01a15e72-17fb-723a-bb91-d4b541411c4e/avatar/01a15e74-65f3-72b2-9b47-dc2b68df560b-sample.png",
       "token": "<redacted: one-time secret>"
     }
   },
   "meta": {
-    "correlationId": "dGzWUxLreA717cbd9Hyf2",
-    "timestamp": 1792520437805
+    "correlationId": "wqEOyDfO1gHDKfzmmqNV5",
+    "timestamp": 1792586049029
+  }
+}
+```
+
+### POST /api/v1/tenants/{tenantSlug}/files/upload-url
+
+Create a browser upload ticket for a tenant-owned file
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantFilesController_createUploadUrl` · [source](../../../apps/api/src/contexts/files/presentation/http/files.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `assetType` | "LOGO" \| "BANNER" | no |  |
+| `category` | "STORE_LOGO" \| "STORE_BANNER" \| "REWARD_IMAGE" \| "MERCHANT_KYB" | yes |  |
+| `checksumSha256` | string | yes | exactly 64 characters |
+| `fileName` | string | yes | length 1–255 |
+| `mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
+| `sizeBytes` | integer | yes |  |
+
+**Response 201 Created** (`application/json`) — Browser upload ticket created
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.expiresIn` | integer | yes |  |
+| `data.fields` | object | no |  |
+| `data.fileId` | string (uuid) | yes |  |
+| `data.headers` | object | no |  |
+| `data.method` | "POST_MULTIPART" \| "PUT" | yes |  |
+| `data.objectPath` | string | yes | at least 1 characters |
+| `data.uploadUrl` | string (uri) | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+**Example** — called as brew.owner@kl-rewards.demo (merchant portal).
+
+```http
+POST /api/v1/tenants/brew-bean-kl/files/upload-url
+X-Client-Type: merchant
+X-Mutation-Intent: same-origin
+Cookie: <session cookies from POST /api/v1/auth/login>
+Content-Type: application/json
+
+{
+  "category": "REWARD_IMAGE",
+  "fileName": "reward.png",
+  "mimeType": "image/png",
+  "sizeBytes": 8743,
+  "checksumSha256": "090ebe74d4090444f1b587e07a6b7023423f3754ee6c40ffc4be4b0162272f4a"
+}
+```
+
+Response `201 Created` (application/json):
+
+```json
+{
+  "success": true,
+  "data": {
+    "fileId": "01a15e74-c81e-78e9-9c75-6c80102ffff1",
+    "objectPath": "staging/stores/019b76da-a800-7a94-a198-23ad1b4cfdd9/reward-images/01a15e74-c81e-78e9-9c75-6c80102ffff1-reward.png",
+    "expiresIn": 300,
+    "method": "POST_MULTIPART",
+    "uploadUrl": "http://192.168.100.23:8097/api/v1/files/01a15e74-c81e-78e9-9c75-6c80102ffff1/local-upload",
+    "fields": {
+      "key": "staging/stores/019b76da-a800-7a94-a198-23ad1b4cfdd9/reward-images/01a15e74-c81e-78e9-9c75-6c80102ffff1-reward.png",
+      "token": "<redacted: one-time secret>"
+    }
+  },
+  "meta": {
+    "correlationId": "DaVg_zEPb85yIL-1F2I9G",
+    "timestamp": 1792586074146
   }
 }
 ```

@@ -193,12 +193,3 @@ export class LegalVersionBlankError extends DomainError {
 		super("Name the terms and privacy versions being accepted.");
 	}
 }
-
-/** Stored reward state the aggregate cannot represent (e.g. a status the domain does not model). */
-export class CorruptRewardStateError extends DomainError {
-	public readonly code = "CORRUPT_AGGREGATE_STATE";
-
-	public constructor(aggregateId: string) {
-		super("Stored reward state cannot be loaded.", { aggregateId });
-	}
-}

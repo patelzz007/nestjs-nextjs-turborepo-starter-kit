@@ -21,6 +21,7 @@ import type { DueForAutoPublish, RewardReadPort } from "../../application/ports/
 import {
 	buildMarketplaceOrder,
 	buildMarketplaceWhere,
+	OPERATING_MERCHANT_WHERE,
 	buildTenantRewardListOrder,
 	buildTenantRewardListWhere,
 	buildPendingReviewOrder,
@@ -121,7 +122,7 @@ export class PrismaRewardReadRepository implements RewardReadPort {
 			this.toResponse(
 				db,
 				await db.reward.findFirst({
-					where: { id: rewardId, isDeleted: false, status: "PUBLISHED", rewardKind: "CONSUMER" },
+					where: { AND: [{ id: rewardId, isDeleted: false, status: "PUBLISHED", rewardKind: "CONSUMER" }, OPERATING_MERCHANT_WHERE] },
 					select: MARKETPLACE_REWARD_SELECT,
 				}),
 			),

@@ -256,6 +256,7 @@ const ACTIVE_CASES: readonly ActiveCase[] = [
 	{ pathname: "/components", expected: ["Components"] },
 	{ pathname: "/account/profile", expected: ["Account", "Profile"] },
 	{ pathname: "/account/security", expected: ["Account", "Security"] },
+	{ pathname: "/account/github", expected: ["Account", "GitHub token"] },
 ];
 
 describe("sidebar active state on real pages (guard)", () => {

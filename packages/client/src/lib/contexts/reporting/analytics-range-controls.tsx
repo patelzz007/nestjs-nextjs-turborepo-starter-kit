@@ -3,68 +3,20 @@
 // ============================================
 // lib/contexts/reporting/analytics-range-controls.tsx - the URL-backed range + interval filter of every analytics dashboard
 // ============================================
-// `useAnalyticsRange` reads and writes `ANALYTICS_URL_STATE` (shallow History
-// API updates — the dashboard queries refetch for the new key, the server page
-// does not re-render) and resolves it against the request time. The
-// `AnalyticsRangeControls` smart component renders the packages/ui
-// `AnalyticsRangePicker` for it; its only local state is the custom range
+// The `AnalyticsRangeControls` smart component renders the packages/ui
+// `AnalyticsRangePicker` for a `useAnalyticsRange` controller
+// (analytics-range-controller.ts); its only local state is the custom range
 // being picked (a draft, committed to the URL by Apply — like `useUrlDraft`).
+// Pages load it through `next/dynamic` with `AnalyticsRangePickerSkeleton`, so
+// the calendar is its own chunk (rules/19).
 
 import { MAX_ANALYTICS_RANGE_DAYS, PLATFORM_DISPLAY_REGION, type AnalyticsInterval } from "@workspace/shared";
 import { AnalyticsRangePicker, type CustomDays } from "@workspace/ui/components/analytics-range-picker";
 import * as React from "react";
 
-import { useUrlState } from "../../url-state/use-url-state";
-import {
-	ANALYTICS_URL_STATE,
-	checkCustomRange,
-	CUSTOM_RANGE_ISSUE_MESSAGES,
-	resolveAnalyticsRange,
-	type AnalyticsRangePreset,
-	type LocalDateRange,
-	type ResolvedAnalyticsRange,
-} from "./analytics-range";
+import { checkCustomRange, CUSTOM_RANGE_ISSUE_MESSAGES, type AnalyticsRangePreset } from "./analytics-range";
+import type { AnalyticsRangeController } from "./analytics-range-controller";
 import { analyticsDisplayRegion, ANALYTICS_INTERVAL_OPTIONS, ANALYTICS_RANGE_PRESET_OPTIONS, formatAnalyticsRangeLabel, formatCustomDays } from "./analytics-presentation";
-
-/** The dashboard's range and the commands that change it (each writes the URL). */
-export interface AnalyticsRangeController {
-	readonly range: ResolvedAnalyticsRange;
-	/** A relative preset; resets any custom days and the interval (back to the length's default). */
-	readonly selectPreset: (preset: Exclude<AnalyticsRangePreset, "custom">) => void;
-	/** A validated custom range; resets the interval to the length's default. */
-	readonly applyCustomRange: (days: LocalDateRange) => void;
-	readonly selectInterval: (interval: AnalyticsInterval) => void;
-}
-
-/**
- * The analytics range of the current URL, resolved against `nowMs` (the
- * request time the server page rendered with) in the report's `timeZone`.
- */
-export function useAnalyticsRange(nowMs: number, timeZone: string): AnalyticsRangeController {
-	const [state, update] = useUrlState(ANALYTICS_URL_STATE);
-	const range = React.useMemo((): ResolvedAnalyticsRange => resolveAnalyticsRange(state, nowMs, timeZone), [state, nowMs, timeZone]);
-
-	const selectPreset = React.useCallback(
-		(preset: Exclude<AnalyticsRangePreset, "custom">): void => {
-			update({ range: preset, from: undefined, to: undefined, interval: undefined });
-		},
-		[update],
-	);
-	const applyCustomRange = React.useCallback(
-		(days: LocalDateRange): void => {
-			update({ range: "custom", from: days.fromDate, to: days.toDate, interval: undefined });
-		},
-		[update],
-	);
-	const selectInterval = React.useCallback(
-		(interval: AnalyticsInterval): void => {
-			update({ interval });
-		},
-		[update],
-	);
-
-	return React.useMemo((): AnalyticsRangeController => ({ range, selectPreset, applyCustomRange, selectInterval }), [range, selectPreset, applyCustomRange, selectInterval]);
-}
 
 export interface AnalyticsRangeControlsProps {
 	readonly controller: AnalyticsRangeController;

@@ -323,52 +323,93 @@ export const FileVariantRecordSchema = z
 
 export type FileVariantRecord = z.output<typeof FileVariantRecordSchema>;
 
+/** Categories a signed-in person uploads for themselves or the platform (`POST /files/upload-url`). */
+export const PlatformFileCategorySchema = FileCategorySchema.extract(["PRODUCT_IMAGE", "USER_AVATAR", "GITHUB_COMMENT_IMAGE"]);
+
+export type PlatformFileCategory = z.output<typeof PlatformFileCategorySchema>;
+
+/** Categories a tenant owns (`POST /tenants/:tenantSlug/files/upload-url`): the tenant comes from the route, never the body. */
+export const TenantFileCategorySchema = FileCategorySchema.extract(["STORE_LOGO", "STORE_BANNER", "REWARD_IMAGE", "MERCHANT_KYB"]);
+
+export type TenantFileCategory = z.output<typeof TenantFileCategorySchema>;
+
+/** The bytes an upload ticket is for: the same four fields on every upload route. */
+const UPLOAD_FILE_FIELDS = {
+	fileName: z.string().min(1).max(255),
+	mimeType: DocumentMimeTypeSchema,
+	sizeBytes: z.number().int().positive(),
+	checksumSha256: z.string().length(64),
+};
+
+/** `POST /files/upload-url`: a product image, the caller's avatar or a GitHub comment image. No tenant: those uploads go through the tenant route. */
 export const CreateFileUploadUrlSchema = z
 	.object({
-		category: FileCategorySchema,
-		fileName: z.string().min(1).max(255),
-		mimeType: DocumentMimeTypeSchema,
-		sizeBytes: z.number().int().positive(),
-		checksumSha256: z.string().length(64),
+		category: PlatformFileCategorySchema,
+		...UPLOAD_FILE_FIELDS,
 		productId: z.uuid().optional(),
-		tenantId: z.uuid().optional(),
 		userId: z.uuid().optional(),
-		assetType: MerchantAssetTypeSchema.optional(),
 	})
 	.strict()
 	.superRefine((value, ctx) => {
 		if (value.category === "PRODUCT_IMAGE" && value.productId === undefined) {
 			ctx.addIssue({ code: "custom", message: "productId is required for PRODUCT_IMAGE uploads", path: ["productId"] });
 		}
-		if ((value.category === "STORE_LOGO" || value.category === "STORE_BANNER") && value.tenantId === undefined) {
-			ctx.addIssue({ code: "custom", message: "tenantId is required for store asset uploads", path: ["tenantId"] });
+		if ((value.category === "USER_AVATAR" || value.category === "GITHUB_COMMENT_IMAGE") && value.userId === undefined) {
+			ctx.addIssue({ code: "custom", message: `userId is required for ${value.category} uploads`, path: ["userId"] });
 		}
-		if ((value.category === "STORE_LOGO" || value.category === "STORE_BANNER") && value.assetType === undefined) {
-			ctx.addIssue({ code: "custom", message: "assetType is required for store asset uploads", path: ["assetType"] });
-		}
+	});
+
+export type CreateFileUploadUrlInput = z.output<typeof CreateFileUploadUrlSchema>;
+
+/** `POST /tenants/:tenantSlug/files/upload-url` body: a store logo or banner, a reward image or KYB evidence of the route's tenant. */
+export const CreateTenantFileUploadUrlSchema = z
+	.object({
+		category: TenantFileCategorySchema,
+		...UPLOAD_FILE_FIELDS,
+		assetType: MerchantAssetTypeSchema.optional(),
+	})
+	.strict()
+	.superRefine((value, ctx) => {
 		// The category decides what the file becomes (`LOGO` / `BANNER`); a label saying otherwise is refused, never ignored.
 		const expectedAssetType = value.category === "STORE_LOGO" ? "LOGO" : value.category === "STORE_BANNER" ? "BANNER" : undefined;
+		if (expectedAssetType !== undefined && value.assetType === undefined) {
+			ctx.addIssue({ code: "custom", message: "assetType is required for store asset uploads", path: ["assetType"] });
+		}
 		if (expectedAssetType !== undefined && value.assetType !== undefined && value.assetType !== expectedAssetType) {
 			ctx.addIssue({ code: "custom", message: `assetType must be ${expectedAssetType} for ${value.category} uploads`, path: ["assetType"] });
 		}
 		if (expectedAssetType === undefined && value.assetType !== undefined) {
 			ctx.addIssue({ code: "custom", message: "assetType is only for store logo and banner uploads", path: ["assetType"] });
 		}
-		if (value.category === "USER_AVATAR" && value.userId === undefined) {
-			ctx.addIssue({ code: "custom", message: "userId is required for USER_AVATAR uploads", path: ["userId"] });
-		}
-		if (value.category === "GITHUB_COMMENT_IMAGE" && value.userId === undefined) {
-			ctx.addIssue({ code: "custom", message: "userId is required for GITHUB_COMMENT_IMAGE uploads", path: ["userId"] });
-		}
-		if (value.category === "REWARD_IMAGE" && value.tenantId === undefined) {
-			ctx.addIssue({ code: "custom", message: "tenantId is required for REWARD_IMAGE uploads", path: ["tenantId"] });
-		}
-		if (value.category === "MERCHANT_KYB" && value.tenantId === undefined) {
-			ctx.addIssue({ code: "custom", message: "tenantId is required for MERCHANT_KYB uploads", path: ["tenantId"] });
-		}
 	});
 
-export type CreateFileUploadUrlInput = z.output<typeof CreateFileUploadUrlSchema>;
+export type CreateTenantFileUploadUrlInput = z.output<typeof CreateTenantFileUploadUrlSchema>;
+
+/**
+ * One upload as the API handles it, whichever route it came from: the platform route's body as it
+ * is, or the tenant route's body with the tenant the route resolved (`tenantId`, set server-side,
+ * never read from a request body).
+ */
+export interface FileUploadRequest {
+	readonly category: FileCategory;
+	readonly fileName: string;
+	readonly mimeType: DocumentMimeType;
+	readonly sizeBytes: number;
+	readonly checksumSha256: string;
+	readonly productId?: string | undefined;
+	readonly userId?: string | undefined;
+	readonly tenantId?: string | undefined;
+	readonly assetType?: MerchantAssetType | undefined;
+}
+
+/** Validates a server-built upload request with the schema of the route it stands for (the tenant route when it names a tenant). */
+export function parseFileUploadRequest(request: FileUploadRequest): FileUploadRequest {
+	const { tenantId, ...upload } = request;
+	if (tenantId === undefined) {
+		return CreateFileUploadUrlSchema.parse(upload);
+	}
+	return { ...CreateTenantFileUploadUrlSchema.parse(upload), tenantId: z.uuid().parse(tenantId) };
+}
 
 /** Active object-storage backend for a deployment or stored file row. */
 export const StorageProviderSchema = z.enum(["local", "s3", "firebase"]);

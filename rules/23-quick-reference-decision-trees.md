@@ -28,19 +28,19 @@ Catalog (`apps/api/src/contexts/catalog`) is the application-service example. Th
 
 ```text
 Does it handle HTTP, auth, or request/response shaping?
-  YES → apps/api/src/modules/<feature>/presentation/http   (02-backend-nestjs.md)
+  YES → apps/api/src/contexts/<context>/presentation/http  (02-backend-nestjs.md)
   NO  ↓
 Is it a business rule ("can this order be cancelled?")?
-  YES → apps/api/src/modules/<feature>/domain/policies      (02-backend-nestjs.md)
+  YES → apps/api/src/contexts/<context>/domain/policies     (02-backend-nestjs.md)
   NO  ↓
 Does it orchestrate a use case across policies + repositories?
-  YES → apps/api/src/modules/<feature>/application/services (02-backend-nestjs.md)
+  YES → apps/api/src/contexts/<context>/application/{commands,queries} (02-backend-nestjs.md, ADR 059)
   NO  ↓
 Does it talk to Prisma / Kafka / S3 / Redis?
   YES → .../infrastructure/ (behind an interface)           (21-oop-and-solid-principles.md)
   NO  ↓
 Is it a zod schema used by more than one app?
-  YES → packages/contracts                                   (05-contracts-zod-api.md)
+  YES → packages/shared/src/contexts/<context>/schemas    (05-contracts-zod-api.md)
   NO  ↓
 Is it a pure, framework-agnostic function used by 2+ apps?
   YES → packages/shared                                      (01-repository-architecture.md)

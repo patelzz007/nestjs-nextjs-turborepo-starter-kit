@@ -7,7 +7,7 @@ Shared, **dumb** UI primitives for the monorepo. Components are stateless, fully
 | Rule | Practice |
 |------|----------|
 | Smart vs dumb | No data fetching, routing, or `localStorage` in primitives — pages/containers own that logic. |
-| `forwardRef` | Every interactive root forwards a ref so RHF `register()` and focus management work. |
+| `forwardRef` | Every interactive root forwards a ref so form libraries and focus management can reach the native control. |
 | CVA | Styled components use `class-variance-authority` with `variant`, `size`, and `state` (`default` \| `loading` \| `disabled` \| `error`). |
 | Copy | No strings in components — every string comes from the app's label registry (see [Copy and languages](#copy-and-languages)); `labels` props override per usage. |
 | Tokens | Use design tokens (`bg-primary`, `text-destructive`, `z-overlay`) — no raw `z-50`, `bg-emerald-*`, or hex literals. |
@@ -474,27 +474,19 @@ callbacks — never an API type. What each is for, the colour rules, accessibili
 real kit surfaces. The sweep is CSS (`skeleton-bone` in `styles/components.css`) and respects reduced
 motion. When and how to use them: [Loading skeletons](../../docs/technical/frontend/loading-skeletons.md).
 
-## React Hook Form
+## Forms (TanStack Form)
 
-`react-hook-form` is an **optional peer** — install it in the app that owns the form:
-
-```bash
-pnpm add react-hook-form
-```
-
-**`register()`** — primitives forward refs to the native control:
+Forms use **TanStack Form** (`@tanstack/react-form`, installed in the app that owns the form), validated
+by the shared zod contract (rules/06). Kit primitives are controlled, so a `form.Field` passes its state
+straight through:
 
 ```tsx
-const { register } = useForm<LoginInput>({ resolver: zodResolver(LoginInputSchema) });
-
-<Input {...register("email")} aria-invalid={errors.email ? true : undefined} />;
+<form.Field name="email">
+	{(field) => <Input value={field.state.value} onChange={(event) => field.handleChange(event.target.value)} aria-invalid={field.state.meta.errors.length > 0} />}
+</form.Field>
 ```
 
-**`Controller`** — for headless primitives (Select, Combobox, Switch):
-
-```tsx
-<Controller name="role" control={control} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />} />
-```
+Headless primitives (Select, Combobox, Switch) take `value` / `onValueChange` the same way.
 
 **Loading submit** — use `Button` with `loading` or `FormShell` with explicit `submitLabel` / `loadingLabel` (both required).
 

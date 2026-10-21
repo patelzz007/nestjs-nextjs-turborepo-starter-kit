@@ -29,6 +29,7 @@ const USER: AdminUserDetail = AdminUserDetailSchema.parse({
 	deletedAt: null,
 	signupReferrer: null,
 	signupReferralStatus: null,
+	ban: null,
 });
 
 /** The `<dd>` value of the field labelled `label` inside the Signup referral section. */

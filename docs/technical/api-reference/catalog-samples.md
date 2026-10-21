@@ -3,7 +3,7 @@ title: "API reference — Sample catalog (products and categories)"
 description: "The reference CRUD modules every new feature copies: list/detail/create/update/soft delete/restore/bulk."
 order: 13
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792454400000
+lastUpdated: 1792540800000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -111,8 +111,8 @@ Response `200 OK` (application/json):
       "weightGrams": 845,
       "version": 0,
       "deletedAt": null,
-      "createdAt": 1792001964642,
-      "updatedAt": 1792520364641
+      "createdAt": 1792067551728,
+      "updatedAt": 1792585951727
     },
     {
       "id": "019b76da-a800-7036-b802-0712c9ec5c0f",
@@ -132,8 +132,8 @@ Response `200 OK` (application/json):
       "weightGrams": 820,
       "version": 2,
       "deletedAt": null,
-      "createdAt": 1791915564642,
-      "updatedAt": 1792520364641
+      "createdAt": 1791981151728,
+      "updatedAt": 1792585951727
     }
   ],
   "meta": {
@@ -141,11 +141,11 @@ Response `200 OK` (application/json):
     "total": 71,
     "page": 1,
     "totalPages": 36,
-    "nextCursor": "eyJjcmVhdGVkQXQiOjE3OTE5MTU1NjQ2NDIsImlkIjoiMDE5Yjc2ZGEtYTgwMC03MDM2LWI4MDItMDcxMmM5ZWM1YzBmIn0",
+    "nextCursor": "eyJjcmVhdGVkQXQiOjE3OTE5ODExNTE3MjgsImlkIjoiMDE5Yjc2ZGEtYTgwMC03MDM2LWI4MDItMDcxMmM5ZWM1YzBmIn0",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "eV589llfamTA8wkp-thiC",
-    "timestamp": 1792520437196
+    "correlationId": "sCswkg2wXLv4kOq4krtAk",
+    "timestamp": 1792586048136
   }
 }
 ```
@@ -244,7 +244,7 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a15a8b-3e0e-7732-ad23-e08488ab9bc6",
+    "id": "01a15e74-6305-70aa-b140-c7847a722b7c",
     "brand": null,
     "categoryId": "019b76da-a800-74d1-86c3-d6127e984dc7",
     "compareAtPrice": null,
@@ -261,12 +261,12 @@ Response `201 Created` (application/json):
     "weightGrams": null,
     "version": 0,
     "deletedAt": null,
-    "createdAt": 1792520437259,
-    "updatedAt": 1792520437259
+    "createdAt": 1792586048255,
+    "updatedAt": 1792586048255
   },
   "meta": {
-    "correlationId": "EDh7dedjpxJs4EcE3X8XK",
-    "timestamp": 1792520437266
+    "correlationId": "iKDUlF2MpAglNwjdMGjui",
+    "timestamp": 1792586048277
   }
 }
 ```
@@ -350,12 +350,12 @@ Response `200 OK` (application/json):
     "weightGrams": 845,
     "version": 0,
     "deletedAt": null,
-    "createdAt": 1792001964642,
-    "updatedAt": 1792520364641
+    "createdAt": 1792067551728,
+    "updatedAt": 1792585951727
   },
   "meta": {
-    "correlationId": "rfAsNGbDoMPzkwgONSZ3r",
-    "timestamp": 1792520437222
+    "correlationId": "XE8wfKA52rx4x5v_aP19i",
+    "timestamp": 1792586048196
   }
 }
 ```
@@ -433,7 +433,7 @@ Update Product
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/product/01a15a8b-3e0e-7732-ad23-e08488ab9bc6
+PATCH /api/v1/product/01a15e74-6305-70aa-b140-c7847a722b7c
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -451,7 +451,7 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a15a8b-3e0e-7732-ad23-e08488ab9bc6",
+    "id": "01a15e74-6305-70aa-b140-c7847a722b7c",
     "brand": null,
     "categoryId": "019b76da-a800-74d1-86c3-d6127e984dc7",
     "compareAtPrice": null,
@@ -468,12 +468,12 @@ Response `200 OK` (application/json):
     "weightGrams": null,
     "version": 1,
     "deletedAt": null,
-    "createdAt": 1792520437259,
-    "updatedAt": 1792520437311
+    "createdAt": 1792586048255,
+    "updatedAt": 1792586048338
   },
   "meta": {
-    "correlationId": "Zy_VGG-bmOuKzjFLZsNT-",
-    "timestamp": 1792520437316
+    "correlationId": "dBoJ4dHekAAe2RnV3aaWE",
+    "timestamp": 1792586048349
   }
 }
 ```
@@ -513,7 +513,7 @@ Soft delete Product
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-DELETE /api/v1/product/01a15a8b-3e0e-7732-ad23-e08488ab9bc6
+DELETE /api/v1/product/01a15e74-6305-70aa-b140-c7847a722b7c
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -528,8 +528,8 @@ Response `200 OK` (application/json):
     "success": true
   },
   "meta": {
-    "correlationId": "TM71iG54_XoCayu6UVGKI",
-    "timestamp": 1792520437352
+    "correlationId": "qHElSVBh2u-kBH5_n0LJq",
+    "timestamp": 1792586048404
   }
 }
 ```
@@ -587,7 +587,7 @@ Restore Product
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/product/01a15a8b-3e0e-7732-ad23-e08488ab9bc6/restore
+POST /api/v1/product/01a15e74-6305-70aa-b140-c7847a722b7c/restore
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -599,7 +599,7 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a15a8b-3e0e-7732-ad23-e08488ab9bc6",
+    "id": "01a15e74-6305-70aa-b140-c7847a722b7c",
     "brand": null,
     "categoryId": "019b76da-a800-74d1-86c3-d6127e984dc7",
     "compareAtPrice": null,
@@ -616,12 +616,12 @@ Response `201 Created` (application/json):
     "weightGrams": null,
     "version": 1,
     "deletedAt": null,
-    "createdAt": 1792520437259,
-    "updatedAt": 1792520437387
+    "createdAt": 1792586048255,
+    "updatedAt": 1792586048458
   },
   "meta": {
-    "correlationId": "HrusutNYX0ioI7dcNx8r8",
-    "timestamp": 1792520437393
+    "correlationId": "hzYr2h728dLU-lMpPVDlA",
+    "timestamp": 1792586048467
   }
 }
 ```
@@ -720,7 +720,7 @@ Response `201 Created` (application/json):
   "success": true,
   "data": [
     {
-      "id": "01a15a8b-3ec4-743a-8ee9-44fe65408851",
+      "id": "01a15e74-641d-727b-94d7-7b22e60c1714",
       "brand": null,
       "categoryId": "019b76da-a800-7a84-baeb-0ade2d257c8d",
       "compareAtPrice": null,
@@ -737,13 +737,13 @@ Response `201 Created` (application/json):
       "weightGrams": null,
       "version": 0,
       "deletedAt": null,
-      "createdAt": 1792520437440,
-      "updatedAt": 1792520437440
+      "createdAt": 1792586048534,
+      "updatedAt": 1792586048534
     }
   ],
   "meta": {
-    "correlationId": "0I9Scxh9h9zIomfh8eIdx",
-    "timestamp": 1792520437453
+    "correlationId": "EmQiAZvAYH-eutUj8LiiA",
+    "timestamp": 1792586048553
   }
 }
 ```
@@ -791,8 +791,8 @@ Content-Type: application/json
 
 {
   "ids": [
-    "01a15a8b-3e0e-7732-ad23-e08488ab9bc6",
-    "01a15a8b-3ec4-743a-8ee9-44fe65408851"
+    "01a15e74-6305-70aa-b140-c7847a722b7c",
+    "01a15e74-641d-727b-94d7-7b22e60c1714"
   ]
 }
 ```
@@ -806,8 +806,8 @@ Response `201 Created` (application/json):
     "deletedCount": 2
   },
   "meta": {
-    "correlationId": "aPN0bR-zJlHFUtnCoHSwa",
-    "timestamp": 1792520437517
+    "correlationId": "428e4xsiBbESKUfKJ8_97",
+    "timestamp": 1792586048624
   }
 }
 ```
@@ -889,8 +889,8 @@ Response `200 OK` (application/json):
       "sortOrder": 70,
       "version": 0,
       "deletedAt": null,
-      "createdAt": 1790705964308,
-      "updatedAt": 1792520364307
+      "createdAt": 1790771551471,
+      "updatedAt": 1792585951470
     },
     {
       "id": "019b76da-a800-7a84-baeb-0ade2d257c8d",
@@ -901,8 +901,8 @@ Response `200 OK` (application/json):
       "sortOrder": 69,
       "version": 0,
       "deletedAt": null,
-      "createdAt": 1790619564308,
-      "updatedAt": 1792520364307
+      "createdAt": 1790685151471,
+      "updatedAt": 1792585951470
     }
   ],
   "meta": {
@@ -910,11 +910,11 @@ Response `200 OK` (application/json):
     "total": 70,
     "page": 1,
     "totalPages": 35,
-    "nextCursor": "eyJjcmVhdGVkQXQiOjE3OTA2MTk1NjQzMDgsImlkIjoiMDE5Yjc2ZGEtYTgwMC03YTg0LWJhZWItMGFkZTJkMjU3YzhkIn0",
+    "nextCursor": "eyJjcmVhdGVkQXQiOjE3OTA2ODUxNTE0NzEsImlkIjoiMDE5Yjc2ZGEtYTgwMC03YTg0LWJhZWItMGFkZTJkMjU3YzhkIn0",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "IjxV4DlC8nErSIWhQnClK",
-    "timestamp": 1792520436970
+    "correlationId": "nQP_1qkCYVvOGiGnUnH3g",
+    "timestamp": 1792586047631
   }
 }
 ```
@@ -993,7 +993,7 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a15a8b-3d1e-73a9-8bf3-3dcb06bf05d6",
+    "id": "01a15e74-6107-771b-9c14-a60b18ed2182",
     "description": "Curated pet supplies — collection 5 for the demo storefront.",
     "isActive": true,
     "name": "Pet Supplies — Collection 5 Archive",
@@ -1001,12 +1001,12 @@ Response `201 Created` (application/json):
     "sortOrder": 0,
     "version": 0,
     "deletedAt": null,
-    "createdAt": 1792520437021,
-    "updatedAt": 1792520437021
+    "createdAt": 1792586047750,
+    "updatedAt": 1792586047750
   },
   "meta": {
-    "correlationId": "Tj9sLw1qq2W63IW3Ae42d",
-    "timestamp": 1792520437024
+    "correlationId": "fvirG3NI-Yk1Pfj1lJScR",
+    "timestamp": 1792586047758
   }
 }
 ```
@@ -1072,12 +1072,12 @@ Response `200 OK` (application/json):
     "sortOrder": 70,
     "version": 0,
     "deletedAt": null,
-    "createdAt": 1790705964308,
-    "updatedAt": 1792520364307
+    "createdAt": 1790771551471,
+    "updatedAt": 1792585951470
   },
   "meta": {
-    "correlationId": "wulH9YkBZ5Ek25FQQ2kal",
-    "timestamp": 1792520436997
+    "correlationId": "6cW7mYhqY4aYrjbgg6oZG",
+    "timestamp": 1792586047702
   }
 }
 ```
@@ -1137,7 +1137,7 @@ Update SampleCategory
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/sample-category/01a15a8b-3d1e-73a9-8bf3-3dcb06bf05d6
+PATCH /api/v1/sample-category/01a15e74-6107-771b-9c14-a60b18ed2182
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1155,7 +1155,7 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a15a8b-3d1e-73a9-8bf3-3dcb06bf05d6",
+    "id": "01a15e74-6107-771b-9c14-a60b18ed2182",
     "description": "Curated pet supplies — collection 5 for the demo storefront.",
     "isActive": false,
     "name": "Pet Supplies — Collection 5 Archive",
@@ -1163,12 +1163,12 @@ Response `200 OK` (application/json):
     "sortOrder": 0,
     "version": 1,
     "deletedAt": null,
-    "createdAt": 1792520437021,
-    "updatedAt": 1792520437049
+    "createdAt": 1792586047750,
+    "updatedAt": 1792586047817
   },
   "meta": {
-    "correlationId": "cBGQmZO_s19NRxkfmQMd_",
-    "timestamp": 1792520437053
+    "correlationId": "oGg4ogZIYa0fDfSxWpm_L",
+    "timestamp": 1792586047826
   }
 }
 ```
@@ -1208,7 +1208,7 @@ Soft delete SampleCategory
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-DELETE /api/v1/sample-category/01a15a8b-3d1e-73a9-8bf3-3dcb06bf05d6
+DELETE /api/v1/sample-category/01a15e74-6107-771b-9c14-a60b18ed2182
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1223,8 +1223,8 @@ Response `200 OK` (application/json):
     "success": true
   },
   "meta": {
-    "correlationId": "h50inmtqWonB_IapLZPJS",
-    "timestamp": 1792520437077
+    "correlationId": "vrGhhMNnLs5yi_CuLRfyQ",
+    "timestamp": 1792586047873
   }
 }
 ```
@@ -1273,7 +1273,7 @@ Restore SampleCategory
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/sample-category/01a15a8b-3d1e-73a9-8bf3-3dcb06bf05d6/restore
+POST /api/v1/sample-category/01a15e74-6107-771b-9c14-a60b18ed2182/restore
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1285,7 +1285,7 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a15a8b-3d1e-73a9-8bf3-3dcb06bf05d6",
+    "id": "01a15e74-6107-771b-9c14-a60b18ed2182",
     "description": "Curated pet supplies — collection 5 for the demo storefront.",
     "isActive": false,
     "name": "Pet Supplies — Collection 5 Archive",
@@ -1293,12 +1293,12 @@ Response `201 Created` (application/json):
     "sortOrder": 0,
     "version": 1,
     "deletedAt": null,
-    "createdAt": 1792520437021,
-    "updatedAt": 1792520437098
+    "createdAt": 1792586047750,
+    "updatedAt": 1792586047930
   },
   "meta": {
-    "correlationId": "rT_mDm0cD4AEmuFgqj2nl",
-    "timestamp": 1792520437102
+    "correlationId": "ae23765Z-1hB-uboR00zl",
+    "timestamp": 1792586047943
   }
 }
 ```
@@ -1376,7 +1376,7 @@ Response `201 Created` (application/json):
   "success": true,
   "data": [
     {
-      "id": "01a15a8b-3d93-7531-a616-d6af29252ff2",
+      "id": "01a15e74-6204-774e-bbf9-17d507f5d041",
       "description": null,
       "isActive": true,
       "name": "Health & Wellness — Collection 5 Archive",
@@ -1384,13 +1384,13 @@ Response `201 Created` (application/json):
       "sortOrder": 0,
       "version": 0,
       "deletedAt": null,
-      "createdAt": 1792520437139,
-      "updatedAt": 1792520437139
+      "createdAt": 1792586048003,
+      "updatedAt": 1792586048003
     }
   ],
   "meta": {
-    "correlationId": "KQavDN-9ISLhjs7kvwPSZ",
-    "timestamp": 1792520437141
+    "correlationId": "yGOgzCPl0ZN-Icr4cLjJm",
+    "timestamp": 1792586048009
   }
 }
 ```
@@ -1438,8 +1438,8 @@ Content-Type: application/json
 
 {
   "ids": [
-    "01a15a8b-3d1e-73a9-8bf3-3dcb06bf05d6",
-    "01a15a8b-3d93-7531-a616-d6af29252ff2"
+    "01a15e74-6107-771b-9c14-a60b18ed2182",
+    "01a15e74-6204-774e-bbf9-17d507f5d041"
   ]
 }
 ```
@@ -1453,8 +1453,8 @@ Response `201 Created` (application/json):
     "deletedCount": 2
   },
   "meta": {
-    "correlationId": "MihOMZRMOSN5elgU2N8dj",
-    "timestamp": 1792520437172
+    "correlationId": "MZRvyS85i-kk6q0mhju03",
+    "timestamp": 1792586048078
   }
 }
 ```

@@ -5,7 +5,7 @@ import { MERCHANT_CAPABILITY, type MerchantKybProfileResponse } from "@workspace
 import { merchantNotFound } from "../../kyb-errors";
 import { actingInTenant, requireUserActor } from "../../tenant-actor";
 import type { KybReadPort } from "../../ports/kyb-read.port";
-import type { MerchantAccessPort } from "../../ports/merchant-access.port";
+import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { TenantDirectoryPort } from "../../ports/tenant-directory.port";
 import { KYB_READ, MERCHANT_ACCESS, TENANT_DIRECTORY } from "../../ports/tenants.tokens";
 import { GetKybProfileQuery } from "./get-kyb-profile.query";

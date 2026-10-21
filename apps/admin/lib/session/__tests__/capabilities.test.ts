@@ -13,7 +13,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { buildSearchableItems } from "@/lib/palette/search";
-import { resolveSessionCapabilities, SESSION_PERMISSIONS_REFETCH_INTERVAL_MS, useSessionPermissionsQuery } from "@/lib/session/capabilities";
+import { resolveSessionCapabilities } from "@workspace/client/lib/contexts/authorization/session-permissions";
+import { SESSION_PERMISSIONS_REFETCH_INTERVAL_MS, useSessionPermissionsQuery } from "@/lib/session/capabilities";
 
 interface PermissionsQueryOptions {
 	readonly initialData?: Envelope<SessionPermissionsResponse>;

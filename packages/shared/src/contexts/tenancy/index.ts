@@ -10,3 +10,5 @@ export * from "./schemas/merchant-kyb";
 export * from "./schemas/merchant";
 export * from "./schemas/tenant-enums";
 export * from "./schemas/tenant";
+export * from "./schemas/tenant-lifecycle";
+export * from "./schemas/customer-bans";

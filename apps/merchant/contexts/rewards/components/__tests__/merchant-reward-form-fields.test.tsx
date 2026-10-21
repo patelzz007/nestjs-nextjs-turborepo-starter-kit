@@ -1,14 +1,13 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { MerchantRewardFormFieldsSchema, type MerchantRewardFormValues } from "@workspace/shared";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { MerchantRewardFormValues } from "@workspace/shared";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
-import { useForm } from "react-hook-form";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { MerchantRewardFormFields } from "@/contexts/rewards/components/merchant-reward-form-fields";
 import { REWARD_TYPE_OPTIONS } from "@/contexts/rewards/components/merchant-reward-form.constants";
+import { useRewardEditorForm, type RewardEditorInput } from "@/contexts/rewards/lib/reward-editor-form";
 
 vi.mock("@/contexts/rewards/components/merchant-reward-images-field", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@/contexts/rewards/components/merchant-reward-images-field")>();
@@ -32,15 +31,17 @@ beforeAll((): void => {
 	vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 });
 
-const DEFAULTS: MerchantRewardFormValues = {
+const DEFAULTS: RewardEditorInput = {
 	rewardType: "DISCOUNT",
 	title: "",
 	description: "",
 	imageFileIds: [],
-	rewardValue: 0,
+	rewardValue: "0",
+	minPurchase: "",
+	termsConditions: "",
 	startDate: "2026-11-01",
 	expiryDate: "2026-11-30",
-	quantityTotal: 100,
+	quantityTotal: "100",
 	maxClaimsPerUser: 1,
 	locationScopeType: "ALL_LOCATIONS",
 	locationIds: [],
@@ -56,30 +57,19 @@ interface FieldsHarnessProps {
 	readonly onValid: (values: MerchantRewardFormValues) => void;
 }
 
-/** The editor's form with the shared schema's resolver, around the fields. */
+/** The editor's real form (the shared schema validates it), around the fields. */
 function FieldsHarness({ stores, onValid }: FieldsHarnessProps): React.JSX.Element {
-	const { register, control, setValue, handleSubmit, formState } = useForm<MerchantRewardFormValues>({
-		resolver: zodResolver(MerchantRewardFormFieldsSchema),
-		defaultValues: DEFAULTS,
-	});
+	const { editor, submit } = useRewardEditorForm<null>({ defaultValues: DEFAULTS, defaultMeta: null, onValid });
 	const handleFormSubmit = React.useCallback(
 		(event: React.SubmitEvent<HTMLFormElement>): void => {
-			void handleSubmit(onValid)(event);
+			event.preventDefault();
+			void submit(null);
 		},
-		[handleSubmit, onValid],
+		[submit],
 	);
 	return (
 		<form onSubmit={handleFormSubmit}>
-			<MerchantRewardFormFields
-				register={register}
-				control={control}
-				errors={formState.errors}
-				setValue={setValue}
-				tenantId={undefined}
-				initialImages={[]}
-				onImagesChange={ignoreImages}
-				stores={stores}
-			/>
+			<MerchantRewardFormFields editor={editor} tenantSlug="jonker-street-kitchen" initialImages={[]} onImagesChange={ignoreImages} stores={stores} />
 			<button type="submit">Save</button>
 		</form>
 	);
@@ -132,16 +122,46 @@ describe("MerchantRewardFormFields", () => {
 	it("puts each validation message under its field and points the field at it", async () => {
 		const onValid = renderFields();
 
-		await act(async (): Promise<void> => {
-			fireEvent.click(screen.getByRole("button", { name: "Save" }));
-			await Promise.resolve();
-		});
+		fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
 		const title = screen.getByLabelText("Title");
-		expect(title.getAttribute("aria-invalid")).toBe("true");
+		await waitFor((): void => {
+			expect(title.getAttribute("aria-invalid")).toBe("true");
+		});
 		const describedBy = title.getAttribute("aria-describedby");
 		expect(describedBy).toBe("title-error");
 		expect(document.getElementById("title-error")?.getAttribute("role")).toBe("alert");
 		expect(onValid).not.toHaveBeenCalled();
+	});
+});
+
+describe("MerchantRewardFormFields values", () => {
+	it("hands the shared schema's values to the save once the fields are filled, numbers read from their text", async () => {
+		const onValid = renderFields();
+
+		fireEvent.change(screen.getByLabelText("Title"), { target: { value: "20% off nasi lemak" } });
+		fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Dine-in, any weekday." } });
+		fireEvent.change(screen.getByRole("spinbutton", { name: "Discount" }), { target: { value: "20" } });
+		fireEvent.change(screen.getByLabelText(/Minimum spend/u), { target: { value: "12.5" } });
+		fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+		// The photos field is stubbed, so the schema still asks for an image: nothing is saved, and the numbers parsed.
+		await waitFor((): void => {
+			expect(screen.getByLabelText("Title").getAttribute("aria-invalid")).toBeNull();
+		});
+		expect(screen.getByRole("spinbutton", { name: "Discount" })).toHaveProperty("value", "20");
+		expect(screen.getByLabelText(/Minimum spend/u)).toHaveProperty("value", "12.5");
+		expect(onValid).not.toHaveBeenCalled();
+	});
+
+	it("reports a cleared required number as missing, never as 0", async () => {
+		renderFields();
+
+		fireEvent.change(screen.getByLabelText("Available in total"), { target: { value: "" } });
+		fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+		await waitFor((): void => {
+			expect(screen.getByLabelText("Available in total").getAttribute("aria-invalid")).toBe("true");
+		});
 	});
 });

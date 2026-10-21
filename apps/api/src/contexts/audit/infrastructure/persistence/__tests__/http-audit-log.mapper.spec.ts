@@ -35,7 +35,6 @@ function auditRow(overrides: Partial<AuditLog> = {}): AuditLog {
 		apiKeyId: null,
 		terminalId: null,
 		tenantId: TENANT_ID,
-		storeId: null,
 		locationId: null,
 		ipAddress: "203.0.113.24",
 		userAgent: "vitest-agent",

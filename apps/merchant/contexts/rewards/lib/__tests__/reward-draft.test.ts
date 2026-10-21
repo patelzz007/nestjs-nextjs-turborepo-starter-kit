@@ -1,22 +1,24 @@
-import type { MerchantRewardFormValues } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
+import type { RewardEditorInput } from "@/contexts/rewards/lib/reward-editor-form";
 import { describeDraftRewardStores, describeRewardDraftGaps, formatDraftRewardEnd, RewardEditorSectionIdSchema } from "@/contexts/rewards/lib/reward-draft";
 
 const STORE_A = { id: "5d2f6a1b-0c3e-4f7a-9b8c-2d1e0f3a4b5c", name: "Jonker Street Kitchen — Bukit Katil" };
 const STORE_B = { id: "6e3a7b2c-1d4f-4a8b-8c9d-3e2f1a4b5c6d", name: "Jonker Street Kitchen — Melaka Raya" };
 
 /** A reward the shared schema accepts — override what the test is about. */
-function completeDraft(overrides: Partial<MerchantRewardFormValues> = {}): MerchantRewardFormValues {
+function completeDraft(overrides: Partial<RewardEditorInput> = {}): RewardEditorInput {
 	return {
 		rewardType: "DISCOUNT",
 		title: "20% off nasi lemak",
 		description: "Any nasi lemak set, dine-in or takeaway.",
 		imageFileIds: ["4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b"],
-		rewardValue: 20,
+		rewardValue: "20",
+		minPurchase: "",
+		termsConditions: "",
 		startDate: "2026-11-01",
 		expiryDate: "2026-11-30",
-		quantityTotal: 100,
+		quantityTotal: "100",
 		maxClaimsPerUser: 1,
 		locationScopeType: "ALL_LOCATIONS",
 		locationIds: [],
@@ -49,13 +51,15 @@ describe("describeRewardDraftGaps", () => {
 	});
 
 	it("reads a cleared number field as missing rather than failing", () => {
-		const gaps = describeRewardDraftGaps(completeDraft({ quantityTotal: Number.NaN }));
+		const gaps = describeRewardDraftGaps(completeDraft({ quantityTotal: "" }));
 
 		expect(gaps.map((gap) => gap.field)).toEqual(["quantityTotal"]);
 	});
 
 	it("links every gap to a section that exists on the page", () => {
-		const gaps = describeRewardDraftGaps({});
+		const gaps = describeRewardDraftGaps(
+			completeDraft({ title: "", description: "", imageFileIds: [], rewardValue: "", quantityTotal: "", startDate: "", expiryDate: "", locationScopeType: "SELECTED" }),
+		);
 
 		expect(gaps.length).toBeGreaterThan(0);
 		expect(gaps.every((gap) => RewardEditorSectionIdSchema.safeParse(gap.sectionId).success)).toBe(true);

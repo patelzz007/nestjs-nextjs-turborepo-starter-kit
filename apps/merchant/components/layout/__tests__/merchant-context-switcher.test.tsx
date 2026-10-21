@@ -14,7 +14,7 @@ import {
 	storeSwitcherStores,
 	type SwitcherStore,
 } from "@/components/layout/merchant-context-switcher";
-import { clearLocationCookie, locationCookieName } from "@/contexts/tenancy/lib/org/location";
+import { clearLocationCookie, locationCookieName } from "@/contexts/tenancy/lib/tenant/location";
 import { membershipFixture, renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
 import { testEnvelope } from "@/test/envelope";
 import { contextQueryState, tenantContextFixture, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
@@ -35,7 +35,7 @@ vi.mock("next/navigation", () => ({
 	useParams: (): object => ({ tenantSlug: TEST_ORG_SLUG }),
 }));
 
-/** A member scoped to one store location: nothing org-wide to roll up to. */
+/** A member scoped to one store location: nothing tenant-wide to roll up to. */
 const SINGLE_LOCATION_CONTEXT = tenantContextFixture({ locations: [STORE_A_LOCATION], locationScopeType: "SELECTED", locationIds: [STORE_A.id] });
 
 const OWNER: TenantRewardMembershipResponse = membershipFixture("OWNER");
@@ -91,7 +91,7 @@ function openMenu(): HTMLElement {
 }
 
 describe("location switcher helpers", () => {
-	it("offers all locations first only to members who may see org-wide rollups", () => {
+	it("offers all locations first only to members who may see tenant-wide rollups", () => {
 		expect(locationSwitcherOptions([STORE_A_LOCATION, STORE_B_LOCATION], true).map((option) => option.value)).toStrictEqual([ALL_LOCATIONS_VALUE, STORE_A.id, STORE_B.id]);
 		expect(locationSwitcherOptions([STORE_A_LOCATION], false).map((option) => option.value)).toStrictEqual([STORE_A.id]);
 	});

@@ -7,7 +7,13 @@ import {
 	TenantAccessRequestCreateSchema,
 	TenantAccessRequestParamSchema,
 	TenantAccessRequestResponseSchema,
+	TenantAppealCreateSchema,
 	TenantContextResponseSchema,
+	TenantLifecycleResponseSchema,
+	TenantMembershipLeaveResponseSchema,
+	type TenantAppealCreateInput,
+	type TenantLifecycleResponse,
+	type TenantMembershipLeaveResponse,
 	LocationCloseResponseSchema,
 	LocationCloseSchema,
 	LocationCreateSchema,
@@ -21,9 +27,9 @@ import {
 	TenantMemberInviteSchema,
 	TenantMemberListQuerySchema,
 	TenantMemberRosterResponseSchema,
-	TenantMemberStoreParamSchema,
-	TenantMemberStoreRemoveResponseSchema,
-	TenantMemberStoreRemoveSchema,
+	TenantMemberLocationParamSchema,
+	TenantMemberLocationRemoveResponseSchema,
+	TenantMemberLocationRemoveSchema,
 	MembershipResponseSchema,
 	TenantOwnMembershipUpdateSchema,
 	TenantSlugParamSchema,
@@ -44,9 +50,9 @@ import {
 	type TenantMemberInviteResponse,
 	type TenantMemberListQuery,
 	type TenantMemberRosterResponse,
-	type TenantMemberStoreParam,
-	type TenantMemberStoreRemoveInput,
-	type TenantMemberStoreRemoveResponse,
+	type TenantMemberLocationParam,
+	type TenantMemberLocationRemoveInput,
+	type TenantMemberLocationRemoveResponse,
 	type MembershipResponse,
 	type TenantOwnMembershipUpdateInput,
 	type PaginatedServiceResult,
@@ -61,7 +67,7 @@ import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presenta
 import { CloseLocationCommand } from "../../application/commands/close-location/close-location.command";
 import { InviteMemberCommand } from "../../application/commands/invite-member/invite-member.command";
 import { ProposeLocationCommand } from "../../application/commands/propose-location/propose-location.command";
-import { RemoveMemberFromStoreCommand } from "../../application/commands/remove-member-from-store/remove-member-from-store.command";
+import { RemoveMemberFromLocationCommand } from "../../application/commands/remove-member-from-location/remove-member-from-location.command";
 import { RenameOwnMembershipCommand } from "../../application/commands/rename-own-membership/rename-own-membership.command";
 import { RequestTenantAccessCommand } from "../../application/commands/request-tenant-access/request-tenant-access.command";
 import { ResubmitLocationCommand } from "../../application/commands/resubmit-location/resubmit-location.command";
@@ -69,6 +75,10 @@ import { ReviewAccessRequestCommand } from "../../application/commands/review-ac
 import { RevokeInviteCommand } from "../../application/commands/revoke-invite/revoke-invite.command";
 import { GetTenantContextQuery } from "../../application/queries/get-tenant-context/get-tenant-context.query";
 import { TenantLifecycleRoute } from "./tenant-lifecycle-route.decorator";
+import { LeaveTenantCommand } from "../../application/commands/leave-tenant/leave-tenant.command";
+import { ReactivateTenantCommand } from "../../application/commands/reactivate-tenant/reactivate-tenant.command";
+import { SubmitSuspensionAppealCommand } from "../../application/commands/submit-suspension-appeal/submit-suspension-appeal.command";
+import { GetTenantLifecycleQuery } from "../../application/queries/get-tenant-lifecycle/get-tenant-lifecycle.query";
 import { ListMembersQuery } from "../../application/queries/list-members/list-members.query";
 import { ListPendingInvitesQuery } from "../../application/queries/list-pending-invites/list-pending-invites.query";
 
@@ -85,6 +95,43 @@ export class TenantController {
 	@ZodResponse(TenantContextResponseSchema, { description: "Tenant context for the signed-in member" })
 	public getContext(@CurrentActor() actor: ActorContext, @ZodParams(TenantSlugParamSchema) params: { tenantSlug: string }): Promise<TenantContextResponse> {
 		return this.queryBus.execute(new GetTenantContextQuery(actor, params));
+	}
+
+	// ── Lifecycle routes (MT-23): they run while the tenant is suspended or pending deletion. ──
+
+	@TenantLifecycleRoute()
+	@Get(":tenantSlug/lifecycle")
+	@ZodResponse(TenantLifecycleResponseSchema, { description: "The tenant's lifecycle state, current suspension and appeals" })
+	public getLifecycle(@CurrentActor() actor: ActorContext, @ZodParams(TenantSlugParamSchema) params: { tenantSlug: string }): Promise<TenantLifecycleResponse> {
+		return this.queryBus.execute(new GetTenantLifecycleQuery(actor, params));
+	}
+
+	@TenantLifecycleRoute()
+	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@Post(":tenantSlug/lifecycle/appeals")
+	@ZodResponse(TenantLifecycleResponseSchema, { status: HttpStatus.CREATED, description: "Appeal submitted (409 TENANT_APPEAL_PENDING when one is already waiting)" })
+	public submitAppeal(
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(TenantSlugParamSchema) params: { tenantSlug: string },
+		@ZodBody(TenantAppealCreateSchema) body: TenantAppealCreateInput,
+	): Promise<TenantLifecycleResponse> {
+		return this.commandBus.execute(new SubmitSuspensionAppealCommand(actor, { tenantSlug: params.tenantSlug, message: body.message }));
+	}
+
+	@TenantLifecycleRoute()
+	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@Post(":tenantSlug/lifecycle/reactivate")
+	@ZodResponse(TenantLifecycleResponseSchema, { status: HttpStatus.CREATED, description: "Pending deletion cancelled: the tenant is active again" })
+	public reactivate(@CurrentActor() actor: ActorContext, @ZodParams(TenantSlugParamSchema) params: { tenantSlug: string }): Promise<TenantLifecycleResponse> {
+		return this.commandBus.execute(new ReactivateTenantCommand(actor, params));
+	}
+
+	@TenantLifecycleRoute("leave")
+	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
+	@Post(":tenantSlug/members/me/leave")
+	@ZodResponse(TenantMembershipLeaveResponseSchema, { status: HttpStatus.CREATED, description: "Left the tenant (409 TENANT_OWNER_CANNOT_LEAVE for the owner)" })
+	public leave(@CurrentActor() actor: ActorContext, @ZodParams(TenantSlugParamSchema) params: { tenantSlug: string }): Promise<TenantMembershipLeaveResponse> {
+		return this.commandBus.execute(new LeaveTenantCommand(actor, params));
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
@@ -135,14 +182,14 @@ export class TenantController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
-	@Post(":tenantSlug/members/:membershipId/stores/:locationId/remove")
-	@ZodResponse(TenantMemberStoreRemoveResponseSchema, { status: HttpStatus.CREATED, description: "Team member removed from one store" })
-	public removeMemberFromStore(
+	@Post(":tenantSlug/members/:membershipId/locations/:locationId/remove")
+	@ZodResponse(TenantMemberLocationRemoveResponseSchema, { status: HttpStatus.CREATED, description: "Team member removed from one store" })
+	public removeMemberFromLocation(
 		@CurrentActor() actor: ActorContext,
-		@ZodParams(TenantMemberStoreParamSchema) params: TenantMemberStoreParam,
-		@ZodBody(TenantMemberStoreRemoveSchema) body: TenantMemberStoreRemoveInput,
-	): Promise<TenantMemberStoreRemoveResponse> {
-		return this.commandBus.execute(new RemoveMemberFromStoreCommand(actor, { ...body, ...params }));
+		@ZodParams(TenantMemberLocationParamSchema) params: TenantMemberLocationParam,
+		@ZodBody(TenantMemberLocationRemoveSchema) body: TenantMemberLocationRemoveInput,
+	): Promise<TenantMemberLocationRemoveResponse> {
+		return this.commandBus.execute(new RemoveMemberFromLocationCommand(actor, { ...body, ...params }));
 	}
 
 	@Get(":tenantSlug/members")

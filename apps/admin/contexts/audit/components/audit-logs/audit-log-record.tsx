@@ -92,9 +92,6 @@ export function AuditLogRecord({ record, layout }: { readonly record: HttpAuditL
 						</Link>
 					)}
 				</RecordField>
-				<RecordField label="Store" mono>
-					{orDash(record.storeId)}
-				</RecordField>
 				<RecordField label="Location" mono>
 					{orDash(record.locationId)}
 				</RecordField>

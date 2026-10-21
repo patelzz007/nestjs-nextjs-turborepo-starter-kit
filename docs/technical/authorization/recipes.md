@@ -78,19 +78,19 @@ public async refund(actor: AuthenticatedUser, tenant: VerifiedTenantContext, ord
 	}
 
 	await this.kernel.authorize({
-		subject: { userId: actor.id, isSuperAdmin: actor.isSuperAdmin, tenantId: tenant.tenantId, storeId: tenant.storeId },
+		subject: { userId: actor.id, isSuperAdmin: actor.isSuperAdmin, tenantId: tenant.tenantId, locationId: tenant.locationId },
 		action: "UPDATE",
 		resource: "PAYMENT",
 		resourceId: order.paymentId,
-		resourceAttributes: { tenantId: order.tenantId, storeId: order.storeId, status: order.status, amount: order.total },
+		resourceAttributes: { tenantId: order.tenantId, locationId: order.locationId, status: order.status, amount: order.total },
 	});
 
 	// … business validation (e.g. "COMPLETED → PENDING is invalid") is a SEPARATE step (spec §96)
 }
 ```
 
-Always pass the record's `tenantId` / `storeId` / `locationId` as resource attributes —
-without them, `TENANT` / `STORE` / `LOCATION` grants do not apply (fail closed).
+Always pass the record's `tenantId` / `locationId` as resource attributes —
+without them, `TENANT` / `LOCATION` grants do not apply (fail closed).
 Read the tenant from the request context — `requestContext.current()?.tenant` (the guard verified it), never from
 headers or the body.
 
@@ -107,7 +107,7 @@ headers or the body.
 ```ts
 public async list(user: AuthenticatedUser, tenant: VerifiedTenantContext, query: ListQuery): Promise<Order[]> {
 	const allowed = await this.kernel.filter(
-		{ userId: user.id, isSuperAdmin: user.isSuperAdmin, tenantId: tenant.tenantId, storeId: tenant.storeId },
+		{ userId: user.id, isSuperAdmin: user.isSuperAdmin, tenantId: tenant.tenantId, locationId: tenant.locationId },
 		"LIST",
 		"ORDER",
 	);
@@ -117,7 +117,7 @@ public async list(user: AuthenticatedUser, tenant: VerifiedTenantContext, query:
 
 - ✅ one query; the database does the filtering.
 - ❌ never `findMany()` everything and `.filter()` in JavaScript (spec §32, §57).
-- The filter assumes columns named `tenantId`, `storeId`, `locationId`, `userId`, `id`.
+- The filter assumes columns named `tenantId`, `locationId`, `userId`, `id`.
 
 ---
 
@@ -151,34 +151,33 @@ Web: use `AccessGate`.
 
 ---
 
-## 5. Add a store-scoped feature
+## 5. Add a location-scoped feature
 
-**Example:** store staff can close the till in **their** store only.
+**Example:** location staff can close the till at **their** location only.
 
-1. Add STORE-scoped permission rows (recipe 1):
-
-   ```ts
-   { action: "UPDATE", resource: "INVENTORY", scope: "STORE", description: "Update inventory at own store", group: "Store Operations" },
-   ```
-
-2. Add them to the `Store Manager` / `Store Staff` matrices in `apps/api/src/contexts/authorization/infrastructure/reference-data/system-role-catalog.ts`
-   (`matchesAny(p, "INVENTORY", ["UPDATE"], "STORE")`), then re-run `db:sync-reference-data`, or to a new role in the admin panel.
-3. Your table needs `tenantId` and `storeId` columns (plus RLS — recipe 7).
-4. The client sends the active store: header **`x-store-id: <storeId>`**. The guard verifies
-   the membership (forged → 403).
-5. In the service, authorize with the record's tenant:
+1. Add LOCATION-scoped permission rows (recipe 1):
 
    ```ts
-   await this.kernel.authorize({ subject: { userId, tenantId, storeId }, action: "UPDATE", resource: "INVENTORY",
-     resourceId: item.id, resourceAttributes: { tenantId: item.tenantId, storeId: item.storeId } });
+   { action: "UPDATE", resource: "INVENTORY", scope: "LOCATION", description: "Update inventory at own location", group: "Location Operations" },
    ```
 
-6. Lists: `kernel.filter(...)` returns `{ tenantId, storeId }` for the member's store(s).
+2. Add them to the `Location Manager` / `Location Staff` matrices in `apps/api/src/contexts/authorization/infrastructure/reference-data/system-role-catalog.ts`
+   (`matchesAny(p, "INVENTORY", ["UPDATE"], "LOCATION")`), then re-run `db:sync-reference-data`, or to a new role in the admin panel.
+3. Your table needs `tenantId` and `locationId` columns (plus RLS — recipe 7).
+4. The client names the location in the route, query or body (`locationId`). The guard verifies
+   the member's location scope (another tenant's location, or one outside the scope → refused).
+5. In the service, authorize with the record's tenant and location:
 
-Store memberships are created by the seed today (`prisma/seed/stores.ts`: owners / admins →
-`Store Manager` in every store their location scope covers, other members → `Store Staff` in
-their selected stores). Stores themselves are **never** created by hand — they follow their
-location automatically.
+   ```ts
+   await this.kernel.authorize({ subject: { userId, tenantId, locationId }, action: "UPDATE", resource: "INVENTORY",
+     resourceId: item.id, resourceAttributes: { tenantId: item.tenantId, locationId: item.locationId } });
+   ```
+
+6. Lists: `kernel.filter(...)` returns `{ tenantId, locationId }` for the member's location(s).
+
+A location role is the `roleId` of a member's `SELECTED` location scope row
+(`MembershipLocationScope`). The seed assigns them (`prisma/seed/location-roles.ts`: owners /
+admins → `Location Manager`, other members → `Location Staff`, on their selected locations).
 
 ---
 
@@ -200,7 +199,7 @@ Add a unit test for owner / non-owner / missing. Never read the owner from the r
 
 ## 7. Add a new tenant table with RLS
 
-1. Prisma model with `tenantId` (and `storeId` / `locationId` if relevant), `@@map("snake_case")`,
+1. Prisma model with `tenantId` (and `locationId` if relevant), `@@map("snake_case")`,
    an index on the tenant columns, and a `/// RLS:` doc comment like its neighbours.
 2. Migration: `pnpm --filter @workspace/api db:migrate:create`, then check the SQL.
 3. Add the table name to the right profile in `apps/api/prisma/rls/manifest-index.ts`

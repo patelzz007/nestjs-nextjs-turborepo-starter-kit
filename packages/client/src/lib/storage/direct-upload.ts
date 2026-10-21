@@ -19,6 +19,7 @@ import {
 	type CompleteFileUploadResponse,
 	type CreateFileUploadUrlInput,
 	type CreateFileUploadUrlResponse,
+	type CreateTenantFileUploadUrlInput,
 	type DocumentMimeType,
 } from "@workspace/shared";
 
@@ -38,7 +39,18 @@ export interface DirectUploadResult {
 	readonly response: CompleteFileUploadResponse;
 }
 
+/** A platform upload (`POST /files/upload-url`): a product image, the caller's avatar or a GitHub comment image. */
 export type DirectUploadInput = Omit<CreateFileUploadUrlInput, "checksumSha256" | "sizeBytes">;
+
+/** A tenant-owned upload (`POST /tenants/:tenantSlug/files/upload-url`): the route names the tenant, never the body. */
+export type TenantDirectUploadInput = Omit<CreateTenantFileUploadUrlInput, "checksumSha256" | "sizeBytes">;
+
+/** The bytes' facts every upload ticket request carries. */
+interface UploadedBytes {
+	readonly checksumSha256: string;
+	readonly sizeBytes: number;
+	readonly mimeType: DocumentMimeType;
+}
 
 /**
  * Why a direct upload failed:
@@ -119,16 +131,14 @@ export async function uploadFileWithTicket(ticket: CreateFileUploadUrlResponse, 
 	await STORAGE_UPLOAD_STRATEGIES[ticket.method].upload(ticket, file);
 }
 
-export async function uploadFileDirect(api: ApiClient<ApiRouter>, input: DirectUploadInput, file: File): Promise<DirectUploadResult> {
+/** Ticket (from `requestTicket`) → bytes to storage → `files/complete`, shared by both upload routes. */
+async function uploadThroughTicket(
+	api: ApiClient<ApiRouter>,
+	file: File,
+	requestTicket: (bytes: UploadedBytes) => Promise<CreateFileUploadUrlResponse>,
+): Promise<DirectUploadResult> {
 	const checksumSha256 = await calculateFileSha256Hex(file);
-	const presignBody: CreateFileUploadUrlInput = {
-		...input,
-		checksumSha256,
-		sizeBytes: file.size,
-		mimeType: toDocumentMimeType(file),
-	};
-	const presignedEnvelope = await api.files.uploadUrl.mutate(presignBody);
-	const ticket: CreateFileUploadUrlResponse = presignedEnvelope.data;
+	const ticket: CreateFileUploadUrlResponse = await requestTicket({ checksumSha256, sizeBytes: file.size, mimeType: toDocumentMimeType(file) });
 
 	await uploadFileWithTicket(ticket, file);
 
@@ -137,6 +147,20 @@ export async function uploadFileDirect(api: ApiClient<ApiRouter>, input: DirectU
 		checksumSha256,
 	});
 	return { fileId: ticket.fileId, response: completedEnvelope.data };
+}
+
+/** Uploads a platform file (`POST /files/upload-url`) and completes it. */
+export function uploadFileDirect(api: ApiClient<ApiRouter>, input: DirectUploadInput, file: File): Promise<DirectUploadResult> {
+	return uploadThroughTicket(api, file, async (bytes: UploadedBytes): Promise<CreateFileUploadUrlResponse> => (await api.files.uploadUrl.mutate({ ...input, ...bytes })).data);
+}
+
+/** Uploads a file of `tenantSlug` (`POST /tenants/:tenantSlug/files/upload-url`) and completes it. */
+export function uploadTenantFileDirect(api: ApiClient<ApiRouter>, tenantSlug: string, input: TenantDirectUploadInput, file: File): Promise<DirectUploadResult> {
+	return uploadThroughTicket(
+		api,
+		file,
+		async (bytes: UploadedBytes): Promise<CreateFileUploadUrlResponse> => (await api.files.tenantUploadUrl.mutate({ tenantSlug, ...input, ...bytes })).data,
+	);
 }
 
 // ── Waiting for the scan verdict ────────────────────────────────────────────

@@ -1,6 +1,6 @@
 // TEST-ONLY real implementations of the files ports (no vi.fn stubs of the subject).
 import type {
-	CreateFileUploadUrlInput,
+	FileUploadRequest,
 	CreateFileUploadUrlResponse,
 	EpochMs,
 	FileCategory,
@@ -230,7 +230,7 @@ export class FakeFileObjectStorage implements FileObjectStoragePort {
 	public readonly cachedKeys = new Map<string, readonly string[]>();
 	public failWithdrawal = false;
 
-	public stagingLocator(input: CreateFileUploadUrlInput, fileId: string, ownerId: string): StorageObjectLocator {
+	public stagingLocator(input: FileUploadRequest, fileId: string, ownerId: string): StorageObjectLocator {
 		return locator(`staging/${input.category.toLowerCase()}/${ownerId}/${fileId}-${input.fileName}`);
 	}
 
@@ -274,13 +274,13 @@ export class FakeFileObjectStorage implements FileObjectStoragePort {
 
 /** An owner's access rule that allows, or denies with the given error, and records what it was asked. */
 export class RecordingAccessRule implements FileCategoryAccessRule {
-	public readonly uploads: { readonly actor: FileActor; readonly request: CreateFileUploadUrlInput }[] = [];
+	public readonly uploads: { readonly actor: FileActor; readonly request: FileUploadRequest }[] = [];
 	public readonly acts: { readonly actor: FileActor; readonly file: FileAccessSubject; readonly action: FileAccessAction }[] = [];
 	public denial: Error | null = null;
 
 	public constructor(public readonly categories: readonly FileCategory[]) {}
 
-	public assertCanUpload(actor: FileActor, request: CreateFileUploadUrlInput): Promise<void> {
+	public assertCanUpload(actor: FileActor, request: FileUploadRequest): Promise<void> {
 		this.uploads.push({ actor, request });
 		return this.denial === null ? Promise.resolve() : Promise.reject(this.denial);
 	}

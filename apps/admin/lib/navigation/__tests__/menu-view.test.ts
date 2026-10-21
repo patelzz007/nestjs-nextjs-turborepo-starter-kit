@@ -120,14 +120,14 @@ describe("computeRouteState", () => {
 			{
 				id: "my-rewards",
 				title: "My Rewards",
-				url: "/orgs/jonker-street-kitchen/rewards",
+				url: "/t/jonker-street-kitchen/rewards",
 				children: [
-					{ id: "all-rewards", title: "All Rewards", url: "/orgs/jonker-street-kitchen/rewards" },
-					{ id: "rewards-new", title: "Create New", url: "/orgs/jonker-street-kitchen/rewards/new" },
+					{ id: "all-rewards", title: "All Rewards", url: "/t/jonker-street-kitchen/rewards" },
+					{ id: "rewards-new", title: "Create New", url: "/t/jonker-street-kitchen/rewards/new" },
 				],
 			},
 		];
-		const { activeItems, autoExpandedItems } = computeRouteState(items, "/orgs/jonker-street-kitchen/rewards");
+		const { activeItems, autoExpandedItems } = computeRouteState(items, "/t/jonker-street-kitchen/rewards");
 		expect(activeItems["all-rewards"]).toBe(true);
 		expect(activeItems["my-rewards"]).toBeUndefined();
 		expect(activeItems["rewards-new"]).toBeUndefined();

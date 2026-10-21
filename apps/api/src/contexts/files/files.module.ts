@@ -64,7 +64,7 @@ import { StorageFileObjectAdapter } from "./infrastructure/adapters/storage-file
 import { FilesScopeFactory } from "./infrastructure/persistence/files-scope.factory";
 import { FilesQueueModule } from "./infrastructure/queue/files-queue.module";
 import { PrismaStoredFileReadRepository } from "./infrastructure/persistence/prisma-stored-file.read-repository";
-import { FilesController } from "./presentation/http/files.controller";
+import { FilesController, TenantFilesController } from "./presentation/http/files.controller";
 import { LocalStorageTransferController } from "./presentation/http/local-storage-transfer.controller";
 
 // Executor wiring is decided at load time from the validated config (parsed by main.ts first):
@@ -103,7 +103,7 @@ const storageTaskProviders: Provider[] = hasRedis
  */
 @Module({
 	imports: [PrismaModule, StorageModule, UnitOfWorkModule, SystemCommandModule, ...storageQueueImports],
-	controllers: [FilesController, LocalStorageTransferController],
+	controllers: [FilesController, TenantFilesController, LocalStorageTransferController],
 	providers: [
 		{ provide: FileCategoryAccessRegistry, useFactory: (): FileCategoryAccessRegistry => new FileCategoryAccessRegistry() },
 		{

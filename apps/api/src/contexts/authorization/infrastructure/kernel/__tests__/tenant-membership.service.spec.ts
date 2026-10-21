@@ -5,14 +5,14 @@ import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../../../../../prisma/prisma.service";
 import type { SystemDatabaseContext } from "../../../../../prisma/tenant-context";
 import { TenantMembershipService } from "../tenant-membership.service";
+import { SERVES_EVERY_TENANT, servesOnly } from "../../../../../../test/support/served-tenants";
 import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import type { ServedTenantPolicy } from "../../../../../platform/application/tenancy/served-tenant.port";
 
 const mocks = vi.hoisted(() => ({
 	membershipFindFirst: vi.fn(),
 	supportGrantFindFirst: vi.fn(),
 	locationFindFirst: vi.fn(),
-	storeFindFirst: vi.fn(),
-	storeMembershipFindFirst: vi.fn(),
 	tenantFindFirst: vi.fn(),
 }));
 
@@ -21,8 +21,6 @@ vi.mock("../../../../../prisma/prisma.service", () => ({
 		public readonly membership = { findFirst: mocks.membershipFindFirst };
 		public readonly supportAccessGrant = { findFirst: mocks.supportGrantFindFirst };
 		public readonly location = { findFirst: mocks.locationFindFirst };
-		public readonly store = { findFirst: mocks.storeFindFirst };
-		public readonly storeMembership = { findFirst: mocks.storeMembershipFindFirst };
 		public readonly tenant = { findFirst: mocks.tenantFindFirst };
 	},
 }));
@@ -31,17 +29,14 @@ vi.mock("../../../../../prisma/prisma.service", () => ({
 const tenants: Record<string, string> = { "org-a": "ACTIVE", "org-b": "ACTIVE" };
 
 const locations: Readonly<Record<string, string>> = { "loc-a1": "org-a", "loc-a2": "org-a", "loc-b1": "org-b" };
-const stores: Readonly<Record<string, { readonly id: string; readonly tenantId: string; readonly locationId: string }>> = {
-	"store-a1": { id: "store-a1", tenantId: "org-a", locationId: "loc-a1" },
-	"store-a2": { id: "store-a2", tenantId: "org-a", locationId: "loc-a2" },
-	"store-b1": { id: "store-b1", tenantId: "org-b", locationId: "loc-b1" },
-};
-
-const service = (): TenantMembershipService => {
+const service = (servedTenants: ServedTenantPolicy = SERVES_EVERY_TENANT): TenantMembershipService => {
 	const prisma = new PrismaService(createTestTypedConfig());
-	return new TenantMembershipService({
-		withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
-	});
+	return new TenantMembershipService(
+		{
+			withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
+		},
+		servedTenants,
+	);
 };
 
 describe("TenantMembershipService.verify", () => {
@@ -51,8 +46,6 @@ describe("TenantMembershipService.verify", () => {
 			const tenantId = locations[where.id];
 			return Promise.resolve(tenantId === undefined ? null : { tenantId });
 		});
-		mocks.storeFindFirst.mockImplementation(({ where }: { where: { id: string } }) => Promise.resolve(stores[where.id] ?? null));
-		mocks.storeMembershipFindFirst.mockResolvedValue(null);
 		mocks.supportGrantFindFirst.mockResolvedValue(null);
 		tenants["org-a"] = "ACTIVE";
 		mocks.tenantFindFirst.mockImplementation(({ where }: { where: { id: string } }) => {
@@ -64,7 +57,7 @@ describe("TenantMembershipService.verify", () => {
 	it("returns an empty context when nothing is requested", async () => {
 		const result = await service().verify("user-1", {});
 
-		expect(result).toEqual({ context: {}, target: null, tenantRejected: false, storeRejected: false, locationRejected: false });
+		expect(result).toEqual({ context: {}, target: null, tenantRejected: false, locationRejected: false });
 		expect(mocks.membershipFindFirst).not.toHaveBeenCalled();
 	});
 
@@ -101,18 +94,17 @@ describe("TenantMembershipService.verify", () => {
 			context: {},
 			target: { tenantId: "org-a", lifecycleState: "ACTIVE", membershipStatus: "SUSPENDED" },
 			tenantRejected: true,
-			storeRejected: false,
 			locationRejected: false,
 		});
 	});
 
-	it("reports the lifecycle of a tenant reached only through a store, so a suspended tenant is not served (C1)", async () => {
+	it("reports the lifecycle of a tenant reached only through a location, so a suspended tenant is not served (C1)", async () => {
 		tenants["org-a"] = "SUSPENDED";
 		mocks.membershipFindFirst.mockResolvedValue({ status: "ACTIVE", locationScopes: [{ scopeType: "ALL_LOCATIONS", locationId: null }] });
 
-		const result = await service().verify("user-1", { storeId: "store-a1" });
+		const result = await service().verify("user-1", { locationId: "loc-a1" });
 
-		expect(result.context).toEqual({ tenantId: "org-a", storeId: "store-a1" });
+		expect(result.context).toEqual({ tenantId: "org-a", locationId: "loc-a1" });
 		expect(result.target).toEqual({ tenantId: "org-a", lifecycleState: "SUSPENDED", membershipStatus: "ACTIVE" });
 	});
 
@@ -148,7 +140,6 @@ describe("TenantMembershipService.verify", () => {
 				context: { tenantId: "org-a" },
 				target: { tenantId: "org-a", lifecycleState: "ACTIVE", membershipStatus: "ACTIVE" },
 				tenantRejected: false,
-				storeRejected: false,
 				locationRejected: true,
 			});
 		});
@@ -174,53 +165,30 @@ describe("TenantMembershipService.verify", () => {
 		it("rejects an unknown location", async () => {
 			const result = await service().verify("user-1", { locationId: "loc-missing" });
 
-			expect(result).toEqual({ context: {}, target: null, tenantRejected: false, storeRejected: false, locationRejected: true });
+			expect(result).toEqual({ context: {}, target: null, tenantRejected: false, locationRejected: true });
 		});
 	});
 
-	describe("stores", () => {
-		it("accepts a store through an active store membership, even without a tenant membership", async () => {
-			mocks.membershipFindFirst.mockResolvedValue(null);
-			mocks.storeMembershipFindFirst.mockResolvedValue({ id: "sm-1" });
-
-			const result = await service().verify("user-1", { storeId: "store-a1" });
-
-			expect(result.context).toEqual({ tenantId: "org-a", storeId: "store-a1" });
-		});
-
-		it("accepts a store covered by the tenant membership location scope", async () => {
-			mocks.membershipFindFirst.mockResolvedValue({ status: "ACTIVE", locationScopes: [{ scopeType: "SELECTED", locationId: "loc-a2" }] });
-
-			expect((await service().verify("user-1", { tenantId: "org-a", storeId: "store-a2" })).context).toEqual({ tenantId: "org-a", storeId: "store-a2" });
-		});
-
-		it("rejects a store outside the member's scope (forged storeId)", async () => {
-			mocks.membershipFindFirst.mockResolvedValue({ status: "ACTIVE", locationScopes: [{ scopeType: "SELECTED", locationId: "loc-a1" }] });
-
-			const result = await service().verify("user-1", { tenantId: "org-a", storeId: "store-a2" });
-
-			expect(result.storeRejected).toBe(true);
-			expect(result.context).toEqual({ tenantId: "org-a" });
-		});
-
-		it("rejects a store belonging to another tenant", async () => {
+	describe("single-tenant deployment", () => {
+		it("never reaches another tenant through a location id, even for one of its active members", async () => {
 			mocks.membershipFindFirst.mockResolvedValue({ status: "ACTIVE", locationScopes: [{ scopeType: "ALL_LOCATIONS", locationId: null }] });
 
-			expect((await service().verify("user-1", { tenantId: "org-a", storeId: "store-b1" })).storeRejected).toBe(true);
+			const result = await service(servesOnly("org-a")).verify("user-1", { locationId: "loc-b1" });
+
+			expect(result).toEqual({ context: {}, target: null, tenantRejected: false, locationRejected: true });
+			expect(mocks.membershipFindFirst).not.toHaveBeenCalled();
 		});
 
-		it("rejects an unknown or inactive store", async () => {
-			const result = await service().verify("user-1", { storeId: "store-missing" });
+		it("still serves the configured tenant's locations", async () => {
+			mocks.membershipFindFirst.mockResolvedValue({ status: "ACTIVE", locationScopes: [{ scopeType: "ALL_LOCATIONS", locationId: null }] });
 
-			expect(result).toEqual({ context: {}, target: null, tenantRejected: false, storeRejected: true, locationRejected: false });
-			expect(mocks.storeFindFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "store-missing", isDeleted: false, status: "ACTIVE" } }));
+			expect((await service(servesOnly("org-a")).verify("user-1", { locationId: "loc-a1" })).context).toEqual({ tenantId: "org-a", locationId: "loc-a1" });
 		});
 
-		it("rejects a store member claiming another tenant", async () => {
-			mocks.membershipFindFirst.mockResolvedValue(null);
-			mocks.storeMembershipFindFirst.mockResolvedValue({ id: "sm-1" });
+		it("rejects a named tenant it does not serve", async () => {
+			mocks.membershipFindFirst.mockResolvedValue({ status: "ACTIVE", locationScopes: [] });
 
-			expect((await service().verify("user-1", { tenantId: "org-b", storeId: "store-a1" })).tenantRejected).toBe(true);
+			expect(await service(servesOnly("org-a")).verify("user-1", { tenantId: "org-b" })).toMatchObject({ context: {}, target: null, tenantRejected: true });
 		});
 	});
 });

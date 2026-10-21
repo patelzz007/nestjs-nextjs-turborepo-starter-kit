@@ -40,6 +40,8 @@ export const ADMIN_MENU_AUTHORIZATION: ReadonlyMap<string, SidebarAuthorization>
 	[ROUTES.catalog.categories.list, { permissions: [PERMISSION.SAMPLE_CATEGORY.LIST] }],
 	// GET /product (LIST PRODUCT)
 	[ROUTES.catalog.products.list, { permissions: [PERMISSION.PRODUCT.LIST] }],
+	// GET /github/account (READ GITHUB_PULL_REQUEST) · PUT + DELETE /github/account (UPDATE GITHUB_PULL_REQUEST)
+	[ROUTES.account.github, { permissions: [PERMISSION.GITHUB_PULL_REQUEST.READ, PERMISSION.GITHUB_PULL_REQUEST.UPDATE], mode: "all" }],
 ]);
 
 function applyToItem(item: SidebarMenuItem, requirements: ReadonlyMap<string, SidebarAuthorization>): SidebarMenuItem {

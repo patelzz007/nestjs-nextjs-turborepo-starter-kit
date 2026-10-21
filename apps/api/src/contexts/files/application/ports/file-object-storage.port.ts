@@ -1,4 +1,4 @@
-import type { CreateFileUploadUrlInput, CreateFileUploadUrlResponse, FileDownloadDisposition, FileDownloadResponse, StorageObjectLocator } from "@workspace/shared";
+import type { FileUploadRequest, CreateFileUploadUrlResponse, FileDownloadDisposition, FileDownloadResponse, StorageObjectLocator } from "@workspace/shared";
 
 import type { VerifiedUpload } from "../../domain/aggregates/stored-file.aggregate";
 import type { StoredFileView } from "./stored-file-read.port";
@@ -8,7 +8,7 @@ export interface UploadTicketRequest {
 	readonly fileId: string;
 	readonly uploadedById: string;
 	readonly locator: StorageObjectLocator;
-	readonly input: CreateFileUploadUrlInput;
+	readonly input: FileUploadRequest;
 	readonly maxBytes: number;
 }
 
@@ -19,7 +19,7 @@ export interface UploadTicketRequest {
  */
 export interface FileObjectStoragePort {
 	/** The private staging location a new upload's bytes go to. */
-	stagingLocator(input: CreateFileUploadUrlInput, fileId: string, ownerId: string): StorageObjectLocator;
+	stagingLocator(input: FileUploadRequest, fileId: string, ownerId: string): StorageObjectLocator;
 
 	issueUploadTicket(request: UploadTicketRequest): Promise<CreateFileUploadUrlResponse>;
 

@@ -3,11 +3,12 @@ import { epochMs, type EpochMs } from "@workspace/shared";
 
 import { OtpChallenge } from "../aggregates/otp-challenge.aggregate";
 import { RewardClaim, type RewardClaimState } from "../aggregates/reward-claim.aggregate";
-import { ClaimExpiredError, ClaimLimitReachedError, ClaimNotActiveError, CorruptClaimStateError, OtpAttemptsExhaustedError, OtpMissingError } from "../errors/claims.errors";
+import { ClaimExpiredError, ClaimLimitReachedError, ClaimNotActiveError, OtpAttemptsExhaustedError, OtpMissingError } from "../errors/claims.errors";
 import { ClaimCodesIssued, ClaimExpired, ClaimRedeemed, RewardClaimed } from "../events/claim.events";
 import { assertWithinClaimLimit } from "../policies/claim-limit.policy";
 import { claimNeedsOtp, liveAttributionToken } from "../policies/phone-verification.policy";
 import { CLAIM_TTL_MS, MAX_OTP_ATTEMPTS, OTP_TTL_MS } from "../value-objects/claim-rules.value-object";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 const NOW: EpochMs = epochMs(1_800_000_000_000);
 const CODES = { redemptionTokenHash: "token-hash", backupCodeHash: "backup-hash" };
@@ -86,9 +87,9 @@ describe("RewardClaim lifecycle", () => {
 	});
 
 	it("refuses a stored row whose status and redemption stamp disagree, or an unknown status", () => {
-		expect(() => stored({ status: "REDEEMED", redeemedAt: null })).toThrow(CorruptClaimStateError);
-		expect(() => stored({ status: "PENDING", redeemedAt: NOW })).toThrow(CorruptClaimStateError);
-		expect(() => stored({ status: "LOST" })).toThrow(CorruptClaimStateError);
+		expect(() => stored({ status: "REDEEMED", redeemedAt: null })).toThrow(CorruptAggregateStateError);
+		expect(() => stored({ status: "PENDING", redeemedAt: NOW })).toThrow(CorruptAggregateStateError);
+		expect(() => stored({ status: "LOST" })).toThrow(CorruptAggregateStateError);
 	});
 });
 
@@ -119,8 +120,8 @@ describe("OtpChallenge", () => {
 
 	it("refuses an expired challenge and corrupt counters", () => {
 		expect(() => issued().verify("code-hash", epochMs(NOW + OTP_TTL_MS + 1))).toThrow(OtpMissingError);
-		expect(() => OtpChallenge.rehydrate({ ...issued().snapshot(), attempts: 1, failedAttempts: 2 })).toThrow(CorruptClaimStateError);
-		expect(() => OtpChallenge.rehydrate({ ...issued().snapshot(), attempts: -1 })).toThrow(CorruptClaimStateError);
+		expect(() => OtpChallenge.rehydrate({ ...issued().snapshot(), attempts: 1, failedAttempts: 2 })).toThrow(CorruptAggregateStateError);
+		expect(() => OtpChallenge.rehydrate({ ...issued().snapshot(), attempts: -1 })).toThrow(CorruptAggregateStateError);
 	});
 });
 

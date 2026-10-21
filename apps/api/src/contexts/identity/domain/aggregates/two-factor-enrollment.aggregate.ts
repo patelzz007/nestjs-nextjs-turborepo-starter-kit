@@ -3,7 +3,6 @@ import { epochMs, type EpochMs } from "@workspace/shared";
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
 import {
 	BackupCodeRejectedError,
-	CorruptIdentityStateError,
 	InvalidRotationPasswordError,
 	InvalidTotpTokenError,
 	TwoFactorAlreadyEnabledError,
@@ -14,6 +13,7 @@ import {
 } from "../errors/identity.errors";
 import { UserCredentialsChanged, type IdentityEvent } from "../events/identity.events";
 import type { TokenVersion } from "../value-objects/token-version.value-object";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** Milliseconds per minute. */
 const MS_PER_MINUTE = 60_000;
@@ -94,7 +94,7 @@ export class TwoFactorEnrollment extends AggregateRoot<IdentityEvent> {
 	/** Mapper-only. An enabled factor without a secret still loads (sign-in answers "not configured"); a pending setup without backup codes does not. */
 	public static rehydrate(state: TwoFactorEnrollmentState): TwoFactorEnrollment {
 		if (state.pendingSetup !== null && state.pendingSetup.backupCodeHashes.length === 0) {
-			throw new CorruptIdentityStateError("two_factor_enrollment", `pending setup of ${state.userId} has no backup codes`);
+			throw new CorruptAggregateStateError("two_factor_enrollment", null, `pending setup of ${state.userId} has no backup codes`);
 		}
 		return new TwoFactorEnrollment(state);
 	}
@@ -247,7 +247,7 @@ export class TwoFactorEnrollment extends AggregateRoot<IdentityEvent> {
 
 	private beginSetup(secret: EncryptedTotpSecret, backupCodeHashes: readonly string[], now: EpochMs): void {
 		if (backupCodeHashes.length === 0) {
-			throw new CorruptIdentityStateError("two_factor_enrollment", "a setup needs backup codes");
+			throw new CorruptAggregateStateError("two_factor_enrollment", null, "a setup needs backup codes");
 		}
 		const setup: PendingTwoFactorSetup = { secret, backupCodeHashes, expiresAt: epochMs(now + TWO_FACTOR_SETUP_TTL_MS) };
 		this.changes.push({ kind: "setup_started", setup });

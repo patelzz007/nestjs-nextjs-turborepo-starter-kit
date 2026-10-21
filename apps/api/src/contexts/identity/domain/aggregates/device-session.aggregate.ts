@@ -1,10 +1,11 @@
 import { epochMs, type EpochMs, type SessionLocation, type SessionSignInMethod } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
-import { CorruptIdentityStateError, RefreshTokenExpiredError, RefreshTokenInvalidError, RefreshTokenRevokedError } from "../errors/identity.errors";
+import { RefreshTokenExpiredError, RefreshTokenInvalidError, RefreshTokenRevokedError } from "../errors/identity.errors";
 import { DeviceSessionsRevoked, type IdentityEvent } from "../events/identity.events";
 import type { SessionDeviceDetails } from "../value-objects/session-device.value-object";
 import { revokedBySystem, type SessionRevoker } from "../value-objects/session-revoker.value-object";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /**
  * Grace window after a refresh-token rotation during which presenting the
@@ -126,7 +127,7 @@ export class DeviceSession extends AggregateRoot<IdentityEvent> {
 
 	public static rehydrate(state: DeviceSessionState): DeviceSession {
 		if (state.tokenHash.length === 0) {
-			throw new CorruptIdentityStateError("device_session", `session ${state.id} has no token hash`);
+			throw new CorruptAggregateStateError("device_session", null, `session ${state.id} has no token hash`);
 		}
 		return new DeviceSession(state, false);
 	}

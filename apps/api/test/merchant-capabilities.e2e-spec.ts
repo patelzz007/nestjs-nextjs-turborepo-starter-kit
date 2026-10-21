@@ -43,17 +43,17 @@ describe("Merchant tenant-management capabilities (e2e)", () => {
 		return ApiErrorResponseSchema.parse(response.json()).error.code;
 	}
 
-	const orgPath = (path: string): string => `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.kl}${path}`;
+	const tenantScopedPath = (path: string): string => `${API_VERSION_PREFIX}/tenants/${TENANT_SEED_SLUGS.kl}${path}`;
 
 	it("lets the owner list pending team invitations (merchant:manage_team)", async () => {
-		const response = await app.inject({ method: "GET", url: orgPath("/members/invites"), headers: merchantHeaders(owner) });
+		const response = await app.inject({ method: "GET", url: tenantScopedPath("/members/invites"), headers: merchantHeaders(owner) });
 
 		expect(response.statusCode).toBe(200);
 		expect(parseSuccessEnvelope(response, z.array(TenantMemberInviteResponseSchema)).success).toBe(true);
 	});
 
 	it("lets the owner list the team roster with every member's name and email (users RLS is self-only, so the profiles come from an allowlisted system read)", async () => {
-		const response = await app.inject({ method: "GET", url: orgPath("/members"), headers: merchantHeaders(owner) });
+		const response = await app.inject({ method: "GET", url: tenantScopedPath("/members"), headers: merchantHeaders(owner) });
 
 		expect(response.statusCode, response.body).toBe(200);
 		const roster = parseSuccessEnvelope(response, z.array(TenantMemberRosterResponseSchema)).data;
@@ -65,7 +65,7 @@ describe("Merchant tenant-management capabilities (e2e)", () => {
 	});
 
 	it("pages the roster in join order, with the totals in meta, and narrows it by role", async () => {
-		const first = await app.inject({ method: "GET", url: orgPath("/members?limit=1"), headers: merchantHeaders(owner) });
+		const first = await app.inject({ method: "GET", url: tenantScopedPath("/members?limit=1"), headers: merchantHeaders(owner) });
 		expect(first.statusCode, first.body).toBe(200);
 		const firstPage = parsePaginatedEnvelope(first, TenantMemberRosterResponseSchema);
 		const { meta } = firstPage;
@@ -73,11 +73,15 @@ describe("Merchant tenant-management capabilities (e2e)", () => {
 		expect(meta).toMatchObject({ limit: 1, page: 1, hasNext: true, hasPrevious: false });
 		expect(meta.total).toBeGreaterThanOrEqual(2);
 
-		const next = await app.inject({ method: "GET", url: orgPath(`/members?limit=1&cursor=${encodeURIComponent(meta.nextCursor ?? "")}`), headers: merchantHeaders(owner) });
+		const next = await app.inject({
+			method: "GET",
+			url: tenantScopedPath(`/members?limit=1&cursor=${encodeURIComponent(meta.nextCursor ?? "")}`),
+			headers: merchantHeaders(owner),
+		});
 		const nextPage = parseSuccessEnvelope(next, z.array(TenantMemberRosterResponseSchema)).data;
 		expect(nextPage.map((member) => member.id)).not.toEqual(firstPage.data.map((member) => member.id));
 
-		const owners = await app.inject({ method: "GET", url: orgPath("/members?filter[role]=OWNER"), headers: merchantHeaders(owner) });
+		const owners = await app.inject({ method: "GET", url: tenantScopedPath("/members?filter[role]=OWNER"), headers: merchantHeaders(owner) });
 		expect(parseSuccessEnvelope(owners, z.array(TenantMemberRosterResponseSchema)).data.every((member) => member.role === "OWNER")).toBe(true);
 	});
 
@@ -93,7 +97,7 @@ describe("Merchant tenant-management capabilities (e2e)", () => {
 	});
 
 	it("lets the owner read business verification (merchant:manage_verification)", async () => {
-		const response = await app.inject({ method: "GET", url: orgPath("/kyb"), headers: merchantHeaders(owner) });
+		const response = await app.inject({ method: "GET", url: tenantScopedPath("/kyb"), headers: merchantHeaders(owner) });
 
 		expect(response.statusCode).toBe(200);
 	});
@@ -103,7 +107,7 @@ describe("Merchant tenant-management capabilities (e2e)", () => {
 		["GET", "/members/invites"],
 		["GET", "/kyb"],
 	] satisfies ["GET", string][])("denies a cashier %s %s with the role-capability error", async (method, path) => {
-		const response = await app.inject({ method, url: orgPath(path), headers: merchantHeaders(cashier) });
+		const response = await app.inject({ method, url: tenantScopedPath(path), headers: merchantHeaders(cashier) });
 
 		expect(response.statusCode).toBe(403);
 		expect(errorCodeOf(response)).toBe("TENANT_ROLE_CAPABILITY_REQUIRED");
@@ -112,7 +116,7 @@ describe("Merchant tenant-management capabilities (e2e)", () => {
 	it("denies a cashier requesting a new store (merchant:manage_locations)", async () => {
 		const response = await app.inject({
 			method: "POST",
-			url: orgPath("/locations"),
+			url: tenantScopedPath("/locations"),
 			headers: mutationHeaders(merchantHeaders(cashier)),
 			payload: { name: "Cashier store attempt", addressText: "1 Jalan Ujian, Kuala Lumpur" },
 		});
@@ -122,7 +126,7 @@ describe("Merchant tenant-management capabilities (e2e)", () => {
 	});
 
 	it("still lets a cashier read the store locations (merchant:view_locations comes from the member-wide context)", async () => {
-		const response = await app.inject({ method: "GET", url: orgPath("/context"), headers: merchantHeaders(cashier) });
+		const response = await app.inject({ method: "GET", url: tenantScopedPath("/context"), headers: merchantHeaders(cashier) });
 
 		expect(response.statusCode).toBe(200);
 		expect(parseSuccessEnvelope(response, TenantContextResponseSchema).data.locations.length).toBeGreaterThan(0);

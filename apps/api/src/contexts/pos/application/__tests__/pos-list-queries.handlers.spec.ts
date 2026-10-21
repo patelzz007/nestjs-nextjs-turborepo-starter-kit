@@ -55,6 +55,7 @@ const REDEMPTION: MerchantRedemptionListItem = {
 	redeemedAt: NOW,
 	terminalId: "TERM-AAAA2222",
 	redemptionMethod: "SCAN",
+	customerBanned: false,
 };
 
 class RecordingApiKeyReads implements ApiKeyReadPort {

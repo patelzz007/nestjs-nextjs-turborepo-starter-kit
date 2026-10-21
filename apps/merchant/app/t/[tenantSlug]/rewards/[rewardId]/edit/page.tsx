@@ -1,6 +1,6 @@
 import { MerchantEditRewardPageView } from "@/contexts/rewards/components/merchant-edit-reward-page-view";
 import { loadMerchantServerContext } from "@/lib/merchant-server-api";
-import { guardOrgPage } from "@/contexts/tenancy/lib/org/org-page-guard";
+import { guardTenantPage } from "@/contexts/tenancy/lib/tenant/tenant-page-guard";
 import { prefetchedDataOrUndefined } from "@/lib/server/server-query-outcome";
 import * as React from "react";
 
@@ -12,7 +12,7 @@ interface MerchantEditRewardPageProps {
 
 export default async function MerchantEditRewardPage({ params }: MerchantEditRewardPageProps): Promise<React.JSX.Element> {
 	const { tenantSlug, rewardId } = await params;
-	const denied = await guardOrgPage(tenantSlug, "/rewards/[rewardId]/edit");
+	const denied = await guardTenantPage(tenantSlug, "/rewards/[rewardId]/edit");
 	if (denied !== null) {
 		return denied;
 	}

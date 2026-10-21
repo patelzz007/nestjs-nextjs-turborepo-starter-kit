@@ -8,7 +8,7 @@ import { Membership } from "../../../domain/aggregates/membership.aggregate";
 import { LocationScope } from "../../../domain/value-objects/location-scope.value-object";
 import { notFound, requireUserActor } from "../../tenant-actor";
 import type { TenantsScope } from "../../tenants-scope";
-import type { MerchantAccessPort } from "../../ports/merchant-access.port";
+import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { TenantDirectoryPort } from "../../ports/tenant-directory.port";
 import { MERCHANT_ACCESS, TENANT_DIRECTORY, TENANTS_UNIT_OF_WORK } from "../../ports/tenants.tokens";
 import { ReviewAccessRequestCommand } from "./review-access-request.command";

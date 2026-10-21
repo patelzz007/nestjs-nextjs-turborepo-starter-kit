@@ -84,6 +84,7 @@ function targetUser(overrides: { readonly isSuperAdmin?: boolean } = {}): AdminU
 		deletedAt: null,
 		signupReferrer: null,
 		signupReferralStatus: null,
+		ban: null,
 	});
 }
 

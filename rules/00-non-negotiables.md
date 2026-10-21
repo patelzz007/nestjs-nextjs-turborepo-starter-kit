@@ -6,7 +6,7 @@ This document exists because of a simple, repeated failure pattern in codebases 
 
 ## Why this matters more here than in a typical project
 
-This is a multi-app monorepo (API, web, mobile) sharing contracts across all three. A silent type-safety gap in one app doesn't stay contained — because `packages/contracts` schemas are shared, a loosened type in the API can quietly propagate into the web app's assumptions, and from there into what a junior developer believes is "safe" to build on top of. Strictness at the boundaries is what lets three separate apps, built by people who don't all talk to each other every day, stay in sync without constant manual coordination.
+This is a multi-app monorepo (API, web, mobile) sharing contracts across all three. A silent type-safety gap in one app doesn't stay contained — because `packages/shared` schemas are shared, a loosened type in the API can quietly propagate into the web app's assumptions, and from there into what a junior developer believes is "safe" to build on top of. Strictness at the boundaries is what lets three separate apps, built by people who don't all talk to each other every day, stay in sync without constant manual coordination.
 
 ## Forbidden constructs
 

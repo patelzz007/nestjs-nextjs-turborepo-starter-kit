@@ -3,7 +3,10 @@ import { epochMs, type EpochMs } from "@workspace/shared";
 
 import { UserAccount, type UserAccountState } from "../aggregates/user-account.aggregate";
 import {
-	CorruptIdentityStateError,
+	AccountAlreadyBannedError,
+	AccountNotBannedError,
+	CannotBanSelfError,
+	CannotBanSuperAdminError,
 	CredentialAccountMissingError,
 	CurrentPasswordIncorrectError,
 	InvalidOnboardingPasswordError,
@@ -13,6 +16,7 @@ import { UserCredentialsChanged, UserProfileChanged } from "../events/identity.e
 import { EmailAddress } from "../value-objects/email-address.value-object";
 import { LockoutState, MAX_FAILED_SIGN_IN_ATTEMPTS } from "../value-objects/lockout-state.value-object";
 import { TokenVersion } from "../value-objects/token-version.value-object";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 const NOW: EpochMs = epochMs(1_800_000_000_000);
 const LATER: EpochMs = epochMs(NOW + 1_000);
@@ -33,6 +37,7 @@ function state(overrides: Partial<UserAccountState> = {}): UserAccountState {
 		twoFactorEnabled: false,
 		mfaEnrollmentDeadline: null,
 		mfaAssuredAt: null,
+		ban: null,
 		createdAt: NOW,
 		updatedAt: NOW,
 		...overrides,
@@ -76,13 +81,13 @@ describe("UserAccount.register", () => {
 				},
 				NOW,
 			),
-		).toThrow(CorruptIdentityStateError);
+		).toThrow(CorruptAggregateStateError);
 	});
 });
 
 describe("UserAccount.rehydrate", () => {
 	it("refuses a stored account without a password hash", () => {
-		expect(() => UserAccount.rehydrate(state({ passwordHash: "" }))).toThrow(CorruptIdentityStateError);
+		expect(() => UserAccount.rehydrate(state({ passwordHash: "" }))).toThrow(CorruptAggregateStateError);
 	});
 
 	it("keeps the loaded token generation as its compare-and-set token", () => {
@@ -160,7 +165,7 @@ describe("UserAccount password changes", () => {
 	it("refuses an empty new hash as corrupt", () => {
 		expect(() => {
 			UserAccount.rehydrate(state()).resetPassword("", false, LATER);
-		}).toThrow(CorruptIdentityStateError);
+		}).toThrow(CorruptAggregateStateError);
 	});
 });
 
@@ -199,7 +204,7 @@ describe("UserAccount email verification, unlock, rename and MFA assurance", () 
 		expect(account.pendingChanges).toEqual([{ kind: "renamed", fullName: "Jane Smith", at: LATER }]);
 		expect(() => {
 			account.rename(" ", LATER);
-		}).toThrow(CorruptIdentityStateError);
+		}).toThrow(CorruptAggregateStateError);
 	});
 
 	it("checks a provisioning flow's password proof", () => {
@@ -216,5 +221,60 @@ describe("UserAccount email verification, unlock, rename and MFA assurance", () 
 		expect(account.mfaAssuranceAt(NOW)).toBeNull();
 		expect(account.mfaAssuranceAt(LATER)).toBe(LATER);
 		expect(account.pendingChanges).toEqual([{ kind: "mfa_assured", at: LATER }]);
+	});
+});
+
+describe("UserAccount ban and unban", () => {
+	const ADMIN = "admin-1";
+
+	it("bans: deactivates the account, records the ban, moves the token generation and cannot sign in", () => {
+		const account = UserAccount.rehydrate(state());
+
+		account.banBy(ADMIN, "  Chargeback fraud  ", LATER);
+
+		expect(account.isActive).toBe(false);
+		expect(account.canSignIn()).toBe(false);
+		expect(account.ban).toEqual({ bannedAt: LATER, bannedByUserId: ADMIN, reason: "Chargeback fraud" });
+		expect(account.tokenVersion.value).toBe(3);
+		expect(account.pendingChanges).toEqual([
+			{ kind: "banned", ban: { bannedAt: LATER, bannedByUserId: ADMIN, reason: "Chargeback fraud" }, previousTokenVersion: TokenVersion.of(2) },
+		]);
+		expect(account.pullEvents()).toEqual([expect.objectContaining({ reason: "account_banned" })]);
+	});
+
+	it("refuses to ban the admin's own account, a SuperAdmin, an already banned account, or with an empty reason", () => {
+		expect(() => {
+			UserAccount.rehydrate(state()).banBy("user-1", "self", NOW);
+		}).toThrow(CannotBanSelfError);
+		expect(() => {
+			UserAccount.rehydrate(state({ isSuperAdmin: true })).banBy(ADMIN, "operator", NOW);
+		}).toThrow(CannotBanSuperAdminError);
+		expect(() => {
+			UserAccount.rehydrate(state({ isActive: false, ban: { bannedAt: NOW, bannedByUserId: ADMIN, reason: "x" } })).banBy(ADMIN, "again", LATER);
+		}).toThrow(AccountAlreadyBannedError);
+		expect(() => {
+			UserAccount.rehydrate(state()).banBy(ADMIN, "   ", NOW);
+		}).toThrow(CorruptAggregateStateError);
+	});
+
+	it("unbans: active again, the ban cleared, compare-and-set on the loaded ban", () => {
+		const account = UserAccount.rehydrate(state({ isActive: false, ban: { bannedAt: NOW, bannedByUserId: ADMIN, reason: "x" } }));
+
+		account.unban(LATER);
+
+		expect(account.isActive).toBe(true);
+		expect(account.ban).toBeNull();
+		expect(account.pendingChanges).toEqual([{ kind: "unbanned", bannedAt: NOW, at: LATER }]);
+		expect(account.pullEvents()).toEqual([expect.objectContaining({ reason: "account_unbanned" })]);
+	});
+
+	it("refuses to unban an account that is not banned", () => {
+		expect(() => {
+			UserAccount.rehydrate(state()).unban(NOW);
+		}).toThrow(AccountNotBannedError);
+	});
+
+	it("refuses to load a banned account that is still active", () => {
+		expect(() => UserAccount.rehydrate(state({ ban: { bannedAt: NOW, bannedByUserId: ADMIN, reason: "x" } }))).toThrow(CorruptAggregateStateError);
 	});
 });

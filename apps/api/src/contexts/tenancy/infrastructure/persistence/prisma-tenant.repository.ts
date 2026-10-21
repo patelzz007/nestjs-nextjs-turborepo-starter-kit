@@ -1,5 +1,7 @@
-import type { PilotCity } from "@workspace/shared";
+import type { Prisma } from "@prisma/client";
+import { epochMs, newRowId, UuidParamSchema, type PilotCity } from "@workspace/shared";
 
+import { ConcurrentModificationError } from "../../../../platform/infrastructure/persistence/persistence.errors";
 import { Tenant } from "../../domain/aggregates/tenant.aggregate";
 import { TenantNotProvisioningError, TenantSlugTakenError } from "../../domain/errors/tenants.errors";
 import type { TenantRepository } from "../../domain/repositories/tenant.repository";
@@ -7,7 +9,12 @@ import { readTransactionCorrelationId } from "../../../../prisma/transaction-cor
 import type { TenantsDb } from "./tenant-db";
 import { allocateUniqueTenantSlug } from "./tenant-slug";
 import { withUniqueViolationAs } from "./unique-violation";
-import { newRowId } from "@workspace/shared";
+
+const TENANT_SELECT = { id: true, slug: true, displayName: true, lifecycleState: true, deletionGraceEndsAt: true } satisfies Prisma.TenantSelect;
+
+function toTenant(row: Prisma.TenantGetPayload<{ select: typeof TENANT_SELECT }>): Tenant {
+	return Tenant.rehydrate({ ...row, deletionGraceEndsAt: row.deletionGraceEndsAt === null ? null : epochMs(Number(row.deletionGraceEndsAt)) });
+}
 
 /** Shared tenant placement every tenant starts in (dedicated placement is an operator migration). */
 const DEFAULT_PLACEMENT = { kind: "SHARED", regionCode: "default" } satisfies { readonly kind: "SHARED"; readonly regionCode: string };
@@ -46,11 +53,20 @@ export class PrismaTenantRepository implements TenantRepository {
 	}
 
 	public async findById(tenantId: string): Promise<Tenant | null> {
+		const row = await this.db.tenant.findFirst({ where: { id: tenantId, isDeleted: false }, select: TENANT_SELECT });
+		return row === null ? null : toTenant(row);
+	}
+
+	public async findByRouteKey(routeKey: string): Promise<Tenant | null> {
 		const row = await this.db.tenant.findFirst({
-			where: { id: tenantId, isDeleted: false },
-			select: { id: true, slug: true, displayName: true, lifecycleState: true },
+			where: {
+				isDeleted: false,
+				lifecycleState: { not: "DELETED" },
+				OR: [{ slug: routeKey }, { slugHistory: { some: { slug: routeKey } } }, ...(UuidParamSchema.safeParse(routeKey).success ? [{ id: routeKey }] : [])],
+			},
+			select: TENANT_SELECT,
 		});
-		return row === null ? null : Tenant.rehydrate(row);
+		return row === null ? null : toTenant(row);
 	}
 
 	public async findMerchantCity(tenantId: string): Promise<PilotCity | null> {
@@ -68,12 +84,14 @@ export class PrismaTenantRepository implements TenantRepository {
 			where: { id: tenant.id, lifecycleState: loaded, isDeleted: false },
 			data: {
 				lifecycleState: tenant.lifecycleState,
+				deletionGraceEndsAt: tenant.deletionGraceEndsAt,
 				...(tenant.displayNameChanged ? { displayName: tenant.displayName } : {}),
 				updatedAt,
 			},
 		});
 		if (changed.count !== 1) {
-			throw new TenantNotProvisioningError();
+			// Onboarding activation keeps its own answer; any other lost compare-and-set is a concurrent change.
+			throw loaded === "PROVISIONING" ? new TenantNotProvisioningError() : new ConcurrentModificationError(tenant.id);
 		}
 		await this.appendLifecycleEvents(tenant);
 	}

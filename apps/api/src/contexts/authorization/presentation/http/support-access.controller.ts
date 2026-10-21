@@ -1,9 +1,16 @@
-import { Controller, HttpStatus, Post } from "@nestjs/common";
-import { CommandBus } from "@nestjs/cqrs";
+import { Controller, Get, HttpStatus, Post } from "@nestjs/common";
+import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import {
+	apiContract,
 	apiPath,
 	MessageResponseSchema,
+	SupportAccessGrantDetailListSchema,
+	SupportAccessGrantDetailSchema,
+	TenantSlugParamSchema,
+	type PaginatedServiceResult,
+	type SupportAccessGrantDetail,
+	type SupportAccessGrantListQuery,
 	SupportAccessGrantRequestSchema,
 	SupportAccessGrantResponseSchema,
 	UuidParamSchema,
@@ -20,17 +27,40 @@ import { RequirePermission } from "../../../../platform/presentation/http/securi
 import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { SuperAdminOnly } from "../../../../platform/presentation/http/security/decorators/super-admin.decorator";
 import { RATE_LIMIT_POLICY, RateLimit } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
-import { ZodBody, ZodParam } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
-import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
+import { ZodBody, ZodListQuery, ZodParam, ZodParams } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
+import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
+import { ListSupportAccessGrantsQuery } from "../../application/queries/list-support-access-grants/list-support-access-grants.query";
+import { ListTenantSupportAccessGrantsQuery } from "../../application/queries/list-tenant-support-access-grants/list-tenant-support-access-grants.query";
 import { ApproveSupportAccessCommand } from "../../application/commands/approve-support-access/approve-support-access.command";
 import { RequestSupportAccessCommand } from "../../application/commands/request-support-access/request-support-access.command";
 import { RevokeSupportAccessCommand } from "../../application/commands/revoke-support-access/revoke-support-access.command";
-import { SUPPORT_ACCESS_APPROVE_OPERATION, SUPPORT_ACCESS_GRANT_OPERATION, SUPPORT_ACCESS_REVOKE_OPERATION } from "../../application/ports/authorization.tokens";
+import {
+	SUPPORT_ACCESS_ADMIN_READ_OPERATION,
+	SUPPORT_ACCESS_APPROVE_OPERATION,
+	SUPPORT_ACCESS_GRANT_OPERATION,
+	SUPPORT_ACCESS_REVOKE_OPERATION,
+	SUPPORT_ACCESS_TENANT_READ_OPERATION,
+} from "../../application/ports/authorization.tokens";
 
 @ApiTags("Support Access")
 @Controller(apiPath("/support-access"))
 export class SupportAccessController {
-	public constructor(private readonly commandBus: CommandBus) {}
+	public constructor(
+		private readonly commandBus: CommandBus,
+		private readonly queryBus: QueryBus,
+	) {}
+
+	@Get()
+	@SuperAdminOnly()
+	@RequirePermission("READ", "USER")
+	@PlatformOperation(SUPPORT_ACCESS_ADMIN_READ_OPERATION)
+	@ZodPaginatedResponse(SupportAccessGrantDetailSchema, { description: "Support access grants, newest first" })
+	public async list(
+		@CurrentActor() actor: ActorContext,
+		@ZodListQuery(apiContract.supportAccess.list.input) query: SupportAccessGrantListQuery,
+	): Promise<PaginatedServiceResult<SupportAccessGrantDetail>> {
+		return this.queryBus.execute(new ListSupportAccessGrantsQuery(actor, query));
+	}
 
 	@Post("request")
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
@@ -81,5 +111,21 @@ export class SupportAccessController {
 	public async revoke(@ZodParam("grantId", UuidParamSchema) grantId: string, @CurrentActor() actor: ActorContext): Promise<MessageResponse> {
 		await this.commandBus.execute(new RevokeSupportAccessCommand(actor, grantId));
 		return { message: "Support access revoked" };
+	}
+}
+
+/** The tenant owner's side of support access: their tenant's grants, to approve the pending ones. */
+@ApiTags("Support Access")
+@Controller(apiPath("/tenants"))
+export class TenantSupportAccessController {
+	public constructor(private readonly queryBus: QueryBus) {}
+
+	/** Resource-scoped like approval: only an active OWNER of the tenant (checked in the read itself) gets the list. */
+	@Get(":tenantSlug/support-access")
+	@PlatformOperation(SUPPORT_ACCESS_TENANT_READ_OPERATION)
+	@ZodResponse(SupportAccessGrantDetailListSchema, { description: "The tenant's support access grants, newest first" })
+	@ApiResponse({ status: 404, type: ApiErrorResponseDto, description: "No such tenant, or the caller is not its active owner" })
+	public async list(@CurrentActor() actor: ActorContext, @ZodParams(TenantSlugParamSchema) params: { tenantSlug: string }): Promise<readonly SupportAccessGrantDetail[]> {
+		return this.queryBus.execute(new ListTenantSupportAccessGrantsQuery(actor, params));
 	}
 }

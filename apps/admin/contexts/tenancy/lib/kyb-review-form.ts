@@ -9,7 +9,7 @@
 import { AdminKybUpdateSchema, JsonObjectSchema, KybStatusSchema, type AdminKybUpdateInput, type JsonObject, type JsonValue, type KybStatus } from "@workspace/shared";
 import { z } from "zod";
 
-import { OptionalTextInputSchema } from "@/lib/forms/contract-form-schema";
+import { OptionalTextInputSchema } from "@workspace/client/lib/forms/contract-form-schema";
 
 /** The KYB payload keys the decision form edits. */
 export const KybReviewFieldKeySchema = z.enum(["registrationNo", "taxId", "documentType", "reviewNotes", "rejectionReason"]);

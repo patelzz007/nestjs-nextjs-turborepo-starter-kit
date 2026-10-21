@@ -100,6 +100,7 @@ function user(id: string, overrides: Partial<Pick<AdminUserDetail, "isActive" | 
 		deletedAt: null,
 		signupReferrer: null,
 		signupReferralStatus: null,
+		ban: null,
 	});
 }
 

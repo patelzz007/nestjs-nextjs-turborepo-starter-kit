@@ -372,21 +372,10 @@ export default [
 		},
 	},
 
-	// 3. Relax no-unsafe-* for runtime-type patterns (Prisma / Zod / Fastify)
+	// 3. Relax no-unsafe-* for Prisma's generated generic chains only (surgical: every other
+	//    folder — contexts/, platform/, bootstrap/ — is fully enforced)
 	{
-		files: [
-			"src/prisma/**/*.ts",
-			"src/modules/**/*.ts",
-			"src/common/**/*.ts",
-			"src/common/guards/**/*.ts",
-			"src/common/interceptors/**/*.ts",
-			"src/common/middleware/**/*.ts",
-			"src/app.controller.ts",
-			"src/main.ts",
-			"src/common/dto/**/*.ts",
-			"src/common/services/**/*.ts",
-			"src/main.ts",
-		],
+		files: ["src/prisma/**/*.ts"],
 		rules: {
 			"@typescript-eslint/no-unsafe-assignment": "off",
 			"@typescript-eslint/no-unsafe-call": "off",

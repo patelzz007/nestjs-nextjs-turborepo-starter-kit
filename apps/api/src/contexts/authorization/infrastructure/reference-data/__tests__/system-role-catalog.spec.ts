@@ -1,7 +1,7 @@
 import { getPermissionDefinitions } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { ADMIN_ROLE_NAME, DEFAULT_CONSUMER_ROLE_NAME, SUPER_ADMIN_ROLE_NAME } from "../../../domain/rbac-catalog";
+import { ADMIN_ROLE_NAME, DEFAULT_CONSUMER_ROLE_NAME, LOCATION_MANAGER_ROLE_NAME, LOCATION_STAFF_ROLE_NAME, SUPER_ADMIN_ROLE_NAME } from "../../../domain/rbac-catalog";
 import { SYSTEM_ROLE_CATALOG, type PermissionKey } from "../system-role-catalog";
 
 const CATALOG: readonly PermissionKey[] = getPermissionDefinitions().map((definition): PermissionKey => ({
@@ -27,7 +27,7 @@ describe("SYSTEM_ROLE_CATALOG", () => {
 		const names = SYSTEM_ROLE_CATALOG.map((role) => role.name);
 
 		expect(new Set(names).size).toBe(names.length);
-		expect(names).toEqual(expect.arrayContaining([SUPER_ADMIN_ROLE_NAME, ADMIN_ROLE_NAME, DEFAULT_CONSUMER_ROLE_NAME, "Store Manager", "Store Staff"]));
+		expect(names).toEqual(expect.arrayContaining([SUPER_ADMIN_ROLE_NAME, ADMIN_ROLE_NAME, DEFAULT_CONSUMER_ROLE_NAME, LOCATION_MANAGER_ROLE_NAME, LOCATION_STAFF_ROLE_NAME]));
 	});
 
 	it("grants every role at least one permission, and only permissions that exist in the catalog", () => {
@@ -60,10 +60,12 @@ describe("SYSTEM_ROLE_CATALOG", () => {
 		expect(keys(grantsOf("Admin")).has("MANAGE:SYSTEM_SETTINGS:GLOBAL")).toBe(false);
 	});
 
-	it("makes Store Staff a subset of Store Manager, both STORE-scoped", () => {
-		const manager = keys(grantsOf("Store Manager"));
-		const staff = grantsOf("Store Staff");
+	it("makes Location Staff a subset of Location Manager, both only LOCATION-scoped", () => {
+		const manager = grantsOf(LOCATION_MANAGER_ROLE_NAME);
+		const managerKeys = keys(manager);
+		const staff = grantsOf(LOCATION_STAFF_ROLE_NAME);
 
-		expect(staff.every((permission) => permission.scope === "STORE" && manager.has(`${permission.action}:${permission.resource}:${permission.scope}`))).toBe(true);
+		expect(manager.every((permission) => permission.scope === "LOCATION")).toBe(true);
+		expect(staff.every((permission) => permission.scope === "LOCATION" && managerKeys.has(`${permission.action}:${permission.resource}:${permission.scope}`))).toBe(true);
 	});
 });

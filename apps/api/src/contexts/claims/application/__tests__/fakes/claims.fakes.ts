@@ -33,6 +33,7 @@ import type { ClaimsScope } from "../../claims-scope";
 import type { ClaimCodesPort, IssuedClaimCodes, IssuedOtp } from "../../ports/claim-codes.port";
 import type { ClaimantPort, ClaimantProfile, ClaimViewPort, ReferralAttributionPort, RewardNotice, RewardNotificationInbox } from "../../ports/claims-transactional.ports";
 import type { ClaimCodeLookup } from "../../services/claim-redemption.application-service";
+import type { CustomerStandingPort } from "../../../../tenancy/public-api";
 
 export const NOW: EpochMs = epochMs(1_800_000_000_000);
 
@@ -502,6 +503,32 @@ export class InMemorySignupSuccessNotices implements SignupSuccessNoticesPort {
 }
 
 /** One claims database in memory; its unit of work rolls everything back when the work throws. */
+/** Tenants' customer standing in memory: every tenant operates unless stopped; bans are per tenant. */
+export class InMemoryCustomerStanding implements CustomerStandingPort {
+	private readonly stopped = new Set<string>();
+	private readonly bans = new Map<string, Set<string>>();
+
+	/** The tenant no longer operates (suspended, banned, not live). */
+	public stop(tenantId: string): void {
+		this.stopped.add(tenantId);
+	}
+
+	public ban(tenantId: string, customerUserId: string): void {
+		const banned = this.bans.get(tenantId) ?? new Set<string>();
+		banned.add(customerUserId);
+		this.bans.set(tenantId, banned);
+	}
+
+	public tenantOperates(tenantId: string): Promise<boolean> {
+		return Promise.resolve(!this.stopped.has(tenantId));
+	}
+
+	public bannedCustomers(tenantId: string, customerUserIds: readonly string[]): Promise<ReadonlySet<string>> {
+		const banned = this.bans.get(tenantId);
+		return Promise.resolve(new Set(customerUserIds.filter((userId): boolean => banned?.has(userId) === true)));
+	}
+}
+
 export class InMemoryClaimsStore {
 	public readonly clock = new FixedClock();
 	public readonly claims = new InMemoryClaims();
@@ -513,6 +540,7 @@ export class InMemoryClaimsStore {
 	public readonly signupSuccessNotices = new InMemorySignupSuccessNotices();
 	public readonly legal = new ScriptedLegal();
 	public readonly rewardAudit = new RecordingRewardAudit();
+	public readonly customerStanding = new InMemoryCustomerStanding();
 	public readonly emails = new RecordingEmails();
 	public readonly events = new TransactionalEventCollector();
 	public readonly uow: InMemoryClaimsUnitOfWork;
@@ -533,6 +561,7 @@ export class InMemoryClaimsStore {
 			signupSuccessNotices: this.signupSuccessNotices,
 			rewards: this.inventory,
 			rewardFacts: this.inventory,
+			customerStanding: this.customerStanding,
 			legal: this.legal,
 			rewardAudit: this.rewardAudit,
 			emails: this.emails,

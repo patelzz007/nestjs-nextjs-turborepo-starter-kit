@@ -6,6 +6,8 @@ export const ACCOUNT_LOOKUP_OPERATION: SystemOperationName = "auth.account.looku
 export const ADMIN_USERS_READ_OPERATION: SystemOperationName = "auth.admin_users.read";
 /** A platform administrator clears another account's lockout. Writes `User` only. */
 export const ADMIN_USERS_UNLOCK_OPERATION: SystemOperationName = "auth.admin_users.unlock";
+export const ADMIN_USERS_BAN_OPERATION: SystemOperationName = "auth.admin_users.ban";
+export const ADMIN_USERS_UNBAN_OPERATION: SystemOperationName = "auth.admin_users.unban";
 /** Count a failed password and request the lockout email. */
 export const LOGIN_FAILURE_OPERATION: SystemOperationName = "auth.login.record_failure";
 /** Clear the failed-attempt counter after a successful password. */

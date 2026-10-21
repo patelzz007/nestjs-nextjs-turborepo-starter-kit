@@ -192,11 +192,14 @@ async function waitForPortsFreed() {
 }
 
 /**
- * @param {{ repoRoot: string, mode: "cold" | "warm", logPath: string, signal: AbortSignal }} options
+ * @param {{ repoRoot: string, mode: "cold" | "warm", logPath: string, signal: AbortSignal, sessions?: Map<string, string> }} options
  *   `signal` aborts the run (Ctrl-C): the stack is stopped and the run reports what it measured so far.
+ *   `sessions` carries each demo account's session cookie from one run to the next (the sessions live
+ *   in the database, so they outlast the restart): signing in again every run would exceed the
+ *   per-IP login limit. Only phase C's page GET is timed, never the sign-in.
  * @returns {Promise<RunResult>}
  */
-export async function runDevTiming({ repoRoot, mode, logPath, signal }) {
+export async function runDevTiming({ repoRoot, mode, logPath, signal, sessions = new Map() }) {
 	signal.throwIfAborted();
 	const occupied = await findOccupiedPorts(DEV_SERVERS);
 	if (occupied.length > 0) {
@@ -262,7 +265,9 @@ export async function runDevTiming({ repoRoot, mode, logPath, signal }) {
 		for (const page of PAGE_TARGETS) {
 			signal.throwIfAborted();
 			try {
-				const cookie = await signIn({ apiUrl: localUrl(API_PORT, ""), account: page.account, readLoginCode, readCurrentCode });
+				const sessionKey = `${page.account.clientType} ${page.account.email}`;
+				const cookie = sessions.get(sessionKey) ?? (await signIn({ apiUrl: localUrl(API_PORT, ""), account: page.account, readLoginCode, readCurrentCode }));
+				sessions.set(sessionKey, cookie);
 				measurements.push(await measureDownload({ phase: PHASES.firstPageCompile.id, target: page.id, url: localUrl(page.port, page.path), headers: { cookie }, now }));
 			} catch (error) {
 				errors.push(`phase ${PHASES.firstPageCompile.id} (${page.id}): ${messageOf(error)}`);

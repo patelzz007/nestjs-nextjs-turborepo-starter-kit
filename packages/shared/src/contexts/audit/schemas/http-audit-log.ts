@@ -104,7 +104,6 @@ export const HttpAuditLogSummarySchema = z.object({
 	apiKeyId: AuditIdSchema.nullable(),
 	terminalId: AuditIdSchema.nullable(),
 	tenant: AuditLogTenantSchema.nullable(),
-	storeId: AuditIdSchema.nullable(),
 	locationId: AuditIdSchema.nullable(),
 	ipAddress: z.string().max(AUDIT_ID_MAX_LENGTH).nullable(),
 	userAgent: z.string().max(AUDIT_USER_AGENT_MAX_LENGTH).nullable(),

@@ -13,7 +13,7 @@ describe("dev-timing plan", () => {
 	});
 
 	it("measures the plan's representative route per Next app, on that app's port", () => {
-		expect(PAGE_TARGETS.map(({ id, path }) => `${id} ${path}`)).toEqual(["web /dashboard", "admin /", "merchant /orgs/brew-bean-kl/dashboard"]);
+		expect(PAGE_TARGETS.map(({ id, path }) => `${id} ${path}`)).toEqual(["web /dashboard", "admin /", "merchant /t/brew-bean-kl/dashboard"]);
 		for (const page of PAGE_TARGETS) {
 			expect(page.port).toBe(DEV_SERVERS.find(({ id }) => id === page.id)?.port);
 			expect(page.account.clientType).toBe(page.id);

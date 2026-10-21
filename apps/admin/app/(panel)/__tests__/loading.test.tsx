@@ -27,6 +27,7 @@ import EmailTemplatesLoading from "../emails/templates/loading";
 import GeographyLoading from "../geography/loading";
 import DashboardLoading from "../(home)/loading";
 import PanelLoading from "../loading";
+import MerchantDetailLoading from "../merchants/[id]/loading";
 import MerchantInvitesLoading from "../merchants/invites/loading";
 import MerchantsLoading from "../merchants/loading";
 import StoreRequestsLoading from "../merchants/store-requests/loading";
@@ -40,6 +41,7 @@ import PanelCatchAllLoading from "../[...slug]/loading";
 import UserDetailLoading from "../users/[id]/loading";
 import UsersLoading from "../users/loading";
 import MfaRecoveryLoading from "../users/mfa-recovery/loading";
+import SupportAccessLoading from "../users/support-access/loading";
 
 afterEach(() => {
 	cleanup();
@@ -132,6 +134,12 @@ const ROUTE_CASES: readonly RouteLoadingCase[] = [
 	},
 	{ route: "/merchants", loadingView: MerchantsLoading, announcement: "Loading merchants…", landmarks: [PAGE_HEADER, TABLE] },
 	{
+		route: "/merchants/[id]",
+		loadingView: MerchantDetailLoading,
+		announcement: "Loading merchant…",
+		landmarks: [PAGE_HEADER, '[data-skeleton="merchant-summary"]', '[data-skeleton="merchant-lifecycle"]'],
+	},
+	{
 		route: "/merchants/invites",
 		loadingView: MerchantInvitesLoading,
 		announcement: "Loading merchant invites…",
@@ -167,6 +175,7 @@ const ROUTE_CASES: readonly RouteLoadingCase[] = [
 		landmarks: ['[data-skeleton="user-detail-header"]', '[data-skeleton="user-profile-section"]'],
 	},
 	{ route: "/users/mfa-recovery", loadingView: MfaRecoveryLoading, announcement: "Loading MFA recovery requests…", landmarks: [PAGE_HEADER, TABLE] },
+	{ route: "/users/support-access", loadingView: SupportAccessLoading, announcement: "Loading support access…", landmarks: [PAGE_HEADER, TABLE] },
 	{
 		route: "/account",
 		loadingView: AccountLoading,

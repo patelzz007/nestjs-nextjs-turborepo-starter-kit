@@ -1,6 +1,6 @@
-import type { TenantLifecycleState, MembershipRole, Prisma, User } from "@prisma/client";
+import type { TenantAppealStatus, TenantLifecycleState, MembershipRole, Prisma, User } from "@prisma/client";
 import * as bcrypt from "bcrypt";
-import { PILOT_CITY_TIME_ZONES, DAY_MS } from "@workspace/shared";
+import { assertNever, PILOT_CITY_TIME_ZONES, DAY_MS } from "@workspace/shared";
 
 import { findActivePolicyVersionInTx, seedDefaultTenantPolicies } from "../../src/contexts/authorization/public-api";
 
@@ -267,10 +267,16 @@ interface LifecycleTenant {
 	readonly phone: string;
 	readonly owner: { readonly email: string; readonly fullName: string; readonly password: string };
 	/** Lifecycle the tenant ends in. */
-	readonly finalState: Extract<TenantLifecycleState, "PENDING_DELETION" | "DELETED">;
-	/** When the owner asked for deletion, relative to the seed run. */
+	readonly finalState: Extract<TenantLifecycleState, "PENDING_DELETION" | "DELETED" | "SUSPENDED" | "BANNED">;
+	/** When the owner asked for deletion (or the platform suspended the tenant), relative to the seed run. */
 	readonly deletionRequestedDaysAgo: number;
 }
+
+/** Why the platform suspended the seeded suspended tenant (also the reason on its lifecycle event). */
+const SEED_SUSPENSION_REASON = "Repeated customer chargebacks under review by the platform risk team.";
+
+/** Why a super admin banned the seeded banned tenant (also the reason on its lifecycle event). */
+const SEED_BAN_REASON = "Sold counterfeit vouchers to customers; confirmed by the platform risk team.";
 
 const LIFECYCLE_TENANTS: readonly LifecycleTenant[] = [
 	{
@@ -302,6 +308,36 @@ const LIFECYCLE_TENANTS: readonly LifecycleTenant[] = [
 		// Requested well over the 30-day grace window ago, so the grace period has elapsed.
 		deletionRequestedDaysAgo: 45,
 	},
+	{
+		key: "harbour-noodle-house",
+		slug: "harbour-noodle-house",
+		displayName: "Harbour Noodle House",
+		legalName: "Harbour Noodle House Sdn Bhd",
+		category: "restaurant",
+		registrationNo: "202001056789",
+		city: "KUALA_LUMPUR",
+		addressText: "3 Jalan Pelabuhan, Kuala Lumpur",
+		phone: "+60321450003",
+		owner: { email: "owner@harbour-noodle-house.demo", fullName: "Wong Mei Harbour", password: "HarbourOwner@123" },
+		// Suspended by the platform 10 days ago; one appeal was rejected, a second one waits for review.
+		finalState: "SUSPENDED",
+		deletionRequestedDaysAgo: 10,
+	},
+	{
+		key: "lucky-gold-traders",
+		slug: "lucky-gold-traders",
+		displayName: "Lucky Gold Traders",
+		legalName: "Lucky Gold Traders Enterprise",
+		category: "retail",
+		registrationNo: "202101067890",
+		city: "MELAKA",
+		addressText: "41 Jalan Tukang Emas, 75200 Melaka",
+		phone: "+6062820004",
+		owner: { email: "owner@lucky-gold-traders.demo", fullName: "Goh Kim Lucky", password: "LuckyOwner@123" },
+		// Banned by a super admin 5 days ago: no appeal, no reactivation.
+		finalState: "BANNED",
+		deletionRequestedDaysAgo: 5,
+	},
 ];
 
 /**
@@ -313,6 +349,8 @@ const LIFECYCLE_TENANTS: readonly LifecycleTenant[] = [
 async function seedLifecycleTenant(spec: LifecycleTenant, platformAdminId: string, now: number): Promise<void> {
 	const tenantId = id(`tenant:${spec.key}`);
 	const deleted = spec.finalState === "DELETED";
+	const suspended = spec.finalState === "SUSPENDED";
+	const banned = spec.finalState === "BANNED";
 	const provisionedAt = now - (spec.deletionRequestedDaysAgo + 120) * DAY_MS;
 	const activatedAt = provisionedAt + 2 * DAY_MS;
 	const deletionRequestedAt = now - spec.deletionRequestedDaysAgo * DAY_MS;
@@ -342,7 +380,7 @@ async function seedLifecycleTenant(spec: LifecycleTenant, platformAdminId: strin
 			displayName: spec.displayName,
 			lifecycleState: spec.finalState,
 			timeZone: PILOT_CITY_TIME_ZONES[spec.city],
-			deletionGraceEndsAt: graceEndsAt,
+			deletionGraceEndsAt: suspended || banned ? null : graceEndsAt,
 			isDeleted: deleted,
 			deletedAt: deleted ? deletedAt : null,
 			createdAt: provisionedAt,
@@ -421,7 +459,7 @@ async function seedLifecycleTenant(spec: LifecycleTenant, platformAdminId: strin
 	const events: LifecycleEventSeed[] = [
 		{ key: "provisioned", from: null, to: "PROVISIONING", actorUserId: platformAdminId, reason: "Platform admin invite created", at: provisionedAt },
 		{ key: "activated", from: "PROVISIONING", to: "ACTIVE", actorUserId: owner.id, reason: "Onboarding complete", at: activatedAt },
-		{ key: "deletion-requested", from: "ACTIVE", to: "PENDING_DELETION", actorUserId: owner.id, reason: "Owner requested deletion", at: deletionRequestedAt },
+		finalLifecycleEvent(spec.finalState, platformAdminId, owner.id, deletionRequestedAt),
 	];
 	if (deleted) {
 		events.push({ key: "deleted", from: "PENDING_DELETION", to: "DELETED", actorUserId: null, reason: "Deletion grace period elapsed", at: deletedAt });
@@ -461,6 +499,95 @@ async function seedLifecycleTenant(spec: LifecycleTenant, platformAdminId: strin
 		resourceId: tenantId,
 		createdAt: activatedAt,
 	});
+	if (suspended) {
+		await auditRow(`${spec.key}:suspended`, {
+			tenantId,
+			actorUserId: platformAdminId,
+			action: "tenant.suspended",
+			resourceType: "Tenant",
+			resourceId: tenantId,
+			createdAt: deletionRequestedAt,
+			metadata: { from: "ACTIVE", to: "SUSPENDED", reason: SEED_SUSPENSION_REASON },
+		});
+		await seedSuspensionAppeals(spec.key, tenantId, owner.id, platformAdminId, deletionRequestedAt);
+	}
+	if (banned) {
+		await auditRow(`${spec.key}:banned`, {
+			tenantId,
+			actorUserId: platformAdminId,
+			action: "tenant.banned",
+			resourceType: "Tenant",
+			resourceId: tenantId,
+			createdAt: deletionRequestedAt,
+			metadata: { from: "ACTIVE", to: "BANNED", reason: SEED_BAN_REASON, closedAppealId: null },
+		});
+	}
+}
+
+/** The event that put a lifecycle tenant in its final state: a suspension, a ban, or the owner's deletion request. */
+function finalLifecycleEvent(finalState: LifecycleTenant["finalState"], platformAdminId: string, ownerId: string, at: number): LifecycleEventSeed {
+	switch (finalState) {
+		case "SUSPENDED":
+			return { key: "suspended", from: "ACTIVE", to: "SUSPENDED", actorUserId: platformAdminId, reason: SEED_SUSPENSION_REASON, at };
+		case "BANNED":
+			return { key: "banned", from: "ACTIVE", to: "BANNED", actorUserId: platformAdminId, reason: SEED_BAN_REASON, at };
+		case "PENDING_DELETION":
+		case "DELETED":
+			return { key: "deletion-requested", from: "ACTIVE", to: "PENDING_DELETION", actorUserId: ownerId, reason: "Owner requested deletion", at };
+		default:
+			return assertNever(finalState, "lifecycle tenant final state");
+	}
+}
+
+interface SeededAppeal {
+	readonly id: string;
+	readonly message: string;
+	readonly status: TenantAppealStatus;
+	readonly reviewedByUserId: string | null;
+	readonly reviewedAt: number | null;
+	readonly reviewNote: string | null;
+	readonly createdAt: number;
+}
+
+/**
+ * The suspended tenant's appeals, as `POST /tenants/:tenantSlug/lifecycle/appeals` and the admin review
+ * write them: a first appeal the platform REJECTED with a note, and a second one still PENDING.
+ */
+async function seedSuspensionAppeals(key: string, tenantId: string, ownerId: string, platformAdminId: string, suspendedAt: number): Promise<void> {
+	const rejectedAt = suspendedAt + 3 * DAY_MS;
+	const appeals: readonly SeededAppeal[] = [
+		{
+			id: id(`appeal:${key}:rejected`),
+			message: "We have refunded every disputed order and changed our card terminal provider. Please reinstate our store.",
+			status: "REJECTED",
+			reviewedByUserId: platformAdminId,
+			reviewedAt: rejectedAt,
+			reviewNote: "Two new chargebacks arrived after the refunds; we will look again once the dispute rate is under 1%.",
+			createdAt: suspendedAt + DAY_MS,
+		},
+		{
+			id: id(`appeal:${key}:pending`),
+			message: "Our dispute rate has been 0.4% for the last week; statements attached to the support ticket.",
+			status: "PENDING",
+			reviewedByUserId: null,
+			reviewedAt: null,
+			reviewNote: null,
+			createdAt: rejectedAt + 4 * DAY_MS,
+		},
+	];
+	for (const appeal of appeals) {
+		const row = { tenantId, submittedByUserId: ownerId, ...appeal, updatedAt: appeal.reviewedAt ?? appeal.createdAt };
+		await prisma.tenantSuspensionAppeal.upsert({ where: { id: appeal.id }, create: row, update: row });
+		await auditRow(`${key}:appeal:${appeal.status}`, {
+			tenantId,
+			actorUserId: ownerId,
+			action: "tenant.suspension.appealed",
+			resourceType: "TenantSuspensionAppeal",
+			resourceId: appeal.id,
+			createdAt: appeal.createdAt,
+			metadata: { message: appeal.message },
+		});
+	}
 }
 
 /** A former employee's account, soft-deleted: inactive, with the time it was removed. No e2e suite signs in as it. */
@@ -485,11 +612,34 @@ async function seedDeletedUser(now: number): Promise<void> {
 	});
 }
 
+/** A customer a platform admin banned for fraud: inactive, with the ban's time, admin and reason. No e2e suite signs in as it. */
+async function seedBannedUser(platformAdminId: string, now: number): Promise<void> {
+	const bannedAt = now - 9 * DAY_MS;
+	const ban = { isActive: false, bannedAt, bannedByUserId: platformAdminId, banReason: "Repeated chargeback fraud reported by three merchants." };
+	await prisma.user.upsert({
+		where: { email: "banned.customer@example.com" },
+		create: {
+			id: id("user:banned-customer"),
+			email: "banned.customer@example.com",
+			fullName: "Banned Customer",
+			passwordHash: await bcrypt.hash(id("password:banned-customer"), SEED_BCRYPT_ROUNDS),
+			...ban,
+			tokenVersion: 1,
+			emailVerifiedAt: bannedAt - 120 * DAY_MS,
+			lastLoginAt: bannedAt - DAY_MS,
+			createdAt: bannedAt - 120 * DAY_MS,
+			updatedAt: bannedAt,
+		},
+		update: ban,
+	});
+}
+
 export interface TenantReviewStatesSummary {
 	readonly reviewedAccessRequests: number;
 	readonly rejectedLocationRequests: number;
 	readonly lifecycleTenants: number;
 	readonly deletedUsers: number;
+	readonly bannedUsers: number;
 }
 
 export async function seedTenantReviewStates(platformAdmin: Pick<User, "id">): Promise<TenantReviewStatesSummary> {
@@ -505,5 +655,6 @@ export async function seedTenantReviewStates(platformAdmin: Pick<User, "id">): P
 		await seedLifecycleTenant(spec, platformAdmin.id, now);
 	}
 	await seedDeletedUser(now);
-	return { reviewedAccessRequests, rejectedLocationRequests, lifecycleTenants: LIFECYCLE_TENANTS.length, deletedUsers: 1 };
+	await seedBannedUser(platformAdmin.id, now);
+	return { reviewedAccessRequests, rejectedLocationRequests, lifecycleTenants: LIFECYCLE_TENANTS.length, deletedUsers: 1, bannedUsers: 1 };
 }

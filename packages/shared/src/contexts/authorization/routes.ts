@@ -31,6 +31,10 @@ export const adminRbacRoutes = {
 
 /** Path templates composed into `apiRoutes.supportAccess`. */
 export const supportAccessRoutes = {
+	/** Platform admins: every grant (newest first). */
+	list: "/support-access",
+	/** The tenant owner: their tenant's grants, to approve the pending ones. */
+	tenantList: "/tenants/:tenantSlug/support-access",
 	request: "/support-access/request",
 	approve: "/support-access/:grantId/approve",
 	revoke: "/support-access/:grantId/revoke",

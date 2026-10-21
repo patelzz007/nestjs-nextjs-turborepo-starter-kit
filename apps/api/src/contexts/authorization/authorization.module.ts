@@ -66,6 +66,7 @@ import {
 	REQUEST_TENANT_RESOLVER,
 	SUBJECT_AUTHORIZATION_READ,
 	SUPER_ADMIN_BYPASS_AUDIT,
+	SUPPORT_ACCESS_READ,
 } from "./application/ports/authorization.tokens";
 import type { ReferenceDataSyncPort } from "./application/ports/catalog-sync.port";
 import { POLICY_ENGINE } from "./application/ports/policy-engine.port";
@@ -84,6 +85,9 @@ import { ValidateRoleAssignmentHandler } from "./application/queries/validate-ro
 import { RbacMutationGuard } from "./application/services/rbac-mutation-guard";
 import { RbacMutationScope } from "./application/services/rbac-mutation-scope";
 import { SupportAccessGrantLocator } from "./application/services/support-access-grant-locator";
+import { ListSupportAccessGrantsHandler } from "./application/queries/list-support-access-grants/list-support-access-grants.handler";
+import { ListTenantSupportAccessGrantsHandler } from "./application/queries/list-tenant-support-access-grants/list-tenant-support-access-grants.handler";
+import { PrismaSupportAccessReadRepository } from "./infrastructure/read/prisma-support-access.read-repository";
 import { AccountDefaultRoleAdapter } from "./infrastructure/adapters/account-default-role.adapter";
 import { AuthorizationPortAdapter } from "./infrastructure/adapters/authorization-port.adapter";
 import { PermissionReachAdapter } from "./infrastructure/adapters/permission-reach.adapter";
@@ -114,6 +118,8 @@ import { RequestTenantAdapter } from "./infrastructure/read/request-tenant.adapt
 import { createReferenceDataSyncService, systemOperationRunner } from "./infrastructure/reference-data/reference-data.composition";
 import { AuditLogRetentionCron } from "./presentation/jobs/audit-log-retention.cron";
 import { PermissionExpiryCron } from "./presentation/jobs/permission-expiry.cron";
+import { SupportAccessExpiryCron } from "./presentation/jobs/support-access-expiry.cron";
+import { ExpireSupportAccessGrantsHandler } from "./application/commands/expire-support-access-grants/expire-support-access-grants.handler";
 
 /**
  * The authorization context's composition root: what you may do (roles, permissions, overrides, the
@@ -149,6 +155,10 @@ import { PermissionExpiryCron } from "./presentation/jobs/permission-expiry.cron
 		RbacMutationScope,
 		RbacMutationGuard,
 		SupportAccessGrantLocator,
+		ListSupportAccessGrantsHandler,
+		ListTenantSupportAccessGrantsHandler,
+		PrismaSupportAccessReadRepository,
+		{ provide: SUPPORT_ACCESS_READ, useExisting: PrismaSupportAccessReadRepository },
 		CreatePermissionHandler,
 		RevisePermissionHandler,
 		RemovePermissionHandler,
@@ -248,6 +258,8 @@ import { PermissionExpiryCron } from "./presentation/jobs/permission-expiry.cron
 		{ provide: AUTHORIZATION_HEALTH_INDICATOR, useExisting: AuthorizationHealthIndicator },
 		// ── Scheduled entry points ──────────────────────────────────────
 		PermissionExpiryCron,
+		SupportAccessExpiryCron,
+		ExpireSupportAccessGrantsHandler,
 		AuditLogRetentionCron,
 	],
 	exports: [

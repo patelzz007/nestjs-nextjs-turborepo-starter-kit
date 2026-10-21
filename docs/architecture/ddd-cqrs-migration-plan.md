@@ -1026,7 +1026,7 @@ Paths in "Today" are relative to `apps/api/src/modules/`. Command and query clas
 | @Cron hourly (same) | deliverPendingSuccessNotifications | J→C | SweepSignupSuccessNotices (claims; see handoff §0.9) | SignupReferral | CAS on `successNotifiedAt` (keep) | backlog sweeper; normal path is after commit (M2), delivered by claims, which owns the inbox |
 | BullMQ `rewardsReferralCreditNotify` | ReferralCreditNotifyProcessor | J→C | SweepReferrerCreditEmails | RewardReferral | CAS on `creditNotifiedAt` | becomes a sweeper: requests the email through `EmailRequestPort` and sets `creditNotifiedAt` **in the same tx** (decision #44); normal path requests the email during checkout |
 
-**Not implemented (decision #40):** `RewardReferral` creation and `pendingAttributionToken` writes. `RewardReferralStatus.BLOCKED` is not modelled.
+**Not implemented (decision #40):** `RewardReferral` creation and `pendingAttributionToken` writes. `RewardReferralStatus.BLOCKED` is not modelled. *(Implemented 2026-10-21: `CreateRewardReferralLink` and `RecordRewardReferralAttribution` in the referrals context, `POST /referrals/rewards/:rewardId/links` and `POST /referrals/attribution`; `BLOCKED` is still not modelled.)*
 
 ### 7.5 organizations
 
@@ -1976,12 +1976,12 @@ Each task: the §16 definition of done.
    - `lib/palette/store-config.ts`, `lib/session/{capabilities,notifications}`, `lib/server/server-query-outcome.ts` (also in `packages/client/src/lib/api`).
    - `apps/mobile/src/features/profile/own-profile-cache.ts` vs `packages/client/src/lib/auth/profile/own-profile-cache.ts`.
    - Candidate fix: a platform-agnostic `packages/client-core`.
-2. **Referral attribution capture:** nothing writes `RewardReferral` rows or `pendingAttributionToken`. Needs product decisions.
+2. **Referral attribution capture:** nothing writes `RewardReferral` rows or `pendingAttributionToken`. Needs product decisions. *(Done 2026-10-21 — see §7.4 note.)*
 3. **Organization lifecycle** (suspend, delete, erasure) and quotas: deleted as dead code (D26). Needs product decisions.
 4. **Unused enum values** (§9 end): decide per enum whether to model them or remove them with a migration.
-5. **Support access expiry job:** `EXPIRED` is never written; expiry is enforced only by predicate.
+5. **Support access expiry job:** `EXPIRED` is never written; expiry is enforced only by predicate. *(Done 2026-10-21: `maintenance.support_access_expiry`, every 5 minutes.)*
 6. **Redis `authz:invalidate` is at-most-once:** acceptable today (`tokenVersion` is authoritative). Revisit if caches grow longer TTLs.
-7. **Both `react-hook-form` and `@tanstack/react-form` are installed:** `rules/06` mandates TanStack Form.
+7. **Both `react-hook-form` and `@tanstack/react-form` are installed:** `rules/06` mandates TanStack Form. *(Done 2026-10-21: `react-hook-form` removed, ADR 019.)*
 
 ---
 
@@ -2054,7 +2054,7 @@ unit tests: <n> → <n>   e2e files: <n> → <n>
 |---|---|---|
 | A. Cold `pnpm dev` | command spawned | every app's port answers (`api` `/health/ready` 200, web 3000, admin 3001, merchant 3003, docs 3002 respond to `GET /`; mobile Metro `GET /status` returns `packager-status:running`) |
 | B. API boot | API process spawned | `/health/ready` 200. Also capture the `markPhase` lines that `bootstrap-app.ts` already prints. |
-| C. First page compile | dev server ready | first `GET` of a representative route per app returns 200 (web `/dashboard`, admin `/`, merchant `/orgs/<seeded slug>/dashboard`, using the seeded demo accounts' session from `docs/technical`) |
+| C. First page compile | dev server ready | first `GET` of a representative route per app returns 200 (web `/dashboard`, admin `/`, merchant `/t/<seeded slug>/dashboard`, using the seeded demo accounts' session from `docs/technical`) |
 | D. First Metro bundle | Metro ready | the iOS bundle URL (`/index.bundle?platform=ios&dev=true`) finishes downloading |
 
 - **Modes:**

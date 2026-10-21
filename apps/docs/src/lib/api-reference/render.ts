@@ -130,7 +130,7 @@ export function accessLines(endpoint: Endpoint, access: EndpointAccess | undefin
 		const [policyName = policy, ...explanation] = policy.split(POLICY_DESCRIPTION_SEPARATOR);
 		lines.push(`**Policy** ${code(policyName)}${explanation.length > 0 ? `${POLICY_DESCRIPTION_SEPARATOR}${explanation.join(POLICY_DESCRIPTION_SEPARATOR)}` : ""}.`);
 	}
-	if (endpoint.path.includes("/orgs/{orgSlug}") && !access.isPublic) {
+	if (endpoint.path.includes("/tenants/{tenantSlug}") && !access.isPublic) {
 		lines.push(
 			"**Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).",
 		);

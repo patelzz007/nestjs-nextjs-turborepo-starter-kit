@@ -1,13 +1,13 @@
-import { OrgTenantBootstrap } from "@/contexts/tenancy/components/org/org-tenant-bootstrap";
+import { TenantBootstrap } from "@/contexts/tenancy/components/tenant/tenant-bootstrap";
 import { MerchantShell } from "@/components/merchant-shell";
 import { getMerchantServerSession } from "@/contexts/identity/lib/server";
 import { loadMerchantServerContext, loadTenantContext, loadPreferredTenantSlug, readSidebarOpen } from "@/lib/merchant-server-api";
-import { isCanonicalTenantSlug } from "@/contexts/tenancy/lib/org/resolve-slug";
-import { loadServerLocationScope, type ServerLocationScope } from "@/contexts/tenancy/lib/org/server-location-scope";
+import { isCanonicalTenantSlug } from "@/contexts/tenancy/lib/tenant/resolve-slug";
+import { loadServerLocationScope, type ServerLocationScope } from "@/contexts/tenancy/lib/tenant/server-location-scope";
 import { tenantRoutes, ROUTES } from "@/lib/routes";
 import { redirect } from "next/navigation";
 
-interface OrgLayoutProps {
+interface TenantLayoutProps {
 	readonly children: React.ReactNode;
 	readonly params: Promise<{ tenantSlug: string }>;
 }
@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
  *   tenant — the `tenantSlug` cookie, followed only when the API confirms the membership —
  *   or, without a valid preference, renders (the page guard denies) / sends a member-less user to onboarding.
  */
-export default async function OrgLayout({ children, params }: OrgLayoutProps): Promise<React.JSX.Element> {
+export default async function TenantLayout({ children, params }: TenantLayoutProps): Promise<React.JSX.Element> {
 	const { tenantSlug } = await params;
 	const [ctx, session, urlContext, sidebarOpen] = await Promise.all([
 		loadMerchantServerContext(),
@@ -61,7 +61,7 @@ export default async function OrgLayout({ children, params }: OrgLayoutProps): P
 			initialUser={session.user}
 			initialIsImpersonating={session.isImpersonating}
 			initialSidebarOpen={sidebarOpen}>
-			{resolvedTenant !== undefined ? <OrgTenantBootstrap tenantSlug={resolvedTenant.slug} /> : null}
+			{resolvedTenant !== undefined ? <TenantBootstrap tenantSlug={resolvedTenant.slug} /> : null}
 			{children}
 		</MerchantShell>
 	);

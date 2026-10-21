@@ -2,16 +2,11 @@ import type { FileStatus } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { StoredFileAggregate, type StoredFileState, type VerdictRecord } from "../aggregates/stored-file.aggregate";
-import {
-	CorruptStoredFileStateError,
-	FileChecksumMismatchError,
-	FileStateConflictError,
-	FileUploadAlreadyCompletedError,
-	FileUploadForbiddenError,
-} from "../errors/files.errors";
+import { FileChecksumMismatchError, FileStateConflictError, FileUploadAlreadyCompletedError, FileUploadForbiddenError } from "../errors/files.errors";
 import { FileDeleted } from "../events/file-deleted.event";
 import { FileVerdictReached } from "../events/file-verdict-reached.event";
 import { CHECKSUM, FILE_ID, FILE_STATUSES_FOR_TEST, NOW, ORG_ID, UPLOADER_ID, locator, state } from "./stored-file.fixtures";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 const VERIFIED = { actualChecksum: CHECKSUM, objectRevision: "rev", imageWidth: null, imageHeight: null };
 const RECORD: VerdictRecord = { scanStatus: "CLEAN", scannedAt: NOW, scanResult: "scanner: OK", promoted: null, renditions: [] };
@@ -47,8 +42,8 @@ describe("StoredFileAggregate.rehydrate", () => {
 	});
 
 	it("rejects a live row in DELETED and a deleted row in any other status (§spec-7.3)", () => {
-		expect(() => load({ status: "DELETED", isDeleted: false })).toThrow(CorruptStoredFileStateError);
-		expect(() => load({ status: "READY", isDeleted: true })).toThrow(CorruptStoredFileStateError);
+		expect(() => load({ status: "DELETED", isDeleted: false })).toThrow(CorruptAggregateStateError);
+		expect(() => load({ status: "READY", isDeleted: true })).toThrow(CorruptAggregateStateError);
 	});
 });
 

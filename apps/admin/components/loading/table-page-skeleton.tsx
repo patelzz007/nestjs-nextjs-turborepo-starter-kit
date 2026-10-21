@@ -37,6 +37,9 @@ export const EMAIL_LOG_TABLE_PAGE: TablePageShape = { columns: 5, actions: 2, wi
 /** `/users/mfa-recovery` — select + User, Status, Requested + row actions. */
 export const MFA_RECOVERY_TABLE_PAGE: TablePageShape = { columns: 5, actions: 0, withAvatar: false, withCardDescription: true, className: "" };
 
+/** `/users/support-access` — select + Merchant, For, Status, Access, Reason, Expires, Revoke (below the request card). */
+export const SUPPORT_ACCESS_TABLE_PAGE: TablePageShape = { columns: 8, actions: 0, withAvatar: false, withCardDescription: true, className: "" };
+
 export interface TablePageSkeletonProps {
 	/** What the region announces, e.g. `{ loading: "Loading users…" }` — a module constant. */
 	readonly labels: SkeletonRegionLabelsOverride;

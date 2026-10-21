@@ -4,7 +4,7 @@ import type { FeatureEffect, FeatureEffectContext } from "@workspace/client/lib/
 import type { TenantContextAction } from "./actions";
 import type { TenantContextState } from "./state";
 
-/** Writes the tenant's store-choice cookie (`tenantLocationId.<orgSlug>`) — the browser implementation lives in `lib/org/location.ts`. */
+/** Writes the tenant's store-choice cookie (`tenantLocationId.<tenantSlug>`) — the browser implementation lives in `lib/tenant/location.ts`. */
 export interface LocationCookieWriter {
 	readonly write: (locationId: string) => void;
 	readonly clear: () => void;

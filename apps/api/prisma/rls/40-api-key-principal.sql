@@ -94,6 +94,11 @@ DROP POLICY IF EXISTS tenant_assets_api_key_read ON public."TenantAsset";
 CREATE POLICY tenant_assets_api_key_read ON public."TenantAsset"
   FOR SELECT TO app_runtime USING (app_api_key_org_access("tenantId"));
 
+-- A till refuses the codes of a customer its merchant banned.
+DROP POLICY IF EXISTS tenant_customer_bans_api_key_read ON public."TenantCustomerBan";
+CREATE POLICY tenant_customer_bans_api_key_read ON public."TenantCustomerBan"
+  FOR SELECT TO app_runtime USING (app_api_key_org_access("tenantId"));
+
 DROP POLICY IF EXISTS stored_files_api_key_read ON public."StoredFile";
 CREATE POLICY stored_files_api_key_read ON public."StoredFile"
   FOR SELECT TO app_runtime USING ("tenantId" IS NOT NULL AND app_api_key_org_access("tenantId"));

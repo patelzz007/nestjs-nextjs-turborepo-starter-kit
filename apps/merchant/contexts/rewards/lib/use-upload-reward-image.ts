@@ -2,7 +2,7 @@
 
 import { useMutation, type UseMutationResult } from "@tanstack/react-query";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { toDocumentMimeType, uploadFileDirect, waitForFileReady } from "@workspace/client/lib/storage/direct-upload";
+import { toDocumentMimeType, uploadTenantFileDirect, waitForFileReady } from "@workspace/client/lib/storage/direct-upload";
 import { assertImageFileAllowed, imageFileRules, requireImageRules, type ImageFileRules } from "@workspace/client/lib/storage/image-file-rules";
 import { FILE_CATEGORY_POLICIES, type FileCategoryPolicy, type ImageRules } from "@workspace/shared";
 
@@ -30,8 +30,8 @@ export class RewardImageNotPublishedError extends Error {
 }
 
 export interface RewardImageUploadInput {
-	/** The tenant the image belongs to (only its reward managers may upload). */
-	readonly tenantId: string;
+	/** The tenant the image belongs to (only its reward managers may upload); its route names it, never the body. */
+	readonly tenantSlug: string;
 	/** The prepared image (cropped to 16:9, Full HD to 4K — see `image-preparation`). */
 	readonly file: File;
 }
@@ -50,9 +50,9 @@ export interface RewardImageUploadInput {
 export function useUploadRewardImage(): UseMutationResult<UploadedRewardImage, Error, RewardImageUploadInput> {
 	const { api } = useAuth();
 	return useMutation({
-		mutationFn: async ({ tenantId, file }: RewardImageUploadInput): Promise<UploadedRewardImage> => {
+		mutationFn: async ({ tenantSlug, file }: RewardImageUploadInput): Promise<UploadedRewardImage> => {
 			assertImageFileAllowed(file, REWARD_IMAGE_FILE_POLICY);
-			const uploaded = await uploadFileDirect(api, { category: "REWARD_IMAGE", tenantId, fileName: file.name, mimeType: toDocumentMimeType(file) }, file);
+			const uploaded = await uploadTenantFileDirect(api, tenantSlug, { category: "REWARD_IMAGE", fileName: file.name, mimeType: toDocumentMimeType(file) }, file);
 			const ready = await waitForFileReady(api, uploaded.fileId);
 			const url = ready.file.publicUrl;
 			if (url === null) {

@@ -1,5 +1,5 @@
 import { MerchantCreateRewardPageView } from "@/contexts/rewards/components/merchant-create-reward-page-view";
-import { guardOrgPage } from "@/contexts/tenancy/lib/org/org-page-guard";
+import { guardTenantPage } from "@/contexts/tenancy/lib/tenant/tenant-page-guard";
 import type { RewardCategory } from "@workspace/shared";
 import * as React from "react";
 
@@ -15,7 +15,7 @@ function resolveDefaultCategory(): RewardCategory {
 
 export default async function MerchantCreateRewardPage({ params }: MerchantCreateRewardPageProps): Promise<React.JSX.Element> {
 	const { tenantSlug } = await params;
-	const denied = await guardOrgPage(tenantSlug, "/rewards/new");
+	const denied = await guardTenantPage(tenantSlug, "/rewards/new");
 	if (denied !== null) {
 		return denied;
 	}

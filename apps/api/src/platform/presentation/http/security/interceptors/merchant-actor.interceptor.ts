@@ -10,7 +10,7 @@ import { getApiKeyAuthFromRequest, setMerchantActorOnRequest } from "../api-keys
 import type { MerchantActor } from "../api-keys/merchant-actor";
 
 /** The `:tenantSlug` route segment, when the matched route declares one. */
-const OrgSlugRouteParamsSchema = z.object({ tenantSlug: z.string() });
+const TenantSlugRouteParamsSchema = z.object({ tenantSlug: z.string() });
 
 /**
  * Resolves a unified `MerchantActor` for merchant dashboard and API-key routes: a verified API key is
@@ -27,7 +27,7 @@ export class MerchantActorInterceptor implements NestInterceptor {
 
 	public intercept<T>(context: ExecutionContext, next: CallHandler<T>): Observable<T> {
 		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
-		const routeParams = OrgSlugRouteParamsSchema.safeParse(request.params);
+		const routeParams = TenantSlugRouteParamsSchema.safeParse(request.params);
 		const tenantSlug: string | undefined = routeParams.success ? routeParams.data.tenantSlug : undefined;
 		if (tenantSlug !== undefined && getApiKeyAuthFromRequest(request) === undefined && !TenantSlugParamSchema.safeParse({ tenantSlug }).success) {
 			return next.handle();

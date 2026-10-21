@@ -1,7 +1,7 @@
 "use client";
 
-import { canSelectAllLocations, resolveMemberLocationAccess, type MemberLocationAccess } from "@/contexts/tenancy/lib/org/location-access";
-import { clearLocationCookie, writeLocationCookie } from "@/contexts/tenancy/lib/org/location";
+import { canSelectAllLocations, resolveMemberLocationAccess, type MemberLocationAccess } from "@/contexts/tenancy/lib/tenant/location-access";
+import { clearLocationCookie, writeLocationCookie } from "@/contexts/tenancy/lib/tenant/location";
 import { useRequestScope } from "@/lib/session/request-scope";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
@@ -35,7 +35,7 @@ import { createTenantContextStore, type TenantContextStore } from "./store";
 
 const TENANT_CONTEXT_DEVTOOLS_NAME = "Tenant Context · merchant";
 
-/** The browser cookie of ONE tenant's store choice (`tenantLocationId.<orgSlug>`). */
+/** The browser cookie of ONE tenant's store choice (`tenantLocationId.<tenantSlug>`). */
 function createBrowserLocationCookie(tenantSlug: string): LocationCookieWriter {
 	return {
 		write: (locationId: string): void => {
@@ -165,7 +165,7 @@ export function useActiveLocationId(): string | null {
 }
 
 /**
- * Location filter for org-scoped operational queries, in API input form
+ * Location filter for tenant-scoped operational queries, in API input form
  * (`undefined` = all stores). Queries put it in their key, so a change fetches
  * the new store and keeps the old one cached — no invalidation needed.
  */
@@ -204,7 +204,7 @@ export interface MerchantLocationState {
 	readonly activeLocation: LocationResponse | undefined;
 	/** Active locations the member may operate on (empty until loaded). */
 	readonly accessibleLocations: readonly LocationResponse[];
-	/** Whether "All locations" (org-wide rollups) is an option for this member. */
+	/** Whether "All locations" (tenant-wide rollups) is an option for this member. */
 	readonly canSelectAllLocations: boolean;
 	/** Whether the membership covers the whole tenant — only then may the member create tenant-wide credentials. */
 	readonly hasTenantWideAccess: boolean;

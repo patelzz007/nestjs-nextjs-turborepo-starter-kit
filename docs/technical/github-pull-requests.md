@@ -3,7 +3,7 @@ title: "GitHub pull requests"
 description: "Admins link their own fine-grained GitHub token and work on the pull requests of every repository it can see — private ones included — from the mobile app: the list, the conversation, commits, files with diffs, line comments and edit histories."
 order: 12
 author: "Platform Team"
-lastUpdated: 1792022400000
+lastUpdated: 1792540800000
 coverImage: "https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=1200&h=630&fit=crop"
 tags: ["github", "integration", "api", "mobile", "security"]
 ---
@@ -66,6 +66,13 @@ access tokens → Fine-grained), for the repositories (or the account) you want,
 | Contents      | Read and write | Files and diffs; merging; deleting a merged branch; attaching pictures (read-only is enough without them) |
 | Metadata      | Read-only      | Required by GitHub                                          |
 | Webhooks      | Read and write | Live updates; optional                                      |
+
+Link it from either app — both call the same route and show the same permission list
+(`GITHUB_TOKEN_REQUIRED_PERMISSIONS` in `@workspace/shared`):
+
+- **Admin panel:** **Account → GitHub token** (`/account/github`, needs `READ` and `UPDATE` on
+  `GITHUB_PULL_REQUEST`). Easier than the phone for pasting a 93-character token.
+- **Mobile app:** **Profile → GitHub token**.
 
 `PUT /github/account` with `{ "personalAccessToken": "github_pat_…" }`:
 

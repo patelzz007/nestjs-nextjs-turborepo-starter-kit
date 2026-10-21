@@ -33,7 +33,6 @@ const RECORD: HttpAuditLogDetail = HttpAuditLogDetailSchema.parse({
 	apiKeyId: null,
 	terminalId: null,
 	tenant: null,
-	storeId: null,
 	locationId: null,
 	ipAddress: "203.0.113.24",
 	userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/129.0.0.0 Safari/537.36",

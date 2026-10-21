@@ -12,15 +12,10 @@ import {
 } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
-import {
-	CorruptStoredFileStateError,
-	FileChecksumMismatchError,
-	FileStateConflictError,
-	FileUploadAlreadyCompletedError,
-	FileUploadForbiddenError,
-} from "../errors/files.errors";
+import { FileChecksumMismatchError, FileStateConflictError, FileUploadAlreadyCompletedError, FileUploadForbiddenError } from "../errors/files.errors";
 import { FileDeleted, type DeletedFileObject } from "../events/file-deleted.event";
 import { FileVerdictReached, type FileVerdictOutcome } from "../events/file-verdict-reached.event";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** Statuses a file is in while a scan verdict is outstanding (`PROCESSING` is the pre-scanner legacy name). */
 export const AWAITING_VERDICT_STATUSES: readonly FileStatus[] = ["SCANNING", "PROCESSING"];
@@ -176,11 +171,11 @@ export class StoredFileAggregate extends AggregateRoot<StoredFileEvent> {
 		const category = FileCategorySchema.safeParse(state.category);
 		const visibility = FileVisibilitySchema.safeParse(state.visibility);
 		if (!status.success || !category.success || !visibility.success) {
-			throw new CorruptStoredFileStateError(state.id);
+			throw new CorruptAggregateStateError("stored file", state.id);
 		}
 		// Soft delete always sets both: a live row in DELETED, or a deleted row in any other status, is corrupt.
 		if (state.isDeleted !== (status.data === "DELETED")) {
-			throw new CorruptStoredFileStateError(state.id);
+			throw new CorruptAggregateStateError("stored file", state.id);
 		}
 		return new StoredFileAggregate(state, status.data);
 	}

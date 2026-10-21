@@ -13,7 +13,7 @@ import { TransactionalEventCollector } from "../../../../../platform/application
 import type { SystemOperationName } from "../../../../../platform/application/system-operation-names";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import { ClaimNoLongerRedeemableError, type ClaimRedemptionLookup, type ClaimRedemptionPort } from "../../../../claims/public-api";
-import type { MerchantPosSettingsPort, TillTenantFacts } from "../../../../tenancy/public-api";
+import type { CustomerStandingPort, MerchantPosSettingsPort, TillTenantFacts } from "../../../../tenancy/public-api";
 import type { ReferralCreditPort } from "../../../../referrals/public-api";
 import type {
 	ClaimableRewardFacts,
@@ -603,6 +603,32 @@ function restorableArray(items: { length: number }): () => void {
 	};
 }
 
+/** Tenants' customer standing in memory: every tenant operates unless stopped; bans are per tenant. */
+export class InMemoryCustomerStanding implements CustomerStandingPort {
+	private readonly stopped = new Set<string>();
+	private readonly bans = new Map<string, Set<string>>();
+
+	/** The tenant no longer operates (suspended, banned, not live). */
+	public stop(tenantId: string): void {
+		this.stopped.add(tenantId);
+	}
+
+	public ban(tenantId: string, customerUserId: string): void {
+		const banned = this.bans.get(tenantId) ?? new Set<string>();
+		banned.add(customerUserId);
+		this.bans.set(tenantId, banned);
+	}
+
+	public tenantOperates(tenantId: string): Promise<boolean> {
+		return Promise.resolve(!this.stopped.has(tenantId));
+	}
+
+	public bannedCustomers(tenantId: string, customerUserIds: readonly string[]): Promise<ReadonlySet<string>> {
+		const banned = this.bans.get(tenantId);
+		return Promise.resolve(new Set(customerUserIds.filter((userId): boolean => banned?.has(userId) === true)));
+	}
+}
+
 /** One pos database in memory; its unit of work rolls everything back when the work throws. */
 export class InMemoryPosStore {
 	public readonly sales = new InMemorySales();
@@ -610,6 +636,7 @@ export class InMemoryPosStore {
 	public readonly terminals = new InMemoryTerminals();
 	public readonly apiKeys = new InMemoryApiKeys();
 	public readonly posSettings = new InMemoryPosSettings();
+	public readonly customerStanding = new InMemoryCustomerStanding();
 	public readonly rewards = new InMemoryRewards();
 	public readonly claims = new InMemoryClaimRedemption(this.rewards);
 	public readonly audit = new RecordingAudit();
@@ -629,6 +656,7 @@ export class InMemoryPosStore {
 			terminalViews: new StoreTerminalViews(this.terminals, this.apiKeys, this.posSettings),
 			apiKeys: this.apiKeys,
 			posSettings: this.posSettings,
+			customerStanding: this.customerStanding,
 			claims: this.claims,
 			rewards: this.rewards,
 			rewardFacts: this.rewards,

@@ -19,7 +19,7 @@ import { REQUIRED_PERMISSION_KEY, REQUIRED_PERMISSIONS_KEY, REQUIRED_ROLES_KEY }
 import { AUTHORIZE_KEY, self, type AuthorizationRequirement } from "../../decorators/authorize.decorator";
 import { AuthorizationGuard } from "../authorization.guard";
 import { RequestContextService, type RequestTenant } from "../../../../../infrastructure/context/request-context";
-import { MembershipInactiveError, TENANT_LIFECYCLE_ROUTE_KEY, TenantSuspendedError } from "../../../../../../contexts/tenancy/public-api";
+import { MembershipInactiveError, TENANT_LIFECYCLE_ROUTE_KEY, TenantBannedError, TenantSuspendedError } from "../../../../../../contexts/tenancy/public-api";
 import { createTestPrisma } from "../../../../../../../test/support/test-service-graph";
 import type { SystemDatabaseContext } from "../../../../../../prisma/tenant-context";
 
@@ -123,6 +123,16 @@ describe("AuthorizationGuard", () => {
 		await expect(createGuard().canActivate(contextFor(accessToken()).context)).rejects.toBeInstanceOf(TenantSuspendedError);
 	});
 
+	it("rejects an active member of a banned tenant on an ordinary route with TENANT_BANNED", async () => {
+		mocks.resolve.mockResolvedValue({
+			verified: { tenantId: "org-a" },
+			requested: { tenantId: "org-a" },
+			target: { tenantId: "org-a", lifecycleState: "BANNED", membershipStatus: "ACTIVE" },
+		});
+
+		await expect(createGuard().canActivate(contextFor(accessToken()).context)).rejects.toBeInstanceOf(TenantBannedError);
+	});
+
 	it("allows an active member of a suspended tenant on a lifecycle route", async () => {
 		mocks.resolve.mockResolvedValue({
 			verified: { tenantId: "org-a" },
@@ -130,7 +140,7 @@ describe("AuthorizationGuard", () => {
 			target: { tenantId: "org-a", lifecycleState: "SUSPENDED", membershipStatus: "ACTIVE" },
 		});
 
-		await expect(createGuard().canActivate(contextFor(accessToken(), { [TENANT_LIFECYCLE_ROUTE_KEY]: true }).context)).resolves.toBe(true);
+		await expect(createGuard().canActivate(contextFor(accessToken(), { [TENANT_LIFECYCLE_ROUTE_KEY]: "lifecycle" }).context)).resolves.toBe(true);
 	});
 
 	it("LIFE-003: a deleted tenant is not found", async () => {
@@ -143,10 +153,10 @@ describe("AuthorizationGuard", () => {
 		await expect(createGuard().canActivate(contextFor(accessToken()).context)).rejects.toBeInstanceOf(NotFoundError);
 	});
 
-	it("rejects a member of a suspended tenant reached through a store, with no :tenantSlug on the route", async () => {
+	it("rejects a member of a suspended tenant reached through a location, with no :tenantSlug on the route", async () => {
 		mocks.resolve.mockResolvedValue({
-			verified: { tenantId: "org-a", storeId: "store-1" },
-			requested: { storeId: "store-1" },
+			verified: { tenantId: "org-a", locationId: "loc-1" },
+			requested: { locationId: "loc-1" },
 			target: { tenantId: "org-a", lifecycleState: "SUSPENDED", membershipStatus: "ACTIVE" },
 		});
 
@@ -177,6 +187,17 @@ describe("AuthorizationGuard", () => {
 		});
 
 		await expect(createGuard().canActivate(contextFor(accessToken()).context)).rejects.toBeInstanceOf(MembershipInactiveError);
+	});
+
+	it("lets a suspended membership call the leave-tenant route, and no other lifecycle route", async () => {
+		mocks.resolve.mockResolvedValue({
+			verified: {},
+			requested: { tenantId: "org-a" },
+			target: { tenantId: "org-a", lifecycleState: "SUSPENDED", membershipStatus: "SUSPENDED" },
+		});
+
+		await expect(createGuard().canActivate(contextFor(accessToken(), { [TENANT_LIFECYCLE_ROUTE_KEY]: "leave" }).context)).resolves.toBe(true);
+		await expect(createGuard().canActivate(contextFor(accessToken(), { [TENANT_LIFECYCLE_ROUTE_KEY]: "lifecycle" }).context)).rejects.toBeInstanceOf(MembershipInactiveError);
 	});
 
 	it("audits decisions with the request context's correlation id, not a raw header", async () => {

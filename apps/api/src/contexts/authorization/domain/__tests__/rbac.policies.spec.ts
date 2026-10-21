@@ -78,13 +78,13 @@ describe("RBAC escalation policy", () => {
 });
 
 describe("Separation of duties", () => {
-	it("flags the conflicting pair of store roles and lets compatible ones through", () => {
-		expect(findSeparationOfDutyViolations(new Set(["Store Manager", "Store Staff"]))).toHaveLength(1);
+	it("flags the conflicting pair of location roles and lets compatible ones through", () => {
+		expect(findSeparationOfDutyViolations(new Set(["Location Manager", "Location Staff"]))).toHaveLength(1);
 		expect(() => {
-			assertSeparationOfDuties(new Set(["Store Manager", "Store Staff"]));
+			assertSeparationOfDuties(new Set(["Location Manager", "Location Staff"]));
 		}).toThrow(SeparationOfDutyViolationError);
 		expect(() => {
-			assertSeparationOfDuties(new Set(["Store Manager", "Auditor"]));
+			assertSeparationOfDuties(new Set(["Location Manager", "Auditor"]));
 		}).not.toThrow();
 	});
 });

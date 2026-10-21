@@ -22,7 +22,7 @@ import type { ProductSeedRow } from "../products";
 import { seedReferenceData } from "../reference-data";
 import { requireRow } from "../require-row";
 import { buildCategorySeedRows, seedSamplePlatform } from "../sample-platform";
-import { seedStores } from "../stores";
+import { seedLocationRoles } from "../location-roles";
 import { PLATFORM_SUPERADMIN_EMAIL, printPlatformAccountCredentials, seedPlatformAccounts } from "./platform-accounts";
 import { seedLog } from "../seed-log";
 
@@ -255,9 +255,9 @@ export async function runEnterpriseScenario(options: EnterpriseScenarioOptions):
 	});
 	const summary = await persistEnterpriseDataset(dataset, reference.roles);
 
-	seedLog("Seeding stores and store memberships...");
-	const storeSummary = await seedStores(reference.roles);
-	seedLog(`✅ Stores (all tenants): ${String(storeSummary.stores)} stores, ${String(storeSummary.memberships)} store memberships`);
+	seedLog("Seeding location roles...");
+	const locationRoles = await seedLocationRoles(reference.roles);
+	seedLog(`✅ Location roles (all tenants): ${String(locationRoles.scopesWithRole)} location scopes with a role, ${String(locationRoles.closedLocations)} closed location`);
 
 	seedLog("Seeding account security (impersonation, MFA recovery, 2FA enrollment, lockout, password history, support access)...");
 	const memberEmail = (index: number): string => requireRow(dataset.members.at(index), `enterprise member #${String(index)}`).email;

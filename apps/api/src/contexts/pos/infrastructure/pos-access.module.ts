@@ -7,20 +7,21 @@ import { SystemCommandModule } from "../../../platform/infrastructure/system-com
 import { PrismaReadExecutor } from "../../../platform/infrastructure/unit-of-work/prisma-read-executor";
 import { PrismaModule } from "../../../prisma/prisma.module";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
-import { API_KEY_CAPABILITIES, STORE_CLOSURE_FACTORY, type ApiKeyCapabilitiesPort } from "../../tenancy/public-api";
+import { API_KEY_CAPABILITIES, LOCATION_CLOSURE_FACTORY, REDEMPTION_CUSTOMER_FACTORY, type ApiKeyCapabilitiesPort } from "../../tenancy/public-api";
 import { TILL_TERMINALS } from "../application/ports/pos.tokens";
 import { TillAuthenticationService } from "../application/services/till-authentication.service";
 import { ApiKeyCapabilitiesAdapter } from "./adapters/api-key-capabilities.adapter";
 import { PrismaApiKeyVerifier } from "./adapters/prisma-api-key-verifier";
-import { PRISMA_STORE_CLOSURE_FACTORY } from "./adapters/prisma-store-closure";
+import { PRISMA_LOCATION_CLOSURE_FACTORY } from "./adapters/prisma-location-closure";
+import { PRISMA_REDEMPTION_CUSTOMER_FACTORY } from "./adapters/prisma-redemption-customer";
 import { PrismaTillTerminals } from "./adapters/prisma-till-terminals";
 
 /**
  * What pos provides to code that must not import it (a leaf: platform and tenants' tokens only):
  * the merchant key verification and till resolution the security kit's guards use
- * (`API_KEY_VERIFICATION`, `TILL_RESOLVER`), and the two
- * ports tenants consumes — an API key's capabilities (`API_KEY_CAPABILITIES`) and store closure
- * (`STORE_CLOSURE_FACTORY`). Global, like identity's security kit, so neither side imports the other's
+ * (`API_KEY_VERIFICATION`, `TILL_RESOLVER`), and the three
+ * ports tenants consumes — an API key's capabilities (`API_KEY_CAPABILITIES`), store closure
+ * (`LOCATION_CLOSURE_FACTORY`) and the customer behind a redemption (`REDEMPTION_CUSTOMER_FACTORY`). Global, like identity's security kit, so neither side imports the other's
  * module and the graph stays acyclic without `forwardRef`.
  */
 @Global()
@@ -39,8 +40,9 @@ import { PrismaTillTerminals } from "./adapters/prisma-till-terminals";
 			useFactory: (transactions: TenantTransactionService): ApiKeyCapabilitiesPort =>
 				new ApiKeyCapabilitiesAdapter(new PrismaReadExecutor<Prisma.TransactionClient>(transactions)),
 		},
-		{ provide: STORE_CLOSURE_FACTORY, useValue: PRISMA_STORE_CLOSURE_FACTORY },
+		{ provide: LOCATION_CLOSURE_FACTORY, useValue: PRISMA_LOCATION_CLOSURE_FACTORY },
+		{ provide: REDEMPTION_CUSTOMER_FACTORY, useValue: PRISMA_REDEMPTION_CUSTOMER_FACTORY },
 	],
-	exports: [API_KEY_VERIFICATION, TILL_RESOLVER, API_KEY_CAPABILITIES, STORE_CLOSURE_FACTORY],
+	exports: [API_KEY_VERIFICATION, TILL_RESOLVER, API_KEY_CAPABILITIES, LOCATION_CLOSURE_FACTORY, REDEMPTION_CUSTOMER_FACTORY],
 })
 export class PosAccessModule {}

@@ -44,7 +44,7 @@ describe("users", () => {
 });
 
 describe("merchants", () => {
-	it("maps the KYB and org status filters", () => {
+	it("maps the KYB and merchant status filters", () => {
 		const input = toMerchantsListQuery(MERCHANTS_TABLE_URL_STATE.parse({ "filter[kybStatus]": "PENDING", "filter[status]": "ACTIVE", search: "café" }));
 		expect(input).toEqual({ page: 1, limit: 20, search: "café", filter: { kybStatus: { eq: "PENDING" }, status: { eq: "ACTIVE" } } });
 		expect(AdminMerchantListQuerySchema.safeParse(input).success).toBe(true);

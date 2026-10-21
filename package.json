@@ -31,6 +31,7 @@
 		"db:all": "turbo run db:seed",
 		"db:deploy": "pnpm --filter @workspace/api db:deploy",
 		"db:check-tenant-integrity": "pnpm --filter @workspace/api db:check-tenant-integrity",
+		"db:carry-github-link": "pnpm --filter @workspace/api db:carry-github-link",
 		"db:migrate": "pnpm --filter @workspace/api db:migrate",
 		"db:migrate:create": "pnpm --filter @workspace/api db:migrate:create",
 		"db:migrate:status": "pnpm --filter @workspace/api db:migrate:status",

@@ -132,6 +132,13 @@ model User {
   isActive     Boolean @default(true)
   isSuperAdmin Boolean @default(false)
 
+  /// Platform ban (`POST /auth/admin/users/:userId/ban`): set together with `isActive = false`, so the
+  /// account can neither sign in nor keep a session. Cleared by an unban. NULL = not banned.
+  bannedAt       BigInt?
+  bannedByUserId String?
+  /// Why a platform admin banned the account (shown to admins only); trimmed, at most `USER_BAN_REASON_MAX_LENGTH`.
+  banReason      String? @db.Text
+
   /// Optimistic-lock token of the self-service profile fields (`full_name`): every write of those
   /// fields increments it, and `PATCH /auth/profile` applies only while it still equals the
   /// `version` the client read (409 otherwise). Unrelated to `tokenVersion`.
@@ -195,11 +202,17 @@ model User {
   authorizationPolicySimulations       AuthorizationPolicySimulation[] @relation("AuthorizationPolicySimulator")
   supportAccessGrants                  SupportAccessGrant[]            @relation("SupportAccessGrantSupportUser")
   tenantApiKeysCreated                 TenantApiKey[]                  @relation("TenantApiKeyCreator")
+  bannedBy                             User?                           @relation("UserBannedBy", fields: [bannedByUserId], references: [id], onDelete: SetNull)
+  usersBanned                          User[]                          @relation("UserBannedBy")
+  tenantAppealsSubmitted               TenantSuspensionAppeal[]        @relation("TenantSuspensionAppealSubmitter")
+  tenantAppealsReviewed                TenantSuspensionAppeal[]        @relation("TenantSuspensionAppealReviewer")
+  merchantBansReceived                 TenantCustomerBan[]             @relation("TenantCustomerBanCustomer")
+  merchantBansIssued                   TenantCustomerBan[]             @relation("TenantCustomerBanIssuer")
+  merchantBansLifted                   TenantCustomerBan[]             @relation("TenantCustomerBanLifter")
   tenantTerminalsCreated               TenantTerminal[]                @relation("TenantTerminalCreator")
   tenantTerminalPairingCodesIssued     TenantTerminal[]                @relation("TenantTerminalPairingCodeIssuer")
   locationsRequested                   Location[]                      @relation("LocationRequestedBy")
   locationsReviewed                    Location[]                      @relation("LocationReviewedBy")
-  storeMemberships                     StoreMembership[]               @relation("StoreMemberships")
   rewardClaims                         RewardClaim[]
   rewardRedemptions                    RewardRedemption[]
   rewardSales                          RewardSale[]
@@ -633,7 +646,6 @@ enum PermissionResource {
   INVENTORY
   TENANT
   LOCATION
-  STORE
   GITHUB
   GITHUB_PULL_REQUEST
 }
@@ -641,7 +653,6 @@ enum PermissionResource {
 enum PermissionScope {
   GLOBAL
   TENANT
-  STORE
   LOCATION
   RESOURCE
   OWN
@@ -689,9 +700,10 @@ model Role {
   children Role[]  @relation("RoleHierarchy")
 
   // Relations
-  userRoles        UserRole[]
-  rolePermissions  RolePermission[]
-  storeMemberships StoreMembership[]
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+  /// Location roles (Location Manager / Location Staff) granted through a membership's location scope.
+  locationScopes  MembershipLocationScope[]
 
   @@index([parentId])
 }
@@ -1199,6 +1211,7 @@ enum TenantLifecycleState {
   ACTIVE
   RESTRICTED
   SUSPENDED
+  BANNED
   PENDING_DELETION
   DELETED
 }
@@ -1308,8 +1321,8 @@ model Tenant {
   membershipLocationScopes MembershipLocationScope[]
   invitationLocationScopes TenantInvitationLocationScope[]
   rewardLocationScopes     RewardLocationScope[]
-  stores                   Store[]
-  storeMemberships         StoreMembership[]
+  suspensionAppeals        TenantSuspensionAppeal[]
+  customerBans             TenantCustomerBan[]
 
   @@index([lifecycleState])
 }
@@ -1377,7 +1390,6 @@ model Location {
   redemptions              RewardRedemption[]
   rewardSales              RewardSale[]
   apiKeys                  TenantApiKey[]
-  store                    Store?
 
   @@unique([tenantId, code])
   /// At most one live primary location per tenant (partial unique — soft-deleted rows ignored).
@@ -1421,7 +1433,7 @@ model Membership {
   @@unique([tenantId, id])
   @@index([userId])
   @@index([tenantId, status])
-  /// `GET /orgs/:orgSlug/members` (join order within one tenant) and `GET /orgs/memberships` (one user's, in join order).
+  /// `GET /tenants/:tenantSlug/members` (join order within one tenant) and `GET /tenants/memberships` (one user's, in join order).
   @@index([tenantId, createdAt, id])
   @@index([userId, createdAt, id])
 }
@@ -1444,85 +1456,17 @@ model MembershipLocationScope {
   membershipId String
   scopeType    LocationScopeType
   locationId   String?
+  /// The location role (an RBAC `Role`, e.g. Location Manager) the member holds wherever this scope
+  /// reaches: its permissions apply only at the scope's location (ALL_LOCATIONS: every location of the
+  /// tenant). NULL = the scope only limits where the member's tenant role applies.
+  roleId       String?
 
   tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   membership Membership @relation(fields: [tenantId, membershipId], references: [tenantId, id], onDelete: Cascade)
   location   Location?  @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade)
+  role       Role?      @relation(fields: [roleId], references: [id], onDelete: SetNull)
 
   @@unique([membershipId, locationId], where: { isDeleted: false })
-  @@index([tenantId])
-}
-
-/// Store lifecycle — mirrors the linked location (ACTIVE only while the location is ACTIVE).
-enum StoreStatus {
-  ACTIVE
-  INACTIVE
-}
-
-/// RLS: TENANT — a store within a tenant (spec §35). Each store is linked 1:1 to
-/// its operational `Location` (terminals, rewards, redemptions) and kept in
-/// sync by `LocationRepository`.
-/// @extends BaseModel
-model Store {
-  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
-  id        String  @id @default(uuid(7))
-  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
-  createdBy String? @db.VarChar(128)
-  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
-  updatedBy String? @db.VarChar(128)
-  isDeleted Boolean @default(false)
-  deletedAt BigInt?
-  deletedBy String? @db.VarChar(128)
-  // ── end BaseModel ──
-
-  tenantId   String
-  locationId String      @unique
-  name       String      @db.VarChar(200)
-  code       String      @db.VarChar(64)
-  status     StoreStatus @default(INACTIVE)
-
-  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  location    Location          @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade)
-  memberships StoreMembership[]
-
-  @@unique([tenantId, code])
-  /// Composite target of the tenant-scoped foreign keys (multi-tenancy plan §7): a child row
-  /// can reference this row only from the same tenant.
-  @@unique([tenantId, id])
-  /// One-to-one with a composite tenant foreign key: Prisma needs the FK's fields unique here too. The
-  /// single column is already unique, so this adds no constraint, only the index Prisma requires.
-  @@unique([tenantId, locationId])
-  @@index([tenantId, status])
-}
-
-/// RLS: TENANT — a user's membership in one store with a dynamic RBAC role (spec §36).
-/// The role's permissions apply only inside this store (STORE scope).
-/// @extends BaseModel
-model StoreMembership {
-  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
-  id        String  @id @default(uuid(7))
-  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
-  createdBy String? @db.VarChar(128)
-  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
-  updatedBy String? @db.VarChar(128)
-  isDeleted Boolean @default(false)
-  deletedAt BigInt?
-  deletedBy String? @db.VarChar(128)
-  // ── end BaseModel ──
-
-  tenantId String
-  storeId  String
-  userId   String
-  roleId   String
-  status   MembershipStatus @default(ACTIVE)
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store  Store  @relation(fields: [tenantId, storeId], references: [tenantId, id], onDelete: Cascade)
-  user   User   @relation("StoreMemberships", fields: [userId], references: [id], onDelete: Cascade)
-  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
-
-  @@unique([storeId, userId])
-  @@index([userId])
   @@index([tenantId])
   @@index([roleId])
 }
@@ -1597,7 +1541,7 @@ model TenantInvitation {
   @@index([email])
   @@index([tenantId])
   @@index([tenantId, kind, status])
-  /// `GET /orgs/:orgSlug/members/invites`: one tenant's pending team invites, newest first.
+  /// `GET /tenants/:tenantSlug/members/invites`: one tenant's pending team invites, newest first.
   @@index([tenantId, kind, status, createdAt(sort: Desc), id(sort: Desc)])
 }
 
@@ -1655,6 +1599,87 @@ model TenantAccessRequest {
   @@unique([tenantId, userId], where: { status: "PENDING" })
   @@index([tenantId, userId, status])
   @@index([tenantId, status])
+}
+
+/// RLS: TENANT — a suspended tenant's appeal against its suspension (MT-23). The tenant's OWNER or
+/// ADMIN submits it from the lifecycle routes; a platform admin accepts it (which reactivates the
+/// tenant) or rejects it. At most one PENDING appeal per tenant.
+/// @extends BaseModel
+model TenantSuspensionAppeal {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  tenantId          String
+  submittedByUserId String
+  /// The tenant's case for reactivation; trimmed, at most `TENANT_APPEAL_MESSAGE_MAX_LENGTH`.
+  message           String             @db.Text
+  status            TenantAppealStatus @default(PENDING)
+  reviewedByUserId  String?
+  reviewedAt        BigInt?
+  /// The platform admin's answer, shown to the tenant; trimmed, at most `TENANT_APPEAL_MESSAGE_MAX_LENGTH`.
+  reviewNote        String?            @db.Text
+
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  submittedBy User   @relation("TenantSuspensionAppealSubmitter", fields: [submittedByUserId], references: [id], onDelete: Cascade)
+  reviewedBy  User?  @relation("TenantSuspensionAppealReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId], where: { status: "PENDING", isDeleted: false })
+  @@index([tenantId, createdAt])
+  @@index([status, createdAt])
+}
+
+enum TenantAppealStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+/// RLS: TENANT — a merchant's ban of one customer from its rewards: while it is active (`liftedAt`
+/// null) the customer cannot claim the merchant's rewards and the merchant's tills refuse their
+/// codes. Made from one of the customer's redemptions (merchants never see who a customer is); a
+/// lifted ban stays as history. At most one active ban per tenant and customer.
+/// @extends BaseModel
+model TenantCustomerBan {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  tenantId           String
+  customerUserId     String
+  /// The redemption the merchant banned the customer from; null once that redemption no longer exists.
+  sourceRedemptionId String?
+  /// Why, in the merchant's words; trimmed, at most `TENANT_CUSTOMER_BAN_REASON_MAX_LENGTH`. Never shown to the customer.
+  reason             String  @db.Text
+  bannedByUserId     String?
+  bannedAt           BigInt
+  liftedByUserId     String?
+  /// When the merchant lifted the ban; null while it is active.
+  liftedAt           BigInt?
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer         User              @relation("TenantCustomerBanCustomer", fields: [customerUserId], references: [id], onDelete: Cascade)
+  sourceRedemption RewardRedemption? @relation(fields: [sourceRedemptionId], references: [id], onDelete: SetNull)
+  bannedBy         User?             @relation("TenantCustomerBanIssuer", fields: [bannedByUserId], references: [id], onDelete: SetNull)
+  liftedBy         User?             @relation("TenantCustomerBanLifter", fields: [liftedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, customerUserId], where: { liftedAt: null, isDeleted: false })
+  @@index([tenantId, bannedAt])
+  @@index([customerUserId])
 }
 
 /// RLS: OPERATIONAL — lifecycle state transition audit.
@@ -2069,7 +2094,7 @@ model Reward {
   /// can reference this row only from the same tenant.
   @@unique([tenantId, id])
   @@index([tenantId])
-  /// `GET /orgs/:orgSlug/rewards`: one tenant's catalog, newest first (a status tab narrows it).
+  /// `GET /tenants/:tenantSlug/rewards`: one tenant's catalog, newest first (a status tab narrows it).
   @@index([tenantId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([status])
   @@index([category])
@@ -2163,7 +2188,7 @@ model RewardLegalAcceptance {
   @@index([userId])
 }
 
-/// RLS: bypass for validate audit; org members can read org events.
+/// RLS: bypass for validate audit; tenant members can read org events.
 /// @extends BaseModel
 model RewardAuditLog {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
@@ -2425,7 +2450,7 @@ enum TenantApiKeyScope {
   INTEGRATION
 }
 
-/// RLS: org members write; POS auth uses key hash lookup with bypass.
+/// RLS: tenant members write; POS auth uses key hash lookup with bypass.
 /// @extends BaseModel
 model TenantApiKey {
   // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
@@ -2539,11 +2564,13 @@ model RewardRedemption {
   saleId           String
   redeemedAt       BigInt
 
-  claim    RewardClaim @relation(fields: [claimId], references: [id], onDelete: Restrict)
-  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  location Location?   @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Restrict)
-  user     User        @relation(fields: [userId], references: [id], onDelete: Restrict)
-  sale     RewardSale  @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  claim        RewardClaim         @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  location     Location?           @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Restrict)
+  user         User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  sale         RewardSale          @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  /// Customer bans a merchant made from this redemption (how its staff recognise the customer).
+  customerBans TenantCustomerBan[]
 
   @@index([tenantId])
   @@index([locationId])
@@ -3346,7 +3373,6 @@ model AuditLog {
   apiKeyId               String?          @db.VarChar(64)
   terminalId             String?          @db.VarChar(64)
   tenantId               String?          @db.VarChar(64)
-  storeId                String?          @db.VarChar(64)
   locationId             String?          @db.VarChar(64)
   ipAddress              String?          @db.VarChar(64)
   /// The calling device (User-Agent, bounded).

@@ -41,7 +41,6 @@ export const AUDIT_LOG_SUMMARY_SELECT = {
 	apiKeyId: true,
 	terminalId: true,
 	tenantId: true,
-	storeId: true,
 	locationId: true,
 	ipAddress: true,
 	userAgent: true,

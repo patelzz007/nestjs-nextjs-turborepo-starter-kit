@@ -21,6 +21,11 @@ export function hasGlobalConstructor(name: string): boolean {
 	return FUNCTION_SCHEMA.safeParse(Reflect.get(globalThis, name)).success;
 }
 
+/** `true` when `target[name]` is callable: a browser API present on one host object (e.g. `navigator.share`). */
+export function hasMethod(target: object, name: string): boolean {
+	return FUNCTION_SCHEMA.safeParse(Reflect.get(target, name)).success;
+}
+
 /** `true` in a browser-like runtime (a DOM `window` and `document` exist); `false` during SSR / in Node. */
 export function isBrowserRuntime(): boolean {
 	return hasGlobalValue("window") && hasGlobalValue("document");

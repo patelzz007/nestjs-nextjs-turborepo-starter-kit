@@ -1,7 +1,7 @@
 import { eqFilter, listStateToListQuery, type TableListQueryInput } from "@workspace/client/lib/api/list-query";
 import { listFilterKey, listSearchParam, listUrlParams } from "@workspace/client/lib/url-state/list-url-state";
 import { defineUrlState, optionalUrlParam } from "@workspace/client/lib/url-state/url-state";
-import { adminMerchantListQuery, KybStatusSchema, MerchantOrgStatusSchema, type KybStatus, type MerchantOrgStatus } from "@workspace/shared";
+import { adminMerchantListQuery, KybStatusSchema, MerchantTenantStatusSchema, type KybStatus, type MerchantTenantStatus } from "@workspace/shared";
 
 /** Page sizes the merchant table offers. */
 export const MERCHANTS_PAGE_SIZE_OPTIONS: readonly number[] = [10, 20, 50, 100];
@@ -14,7 +14,7 @@ export const MERCHANTS_TABLE_URL_STATE = defineUrlState(
 		...listUrlParams(adminMerchantListQuery, { pageSizes: MERCHANTS_PAGE_SIZE_OPTIONS, defaultLimit: MERCHANTS_DEFAULT_PAGE_SIZE }),
 		search: listSearchParam(),
 		kybStatus: optionalUrlParam(KybStatusSchema),
-		status: optionalUrlParam(MerchantOrgStatusSchema),
+		status: optionalUrlParam(MerchantTenantStatusSchema),
 	},
 	{ urlKeys: { kybStatus: listFilterKey("kybStatus"), status: listFilterKey("status") } },
 );
@@ -23,7 +23,7 @@ export type MerchantsTableUrlState = typeof MERCHANTS_TABLE_URL_STATE.defaults;
 
 export type MerchantsListFilter = Readonly<{
 	kybStatus: { eq: KybStatus } | undefined;
-	status: { eq: MerchantOrgStatus } | undefined;
+	status: { eq: MerchantTenantStatus } | undefined;
 }>;
 
 /** The `GET /admin/merchants` input for a URL state (server prefetch and client query). */

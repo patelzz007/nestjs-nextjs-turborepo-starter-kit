@@ -8,33 +8,22 @@ import { TenantTransactionService } from "../../../prisma/tenant-transaction.ser
 import type { SystemOperation } from "../../../prisma/system-operation.registry";
 import { CEDAR_POLICY_EVALUATOR, type CedarPolicyEvaluatorPort } from "../../../contexts/authorization/public-api";
 import { TENANT_AUDIT, type TenantAuditEntry, type TenantAuditPort, type TenantAuditTransaction } from "../../../contexts/tenancy/public-api";
-import { AES_256_KEY_BYTES, formatGcmEnvelope, gcmDecrypt, gcmEncrypt, parseGcmEnvelope } from "./aes-256-gcm";
+import { AES_256_KEY_BYTES } from "./aes-256-gcm";
 import { TENANT_KEY_MANAGEMENT, type TenantKeyManagementPort, type WrappedDataKey } from "./kms/tenant-key-management.port";
 import { TenantEncryptionKeyRepository, type TenantEncryptionKeyDbClient } from "./tenant-encryption-key.repository";
 
 /** First data-key version of a tenant. */
 const INITIAL_DATA_KEY_VERSION = 1;
-/** Data-key version prefix of a tenant ciphertext: `<keyVersion>:<iv>:<tag>:<data>`. */
-const CIPHERTEXT_PATTERN = /^(?<keyVersion>[1-9]\d*):(?<envelope>.+)$/;
 /** Keys re-wrapped per page (one read transaction per page, one write transaction per key). */
 export const REWRAP_PAGE_SIZE = 100;
 
 const AUDIT_RESOURCE_TYPE = "TenantEncryptionKey";
 export const TENANT_KEY_AUDIT_ACTIONS = {
 	created: "encryption.tenant_key.created",
-	decrypted: "encryption.decrypt",
 	rewrapped: "encryption.tenant_key.rewrapped",
 } satisfies Record<string, string>;
 
-/** A tenant ciphertext that cannot be parsed, or names no key. */
-export class TenantCiphertextError extends Error {
-	public constructor(message: string) {
-		super(message);
-		this.name = "TenantCiphertextError";
-	}
-}
-
-/** The ciphertext (or encrypt) names a data-key version the tenant does not have. */
+/** The tenant's data key could not be read back after it was created. */
 export class TenantKeyNotFoundError extends Error {
 	public constructor(tenantId: string, keyVersion: number) {
 		super(`Tenant encryption key not found: tenant ${tenantId} v${String(keyVersion)}`);
@@ -119,38 +108,6 @@ export class TenantEncryptionService {
 		return created.row.keyVersion;
 	}
 
-	public async encrypt(tenantId: string, plaintext: string, actorUserId: string): Promise<string> {
-		const keyVersion: number = await this.ensureTenantKey(tenantId, actorUserId);
-		const row: TenantEncryptionKey = await this.requireKey(tenantId, keyVersion, actorUserId);
-		const dataKey: Buffer = await this.kms.unwrapDataKey(row);
-		return `${String(keyVersion)}:${formatGcmEnvelope(gcmEncrypt(dataKey, Buffer.from(plaintext, "utf8")))}`;
-	}
-
-	/** Decrypts and authenticates; the decrypt is audited (with its purpose) before key material is used. */
-	public async decrypt(tenantId: string, payload: string, actorUserId: string, purpose: string): Promise<string> {
-		const match = CIPHERTEXT_PATTERN.exec(payload);
-		const keyVersionText: string | undefined = match?.groups?.keyVersion;
-		const envelopeText: string | undefined = match?.groups?.envelope;
-		if (keyVersionText === undefined || envelopeText === undefined) {
-			throw new TenantCiphertextError("Malformed tenant ciphertext: expected <keyVersion>:<iv>:<tag>:<ciphertext>");
-		}
-		const keyVersion = Number(keyVersionText);
-		const envelope = parseGcmEnvelope(envelopeText);
-		const policyVersion: number = await this.cedar.getActivePolicyVersion(tenantId);
-
-		const row: TenantEncryptionKey = await this.system("encryption.tenant_key.unwrap", "Audit and read the tenant key for decrypt", actorUserId, async (db) => {
-			const key: TenantEncryptionKey | null = await this.keys.findKey(tenantId, keyVersion, db);
-			if (key === null) {
-				throw new TenantKeyNotFoundError(tenantId, keyVersion);
-			}
-			await this.audit.recordInTx(db, this.auditEntry(key, actorUserId, policyVersion, TENANT_KEY_AUDIT_ACTIONS.decrypted, { purpose }));
-			return key;
-		});
-
-		const dataKey: Buffer = await this.kms.unwrapDataKey(row);
-		return gcmDecrypt(dataKey, envelope).toString("utf8");
-	}
-
 	/**
 	 * Re-wraps every DEK that is not wrapped with the provider's CURRENT KEK
 	 * (after a KEK rotation, and for legacy pilot rows). Each key is unwrapped
@@ -217,16 +174,6 @@ export class TenantEncryptionService {
 			);
 			return "rewrapped";
 		});
-	}
-
-	private async requireKey(tenantId: string, keyVersion: number, actorUserId: string): Promise<TenantEncryptionKey> {
-		const row: TenantEncryptionKey | null = await this.system("encryption.tenant_key.unwrap", "Read the tenant key for encrypt", actorUserId, (db) =>
-			this.keys.findKey(tenantId, keyVersion, db),
-		);
-		if (row === null) {
-			throw new TenantKeyNotFoundError(tenantId, keyVersion);
-		}
-		return row;
 	}
 
 	private async system<T>(

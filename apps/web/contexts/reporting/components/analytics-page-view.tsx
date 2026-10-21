@@ -28,7 +28,8 @@ import {
 	type AnalyticsFormatters,
 } from "@workspace/client/lib/contexts/reporting/analytics-presentation";
 import { analyticsPrefetchKey, toAnalyticsRangeQuery, type AnalyticsRangeQuery } from "@workspace/client/lib/contexts/reporting/analytics-range";
-import { AnalyticsRangeControls, useAnalyticsRange } from "@workspace/client/lib/contexts/reporting/analytics-range-controls";
+import { useAnalyticsRange } from "@workspace/client/lib/contexts/reporting/analytics-range-controller";
+import { AnalyticsRangePickerSkeleton } from "@workspace/ui/components/analytics-range-picker-skeleton";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
@@ -50,7 +51,17 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@workspace/ui/components/empty";
 import { Receipt } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import * as React from "react";
+
+function renderRangeControlsSkeleton(): React.JSX.Element {
+	return <AnalyticsRangePickerSkeleton />;
+}
+
+/** The range picker and its calendar (`react-day-picker`) in their own chunk; it still renders on the server (rules/19, T43). */
+const AnalyticsRangeControls = dynamic(() => import("@workspace/client/lib/contexts/reporting/analytics-range-controls").then((module) => module.AnalyticsRangeControls), {
+	loading: renderRangeControlsSkeleton,
+});
 
 /** A customer's activity is cut in UTC days (`range.timeZone`) — they spend across merchants and zones. */
 const CUSTOMER_REPORT_TIME_ZONE = UTC_TIME_ZONE;

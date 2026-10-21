@@ -5,7 +5,15 @@ import type { CreateRewardClaimInput, EpochMs, RewardClaimCreatedResponse } from
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import { RewardClaim } from "../../../domain/aggregates/reward-claim.aggregate";
-import { ClaimantNotFoundError, LegalAcceptanceRequiredError, OtpInvalidError, OtpMissingError, OtpRequiredError } from "../../../domain/errors/claims.errors";
+import {
+	ClaimantNotFoundError,
+	ClaimCustomerBannedError,
+	ClaimRewardUnavailableError,
+	LegalAcceptanceRequiredError,
+	OtpInvalidError,
+	OtpMissingError,
+	OtpRequiredError,
+} from "../../../domain/errors/claims.errors";
 import { assertWithinClaimLimit } from "../../../domain/policies/claim-limit.policy";
 import { claimNeedsOtp, liveAttributionToken } from "../../../domain/policies/phone-verification.policy";
 import type { ClaimsScope } from "../../claims-scope";
@@ -15,12 +23,25 @@ import { CLAIM_CODES, CLAIM_ID_GENERATOR, CLAIMS_UNIT_OF_WORK, CLAIM_REWARD_OPER
 import { actingUserId } from "../acting-user";
 import { ClaimRewardCommand } from "./claim-reward.command";
 
+/**
+ * A merchant that does not operate (suspended, banned, not live yet) offers nothing — answered like
+ * a missing reward, as the marketplace hides it — and a customer the merchant banned takes nothing.
+ */
+async function assertCustomerMayClaim(scope: ClaimsScope, tenantId: string, userId: string, rewardId: string): Promise<void> {
+	if (!(await scope.customerStanding.tenantOperates(tenantId))) {
+		throw new ClaimRewardUnavailableError(rewardId);
+	}
+	if ((await scope.customerStanding.bannedCustomers(tenantId, [userId])).has(userId)) {
+		throw new ClaimCustomerBannedError();
+	}
+}
+
 /** How the claim transaction ended: a claim, or a wrong OTP whose spent attempt must still commit. */
 type ClaimOutcome = { readonly kind: "created"; readonly response: RewardClaimCreatedResponse } | { readonly kind: "otp_rejected" };
 
 /**
  * Claims one unit of a reward in ONE transaction: the claimant's row lock (D08), the OTP attempt
- * compare-and-set (D09), the per-customer limit, the stock reservation on the Reward aggregate,
+ * compare-and-set (D09), the merchant still operating and not having banned the customer, the per-customer limit, the stock reservation on the Reward aggregate,
  * the referral attribution, the claim and the verified phone all commit or roll back together.
  * A wrong code is the exception: its attempt is committed (so guessing is counted) and the
  * request then fails with `OTP_INVALID`.
@@ -75,6 +96,7 @@ export class ClaimRewardHandler implements ICommandHandler<ClaimRewardCommand, R
 
 	private async claim(scope: ClaimsScope, userId: string, claimant: ClaimantProfile, input: CreateRewardClaimInput, now: EpochMs): Promise<RewardClaimCreatedResponse> {
 		const reward = await scope.rewards.assertClaimable(input.rewardId, now);
+		await assertCustomerMayClaim(scope, reward.tenantId, userId, input.rewardId);
 		assertWithinClaimLimit(await scope.claims.countHeld(userId, input.rewardId), reward.maxClaimsPerUser);
 		await scope.rewards.reserve(input.rewardId, now);
 

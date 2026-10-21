@@ -333,12 +333,3 @@ export class SupportAccessTenantNotFoundError extends DomainError {
 }
 
 // ── Persistence integrity ────────────────────────────────────────────────────
-
-/** A stored authorization row violates an aggregate invariant. It is never loaded silently. */
-export class CorruptAuthorizationStateError extends DomainError {
-	public readonly code: DomainErrorCode = "CORRUPT_AGGREGATE_STATE";
-
-	public constructor(aggregate: string, aggregateId: string) {
-		super("Stored authorization state cannot be loaded.", { aggregate, aggregateId });
-	}
-}

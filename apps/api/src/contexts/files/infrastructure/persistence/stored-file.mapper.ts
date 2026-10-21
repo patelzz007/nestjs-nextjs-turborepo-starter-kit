@@ -44,7 +44,7 @@ function renditionOf(variant: FileVariant): StoredFileObject {
 	return { slot: variant.kind, locator: storedLocatorOf(variant), publicPath: variant.publicPath };
 }
 
-/** Row → aggregate. A row that breaks an invariant throws `CorruptStoredFileStateError` (never a silently invalid aggregate). */
+/** Row → aggregate. A row that breaks an invariant throws `CorruptAggregateStateError` (never a silently invalid aggregate). */
 export function toStoredFileAggregate(row: StoredFile, variants: readonly FileVariant[] = []): StoredFileAggregate {
 	return StoredFileAggregate.rehydrate({
 		id: row.id,

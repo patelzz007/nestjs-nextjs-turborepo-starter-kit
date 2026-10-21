@@ -1,17 +1,20 @@
 import type { Tenant, TenantLifecycleState, TenantMerchantProfile, Prisma } from "@prisma/client";
-import { epochMs, JsonObjectSchema, type AdminMerchantDetailResponse, type JsonObject, type MerchantKybDocumentRecord, type MerchantOrgResponse } from "@workspace/shared";
+import { epochMs, JsonObjectSchema, type AdminMerchantDetailResponse, type JsonObject, type MerchantKybDocumentRecord, type MerchantTenantResponse } from "@workspace/shared";
 
 import type { ADMIN_ORG_DETAIL_INCLUDE } from "./prisma-merchant-admin.read-repository";
 
 export type TenantAdminDetailRow = Prisma.TenantGetPayload<{ include: typeof ADMIN_ORG_DETAIL_INCLUDE }>;
 
 /** The tenant lifecycle as the merchant-facing status. */
-export function merchantStatusOf(lifecycleState: TenantLifecycleState): MerchantOrgResponse["status"] {
+export function merchantStatusOf(lifecycleState: TenantLifecycleState): MerchantTenantResponse["status"] {
 	if (lifecycleState === "ACTIVE") {
 		return "ACTIVE";
 	}
 	if (lifecycleState === "SUSPENDED") {
 		return "SUSPENDED";
+	}
+	if (lifecycleState === "BANNED") {
+		return "BANNED";
 	}
 	return "ONBOARDING";
 }
@@ -24,7 +27,7 @@ function parseKybFields(value: Prisma.JsonValue | null): JsonObject | null {
 	return parsed.success ? parsed.data : null;
 }
 
-export function toMerchantOrgResponse(org: Tenant & { readonly merchantProfile: TenantMerchantProfile | null }): MerchantOrgResponse {
+export function toMerchantTenantResponse(org: Tenant & { readonly merchantProfile: TenantMerchantProfile | null }): MerchantTenantResponse {
 	const profile = org.merchantProfile;
 	return {
 		id: org.id,
@@ -51,7 +54,7 @@ export function toMerchantDetailResponse(
 ): AdminMerchantDetailResponse {
 	const ownerMember = org.memberships.find((member) => member.role === "OWNER");
 	return {
-		...toMerchantOrgResponse(org),
+		...toMerchantTenantResponse(org),
 		kybFields: parseKybFields(org.merchantProfile?.kybFields ?? null),
 		documents: [...documents],
 		locations: [...locations],

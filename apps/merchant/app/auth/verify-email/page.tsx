@@ -1,7 +1,7 @@
 "use client";
 
 import { VerifyEmailStatusSkeleton } from "@/components/loading/auth-skeletons";
-import { useTenantPath } from "@/contexts/tenancy/lib/org/use-tenant-path";
+import { useTenantPath } from "@/contexts/tenancy/lib/tenant/use-tenant-path";
 import { TENANT_ROUTES, ROUTES } from "@/lib/routes";
 import { VerifyEmailView } from "@workspace/client/lib/contexts/identity/email/verify-email-view";
 import { AuthLayout } from "@workspace/ui/components/auth-layout";

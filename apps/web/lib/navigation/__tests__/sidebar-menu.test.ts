@@ -2,7 +2,7 @@ import { buildSidebarView } from "@workspace/ui/lib/sidebar/menu-view";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
+import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import { USER_SIDEBAR_MENU, type CompiledSidebarMenuItem } from "@/lib/navigation/sidebar-menu";
 import { isPathWithin, rewardDetailPath, ROUTES, walletClaimPath } from "@/lib/routes";
 import { listAppPageRoutes, resolvesToAppPage } from "@/test-support/app-routes";

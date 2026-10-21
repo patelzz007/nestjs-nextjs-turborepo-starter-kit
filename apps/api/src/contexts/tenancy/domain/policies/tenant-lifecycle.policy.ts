@@ -9,6 +9,7 @@ export type TenantLifecycleDecision =
 	| { readonly kind: "not_found" }
 	| { readonly kind: "no_membership" }
 	| { readonly kind: "tenant_suspended" }
+	| { readonly kind: "tenant_banned" }
 	| { readonly kind: "tenant_not_active" }
 	| { readonly kind: "membership_inactive" };
 
@@ -34,7 +35,9 @@ function lifecycleRoute(route: TenantLifecycleRouteKind): boolean {
  * C1. A deleted tenant is not found on every route. A caller with no membership
  * learns nothing else. An inactive membership is rejected except when leaving.
  * Ordinary routes accept only `ACTIVE` and `RESTRICTED`; lifecycle routes also
- * accept `PROVISIONING`, `SUSPENDED` and `PENDING_DELETION`.
+ * accept `PROVISIONING`, `SUSPENDED`, `BANNED` and `PENDING_DELETION` (a banned tenant's lifecycle
+ * mutations — appeal, reactivate — are refused by the aggregate, so its members can only read the
+ * status or leave).
  */
 export function decideTenantLifecycle(check: TenantLifecycleCheck): TenantLifecycleDecision {
 	if (check.isDeleted || check.lifecycleState === "DELETED") {
@@ -51,6 +54,9 @@ export function decideTenantLifecycle(check: TenantLifecycleCheck): TenantLifecy
 	}
 	if (check.lifecycleState === "SUSPENDED") {
 		return { kind: "tenant_suspended" };
+	}
+	if (check.lifecycleState === "BANNED") {
+		return { kind: "tenant_banned" };
 	}
 	return { kind: "tenant_not_active" };
 }

@@ -17,7 +17,7 @@ import { PERMISSION, type CapabilitySlug } from "@workspace/shared";
 import { samplePathForPattern } from "@workspace/ui/lib/sidebar/navigation/route-patterns";
 import { describe, expect, it } from "vitest";
 
-import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
+import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import {
 	ADMIN_ROUTE_AUTHORIZATION,
 	canAccessRoute,
@@ -121,7 +121,9 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	["/users", SUPER_ADMIN],
 	["/users/[id]", SUPER_ADMIN],
 	["/users/mfa-recovery", SUPER_ADMIN],
+	["/users/support-access", SUPER_ADMIN],
 	// @RequirePermission API routes.
+	["/account/github", needsAll(PERMISSION.GITHUB_PULL_REQUEST.READ, PERMISSION.GITHUB_PULL_REQUEST.UPDATE)],
 	["/analytics", needs(PERMISSION.ANALYTICS.READ)],
 	["/audit-logs", needs(PERMISSION.AUDIT_LOG.LIST)],
 	["/audit-logs/[id]", needsAll(PERMISSION.AUDIT_LOG.READ, PERMISSION.AUDIT_LOG.LIST)],
@@ -138,6 +140,7 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	["/emails/log", needs(PERMISSION.EMAIL.LIST)],
 	["/geography", needs(PERMISSION.GEO.READ)],
 	["/merchants", needs(PERMISSION.MERCHANT_ORG.LIST)],
+	["/merchants/[id]", needs(PERMISSION.MERCHANT_ORG.LIST)],
 	["/merchants/invites", needs(PERMISSION.MERCHANT_ORG.MANAGE)],
 	["/merchants/verification", needs(PERMISSION.MERCHANT_ORG.LIST)],
 	["/merchants/store-requests", needs(PERMISSION.MERCHANT_ORG.LIST)],

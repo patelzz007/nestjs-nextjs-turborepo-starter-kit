@@ -103,7 +103,7 @@ export interface ComboboxProps<Value, Multiple extends boolean | undefined = fal
 	readonly ariaLabel?: string;
 	/** Debounce `onInputValueChange` by N ms — for server-side search (feature 8). */
 	readonly debounceMs?: number;
-	/** Validation state — threads to the input group as `aria-invalid` (RHF/zod rule 18). */
+	/** Validation state — threads to the input group as `aria-invalid` (form validation, rule 18). */
 	readonly invalid?: boolean;
 	/**
 	 * Per-usage overrides of the `combobox` copy from `UiKitLabelsProvider`, for

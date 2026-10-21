@@ -503,7 +503,7 @@ $$;
 
 GRANT EXECUTE ON FUNCTION app_holds_reward_claim(text) TO app_runtime;
 
--- Published consumer rewards are marketplace-readable; org members see all org
+-- Published consumer rewards are marketplace-readable; tenant members see all org
 -- rewards; a claim holder sees the reward they claimed, whatever its state now.
 DROP POLICY IF EXISTS rewards_read ON public."Reward";
 CREATE POLICY rewards_read ON public."Reward"
@@ -586,7 +586,7 @@ CREATE POLICY reward_claims_own ON public."RewardClaim"
 -- The merchant's members may READ the claims of their tenant's rewards
 -- (redemption history and analytics join a redemption to its claim and reward).
 -- Read-only: claims are written by the customer (own row) or system flows.
--- Store scope within the tenant is enforced by the API service layer.
+-- Location scope within the tenant is enforced by the API service layer.
 DROP POLICY IF EXISTS reward_claims_merchant_read ON public."RewardClaim";
 CREATE POLICY reward_claims_merchant_read ON public."RewardClaim"
   FOR SELECT
@@ -768,14 +768,14 @@ BEGIN
     'Tenant',
     'TenantSlugHistory',
     'Location',
-    'Store',
-    'StoreMembership',
     'Membership',
     'MembershipLocationScope',
     'TenantMerchantProfile',
     'TenantInvitation',
     'TenantInvitationLocationScope',
     'TenantAccessRequest',
+    'TenantSuspensionAppeal',
+    'TenantCustomerBan',
     'TenantLifecycleEvent',
     'TenantPlacement',
     'AuthorizationPolicyDraft',
@@ -829,77 +829,6 @@ CREATE POLICY locations_member ON public."Location"
     OR app_member_of("tenantId")
   );
 
--- Stores: tenant members read their org's stores; store members read their store.
--- A store is the 1:1 mirror of a tenant location, written in the SAME
--- transaction as every location write (syncStoreForLocation). Location writes
--- run in the member's tenant transaction (store request / resubmit) or a system
--- operation (admin review, close), so the mirror is writable under exactly the
--- tenant condition `locations_member` accepts — and only for a row
--- that mirrors one of that tenant's own locations. Never hard-deleted (DELETE
--- stays bypass-only).
-DROP POLICY IF EXISTS stores_member ON public."Store";
-DROP POLICY IF EXISTS stores_select ON public."Store";
-DROP POLICY IF EXISTS stores_mirror_insert ON public."Store";
-DROP POLICY IF EXISTS stores_mirror_update ON public."Store";
-DROP POLICY IF EXISTS stores_delete ON public."Store";
-CREATE POLICY stores_select ON public."Store"
-  FOR SELECT
-  USING (
-    (SELECT app_rls_bypass_on('Store'))
-    OR app_tenant_member_of("tenantId")
-    OR app_member_of("tenantId")
-    OR EXISTS (
-      SELECT 1
-      FROM public."StoreMembership" sm
-      WHERE sm."storeId" = "Store".id
-        AND sm."userId" = app_current_user_id()
-        AND sm.status = 'ACTIVE'
-        AND sm."isDeleted" = false
-    )
-  );
-CREATE POLICY stores_mirror_insert ON public."Store"
-  FOR INSERT
-  WITH CHECK (
-    (SELECT app_rls_bypass_on('Store'))
-    OR (
-      app_tenant_member_of("tenantId")
-      AND EXISTS (
-        SELECT 1
-        FROM public."Location" loc
-        WHERE loc.id = "Store"."locationId"
-          AND loc."tenantId" = "Store"."tenantId"
-      )
-    )
-  );
-CREATE POLICY stores_mirror_update ON public."Store"
-  FOR UPDATE
-  USING ((SELECT app_rls_bypass_on('Store')) OR app_tenant_member_of("tenantId"))
-  WITH CHECK (
-    (SELECT app_rls_bypass_on('Store'))
-    OR (
-      app_tenant_member_of("tenantId")
-      AND EXISTS (
-        SELECT 1
-        FROM public."Location" loc
-        WHERE loc.id = "Store"."locationId"
-          AND loc."tenantId" = "Store"."tenantId"
-      )
-    )
-  );
-CREATE POLICY stores_delete ON public."Store"
-  FOR DELETE
-  USING ((SELECT app_rls_bypass_on('Store')));
-
--- Store memberships: a user sees their own rows; tenant members see the org's rows.
-DROP POLICY IF EXISTS store_memberships_member ON public."StoreMembership";
-CREATE POLICY store_memberships_member ON public."StoreMembership"
-  USING (
-    (SELECT app_rls_bypass_on('StoreMembership'))
-    OR "userId" = app_current_user_id()
-    OR app_tenant_member_of("tenantId")
-  )
-  WITH CHECK ((SELECT app_rls_bypass_on('StoreMembership')));
-
 DROP POLICY IF EXISTS tenant_memberships_member ON public."Membership";
 CREATE POLICY tenant_memberships_member ON public."Membership"
   USING ((SELECT app_rls_bypass_on('Membership')) OR app_tenant_member_of("tenantId"))
@@ -928,6 +857,31 @@ CREATE POLICY tenant_access_requests_review ON public."TenantAccessRequest"
   FOR UPDATE
   USING ((SELECT app_rls_bypass_on('TenantAccessRequest')))
   WITH CHECK ((SELECT app_rls_bypass_on('TenantAccessRequest')));
+
+-- Suspension appeals (MT-23): the tenant's members read their tenant's appeals; every write
+-- (submit, accept, reject) runs as its own system operation after the route's checks.
+DROP POLICY IF EXISTS tenant_suspension_appeals_select ON public."TenantSuspensionAppeal";
+DROP POLICY IF EXISTS tenant_suspension_appeals_write ON public."TenantSuspensionAppeal";
+CREATE POLICY tenant_suspension_appeals_select ON public."TenantSuspensionAppeal"
+  FOR SELECT
+  USING ((SELECT app_rls_bypass_on('TenantSuspensionAppeal')) OR app_tenant_member_of("tenantId"));
+CREATE POLICY tenant_suspension_appeals_write ON public."TenantSuspensionAppeal"
+  FOR ALL
+  USING ((SELECT app_rls_bypass_on('TenantSuspensionAppeal')))
+  WITH CHECK ((SELECT app_rls_bypass_on('TenantSuspensionAppeal')));
+
+-- Customer bans: the tenant's members read their tenant's bans (the redemption log's "banned"
+-- badge, the banned-customers page); every write (ban, lift) runs as its own system operation
+-- after the route's capability check. Claims and the tills read them inside their own operations.
+DROP POLICY IF EXISTS tenant_customer_bans_select ON public."TenantCustomerBan";
+DROP POLICY IF EXISTS tenant_customer_bans_write ON public."TenantCustomerBan";
+CREATE POLICY tenant_customer_bans_select ON public."TenantCustomerBan"
+  FOR SELECT
+  USING ((SELECT app_rls_bypass_on('TenantCustomerBan')) OR app_tenant_member_of("tenantId"));
+CREATE POLICY tenant_customer_bans_write ON public."TenantCustomerBan"
+  FOR ALL
+  USING ((SELECT app_rls_bypass_on('TenantCustomerBan')))
+  WITH CHECK ((SELECT app_rls_bypass_on('TenantCustomerBan')));
 
 DROP POLICY IF EXISTS tenant_merchant_profiles_member ON public."TenantMerchantProfile";
 CREATE POLICY tenant_merchant_profiles_member ON public."TenantMerchantProfile"

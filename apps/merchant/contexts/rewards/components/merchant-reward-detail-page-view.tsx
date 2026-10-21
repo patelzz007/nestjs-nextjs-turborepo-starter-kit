@@ -33,7 +33,7 @@ const GALLERY_SIZES = "(min-width: 1024px) 55vw, 100vw";
 export interface MerchantRewardDetailPageViewProps {
 	readonly tenantSlug: string;
 	readonly rewardId: string;
-	/** The reward as the server fetched it (`GET /t/:orgSlug/rewards/:rewardId`, the API's own envelope). */
+	/** The reward as the server fetched it (`GET /t/:tenantSlug/rewards/:rewardId`, the API's own envelope). */
 	readonly initialReward?: Envelope<RewardResponse> | undefined;
 }
 

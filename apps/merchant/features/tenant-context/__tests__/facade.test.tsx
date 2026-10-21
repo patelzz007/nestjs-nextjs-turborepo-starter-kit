@@ -6,7 +6,7 @@ import { ApiError } from "@workspace/client/lib/api/use-api";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { clearAllLocationCookies, locationCookieName } from "@/contexts/tenancy/lib/org/location";
+import { clearAllLocationCookies, locationCookieName } from "@/contexts/tenancy/lib/tenant/location";
 import { TEST_ORG_SLUG } from "@/test/authorization";
 import { testEnvelope } from "@/test/envelope";
 import { contextQueryState, STORE_A_LOCATION, STORE_B_LOCATION, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";

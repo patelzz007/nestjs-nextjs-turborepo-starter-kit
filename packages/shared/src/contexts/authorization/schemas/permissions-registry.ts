@@ -23,15 +23,15 @@ export interface PermissionDefinition {
 	readonly isSystem?: boolean;
 	/**
 	 * Where the permission applies (default GLOBAL). OWN rows only reach the
-	 * subject's own records; STORE rows only apply inside a store the subject
-	 * is a member of. The same action × resource may exist once per scope.
+	 * subject's own records; LOCATION rows only apply at a location the subject
+	 * holds a location role for. The same action × resource may exist once per scope.
 	 */
 	readonly scope?: PermissionScope;
 }
 
 /**
  * Stable dot-notation id for a permission row (`user.read` → READ:USER).
- * Non-global scopes get a suffix (`profile.update.own`, `store.read.store`).
+ * Non-global scopes get a suffix (`profile.update.own`, `location.read.location`).
  */
 export function toPermissionRegistryName(action: PermissionAction, resource: PermissionResource, scope: PermissionScope = "GLOBAL"): string {
 	const base = `${resource.toLowerCase()}.${action.toLowerCase()}`;
@@ -132,7 +132,7 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
 		group: "GitHub",
 	},
 
-	// Merchant orgs
+	// Merchant tenants
 	{ action: "CREATE", resource: "MERCHANT_ORG", description: "Create merchant tenants", group: "Merchant" },
 	{ action: "READ", resource: "MERCHANT_ORG", description: "View merchant tenant details", group: "Merchant" },
 	{ action: "UPDATE", resource: "MERCHANT_ORG", description: "Update merchant tenants", group: "Merchant" },
@@ -146,22 +146,22 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
 	{ action: "LIST", resource: "REDEMPTION", description: "List redemptions", group: "Redemptions" },
 	{ action: "MANAGE", resource: "REDEMPTION", description: "Full redemption management", group: "Redemptions" },
 
-	// Stores (platform administration — any store)
-	{ action: "CREATE", resource: "STORE", description: "Create stores", group: "Stores" },
-	{ action: "READ", resource: "STORE", description: "View any store", group: "Stores" },
-	{ action: "UPDATE", resource: "STORE", description: "Update any store", group: "Stores" },
-	{ action: "DELETE", resource: "STORE", description: "Delete stores", group: "Stores" },
-	{ action: "LIST", resource: "STORE", description: "List stores", group: "Stores" },
-	{ action: "MANAGE", resource: "STORE", description: "Full store management", group: "Stores" },
+	// Locations (platform administration — any tenant's locations)
+	{ action: "CREATE", resource: "LOCATION", description: "Create locations", group: "Locations" },
+	{ action: "READ", resource: "LOCATION", description: "View any location", group: "Locations" },
+	{ action: "UPDATE", resource: "LOCATION", description: "Update any location", group: "Locations" },
+	{ action: "DELETE", resource: "LOCATION", description: "Delete locations", group: "Locations" },
+	{ action: "LIST", resource: "LOCATION", description: "List locations", group: "Locations" },
+	{ action: "MANAGE", resource: "LOCATION", description: "Full location management", group: "Locations" },
 
-	// Store-scoped (granted through a store membership role; valid only inside that store)
-	{ action: "READ", resource: "STORE", scope: "STORE", description: "View own store", group: "Store Operations" },
-	{ action: "UPDATE", resource: "STORE", scope: "STORE", description: "Update own store details", group: "Store Operations" },
-	{ action: "READ", resource: "REWARD", scope: "STORE", description: "View rewards at own store", group: "Store Operations" },
-	{ action: "LIST", resource: "REWARD", scope: "STORE", description: "List rewards at own store", group: "Store Operations" },
-	{ action: "CREATE", resource: "REDEMPTION", scope: "STORE", description: "Redeem rewards at own store", group: "Store Operations" },
-	{ action: "READ", resource: "REDEMPTION", scope: "STORE", description: "View redemptions at own store", group: "Store Operations" },
-	{ action: "LIST", resource: "REDEMPTION", scope: "STORE", description: "List redemptions at own store", group: "Store Operations" },
+	// Location-scoped (granted through a location role on a membership's location scope; valid only at that location)
+	{ action: "READ", resource: "LOCATION", scope: "LOCATION", description: "View own location", group: "Location Operations" },
+	{ action: "UPDATE", resource: "LOCATION", scope: "LOCATION", description: "Update own location details", group: "Location Operations" },
+	{ action: "READ", resource: "REWARD", scope: "LOCATION", description: "View rewards at own location", group: "Location Operations" },
+	{ action: "LIST", resource: "REWARD", scope: "LOCATION", description: "List rewards at own location", group: "Location Operations" },
+	{ action: "CREATE", resource: "REDEMPTION", scope: "LOCATION", description: "Redeem rewards at own location", group: "Location Operations" },
+	{ action: "READ", resource: "REDEMPTION", scope: "LOCATION", description: "View redemptions at own location", group: "Location Operations" },
+	{ action: "LIST", resource: "REDEMPTION", scope: "LOCATION", description: "List redemptions at own location", group: "Location Operations" },
 
 	// Own records (customer app — only the subject's own rows)
 	{ action: "READ", resource: "PROFILE", scope: "OWN", description: "View own profile", group: "Own Records" },

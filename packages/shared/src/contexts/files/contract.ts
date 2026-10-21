@@ -7,12 +7,14 @@ import { defineContract } from "../../contracts/define-contract";
 import { singleResponse } from "../../contracts/response";
 import { DeleteSuccessDataSchema } from "../../schemas/api/api-response";
 import { UuidParamSchema } from "../../schemas/domain/platform/param-schemas";
+import { TenantSlugParamSchema } from "../tenancy/schemas/tenant";
 import { filesRoutes } from "./routes";
 import {
 	CompleteFileUploadResponseSchema,
 	CompleteFileUploadSchema,
 	CreateFileUploadUrlResponseSchema,
 	CreateFileUploadUrlSchema,
+	CreateTenantFileUploadUrlSchema,
 	FileDetailResponseSchema,
 	FileDownloadResponseSchema,
 } from "./schemas/storage";
@@ -23,6 +25,12 @@ export const filesContract = {
 		method: "POST",
 		path: filesRoutes.uploadUrl,
 		input: CreateFileUploadUrlSchema,
+		response: singleResponse(CreateFileUploadUrlResponseSchema),
+	}),
+	tenantUploadUrl: defineContract({
+		method: "POST",
+		path: filesRoutes.tenantUploadUrl,
+		input: z.intersection(TenantSlugParamSchema, CreateTenantFileUploadUrlSchema),
 		response: singleResponse(CreateFileUploadUrlResponseSchema),
 	}),
 	complete: defineContract({

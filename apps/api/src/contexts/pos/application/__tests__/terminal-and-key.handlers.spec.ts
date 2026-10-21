@@ -411,10 +411,10 @@ describe("API key commands", () => {
 
 	it("answers another store's key, a tenant-wide key (for a store-limited member) and a missing one as not found", async () => {
 		store.apiKeys.seed("store-b-key", { locationId: STORE_B });
-		store.apiKeys.seed("org-wide-key", { locationId: null });
+		store.apiKeys.seed("tenant-wide-key", { locationId: null });
 		const handler = new RevokeApiKeyHandler(store.uow, access.grantLocations([STORE_A]), new FixedClock(NOW));
 
-		for (const keyId of ["store-b-key", "org-wide-key", "missing"]) {
+		for (const keyId of ["store-b-key", "tenant-wide-key", "missing"]) {
 			await expect(handler.execute(new RevokeApiKeyCommand(member(), { tenantId: TENANT_ID, keyId }))).rejects.toBeInstanceOf(ApiKeyNotFoundError);
 		}
 	});

@@ -261,7 +261,7 @@ import type { LoginInput } from "@workspace/shared";
 ```
 
 App code imports **types** (`LoginInput`) for annotations and props. Import the
-**schema** (`LoginSchema`) only at validation boundaries — `zodResolver`,
+**schema** (`LoginSchema`) only at validation boundaries — a TanStack Form validator,
 `ZodValidationPipe`, `.parse()` / `.safeParse()`.
 
 - `@workspace/ui/...` and `@workspace/client/...` resolve through their explicit

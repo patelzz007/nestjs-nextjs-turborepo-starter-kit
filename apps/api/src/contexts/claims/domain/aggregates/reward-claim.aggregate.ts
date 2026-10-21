@@ -1,9 +1,10 @@
 import { epochMs, type EpochMs } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
-import { ClaimExpiredError, ClaimNotActiveError, CorruptClaimStateError } from "../errors/claims.errors";
+import { ClaimExpiredError, ClaimNotActiveError } from "../errors/claims.errors";
 import { ClaimCodesIssued, ClaimExpired, ClaimRedeemed, RewardClaimed, type ClaimDomainEvent, type ClaimEventFacts } from "../events/claim.events";
 import { CLAIM_TTL_MS, RewardClaimStatusSchema, type RewardClaimStatus } from "../value-objects/claim-rules.value-object";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** The hashes of a claim's two codes: the QR token and the backup code read out at a till. */
 export interface ClaimCodeHashes {
@@ -122,7 +123,7 @@ export class RewardClaim extends AggregateRoot<ClaimDomainEvent> {
 	public static rehydrate(state: RewardClaimState): RewardClaim {
 		const parsed = RewardClaimStatusSchema.safeParse(state.status);
 		if (!parsed.success || (parsed.data === "REDEEMED") !== (state.redeemedAt !== null)) {
-			throw new CorruptClaimStateError(state.id);
+			throw new CorruptAggregateStateError("claim", state.id);
 		}
 		return new RewardClaim(state, parsed.data, parsed.data);
 	}

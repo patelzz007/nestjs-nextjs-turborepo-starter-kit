@@ -544,6 +544,8 @@ export const apiRouter = {
 		adminMfaRecoveryRequests: defineQuery(apiContract.auth.adminMfaRecoveryRequests, { scope: (): ApiQueryKey => ["auth", "admin-mfa-recovery-requests"] }),
 		adminUsers: defineQuery(apiContract.auth.adminUsers, { scope: (): ApiQueryKey => ["auth", "admin-users"] }),
 		adminUserDetail: defineQuery(apiContract.auth.adminUserDetail, { scope: ({ userId }: { readonly userId: string }): ApiQueryKey => ["auth", "admin-user", userId] }),
+		adminUserBan: defineMutation(apiContract.auth.adminUserBan),
+		adminUserUnban: defineMutation(apiContract.auth.adminUserUnban),
 		impersonate: defineMutation(apiContract.auth.impersonate),
 		stopImpersonation: defineMutation(apiContract.auth.stopImpersonation),
 	},
@@ -698,10 +700,24 @@ export const apiRouter = {
 	},
 	files: {
 		uploadUrl: defineMutation(apiContract.files.uploadUrl),
+		tenantUploadUrl: defineMutation(apiContract.files.tenantUploadUrl),
 		complete: defineMutation(apiContract.files.complete),
 		detail: defineQuery(apiContract.files.detail, { scope: ({ fileId }: { readonly fileId: string }): ApiQueryKey => ["files", "detail", fileId] }),
 		downloadUrl: defineQuery(apiContract.files.downloadUrl, { scope: ({ fileId }: { readonly fileId: string }): ApiQueryKey => ["files", "download-url", fileId] }),
 		delete: defineMutation(apiContract.files.delete),
+	},
+	referrals: {
+		createLink: defineMutation(apiContract.referrals.createLink),
+		recordAttribution: defineMutation(apiContract.referrals.recordAttribution),
+	},
+	supportAccess: {
+		/** Platform admins: every grant, newest first. Invalidate after request / revoke. */
+		list: defineQuery(apiContract.supportAccess.list, { scope: (): ApiQueryKey => ["support-access", "grants"] }),
+		/** The tenant owner's grants (to approve). */
+		tenantList: defineQuery(apiContract.supportAccess.tenantList, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "support-access"] }),
+		request: defineMutation(apiContract.supportAccess.request),
+		approve: defineMutation(apiContract.supportAccess.approve),
+		revoke: defineMutation(apiContract.supportAccess.revoke),
 	},
 	tenants: {
 		/** The member's tenants (membership + capabilities) — invalidate after any identity or membership change. */
@@ -712,10 +728,20 @@ export const apiRouter = {
 			scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "members", "invites"],
 		}),
 		inviteMember: defineMutation(apiContract.tenants.inviteMember),
+		/** The tenant's active customer bans. Invalidate it and `redemptions` (the log's "banned" badge) after a ban or a lift. */
+		customerBans: defineQuery(apiContract.tenants.customerBans, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "customer-bans"] }),
+		banCustomer: defineMutation(apiContract.tenants.banCustomer),
+		liftCustomerBan: defineMutation(apiContract.tenants.liftCustomerBan),
 		revokeMemberInvite: defineMutation(apiContract.tenants.revokeMemberInvite),
-		removeMemberFromStore: defineMutation(apiContract.tenants.removeMemberFromStore),
+		removeMemberFromLocation: defineMutation(apiContract.tenants.removeMemberFromLocation),
 		/** The signed-in member's own membership (display name). Invalidate `context` and `listMembers` of the tenant after it. */
 		updateOwnMembership: defineMutation(apiContract.tenants.updateOwnMembership),
+		/** Leave the tenant (any membership status). Invalidate `membershipsBootstrap` after it. */
+		leaveTenant: defineMutation(apiContract.tenants.leaveTenant),
+		/** The tenant's lifecycle state, suspension and appeals — readable while suspended or pending deletion. */
+		lifecycle: defineQuery(apiContract.tenants.lifecycle, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "lifecycle"] }),
+		submitAppeal: defineMutation(apiContract.tenants.submitAppeal),
+		reactivate: defineMutation(apiContract.tenants.reactivate),
 		validateTeamInvite: defineMutation(apiContract.tenants.validateTeamInvite),
 		acceptTeamInvite: defineMutation(apiContract.tenants.acceptTeamInvite),
 		registerAndAcceptTeamInvite: defineMutation(apiContract.tenants.registerAndAcceptTeamInvite, { baseOptions: { headers: clientTypeHeader("merchant") } }),
@@ -792,6 +818,14 @@ export const apiRouter = {
 		downloadTenantDocument: defineQuery(apiContract.rewardsAdmin.downloadTenantDocument, {
 			scope: ({ tenantId }: AdminTenantScope): ApiQueryKey => ["rewards-admin", "tenant", tenantId, "documents", "download"],
 		}),
+		getTenantLifecycle: defineQuery(apiContract.rewardsAdmin.getTenantLifecycle, {
+			scope: ({ tenantId }: AdminTenantScope): ApiQueryKey => ["rewards-admin", "tenant", tenantId, "lifecycle"],
+		}),
+		suspendTenant: defineMutation(apiContract.rewardsAdmin.suspendTenant),
+		reinstateTenant: defineMutation(apiContract.rewardsAdmin.reinstateTenant),
+		banTenant: defineMutation(apiContract.rewardsAdmin.banTenant),
+		unbanTenant: defineMutation(apiContract.rewardsAdmin.unbanTenant),
+		rejectTenantAppeal: defineMutation(apiContract.rewardsAdmin.rejectTenantAppeal),
 		createInvite: defineMutation(apiContract.rewardsAdmin.createInvite),
 		/** Whether this deployment may invite a new merchant (false in single-tenant mode). */
 		inviteAvailability: defineQuery(apiContract.rewardsAdmin.inviteAvailability, { scope: (): ApiQueryKey => ["rewards-admin", "invites", "availability"] }),

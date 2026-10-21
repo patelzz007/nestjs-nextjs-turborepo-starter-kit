@@ -78,7 +78,6 @@ export interface HttpAuditEntry {
 	readonly apiKeyId: string | null;
 	readonly terminalId: string | null;
 	readonly tenantId: string | null;
-	readonly storeId: string | null;
 	readonly locationId: string | null;
 	readonly ipAddress: string | null;
 	readonly userAgent: string | null;
@@ -290,7 +289,6 @@ export function buildHttpAuditEntry(request: FastifyRequest, context: RequestCon
 		apiKeyId: context.apiKey?.apiKeyId ?? null,
 		terminalId: context.apiKey?.terminalId ?? null,
 		tenantId: context.tenant.tenantId ?? context.apiKey?.tenantId ?? null,
-		storeId: context.tenant.storeId ?? null,
 		locationId: context.tenant.locationId ?? null,
 		ipAddress,
 		userAgent,

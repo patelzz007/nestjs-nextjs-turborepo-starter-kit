@@ -3,7 +3,7 @@ title: "API reference — GitHub contributions"
 description: "Read-only summary, commit history with line counts and contributor totals of the GitHub repositories the API is configured with."
 order: 11
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792454400000
+lastUpdated: 1792540800000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -71,8 +71,8 @@ Response `200 OK` (application/json):
     "repositories": []
   },
   "meta": {
-    "correlationId": "1-hQfkONimtQ8fctyxp_D",
-    "timestamp": 1792520436944
+    "correlationId": "uBovBcvM_9YEGsaE-Co2w",
+    "timestamp": 1792586047573
   }
 }
 ```

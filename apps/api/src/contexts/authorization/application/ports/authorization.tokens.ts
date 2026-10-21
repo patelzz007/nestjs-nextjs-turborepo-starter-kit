@@ -36,6 +36,10 @@ export const POLICY_PUBLISH_OPERATION: SystemOperationName = "policy.publish";
 export const SUPPORT_ACCESS_GRANT_OPERATION: SystemOperationName = "support_access.grant";
 export const SUPPORT_ACCESS_APPROVE_OPERATION: SystemOperationName = "support_access.approve";
 export const SUPPORT_ACCESS_REVOKE_OPERATION: SystemOperationName = "support_access.revoke";
+export const SUPPORT_ACCESS_EXPIRY_OPERATION: SystemOperationName = "maintenance.support_access_expiry";
+export const SUPPORT_ACCESS_ADMIN_READ_OPERATION: SystemOperationName = "support_access.admin_read";
+export const SUPPORT_ACCESS_TENANT_READ_OPERATION: SystemOperationName = "support_access.tenant_read";
+export const SUPPORT_ACCESS_READ = Symbol("SUPPORT_ACCESS_READ");
 
 // ── Injection tokens ────────────────────────────────────────────────────────
 

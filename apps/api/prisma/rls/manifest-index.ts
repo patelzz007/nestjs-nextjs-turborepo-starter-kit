@@ -34,14 +34,14 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"Tenant",
 		"TenantSlugHistory",
 		"Location",
-		"Store",
-		"StoreMembership",
 		"Membership",
 		"MembershipLocationScope",
 		"TenantMerchantProfile",
 		"TenantInvitation",
 		"TenantInvitationLocationScope",
 		"TenantAccessRequest",
+		"TenantSuspensionAppeal",
+		"TenantCustomerBan",
 		"TenantAuditLog",
 		"TenantLifecycleEvent",
 		"TenantPlacement",
@@ -120,7 +120,7 @@ export interface PrismaTableModel {
 export interface RlsManifestDriftReport {
 	readonly missingFromManifest: readonly string[];
 	readonly unknownManifestTables: readonly string[];
-	readonly orgModelsMissingManifest: readonly string[];
+	readonly tenantModelsMissingManifest: readonly string[];
 	readonly locationProfileMismatch: readonly string[];
 	readonly manifestNotInRlsSql: readonly string[];
 }
@@ -230,7 +230,7 @@ export function computeRlsManifestDrift(input: {
 	const profileMap = buildManifestTableToProfileMap();
 
 	const missingFromManifest: string[] = [];
-	const orgModelsMissingManifest: string[] = [];
+	const tenantModelsMissingManifest: string[] = [];
 	const locationProfileMismatch: string[] = [];
 
 	for (const model of input.prismaModels) {
@@ -238,7 +238,7 @@ export function computeRlsManifestDrift(input: {
 			missingFromManifest.push(model.tableName);
 		}
 		if (model.hasTenantId && !manifestSet.has(model.tableName)) {
-			orgModelsMissingManifest.push(model.tableName);
+			tenantModelsMissingManifest.push(model.tableName);
 		}
 		const profile = profileMap.get(model.tableName);
 		const locationScopeJunctionTables: readonly string[] = ["RewardLocationScope", "TenantInvitationLocationScope", "MembershipLocationScope"];
@@ -269,7 +269,7 @@ export function computeRlsManifestDrift(input: {
 	return {
 		missingFromManifest: sort(missingFromManifest),
 		unknownManifestTables: sort(unknownManifestTables),
-		orgModelsMissingManifest: sort(orgModelsMissingManifest),
+		tenantModelsMissingManifest: sort(tenantModelsMissingManifest),
 		locationProfileMismatch: sort(locationProfileMismatch),
 		manifestNotInRlsSql: sort(manifestNotInRlsSql),
 	};

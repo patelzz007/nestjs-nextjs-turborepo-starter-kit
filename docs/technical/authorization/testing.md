@@ -52,7 +52,7 @@ dropdb authz_e2e
 
 | File | Covers |
 |---|---|
-| `src/contexts/authorization/infrastructure/kernel/__tests__/authorization-kernel.service.spec.ts` | precedence, DENY overrides, ACL, MANAGE, scopes (ORG / STORE / LOCATION / OWN / RESOURCE), cross-tenant CRUD, forged tenants, membership-grants-nothing, policies, conditions, `filter()` shapes, `resourceCapabilities`, `hasRoles`, audit on `authorize()` |
+| `src/contexts/authorization/infrastructure/kernel/__tests__/authorization-kernel.service.spec.ts` | precedence, DENY overrides, ACL, MANAGE, scopes (TENANT / LOCATION / OWN / RESOURCE), cross-tenant CRUD, forged tenants, membership-grants-nothing, policies, conditions, `filter()` shapes, `resourceCapabilities`, `hasRoles`, audit on `authorize()` |
 | `kernel/__tests__/tenant-membership.service.spec.ts` | tenant / store / location verification, forged ids, scope rows |
 | `kernel/__tests__/policy-engine.service.spec.ts` | every operator, DENY-only abstain, conditional ALLOW, malformed rules fail closed, strict schema |
 | `kernel/__tests__/acl.service.spec.ts` | query shape (user + role subjects, MANAGE, type-wide, tenant), conditions |
@@ -73,7 +73,7 @@ dropdb authz_e2e
 
 | File | Covers |
 |---|---|
-| `authorization-hardening.e2e-spec.ts` | `x-tenant-id` / `x-location-id` select nothing, forged `x-store-id` → 403, store-scoped decisions, decisions endpoint, explain restricted to admins, `@Authorize(self())` routes, self-escalation and subset rule, refresh / logout under user-scoped RLS |
+| `authorization-hardening.e2e-spec.ts` | `x-tenant-id` / `x-location-id` select nothing, location roles (`?locationId=`) and location-scoped decisions, decisions endpoint, explain restricted to admins, `@Authorize(self())` routes, self-escalation and subset rule, refresh / logout under user-scoped RLS |
 | `authorization-kernel.e2e-spec.ts` | kernel against seeded data: admin dashboard, default deny, self grants, DENY override, ACL DENY, forged org, membership ≠ permission, filters |
 | `access-hardening.e2e-spec.ts`, `rls-hardening.e2e-spec.ts`, `tenant-isolation.e2e-spec.ts` | cross-org reads / writes over HTTP, RLS at the database level |
 | `merchant-capabilities.e2e-spec.ts` | seeded owner vs cashier on team, KYB and store-location endpoints (`TENANT_ROLE_CAPABILITY_REQUIRED`), cashier still reads locations |

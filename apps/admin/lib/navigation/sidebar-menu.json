@@ -31,6 +31,11 @@
 							"title": "MFA recovery",
 							"url": "/users/mfa-recovery",
 							"icon": "ShieldAlert"
+						},
+						{
+							"title": "Support access",
+							"url": "/users/support-access",
+							"icon": "LifeBuoy"
 						}
 					]
 				},
@@ -159,6 +164,11 @@
 					"title": "Security",
 					"url": "/account/security",
 					"icon": "Shield"
+				},
+				{
+					"title": "GitHub token",
+					"url": "/account/github",
+					"icon": "KeyRound"
 				}
 			]
 		}

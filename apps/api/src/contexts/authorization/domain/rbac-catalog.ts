@@ -5,6 +5,13 @@
 export const SUPER_ADMIN_ROLE_NAME = "SuperAdmin";
 export const ADMIN_ROLE_NAME = "Admin";
 
+/**
+ * Location roles a membership's location scope can carry (`MembershipLocationScope.roleId`): their
+ * LOCATION-scoped permissions apply only at the locations that scope reaches.
+ */
+export const LOCATION_MANAGER_ROLE_NAME = "Location Manager";
+export const LOCATION_STAFF_ROLE_NAME = "Location Staff";
+
 /** Platform role attached to every self-provisioned consumer account (signup, merchant onboarding, invite registration). */
 export const DEFAULT_CONSUMER_ROLE_NAME = "User";
 
@@ -35,9 +42,9 @@ export interface RoleSeparationOfDutyRule {
  */
 export const ROLE_SEPARATION_OF_DUTY_RULES: readonly RoleSeparationOfDutyRule[] = [
 	{
-		roleA: "Store Manager",
-		roleB: "Store Staff",
-		reason: "A store member holds exactly one store role; Store Manager already includes front-of-house duties",
+		roleA: LOCATION_MANAGER_ROLE_NAME,
+		roleB: LOCATION_STAFF_ROLE_NAME,
+		reason: "A member holds exactly one location role; Location Manager already includes front-of-house duties",
 	},
 ];
 

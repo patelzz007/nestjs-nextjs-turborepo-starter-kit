@@ -4,7 +4,7 @@ tags: ["authorization", "changelog", "migration", "security"]
 description: "Everything that changed in the authorization overhaul: security fixes, new kernel features, stores, RLS hardening, frontend gating, removed code, breaking changes, and known follow-ups."
 order: 28
 author: "Platform Team"
-lastUpdated: 1790899200000
+lastUpdated: 1792540800000
 coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -13,6 +13,18 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 > [!NOTE]
 > This page records **what changed and why**, so reviewers and future readers can follow the
 > reasoning. The how-to guides are linked from the [overview](./overview.md).
+
+---
+
+## 0. 2026-10-21 — one location model, bans, support access, served tenants
+
+| Change | Why |
+|---|---|
+| `Store` / `StoreMembership`, the `STORE` scope and resource, `x-store-id` and every `storeId` selector removed; location roles are `MembershipLocationScope.roleId` (`LOCATION` scope), seeded as `Location Manager` / `Location Staff` | the store twin added nothing a location could not hold, and keeping it in sync was a second source of truth |
+| Single mode serves only the default tenant (`ServedTenantPolicy`): another tenant's slug, location or API key is refused | a single-tenant deployment must not reach rows of a tenant it does not serve |
+| Platform bans (`POST /auth/admin/users/:userId/ban` / `unban`, SuperAdmin only, audited; a banned account's sessions are revoked) | an owner decision of 2026-10-21 |
+| Support access: the expiry job marks overdue grants `EXPIRED`; `GET /support-access` (platform) and `GET /tenants/:tenantSlug/support-access` (owner) list grants | `EXPIRED` was never written, and neither side could see its grants |
+| Tenant files upload through `POST /tenants/:tenantSlug/files/upload-url`; `POST /files/upload-url` no longer takes a `tenantId` | the tenant comes from the route, never the body (D23) |
 
 ---
 

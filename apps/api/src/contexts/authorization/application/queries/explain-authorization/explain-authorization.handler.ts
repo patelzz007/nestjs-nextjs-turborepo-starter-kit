@@ -24,7 +24,6 @@ export class ExplainAuthorizationHandler implements IQueryHandler<ExplainAuthori
 				userId: explain.userId ?? actor.userId,
 				isSuperAdmin: explainingSelf ? actor.isSuperAdmin : false,
 				...(explain.tenantId === undefined ? {} : { tenantId: explain.tenantId }),
-				...(explain.storeId === undefined ? {} : { storeId: explain.storeId }),
 				...(explain.locationId === undefined ? {} : { locationId: explain.locationId }),
 			},
 			action: explain.action,

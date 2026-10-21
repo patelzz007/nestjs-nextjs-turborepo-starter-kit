@@ -30,7 +30,7 @@ export const ENTERPRISE_EMAIL_DOMAIN = "enterprise.example.com";
 export const ENTERPRISE_OWNER_EMAIL = `owner@${ENTERPRISE_EMAIL_DOMAIN}`;
 
 export interface EnterpriseDatasetSizes {
-	/** Tenant locations (each gets a 1:1 store via seedStores). */
+	/** Tenant locations (each member scope row gets its location role from seedLocationRoles). */
 	readonly locations: number;
 	/** Tenant members, INCLUDING the owner. */
 	readonly members: number;
@@ -44,7 +44,7 @@ export const ENTERPRISE_DATASET_SIZES: EnterpriseDatasetSizes = {
 	products: 500,
 };
 
-/** Every Nth member (after the owner and policy admin) is an org ADMIN covering all locations. */
+/** Every Nth member (after the owner and policy admin) is a tenant ADMIN covering all locations. */
 const ADMIN_EVERY_NTH_MEMBER = 25;
 /** Every Nth remaining member is a back-office MEMBER; the rest are CASHIERs. */
 const BACK_OFFICE_EVERY_NTH_MEMBER = 4;

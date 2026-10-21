@@ -26,7 +26,6 @@ export function toAuditLogCreateInput(entry: HttpAuditEntry): Prisma.AuditLogCre
 		apiKeyId: entry.apiKeyId,
 		terminalId: entry.terminalId,
 		tenantId: entry.tenantId,
-		storeId: entry.storeId,
 		locationId: entry.locationId,
 		ipAddress: entry.ipAddress,
 		userAgent: entry.userAgent,

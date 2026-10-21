@@ -33,8 +33,8 @@ const CROP_DESCRIPTION =
 const TILE_SIZES = "(min-width: 1024px) 22rem, (min-width: 640px) 50vw, 100vw";
 
 export interface MerchantRewardImagesFieldProps {
-	/** The tenant the images are uploaded to — `undefined` while it loads (adding waits for it). */
-	readonly tenantId: string | undefined;
+	/** The tenant route the images are uploaded through (`POST /tenants/:tenantSlug/files/upload-url`). */
+	readonly tenantSlug: string;
 	/** The saved images in display order (editing), with their renditions, or none for a new reward. */
 	readonly initialImages: readonly SavedRewardImage[];
 	/** The ready images changed (added, removed, reordered): the form saves their ids, in order; the first is the cover. */
@@ -139,7 +139,7 @@ function readyImagesOf(items: readonly ImageItem[]): readonly SavedRewardImage[]
  * by itself — the form saves the ordered `imageFileIds`. Renders only the
  * field's body: the editor section around it carries the visible heading.
  */
-export function MerchantRewardImagesField({ tenantId, initialImages, onImagesChange, errorMessage, disabled = false }: MerchantRewardImagesFieldProps): React.JSX.Element {
+export function MerchantRewardImagesField({ tenantSlug, initialImages, onImagesChange, errorMessage, disabled = false }: MerchantRewardImagesFieldProps): React.JSX.Element {
 	const inputId = React.useId();
 	const messageId = React.useId();
 	const inputRef = React.useRef<HTMLInputElement>(null);
@@ -155,7 +155,7 @@ export function MerchantRewardImagesField({ tenantId, initialImages, onImagesCha
 
 	const taken = items.length + cropQueue.length + readingCount;
 	const freeSlots = Math.max(0, MAX_REWARD_IMAGES - taken);
-	const canAdd = !disabled && tenantId !== undefined && freeSlots > 0;
+	const canAdd = !disabled && freeSlots > 0;
 	const isUploading = items.some((item) => item.kind === "uploading");
 	const message = errorMessage ?? null;
 	const [currentCrop = null] = cropQueue;
@@ -179,15 +179,12 @@ export function MerchantRewardImagesField({ tenantId, initialImages, onImagesCha
 
 	const startUpload = React.useCallback(
 		(file: File): void => {
-			if (tenantId === undefined) {
-				return;
-			}
 			const key = crypto.randomUUID();
 			const localUrl = URL.createObjectURL(file);
 			setItems((current) => [...current, { key, kind: "uploading", localUrl }]);
 			const run = async (): Promise<void> => {
 				try {
-					const image = await mutateAsync({ tenantId, file });
+					const image = await mutateAsync({ tenantSlug, file });
 					setItems((current) => current.map((item) => (item.key === key ? { key, kind: "ready", fileId: image.fileId, url: image.url, sources: [] } : item)));
 				} catch (error) {
 					setItems((current) => current.filter((item) => item.key !== key));
@@ -198,7 +195,7 @@ export function MerchantRewardImagesField({ tenantId, initialImages, onImagesCha
 			};
 			void run();
 		},
-		[addNotice, mutateAsync, tenantId],
+		[addNotice, mutateAsync, tenantSlug],
 	);
 
 	const addFiles = React.useCallback(

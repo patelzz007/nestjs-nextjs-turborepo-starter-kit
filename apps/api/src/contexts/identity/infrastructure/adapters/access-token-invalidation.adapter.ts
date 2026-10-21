@@ -5,8 +5,8 @@ import type { AccessTokenInvalidationPort, AccessTokenInvalidationReason } from 
 
 /**
  * Authorization's `authz:invalidate` triggers for identity's reasons. Authorization's enum has no
- * value for a 2FA change or an unlock; they are logged as `password_changed`, the closest credential
- * change. The trigger is a log label only (the dropped state is the same), and it is parsed by every
+ * value for a 2FA change, an unlock or a ban; they are logged as the closest change (`password_changed`,
+ * or `logout_all_devices` for a ban, which revokes every session). The trigger is a log label only (the dropped state is the same), and it is parsed by every
  * instance from the Redis message, so a new value would be dropped by instances not yet upgraded.
  */
 const TRIGGER_OF: Readonly<Record<AccessTokenInvalidationReason, UserInvalidationTrigger>> = {
@@ -16,6 +16,8 @@ const TRIGGER_OF: Readonly<Record<AccessTokenInvalidationReason, UserInvalidatio
 	two_factor_rotated: "password_changed",
 	account_unlocked: "password_changed",
 	mfa_recovery_completed: "mfa_recovery_completed",
+	account_banned: "logout_all_devices",
+	account_unbanned: "password_changed",
 	session_revoked: "session_revoked",
 	logout_all_devices: "logout_all_devices",
 	refresh_token_reuse: "refresh_token_reuse",

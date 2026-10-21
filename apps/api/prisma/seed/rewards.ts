@@ -15,6 +15,7 @@ import { seedCheckout, type SeedCheckoutInput } from "./reward-checkout";
 import { linkRewardImages, seedReplacedRewardImage, seedRewardImageFiles, type RewardImageLink, type RewardImageSetSlug } from "./reward-images";
 import { seedRewardLifecycleStates } from "./reward-lifecycle-states";
 import { seedLog } from "./seed-log";
+import { seedAttributionToken } from "./referral-tokens";
 
 /** Fixed seed UUIDs for idempotent re-seeds. */
 export const REWARD_SEED_IDS = Object.freeze({
@@ -726,7 +727,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			referrerUserId: alice.id,
 			refereeUserId: bob.id,
 			rewardId: REWARD_SEED_IDS.klRewardPublished,
-			attributionToken: "seed_ref_token_alice_bob_kl",
+			attributionToken: seedAttributionToken("alice_bob_kl"),
 			status: "PENDING",
 			refereeIp: "203.176.12.10",
 		},
@@ -738,7 +739,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			referrerUserId: carol.id,
 			refereeUserId: user.id,
 			rewardId: REWARD_SEED_IDS.mlkRewardPublished,
-			attributionToken: "seed_ref_token_carol_user_mlk",
+			attributionToken: seedAttributionToken("carol_user_mlk"),
 			status: "CREDITED",
 			creditedAt: daysAgo(2),
 			// The "reward credited" email was delivered when the credit happened.
@@ -871,7 +872,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	await prisma.user.update({
 		where: { id: bob.id },
 		data: {
-			pendingAttributionToken: "seed_ref_token_alice_bob_kl",
+			pendingAttributionToken: seedAttributionToken("alice_bob_kl"),
 			pendingAttributionExpiresAt: daysFromNow(7),
 			phone: "+60198765432",
 			phoneVerifiedAt: now,

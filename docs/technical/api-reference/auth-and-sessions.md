@@ -3,7 +3,7 @@ title: "API reference — Auth, sessions and account security"
 description: "Login, signup, email verification, password reset, two-factor authentication, MFA recovery, sessions, impersonation and support access."
 order: 2
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792454400000
+lastUpdated: 1792540800000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -56,8 +56,8 @@ Response `200 OK` (application/json):
     "remaining": 8
   },
   "meta": {
-    "correlationId": "J4SU3uWOL8y0UzyyKjTdg",
-    "timestamp": 1792520420994
+    "correlationId": "GrEyDBhxw3PeP5ykJXc9m",
+    "timestamp": 1792586025107
   }
 }
 ```
@@ -117,8 +117,8 @@ Response `200 OK` (application/json):
     "message": "Two-factor authentication enabled successfully"
   },
   "meta": {
-    "correlationId": "HU0MCKgAx6hMG8Q1IaPrs",
-    "timestamp": 1792520423332
+    "correlationId": "fnIO-2BD4VzTc3Acatk6g",
+    "timestamp": 1792586027484
   }
 }
 ```
@@ -171,7 +171,7 @@ Content-Type: application/json
 
 {
   "password": "Henry@123",
-  "backupCode": "V2NHKNWGD3XU4U5K"
+  "backupCode": "9B84XD7MPSBJ5DV6"
 }
 ```
 
@@ -190,8 +190,8 @@ Response `200 OK` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "OoMfQz3rc36NQMl-yoWO9",
-    "timestamp": 1792520432022
+    "correlationId": "5R3RYcLNGg99UPrMCr_0x",
+    "timestamp": 1792586042407
   }
 }
 ```
@@ -256,8 +256,8 @@ Response `201 Created` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "A1JfeAtEt2CjHitxcUVAp",
-    "timestamp": 1792520423209
+    "correlationId": "joKQQ8qemCSSaSQEoM9Th",
+    "timestamp": 1792586027357
   }
 }
 ```
@@ -302,7 +302,7 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "backupCode": "NZ7UP9UK995V8H2Z"
+  "backupCode": "36EXY2DS27RKSDK6"
 }
 ```
 
@@ -315,8 +315,8 @@ Response `200 OK` (application/json):
     "valid": true
   },
   "meta": {
-    "correlationId": "Aq5mv1YPm2HYpgLG78rhf",
-    "timestamp": 1792520430430
+    "correlationId": "K0Uomal7SZ-N21I14V7_2",
+    "timestamp": 1792586040830
   }
 }
 ```
@@ -389,12 +389,12 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "01a15a8b-29e6-741f-a717-b550a70cb94f",
-      "userId": "01a15a89-7026-7248-b00e-c6e46d03d186",
+      "id": "01a15e74-4c96-76e9-876d-74aa2acc22b6",
+      "userId": "01a15e72-184b-72a3-b3e3-e13e6381a38d",
       "userEmail": "david.lee@example.com",
       "userFullName": "David Lee",
       "status": "PENDING",
-      "requestedAt": 1792520432102,
+      "requestedAt": 1792586042518,
       "reviewedBy": null,
       "reviewedAt": null,
       "scheduledUnlockAt": null,
@@ -403,15 +403,15 @@ Response `200 OK` (application/json):
     },
     {
       "id": "019b76da-a800-7b7f-8a2d-246a20f7cc91",
-      "userId": "01a15a89-701f-77be-925b-403c7abefb5b",
+      "userId": "01a15e72-183c-7503-bab7-d8a484556fdb",
       "userEmail": "bob.smith@example.com",
       "userFullName": "Bob Smith",
       "status": "COMPLETED",
-      "requestedAt": 1791656520317,
-      "reviewedBy": "01a15a89-6fe5-753f-8ef2-a28d8210e0e0",
-      "reviewedAt": 1791742800317,
-      "scheduledUnlockAt": 1791829200317,
-      "completedAt": 1791829200317,
+      "requestedAt": 1791722108728,
+      "reviewedBy": "01a15e72-17fb-723a-bb91-d4b541411c4e",
+      "reviewedAt": 1791808388728,
+      "scheduledUnlockAt": 1791894788728,
+      "completedAt": 1791894788728,
       "notes": "Lost authenticator device; identity verified by video call against government ID."
     }
   ],
@@ -423,8 +423,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "dC_aeEp9rRp9gNchHdURn",
-    "timestamp": 1792520432198
+    "correlationId": "eSa8FejwWjyQfy0OVV27W",
+    "timestamp": 1792586042628
   }
 }
 ```
@@ -476,7 +476,7 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "requestId": "01a15a8b-29e6-741f-a717-b550a70cb94f",
+  "requestId": "01a15e74-4c96-76e9-876d-74aa2acc22b6",
   "action": "deny",
   "notes": "Identity not confirmed"
 }
@@ -492,8 +492,8 @@ Response `200 OK` (application/json):
     "message": "Your MFA recovery request was denied."
   },
   "meta": {
-    "correlationId": "aSBE9qsd9KxC9bzllw0xZ",
-    "timestamp": 1792520432255
+    "correlationId": "riWT3ptpgX8dGEhEojKUU",
+    "timestamp": 1792586042689
   }
 }
 ```
@@ -524,6 +524,12 @@ SuperAdmin: list all users with roles and lockout status
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data` | object[] | yes |  |
+| `data[].ban` | object \| null | yes | The platform ban on the account (null = not banned) |
+| `data[].ban.bannedAt` | integer | yes |  |
+| `data[].ban.bannedBy` | object \| null | yes |  |
+| `data[].ban.bannedBy.fullName` | string | yes |  |
+| `data[].ban.bannedBy.id` | string (uuid) | yes |  |
+| `data[].ban.reason` | string | yes |  |
 | `data[].createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data[].deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data[].directPermissionIds` | string[] | yes | Permission IDs granted directly to this user (not via roles) |
@@ -587,11 +593,11 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1791713334739,
-      "updatedAt": 1792520397510,
+      "createdAt": 1792088222381,
+      "updatedAt": 1792585985245,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15a89-7005-7762-9f2f-9abce72a4081",
+      "id": "01a15e72-1814-7450-a1e4-9b936ab02184",
       "email": "manager@example.com",
       "fullName": "Manager User",
       "isActive": true,
@@ -602,7 +608,7 @@ Response `200 OK` (application/json):
       "tokenVersion": 0,
       "roles": [
         {
-          "id": "01a15a89-6ad2-74db-81c9-f881b1e6d66c",
+          "id": "01a15e72-12dd-756d-86fd-d5396d5ab9d1",
           "name": "Manager",
           "description": "Admin panel — read/update users and reports (no RBAC or system settings)"
         }
@@ -612,17 +618,18 @@ Response `200 OK` (application/json):
       "lockedUntil": null,
       "directPermissionIds": [],
       "signupReferrer": {
-        "id": "01a15a89-701c-7219-85d9-09163e2d3180",
+        "id": "01a15e72-1834-7579-a59f-d4337ab3d3f0",
         "fullName": "Alice Johnson"
       },
-      "signupReferralStatus": "redeemed"
+      "signupReferralStatus": "redeemed",
+      "ban": null
     },
     {
-      "createdAt": 1790930994738,
-      "updatedAt": 1792520417617,
+      "createdAt": 1791410942380,
+      "updatedAt": 1792586021652,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15a89-6fe5-753f-8ef2-a28d8210e0e0",
+      "id": "01a15e72-17fb-723a-bb91-d4b541411c4e",
       "email": "superadmin@example.com",
       "fullName": "Super Admin",
       "isActive": true,
@@ -633,7 +640,7 @@ Response `200 OK` (application/json):
       "tokenVersion": 0,
       "roles": [
         {
-          "id": "01a15a89-6ace-709d-94a0-98948cf34e1a",
+          "id": "01a15e72-12d7-703d-82c0-41647ae9b000",
           "name": "SuperAdmin",
           "description": "Full system access (platform operator)"
         }
@@ -643,19 +650,20 @@ Response `200 OK` (application/json):
       "lockedUntil": null,
       "directPermissionIds": [],
       "signupReferrer": null,
-      "signupReferralStatus": null
+      "signupReferralStatus": null,
+      "ban": null
     }
   ],
   "meta": {
     "limit": 5,
-    "total": 35,
+    "total": 36,
     "page": 1,
-    "totalPages": 7,
-    "nextCursor": "eyJhdCI6MTc4ODM2NTA0MDAwMCwiaWQiOiIwMWExNWE4OS03MTk0LTc0YmYtYjhlYS00NmE0NGU3MWZiNDIifQ",
+    "totalPages": 8,
+    "nextCursor": "eyJhdCI6MTc4OTQzMDIyMDAwMCwiaWQiOiIwMWExNWU3Mi0xOWRmLTcxYTgtODBmOS05Yzk1ZjY3MjBiN2YifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "S9UYdwiQPESzua6_IhipK",
-    "timestamp": 1792520417699
+    "correlationId": "wNS3aO5Bsa3fdZktJ6Dq_",
+    "timestamp": 1792586021744
   }
 }
 ```
@@ -680,6 +688,12 @@ SuperAdmin: get detailed user info including security state
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `data.ban` | object \| null | yes | The platform ban on the account (null = not banned) |
+| `data.ban.bannedAt` | integer | yes |  |
+| `data.ban.bannedBy` | object \| null | yes |  |
+| `data.ban.bannedBy.fullName` | string | yes |  |
+| `data.ban.bannedBy.id` | string (uuid) | yes |  |
+| `data.ban.reason` | string | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.directPermissionIds` | string[] | yes | Permission IDs granted directly to this user (not via roles) |
@@ -724,7 +738,7 @@ SuperAdmin: get detailed user info including security state
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/auth/admin/users/01a15a89-7032-751b-9ecd-21d831697ced
+GET /api/v1/auth/admin/users/01a15e72-185b-728f-b7bf-32779a30825f
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -735,11 +749,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1767846060000,
-    "updatedAt": 1792520409610,
+    "createdAt": 1767248100000,
+    "updatedAt": 1792585998047,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15a89-7032-751b-9ecd-21d831697ced",
+    "id": "01a15e72-185b-728f-b7bf-32779a30825f",
     "email": "grace.wilson@example.com",
     "fullName": "Grace Wilson",
     "isActive": true,
@@ -750,21 +764,21 @@ Response `200 OK` (application/json):
     "tokenVersion": 0,
     "roles": [
       {
-        "id": "01a15a89-6ad6-72cd-8e42-f9e9bfec3693",
+        "id": "01a15e72-12e1-759c-b594-26a0a071f259",
         "name": "User",
         "description": "Customer app — own profile and own analytics (no admin panel)"
       }
     ],
     "permissions": [
       {
-        "id": "01a15a89-6a9b-736d-96cd-28130ffb8f70",
+        "id": "01a15e72-12a9-72ab-9aab-fa79c3820b69",
         "action": "READ",
         "resource": "GITHUB",
         "description": "View contributions of the configured GitHub repositories",
         "group": "GitHub"
       },
       {
-        "id": "01a15a89-6a9b-736d-96cd-9337db5542a2",
+        "id": "01a15e72-12a9-72ab-9aac-60d0230a2312",
         "action": "READ",
         "resource": "PROFILE",
         "description": "View own profile",
@@ -772,17 +786,117 @@ Response `200 OK` (application/json):
       }
     ],
     "failedLoginAttempts": 5,
-    "lockedUntil": 1792521300317,
+    "lockedUntil": 1792586888728,
     "directPermissionIds": [],
     "signupReferrer": null,
-    "signupReferralStatus": null
+    "signupReferralStatus": null,
+    "ban": null
   },
   "meta": {
-    "correlationId": "r8C_vYEIdnoNq_OJTfdbA",
-    "timestamp": 1792520417814
+    "correlationId": "JPvZ9L34AAq8127awAgsI",
+    "timestamp": 1792586021890
   }
 }
 ```
+
+### POST /api/v1/auth/admin/users/{userId}/ban
+
+SuperAdmin: ban an account — it can no longer sign in, and every session it has is revoked
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **SuperAdmin only.**
+- **Permission** `DELETE:USER`.
+- **Policy** `DELETE:USER` — A platform admin bans an account.
+- Requires a **verified email address**.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `AuthController_banUser` · [source](../../../apps/api/src/contexts/identity/presentation/http/auth.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `userId` | path | string (uuid) | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `reason` | string | yes | Why the account is banned (shown to platform admins only); length 1–500 |
+
+**Response 201 Created** (`application/json`) — Account banned
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.ban` | object \| null | yes |  |
+| `data.ban.bannedAt` | integer | yes |  |
+| `data.ban.bannedBy` | object \| null | yes |  |
+| `data.ban.bannedBy.fullName` | string | yes |  |
+| `data.ban.bannedBy.id` | string (uuid) | yes |  |
+| `data.ban.reason` | string | yes |  |
+| `data.userId` | string (uuid) | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | USER_BAN_SELF or USER_BAN_SUPERADMIN |
+| 404 | — | User not found |
+| 409 | — | USER_ALREADY_BANNED |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/auth/admin/users/{userId}/unban
+
+SuperAdmin: lift an account's ban — it may sign in again
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **SuperAdmin only.**
+- **Permission** `DELETE:USER`.
+- **Policy** `DELETE:USER` — A platform admin lifts an account's ban.
+- Requires a **verified email address**.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `AuthController_unbanUser` · [source](../../../apps/api/src/contexts/identity/presentation/http/auth.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `userId` | path | string (uuid) | yes |  |
+
+**Response 201 Created** (`application/json`) — Ban lifted
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.ban` | object \| null | yes |  |
+| `data.ban.bannedAt` | integer | yes |  |
+| `data.ban.bannedBy` | object \| null | yes |  |
+| `data.ban.bannedBy.fullName` | string | yes |  |
+| `data.ban.bannedBy.id` | string (uuid) | yes |  |
+| `data.ban.reason` | string | yes |  |
+| `data.userId` | string (uuid) | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 404 | — | User not found |
+| 409 | — | USER_NOT_BANNED |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
 
 ### PATCH /api/v1/auth/admin/users/{userId}/unlock
 
@@ -823,7 +937,7 @@ SuperAdmin: unlock a locked user account
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/auth/admin/users/01a15a89-7032-751b-9ecd-21d831697ced/unlock
+PATCH /api/v1/auth/admin/users/01a15e72-185b-728f-b7bf-32779a30825f/unlock
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -838,8 +952,8 @@ Response `200 OK` (application/json):
     "message": "User account has been unlocked successfully."
   },
   "meta": {
-    "correlationId": "GYR-LoaTUkPEuDzb7Frmk",
-    "timestamp": 1792520417840
+    "correlationId": "Kqg3yUmdya_YxHeBpsYbe",
+    "timestamp": 1792586021919
   }
 }
 ```
@@ -903,8 +1017,8 @@ Response `200 OK` (application/json):
     "message": "Password changed successfully"
   },
   "meta": {
-    "correlationId": "NdaPIglfU-ILdKzyCYAJX",
-    "timestamp": 1792520420087
+    "correlationId": "udn4cpSxuVo0Fm-vP07xD",
+    "timestamp": 1792586024181
   }
 }
 ```
@@ -966,8 +1080,8 @@ Response `200 OK` (application/json):
     "message": "If an account with that email exists, a password reset link has been sent."
   },
   "meta": {
-    "correlationId": "WenR4ll4tkd4OSy28FXvW",
-    "timestamp": 1792520418224
+    "correlationId": "mQuileeyAw9wvKoOgrNNu",
+    "timestamp": 1792586022314
   }
 }
 ```
@@ -1123,11 +1237,11 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "user": {
-      "createdAt": 1790930994738,
-      "updatedAt": 1792520397493,
+      "createdAt": 1791410942380,
+      "updatedAt": 1792585985230,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15a89-6fe5-753f-8ef2-a28d8210e0e0",
+      "id": "01a15e72-17fb-723a-bb91-d4b541411c4e",
       "email": "superadmin@example.com",
       "fullName": "Super Admin",
       "isActive": true,
@@ -1138,7 +1252,7 @@ Response `201 Created` (application/json):
       "tokenVersion": 0,
       "roles": [
         {
-          "id": "01a15a89-6ace-709d-94a0-98948cf34e1a",
+          "id": "01a15e72-12d7-703d-82c0-41647ae9b000",
           "name": "SuperAdmin",
           "description": "Full system access (platform operator)"
         }
@@ -1146,8 +1260,8 @@ Response `201 Created` (application/json):
     }
   },
   "meta": {
-    "correlationId": "yAI-w7ykv_51XO37yr-cv",
-    "timestamp": 1792520416891
+    "correlationId": "kYcdxGh1ULtTC6kqCbGaS",
+    "timestamp": 1792586020904
   }
 }
 ```
@@ -1297,11 +1411,11 @@ Response `200 OK` (application/json):
     "enrollmentReason": "email_verification",
     "message": "Verify your email address to continue.",
     "user": {
-      "createdAt": 1764570600000,
-      "updatedAt": 1792520420877,
+      "createdAt": 1765080180000,
+      "updatedAt": 1792586024989,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15a89-7026-7248-b00e-c6e46d03d186",
+      "id": "01a15e72-184b-72a3-b3e3-e13e6381a38d",
       "email": "david.lee@example.com",
       "fullName": "David Lee",
       "isActive": true,
@@ -1312,7 +1426,7 @@ Response `200 OK` (application/json):
       "tokenVersion": 4,
       "roles": [
         {
-          "id": "01a15a89-6ad2-74db-81c9-f881b1e6d66c",
+          "id": "01a15e72-12dd-756d-86fd-d5396d5ab9d1",
           "name": "Manager",
           "description": "Admin panel — read/update users and reports (no RBAC or system settings)"
         },
@@ -1325,8 +1439,8 @@ Response `200 OK` (application/json):
     }
   },
   "meta": {
-    "correlationId": "AxuvHZWlI7x5bu9ACJ341",
-    "timestamp": 1792520420939
+    "correlationId": "zm7fabGL0ypnK0DvaUP-t",
+    "timestamp": 1792586025051
   }
 }
 ```
@@ -1462,7 +1576,7 @@ Content-Type: application/json
 
 {
   "tempToken": "<redacted: one-time secret>",
-  "backupCode": "JSQ689N7QD3V57YM"
+  "backupCode": "ZHH3Z6W72GWW48P9"
 }
 ```
 
@@ -1476,11 +1590,11 @@ Response `200 OK` (application/json):
     "enrollmentReason": "email_verification",
     "message": "Verify your email address to continue.",
     "user": {
-      "createdAt": 1764570600000,
-      "updatedAt": 1792520421384,
+      "createdAt": 1765080180000,
+      "updatedAt": 1792586025508,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15a89-7026-7248-b00e-c6e46d03d186",
+      "id": "01a15e72-184b-72a3-b3e3-e13e6381a38d",
       "email": "david.lee@example.com",
       "fullName": "David Lee",
       "isActive": true,
@@ -1491,7 +1605,7 @@ Response `200 OK` (application/json):
       "tokenVersion": 4,
       "roles": [
         {
-          "id": "01a15a89-6ad2-74db-81c9-f881b1e6d66c",
+          "id": "01a15e72-12dd-756d-86fd-d5396d5ab9d1",
           "name": "Manager",
           "description": "Admin panel — read/update users and reports (no RBAC or system settings)"
         },
@@ -1504,8 +1618,8 @@ Response `200 OK` (application/json):
     }
   },
   "meta": {
-    "correlationId": "m3kSSMgjR4EYbkC9bTeXP",
-    "timestamp": 1792520421760
+    "correlationId": "KkLVSt61XYAwTXZjfpXZH",
+    "timestamp": 1792586025889
   }
 }
 ```
@@ -1562,11 +1676,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1790930994738,
-    "updatedAt": 1792520397493,
+    "createdAt": 1791410942380,
+    "updatedAt": 1792585985230,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15a89-6fe5-753f-8ef2-a28d8210e0e0",
+    "id": "01a15e72-17fb-723a-bb91-d4b541411c4e",
     "email": "superadmin@example.com",
     "fullName": "Super Admin",
     "isActive": true,
@@ -1577,15 +1691,15 @@ Response `200 OK` (application/json):
     "tokenVersion": 0,
     "roles": [
       {
-        "id": "01a15a89-6ace-709d-94a0-98948cf34e1a",
+        "id": "01a15e72-12d7-703d-82c0-41647ae9b000",
         "name": "SuperAdmin",
         "description": "Full system access (platform operator)"
       }
     ]
   },
   "meta": {
-    "correlationId": "e_WwoukKtERfoSQEeDx0i",
-    "timestamp": 1792520417342
+    "correlationId": "SsEvbNOu56Ou7aM4BX7bE",
+    "timestamp": 1792586021354
   }
 }
 ```
@@ -1648,8 +1762,8 @@ Response `200 OK` (application/json):
     "message": "MFA recovery request submitted. An administrator will review it shortly."
   },
   "meta": {
-    "correlationId": "uWg_XLNBjSI_e7ZDEOWVi",
-    "timestamp": 1792520432127
+    "correlationId": "lYr0hp9ObJTCoJ-5VLCjj",
+    "timestamp": 1792586042548
   }
 }
 ```
@@ -1695,8 +1809,8 @@ Response `200 OK` (application/json):
     "message": "Your MFA recovery request is pending administrator review."
   },
   "meta": {
-    "correlationId": "G4XnzFKSgQDr_Ubz1OaLs",
-    "timestamp": 1792520432173
+    "correlationId": "LoROJSFoJ_WeWmvgd0DWN",
+    "timestamp": 1792586042601
   }
 }
 ```
@@ -1755,21 +1869,21 @@ Response `200 OK` (application/json):
   "data": {
     "roles": [
       {
-        "id": "01a15a89-6ace-709d-94a0-98948cf34e1a",
+        "id": "01a15e72-12d7-703d-82c0-41647ae9b000",
         "name": "SuperAdmin",
         "description": "Full system access (platform operator)"
       }
     ],
     "permissions": [
       {
-        "id": "01a15a89-6a9a-75d3-a976-59c5ad38b740",
+        "id": "01a15e72-12a8-738e-b085-c32fec0b00be",
         "action": "CREATE",
         "resource": "USER",
         "description": "Create new users",
         "group": "User Management"
       },
       {
-        "id": "01a15a89-6a9a-75d3-a976-5cd9582d0df2",
+        "id": "01a15e72-12a9-72ab-9aab-241697605b86",
         "action": "READ",
         "resource": "USER",
         "description": "View user details",
@@ -1785,8 +1899,8 @@ Response `200 OK` (application/json):
     "sessionScope": "full"
   },
   "meta": {
-    "correlationId": "EO_UA48QIbOo588FPvaip",
-    "timestamp": 1792520417356
+    "correlationId": "IbroTXuXmPIs4tT0HW6nr",
+    "timestamp": 1792586021373
   }
 }
 ```
@@ -1840,17 +1954,17 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a15a89-6fe5-753f-8ef2-a28d8210e0e0",
+    "id": "01a15e72-17fb-723a-bb91-d4b541411c4e",
     "email": "superadmin@example.com",
     "fullName": "Super Admin",
     "avatar": null,
     "version": 0,
-    "createdAt": 1790930994738,
-    "updatedAt": 1792520397493
+    "createdAt": 1791410942380,
+    "updatedAt": 1792585985230
   },
   "meta": {
-    "correlationId": "0uhZr802k5nzbAOpM9gFW",
-    "timestamp": 1792520417584
+    "correlationId": "a86GOeKg-2dn7-nzg93Lj",
+    "timestamp": 1792586021615
   }
 }
 ```
@@ -1924,17 +2038,17 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a15a89-6fe5-753f-8ef2-a28d8210e0e0",
+    "id": "01a15e72-17fb-723a-bb91-d4b541411c4e",
     "email": "superadmin@example.com",
     "fullName": "Super Admin",
     "avatar": null,
     "version": 1,
-    "createdAt": 1790930994738,
-    "updatedAt": 1792520417617
+    "createdAt": 1791410942380,
+    "updatedAt": 1792586021652
   },
   "meta": {
-    "correlationId": "oH8s9G1qwMOOvnePQgVTO",
-    "timestamp": 1792520417671
+    "correlationId": "pVKQ6473XQfCvaldna8ez",
+    "timestamp": 1792586021712
   }
 }
 ```
@@ -1996,8 +2110,8 @@ Response `200 OK` (application/json):
     "message": "If an account with that email exists, a verification email has been sent."
   },
   "meta": {
-    "correlationId": "zpeG8TL9st_G9V1Zf9Wg9",
-    "timestamp": 1792520417865
+    "correlationId": "UQFUJNEE2FYTYLKl6p8BO",
+    "timestamp": 1792586021955
   }
 }
 ```
@@ -2055,8 +2169,8 @@ Response `200 OK` (application/json):
     "message": "Password has been reset successfully. Please log in with your new password."
   },
   "meta": {
-    "correlationId": "AnNMIAyEs7IKi9WxhAcuJ",
-    "timestamp": 1792520419133
+    "correlationId": "V2ltnl8mULpsnlzKIK9d9",
+    "timestamp": 1792586023220
   }
 }
 ```
@@ -2125,8 +2239,8 @@ Response `201 Created` (application/json):
     "message": "If this email is available, check your inbox for verification instructions."
   },
   "meta": {
-    "correlationId": "OLXeGBe5r3AMv83L6d3KA",
-    "timestamp": 1792520420433
+    "correlationId": "1ohA-11Q6548oG_VVqe21",
+    "timestamp": 1792586024538
   }
 }
 ```
@@ -2253,8 +2367,8 @@ Response `200 OK` (application/json):
     "valid": true
   },
   "meta": {
-    "correlationId": "1VjaJ4UquRDiBIMP28c3b",
-    "timestamp": 1792520418518
+    "correlationId": "aVxYHfRzXqxQ_384z4Edj",
+    "timestamp": 1792586022608
   }
 }
 ```
@@ -2311,8 +2425,8 @@ Response `201 Created` (application/json):
     "alreadyVerified": false
   },
   "meta": {
-    "correlationId": "nUqrXtBdDiyYYh2075jsP",
-    "timestamp": 1792520417901
+    "correlationId": "CrsXQFIyuiXaL3KcCpdDL",
+    "timestamp": 1792586021995
   }
 }
 ```
@@ -2488,8 +2602,8 @@ Response `201 Created` (application/json):
     "message": "Logged out successfully"
   },
   "meta": {
-    "correlationId": "VSmFD9oCJYvkjgEoKPRFm",
-    "timestamp": 1792520432701
+    "correlationId": "ndMPO5WyvPYTNHT1DEhA4",
+    "timestamp": 1792586043145
   }
 }
 ```
@@ -2540,8 +2654,8 @@ Response `201 Created` (application/json):
     "message": "Logged out from all devices"
   },
   "meta": {
-    "correlationId": "TAiEDPou6BZoEOSazse-n",
-    "timestamp": 1792520433167
+    "correlationId": "zXy9NBAsvS7uhHC9KaCh3",
+    "timestamp": 1792586043602
   }
 }
 ```
@@ -2597,8 +2711,8 @@ Response `200 OK` (application/json):
     "message": "Tokens refreshed successfully"
   },
   "meta": {
-    "correlationId": "iE0M8tyVtEcUd-hgST6Wy",
-    "timestamp": 1792520417476
+    "correlationId": "Mp1d9Ac00sImCZjFRuV8D",
+    "timestamp": 1792586021505
   }
 }
 ```
@@ -2681,7 +2795,7 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "01a15a8a-f00a-7e40-8d9e-33c639685433",
+      "id": "01a15e73-f9b0-7855-bbe3-b81b96586a28",
       "label": "Node.js",
       "isCurrent": true,
       "clientType": "admin",
@@ -2697,12 +2811,12 @@ Response `200 OK` (application/json):
       "ipAddress": "203.0.113.10",
       "lastIpAddress": "203.0.113.10",
       "location": null,
-      "createdAt": 1792520417270,
-      "lastActiveAt": 1792520417270,
-      "expiresAt": 1795112417270
+      "createdAt": 1792586021279,
+      "lastActiveAt": 1792586021279,
+      "expiresAt": 1795178021279
     },
     {
-      "id": "01a15a8a-ee3c-7816-bff1-a1127660462e",
+      "id": "01a15e73-f800-7776-9ef0-0030a090b1c3",
       "label": "Node.js",
       "isCurrent": false,
       "clientType": "admin",
@@ -2718,9 +2832,9 @@ Response `200 OK` (application/json):
       "ipAddress": "203.0.113.10",
       "lastIpAddress": "203.0.113.10",
       "location": null,
-      "createdAt": 1792520416802,
-      "lastActiveAt": 1792520416802,
-      "expiresAt": 1795112416802
+      "createdAt": 1792586020839,
+      "lastActiveAt": 1792586020839,
+      "expiresAt": 1795178020839
     }
   ],
   "meta": {
@@ -2731,8 +2845,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "qSc4A9d-cL2V7aCNuSy31",
-    "timestamp": 1792520417427
+    "correlationId": "-02v_VNkSsnUHOAKTzbd9",
+    "timestamp": 1792586021439
   }
 }
 ```
@@ -2819,15 +2933,15 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "userId": "01a15a89-6fe5-753f-8ef2-a28d8210e0e0",
+    "userId": "01a15e72-17fb-723a-bb91-d4b541411c4e",
     "email": "superadmin@example.com",
     "fullName": "Super Admin",
-    "expiresAt": 1792529417000,
-    "checkedAt": 1792520417386
+    "expiresAt": 1792595021000,
+    "checkedAt": 1792586021406
   },
   "meta": {
-    "correlationId": "AKXznEUmbEO5tVgjtUjQ2",
-    "timestamp": 1792520417387
+    "correlationId": "e_9iZ0uCLQrAkZDCGpqbO",
+    "timestamp": 1792586021406
   }
 }
 ```
@@ -2894,7 +3008,7 @@ SuperAdmin: impersonate another user
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/auth/impersonate/01a15a89-700f-700b-8610-c7a5ad5addc2
+POST /api/v1/auth/impersonate/01a15e72-1822-73ff-bba9-dd18bcdf87c3
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -2908,13 +3022,13 @@ Response `201 Created` (application/json):
   "data": {
     "message": "Now impersonating user@example.com",
     "impersonating": true,
-    "originalUserId": "01a15a89-6fe5-753f-8ef2-a28d8210e0e0",
+    "originalUserId": "01a15e72-17fb-723a-bb91-d4b541411c4e",
     "user": {
-      "createdAt": 1759126680000,
-      "updatedAt": 1792520400097,
+      "createdAt": 1758940080000,
+      "updatedAt": 1792585988423,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15a89-700f-700b-8610-c7a5ad5addc2",
+      "id": "01a15e72-1822-73ff-bba9-dd18bcdf87c3",
       "email": "user@example.com",
       "fullName": "Regular User",
       "isActive": true,
@@ -2925,7 +3039,7 @@ Response `201 Created` (application/json):
       "tokenVersion": 0,
       "roles": [
         {
-          "id": "01a15a89-6ad6-72cd-8e42-f9e9bfec3693",
+          "id": "01a15e72-12e1-759c-b594-26a0a071f259",
           "name": "User",
           "description": "Customer app — own profile and own analytics (no admin panel)"
         }
@@ -2933,8 +3047,8 @@ Response `201 Created` (application/json):
     }
   },
   "meta": {
-    "correlationId": "xzd4tCyPOu7LZm4JWpoQf",
-    "timestamp": 1792520490381
+    "correlationId": "IPAuXRMjFAJb80t17_hmy",
+    "timestamp": 1792586100561
   }
 }
 ```
@@ -2982,13 +3096,77 @@ Response `201 Created` (application/json):
     "message": "Impersonation ended. Original session restored."
   },
   "meta": {
-    "correlationId": "sUKDg_eGsVPf4tiPc_mG8",
-    "timestamp": 1792520490560
+    "correlationId": "bQpnXaXhYgOoXmNvoHtju",
+    "timestamp": 1792586100762
   }
 }
 ```
 
 ## Support Access
+
+### GET /api/v1/support-access
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **SuperAdmin only.**
+- **Permission** `READ:USER`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `SupportAccessController_list` · [source](../../../apps/api/src/contexts/authorization/presentation/http/support-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `page` | query | integer | no | Page number (1-indexed) for offset pagination |
+| `limit` | query | integer | no | Page size (default 20, max 100) |
+| `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
+| `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt. Default: -createdAt |
+| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: status, tenantId |
+
+**Response 200 OK** (`application/json`) — Support access grants, newest first
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data` | object[] | yes |  |
+| `data[].approvedBy` | object \| null | yes |  |
+| `data[].approvedBy.email` | string | yes |  |
+| `data[].approvedBy.fullName` | string | yes |  |
+| `data[].approvedBy.id` | string (uuid) | yes |  |
+| `data[].createdAt` | integer | yes |  |
+| `data[].expiresAt` | integer | yes |  |
+| `data[].id` | string (uuid) | yes |  |
+| `data[].mode` | "READ_ONLY" \| "WRITE_ELEVATED" | yes |  |
+| `data[].reason` | string | yes |  |
+| `data[].revokedAt` | integer \| null | yes |  |
+| `data[].status` | "PENDING_APPROVAL" \| "PENDING_TENANT_APPROVAL" \| "ACTIVE" \| "EXPIRED" \| "REVOKED" \| "DENIED" | yes |  |
+| `data[].supportUser` | object \| null | yes |  |
+| `data[].supportUser.email` | string | yes |  |
+| `data[].supportUser.fullName` | string | yes |  |
+| `data[].supportUser.id` | string (uuid) | yes |  |
+| `data[].tenant` | object | yes |  |
+| `data[].tenant.displayName` | string | yes |  |
+| `data[].tenant.id` | string (uuid) | yes |  |
+| `data[].tenant.slug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
+| `data[].tenantId` | string (uuid) | yes |  |
+| `data[].ticketRef` | string \| null | yes |  |
+| `meta.hasNext` | boolean | yes | Whether a next page exists |
+| `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
+| `meta.limit` | integer | yes | Items per page; range 1–100 |
+| `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
+| `meta.page` | integer | yes | Current page (1-indexed); min 1 |
+| `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
 
 ### POST /api/v1/support-access/{grantId}/approve
 
@@ -3023,7 +3201,7 @@ Response `201 Created` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/support-access/01a15a8b-ab35-75d3-baa2-2e4bbceb25ad/approve
+POST /api/v1/support-access/01a15e74-d56b-7860-94d8-9ead1e7cd11c/approve
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -3038,8 +3216,8 @@ Response `201 Created` (application/json):
     "message": "Support access approved"
   },
   "meta": {
-    "correlationId": "f_F5te-6U0Zu0vbbGrhQV",
-    "timestamp": 1792520465307
+    "correlationId": "zqIdwuPLeNL5c3ZP2u_bD",
+    "timestamp": 1792586077649
   }
 }
 ```
@@ -3079,7 +3257,7 @@ Response `201 Created` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/support-access/01a15a8b-ab35-75d3-baa2-2e4bbceb25ad/revoke
+POST /api/v1/support-access/01a15e74-d56b-7860-94d8-9ead1e7cd11c/revoke
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -3094,8 +3272,8 @@ Response `201 Created` (application/json):
     "message": "Support access revoked"
   },
   "meta": {
-    "correlationId": "FTB0Bztqg0eNhyAgMNjO5",
-    "timestamp": 1792520465381
+    "correlationId": "9AFhwIE62GTPk8wt_zJno",
+    "timestamp": 1792586077742
   }
 }
 ```
@@ -3165,16 +3343,68 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a15a8b-ab35-75d3-baa2-2e4bbceb25ad",
+    "id": "01a15e74-d56b-7860-94d8-9ead1e7cd11c",
     "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "mode": "READ_ONLY",
     "status": "PENDING_TENANT_APPROVAL",
-    "expiresAt": 1792524065206,
-    "createdAt": 1792520465195
+    "expiresAt": 1792589677547,
+    "createdAt": 1792586077538
   },
   "meta": {
-    "correlationId": "hko5pKCSSUtgaLRgrBaZm",
-    "timestamp": 1792520465218
+    "correlationId": "gYbb8Z4xg9vGGAloY-L-B",
+    "timestamp": 1792586077560
   }
 }
 ```
+
+### GET /api/v1/tenants/{tenantSlug}/support-access
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantSupportAccessController_list` · [source](../../../apps/api/src/contexts/authorization/presentation/http/support-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — The tenant's support access grants, newest first
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data` | object[] | yes |  |
+| `data[].approvedBy` | object \| null | yes |  |
+| `data[].approvedBy.email` | string | yes |  |
+| `data[].approvedBy.fullName` | string | yes |  |
+| `data[].approvedBy.id` | string (uuid) | yes |  |
+| `data[].createdAt` | integer | yes |  |
+| `data[].expiresAt` | integer | yes |  |
+| `data[].id` | string (uuid) | yes |  |
+| `data[].mode` | "READ_ONLY" \| "WRITE_ELEVATED" | yes |  |
+| `data[].reason` | string | yes |  |
+| `data[].revokedAt` | integer \| null | yes |  |
+| `data[].status` | "PENDING_APPROVAL" \| "PENDING_TENANT_APPROVAL" \| "ACTIVE" \| "EXPIRED" \| "REVOKED" \| "DENIED" | yes |  |
+| `data[].supportUser` | object \| null | yes |  |
+| `data[].supportUser.email` | string | yes |  |
+| `data[].supportUser.fullName` | string | yes |  |
+| `data[].supportUser.id` | string (uuid) | yes |  |
+| `data[].tenant` | object | yes |  |
+| `data[].tenant.displayName` | string | yes |  |
+| `data[].tenant.id` | string (uuid) | yes |  |
+| `data[].tenant.slug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
+| `data[].tenantId` | string (uuid) | yes |  |
+| `data[].ticketRef` | string \| null | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 404 | — | No such tenant, or the caller is not its active owner |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.

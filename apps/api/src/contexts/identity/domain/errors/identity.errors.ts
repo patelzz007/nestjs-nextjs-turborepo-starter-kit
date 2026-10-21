@@ -38,6 +38,10 @@ export const IDENTITY_ERROR_CODES = {
 	corruptState: "CORRUPT_AGGREGATE_STATE",
 	conflict: "CONFLICT",
 	emailTaken: "EMAIL_TAKEN",
+	banSelf: "USER_BAN_SELF",
+	banSuperAdmin: "USER_BAN_SUPERADMIN",
+	alreadyBanned: "USER_ALREADY_BANNED",
+	notBanned: "USER_NOT_BANNED",
 } satisfies Readonly<Record<string, DomainErrorCode>>;
 
 /** The client-safe text of the password-history refusal (also asserted by the seed and tests). */
@@ -141,6 +145,42 @@ export class AccountNotFoundError extends DomainError {
 
 	public constructor() {
 		super("User not found");
+	}
+}
+
+/** An admin tried to ban their own account. */
+export class CannotBanSelfError extends DomainError {
+	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.banSelf;
+
+	public constructor() {
+		super("You cannot ban your own account");
+	}
+}
+
+/** A platform operator's account (`isSuperAdmin`) cannot be banned through the API. */
+export class CannotBanSuperAdminError extends DomainError {
+	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.banSuperAdmin;
+
+	public constructor() {
+		super("A SuperAdmin account cannot be banned");
+	}
+}
+
+/** The account is already banned. */
+export class AccountAlreadyBannedError extends DomainError {
+	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.alreadyBanned;
+
+	public constructor() {
+		super("This account is already banned");
+	}
+}
+
+/** Unban of an account that is not banned. */
+export class AccountNotBannedError extends DomainError {
+	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.notBanned;
+
+	public constructor() {
+		super("This account is not banned");
 	}
 }
 
@@ -621,12 +661,3 @@ export class SuperAdminRoleMissingError extends DomainError {
 }
 
 // ── Integrity ───────────────────────────────────────────────────────────────
-
-/** Persisted identity data violates an aggregate invariant (rehydration refused, §5.7). */
-export class CorruptIdentityStateError extends DomainError {
-	public readonly code: DomainErrorCode = IDENTITY_ERROR_CODES.corruptState;
-
-	public constructor(aggregate: string, reason: string) {
-		super(`Corrupt ${aggregate} state: ${reason}`);
-	}
-}

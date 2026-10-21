@@ -44,8 +44,8 @@ export const PLATFORM_DISPLAY_REGION: DisplayRegion = {
 	timeZone: "Asia/Kuala_Lumpur",
 };
 
-export const MerchantOrgStatusSchema = z.enum(["ONBOARDING", "ACTIVE", "SUSPENDED"]);
-export type MerchantOrgStatus = z.output<typeof MerchantOrgStatusSchema>;
+export const MerchantTenantStatusSchema = z.enum(["ONBOARDING", "ACTIVE", "SUSPENDED", "BANNED"]);
+export type MerchantTenantStatus = z.output<typeof MerchantTenantStatusSchema>;
 
 export const KybStatusSchema = z.enum(["PENDING", "APPROVED", "REJECTED", "ACTION_REQUIRED"]);
 export type KybStatus = z.output<typeof KybStatusSchema>;

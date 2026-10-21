@@ -1,7 +1,8 @@
 import { SupportAccessGrantModeSchema, SupportAccessGrantStatusSchema, type EpochMs } from "@workspace/shared";
 import { z } from "zod";
 
-import { CorruptAuthorizationStateError, SupportAccessGrantNotPendingError, SupportAccessGrantNotRevocableError } from "../errors/authorization.errors";
+import { SupportAccessGrantNotPendingError, SupportAccessGrantNotRevocableError } from "../errors/authorization.errors";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** Milliseconds per minute: converts the requested grant duration to an epoch-ms expiry. */
 const MS_PER_MINUTE = 60_000;
@@ -48,7 +49,8 @@ export interface NewSupportAccessGrant {
  * Just-in-time support access to one tenant.
  *
  * A SuperAdmin requests a grant (PENDING_TENANT_APPROVAL); an active owner of the grant's tenant
- * approves it (ACTIVE); a SuperAdmin revokes it (REVOKED). Every transition is compared-and-set on the
+ * approves it (ACTIVE); a SuperAdmin revokes it (REVOKED); the expiry job ends it once its time runs
+ * out (EXPIRED). Every transition is compared-and-set on the
  * status the grant was loaded with, so a revoked or expired grant can never be revived.
  */
 export class SupportAccessGrantAggregate {
@@ -77,7 +79,7 @@ export class SupportAccessGrantAggregate {
 	public static rehydrate(state: SupportAccessGrantState): SupportAccessGrantAggregate {
 		const parsed = SupportAccessGrantStateSchema.safeParse(state);
 		if (!parsed.success) {
-			throw new CorruptAuthorizationStateError("SupportAccessGrant", state.id);
+			throw new CorruptAggregateStateError("SupportAccessGrant", state.id);
 		}
 		return new SupportAccessGrantAggregate(parsed.data, parsed.data.status);
 	}
@@ -109,6 +111,19 @@ export class SupportAccessGrantAggregate {
 			throw new SupportAccessGrantNotPendingError();
 		}
 		this.state = { ...this.state, status: "ACTIVE", tenantApprovedById: approverUserId };
+	}
+
+	/**
+	 * The expiry job marks a grant whose time ran out EXPIRED. Enforcement never waits for it (a grant
+	 * past `expiresAt` already verifies as nothing); it makes the end durable. Returns `false` (no
+	 * change) for a terminal grant or one that has not expired yet.
+	 */
+	public expire(now: EpochMs): boolean {
+		if (!REVOCABLE_STATUSES.has(this.state.status) || this.state.expiresAt > now) {
+			return false;
+		}
+		this.state = { ...this.state, status: "EXPIRED" };
+		return true;
 	}
 
 	/** @throws SupportAccessGrantNotRevocableError for a terminal grant (never revived, never re-revoked). */

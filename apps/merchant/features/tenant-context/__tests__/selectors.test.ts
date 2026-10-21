@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { MemberLocationAccess } from "@/contexts/tenancy/lib/org/location-access";
+import type { MemberLocationAccess } from "@/contexts/tenancy/lib/tenant/location-access";
 import { locationFixture, STORE_A_LOCATION, STORE_B_LOCATION } from "@/test/tenant-context";
 import { STORE_A, STORE_B } from "@/test/terminals";
 import type { LocationResponse } from "@workspace/shared";
@@ -29,7 +29,7 @@ describe("resolveEffectiveLocationId", () => {
 		expect(resolveEffectiveLocationId(REMOVED_STORE_ID, tenantWide(TWO_STORES))).toBeNull();
 	});
 
-	it("shows all stores when nothing was chosen and the member may see org-wide rollups", () => {
+	it("shows all stores when nothing was chosen and the member may see tenant-wide rollups", () => {
 		expect(resolveEffectiveLocationId(null, tenantWide(TWO_STORES))).toBeNull();
 	});
 

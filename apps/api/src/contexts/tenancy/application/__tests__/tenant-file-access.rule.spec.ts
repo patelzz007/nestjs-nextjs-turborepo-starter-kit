@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CreateFileUploadUrlInput, FileCategory, MerchantCapability, MembershipRole } from "@workspace/shared";
+import type { FileUploadRequest, FileCategory, MerchantCapability, MembershipRole } from "@workspace/shared";
 
 import { AuthorizationError } from "../../../../platform/application/errors/app-error";
 import type { FileAccessSubject, FileActor } from "../../../files/public-api";
@@ -8,7 +8,7 @@ import { KYB_EVIDENCE_CAPABILITIES, STORE_BRANDING_CAPABILITIES } from "../servi
 import { TenantFileAccessRule } from "../services/tenant-file-access.rule";
 
 const ACTOR: FileActor = { userId: "user-1", isSuperAdmin: false };
-const BASE: Pick<CreateFileUploadUrlInput, "fileName" | "mimeType" | "sizeBytes" | "checksumSha256"> = {
+const BASE: Pick<FileUploadRequest, "fileName" | "mimeType" | "sizeBytes" | "checksumSha256"> = {
 	fileName: "f.png",
 	mimeType: "image/png",
 	sizeBytes: 10,

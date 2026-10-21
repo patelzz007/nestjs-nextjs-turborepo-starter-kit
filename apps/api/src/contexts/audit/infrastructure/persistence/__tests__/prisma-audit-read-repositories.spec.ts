@@ -37,7 +37,6 @@ const REQUEST_ROW: AuditLogSummaryRow = {
 	apiKeyId: null,
 	terminalId: null,
 	tenantId: TENANT_ID,
-	storeId: null,
 	locationId: null,
 	ipAddress: "203.0.113.24",
 	userAgent: "vitest-agent",

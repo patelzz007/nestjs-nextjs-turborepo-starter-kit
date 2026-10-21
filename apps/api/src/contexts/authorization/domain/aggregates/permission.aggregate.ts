@@ -1,8 +1,9 @@
 import { JsonValueSchema, PermissionActionSchema, PermissionResourceSchema, PermissionScopeSchema, type EpochMs } from "@workspace/shared";
 import { z } from "zod";
 
-import { CorruptAuthorizationStateError, DeletedPermissionNotFoundError, SystemPermissionImmutableError } from "../errors/authorization.errors";
+import { DeletedPermissionNotFoundError, SystemPermissionImmutableError } from "../errors/authorization.errors";
 import { permissionKeyOf } from "../rbac-catalog";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** `Permission.group` column width. */
 export const PERMISSION_GROUP_MAX_LENGTH = 100;
@@ -76,7 +77,7 @@ export class PermissionAggregate {
 	public static rehydrate(state: PermissionState): PermissionAggregate {
 		const parsed = PermissionStateSchema.safeParse(state);
 		if (!parsed.success) {
-			throw new CorruptAuthorizationStateError("Permission", state.id);
+			throw new CorruptAggregateStateError("Permission", state.id);
 		}
 		return new PermissionAggregate(parsed.data);
 	}

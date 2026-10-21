@@ -6,7 +6,6 @@ import { SupportAccessGrantAggregate } from "../aggregates/support-access-grant.
 import { UserAuthorizationAggregate, type UserAuthorizationState } from "../aggregates/user-authorization.aggregate";
 import {
 	AllowDenyConflictError,
-	CorruptAuthorizationStateError,
 	PermissionOverrideNotFoundError,
 	PolicyDraftNotPublishableError,
 	PolicyImpersonationForbiddenError,
@@ -22,6 +21,7 @@ import {
 } from "../errors/authorization.errors";
 import { PolicyPublished } from "../events/policy-published.event";
 import { MAX_ROLES_PER_USER } from "../rbac-catalog";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 const NOW: EpochMs = epochMs(1_800_000_000_000);
 const MINUTE_MS = 60_000;
@@ -118,7 +118,7 @@ describe("UserAuthorizationAggregate direct permissions", () => {
 	});
 
 	it("refuses a corrupt stored row", () => {
-		expect(() => userAuthorization({ userId: "" })).toThrow(CorruptAuthorizationStateError);
+		expect(() => userAuthorization({ userId: "" })).toThrow(CorruptAggregateStateError);
 	});
 });
 

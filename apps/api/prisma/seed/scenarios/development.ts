@@ -6,6 +6,7 @@ import { prisma } from "../client";
 import { EXTRA_SEED_USER_EMAILS, generateAdditionalSeedData } from "../extra-users";
 import { useSeedRandom } from "../helpers";
 import { seedAnalyticsHistory } from "../analytics-history";
+import { seedCustomerBans } from "../customer-bans";
 import { alignCustomerAccountAges } from "../customer-account-age";
 import { SeededRandom } from "../prng";
 import type { SeedRunOptions } from "../seed-options";
@@ -29,7 +30,7 @@ import { seedReferenceData } from "../reference-data";
 import { requireRow } from "../require-row";
 import { cleanupRewardSeedData, printRewardSeedCredentials, REWARD_SEED_IDS, seedRewards } from "../rewards";
 import { seedSamplePlatform } from "../sample-platform";
-import { seedStores } from "../stores";
+import { seedLocationRoles } from "../location-roles";
 import { createPasswordResetTokens, createRefreshTokens } from "../tokens";
 import { seedRbacDemo } from "../rbac-demo";
 import { seedSignupReferralCodes, seedSignupReferralDemo } from "../signup-referrals";
@@ -171,6 +172,9 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 		createdByUserId: REWARD_SEED_IDS.mlkOwnerUser,
 	});
 	seedLog(`✅ Analytics history: ${String(history.rewards)} campaign rewards, ${String(history.claims)} claims, ${String(history.sales)} paid bills`);
+	seedLog("Seeding merchant customer bans (one active, one lifted)...");
+	const customerBans = await seedCustomerBans(Date.now());
+	seedLog(`✅ ${String(customerBans)} customer bans`);
 	const alignedAccounts = await alignCustomerAccountAges(
 		options.seed,
 		allUsers.map((user) => user.id),
@@ -179,7 +183,7 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	seedLog("Seeding tenant review + lifecycle states (reviewed requests, rejected store, deletion flow, deleted user)...");
 	const reviewStates = await seedTenantReviewStates(adminUser);
 	seedLog(
-		`✅ ${String(reviewStates.reviewedAccessRequests)} reviewed access requests, ${String(reviewStates.rejectedLocationRequests)} rejected store request, ${String(reviewStates.lifecycleTenants)} tenants in the deletion flow, ${String(reviewStates.deletedUsers)} soft-deleted user`,
+		`✅ ${String(reviewStates.reviewedAccessRequests)} reviewed access requests, ${String(reviewStates.rejectedLocationRequests)} rejected store request, ${String(reviewStates.lifecycleTenants)} tenants in a lifecycle state (deletion, suspension, ban), ${String(reviewStates.deletedUsers)} soft-deleted user, ${String(reviewStates.bannedUsers)} banned user`,
 	);
 	seedLog("Publishing a four-eyes tenant policy revision (supersedes the default policy)...");
 	const revisionPublished = await seedTenantPolicyRevision(TENANT_SEED_IDS.mlkTenant, adminUser, superAdminUser);
@@ -187,9 +191,9 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	seedLog("Seeding authorization kernel decision audit rows...");
 	const kernelDecisions = await seedKernelDecisionAudits();
 	seedLog(`✅ ${String(kernelDecisions)} kernel decision audit rows`);
-	seedLog("Seeding stores and store memberships...");
-	const storeSummary = await seedStores(roles);
-	seedLog(`✅ Stores: ${String(storeSummary.stores)} stores, ${String(storeSummary.memberships)} store memberships`);
+	seedLog("Seeding location roles...");
+	const locationRoles = await seedLocationRoles(roles);
+	seedLog(`✅ Location roles: ${String(locationRoles.scopesWithRole)} location scopes with a role, ${String(locationRoles.closedLocations)} closed location`);
 
 	seedLog("Seeding file lifecycle demo data (KYB evidence, product image, deleted uploads)...");
 	const fileSummary = await seedFileLifecycle();

@@ -54,6 +54,7 @@ export class ListUsersForAdminHandler implements IQueryHandler<ListUsersForAdmin
 					directPermissionIds: [],
 					signupReferrer: referral?.referrer ?? null,
 					signupReferralStatus: referral?.status ?? null,
+					ban: account.ban,
 				};
 			}),
 		};

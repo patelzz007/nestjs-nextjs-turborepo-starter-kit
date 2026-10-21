@@ -15,6 +15,12 @@
 //    (TypeScript source), like the Next apps and `tsc` do, so no stale `dist/`
 //    is ever bundled and edits to the shared packages reload live.
 //
+// 3. `inlineRequires` (rules/19, T44): a module is evaluated when it is first
+//    used instead of when the file importing it loads, so cold start only runs
+//    the code the first screen needs. Module side effects therefore must not be
+//    relied on for ordering: every app module is side-effect free on import
+//    (state lives in providers and hooks, set up from `app/_layout.tsx`).
+//
 // `withUniwindConfig` is the OUTERMOST wrapper (Uniwind requirement, ADR 032):
 // it wraps our resolver and installs its own CSS transformer.
 
@@ -64,6 +70,10 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 	}
 	return context.resolveRequest(context, moduleName, platform);
 };
+
+config.transformer.getTransformOptions = async () => ({
+	transform: { experimentalImportSupport: false, inlineRequires: true },
+});
 
 module.exports = withUniwindConfig(config, {
 	cssEntryFile: "./global.css",

@@ -51,7 +51,7 @@ export enum Permission {
 if (hasPermission(user, Permission.REWARD_PUBLISH)) { ... }
 ```
 
-Prefer stable permission identifiers over scattered literal strings — define them once (e.g. `packages/contracts/src/permissions.ts`) and reference that everywhere: controllers, guards, and the frontend's UI-hiding logic all read from the same source, so a typo becomes a compile error instead of a silent authorization bypass.
+Prefer stable permission identifiers over scattered literal strings — define them once (e.g. `packages/shared/src/authorization/permission.ts`) and reference that everywhere: controllers, guards, and the frontend's UI-hiding logic all read from the same source, so a typo becomes a compile error instead of a silent authorization bypass.
 
 ## Per-endpoint permission mapping — mandatory for every new endpoint
 

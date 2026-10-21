@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -27,7 +27,11 @@ const REWARD_ID = "00000000-0000-4000-8000-000000000001";
 const DAY_MS = 86_400_000;
 const SECOND_IMAGE_URL = "https://cdn.example.com/rewards/free-coffee/counter.webp";
 
-const { rewardUseQuery, legalStatusUseQuery, rewardListUseQuery } = vi.hoisted(() => ({
+const { rewardUseQuery, legalStatusUseQuery, rewardListUseQuery, searchParamsHolder, recordAttribution, createLink, routerReplace } = vi.hoisted(() => ({
+	searchParamsHolder: { current: new URLSearchParams() },
+	recordAttribution: vi.fn<(input: { readonly attributionToken: string }) => void>(),
+	createLink: vi.fn<(input: { readonly rewardId: string }) => void>(),
+	routerReplace: vi.fn<(href: string) => void>(),
 	rewardUseQuery: vi.fn<() => { readonly data: { readonly data: RewardResponse } | undefined; readonly isLoading: boolean; readonly refetch: () => Promise<void> }>(),
 	rewardListUseQuery: vi.fn<(query: object) => { readonly data: { readonly data: readonly RewardResponse[] } | undefined }>(),
 	legalStatusUseQuery: vi.fn<() => { readonly data: { readonly data: CheckoutStub } | undefined; readonly refetch: () => Promise<void> }>(),
@@ -43,19 +47,28 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 			readonly rewards: { readonly detail: { readonly useQuery: typeof rewardUseQuery }; readonly list: { readonly useQuery: typeof rewardListUseQuery } };
 			readonly legal: { readonly status: { readonly useQuery: typeof legalStatusUseQuery }; readonly accept: { readonly useMutation: () => MutationStub } };
 			readonly claims: { readonly otp: { readonly useMutation: () => MutationStub }; readonly create: { readonly useMutation: () => MutationStub } };
+			readonly referrals: {
+				readonly recordAttribution: { readonly useMutation: () => { readonly mutate: typeof recordAttribution } };
+				readonly createLink: { readonly useMutation: () => { readonly mutate: typeof createLink; readonly isPending: boolean } };
+			};
 		};
 	} => ({
 		api: {
 			rewards: { detail: { useQuery: rewardUseQuery }, list: { useQuery: rewardListUseQuery } },
 			legal: { status: { useQuery: legalStatusUseQuery }, accept: { useMutation: mutationStub } },
 			claims: { otp: { useMutation: mutationStub }, create: { useMutation: mutationStub } },
+			referrals: {
+				recordAttribution: { useMutation: (): { readonly mutate: typeof recordAttribution } => ({ mutate: recordAttribution }) },
+				createLink: { useMutation: (): { readonly mutate: typeof createLink; readonly isPending: boolean } => ({ mutate: createLink, isPending: false }) },
+			},
 		},
 	}),
 }));
 
 vi.mock("next/navigation", () => ({
 	usePathname: (): string => `/rewards/${REWARD_ID}`,
-	useRouter: (): { readonly push: () => void } => ({ push: (): void => undefined }),
+	useRouter: (): { readonly push: () => void; readonly replace: typeof routerReplace } => ({ push: (): void => undefined, replace: routerReplace }),
+	useSearchParams: (): URLSearchParams => searchParamsHolder.current,
 }));
 
 function buildReward(overrides: RewardFixtureOverrides = {}): RewardResponse {
@@ -78,7 +91,13 @@ function renderView(session: WebSessionState): void {
 	);
 }
 
+/** A token the API could have issued: 43 base64url characters. */
+const REFERRAL_TOKEN = "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_abcde";
+
 beforeEach(() => {
+	searchParamsHolder.current = new URLSearchParams();
+	recordAttribution.mockReset();
+	createLink.mockReset();
 	rewardUseQuery.mockReset();
 	legalStatusUseQuery.mockReset();
 	rewardListUseQuery.mockReset();
@@ -337,5 +356,46 @@ describe("RewardDetailView more from the merchant", () => {
 		renderView(GUEST_SESSION_STATE);
 
 		expect(screen.queryByRole("heading", { name: /^More from/u })).toBeNull();
+	});
+});
+
+describe("RewardDetailView referral links", () => {
+	it("keeps a friend's link through the sign-in prompt for a guest, without recording it yet", () => {
+		searchParamsHolder.current = new URLSearchParams({ ref: REFERRAL_TOKEN });
+		renderView(GUEST_SESSION_STATE);
+
+		expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe(
+			`/auth/login?redirect=${encodeURIComponent(`/rewards/${REWARD_ID}?ref=${REFERRAL_TOKEN}`)}`,
+		);
+		expect(recordAttribution).not.toHaveBeenCalled();
+		expect(screen.queryByRole("button", { name: "Share with a friend" })).toBeNull();
+	});
+
+	it("records a friend's link once for a signed-in visitor", () => {
+		searchParamsHolder.current = new URLSearchParams({ ref: REFERRAL_TOKEN });
+		renderView(signedInSession());
+
+		expect(recordAttribution).toHaveBeenCalledTimes(1);
+		expect(recordAttribution).toHaveBeenCalledWith({ attributionToken: REFERRAL_TOKEN });
+	});
+
+	it("ignores a ref that is not a token the API could have issued", () => {
+		searchParamsHolder.current = new URLSearchParams({ ref: "not-a-token" });
+		renderView(signedInSession());
+
+		expect(recordAttribution).not.toHaveBeenCalled();
+	});
+
+	it("offers signed-in customers a share link only when the reward's referrals are on", () => {
+		rewardUseQuery.mockReturnValue({ data: { data: buildReward({ referralsEnabled: true }) }, isLoading: false, refetch: (): Promise<void> => Promise.resolve() });
+		renderView(signedInSession());
+
+		fireEvent.click(screen.getByRole("button", { name: "Share with a friend" }));
+		expect(createLink).toHaveBeenCalledWith({ rewardId: REWARD_ID });
+
+		cleanup();
+		rewardUseQuery.mockReturnValue({ data: { data: buildReward({ referralsEnabled: false }) }, isLoading: false, refetch: (): Promise<void> => Promise.resolve() });
+		renderView(signedInSession());
+		expect(screen.queryByRole("button", { name: "Share with a friend" })).toBeNull();
 	});
 });

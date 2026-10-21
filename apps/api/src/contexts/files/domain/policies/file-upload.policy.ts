@@ -1,4 +1,4 @@
-import { getFileCategoryPolicy, type CreateFileUploadUrlInput, type FileCategory, type FileCategoryPolicy } from "@workspace/shared";
+import { getFileCategoryPolicy, type FileUploadRequest, type FileCategory, type FileCategoryPolicy } from "@workspace/shared";
 
 import { FileMimeTypeNotAllowedError, FileOwnerUnresolvedError, FileTooLargeError, FileUploadForbiddenError } from "../errors/files.errors";
 
@@ -19,7 +19,7 @@ const USER_OWNED_CATEGORIES: ReadonlySet<FileCategory> = new Set<FileCategory>([
  * table the browser checks for UX — this is the authoritative check).
  * Who may upload is decided by the category owner's access rule, not here.
  */
-export function assertUploadWithinCategoryPolicy(input: Pick<CreateFileUploadUrlInput, "category" | "sizeBytes" | "mimeType">): FileCategoryPolicy {
+export function assertUploadWithinCategoryPolicy(input: Pick<FileUploadRequest, "category" | "sizeBytes" | "mimeType">): FileCategoryPolicy {
 	const policy = getFileCategoryPolicy(input.category);
 	if (input.sizeBytes > policy.maxBytes) {
 		throw new FileTooLargeError();
@@ -40,7 +40,7 @@ export function resolveFileOwnerId(fields: FileOwnerFields): string {
 }
 
 /** Owner namespace of a new upload request. */
-export function resolveUploadOwnerId(input: Pick<CreateFileUploadUrlInput, "category" | "productId" | "tenantId" | "userId">): string {
+export function resolveUploadOwnerId(input: Pick<FileUploadRequest, "category" | "productId" | "tenantId" | "userId">): string {
 	return resolveFileOwnerId({
 		category: input.category,
 		productId: input.productId ?? null,
@@ -50,7 +50,7 @@ export function resolveUploadOwnerId(input: Pick<CreateFileUploadUrlInput, "cate
 }
 
 /** A person-owned upload (avatar, GitHub comment picture) may only be requested by that person. */
-export function isOwnPersonalUpload(actorUserId: string, input: Pick<CreateFileUploadUrlInput, "userId">): boolean {
+export function isOwnPersonalUpload(actorUserId: string, input: Pick<FileUploadRequest, "userId">): boolean {
 	return input.userId === actorUserId;
 }
 
@@ -58,7 +58,7 @@ export function isOwnPersonalUpload(actorUserId: string, input: Pick<CreateFileU
  * An avatar is always the uploader's own — whoever asks, a platform SuperAdmin
  * included (the object key and the binding both follow the uploader).
  */
-export function assertAvatarIsUploadersOwn(uploaderId: string, input: Pick<CreateFileUploadUrlInput, "category" | "userId">): void {
+export function assertAvatarIsUploadersOwn(uploaderId: string, input: Pick<FileUploadRequest, "category" | "userId">): void {
 	if (input.category === "USER_AVATAR" && !isOwnPersonalUpload(uploaderId, input)) {
 		throw new FileUploadForbiddenError("Cannot upload avatar for another user");
 	}

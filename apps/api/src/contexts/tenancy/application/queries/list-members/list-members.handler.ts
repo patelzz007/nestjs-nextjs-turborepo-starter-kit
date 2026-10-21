@@ -3,7 +3,7 @@ import { QueryHandler, type IQueryHandler } from "@nestjs/cqrs";
 import { MERCHANT_CAPABILITY, type TenantMemberRosterResponse, type PaginatedServiceResult } from "@workspace/shared";
 
 import { actingInTenant, requireUserActor } from "../../tenant-actor";
-import type { MerchantAccessPort } from "../../ports/merchant-access.port";
+import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { TenantDirectoryPort } from "../../ports/tenant-directory.port";
 import { MERCHANT_ACCESS, TENANT_DIRECTORY, TEAM_READ } from "../../ports/tenants.tokens";
 import type { TeamReadPort } from "../../ports/team-read.port";

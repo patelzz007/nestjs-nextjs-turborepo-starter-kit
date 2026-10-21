@@ -17,6 +17,12 @@ describe("decideTenantLifecycle", () => {
 		expect(decideTenantLifecycle(check({ lifecycleState: "SUSPENDED", route: "lifecycle", membershipStatus: "ACTIVE" }))).toEqual({ kind: "allow" });
 	});
 
+	it("rejects a banned tenant on an ordinary route and allows it on its lifecycle and leave routes", () => {
+		expect(decideTenantLifecycle(check({ lifecycleState: "BANNED", route: "ordinary", membershipStatus: "ACTIVE" }))).toEqual({ kind: "tenant_banned" });
+		expect(decideTenantLifecycle(check({ lifecycleState: "BANNED", route: "lifecycle", membershipStatus: "ACTIVE" }))).toEqual({ kind: "allow" });
+		expect(decideTenantLifecycle(check({ lifecycleState: "BANNED", route: "leave", membershipStatus: "ACTIVE" }))).toEqual({ kind: "allow" });
+	});
+
 	it("rejects provisioning and pending deletion on ordinary routes and allows them on lifecycle routes", () => {
 		expect(decideTenantLifecycle(check({ lifecycleState: "PROVISIONING", route: "ordinary", membershipStatus: "ACTIVE" }))).toEqual({ kind: "tenant_not_active" });
 		expect(decideTenantLifecycle(check({ lifecycleState: "PENDING_DELETION", route: "ordinary", membershipStatus: "ACTIVE" }))).toEqual({ kind: "tenant_not_active" });

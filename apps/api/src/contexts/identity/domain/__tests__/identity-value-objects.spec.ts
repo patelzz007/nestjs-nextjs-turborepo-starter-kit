@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { epochMs } from "@workspace/shared";
 
-import { CorruptIdentityStateError, InvalidEmailAddressError, PasswordReusedError, WeakPasswordError } from "../errors/identity.errors";
+import { InvalidEmailAddressError, PasswordReusedError, WeakPasswordError } from "../errors/identity.errors";
 import { EmailAddress } from "../value-objects/email-address.value-object";
 import { LOCKOUT_DURATION_MS, LockoutState, MAX_FAILED_SIGN_IN_ATTEMPTS } from "../value-objects/lockout-state.value-object";
 import { PasswordPolicy } from "../value-objects/password-policy.value-object";
 import { TokenVersion } from "../value-objects/token-version.value-object";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 const NOW = epochMs(1_800_000_000_000);
 
@@ -34,8 +35,8 @@ describe("TokenVersion", () => {
 	});
 
 	it("refuses a negative or fractional generation as corrupt state", () => {
-		expect(() => TokenVersion.of(-1)).toThrow(CorruptIdentityStateError);
-		expect(() => TokenVersion.of(1.5)).toThrow(CorruptIdentityStateError);
+		expect(() => TokenVersion.of(-1)).toThrow(CorruptAggregateStateError);
+		expect(() => TokenVersion.of(1.5)).toThrow(CorruptAggregateStateError);
 	});
 });
 
@@ -84,7 +85,7 @@ describe("LockoutState", () => {
 	});
 
 	it("refuses a negative counter as corrupt state", () => {
-		expect(() => LockoutState.of(-1, null)).toThrow(CorruptIdentityStateError);
+		expect(() => LockoutState.of(-1, null)).toThrow(CorruptAggregateStateError);
 	});
 });
 

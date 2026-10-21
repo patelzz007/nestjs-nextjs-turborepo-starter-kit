@@ -109,7 +109,7 @@ For a feature shipped behind a flag (`13-ci-cd-and-quality-gates.md`), the rollo
 
 ## Cross-team/cross-app coordination
 
-For a change that touches a shared contract (`packages/contracts`) or a shared package consumed by another team's app, identify every consumer and their release cadence BEFORE merging — not after, when a consumer's build has already broken. A shared-contract change with real downstream impact is coordinated explicitly (a heads-up, an agreed timeline), not dropped in without warning just because it technically passed this project's own CI.
+For a change that touches a shared contract (`packages/shared`) or a shared package consumed by another team's app, identify every consumer and their release cadence BEFORE merging — not after, when a consumer's build has already broken. A shared-contract change with real downstream impact is coordinated explicitly (a heads-up, an agreed timeline), not dropped in without warning just because it technically passed this project's own CI.
 
 ## Definition of Ready — the bookend to Definition of Done
 

@@ -1,5 +1,6 @@
 import type { EpochMs } from "@workspace/shared";
 
+import type { CustomerStandingPort } from "./customer-standing.port";
 import type { TenantAuditWriter } from "./tenant-audit.port";
 import type { TenantExistencePort } from "./tenant-existence.port";
 
@@ -35,5 +36,6 @@ export interface MerchantPosSettingsPort {
 export interface TenantsTransactionalPorts {
 	readonly merchantPosSettings: MerchantPosSettingsPort;
 	readonly existence: TenantExistencePort;
+	readonly customerStanding: CustomerStandingPort;
 	readonly audit: TenantAuditWriter;
 }

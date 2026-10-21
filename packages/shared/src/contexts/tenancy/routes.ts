@@ -14,6 +14,12 @@ export const rewardsAdminTenantRoutes = {
 	locationCreate: "/admin/merchants/:tenantId/locations",
 	locationReview: "/admin/merchants/:tenantId/locations/:locationId/review",
 	tenantKybDocumentDownload: "/admin/merchants/:tenantId/documents/:documentId/download",
+	tenantLifecycle: "/admin/merchants/:tenantId/lifecycle",
+	suspendTenant: "/admin/merchants/:tenantId/suspend",
+	reinstateTenant: "/admin/merchants/:tenantId/reinstate",
+	banTenant: "/admin/merchants/:tenantId/ban",
+	unbanTenant: "/admin/merchants/:tenantId/unban",
+	rejectTenantAppeal: "/admin/merchants/:tenantId/appeals/:appealId/reject",
 } satisfies Record<string, RouteTree>;
 
 /** Path templates composed into `apiRoutes.tenants`. */
@@ -25,9 +31,15 @@ export const tenantsRoutes = {
 	inviteMember: "/tenants/:tenantSlug/members/invite",
 	listMembers: "/tenants/:tenantSlug/members",
 	ownMembership: "/tenants/:tenantSlug/members/me",
+	leaveTenant: "/tenants/:tenantSlug/members/me/leave",
+	lifecycle: "/tenants/:tenantSlug/lifecycle",
+	submitAppeal: "/tenants/:tenantSlug/lifecycle/appeals",
+	reactivate: "/tenants/:tenantSlug/lifecycle/reactivate",
+	customerBans: "/tenants/:tenantSlug/customer-bans",
+	liftCustomerBan: "/tenants/:tenantSlug/customer-bans/:banId/lift",
 	listMemberInvites: "/tenants/:tenantSlug/members/invites",
 	revokeMemberInvite: "/tenants/:tenantSlug/members/invites/:inviteId/revoke",
-	removeMemberFromStore: "/tenants/:tenantSlug/members/:membershipId/stores/:locationId/remove",
+	removeMemberFromLocation: "/tenants/:tenantSlug/members/:membershipId/locations/:locationId/remove",
 	teamInvites: {
 		validate: "/tenants/invites/validate",
 		accept: "/tenants/invites/accept",

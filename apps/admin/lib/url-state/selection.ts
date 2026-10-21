@@ -8,14 +8,14 @@ import {
 	DataChangeLogSummarySchema,
 	EmailTemplateKeySchema,
 	HttpAuditLogSummarySchema,
-	MerchantOrgResponseSchema,
+	MerchantTenantResponseSchema,
 } from "@workspace/shared";
 
 import { AUDIT_LOG_RECORD_PARAM, DATA_CHANGE_RECORD_PARAM, EMAIL_TEMPLATE_KEY_PARAM, MERCHANT_VERIFICATION_TENANT_PARAM, REVIEW_REQUEST_PARAM } from "@/lib/routes";
 
 /** `/merchants/verification?tenantId=` — the merchant open in the KYB review panel. */
 export const KYB_REVIEW_URL_STATE = defineUrlState(
-	{ tenantId: optionalUrlParam(MerchantOrgResponseSchema.shape.id) },
+	{ tenantId: optionalUrlParam(MerchantTenantResponseSchema.shape.id) },
 	{ urlKeys: { tenantId: MERCHANT_VERIFICATION_TENANT_PARAM } },
 );
 

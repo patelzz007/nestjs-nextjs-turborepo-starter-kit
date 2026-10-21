@@ -827,6 +827,7 @@ export function accountState(overrides: Partial<UserAccountState> & Pick<UserAcc
 		twoFactorEnabled: false,
 		mfaEnrollmentDeadline: null,
 		mfaAssuredAt: null,
+		ban: null,
 		createdAt: NOW,
 		updatedAt: NOW,
 		...overrides,

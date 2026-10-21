@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 
 import { Reward, type RewardManager } from "../aggregates/reward.aggregate";
 import {
-	CorruptRewardStateError,
 	RewardExpiredError,
 	RewardJustSoldOutError,
 	RewardNotDraftError,
@@ -35,6 +34,7 @@ import {
 	STORE_B,
 	WEEK_MS,
 } from "./reward-state.fixture";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** A merchant who may manage every store. */
 const ALL_STORES: RewardManager = { locationIds: null, actorId: REVIEWER_ID };
@@ -105,25 +105,25 @@ describe("Reward.create", () => {
 
 describe("Reward.rehydrate", () => {
 	it.each(["EXPIRED", "DISABLED", "ARCHIVED", ""])("refuses the unmodelled status %s", (status) => {
-		expect(() => Reward.rehydrate(rewardState(status))).toThrow(CorruptRewardStateError);
+		expect(() => Reward.rehydrate(rewardState(status))).toThrow(CorruptAggregateStateError);
 	});
 
 	it("refuses a referrer child out of lockstep with its parent", () => {
-		expect(() => Reward.rehydrate(rewardState("DRAFT", { referrer: referrerRow("PUBLISHED") }))).toThrow(CorruptRewardStateError);
+		expect(() => Reward.rehydrate(rewardState("DRAFT", { referrer: referrerRow("PUBLISHED") }))).toThrow(CorruptAggregateStateError);
 	});
 
 	it("refuses a referrer row that itself has a child", () => {
-		expect(() => Reward.rehydrate(rewardState("PUBLISHED", { kind: "REFERRER", referrer: referrerRow("PUBLISHED") }))).toThrow(CorruptRewardStateError);
+		expect(() => Reward.rehydrate(rewardState("PUBLISHED", { kind: "REFERRER", referrer: referrerRow("PUBLISHED") }))).toThrow(CorruptAggregateStateError);
 	});
 
 	it("refuses a child that is not a referrer reward", () => {
-		expect(() => Reward.rehydrate(rewardState("DRAFT", { referrer: referrerRow("DRAFT", { kind: "CONSUMER" }) }))).toThrow(CorruptRewardStateError);
+		expect(() => Reward.rehydrate(rewardState("DRAFT", { referrer: referrerRow("DRAFT", { kind: "CONSUMER" }) }))).toThrow(CorruptAggregateStateError);
 	});
 
 	it.each([-1, 0.5])("refuses a counter of %s", (value) => {
 		expect(() =>
 			Reward.rehydrate(rewardState("PUBLISHED", { inventory: { quantityTotal: 5, quantityRemaining: value, quantityReserved: 0, claimCount: 0, redemptionCount: 0 } })),
-		).toThrow(CorruptRewardStateError);
+		).toThrow(CorruptAggregateStateError);
 	});
 
 	it("keeps what it was loaded with as the concurrency token and records nothing", () => {

@@ -5,7 +5,7 @@ import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type * as React from "react";
 
-import { PROFILE_LOADING_LABELS, SECURITY_LOADING_LABELS } from "@/components/loading/loading-labels";
+import { GITHUB_TOKEN_LOADING_LABELS, PROFILE_LOADING_LABELS, SECURITY_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { CardHeadingSkeleton } from "@/components/loading/skeleton-parts";
 
 // ── Profile ──────────────────────────────────────────────────────────────────
@@ -122,6 +122,50 @@ export function SecurityPageSkeleton(): React.JSX.Element {
 					<ProseSkeleton lines={SECURITY_PROSE_LINES} />
 					<Skeleton className="h-9 w-40" />
 				</SecuritySectionSkeleton>
+			</div>
+		</SkeletonRegion>
+	);
+}
+
+// ── GitHub token ─────────────────────────────────────────────────────────────
+
+/** Lines of the token's required permissions. */
+const GITHUB_TOKEN_PERMISSION_LINES = 4;
+/** The token field. */
+const GITHUB_TOKEN_FORM_FIELDS = 1;
+
+export interface GithubTokenPageSkeletonProps {
+	/** The page header too (the route's `loading.tsx`); the panel's own loading state sits under the real header. */
+	readonly withHeader?: boolean;
+}
+
+/**
+ * `/account/github`: the linked-account card beside the link-a-token card (permissions, the
+ * GitHub link button, the token field).
+ */
+export function GithubTokenPageSkeleton({ withHeader = false }: GithubTokenPageSkeletonProps): React.JSX.Element {
+	return (
+		<SkeletonRegion labels={GITHUB_TOKEN_LOADING_LABELS} className="flex flex-col gap-6">
+			{withHeader ? <PageHeaderSkeleton /> : null}
+			<div className="grid items-start gap-6 lg:grid-cols-2">
+				<Card>
+					<CardHeader>
+						<CardHeadingSkeleton />
+					</CardHeader>
+					<CardContent>
+						<Skeleton className="h-9 w-32" />
+					</CardContent>
+				</Card>
+				<Card>
+					<CardHeader>
+						<CardHeadingSkeleton />
+					</CardHeader>
+					<CardContent className="flex flex-col gap-5">
+						<ProseSkeleton lines={GITHUB_TOKEN_PERMISSION_LINES} />
+						<Skeleton className="h-9 w-52" />
+						<FormSkeleton surface="plain" fields={GITHUB_TOKEN_FORM_FIELDS} />
+					</CardContent>
+				</Card>
 			</div>
 		</SkeletonRegion>
 	);

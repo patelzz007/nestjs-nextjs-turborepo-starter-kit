@@ -7,10 +7,10 @@ const REWARDS_MENU: readonly SidebarMenuItemLike[] = [
 	{
 		id: "rewards-my-rewards",
 		title: "My Rewards",
-		url: "/orgs/jonker-street-kitchen/rewards",
+		url: "/t/jonker-street-kitchen/rewards",
 		children: [
-			{ id: "rewards-all-rewards", title: "All Rewards", url: "/orgs/jonker-street-kitchen/rewards" },
-			{ id: "rewards-create-new", title: "Create New", url: "/orgs/jonker-street-kitchen/rewards/new" },
+			{ id: "rewards-all-rewards", title: "All Rewards", url: "/t/jonker-street-kitchen/rewards" },
+			{ id: "rewards-create-new", title: "Create New", url: "/t/jonker-street-kitchen/rewards/new" },
 		],
 	},
 ];
@@ -39,7 +39,7 @@ describe("isRouteActive", () => {
 
 describe("computeRouteState", () => {
 	it("highlights only the child when a parent shares its URL (reported merchant bug)", () => {
-		const { activeItems, autoExpandedItems } = computeRouteState(REWARDS_MENU, "/orgs/jonker-street-kitchen/rewards");
+		const { activeItems, autoExpandedItems } = computeRouteState(REWARDS_MENU, "/t/jonker-street-kitchen/rewards");
 
 		expect(activeItems["rewards-all-rewards"]).toBe(true);
 		// The parent/grandparent must NOT be highlighted alongside it…
@@ -65,7 +65,7 @@ describe("computeRouteState", () => {
 	});
 
 	it("lights the closest child (not the parent) on unmapped detail pages", () => {
-		const { activeItems, autoExpandedItems } = computeRouteState(REWARDS_MENU, "/orgs/jonker-street-kitchen/rewards/abc123");
+		const { activeItems, autoExpandedItems } = computeRouteState(REWARDS_MENU, "/t/jonker-street-kitchen/rewards/abc123");
 
 		// No entry points exactly at this URL → the single closest match wins:
 		// the child "All Rewards" (same URL, deeper) beats its parent.
@@ -128,7 +128,7 @@ describe("buildSidebarView", () => {
 				sections: [{ title: "Rewards", items: REWARDS_MENU }],
 				bottomItems: [],
 			},
-			pathname: "/orgs/jonker-street-kitchen/rewards",
+			pathname: "/t/jonker-street-kitchen/rewards",
 			sectionOrder: null,
 			searchQuery: "",
 		});

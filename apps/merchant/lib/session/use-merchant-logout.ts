@@ -1,7 +1,7 @@
 "use client";
 
-import { clearAllLocationCookies } from "@/contexts/tenancy/lib/org/location";
-import { clearTenantSlugCookie } from "@/contexts/tenancy/lib/org/slug";
+import { clearAllLocationCookies } from "@/contexts/tenancy/lib/tenant/location";
+import { clearTenantSlugCookie } from "@/contexts/tenancy/lib/tenant/slug";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import * as React from "react";
 

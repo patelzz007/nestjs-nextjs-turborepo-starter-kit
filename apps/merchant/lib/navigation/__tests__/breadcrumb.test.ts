@@ -45,7 +45,7 @@ describe("resolveMerchantTrail", () => {
 		]);
 	});
 
-	it("links an unknown org page back to the tenant root", () => {
+	it("links an unknown tenant page back to the tenant root", () => {
 		expect(trailOf(`${routes.root}/not-a-page`)).toEqual([{ label: "Dashboard", href: routes.root }]);
 	});
 });

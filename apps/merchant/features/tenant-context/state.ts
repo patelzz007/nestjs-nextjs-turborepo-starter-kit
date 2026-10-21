@@ -2,7 +2,7 @@
  * Merchant tenant context — the member's chosen store (location) inside the
  * current tenant. Owner: Zustand, because the topbar switcher, the scope
  * banner and every location-filtered page view share it in the browser. The
- * tenant's `tenantLocationId.<orgSlug>` cookie mirrors it (see
+ * tenant's `tenantLocationId.<tenantSlug>` cookie mirrors it (see
  * `effects.ts`) so server pages can prefetch the same store's data.
  *
  * NOT here, deliberately:

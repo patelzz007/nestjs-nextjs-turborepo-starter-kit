@@ -5,7 +5,7 @@
  * Conventions:
  * - Plural, kebab-case nouns. CRUD: list `/x`, create `/x/new`, view `/x/[id]`, edit `/x/[id]/edit`.
  * - Business pages live under the tenant scope `/t/[tenantSlug]`.
- *   `TENANT_ROUTES` holds those paths **relative to the org scope** (they are the
+ *   `TENANT_ROUTES` holds those paths **relative to the tenant scope** (they are the
  *   URLs used by `data/merchant-sidebar-menu.json` and the command palette);
  *   `tenantPath(slug, path)` / `tenantRoutes(slug)` turn them into browser hrefs.
  * - Paths another process builds into URLs (the API's emails and invite links)
@@ -13,7 +13,7 @@
  *   cannot drift.
  * - `account` is the signed-in user's PERSONAL settings (profile, password,
  *   2FA, sessions). `settings` is TENANT configuration (team, locations,
- *   business verification).
+ *   business verification, banned customers).
  */
 
 import { APP_LINKS } from "@workspace/shared";
@@ -34,7 +34,7 @@ export function toAppPath(value: string): AppPath {
 	return value;
 }
 
-export interface OrgRewardRoutes {
+export interface TenantRewardRoutes {
 	readonly list: AppPath;
 	readonly new: AppPath;
 	/** The reward's read-only page: what customers see, its performance and its lifecycle actions. */
@@ -42,17 +42,18 @@ export interface OrgRewardRoutes {
 	readonly edit: (rewardId: string) => AppPath;
 }
 
-export interface OrgSettingsRoutes {
+export interface TenantSettingsRoutes {
 	readonly index: AppPath;
 	readonly team: AppPath;
 	readonly locations: AppPath;
 	readonly branding: AppPath;
 	readonly verification: AppPath;
+	readonly bannedCustomers: AppPath;
 }
 
-export interface OrgRouteTable {
+export interface TenantRouteTable {
 	readonly dashboard: AppPath;
-	readonly rewards: OrgRewardRoutes;
+	readonly rewards: TenantRewardRoutes;
 	readonly redemptions: AppPath;
 	readonly analytics: AppPath;
 	readonly terminals: AppPath;
@@ -60,7 +61,7 @@ export interface OrgRouteTable {
 	readonly account: AppPath;
 	/** Every store the member belongs to (the switcher lists the first page). */
 	readonly stores: AppPath;
-	readonly settings: OrgSettingsRoutes;
+	readonly settings: TenantSettingsRoutes;
 }
 
 export interface AuthRouteTable {
@@ -71,7 +72,7 @@ export interface AuthRouteTable {
 	readonly resetPassword: AppPath;
 }
 
-/** Top-level (non-org) routes. */
+/** Top-level (non-tenant) routes. */
 export interface AppRouteTable {
 	/** Post-login entry — resolves the tenant server-side and redirects into it. */
 	readonly home: AppPath;
@@ -98,7 +99,7 @@ export const ROUTES: AppRouteTable = {
 	},
 };
 
-export const TENANT_ROUTES: OrgRouteTable = {
+export const TENANT_ROUTES: TenantRouteTable = {
 	dashboard: "/dashboard",
 	rewards: {
 		list: "/rewards",
@@ -118,10 +119,11 @@ export const TENANT_ROUTES: OrgRouteTable = {
 		locations: "/settings/locations",
 		branding: "/settings/branding",
 		verification: "/settings/verification",
+		bannedCustomers: "/settings/banned-customers",
 	},
 };
 
-/** Every static org-relative route — guarded by tests against `app/t/[tenantSlug]/**\/page.tsx`. */
+/** Every static tenant-relative route — guarded by tests against `app/t/[tenantSlug]/**\/page.tsx`. */
 export const TENANT_STATIC_ROUTES: readonly AppPath[] = [
 	TENANT_ROUTES.dashboard,
 	TENANT_ROUTES.rewards.list,
@@ -137,6 +139,7 @@ export const TENANT_STATIC_ROUTES: readonly AppPath[] = [
 	TENANT_ROUTES.settings.locations,
 	TENANT_ROUTES.settings.branding,
 	TENANT_ROUTES.settings.verification,
+	TENANT_ROUTES.settings.bannedCustomers,
 ];
 
 /** Every static top-level route — guarded by tests against `app/**\/page.tsx`. */
@@ -165,18 +168,18 @@ export function tenantRoot(slug: string): AppPath {
 	return `${TENANT_SCOPE_PREFIX}/${encodeURIComponent(slug)}`;
 }
 
-/** Org-scoped browser href for an org-relative route: `tenantPath("acme", TENANT_ROUTES.rewards.list)` → `/t/acme/rewards`. */
+/** Tenant-scoped browser href for an tenant-relative route: `tenantPath("acme", TENANT_ROUTES.rewards.list)` → `/t/acme/rewards`. */
 export function tenantPath(slug: string, path: AppPath): AppPath {
 	return path === "/" ? tenantRoot(slug) : `${tenantRoot(slug)}${path}`;
 }
 
-/** True when `pathname` is already an org-scoped browser path (`/t/...`). */
+/** True when `pathname` is already an tenant-scoped browser path (`/t/...`). */
 export function isTenantScopedPath(pathname: string): boolean {
 	return pathname.startsWith(`${TENANT_SCOPE_PREFIX}/`);
 }
 
 /**
- * Org-relative part of an org-scoped browser path: `/t/acme/rewards/1/edit`
+ * Tenant-relative part of an tenant-scoped browser path: `/t/acme/rewards/1/edit`
  * → `/rewards/1/edit`, `/t/acme` → `/`. `undefined` for paths outside `/t/{slug}`.
  */
 export function toTenantRelativePath(pathname: string): AppPath | undefined {
@@ -191,7 +194,7 @@ export function toTenantRelativePath(pathname: string): AppPath | undefined {
 }
 
 /**
- * Href for an org-relative route when the tenant may not be known yet.
+ * Href for an tenant-relative route when the tenant may not be known yet.
  * Without a slug the user is sent to the top-level entry page that resolves
  * the tenant server-side (`/account` for the personal account, `/` for
  * everything else).
@@ -203,36 +206,37 @@ export function resolveTenantHref(slug: string | undefined, path: AppPath): AppP
 	return isPathWithin(path, TENANT_ROUTES.account) ? ROUTES.account : ROUTES.home;
 }
 
-export interface OrgRewardHrefs {
+export interface TenantRewardHrefs {
 	readonly list: AppPath;
 	readonly new: AppPath;
 	readonly detail: (rewardId: string) => AppPath;
 	readonly edit: (rewardId: string) => AppPath;
 }
 
-export interface OrgSettingsHrefs {
+export interface TenantSettingsHrefs {
 	readonly index: AppPath;
 	readonly team: AppPath;
 	readonly locations: AppPath;
 	readonly branding: AppPath;
 	readonly verification: AppPath;
+	readonly bannedCustomers: AppPath;
 }
 
-export interface OrgHrefs {
+export interface TenantHrefs {
 	readonly root: AppPath;
 	readonly dashboard: AppPath;
-	readonly rewards: OrgRewardHrefs;
+	readonly rewards: TenantRewardHrefs;
 	readonly redemptions: AppPath;
 	readonly analytics: AppPath;
 	readonly terminals: AppPath;
 	readonly apiKeys: AppPath;
 	readonly account: AppPath;
 	readonly stores: AppPath;
-	readonly settings: OrgSettingsHrefs;
+	readonly settings: TenantSettingsHrefs;
 }
 
 /** Browser hrefs for one tenant: `tenantRoutes("acme").rewards.edit(id)` → `/t/acme/rewards/{id}/edit`. */
-export function tenantRoutes(slug: string): OrgHrefs {
+export function tenantRoutes(slug: string): TenantHrefs {
 	return {
 		root: tenantRoot(slug),
 		dashboard: tenantPath(slug, TENANT_ROUTES.dashboard),
@@ -255,6 +259,7 @@ export function tenantRoutes(slug: string): OrgHrefs {
 			locations: tenantPath(slug, TENANT_ROUTES.settings.locations),
 			branding: tenantPath(slug, TENANT_ROUTES.settings.branding),
 			verification: tenantPath(slug, TENANT_ROUTES.settings.verification),
+			bannedCustomers: tenantPath(slug, TENANT_ROUTES.settings.bannedCustomers),
 		},
 	};
 }

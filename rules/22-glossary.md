@@ -12,7 +12,7 @@ A shared vocabulary for this codebase's domain and architectural terms, per `14-
 
 **Repository** — the persistence-access layer, translating between the domain model and Prisma. Never called directly from a controller. See `02-backend-nestjs.md`, `08-database-prisma.md`.
 
-**Contract** — a zod schema in `packages/contracts` defining the shape of data crossing a boundary (API request/response, an event payload). The single source of truth for that shape across every consumer. See `05-contracts-zod-api.md`.
+**Contract** — a zod schema in `packages/shared` defining the shape of data crossing a boundary (API request/response, an event payload). The single source of truth for that shape across every consumer. See `05-contracts-zod-api.md`.
 
 **Boundary** — any point where data enters the system from outside the currently-executing function: an HTTP request, a webhook, a message payload, an environment variable. Every boundary is validated via a zod schema; nothing crossing one is ever treated as trusted without validation. See `00-non-negotiables.md`, `05-contracts-zod-api.md`.
 

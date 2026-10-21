@@ -84,6 +84,13 @@ const PAGE_API_CALLS: ReadonlyMap<string, readonly PageApiCall[]> = new Map<stri
 	],
 	[ROUTES.geography.index, [{ endpoint: "GET /geo/stats + the active tab's list", permission: PERMISSION.GEO.READ }]],
 	[ROUTES.merchants.list, [{ endpoint: "GET /admin/tenants", permission: PERMISSION.MERCHANT_ORG.LIST }]],
+	[
+		ROUTE_PATTERNS.merchants.detail,
+		[
+			{ endpoint: "GET /admin/merchants/:tenantId", permission: PERMISSION.MERCHANT_ORG.LIST },
+			{ endpoint: "GET /admin/merchants/:tenantId/lifecycle", permission: PERMISSION.MERCHANT_ORG.LIST },
+		],
+	],
 	// The live email preview renders on load; the send (POST /admin/invites) needs the same MANAGE.
 	[ROUTES.merchants.invites, [{ endpoint: "GET /admin/invites/preview-email", permission: PERMISSION.MERCHANT_ORG.MANAGE }]],
 	[ROUTES.merchants.verification, [{ endpoint: "GET /admin/tenants", permission: PERMISSION.MERCHANT_ORG.LIST }]],
@@ -94,6 +101,15 @@ const PAGE_API_CALLS: ReadonlyMap<string, readonly PageApiCall[]> = new Map<stri
 	[ROUTES.settings.access, []],
 	// Any signed-in admin: the page reads (and edits) only the caller's own profile.
 	[ROUTES.account.profile, [{ endpoint: "GET /auth/profile", permission: PERMISSION.PROFILE.READ, ownRecord: true }]],
+	// The caller's own token: reading it, then linking or removing it.
+	[
+		ROUTES.account.github,
+		[
+			{ endpoint: "GET /github/account", permission: PERMISSION.GITHUB_PULL_REQUEST.READ },
+			{ endpoint: "PUT /github/account", permission: PERMISSION.GITHUB_PULL_REQUEST.UPDATE },
+			{ endpoint: "DELETE /github/account", permission: PERMISSION.GITHUB_PULL_REQUEST.UPDATE },
+		],
+	],
 ]);
 
 /** The smallest grants that satisfy `rule`: each permission alone for "any", all of them together for "all". */

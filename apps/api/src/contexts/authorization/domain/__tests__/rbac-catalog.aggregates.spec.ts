@@ -4,13 +4,13 @@ import { epochMs, type EpochMs } from "@workspace/shared";
 import { PermissionAggregate, type PermissionState } from "../aggregates/permission.aggregate";
 import { RoleAggregate, ROLE_NAME_MAX_LENGTH, type RoleState } from "../aggregates/role.aggregate";
 import {
-	CorruptAuthorizationStateError,
 	DeletedPermissionNotFoundError,
 	DeletedRoleNotFoundError,
 	RoleHierarchyCycleError,
 	SystemPermissionImmutableError,
 	SystemRoleImmutableError,
 } from "../errors/authorization.errors";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 const NOW: EpochMs = epochMs(1_800_000_000_000);
 const LATER: EpochMs = epochMs(NOW + 1);
@@ -18,7 +18,7 @@ const LATER: EpochMs = epochMs(NOW + 1);
 function role(overrides: Partial<RoleState> = {}): RoleAggregate {
 	return RoleAggregate.rehydrate({
 		id: "role-1",
-		name: "Store Manager",
+		name: "Location Manager",
 		description: null,
 		isActive: true,
 		isSystem: false,
@@ -61,11 +61,11 @@ describe("RoleAggregate", () => {
 	it("revises only the given fields and knows a rename", () => {
 		const subject = role();
 
-		expect(subject.isRenamedBy({ name: "Store Manager" })).toBe(false);
+		expect(subject.isRenamedBy({ name: "Location Manager" })).toBe(false);
 		expect(subject.isRenamedBy({ name: "Shift Lead" })).toBe(true);
 		subject.revise({ description: "runs the store" }, LATER);
 
-		expect(subject.snapshot()).toMatchObject({ name: "Store Manager", description: "runs the store", updatedAt: LATER });
+		expect(subject.snapshot()).toMatchObject({ name: "Location Manager", description: "runs the store", updatedAt: LATER });
 		expect(() => {
 			subject.revise({ name: "x".repeat(ROLE_NAME_MAX_LENGTH + 1) }, LATER);
 		}).toThrow();
@@ -119,7 +119,7 @@ describe("RoleAggregate", () => {
 	});
 
 	it("refuses a corrupt stored row", () => {
-		expect(() => role({ name: "" })).toThrow(CorruptAuthorizationStateError);
+		expect(() => role({ name: "" })).toThrow(CorruptAggregateStateError);
 	});
 });
 
@@ -149,6 +149,6 @@ describe("PermissionAggregate", () => {
 	});
 
 	it("refuses a corrupt stored row", () => {
-		expect(() => permission({ group: "x".repeat(101) })).toThrow(CorruptAuthorizationStateError);
+		expect(() => permission({ group: "x".repeat(101) })).toThrow(CorruptAggregateStateError);
 	});
 });

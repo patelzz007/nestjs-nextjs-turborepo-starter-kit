@@ -14,10 +14,18 @@ import {
 	AdminMerchantInviteAvailabilitySchema,
 	AdminMerchantInviteCreatedResponseSchema,
 	AdminMerchantListQuerySchema,
-	MerchantOrgResponseSchema,
+	MerchantTenantResponseSchema,
 	TenantRewardMembershipResponseSchema,
 	OwnMembershipListQuerySchema,
 } from "./schemas/merchant";
+import {
+	AdminTenantAppealParamSchema,
+	AdminTenantAppealRejectSchema,
+	AdminTenantLifecycleChangeSchema,
+	TenantAppealCreateSchema,
+	TenantLifecycleResponseSchema,
+	TenantMembershipLeaveResponseSchema,
+} from "./schemas/tenant-lifecycle";
 import {
 	AdminKybUpdatePathInputSchema,
 	MerchantKybDocumentDownloadResponseSchema,
@@ -37,6 +45,7 @@ import {
 	MerchantOnboardingInvitePreviewSchema,
 	MerchantOnboardingValidateTokenSchema,
 } from "./schemas/merchant-kyb";
+import { TenantCustomerBanCreateSchema, TenantCustomerBanListQuerySchema, TenantCustomerBanParamSchema, TenantCustomerBanResponseSchema } from "./schemas/customer-bans";
 import { CompleteFileUploadResponseSchema, CreateFileUploadUrlResponseSchema, FileDownloadDispositionSchema } from "../files/schemas/storage";
 import { LoginClientResponseSchema } from "../identity/schemas/auth";
 import { adminTenantsRoutes, tenantsRoutes, rewardsAdminTenantRoutes } from "./routes";
@@ -64,9 +73,9 @@ import {
 	TenantMemberInviteSchema,
 	TenantMemberListQuerySchema,
 	TenantMemberRosterResponseSchema,
-	TenantMemberStoreParamSchema,
-	TenantMemberStoreRemoveResponseSchema,
-	TenantMemberStoreRemoveSchema,
+	TenantMemberLocationParamSchema,
+	TenantMemberLocationRemoveResponseSchema,
+	TenantMemberLocationRemoveSchema,
 	MembershipResponseSchema,
 	TenantOwnMembershipUpdateSchema,
 	TenantSlugParamSchema,
@@ -94,13 +103,49 @@ export const rewardsAdminTenantContract = {
 		method: "GET",
 		path: rewardsAdminTenantRoutes.merchants,
 		input: AdminMerchantListQuerySchema,
-		response: paginatedResponse(MerchantOrgResponseSchema),
+		response: paginatedResponse(MerchantTenantResponseSchema),
 	}),
 	getTenant: defineContract({
 		method: "GET",
 		path: rewardsAdminTenantRoutes.tenantDetail,
 		input: AdminMerchantIdParamSchema,
 		response: singleResponse(AdminMerchantDetailResponseSchema),
+	}),
+	getTenantLifecycle: defineContract({
+		method: "GET",
+		path: rewardsAdminTenantRoutes.tenantLifecycle,
+		input: AdminMerchantIdParamSchema,
+		response: singleResponse(TenantLifecycleResponseSchema),
+	}),
+	suspendTenant: defineContract({
+		method: "POST",
+		path: rewardsAdminTenantRoutes.suspendTenant,
+		input: z.intersection(AdminMerchantIdParamSchema, AdminTenantLifecycleChangeSchema),
+		response: singleResponse(TenantLifecycleResponseSchema),
+	}),
+	reinstateTenant: defineContract({
+		method: "POST",
+		path: rewardsAdminTenantRoutes.reinstateTenant,
+		input: z.intersection(AdminMerchantIdParamSchema, AdminTenantLifecycleChangeSchema),
+		response: singleResponse(TenantLifecycleResponseSchema),
+	}),
+	banTenant: defineContract({
+		method: "POST",
+		path: rewardsAdminTenantRoutes.banTenant,
+		input: z.intersection(AdminMerchantIdParamSchema, AdminTenantLifecycleChangeSchema),
+		response: singleResponse(TenantLifecycleResponseSchema),
+	}),
+	unbanTenant: defineContract({
+		method: "POST",
+		path: rewardsAdminTenantRoutes.unbanTenant,
+		input: z.intersection(AdminMerchantIdParamSchema, AdminTenantLifecycleChangeSchema),
+		response: singleResponse(TenantLifecycleResponseSchema),
+	}),
+	rejectTenantAppeal: defineContract({
+		method: "POST",
+		path: rewardsAdminTenantRoutes.rejectTenantAppeal,
+		input: z.intersection(AdminTenantAppealParamSchema, AdminTenantAppealRejectSchema),
+		response: singleResponse(TenantLifecycleResponseSchema),
 	}),
 	downloadTenantDocument: defineContract({
 		method: "GET",
@@ -178,6 +223,48 @@ export const tenantsContract = {
 		input: z.intersection(TenantSlugParamSchema, TenantOwnMembershipUpdateSchema),
 		response: singleResponse(MembershipResponseSchema),
 	}),
+	leaveTenant: defineContract({
+		method: "POST",
+		path: tenantsRoutes.leaveTenant,
+		input: TenantSlugParamSchema,
+		response: singleResponse(TenantMembershipLeaveResponseSchema),
+	}),
+	lifecycle: defineContract({
+		method: "GET",
+		path: tenantsRoutes.lifecycle,
+		input: TenantSlugParamSchema,
+		response: singleResponse(TenantLifecycleResponseSchema),
+	}),
+	submitAppeal: defineContract({
+		method: "POST",
+		path: tenantsRoutes.submitAppeal,
+		input: z.intersection(TenantSlugParamSchema, TenantAppealCreateSchema),
+		response: singleResponse(TenantLifecycleResponseSchema),
+	}),
+	reactivate: defineContract({
+		method: "POST",
+		path: tenantsRoutes.reactivate,
+		input: TenantSlugParamSchema,
+		response: singleResponse(TenantLifecycleResponseSchema),
+	}),
+	customerBans: defineContract({
+		method: "GET",
+		path: tenantsRoutes.customerBans,
+		input: z.intersection(TenantSlugParamSchema, TenantCustomerBanListQuerySchema),
+		response: paginatedResponse(TenantCustomerBanResponseSchema),
+	}),
+	banCustomer: defineContract({
+		method: "POST",
+		path: tenantsRoutes.customerBans,
+		input: z.intersection(TenantSlugParamSchema, TenantCustomerBanCreateSchema),
+		response: singleResponse(TenantCustomerBanResponseSchema),
+	}),
+	liftCustomerBan: defineContract({
+		method: "POST",
+		path: tenantsRoutes.liftCustomerBan,
+		input: TenantCustomerBanParamSchema,
+		response: singleResponse(OkResponseSchema),
+	}),
 	listMemberInvites: defineContract({
 		method: "GET",
 		path: tenantsRoutes.listMemberInvites,
@@ -190,11 +277,11 @@ export const tenantsContract = {
 		input: TenantMemberInviteIdParamSchema,
 		response: singleResponse(MessageResponseSchema),
 	}),
-	removeMemberFromStore: defineContract({
+	removeMemberFromLocation: defineContract({
 		method: "POST",
-		path: tenantsRoutes.removeMemberFromStore,
-		input: z.intersection(TenantMemberStoreParamSchema, TenantMemberStoreRemoveSchema),
-		response: singleResponse(TenantMemberStoreRemoveResponseSchema),
+		path: tenantsRoutes.removeMemberFromLocation,
+		input: z.intersection(TenantMemberLocationParamSchema, TenantMemberLocationRemoveSchema),
+		response: singleResponse(TenantMemberLocationRemoveResponseSchema),
 	}),
 	validateTeamInvite: defineContract({
 		access: "public",

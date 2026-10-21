@@ -102,7 +102,7 @@ describe("merchant role capabilities", () => {
 		}
 	});
 
-	it("lets every member read the store locations (the org context is member-wide on the API)", () => {
+	it("lets every member read the store locations (the tenant context is member-wide on the API)", () => {
 		for (const role of MembershipRoleSchema.options) {
 			expect(merchantRoleHasCapability(role, MERCHANT_CAPABILITY.viewLocations)).toBe(true);
 		}

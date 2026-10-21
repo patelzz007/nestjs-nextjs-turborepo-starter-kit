@@ -6,7 +6,12 @@ import { PageHeaderSkeleton } from "@workspace/ui/components/skeleton-patterns";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import type * as React from "react";
 
-import { KYB_REVIEW_LOADING_LABELS, MERCHANT_INVITES_LOADING_LABELS, STORE_REQUESTS_LOADING_LABELS } from "@/components/loading/loading-labels";
+import {
+	KYB_REVIEW_LOADING_LABELS,
+	MERCHANT_DETAIL_LOADING_LABELS,
+	MERCHANT_INVITES_LOADING_LABELS,
+	STORE_REQUESTS_LOADING_LABELS,
+} from "@/components/loading/loading-labels";
 import { BadgeSkeleton, CardHeadingSkeleton, LabelledValueGridSkeleton, LabelledValueSkeleton } from "@/components/loading/skeleton-parts";
 
 // ── Merchant invites ─────────────────────────────────────────────────────────
@@ -216,6 +221,40 @@ export function KybReviewPageSkeleton(): React.JSX.Element {
 					</Card>
 				</div>
 			</div>
+		</SkeletonRegion>
+	);
+}
+
+// ── Merchant detail ──────────────────────────────────────────────────────────
+
+/** The merchant summary fields: status, KYB, city, owner, members, onboarded. */
+const MERCHANT_SUMMARY_FIELDS = 6;
+
+/** `/merchants/[id]`: header (name + slug), the summary card, then the lifecycle card (state, action, appeals). */
+export function MerchantDetailPageSkeleton(): React.JSX.Element {
+	return (
+		<SkeletonRegion labels={MERCHANT_DETAIL_LOADING_LABELS} className="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-6">
+			<PageHeaderSkeleton actions={1} />
+			<Card data-skeleton="merchant-summary">
+				<CardHeader>
+					<CardHeadingSkeleton />
+				</CardHeader>
+				<CardContent>
+					<LabelledValueGridSkeleton count={MERCHANT_SUMMARY_FIELDS} className="md:grid-cols-3" />
+				</CardContent>
+			</Card>
+			<Card data-skeleton="merchant-lifecycle">
+				<CardHeader>
+					<div className="flex items-center justify-between gap-2">
+						<CardHeadingSkeleton />
+						<BadgeSkeleton />
+					</div>
+				</CardHeader>
+				<CardContent className="grid gap-4">
+					<Skeleton className="h-20 w-full" />
+					<Skeleton className="h-9 w-40" />
+				</CardContent>
+			</Card>
 		</SkeletonRegion>
 	);
 }

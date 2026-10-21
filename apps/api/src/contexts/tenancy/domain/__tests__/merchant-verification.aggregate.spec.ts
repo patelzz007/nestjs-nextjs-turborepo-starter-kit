@@ -1,8 +1,9 @@
 import { epochMs, KybStatusSchema, type KybStatus } from "@workspace/shared";
 
 import { MerchantVerification } from "../aggregates/merchant-verification.aggregate";
-import { KybAlreadyApprovedError, KybDecisionReasonRequiredError, KybTransitionNotAllowedError, TenantsCorruptStateError } from "../errors/tenants.errors";
+import { KybAlreadyApprovedError, KybDecisionReasonRequiredError, KybTransitionNotAllowedError } from "../errors/tenants.errors";
 import { MerchantVerificationStatusChanged } from "../events/tenants.events";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 const TENANT_ID = "0199a1b2-0000-7000-8000-000000000001";
 const NOW = epochMs(1_792_368_000_000);
@@ -72,6 +73,6 @@ describe("MerchantVerification merchant submission", () => {
 	});
 
 	it("rejects a stored status outside the enum as corrupt state", () => {
-		expect(() => MerchantVerification.rehydrate({ tenantId: TENANT_ID, kybStatus: "MAYBE" })).toThrow(TenantsCorruptStateError);
+		expect(() => MerchantVerification.rehydrate({ tenantId: TENANT_ID, kybStatus: "MAYBE" })).toThrow(CorruptAggregateStateError);
 	});
 });

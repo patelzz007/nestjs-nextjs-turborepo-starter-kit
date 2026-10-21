@@ -195,9 +195,9 @@ describe("POS terminal pairing (e2e)", () => {
 		const registered = await register("POS-only key");
 		const till = parseSuccessEnvelope(await pair(registered.pairingCode), PosPairedTerminalSchema).data;
 
-		const orgApi = await app.inject({ method: "GET", url: `${API_VERSION_PREFIX}/integration/rewards`, headers: { "x-api-key": till.apiKey } });
-		expect(orgApi.statusCode).toBe(403);
-		expect(errorCodeOf(orgApi)).toBe("API_KEY_SCOPE_FORBIDDEN");
+		const tenantApi = await app.inject({ method: "GET", url: `${API_VERSION_PREFIX}/integration/rewards`, headers: { "x-api-key": till.apiKey } });
+		expect(tenantApi.statusCode).toBe(403);
+		expect(errorCodeOf(tenantApi)).toBe("API_KEY_SCOPE_FORBIDDEN");
 		// …while the POS routes still accept it (the unknown code is the only problem).
 		expect((await validate(till.apiKey)).statusCode).toBe(404);
 	});

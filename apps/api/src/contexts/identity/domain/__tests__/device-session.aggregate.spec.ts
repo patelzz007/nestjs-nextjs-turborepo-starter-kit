@@ -8,9 +8,10 @@ import {
 	type DeviceSessionState,
 	type LiveSessionSummary,
 } from "../aggregates/device-session.aggregate";
-import { CorruptIdentityStateError, RefreshTokenExpiredError, RefreshTokenInvalidError, RefreshTokenRevokedError } from "../errors/identity.errors";
+import { RefreshTokenExpiredError, RefreshTokenInvalidError, RefreshTokenRevokedError } from "../errors/identity.errors";
 import { DeviceSessionsRevoked } from "../events/identity.events";
 import type { SessionDeviceDetails } from "../value-objects/session-device.value-object";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 const NOW: EpochMs = epochMs(1_800_000_000_000);
 const HOUR_MS = 3_600_000;
@@ -61,7 +62,7 @@ describe("DeviceSession.issue and rehydrate", () => {
 	});
 
 	it("refuses a stored session without a token hash", () => {
-		expect(() => DeviceSession.rehydrate(state({ tokenHash: "" }))).toThrow(CorruptIdentityStateError);
+		expect(() => DeviceSession.rehydrate(state({ tokenHash: "" }))).toThrow(CorruptAggregateStateError);
 	});
 });
 

@@ -4,12 +4,12 @@ If you have about six months of experience and this is your first day here, read
 
 ## The one-paragraph version
 
-This repo has three apps (API, web, mobile) and a set of shared packages. The API is the only thing that touches the database and enforces the rules. Web and mobile are clients: they show data and collect input, but they are never trusted. A single zod schema per data shape lives in `packages/contracts` and is used everywhere — API validation, frontend types, forms, and API docs — so nothing drifts. Every rule in `rules/` exists to keep that picture true as the codebase grows.
+This repo has three apps (API, web, mobile) and a set of shared packages. The API is the only thing that touches the database and enforces the rules. Web and mobile are clients: they show data and collect input, but they are never trusted. A single zod schema per data shape lives in `packages/shared` and is used everywhere — API validation, frontend types, forms, and API docs — so nothing drifts. Every rule in `rules/` exists to keep that picture true as the codebase grows.
 
 ## The map
 
 ```text
-                 ┌───────────────────────── packages/contracts ─────────────────────────┐
+                 ┌───────────────────────── packages/shared ─────────────────────────┐
                  │   zod schemas + inferred types (the ONE definition of every shape)   │
                  └───────▲───────────────────────▲────────────────────────▲─────────────┘
                          │                       │                        │
@@ -82,7 +82,7 @@ Web:      OrderDetailPage (smart, server component) loads the order via the API 
           <OrderSummary> (dumb). A "Cancel order" <Button> (dumb) receives onClick from a small client wrapper.
 Click:    The wrapper calls a TanStack Query mutation. The button shows a loading state; the SERVER is idempotent
           anyway, because a double-click or retry must not cancel twice or double-refund.
-Contract: CancelOrderSchema (packages/contracts) validated on the client for instant feedback (UX)…
+Contract: CancelOrderSchema (packages/shared) validated on the client for instant feedback (UX)…
 API:      …and validated AGAIN on the server (security). Guards check permission + ownership + tenant.
 Service:  CancelOrderService asks OrderCancellationPolicy "may this be cancelled?" — a named, unit-tested rule.
 Repo:     One atomic UPDATE … WHERE status NOT IN ('delivered','cancelled') — two concurrent cancels cannot both win.

@@ -61,10 +61,10 @@ describe("applyMerchantRewardChange", () => {
 		const client = new QueryClient();
 		const pageKey = apiRouter.tenants.rewards.list.queryKey({ tenantSlug: ORG, page: 2, limit: 12, locationId: undefined });
 		const summaryKey = apiRouter.tenants.rewards.summary.queryKey({ tenantSlug: ORG, locationId: undefined });
-		const otherOrgKey = apiRouter.tenants.rewards.list.queryKey({ tenantSlug: "other-org", page: 1, limit: 12, locationId: undefined });
+		const otherTenantKey = apiRouter.tenants.rewards.list.queryKey({ tenantSlug: "other-org", page: 1, limit: 12, locationId: undefined });
 		client.setQueryData(pageKey, { success: true, data: [reward("Old")], meta: META });
 		client.setQueryData(summaryKey, { success: true, data: { countsByStatus: {}, unitsRemaining: 0 }, meta: META });
-		client.setQueryData(otherOrgKey, { success: true, data: [], meta: META });
+		client.setQueryData(otherTenantKey, { success: true, data: [], meta: META });
 		const answer: Envelope<RewardResponse> = { success: true, data: reward("New"), meta: META };
 
 		await applyMerchantRewardChange(client, ORG, answer);
@@ -72,6 +72,6 @@ describe("applyMerchantRewardChange", () => {
 		expect(client.getQueryData(apiRouter.tenants.rewards.get.queryKey({ tenantSlug: ORG, rewardId: answer.data.id }))).toEqual(answer);
 		expect(client.getQueryState(pageKey)?.isInvalidated).toBe(true);
 		expect(client.getQueryState(summaryKey)?.isInvalidated).toBe(true);
-		expect(client.getQueryState(otherOrgKey)?.isInvalidated).toBe(false);
+		expect(client.getQueryState(otherTenantKey)?.isInvalidated).toBe(false);
 	});
 });

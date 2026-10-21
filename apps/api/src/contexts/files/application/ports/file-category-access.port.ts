@@ -1,4 +1,4 @@
-import type { CreateFileUploadUrlInput, FileCategory } from "@workspace/shared";
+import type { FileUploadRequest, FileCategory } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { AuthorizationError } from "../../../../platform/application/errors/app-error";
@@ -29,7 +29,7 @@ export interface FileAccessSubject {
  */
 export interface FileCategoryAccessRule {
 	readonly categories: readonly FileCategory[];
-	assertCanUpload(actor: FileActor, request: CreateFileUploadUrlInput): Promise<void>;
+	assertCanUpload(actor: FileActor, request: FileUploadRequest): Promise<void>;
 	assertCanAct(actor: FileActor, file: FileAccessSubject, action: FileAccessAction): Promise<void>;
 }
 
@@ -73,7 +73,7 @@ export class FileCategoryAccessRegistry {
 		}
 	}
 
-	public async assertCanUpload(actor: ActorContext, request: CreateFileUploadUrlInput): Promise<void> {
+	public async assertCanUpload(actor: ActorContext, request: FileUploadRequest): Promise<void> {
 		const person = this.person(actor, "upload");
 		if (person.isSuperAdmin) {
 			return;

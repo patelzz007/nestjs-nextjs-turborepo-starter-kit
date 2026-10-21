@@ -9,7 +9,7 @@ import {
 } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
-import type { MerchantAccessGrant, MerchantAccessPort, MerchantAccessRequest } from "../ports/merchant-access.port";
+import type { MerchantAccessGrant, MerchantAccessPort, MerchantAccessRequest } from "../../../../platform/application/ports/authorization.port";
 import type { TenantDirectoryPort, ResolvedTenantMember } from "../ports/tenant-directory.port";
 import type { TeamInvitePreviewView, TeamReadPort } from "../ports/team-read.port";
 import { ListMembersHandler } from "../queries/list-members/list-members.handler";

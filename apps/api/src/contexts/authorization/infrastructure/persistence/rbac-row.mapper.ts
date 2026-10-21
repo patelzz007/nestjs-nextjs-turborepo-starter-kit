@@ -3,7 +3,7 @@ import { JsonValueSchema } from "@workspace/shared";
 
 import { PermissionAggregate, type PermissionState } from "../../domain/aggregates/permission.aggregate";
 import { RoleAggregate, type RoleState } from "../../domain/aggregates/role.aggregate";
-import { CorruptAuthorizationStateError } from "../../domain/errors/authorization.errors";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** A `Role` row as domain state (bigint epochs → numbers). */
 export function roleStateOf(row: Role): RoleState {
@@ -29,7 +29,7 @@ export function roleAggregateOf(row: Role): RoleAggregate {
 export function permissionStateOf(row: Permission): PermissionState {
 	const conditions = JsonValueSchema.nullable().safeParse(row.conditions);
 	if (!conditions.success) {
-		throw new CorruptAuthorizationStateError("Permission", row.id);
+		throw new CorruptAggregateStateError("Permission", row.id);
 	}
 	return {
 		id: row.id,

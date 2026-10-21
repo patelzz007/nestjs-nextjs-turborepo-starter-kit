@@ -1,9 +1,9 @@
 ---
 title: "API reference — Customer rewards and claims"
-description: "The consumer app's API: browse rewards, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics."
+description: "The consumer app's API: browse rewards, share them with friends, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics."
 order: 6
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792454400000
+lastUpdated: 1792540800000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -12,7 +12,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference — Customer rewards and claims
 
-The consumer app's API: browse rewards, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics.
+The consumer app's API: browse rewards, share them with friends, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics.
 
 How these endpoints fit together: [Customer claims guide](../../user-guide/05-customer-claims.md). Conventions shared by every endpoint (envelope, auth, errors, pagination): [API reference overview](./README.md).
 
@@ -116,11 +116,11 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792520454844,
-      "updatedAt": 1792520455786,
+      "createdAt": 1792586066689,
+      "updatedAt": 1792586067670,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15a8b-82c6-7486-a020-2dc6156d2593",
+      "id": "01a15e74-ab08-77b1-9a35-67e97fd0ad61",
       "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
       "tenantName": "Brew & Bean KL",
       "tenantLogoUrl": null,
@@ -134,18 +134,18 @@ Response `200 OK` (application/json):
       "category": "cafe",
       "images": [
         {
-          "fileId": "01a15a8b-7b4f-7637-b0d1-a42f040b6e31",
-          "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/LARGE/local-public",
+          "fileId": "01a15e74-a3b9-73f2-b9ce-90ff869877d1",
+          "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/LARGE/local-public",
           "width": 1920,
           "height": 1080,
           "sources": [
             {
               "width": 640,
-              "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/THUMBNAIL/local-public"
+              "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/THUMBNAIL/local-public"
             },
             {
               "width": 1280,
-              "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/MEDIUM/local-public"
+              "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/MEDIUM/local-public"
             }
           ]
         }
@@ -153,15 +153,15 @@ Response `200 OK` (application/json):
       "quantityTotal": 250,
       "quantityRemaining": 250,
       "quantityReserved": 0,
-      "startDate": 1792520454635,
-      "expiryDate": 1797704454635,
+      "startDate": 1792586066463,
+      "expiryDate": 1797770066463,
       "status": "PUBLISHED",
       "claimCount": 0,
       "redemptionCount": 0,
       "referralsEnabled": true,
       "referralPoolTotal": 50,
       "referralPoolRemaining": 50,
-      "referrerRewardId": "01a15a8b-82c6-7d80-9792-bf78bab3e1d2",
+      "referrerRewardId": "01a15e74-ab08-7ebb-a3ea-a0f64db406d2",
       "rules": {
         "minSpendMyr": 15,
         "maxUsePerUser": 1
@@ -170,11 +170,11 @@ Response `200 OK` (application/json):
       "locationIds": []
     },
     {
-      "createdAt": 1792520394718,
-      "updatedAt": 1792520395154,
+      "createdAt": 1792585982359,
+      "updatedAt": 1792585982785,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15a8a-97dd-740a-8955-1d4ab2274453",
+      "id": "01a15e73-6196-7639-8853-6997d6ab0d1c",
       "tenantId": "019b76da-a800-72b9-80b8-91bd729eddbe",
       "tenantName": "Jonker Street Kitchen",
       "tenantLogoUrl": null,
@@ -224,7 +224,7 @@ Response `200 OK` (application/json):
       "quantityRemaining": 28,
       "quantityReserved": 2,
       "startDate": null,
-      "expiryDate": 1795544394714,
+      "expiryDate": 1795609982357,
       "status": "PUBLISHED",
       "claimCount": 0,
       "redemptionCount": 0,
@@ -247,11 +247,11 @@ Response `200 OK` (application/json):
     "total": 17,
     "page": 1,
     "totalPages": 9,
-    "nextCursor": "eyJhdCI6MTc5MjUyMDM5NDcxOCwiaWQiOiIwMWExNWE4YS05N2RkLTc0MGEtODk1NS0xZDRhYjIyNzQ0NTMifQ",
+    "nextCursor": "eyJhdCI6MTc5MjU4NTk4MjM1OSwiaWQiOiIwMWExNWU3My02MTk2LTc2MzktODg1My02OTk3ZDZhYjBkMWMifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "8LyKtWO-UMx6kkAat91r3",
-    "timestamp": 1792520456467
+    "correlationId": "CpeNsTLNkxvAz3Xp0ZC1g",
+    "timestamp": 1792586068379
   }
 }
 ```
@@ -330,7 +330,7 @@ Get published reward detail
 **Example** — called as no session.
 
 ```http
-GET /api/v1/rewards/01a15a8b-82c6-7486-a020-2dc6156d2593
+GET /api/v1/rewards/01a15e74-ab08-77b1-9a35-67e97fd0ad61
 X-Client-Type: web
 ```
 
@@ -340,11 +340,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792520454844,
-    "updatedAt": 1792520455786,
+    "createdAt": 1792586066689,
+    "updatedAt": 1792586067670,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15a8b-82c6-7486-a020-2dc6156d2593",
+    "id": "01a15e74-ab08-77b1-9a35-67e97fd0ad61",
     "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "tenantName": "Brew & Bean KL",
     "tenantLogoUrl": null,
@@ -358,18 +358,18 @@ Response `200 OK` (application/json):
     "category": "cafe",
     "images": [
       {
-        "fileId": "01a15a8b-7b4f-7637-b0d1-a42f040b6e31",
-        "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/LARGE/local-public",
+        "fileId": "01a15e74-a3b9-73f2-b9ce-90ff869877d1",
+        "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/LARGE/local-public",
         "width": 1920,
         "height": 1080,
         "sources": [
           {
             "width": 640,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/THUMBNAIL/local-public"
+            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/THUMBNAIL/local-public"
           },
           {
             "width": 1280,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/MEDIUM/local-public"
+            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/MEDIUM/local-public"
           }
         ]
       }
@@ -377,15 +377,15 @@ Response `200 OK` (application/json):
     "quantityTotal": 250,
     "quantityRemaining": 250,
     "quantityReserved": 0,
-    "startDate": 1792520454635,
-    "expiryDate": 1797704454635,
+    "startDate": 1792586066463,
+    "expiryDate": 1797770066463,
     "status": "PUBLISHED",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "01a15a8b-82c6-7d80-9792-bf78bab3e1d2",
+    "referrerRewardId": "01a15e74-ab08-7ebb-a3ea-a0f64db406d2",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -394,11 +394,90 @@ Response `200 OK` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "2BtPRC_hrkXaNM_Y8Hf8V",
-    "timestamp": 1792520456602
+    "correlationId": "HnkChZpsMwnzNrUjZDbyz",
+    "timestamp": 1792586068523
   }
 }
 ```
+
+## Referrals
+
+### POST /api/v1/referrals/attribution
+
+Remember the referral link the caller opened
+
+The next claim of that reward within the window is credited to the referrer. 404 REFERRAL_LINK_INVALID; 409 REFERRAL_OWN_LINK.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `RewardReferralController_recordAttribution` · [source](../../../apps/api/src/contexts/referrals/presentation/http/reward-referral.controller.ts)
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `attributionToken` | string | yes | pattern `^[A-Za-z0-9_-]{43}$` |
+
+**Response 201 Created** (`application/json`) — The pending attribution
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.expiresAt` | integer | yes |  |
+| `data.rewardId` | string (uuid) | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 404 | `REFERRAL_LINK_INVALID` | Stated in the endpoint description. |
+| 409 | `REFERRAL_OWN_LINK` | Stated in the endpoint description. |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/referrals/rewards/{rewardId}/links
+
+Mint a share link for a reward
+
+Each link credits one friend. 404 REFERRAL_REWARD_NOT_REFERABLE when the reward cannot be shared; 409 REFERRAL_LINK_LIMIT_REACHED at the cap of unused links.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `RewardReferralController_createLink` · [source](../../../apps/api/src/contexts/referrals/presentation/http/reward-referral.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `rewardId` | path | string (uuid) | yes |  |
+
+**Response 201 Created** (`application/json`) — The new link's attribution token
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.attributionToken` | string | yes | pattern `^[A-Za-z0-9_-]{43}$` |
+| `data.referralId` | string (uuid) | yes |  |
+| `data.rewardId` | string (uuid) | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 404 | `REFERRAL_REWARD_NOT_REFERABLE` | Stated in the endpoint description. |
+| 409 | `REFERRAL_LINK_LIMIT_REACHED` | Stated in the endpoint description. |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
 
 ## Claims
 
@@ -468,30 +547,30 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792520457455,
-      "updatedAt": 1792520457455,
+      "createdAt": 1792586069400,
+      "updatedAt": 1792586069400,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15a8b-8d71-7b6b-9beb-dc66e8bd7d13",
-      "rewardId": "01a15a8b-82c6-7486-a020-2dc6156d2593",
+      "id": "01a15e74-b5f9-72e6-9c90-2c56384f84f7",
+      "rewardId": "01a15e74-ab08-77b1-9a35-67e97fd0ad61",
       "rewardTitle": "Free Kopi O with any breakfast set",
       "status": "PENDING",
-      "claimedAt": 1792520457455,
-      "claimExpiresAt": 1793125257455,
+      "claimedAt": 1792586069401,
+      "claimExpiresAt": 1793190869401,
       "redeemedAt": null,
       "isReferrerCredit": false
     },
     {
-      "createdAt": 1792520394741,
-      "updatedAt": 1792520394741,
+      "createdAt": 1792585982383,
+      "updatedAt": 1792585982383,
       "isDeleted": false,
       "deletedAt": null,
       "id": "019b76da-a800-7c1a-9069-f2e16d4af0a3",
       "rewardId": "019b76da-a800-7abc-a318-2ac9fe8ee4ca",
       "rewardTitle": "Free coffee — Grand Opening",
       "status": "PENDING",
-      "claimedAt": 1792433994737,
-      "claimExpiresAt": 1793125194737,
+      "claimedAt": 1792499582380,
+      "claimExpiresAt": 1793190782380,
       "redeemedAt": null,
       "isReferrerCredit": false
     }
@@ -501,11 +580,11 @@ Response `200 OK` (application/json):
     "total": 203,
     "page": 1,
     "totalPages": 102,
-    "nextCursor": "eyJhdCI6MTc5MjQzMzk5NDczNywiaWQiOiIwMTliNzZkYS1hODAwLTdjMWEtOTA2OS1mMmUxNmQ0YWYwYTMifQ",
+    "nextCursor": "eyJhdCI6MTc5MjQ5OTU4MjM4MCwiaWQiOiIwMTliNzZkYS1hODAwLTdjMWEtOTA2OS1mMmUxNmQ0YWYwYTMifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "EPRTfPXHgkGJmOWIqX4Nk",
-    "timestamp": 1792520457749
+    "correlationId": "785ZNWjO73RE1NMDGCDRv",
+    "timestamp": 1792586069619
   }
 }
 ```
@@ -567,9 +646,9 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "rewardId": "01a15a8b-82c6-7486-a020-2dc6156d2593",
+  "rewardId": "01a15e74-ab08-77b1-9a35-67e97fd0ad61",
   "phone": "+60123456789",
-  "otp": "274251"
+  "otp": "952175"
 }
 ```
 
@@ -580,25 +659,25 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "claim": {
-      "createdAt": 1792520457455,
-      "updatedAt": 1792520457455,
+      "createdAt": 1792586069400,
+      "updatedAt": 1792586069400,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15a8b-8d71-7b6b-9beb-dc66e8bd7d13",
-      "rewardId": "01a15a8b-82c6-7486-a020-2dc6156d2593",
+      "id": "01a15e74-b5f9-72e6-9c90-2c56384f84f7",
+      "rewardId": "01a15e74-ab08-77b1-9a35-67e97fd0ad61",
       "rewardTitle": "Free Kopi O with any breakfast set",
       "status": "PENDING",
-      "claimedAt": 1792520457455,
-      "claimExpiresAt": 1793125257455,
+      "claimedAt": 1792586069401,
+      "claimExpiresAt": 1793190869401,
       "redeemedAt": null,
       "isReferrerCredit": false
     },
-    "qrDeepLink": "/rewards/claims/01a15a8b-8d71-7b6b-9beb-dc66e8bd7d13/qr",
-    "backupCode": "2E9XGYTF"
+    "qrDeepLink": "/rewards/claims/01a15e74-b5f9-72e6-9c90-2c56384f84f7/qr",
+    "backupCode": "6VKEZ9BH"
   },
   "meta": {
-    "correlationId": "PWmZ1R6gLxzYRak7ue4VL",
-    "timestamp": 1792520457627
+    "correlationId": "KQeWOecIVdCLPrIq2cMho",
+    "timestamp": 1792586069528
   }
 }
 ```
@@ -681,7 +760,7 @@ Issue fresh QR and backup codes for an active claim (the previous codes stop wor
 **Example** — called as alice.johnson@example.com (web app).
 
 ```http
-POST /api/v1/claims/01a15a8b-8d71-7b6b-9beb-dc66e8bd7d13/qr
+POST /api/v1/claims/01a15e74-b5f9-72e6-9c90-2c56384f84f7/qr
 X-Client-Type: web
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -693,14 +772,14 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "claimId": "01a15a8b-8d71-7b6b-9beb-dc66e8bd7d13",
-    "qrPayload": "KcSFR59OJEj1d09TSC_Ow8WENIvR6kkWB0VHULD828U",
-    "backupCode": "GZTKXWZ6",
-    "claimExpiresAt": 1793125257455
+    "claimId": "01a15e74-b5f9-72e6-9c90-2c56384f84f7",
+    "qrPayload": "tSV6EwyqA6nRW2G_qVASU7V16ZnyyN6q2sH6UD3mq50",
+    "backupCode": "RKMGJ4CY",
+    "claimExpiresAt": 1793190869401
   },
   "meta": {
-    "correlationId": "ZCyrPyd7mLS3jzJiba4tb",
-    "timestamp": 1792520457846
+    "correlationId": "6q_SXL0arLJdWK_RUbim0",
+    "timestamp": 1792586069736
   }
 }
 ```
@@ -800,7 +879,7 @@ Response `200 OK` (application/json):
   "data": {
     "period": {
       "from": 1788134400000,
-      "to": 1792520464964,
+      "to": 1792586077274,
       "timeZone": "UTC"
     },
     "totalClaims": {
@@ -857,11 +936,11 @@ Response `200 OK` (application/json):
       "currency": "MYR",
       "totalSpentMinor": {
         "value": 99046,
-        "changePercent": -6
+        "changePercent": -12
       },
       "visits": {
         "value": 17,
-        "changePercent": 6
+        "changePercent": 0
       },
       "byMerchant": [
         {
@@ -894,8 +973,8 @@ Response `200 OK` (application/json):
     }
   },
   "meta": {
-    "correlationId": "gwPvg7hfemjMHa5dxCPk7",
-    "timestamp": 1792520464984
+    "correlationId": "SO-AKscI8i-4BJyJm75ER",
+    "timestamp": 1792586077299
   }
 }
 ```
@@ -1034,50 +1113,50 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "range": {
-      "from": 1789928465028,
-      "to": 1792520465028,
+      "from": 1789994077352,
+      "to": 1792586077352,
       "timeZone": "UTC",
       "interval": "month",
-      "previousFrom": 1787336465028,
-      "previousTo": 1789928465028
+      "previousFrom": 1787402077352,
+      "previousTo": 1789994077352
     },
     "currency": "MYR",
     "totals": {
       "spentMinor": {
-        "value": 59135,
-        "previous": 47389,
-        "change": 11746,
-        "changePercent": 24.8
+        "value": 50960,
+        "previous": 55564,
+        "change": -4604,
+        "changePercent": -8.3
       },
       "visits": {
-        "value": 10,
-        "previous": 8,
-        "change": 2,
-        "changePercent": 25
+        "value": 8,
+        "previous": 10,
+        "change": -2,
+        "changePercent": -20
       },
       "averageBillMinor": {
-        "value": 5914,
-        "previous": 5924,
-        "change": -10,
-        "changePercent": -0.2
+        "value": 6370,
+        "previous": 5556,
+        "change": 814,
+        "changePercent": 14.7
       },
       "claims": {
-        "value": 11,
-        "previous": 9,
-        "change": 2,
-        "changePercent": 22.2
+        "value": 10,
+        "previous": 10,
+        "change": 0,
+        "changePercent": 0
       },
       "redemptions": {
-        "value": 10,
-        "previous": 8,
-        "change": 2,
-        "changePercent": 25
+        "value": 8,
+        "previous": 10,
+        "change": -2,
+        "changePercent": -20
       },
       "conversionRate": {
-        "value": 90.9,
-        "previous": 88.9,
-        "change": 2,
-        "changePercent": 2.2
+        "value": 80,
+        "previous": 100,
+        "change": -20,
+        "changePercent": -20
       },
       "merchants": {
         "value": 2,
@@ -1106,17 +1185,17 @@ Response `200 OK` (application/json):
     },
     "series": [
       {
-        "start": 1789928465028,
+        "start": 1789994077352,
         "end": 1790812800000,
         "isPartial": true,
-        "spentMinor": 11237,
-        "visits": 4,
-        "claims": 3,
-        "redemptions": 4
+        "spentMinor": 3062,
+        "visits": 2,
+        "claims": 2,
+        "redemptions": 2
       },
       {
         "start": 1790812800000,
-        "end": 1792520465028,
+        "end": 1792586077352,
         "isPartial": true,
         "spentMinor": 47898,
         "visits": 6,
@@ -1127,12 +1206,12 @@ Response `200 OK` (application/json):
     "spendingByCategory": [
       {
         "category": "restaurant",
-        "totalMinor": 50851,
-        "visits": 6,
+        "totalMinor": 45398,
+        "visits": 5,
         "series": [
           {
-            "start": 1789928465028,
-            "totalMinor": 5453
+            "start": 1789994077352,
+            "totalMinor": 0
           },
           {
             "start": 1790812800000,
@@ -1142,12 +1221,12 @@ Response `200 OK` (application/json):
       },
       {
         "category": "cafe",
-        "totalMinor": 8284,
-        "visits": 4,
+        "totalMinor": 5562,
+        "visits": 3,
         "series": [
           {
-            "start": 1789928465028,
-            "totalMinor": 5784
+            "start": 1789994077352,
+            "totalMinor": 3062
           },
           {
             "start": 1790812800000,
@@ -1161,12 +1240,12 @@ Response `200 OK` (application/json):
         "tenantId": "019b76da-a800-72b9-80b8-91bd729eddbe",
         "merchantName": "Jonker Street Kitchen",
         "category": "restaurant",
-        "totalMinor": 50851,
-        "visits": 6,
+        "totalMinor": 45398,
+        "visits": 5,
         "series": [
           {
-            "start": 1789928465028,
-            "totalMinor": 5453
+            "start": 1789994077352,
+            "totalMinor": 0
           },
           {
             "start": 1790812800000,
@@ -1178,12 +1257,12 @@ Response `200 OK` (application/json):
         "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
         "merchantName": "Brew & Bean KL",
         "category": "cafe",
-        "totalMinor": 8284,
-        "visits": 4,
+        "totalMinor": 5562,
+        "visits": 3,
         "series": [
           {
-            "start": 1789928465028,
-            "totalMinor": 5784
+            "start": 1789994077352,
+            "totalMinor": 3062
           },
           {
             "start": 1790812800000,
@@ -1199,13 +1278,13 @@ Response `200 OK` (application/json):
       },
       {
         "status": "REDEEMED",
-        "claims": 8
+        "claims": 7
       }
     ]
   },
   "meta": {
-    "correlationId": "hKdgBGLrd6TBJEgBOJBQJ",
-    "timestamp": 1792520465054
+    "correlationId": "UE6RNCuoJU9wYSg2lIKUU",
+    "timestamp": 1792586077380
   }
 }
 ```
@@ -1251,7 +1330,7 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "rewardId": "01a15a8b-82c6-7486-a020-2dc6156d2593",
+  "rewardId": "01a15e74-ab08-77b1-9a35-67e97fd0ad61",
   "phone": "+60123456789"
 }
 ```
@@ -1265,8 +1344,8 @@ Response `201 Created` (application/json):
     "ok": true
   },
   "meta": {
-    "correlationId": "XQg52tUFNlfacypp8ZQxN",
-    "timestamp": 1792520457366
+    "correlationId": "iIz7bOLBqVBFRR1HBzrmh",
+    "timestamp": 1792586069322
   }
 }
 ```
@@ -1328,8 +1407,8 @@ Response `201 Created` (application/json):
     "ok": true
   },
   "meta": {
-    "correlationId": "wwYUVbUK3E3Us1s3oA-Yi",
-    "timestamp": 1792520457245
+    "correlationId": "p33BzgPP-0tEdec8iHmMP",
+    "timestamp": 1792586069186
   }
 }
 ```
@@ -1380,8 +1459,8 @@ Response `200 OK` (application/json):
     "phoneVerified": false
   },
   "meta": {
-    "correlationId": "I58kKZFfsr-l4h4ksQdma",
-    "timestamp": 1792520457136
+    "correlationId": "DcgvJug3AX0NoSCT2d0sU",
+    "timestamp": 1792586069057
   }
 }
 ```
@@ -1452,11 +1531,11 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792433994917,
-      "updatedAt": 1792520394920,
+      "createdAt": 1792499582553,
+      "updatedAt": 1792585982556,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15a8a-98a7-71cf-82b2-e627bd7f9677",
+      "id": "01a15e73-625b-71cf-9a9f-f88e26c2e194",
       "type": "claim_confirmed",
       "title": "Claim confirmed",
       "body": "Your free coffee reward is ready. Show QR at Brew & Bean KL.",
@@ -1474,8 +1553,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "r1VMb4eF4zE5bkb9uAJhd",
-    "timestamp": 1792520465108
+    "correlationId": "XRZOH9kjVoV4d_u45vRwS",
+    "timestamp": 1792586077428
   }
 }
 ```
@@ -1534,8 +1613,8 @@ Response `201 Created` (application/json):
     "ok": true
   },
   "meta": {
-    "correlationId": "w6ksG5fDA6KSmV8kgM9QU",
-    "timestamp": 1792520465159
+    "correlationId": "O1kRfMtXtf7fDeiows-Fs",
+    "timestamp": 1792586077487
   }
 }
 ```

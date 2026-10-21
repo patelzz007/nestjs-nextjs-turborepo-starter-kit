@@ -2,6 +2,7 @@
 
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
 import { AccessGate } from "@/contexts/identity";
+import { readReferralToken, ReferralAttributionCapture, RewardReferralShare, withReferralToken } from "@/contexts/referrals";
 import { RewardDetailSkeleton } from "@/components/loading/reward-detail-skeleton";
 import { RewardClaimFlow } from "@/contexts/rewards/components/detail/claim-flow";
 import { RewardGallery } from "@/contexts/rewards/components/detail/gallery";
@@ -23,6 +24,7 @@ import { formatCount } from "@workspace/ui/lib/format/number";
 import { Card } from "@workspace/ui/components/card";
 import { Clock, Users } from "lucide-react";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { ROUTE_PREFIXES, ROUTES } from "@/lib/routes";
 
@@ -66,6 +68,9 @@ export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = R
 	const reward = rewardQuery.data?.data;
 
 	const [message, setMessage] = React.useState<string | null>(null);
+	const pathname = usePathname();
+	// A friend's referral link (`?ref=`): recorded once signed in, and kept through the sign-in prompt.
+	const referralToken = readReferralToken(useSearchParams());
 	const [nowMs, setNowMs] = React.useState<number>(() => Date.now());
 
 	React.useEffect((): (() => void) => {
@@ -179,14 +184,24 @@ export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = R
 									</Link>
 								</div>
 							) : (
-								<AccessGate feature="this reward" signInDescription="Sign in or create a free account to claim this reward." className="py-8">
+								<AccessGate
+									feature="this reward"
+									signInDescription="Sign in or create a free account to claim this reward."
+									returnTo={withReferralToken(pathname, referralToken)}
+									className="py-8">
 									<RewardClaimFlow rewardId={rewardId} onMessage={setMessage} onClaimFailed={handleClaimFailed} />
 								</AccessGate>
 							)}
 						</div>
+						{reward.referralsEnabled && canClaim ? (
+							<div className="mt-4 border-t border-border pt-4">
+								<RewardReferralShare rewardId={reward.id} rewardTitle={reward.title} />
+							</div>
+						) : null}
 					</Card>
 				</div>
 			</div>
+			<ReferralAttributionCapture attributionToken={referralToken} onMessage={setMessage} />
 
 			<RewardMoreFromMerchant reward={reward} detailPathPrefix={detailPathPrefix} />
 		</div>

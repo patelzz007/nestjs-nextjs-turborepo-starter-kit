@@ -82,6 +82,7 @@ export function adminAccountView(overrides: Partial<AdminAccountView> & Pick<Adm
 		updatedAt: NOW,
 		failedLoginAttempts: 0,
 		lockedUntil: null,
+		ban: null,
 		...overrides,
 	};
 }

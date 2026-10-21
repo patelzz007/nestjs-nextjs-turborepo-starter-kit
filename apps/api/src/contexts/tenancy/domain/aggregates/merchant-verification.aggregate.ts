@@ -9,10 +9,10 @@ import {
 	KybDocumentRejectedError,
 	KybReviewClosedError,
 	KybTransitionNotAllowedError,
-	TenantsCorruptStateError,
 } from "../errors/tenants.errors";
 import { MerchantVerificationStatusChanged, type TenantsDomainEvent } from "../events/tenants.events";
 import { evidenceAllClean, evidenceNeedsAction, kybDocumentScanStatusOf, kybEvidenceRejectionOf, type KybEvidenceFile } from "../policies/kyb-evidence.policy";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /**
  * Admin decisions allowed from each review status (D05, migration plan §7.5).
@@ -72,7 +72,7 @@ export class MerchantVerification extends AggregateRoot<TenantsDomainEvent> {
 	public static rehydrate(state: MerchantVerificationState): MerchantVerification {
 		const parsed = KybStatusSchema.safeParse(state.kybStatus);
 		if (!parsed.success) {
-			throw new TenantsCorruptStateError(state.tenantId);
+			throw new CorruptAggregateStateError("tenant", state.tenantId);
 		}
 		return new MerchantVerification(state.tenantId, parsed.data);
 	}

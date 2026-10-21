@@ -143,7 +143,8 @@ curl -X POST https://api.example.com/api/v1/integration/redemptions/validate \
 ```
 
 - Send exactly one of `token` or `backupCode` (both, or neither, is a `400` validation error).
-- `invalidReason` is one of `ALREADY_REDEEMED`, `EXPIRED`, `NOT_VALID_AT_STORE`, `STORE_REQUIRED`.
+- `invalidReason` is one of `ALREADY_REDEEMED`, `EXPIRED`, `NOT_VALID_AT_STORE`, `STORE_REQUIRED`,
+  `CUSTOMER_BANNED` (the merchant banned this customer from its rewards; tell them, do not apply it).
 - `minSpendMinor` is the reward's minimum bill in sen (`null` = none). Checkout refuses a smaller bill.
 
 Validate changes nothing except the audit log (`merchant.scan_qr`).
@@ -199,6 +200,7 @@ Platform admins with `ANALYTICS:READ` see **Analytics → Sales** (`/analytics/s
 | 403    | `TERMINAL_KEY_MISMATCH`                                                           | A paired key sent another terminal's id.                                                   |
 | 404    | `PAIRING_CODE_INVALID`                                                            | Pairing code unknown, expired or already used.                                             |
 | 404    | `REDEMPTION_TOKEN_INVALID`                                                        | Unknown QR token or backup code — including another merchant's code.                       |
+| 403    | `CUSTOMER_BANNED`                                                                 | The merchant banned this customer from its rewards (`claimId` in the error).               |
 | 409    | `ALREADY_REDEEMED`                                                                | A claim was already used (`claimId` in the error).                                         |
 | 409    | `IDEMPOTENCY_KEY_REUSED`                                                          | Same key, different bill.                                                                  |
 | 422    | `CLAIM_EXPIRED`, `REWARD_NOT_VALID_AT_STORE`                                      | The code can't be used here or now.                                                        |

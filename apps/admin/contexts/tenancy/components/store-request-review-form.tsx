@@ -8,7 +8,7 @@ import * as React from "react";
 import { z } from "zod";
 
 import { TextField, useFormSubmitHandler } from "@/components/common/form-fields";
-import { contractFormSchema, OptionalTextInputSchema } from "@/lib/forms/contract-form-schema";
+import { contractFormSchema, OptionalTextInputSchema } from "@workspace/client/lib/forms/contract-form-schema";
 
 /** Raw review form → the shared review contract (a rejection needs a reason — the contract's rule, not the form's). */
 export const StoreRequestReviewFormSchema = contractFormSchema(z.object({ approve: z.boolean(), rejectionReason: OptionalTextInputSchema }), AdminLocationReviewSchema);

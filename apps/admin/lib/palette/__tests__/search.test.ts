@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { PERMISSION } from "@workspace/shared";
 
-import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
+import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { buildSearchableItems, findSuggestion, matchesQuery, parseInput } from "@/lib/palette/search";
 

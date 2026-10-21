@@ -1,6 +1,6 @@
 ---
-title: "Tenancy, Stores and Row-Level Security"
-tags: ["authorization", "multi-tenancy", "stores", "rls", "postgres", "prisma"]
+title: "Tenancy, Locations and Row-Level Security"
+tags: ["authorization", "multi-tenancy", "locations", "rls", "postgres", "prisma"]
 description: "Tenants, stores, locations and memberships; how client tenant ids are verified; how PostgreSQL RLS knows who is asking; system operations; the two Prisma clients; and applying RLS safely."
 order: 22
 author: "Platform Team"
@@ -8,7 +8,7 @@ lastUpdated: 1790812800000
 coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
 ---
 
-# Tenancy, Stores and Row-Level Security
+# Tenancy, Locations and Row-Level Security
 
 > [!NOTE]
 > Read the [overview](./overview.md) and [backend guide](./backend.md) first.
@@ -21,36 +21,27 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 ```text
 Tenant  (the tenant — e.g. "Brew & Bean KL")
 │
-├── TenantLocation  (an operational site: terminals, rewards, redemptions happen here)
-│     └── Store  (1:1 with its location — the authorization unit for store staff)
+├── Location  (an operational site: terminals, rewards, redemptions happen here; also the authorization unit for location staff)
 │
-├── TenantMembership  (user ↔ tenant, role OWNER / ADMIN / MEMBER / POLICY_ADMIN / CASHIER)
-│     └── TenantMembershipLocationScope  (ALL_LOCATIONS, or SELECTED location ids)
-│
-└── StoreMembership  (user ↔ one store, with a dynamic RBAC Role such as "Store Manager")
+└── Membership  (user ↔ tenant, role OWNER / ADMIN / MEMBER / POLICY_ADMIN / CASHIER)
+      └── MembershipLocationScope  (ALL_LOCATIONS, or one SELECTED location, optionally with a dynamic RBAC Role such as "Location Manager")
 ```
 
-| Model                           | Table                           | Purpose                                                                                                         |
-| ------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `Tenant`                        | `Tenant`                        | The tenant boundary (spec §35).                                                                                 |
-| `TenantLocation`                | `TenantLocation`                | Where business happens. Existing rewards / terminals / API keys point here.                                     |
-| `Store`                         | `Store`                         | One per location (`locationId` is unique). Status `ACTIVE` only while the location is `ACTIVE` and not deleted. |
-| `TenantMembership`              | `TenantMembership`              | "Alice belongs to Brew & Bean as CASHIER". Grants **no permissions** by itself.                                 |
-| `TenantMembershipLocationScope` | `TenantMembershipLocationScope` | Which locations a tenant member may act in.                                                                     |
-| `StoreMembership`               | `StoreMembership`               | "Alice works at Store KL as **Store Staff**". The role's permissions apply **only in that store**.              |
+| Model                     | Table                     | Purpose                                                                                                                          |
+| ------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `Tenant`                  | `Tenant`                  | The tenant boundary (spec §35).                                                                                                  |
+| `Location`                | `Location`                | Where business happens. Rewards, terminals, API keys and redemptions point here.                                                 |
+| `Membership`              | `Membership`              | "Alice belongs to Brew & Bean as CASHIER". Grants **no permissions** by itself.                                                  |
+| `MembershipLocationScope` | `MembershipLocationScope` | Which locations a member may act in. A `SELECTED` row may carry a `roleId`: "Alice works at KL as **Location Staff**" — that role's permissions apply **only at that location**. |
 
-### Why both Store and Location?
+### One location model (Store merged into Location, 2026-10-21)
 
-`TenantLocation` already carried terminals, rewards, redemptions and API keys. Rather
-than a risky rename, each location got a `Store` twin (spec §134 "reuse existing
-conventions"). **Keep them in sync through the repository only:** every location write in
-`TenantLocationRepository` calls `syncStoreForLocation()`
-(`src/contexts/tenants/infrastructure/persistence/store-sync.ts`) **in the same transaction**, so a store
-can never drift from its location. The seed uses the same helper.
-
-> [!WARNING]
-> Never write `tenantLocation.create/update` outside `TenantLocationRepository`,
-> and never create a `Store` by hand. If you do, the store will be missing or out of date.
+Earlier versions kept a `Store` twin per location (and `StoreMembership` for store roles), synced
+from the location repository. The twin added nothing a location could not hold, so it was merged:
+the `Store` / `StoreMembership` tables, the `STORE` permission scope and resource, the `x-store-id`
+header and every `storeId` selector are gone. Location roles live on the member's location scope
+row (`MembershipLocationScope.roleId`, `LOCATION` scope); the seeded roles are `Location Manager`
+and `Location Staff`. Migration `20261020224859_merge_store_into_location_bans_and_appeals`.
 
 ---
 
@@ -58,20 +49,18 @@ can never drift from its location. The seed uses the same helper.
 
 A client may say which tenant it is working in:
 
-| Where        | Tenant                | Store        | Location      |
-| ------------ | --------------------- | ------------ | ------------- |
-| Header       | —                     | `x-store-id` | —             |
-| Route param  | `:tenantSlug`         | `:storeId`   | `:locationId` |
-| Query / body | —                     | `storeId`    | `locationId`  |
+| Where        | Tenant        | Location      |
+| ------------ | ------------- | ------------- |
+| Route param  | `:tenantSlug` | `:locationId` |
+| Query / body | —             | `locationId`  |
 
 The tenant comes from `:tenantSlug` (or the single-mode default tenant), never from a header or a `tenantId` field.
 `AuthorizationContextResolver` (`src/contexts/authorization/infrastructure/kernel/authorization-context.resolver.ts`)
-reads the rest (the `x-store-id` header wins over a route, query or body store) and asks `TenantMembershipService.verify()`:
+reads the location (route, query or body) and asks `TenantMembershipService.verify()`:
 
 | Claim    | Proven when                                                                                                                                                                                                                       |
 | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tenant   | the user has an **ACTIVE**, non-deleted membership in a non-deleted tenant                                                                                                                                                        |
-| Store    | the store is `ACTIVE` **and** belongs to that tenant **and** the user has an active store membership **or** a tenant membership whose location scope covers the store's location                                                  |
+| Tenant   | the deployment serves the tenant (single mode: only the default tenant, `ServedTenantPolicy`) and the user has an **ACTIVE**, non-deleted membership in it, or an approved support grant                                         |
 | Location | the location belongs to the tenant **and** the membership has an `ALL_LOCATIONS` scope row or a `SELECTED` row for it (a membership **without** scope rows covers nothing — same rule as the DB helper `app_can_access_location`) |
 
 ### `X-Tenant-Id` and `X-Location-Id`: information only
@@ -183,7 +172,7 @@ name is written in a second file.
 | HTTP request phases                                                | none                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Platform                                                           | `audit.http_request.record`, `audit.http_request.read`, `audit.data_change.read`, `audit.trail.read`, `http.idempotency`, `idempotency.retention`, `outbox.publish`, `outbox.enqueue`, `outbox.retention`, `tenant.enumerate`, `tenancy.default_tenant.verify`, `auth.membership.lookup`, `auth.api_key.lookup`, `geo.reference_data.write`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Queues / cron (one per job)                                        | `queue.email.send`, `queue.storage.cleanup`, `queue.storage.delete` (object storage and CDN only: its scope lists no table), `queue.rewards.auto_publish`, `queue.claims.*`, `maintenance.*`. The scan job runs as `files.scan_verdict.apply` and the referrer-credit email sweeper as `rewards.referral_credit.deliver`, the operations their work already is.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Tenant, invitations, locations, encryption, support access, policy | one name per purpose, e.g. `tenant.invitation.create`, `tenant.onboarding.document_file`, `encryption.tenant_key.unwrap`, `support_access.verify`, `policy.publish`, `authorization.policy.match`, `authorization.acl.match`, `authorization.acl.write`, `authorization.superadmin_bypass.audit`, `authorization.health.system_roles`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Tenant, invitations, locations, encryption, support access, policy | one name per purpose, e.g. `tenant.invitation.create`, `tenant.onboarding.document_file`, `encryption.tenant_key.rewrap`, `support_access.verify`, `policy.publish`, `authorization.policy.match`, `authorization.acl.match`, `authorization.acl.write`, `authorization.superadmin_bypass.audit`, `authorization.health.system_roles`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Account security / bootstrap                                       | `auth.profile.update`, `auth.account.lookup`, `auth.admin_users.read`, `auth.admin_users.unlock`, `auth.principal.lookup`, `auth.merchant_portal.lookup`, `auth.login.record_failure`, `auth.login.clear_lockout`, `auth.login.open_challenge`, `auth.login.request_device_code`, `auth.login.complete_mfa`, `auth.login.record_mfa_failure`, `auth.session.issue`, `auth.password_reset.request`, `auth.password_reset.lookup`, `auth.password_reset.complete`, `auth.signup.register`, `auth.email_verification.send`, `auth.email_verification.confirm`, `auth.impersonation.start`, `auth.impersonation.stop`, `auth.signup_referrals.validate_code`, `auth.signup_referrals.list_referees`, `auth.signup_referrals.admin_summary`, `auth.signup_referrals.notify_success` (ADR 035: the referrer's success notification, after checkout and from the hourly retry), `auth.mfa_recovery.*`, `auth.superadmin.bootstrap`, `authorization.capability_catalog.sync` (API boot: diff-only capability catalog sync) and `reference_data.sync` (CLI/seed only; [runbook](../operations/superadmin-bootstrap.md)) — `auth.superadmin.bootstrap` (CLI only: the first SuperAdmin, [runbook](../operations/superadmin-bootstrap.md)) |
 | Domain reads RLS cannot express                                    | `claims.otp.request`, `claims.reward.claim`, `rewards.sales.merchant_summary`, `rewards.referral_credit.deliver` (claims requests a credited referrer's email after the checkout and from the sweeper: the till's key may not read the referrer's address), `files.authorization`, `files.delete`, `files.local_object.read`, `files.local_variant.read`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | Catalog                                                            | `catalog.product_catalog.read`, `catalog.product_catalog.write` (bypass-only `Product` and `SampleCategory` tables, after the permission check)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
@@ -230,19 +219,19 @@ registry, so no API code path can borrow them.
 
 ---
 
-## 4. Store and tenant RLS policies
+## 4. Tenant RLS policies
 
 | Table                 | Read                                                          | Write                                                                                                                                                                                                                                      |
 | --------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Store`               | bypass, tenant members, or active store members of that store | bypass, or a member of the session's tenant writing the mirror of one of that tenant's own locations (`stores_mirror_insert` / `stores_mirror_update` — the location write and its store mirror share one transaction); DELETE bypass only |
 | `TenantAccessRequest` | bypass, tenant members, or the requester                      | INSERT: bypass or the requester; UPDATE (review): bypass only — the `tenant.access_request.review` system operation                                                                                                                        |
-| `StoreMembership`     | bypass, your own rows, or tenant members                      | bypass only                                                                                                                                                                                                                                |
+| `TenantSuspensionAppeal` | bypass, or members of the tenant                            | bypass only — the `tenant.lifecycle.*` system operations                                                                                                                                                                                   |
+| `TenantCustomerBan`   | bypass, members of the tenant, or an API key of the tenant (`40-api-key-principal.sql`) | bypass only — `tenant.customer_ban.create` / `.lift` after the `merchant:manage_rewards` check. Claims (`claims.reward.claim`) and the tills read it to refuse a banned customer; the redemption log reads it under the member's own session |
 
 ### 4.1 The merchant API key principal
 
 An API-key request is a **machine principal**, not anonymous and not a bypass. The guard verifies
 the key (under `auth.api_key.lookup`), binds it to the request context
-(`RequestApiKeyPrincipal`: key id, tenant, store), and `RlsInterceptor` turns it into the
+(`RequestApiKeyPrincipal`: key id, tenant, location), and `RlsInterceptor` turns it into the
 `api_key` RLS context (`apiKeyRlsContext` in `src/prisma/rls-context.ts`; its session variables come
 from the one `rlsSessionVariables`). `prisma/rls/40-api-key-principal.sql` adds permissive
 policies for it — helpers `app_api_key_org_access(org)`, `app_api_key_store_access(org, store)`,
@@ -250,8 +239,8 @@ policies for it — helpers `app_api_key_org_access(org)`, `app_api_key_store_ac
 
 | Table                                                   | The key may              | Limited to                                                                                       |
 | ------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------ |
-| `RewardSale`, `RewardRedemption`                        | read, insert             | its tenant **and** its store (a store-scoped key never sees another store's or a store-less row) |
-| `TenantTerminal`                                        | read, update (last seen) | tenant and store                                                                                 |
+| `RewardSale`, `RewardRedemption`                        | read, insert             | its tenant **and** its location (a location-scoped key never sees another location's or a location-less row) |
+| `TenantTerminal`                                        | read, update (last seen) | tenant and location                                                                                 |
 | `TenantApiKey`                                          | read, update             | **its own key row** only (last used, code-guess lockout)                                         |
 | `Reward`, `RewardLocationScope`                         | read, insert, update     | its tenant (store availability is enforced by the service)                                       |
 | `RewardClaim`, `RewardReferral`                         | read, insert/update      | claims and referrals of its tenant's rewards                                                     |
@@ -259,7 +248,7 @@ policies for it — helpers `app_api_key_org_access(org)`, `app_api_key_store_ac
 | `RewardAuditLog`                                        | insert                   | its tenant                                                                                       |
 | `Tenant`, `TenantLocation`, `TenantAsset`, `StoredFile` | read                     | its tenant (reward responses embed name, stores, logo)                                           |
 
-No policy lets a key DELETE anything, and a crafted id of another tenant or store matches no
+No policy lets a key DELETE anything, and a crafted id of another tenant or location matches no
 row (`test/api-key-rls-principal.e2e-spec.ts`). Published consumer rewards remain public
 marketplace data for every session.
 
@@ -268,7 +257,7 @@ Every new tenant table must be added to `prisma/rls/manifest-index.ts` and get p
 missing. See [recipes → add a tenant table](./recipes.md#7-add-a-new-tenant-table-with-rls).
 
 **Dynamic roles never create RLS policies** (spec §50). RLS protects stable concepts —
-tenant, store, user — while roles and permissions live in the kernel.
+tenant, location, user — while roles and permissions live in the kernel.
 
 ---
 
@@ -299,7 +288,7 @@ pnpm build:shared
 # 3. reset, seed, apply RLS
 cd apps/api
 pnpm db:reset          # drops + migrates (+ runs the bootstrap seed)
-pnpm db:seed           # full demo seed (permissions, roles, users, orgs, stores, …)
+pnpm db:seed           # full demo seed (permissions, roles, users, tenants, locations, …)
 pnpm db:apply-security # RLS helpers, policies, grants
 ```
 
@@ -310,11 +299,11 @@ together — `db:reset` already resets and migrates.
 
 ## 6. Migrations added by the authorization work
 
-The authorization tables (`UserPermission.effect`, `Store`, `StoreMembership`, the `STORE` value
-of `PermissionResource` / `PermissionScope`, `ResourceAcl`, `PolicyDefinition`,
+The authorization tables (`UserPermission.effect`, `ResourceAcl`, `PolicyDefinition`,
 `AuthorizationAudit`) are part of the single baseline migration `20261004152638_init`
 (`apps/api/prisma/migrations-baseline.json` records why the history was regenerated). New changes are
-generated forward from `schema.prisma` ([Database](../database.md)).
+generated forward from `schema.prisma` ([Database](../database.md)). The Store → Location merge,
+user bans and suspension appeals are `20261020224859_merge_store_into_location_bans_and_appeals`.
 
 ---
 

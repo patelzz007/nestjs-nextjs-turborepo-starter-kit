@@ -22,6 +22,7 @@ import { TenantMembershipService } from "../../src/contexts/authorization/infras
 import { PrismaService } from "../../src/prisma/prisma.service";
 import { SystemPrismaService } from "../../src/prisma/system-prisma.service";
 import type { SystemDatabaseContext } from "../../src/prisma/tenant-context";
+import { SERVES_EVERY_TENANT } from "./served-tenants";
 import { createTestTypedConfig } from "./test-api-env";
 
 /** Runs a system operation on the test client, which never opens a connection. */
@@ -59,7 +60,7 @@ export function createTestAuthorizationKernelCollaborators(prisma: PrismaService
 	const policyEngine = new PolicyEngineService(lookup);
 	return {
 		grantsLoader: new SubjectGrantsLoader(lookup),
-		tenantMembership: new TenantMembershipService(lookup),
+		tenantMembership: new TenantMembershipService(lookup, SERVES_EVERY_TENANT),
 		ownership: new ResourceOwnershipResolver(lookup),
 		aclService: new AclService(policyEngine, lookup),
 		policyEngine,

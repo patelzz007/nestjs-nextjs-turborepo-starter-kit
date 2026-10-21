@@ -10,6 +10,10 @@ import {
 } from "../../domain/errors/authorization.errors";
 import { ApproveSupportAccessCommand } from "../commands/approve-support-access/approve-support-access.command";
 import { ApproveSupportAccessHandler } from "../commands/approve-support-access/approve-support-access.handler";
+import { ExpireSupportAccessGrantsCommand } from "../commands/expire-support-access-grants/expire-support-access-grants.command";
+import { ExpireSupportAccessGrantsHandler } from "../commands/expire-support-access-grants/expire-support-access-grants.handler";
+import { SUPPORT_ACCESS_EXPIRY_OPERATION } from "../ports/authorization.tokens";
+import { authorizationSystemActor } from "../services/rbac-actor";
 import { RequestSupportAccessCommand } from "../commands/request-support-access/request-support-access.command";
 import { RequestSupportAccessHandler } from "../commands/request-support-access/request-support-access.handler";
 import { RevokeSupportAccessCommand } from "../commands/revoke-support-access/revoke-support-access.command";
@@ -106,5 +110,41 @@ describe("Support access", () => {
 
 	it("answers not found for an unknown grant", async () => {
 		await expect(revoke("ghost")).rejects.toBeInstanceOf(SupportAccessGrantNotFoundError);
+	});
+
+	describe("expiry job", () => {
+		function expire(): ReturnType<ExpireSupportAccessGrantsHandler["execute"]> {
+			return new ExpireSupportAccessGrantsHandler(store.uow, store.clock).execute(
+				new ExpireSupportAccessGrantsCommand(authorizationSystemActor(SUPPORT_ACCESS_EXPIRY_OPERATION, "cron", "expire grants")),
+			);
+		}
+
+		it("marks pending and active grants past their expiry EXPIRED, and nothing else", async () => {
+			const pending = await request();
+			const active = await request();
+			await approve(OWNER, active);
+			const revoked = await request();
+			await revoke(revoked);
+			store.clock.advance(30 * MINUTE_MS);
+
+			const result = await expire();
+			expect(result.expired).toBe(2);
+			expect([...result.grantIds].sort()).toEqual([pending, active].sort());
+
+			expect(store.supportGrants.rows.get(pending)?.status).toBe("EXPIRED");
+			expect(store.supportGrants.rows.get(active)?.status).toBe("EXPIRED");
+			expect(store.supportGrants.rows.get(revoked)?.status).toBe("REVOKED");
+			await expect(revoke(active)).rejects.toBeInstanceOf(SupportAccessGrantNotRevocableError);
+		});
+
+		it("leaves a grant whose time has not run out, and is idempotent", async () => {
+			const grantId = await request();
+
+			await expect(expire()).resolves.toEqual({ expired: 0, grantIds: [] });
+			store.clock.advance(30 * MINUTE_MS);
+			await expire();
+			await expect(expire()).resolves.toEqual({ expired: 0, grantIds: [] });
+			expect(store.supportGrants.rows.get(grantId)?.status).toBe("EXPIRED");
+		});
 	});
 });

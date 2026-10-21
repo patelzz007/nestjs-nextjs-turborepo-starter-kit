@@ -28,7 +28,7 @@ describe("RLS manifest index", () => {
 
 		expect(report.missingFromManifest).toEqual([]);
 		expect(report.unknownManifestTables).toEqual([]);
-		expect(report.orgModelsMissingManifest).toEqual([]);
+		expect(report.tenantModelsMissingManifest).toEqual([]);
 		expect(report.locationProfileMismatch).toEqual([]);
 	});
 });

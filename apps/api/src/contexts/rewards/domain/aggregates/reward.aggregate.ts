@@ -3,7 +3,6 @@ import { epochMs, type EpochMs } from "@workspace/shared";
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
 import { ReferrerReward } from "../entities/referrer-reward.entity";
 import {
-	CorruptRewardStateError,
 	RewardExpiredError,
 	RewardJustSoldOutError,
 	RewardNotDraftError,
@@ -49,6 +48,7 @@ import type {
 	RewardSnapshot,
 	RewardState,
 } from "./reward.state";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** The one-step moves of the reward lifecycle; anything else is refused. */
 const ALLOWED_TRANSITIONS: readonly (readonly [RewardLifecycleStatus, RewardLifecycleStatus])[] = [
@@ -72,7 +72,7 @@ const NO_INVENTORY_CHANGE: RewardInventoryDelta = { quantityTotal: 0, quantityRe
 function parseStatus(rewardId: string, status: string): RewardLifecycleStatus {
 	const parsed = RewardLifecycleStatusSchema.safeParse(status);
 	if (!parsed.success) {
-		throw new CorruptRewardStateError(rewardId);
+		throw new CorruptAggregateStateError("reward", rewardId);
 	}
 	return parsed.data;
 }
@@ -84,7 +84,7 @@ function isValidCounter(value: number): boolean {
 function assertCountersValid(row: RewardRowState): void {
 	const { quantityTotal, quantityRemaining, quantityReserved, claimCount, redemptionCount } = row.inventory;
 	if (![quantityTotal, quantityRemaining, quantityReserved, claimCount, redemptionCount].every(isValidCounter)) {
-		throw new CorruptRewardStateError(row.id);
+		throw new CorruptAggregateStateError("reward", row.id);
 	}
 }
 
@@ -209,7 +209,7 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 		assertCountersValid(state);
 		const child = state.referrer;
 		if (child !== null && state.kind === "REFERRER") {
-			throw new CorruptRewardStateError(state.id);
+			throw new CorruptAggregateStateError("reward", state.id);
 		}
 		const referrer = child === null ? null : Reward.rehydrateReferrer(child, status);
 		const token: RewardConcurrencyToken = { status, updatedAt: state.updatedAt, autoPublishAt: state.autoPublishAt };
@@ -245,7 +245,7 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 		const status = parseStatus(child.id, child.status);
 		assertCountersValid(child);
 		if (child.kind !== "REFERRER" || status !== parentStatus) {
-			throw new CorruptRewardStateError(child.id);
+			throw new CorruptAggregateStateError("reward", child.id);
 		}
 		return ReferrerReward.rehydrate({
 			id: child.id,

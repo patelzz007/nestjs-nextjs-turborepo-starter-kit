@@ -2,10 +2,10 @@
 
 ## Principle
 
-Zod is the **single** runtime boundary contract — not one of several sources of truth. A schema defined once in `packages/contracts` drives, in order: request validation on the API, response typing on the API, the frontend's TanStack Query/TanStack Form types, and the published Swagger/OpenAPI documentation.
+Zod is the **single** runtime boundary contract — not one of several sources of truth. A schema defined once in `packages/shared` drives, in order: request validation on the API, response typing on the API, the frontend's TanStack Query/TanStack Form types, and the published Swagger/OpenAPI documentation.
 
 ```text
-packages/contracts/*.schema.ts   (zod schema — the one source of truth)
+packages/shared/src/contexts/<context>/schemas/*.ts   (zod schema — the one source of truth)
        ↓                              ↓                        ↓
   apps/api                       apps/web / apps/mobile     Swagger/OpenAPI docs
   (request validation,           (z.infer<> types,           (generated from the
@@ -55,7 +55,7 @@ This is not a contradiction of "never trust the frontend" — it's two different
 ```
 
 ```ts
-// packages/contracts/src/orders.ts — the one schema, imported by both sides
+// packages/shared/src/contexts/orders/schemas/orders.ts — the one schema, imported by both sides
 export const CreateOrderSchema = z.object({
   customerId: z.uuid(),
   quantity: z.number().int().positive().max(1000),
@@ -73,16 +73,16 @@ const form = useForm({ validators: { onChange: CreateOrderSchema } });
 public async create(@ZodBody(CreateOrderSchema) dto: CreateOrderDto) { ... }
 ```
 
-If you ever find yourself writing two different validation rules for the same field on the frontend and backend, that's a bug waiting to happen — go back to a single shared schema in `packages/contracts` instead.
+If you ever find yourself writing two different validation rules for the same field on the frontend and backend, that's a bug waiting to happen — go back to a single shared schema in `packages/shared` instead.
 
 ## Never hand-maintain a second source of truth
 
 - Do not hand-write a `CreateOrderDto` class with `class-validator` decorators *and* a separate `createOrderSchema` zod schema that's supposed to match it — pick zod, once, and derive everything else.
 - Do not hand-write Swagger/OpenAPI annotations (`@ApiProperty()` describing fields by hand) that duplicate what the zod schema already says. Generate the OpenAPI schema **from** the zod schema so the request validator, the response type, and the published API docs cannot drift from each other. In `apps/api` that means declaring every request input with `@ZodBody` / `@ZodQuery` / `@ZodParams` / `@ZodParam` (`common/decorators/zod-request.decorators.ts`) — they validate with `ZodValidationPipe` and document the same schema (see `docs/technical/api/routes.md` §13) — and every response with exactly one `@ZodResponse` / `@ZodPaginatedResponse` / `@ZodRawResponse` (`common/decorators/zod-response.decorators.ts`) — they document the response, set its status, enforce it at runtime and type-check the handler (see "Response validation" below, ADR 022). Put field descriptions and examples on the schema (`.describe()` / `.meta({ description, example })`), never in a parallel `@ApiQuery` / `@ApiBody`.
-- The frontend imports the **same** schema from `packages/contracts` for its TanStack Query response typing and its TanStack Form validation — it does not redeclare the shape.
+- The frontend imports the **same** schema from `packages/shared` for its TanStack Query response typing and its TanStack Form validation — it does not redeclare the shape.
 
 ```ts
-// packages/contracts/src/orders.ts — the one definition
+// packages/shared/src/contexts/orders/schemas/orders.ts — the one definition
 export const OrderSchema = z.object({
   id: z.uuid(),
   status: z.enum(['pending', 'processing', 'shipped', 'delivered', 'cancelled']),
@@ -117,12 +117,12 @@ const form = useForm({ validators: { onChange: CreateOrderSchema } });
     a field to one and forgets the other two, something breaks silently.
 
 ✅ DO:
-  packages/contracts/src/orders.ts   — ONE zod schema, everything else derives from it
+  packages/shared/src/contexts/orders/schemas/orders.ts   — ONE zod schema, everything else derives from it
 ```
 
 ## Shared contracts package
 
-`packages/contracts` holds schemas consumed by web/mobile/api alike, and must remain runtime-safe for all three (`01-repository-architecture.md`).
+`packages/shared` holds schemas consumed by web/mobile/api alike, and must remain runtime-safe for all three (`01-repository-architecture.md`).
 
 ## Request validation — every external input, no exceptions
 
@@ -183,7 +183,7 @@ POST /orders/:id/cancel
 
 ## Pagination
 
-Never expose arbitrary database pagination internals. Define a stable pagination contract in `packages/contracts`. Cursor pagination is often safer for large/changing datasets; offset pagination is acceptable for admin tables when product requirements call for it.
+Never expose arbitrary database pagination internals. Define a stable pagination contract in `packages/shared`. Cursor pagination is often safer for large/changing datasets; offset pagination is acceptable for admin tables when product requirements call for it.
 
 ## Sorting and filtering
 
@@ -380,7 +380,7 @@ const AvatarUploadSchema = z.object({
 
 ## API error response catalog
 
-Beyond the stable-error-code pattern already covered, maintain an actual CATALOG of error codes (in `packages/contracts`, alongside the schemas) so "what error codes can this endpoint return" is a documented, discoverable fact — not something a frontend developer has to reverse-engineer by reading backend source or triggering every failure case manually.
+Beyond the stable-error-code pattern already covered, maintain an actual CATALOG of error codes (in `packages/shared`, alongside the schemas) so "what error codes can this endpoint return" is a documented, discoverable fact — not something a frontend developer has to reverse-engineer by reading backend source or triggering every failure case manually.
 
 ```ts
 // ❌ DON'T reach for `as const` here either, even though it's a common
@@ -445,11 +445,11 @@ async findOne(@ZodParam('id', OrderIdSchema) id: OrderId) { ... }
 ## Cross-app schema reuse — a worked example across all three apps
 
 ```ts
-// packages/contracts/src/orders.ts — written ONCE
+// packages/shared/src/contexts/orders/schemas/orders.ts — written ONCE
 export const OrderSchema = z.object({ id: z.uuid(), total: z.number().nonnegative(), status: OrderStatusSchema });
 export type Order = z.infer<typeof OrderSchema>;
 
-// apps/api/src/modules/orders/orders.controller.ts — documented + enforced + type-checked
+// apps/api/src/contexts/orders/orders.controller.ts — documented + enforced + type-checked
 @Get(':id') @ZodResponse(OrderSchema) public async findOne(...): Promise<Order> { ... }
 
 // apps/web/src/app/orders/[id]/page.tsx — the fetch layer parses with the contract leaf's envelope

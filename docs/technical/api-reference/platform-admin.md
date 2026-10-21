@@ -3,7 +3,7 @@ title: "API reference — Platform administration (merchants, rewards review, an
 description: "What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales."
 order: 4
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792454400000
+lastUpdated: 1792540800000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -155,50 +155,50 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "range": {
-      "from": 1789928442016,
-      "to": 1792520442016,
+      "from": 1789994053580,
+      "to": 1792586053580,
       "timeZone": "UTC",
       "interval": "week",
-      "previousFrom": 1787336442016,
-      "previousTo": 1789928442016
+      "previousFrom": 1787402053580,
+      "previousTo": 1789994053580
     },
     "currency": "MYR",
     "totals": {
       "salesMinor": {
-        "value": 1349709,
-        "previous": 1412602,
-        "change": -62893,
-        "changePercent": -4.5
+        "value": 1312526,
+        "previous": 1405856,
+        "change": -93330,
+        "changePercent": -6.6
       },
       "bills": {
-        "value": 223,
-        "previous": 219,
-        "change": 4,
-        "changePercent": 1.8
+        "value": 216,
+        "previous": 217,
+        "change": -1,
+        "changePercent": -0.5
       },
       "averageBillMinor": {
-        "value": 6053,
-        "previous": 6450,
-        "change": -397,
+        "value": 6077,
+        "previous": 6479,
+        "change": -402,
         "changePercent": -6.2
       },
       "claims": {
-        "value": 256,
-        "previous": 258,
-        "change": -2,
-        "changePercent": -0.8
+        "value": 246,
+        "previous": 259,
+        "change": -13,
+        "changePercent": -5
       },
       "redemptions": {
-        "value": 223,
-        "previous": 219,
-        "change": 4,
-        "changePercent": 1.8
+        "value": 216,
+        "previous": 217,
+        "change": -1,
+        "changePercent": -0.5
       },
       "conversionRate": {
-        "value": 87.1,
-        "previous": 84.9,
-        "change": 2.2,
-        "changePercent": 2.6
+        "value": 87.8,
+        "previous": 83.8,
+        "change": 4,
+        "changePercent": 4.8
       },
       "activeMerchants": {
         "value": 2,
@@ -227,28 +227,28 @@ Response `200 OK` (application/json):
     },
     "series": [
       {
-        "start": 1789928442016,
-        "end": 1789948800000,
+        "start": 1789994053580,
+        "end": 1790553600000,
         "isPartial": true,
-        "salesMinor": 0,
-        "bills": 0,
-        "averageBillMinor": 0,
-        "claims": 0,
-        "redemptions": 0,
+        "salesMinor": 277776,
+        "bills": 44,
+        "averageBillMinor": 6313,
+        "claims": 59,
+        "redemptions": 44,
         "newCustomers": 0,
-        "returningCustomers": 0
+        "returningCustomers": 23
       },
       {
-        "start": 1789948800000,
-        "end": 1790553600000,
+        "start": 1790553600000,
+        "end": 1791158400000,
         "isPartial": false,
-        "salesMinor": 314959,
+        "salesMinor": 320868,
         "bills": 51,
-        "averageBillMinor": 6176,
-        "claims": 69,
+        "averageBillMinor": 6292,
+        "claims": 59,
         "redemptions": 51,
-        "newCustomers": 0,
-        "returningCustomers": 24
+        "newCustomers": 1,
+        "returningCustomers": 25
       }
     ],
     "topMerchants": [
@@ -256,51 +256,51 @@ Response `200 OK` (application/json):
         "tenantId": "019b76da-a800-72b9-80b8-91bd729eddbe",
         "name": "Jonker Street Kitchen",
         "category": "restaurant",
-        "salesMinor": 1065358,
-        "bills": 123,
-        "averageBillMinor": 8661
+        "salesMinor": 1036349,
+        "bills": 119,
+        "averageBillMinor": 8709
       },
       {
         "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
         "name": "Brew & Bean KL",
         "category": "cafe",
-        "salesMinor": 284351,
-        "bills": 100,
-        "averageBillMinor": 2844
+        "salesMinor": 276177,
+        "bills": 97,
+        "averageBillMinor": 2847
       }
     ],
     "byCategory": [
       {
         "category": "restaurant",
-        "salesMinor": 1065358,
-        "bills": 123,
+        "salesMinor": 1036349,
+        "bills": 119,
         "merchants": 1
       },
       {
         "category": "cafe",
-        "salesMinor": 284351,
-        "bills": 100,
+        "salesMinor": 276177,
+        "bills": 97,
         "merchants": 1
       }
     ],
     "byCity": [
       {
         "city": "MELAKA",
-        "salesMinor": 1065358,
-        "bills": 123,
+        "salesMinor": 1036349,
+        "bills": 119,
         "merchants": 1
       },
       {
         "city": "KUALA_LUMPUR",
-        "salesMinor": 284351,
-        "bills": 100,
+        "salesMinor": 276177,
+        "bills": 97,
         "merchants": 1
       }
     ]
   },
   "meta": {
-    "correlationId": "vlSGkY2oPAMASDShi6bKo",
-    "timestamp": 1792520442047
+    "correlationId": "hNcu8PO2TnTD27BrpDXYa",
+    "timestamp": 1792586053603
   }
 }
 ```
@@ -342,7 +342,7 @@ The body is the file (Content-Disposition: attachment). Range: `from` (inclusive
 **Example** — called as superadmin@example.com (admin panel). The body is the file itself (Content-Type of the format, Content-Disposition: attachment; filename=…); errors keep the JSON error envelope. See docs/technical/api/analytics.md.
 
 ```http
-GET /api/v1/admin/analytics/export?from=1789928442063&to=1792520442063&format=csv
+GET /api/v1/admin/analytics/export?from=1789994053615&to=1792586053615&format=csv
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -428,21 +428,21 @@ Response `200 OK` (application/json):
   "data": {
     "period": {
       "from": 1788134400000,
-      "to": 1792520441947,
+      "to": 1792586053526,
       "timeZone": "UTC"
     },
     "sales": {
       "currency": "MYR",
       "totalSalesMinor": {
-        "value": 2349167,
-        "changePercent": 12
+        "value": 2352564,
+        "changePercent": 11
       },
       "bills": {
         "value": 375,
-        "changePercent": 9
+        "changePercent": 7
       },
       "averageBillMinor": {
-        "value": 6264,
+        "value": 6274,
         "changePercent": 3
       },
       "overTime": [
@@ -468,7 +468,7 @@ Response `200 OK` (application/json):
         "tenantId": "019b76da-a800-72b9-80b8-91bd729eddbe",
         "name": "Jonker Street Kitchen",
         "category": "restaurant",
-        "salesMinor": 1879358,
+        "salesMinor": 1882755,
         "bills": 209
       },
       {
@@ -481,8 +481,8 @@ Response `200 OK` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "n5kOc8pVjqRTdS_zkzF7u",
-    "timestamp": 1792520441976
+    "correlationId": "k7508iPSLwRYWtqb3Gj6e",
+    "timestamp": 1792586053555
   }
 }
 ```
@@ -545,13 +545,13 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "inviteId": "01a15a8b-5177-7364-a45f-611aa9bdb3d2",
-    "inviteToken": "c8d41396b1c416062508c563f2786de85d9d8e14e1e11b0d0763453aec0d50f4",
-    "expiresAt": 1793125242194
+    "inviteId": "01a15e74-789a-7b07-b51b-beba6b6e0125",
+    "inviteToken": "45914e62705c2d0952fdff949ce25d4ff70640867e5f0bf4ba894c8a30db8502",
+    "expiresAt": 1793190853738
   },
   "meta": {
-    "correlationId": "cjoJrMvG97Cz-AVu7hhS2",
-    "timestamp": 1792520442275
+    "correlationId": "mfIsPCkjFUMxRsEL1-j-a",
+    "timestamp": 1792586053840
   }
 }
 ```
@@ -599,8 +599,8 @@ Response `200 OK` (application/json):
     "available": true
   },
   "meta": {
-    "correlationId": "OPzCcJgtAGCJxm7PUDgup",
-    "timestamp": 1792520442136
+    "correlationId": "gkL1rYsQQbiOxJh55h3aB",
+    "timestamp": 1792586053673
   }
 }
 ```
@@ -677,8 +677,8 @@ Response `200 OK` (application/json):
     }
   },
   "meta": {
-    "correlationId": "eElXNBwtedTT2JdHSP_L7",
-    "timestamp": 1792520442158
+    "correlationId": "gZSEDFN_hLAaXq0-a_aGD",
+    "timestamp": 1792586053705
   }
 }
 ```
@@ -782,7 +782,7 @@ Response `200 OK` (application/json):
       "rejectionReason": null,
       "isPrimary": false,
       "requestedByUserId": "019b76da-a800-727d-bf31-03f65b3b9058",
-      "createdAt": 1792520365930
+      "createdAt": 1792585952979
     }
   ],
   "meta": {
@@ -793,8 +793,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "QMyGyQ0-YtfDpORAI0v8c",
-    "timestamp": 1792520441916
+    "correlationId": "_JTYJ5T-tYeDgfuNQxTty",
+    "timestamp": 1792586053499
   }
 }
 ```
@@ -837,7 +837,7 @@ List merchant tenants
 | `data[].kybStatus` | "PENDING" \| "APPROVED" \| "REJECTED" \| "ACTION_REQUIRED" | yes |  |
 | `data[].legalName` | string \| null | yes |  |
 | `data[].ownerUserId` | string (uuid) \| null | no |  |
-| `data[].status` | "ONBOARDING" \| "ACTIVE" \| "SUSPENDED" | yes |  |
+| `data[].status` | "ONBOARDING" \| "ACTIVE" \| "SUSPENDED" \| "BANNED" | yes |  |
 | `data[].updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
 | `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
@@ -871,8 +871,8 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792520365899,
-      "updatedAt": 1792520365899,
+      "createdAt": 1792585952956,
+      "updatedAt": 1792585952956,
       "isDeleted": false,
       "deletedAt": null,
       "id": "019b76da-a800-72b9-80b8-91bd729eddbe",
@@ -888,8 +888,8 @@ Response `200 OK` (application/json):
       "ownerUserId": "019b76da-a800-727d-bf31-03f65b3b9058"
     },
     {
-      "createdAt": 1792520365841,
-      "updatedAt": 1792520365841,
+      "createdAt": 1792585952905,
+      "updatedAt": 1792585952905,
       "isDeleted": false,
       "deletedAt": null,
       "id": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
@@ -907,14 +907,14 @@ Response `200 OK` (application/json):
   ],
   "meta": {
     "limit": 2,
-    "total": 3,
+    "total": 5,
     "page": 1,
-    "totalPages": 2,
-    "nextCursor": "eyJhdCI6MTc5MjUyMDM2NTg0MSwiaWQiOiIwMTliNzZkYS1hODAwLTdhOTQtYTE5OC0yM2FkMWI0Y2ZkZDkifQ",
+    "totalPages": 3,
+    "nextCursor": "eyJhdCI6MTc5MjU4NTk1MjkwNSwiaWQiOiIwMTliNzZkYS1hODAwLTdhOTQtYTE5OC0yM2FkMWI0Y2ZkZDkifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "iJsvRSVGi6D6xSOHAQsvV",
-    "timestamp": 1792520441763
+    "correlationId": "rWlV-GnZWBqYKab8P4ecm",
+    "timestamp": 1792586053026
   }
 }
 ```
@@ -975,7 +975,7 @@ Get merchant tenant detail for KYB review
 | `data.ownerEmail` | string \| null | yes |  |
 | `data.ownerFullName` | string \| null | yes |  |
 | `data.ownerUserId` | string (uuid) \| null | yes |  |
-| `data.status` | "ONBOARDING" \| "ACTIVE" \| "SUSPENDED" | yes |  |
+| `data.status` | "ONBOARDING" \| "ACTIVE" \| "SUSPENDED" \| "BANNED" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1001,8 +1001,8 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792520365841,
-    "updatedAt": 1792520365841,
+    "createdAt": 1792585952905,
+    "updatedAt": 1792585952905,
     "isDeleted": false,
     "deletedAt": null,
     "id": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
@@ -1027,7 +1027,7 @@ Response `200 OK` (application/json):
         "mimeType": "application/pdf",
         "sizeBytes": 69,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1790792398583
+        "uploadedAt": 1790857986767
       }
     ],
     "locations": [
@@ -1042,8 +1042,8 @@ Response `200 OK` (application/json):
         "status": "ACTIVE",
         "rejectionReason": null,
         "isPrimary": true,
-        "createdAt": 1792520365875,
-        "updatedAt": 1792520365875
+        "createdAt": 1792585952936,
+        "updatedAt": 1792585952936
       }
     ],
     "ownerEmail": "brew.owner@kl-rewards.demo",
@@ -1051,8 +1051,164 @@ Response `200 OK` (application/json):
     "memberCount": 3
   },
   "meta": {
-    "correlationId": "jePRsnSuuqBTQ0chzPQdb",
-    "timestamp": 1792520441825
+    "correlationId": "926e9nG9oYnGnsxRD4Zcj",
+    "timestamp": 1792586053096
+  }
+}
+```
+
+### POST /api/v1/admin/merchants/{tenantId}/appeals/{appealId}/reject
+
+Reject a tenant's pending appeal against its suspension
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Permission** `MANAGE:MERCHANT_ORG`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `RewardsAdminMerchantsController_rejectAppeal` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/merchant-admin.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantId` | path | string (uuid) | yes |  |
+| `appealId` | path | string (uuid) | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `note` | string | yes | length 1–1000 |
+
+**Response 201 Created** (`application/json`) — Appeal rejected
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.appeals` | object[] | yes |  |
+| `data.appeals[].createdAt` | integer | yes |  |
+| `data.appeals[].id` | string (uuid) | yes |  |
+| `data.appeals[].message` | string | yes |  |
+| `data.appeals[].reviewNote` | string \| null | yes |  |
+| `data.appeals[].reviewedAt` | integer \| null | yes |  |
+| `data.appeals[].status` | "PENDING" \| "ACCEPTED" \| "REJECTED" | yes |  |
+| `data.appeals[].submittedBy` | object \| null | yes |  |
+| `data.appeals[].submittedBy.fullName` | string | yes |  |
+| `data.appeals[].submittedBy.id` | string (uuid) | yes |  |
+| `data.ban` | object \| null | yes |  |
+| `data.ban.bannedAt` | integer | yes |  |
+| `data.ban.reason` | string \| null | yes |  |
+| `data.deletionGraceEndsAt` | integer \| null | yes |  |
+| `data.lifecycleState` | "PROVISIONING" \| "ACTIVE" \| "RESTRICTED" \| "SUSPENDED" \| "BANNED" \| "PENDING_DELETION" \| "DELETED" | yes |  |
+| `data.suspension` | object \| null | yes |  |
+| `data.suspension.reason` | string \| null | yes |  |
+| `data.suspension.suspendedAt` | integer | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/admin/merchants/{tenantId}/ban
+
+SuperAdmin: ban an active, restricted or suspended tenant
+
+Harder than a suspension: the tenant cannot appeal or be reactivated by its owner, and its pending appeal is closed. Only its lifecycle routes keep working (read the status, leave).
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **SuperAdmin only.**
+- **Permission** `MANAGE:MERCHANT_ORG`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `RewardsAdminMerchantsController_ban` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/merchant-admin.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantId` | path | string (uuid) | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `reason` | string | yes | length 1–1000 |
+
+**Response 201 Created** (`application/json`) — Tenant banned
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.appeals` | object[] | yes |  |
+| `data.appeals[].createdAt` | integer | yes |  |
+| `data.appeals[].id` | string (uuid) | yes |  |
+| `data.appeals[].message` | string | yes |  |
+| `data.appeals[].reviewNote` | string \| null | yes |  |
+| `data.appeals[].reviewedAt` | integer \| null | yes |  |
+| `data.appeals[].status` | "PENDING" \| "ACCEPTED" \| "REJECTED" | yes |  |
+| `data.appeals[].submittedBy` | object \| null | yes |  |
+| `data.appeals[].submittedBy.fullName` | string | yes |  |
+| `data.appeals[].submittedBy.id` | string (uuid) | yes |  |
+| `data.ban` | object \| null | yes |  |
+| `data.ban.bannedAt` | integer | yes |  |
+| `data.ban.reason` | string \| null | yes |  |
+| `data.deletionGraceEndsAt` | integer \| null | yes |  |
+| `data.lifecycleState` | "PROVISIONING" \| "ACTIVE" \| "RESTRICTED" \| "SUSPENDED" \| "BANNED" \| "PENDING_DELETION" \| "DELETED" | yes |  |
+| `data.suspension` | object \| null | yes |  |
+| `data.suspension.reason` | string \| null | yes |  |
+| `data.suspension.suspendedAt` | integer | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+**Example** — called as superadmin@example.com (admin panel).
+
+```http
+POST /api/v1/admin/merchants/019b76da-a800-75a7-bc75-77a5dcfa0985/ban
+X-Client-Type: admin
+X-Mutation-Intent: same-origin
+Cookie: <session cookies from POST /api/v1/auth/login>
+Content-Type: application/json
+
+{
+  "reason": "Sold counterfeit vouchers to customers."
+}
+```
+
+Response `201 Created` (application/json):
+
+```json
+{
+  "success": true,
+  "data": {
+    "tenantId": "019b76da-a800-75a7-bc75-77a5dcfa0985",
+    "lifecycleState": "BANNED",
+    "deletionGraceEndsAt": null,
+    "suspension": null,
+    "ban": {
+      "bannedAt": 1792586053371,
+      "reason": "Sold counterfeit vouchers to customers."
+    },
+    "appeals": []
+  },
+  "meta": {
+    "correlationId": "XkJsJZeouR5gsEXLaOcO6",
+    "timestamp": 1792586053437
   }
 }
 ```
@@ -1109,11 +1265,11 @@ Response `200 OK` (application/json):
     "documentId": "019b76da-a800-7159-b799-9b0589c815e1",
     "scanStatus": "SCANNING",
     "downloadUrl": "http://192.168.100.23:8097/api/v1/files/local-download?token=<redacted>",
-    "expiresAt": 1792520741880
+    "expiresAt": 1792586353150
   },
   "meta": {
-    "correlationId": "fkxm1F1AowvVXhhihNC4O",
-    "timestamp": 1792520441880
+    "correlationId": "FHI_oG0xNNShJUv-dUEKi",
+    "timestamp": 1792586053151
   }
 }
 ```
@@ -1167,7 +1323,7 @@ Update merchant KYB status (REJECTED / ACTION_REQUIRED require kybFields.rejecti
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/admin/merchants/01a15a8b-5152-7a50-8d1e-08544d56cbad/kyb
+PATCH /api/v1/admin/merchants/01a15e74-786a-73d0-813b-16de3ceeb271/kyb
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1190,8 +1346,87 @@ Response `200 OK` (application/json):
     "ok": true
   },
   "meta": {
-    "correlationId": "20vcel_TEHFLU7wJdWlHt",
-    "timestamp": 1792520448105
+    "correlationId": "9umAoUl5fbp66fnKXgskb",
+    "timestamp": 1792586059933
+  }
+}
+```
+
+### GET /api/v1/admin/merchants/{tenantId}/lifecycle
+
+Read a tenant's lifecycle state, current suspension and appeals
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Permission** `LIST:MERCHANT_ORG`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `RewardsAdminMerchantsController_getLifecycle` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/merchant-admin.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantId` | path | string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — Tenant lifecycle
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.appeals` | object[] | yes |  |
+| `data.appeals[].createdAt` | integer | yes |  |
+| `data.appeals[].id` | string (uuid) | yes |  |
+| `data.appeals[].message` | string | yes |  |
+| `data.appeals[].reviewNote` | string \| null | yes |  |
+| `data.appeals[].reviewedAt` | integer \| null | yes |  |
+| `data.appeals[].status` | "PENDING" \| "ACCEPTED" \| "REJECTED" | yes |  |
+| `data.appeals[].submittedBy` | object \| null | yes |  |
+| `data.appeals[].submittedBy.fullName` | string | yes |  |
+| `data.appeals[].submittedBy.id` | string (uuid) | yes |  |
+| `data.ban` | object \| null | yes |  |
+| `data.ban.bannedAt` | integer | yes |  |
+| `data.ban.reason` | string \| null | yes |  |
+| `data.deletionGraceEndsAt` | integer \| null | yes |  |
+| `data.lifecycleState` | "PROVISIONING" \| "ACTIVE" \| "RESTRICTED" \| "SUSPENDED" \| "BANNED" \| "PENDING_DELETION" \| "DELETED" | yes |  |
+| `data.suspension` | object \| null | yes |  |
+| `data.suspension.reason` | string \| null | yes |  |
+| `data.suspension.suspendedAt` | integer | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+**Example** — called as superadmin@example.com (admin panel).
+
+```http
+GET /api/v1/admin/merchants/019b76da-a800-75a7-bc75-77a5dcfa0985/lifecycle
+X-Client-Type: admin
+Cookie: <session cookies from POST /api/v1/auth/login>
+```
+
+Response `200 OK` (application/json):
+
+```json
+{
+  "success": true,
+  "data": {
+    "tenantId": "019b76da-a800-75a7-bc75-77a5dcfa0985",
+    "lifecycleState": "BANNED",
+    "deletionGraceEndsAt": null,
+    "suspension": null,
+    "ban": {
+      "bannedAt": 1792153985449,
+      "reason": "Sold counterfeit vouchers to customers; confirmed by the platform risk team."
+    },
+    "appeals": []
+  },
+  "meta": {
+    "correlationId": "OR3Js1fw_1mVsrvmPRB9w",
+    "timestamp": 1792586053243
   }
 }
 ```
@@ -1272,7 +1507,7 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a15a8b-6aff-721b-b831-06975ac94238",
+    "id": "01a15e74-935d-755c-b349-058dcd18f9c3",
     "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "name": "Brew & Bean KL — Mid Valley",
     "code": "brew-bean-kl-mid-valley",
@@ -1282,12 +1517,12 @@ Response `201 Created` (application/json):
     "status": "ACTIVE",
     "rejectionReason": null,
     "isPrimary": false,
-    "createdAt": 1792520448770,
-    "updatedAt": 1792520448770
+    "createdAt": 1792586060641,
+    "updatedAt": 1792586060641
   },
   "meta": {
-    "correlationId": "zj_ITC60t8EmO6kvAlNeB",
-    "timestamp": 1792520448804
+    "correlationId": "Wg3tcWOp2Acv_ehP6DvHi",
+    "timestamp": 1792586060656
   }
 }
 ```
@@ -1346,7 +1581,7 @@ Approve or reject a tenant store location request
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/admin/merchants/019b76da-a800-7a94-a198-23ad1b4cfdd9/locations/01a15a8b-6906-7f9a-ac09-e9f7dea0f458/review
+PATCH /api/v1/admin/merchants/019b76da-a800-7a94-a198-23ad1b4cfdd9/locations/01a15e74-9171-792c-bef6-26bdc06ad2e2/review
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1364,7 +1599,7 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a15a8b-6906-7f9a-ac09-e9f7dea0f458",
+    "id": "01a15e74-9171-792c-bef6-26bdc06ad2e2",
     "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "name": "Brew & Bean KL — Bangsar",
     "code": "brew-bean-kl-bangsar",
@@ -1374,12 +1609,221 @@ Response `200 OK` (application/json):
     "status": "REJECTED",
     "rejectionReason": "Add the unit number to the address",
     "isPrimary": false,
-    "createdAt": 1792520448265,
-    "updatedAt": 1792520448350
+    "createdAt": 1792586060148,
+    "updatedAt": 1792586060209
   },
   "meta": {
-    "correlationId": "hIGPTLBkx6KEiC_EQbIKr",
-    "timestamp": 1792520448385
+    "correlationId": "FQF2pL77zGaBs6B6QJteP",
+    "timestamp": 1792586060227
+  }
+}
+```
+
+### POST /api/v1/admin/merchants/{tenantId}/reinstate
+
+Reinstate a suspended tenant (its pending appeal is accepted with this reason)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Permission** `MANAGE:MERCHANT_ORG`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `RewardsAdminMerchantsController_reinstate` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/merchant-admin.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantId` | path | string (uuid) | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `reason` | string | yes | length 1–1000 |
+
+**Response 201 Created** (`application/json`) — Tenant reinstated
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.appeals` | object[] | yes |  |
+| `data.appeals[].createdAt` | integer | yes |  |
+| `data.appeals[].id` | string (uuid) | yes |  |
+| `data.appeals[].message` | string | yes |  |
+| `data.appeals[].reviewNote` | string \| null | yes |  |
+| `data.appeals[].reviewedAt` | integer \| null | yes |  |
+| `data.appeals[].status` | "PENDING" \| "ACCEPTED" \| "REJECTED" | yes |  |
+| `data.appeals[].submittedBy` | object \| null | yes |  |
+| `data.appeals[].submittedBy.fullName` | string | yes |  |
+| `data.appeals[].submittedBy.id` | string (uuid) | yes |  |
+| `data.ban` | object \| null | yes |  |
+| `data.ban.bannedAt` | integer | yes |  |
+| `data.ban.reason` | string \| null | yes |  |
+| `data.deletionGraceEndsAt` | integer \| null | yes |  |
+| `data.lifecycleState` | "PROVISIONING" \| "ACTIVE" \| "RESTRICTED" \| "SUSPENDED" \| "BANNED" \| "PENDING_DELETION" \| "DELETED" | yes |  |
+| `data.suspension` | object \| null | yes |  |
+| `data.suspension.reason` | string \| null | yes |  |
+| `data.suspension.suspendedAt` | integer | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/admin/merchants/{tenantId}/suspend
+
+Suspend an active or restricted tenant: only its lifecycle routes keep working
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Permission** `MANAGE:MERCHANT_ORG`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `RewardsAdminMerchantsController_suspend` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/merchant-admin.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantId` | path | string (uuid) | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `reason` | string | yes | length 1–1000 |
+
+**Response 201 Created** (`application/json`) — Tenant suspended
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.appeals` | object[] | yes |  |
+| `data.appeals[].createdAt` | integer | yes |  |
+| `data.appeals[].id` | string (uuid) | yes |  |
+| `data.appeals[].message` | string | yes |  |
+| `data.appeals[].reviewNote` | string \| null | yes |  |
+| `data.appeals[].reviewedAt` | integer \| null | yes |  |
+| `data.appeals[].status` | "PENDING" \| "ACCEPTED" \| "REJECTED" | yes |  |
+| `data.appeals[].submittedBy` | object \| null | yes |  |
+| `data.appeals[].submittedBy.fullName` | string | yes |  |
+| `data.appeals[].submittedBy.id` | string (uuid) | yes |  |
+| `data.ban` | object \| null | yes |  |
+| `data.ban.bannedAt` | integer | yes |  |
+| `data.ban.reason` | string \| null | yes |  |
+| `data.deletionGraceEndsAt` | integer \| null | yes |  |
+| `data.lifecycleState` | "PROVISIONING" \| "ACTIVE" \| "RESTRICTED" \| "SUSPENDED" \| "BANNED" \| "PENDING_DELETION" \| "DELETED" | yes |  |
+| `data.suspension` | object \| null | yes |  |
+| `data.suspension.reason` | string \| null | yes |  |
+| `data.suspension.suspendedAt` | integer | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/admin/merchants/{tenantId}/unban
+
+SuperAdmin: lift a tenant's ban (it is active again)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **SuperAdmin only.**
+- **Permission** `MANAGE:MERCHANT_ORG`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `RewardsAdminMerchantsController_unban` · [source](../../../apps/api/src/contexts/tenancy/presentation/http/merchant-admin.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantId` | path | string (uuid) | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `reason` | string | yes | length 1–1000 |
+
+**Response 201 Created** (`application/json`) — Tenant unbanned
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.appeals` | object[] | yes |  |
+| `data.appeals[].createdAt` | integer | yes |  |
+| `data.appeals[].id` | string (uuid) | yes |  |
+| `data.appeals[].message` | string | yes |  |
+| `data.appeals[].reviewNote` | string \| null | yes |  |
+| `data.appeals[].reviewedAt` | integer \| null | yes |  |
+| `data.appeals[].status` | "PENDING" \| "ACCEPTED" \| "REJECTED" | yes |  |
+| `data.appeals[].submittedBy` | object \| null | yes |  |
+| `data.appeals[].submittedBy.fullName` | string | yes |  |
+| `data.appeals[].submittedBy.id` | string (uuid) | yes |  |
+| `data.ban` | object \| null | yes |  |
+| `data.ban.bannedAt` | integer | yes |  |
+| `data.ban.reason` | string \| null | yes |  |
+| `data.deletionGraceEndsAt` | integer \| null | yes |  |
+| `data.lifecycleState` | "PROVISIONING" \| "ACTIVE" \| "RESTRICTED" \| "SUSPENDED" \| "BANNED" \| "PENDING_DELETION" \| "DELETED" | yes |  |
+| `data.suspension` | object \| null | yes |  |
+| `data.suspension.reason` | string \| null | yes |  |
+| `data.suspension.suspendedAt` | integer | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+**Example** — called as superadmin@example.com (admin panel).
+
+```http
+POST /api/v1/admin/merchants/019b76da-a800-75a7-bc75-77a5dcfa0985/unban
+X-Client-Type: admin
+X-Mutation-Intent: same-origin
+Cookie: <session cookies from POST /api/v1/auth/login>
+Content-Type: application/json
+
+{
+  "reason": "The risk team cleared the merchant after a review."
+}
+```
+
+Response `201 Created` (application/json):
+
+```json
+{
+  "success": true,
+  "data": {
+    "tenantId": "019b76da-a800-75a7-bc75-77a5dcfa0985",
+    "lifecycleState": "ACTIVE",
+    "deletionGraceEndsAt": null,
+    "suspension": null,
+    "ban": null,
+    "appeals": []
+  },
+  "meta": {
+    "correlationId": "YwYDNPtNT4zhg0oW4oEgs",
+    "timestamp": 1792586053325
   }
 }
 ```
@@ -1544,7 +1988,7 @@ _No fields._
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/rewards/01a15a8b-82c6-7486-a020-2dc6156d2593/approve
+POST /api/v1/admin/rewards/01a15e74-ab08-77b1-9a35-67e97fd0ad61/approve
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1559,11 +2003,11 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792520454844,
-    "updatedAt": 1792520455786,
+    "createdAt": 1792586066689,
+    "updatedAt": 1792586067670,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15a8b-82c6-7486-a020-2dc6156d2593",
+    "id": "01a15e74-ab08-77b1-9a35-67e97fd0ad61",
     "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "tenantName": "Brew & Bean KL",
     "tenantLogoUrl": null,
@@ -1577,18 +2021,18 @@ Response `201 Created` (application/json):
     "category": "cafe",
     "images": [
       {
-        "fileId": "01a15a8b-7b4f-7637-b0d1-a42f040b6e31",
-        "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/LARGE/local-public",
+        "fileId": "01a15e74-a3b9-73f2-b9ce-90ff869877d1",
+        "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/LARGE/local-public",
         "width": 1920,
         "height": 1080,
         "sources": [
           {
             "width": 640,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/THUMBNAIL/local-public"
+            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/THUMBNAIL/local-public"
           },
           {
             "width": 1280,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/MEDIUM/local-public"
+            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/MEDIUM/local-public"
           }
         ]
       }
@@ -1596,15 +2040,15 @@ Response `201 Created` (application/json):
     "quantityTotal": 250,
     "quantityRemaining": 250,
     "quantityReserved": 0,
-    "startDate": 1792520454635,
-    "expiryDate": 1797704454635,
+    "startDate": 1792586066463,
+    "expiryDate": 1797770066463,
     "status": "PUBLISHED",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "01a15a8b-82c6-7d80-9792-bf78bab3e1d2",
+    "referrerRewardId": "01a15e74-ab08-7ebb-a3ea-a0f64db406d2",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -1613,8 +2057,8 @@ Response `201 Created` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "E8_8XBbybV2VEbg4rO-qw",
-    "timestamp": 1792520455894
+    "correlationId": "vHnzjDDoH2umIgHk0Yvg0",
+    "timestamp": 1792586067801
   }
 }
 ```
@@ -1771,14 +2215,14 @@ Reject a pending reward
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/rewards/01a15a8b-875f-7080-936d-231d770e72e4/reject
+POST /api/v1/admin/rewards/01a15e74-afd5-7ff2-8242-198a87ee28fe/reject
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "rewardId": "01a15a8b-875f-7080-936d-231d770e72e4",
+  "rewardId": "01a15e74-afd5-7ff2-8242-198a87ee28fe",
   "reason": "Add the participating stores and the daily limit to the terms"
 }
 ```
@@ -1789,11 +2233,11 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792520456028,
-    "updatedAt": 1792520456217,
+    "createdAt": 1792586067923,
+    "updatedAt": 1792586068124,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15a8b-875f-7080-936d-231d770e72e4",
+    "id": "01a15e74-afd5-7ff2-8242-198a87ee28fe",
     "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "tenantName": "Brew & Bean KL",
     "tenantLogoUrl": null,
@@ -1807,18 +2251,18 @@ Response `201 Created` (application/json):
     "category": "cafe",
     "images": [
       {
-        "fileId": "01a15a8b-7b4f-7637-b0d1-a42f040b6e31",
-        "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/LARGE/local-public",
+        "fileId": "01a15e74-a3b9-73f2-b9ce-90ff869877d1",
+        "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/LARGE/local-public",
         "width": 1920,
         "height": 1080,
         "sources": [
           {
             "width": 640,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/THUMBNAIL/local-public"
+            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/THUMBNAIL/local-public"
           },
           {
             "width": 1280,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/MEDIUM/local-public"
+            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/MEDIUM/local-public"
           }
         ]
       }
@@ -1826,8 +2270,8 @@ Response `201 Created` (application/json):
     "quantityTotal": 200,
     "quantityRemaining": 200,
     "quantityReserved": 0,
-    "startDate": 1792520454635,
-    "expiryDate": 1797704454635,
+    "startDate": 1792586066463,
+    "expiryDate": 1797770066463,
     "status": "DRAFT",
     "claimCount": 0,
     "redemptionCount": 0,
@@ -1843,8 +2287,8 @@ Response `201 Created` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "JS6K0P4xSjmdPILrZ2RpJ",
-    "timestamp": 1792520456326
+    "correlationId": "qJzaXCkH4-OnNaoD9IWuK",
+    "timestamp": 1792586068240
   }
 }
 ```
@@ -1950,8 +2394,8 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792520394672,
-      "updatedAt": 1792520394672,
+      "createdAt": 1792585982311,
+      "updatedAt": 1792585982311,
       "isDeleted": false,
       "deletedAt": null,
       "id": "019b76da-a800-7501-9cc9-ed58933e4620",
@@ -2004,7 +2448,7 @@ Response `200 OK` (application/json):
       "quantityRemaining": 80,
       "quantityReserved": 0,
       "startDate": null,
-      "expiryDate": 1795112394669,
+      "expiryDate": 1795177982307,
       "status": "PENDING_REVIEW",
       "claimCount": 0,
       "redemptionCount": 0,
@@ -2017,11 +2461,11 @@ Response `200 OK` (application/json):
       "locationIds": []
     },
     {
-      "createdAt": 1792520454844,
-      "updatedAt": 1792520455478,
+      "createdAt": 1792586066689,
+      "updatedAt": 1792586067325,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15a8b-82c6-7486-a020-2dc6156d2593",
+      "id": "01a15e74-ab08-77b1-9a35-67e97fd0ad61",
       "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
       "tenantName": "Brew & Bean KL",
       "tenantLogoUrl": null,
@@ -2035,18 +2479,18 @@ Response `200 OK` (application/json):
       "category": "cafe",
       "images": [
         {
-          "fileId": "01a15a8b-7b4f-7637-b0d1-a42f040b6e31",
-          "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/LARGE/local-public",
+          "fileId": "01a15e74-a3b9-73f2-b9ce-90ff869877d1",
+          "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/LARGE/local-public",
           "width": 1920,
           "height": 1080,
           "sources": [
             {
               "width": 640,
-              "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/THUMBNAIL/local-public"
+              "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/THUMBNAIL/local-public"
             },
             {
               "width": 1280,
-              "url": "http://192.168.100.23:8097/api/v1/files/01a15a8b-7b4f-7637-b0d1-a42f040b6e31/variants/MEDIUM/local-public"
+              "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/MEDIUM/local-public"
             }
           ]
         }
@@ -2054,15 +2498,15 @@ Response `200 OK` (application/json):
       "quantityTotal": 250,
       "quantityRemaining": 250,
       "quantityReserved": 0,
-      "startDate": 1792520454635,
-      "expiryDate": 1797704454635,
+      "startDate": 1792586066463,
+      "expiryDate": 1797770066463,
       "status": "PENDING_REVIEW",
       "claimCount": 0,
       "redemptionCount": 0,
       "referralsEnabled": true,
       "referralPoolTotal": 50,
       "referralPoolRemaining": 50,
-      "referrerRewardId": "01a15a8b-82c6-7d80-9792-bf78bab3e1d2",
+      "referrerRewardId": "01a15e74-ab08-7ebb-a3ea-a0f64db406d2",
       "rules": {
         "minSpendMyr": 15,
         "maxUsePerUser": 1
@@ -2079,8 +2523,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "Jg8aytQEuw8RvTkcd6K_h",
-    "timestamp": 1792520455731
+    "correlationId": "d2PlA4BfZO33kfxnod6NZ",
+    "timestamp": 1792586067596
   }
 }
 ```

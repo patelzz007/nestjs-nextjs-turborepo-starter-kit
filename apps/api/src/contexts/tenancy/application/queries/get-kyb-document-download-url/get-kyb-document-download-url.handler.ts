@@ -8,7 +8,7 @@ import { kybDocumentScanStatusOf } from "../../../domain/policies/kyb-evidence.p
 import { actingInTenant, requireUserActor } from "../../tenant-actor";
 import type { KybFileAccessPort } from "../../ports/kyb-files.port";
 import type { KybReadPort } from "../../ports/kyb-read.port";
-import type { MerchantAccessPort } from "../../ports/merchant-access.port";
+import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { TenantDirectoryPort } from "../../ports/tenant-directory.port";
 import { KYB_FILE_ACCESS, KYB_READ, MERCHANT_ACCESS, TENANT_DIRECTORY } from "../../ports/tenants.tokens";
 import { GetKybDocumentDownloadUrlQuery, type KybDocumentRequester } from "./get-kyb-document-download-url.query";

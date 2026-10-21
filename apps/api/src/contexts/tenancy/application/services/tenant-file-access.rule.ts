@@ -1,4 +1,4 @@
-import { merchantRoleHasCapability, type CreateFileUploadUrlInput, type FileCategory, type MerchantCapability } from "@workspace/shared";
+import { merchantRoleHasCapability, type FileUploadRequest, type FileCategory, type MerchantCapability } from "@workspace/shared";
 
 import { fileForbidden, type FileAccessAction, type FileAccessSubject, type FileActor, type FileCategoryAccessRule } from "../../../files/public-api";
 import type { MembershipRoleLookupPort, MerchantCapabilityGatePort, TenantFileCapabilities } from "../ports/tenant-file-access.port";
@@ -16,7 +16,7 @@ export class TenantFileAccessRule implements FileCategoryAccessRule {
 		private readonly gate: MerchantCapabilityGatePort,
 	) {}
 
-	public async assertCanUpload(actor: FileActor, request: CreateFileUploadUrlInput): Promise<void> {
+	public async assertCanUpload(actor: FileActor, request: FileUploadRequest): Promise<void> {
 		await this.assertCapability("upload", actor.userId, request.tenantId ?? null, this.capabilities.manage);
 	}
 

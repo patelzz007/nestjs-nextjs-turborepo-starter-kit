@@ -1,5 +1,7 @@
 import type { PermissionAction, PermissionResource, PermissionScope } from "@prisma/client";
 
+import { LOCATION_MANAGER_ROLE_NAME, LOCATION_STAFF_ROLE_NAME } from "../../domain/rbac-catalog";
+
 /** What identifies one permission in the catalog (`@@unique([action, resource, scope])`). */
 export interface PermissionKey {
 	readonly action: PermissionAction;
@@ -36,7 +38,8 @@ export interface SystemRoleDefinition {
  * - Manager: a limited admin panel (team lead): no RBAC, system settings, geo or email tools.
  * - User: customer app only, every grant OWN-scoped except READ:GITHUB (the configured repositories are shared,
  *   not owned — every signed-in person sees the same contributions), no ADMIN_DASHBOARD.
- * - Store Manager / Store Staff: STORE-scoped rows, applied only inside the member's store.
+ * - Location Manager / Location Staff: LOCATION-scoped rows, applied only at the locations a member's location
+ *   scope gives them the role for.
  */
 export const SYSTEM_ROLE_CATALOG: readonly SystemRoleDefinition[] = [
 	{ name: "SuperAdmin", description: "Full system access (platform operator)", grants: (): boolean => true },
@@ -58,7 +61,7 @@ export const SYSTEM_ROLE_CATALOG: readonly SystemRoleDefinition[] = [
 			matchesAny(p, "GEO", ["READ", "LIST", "CREATE", "UPDATE", "DELETE"]) ||
 			matchesAny(p, "REWARD", ["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"]) ||
 			matchesAny(p, "MERCHANT_ORG", ["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"]) ||
-			matchesAny(p, "STORE", ["CREATE", "READ", "UPDATE", "LIST"]) ||
+			matchesAny(p, "LOCATION", ["CREATE", "READ", "UPDATE", "LIST"]) ||
 			matches(p, "READ", "GITHUB") ||
 			matchesAny(p, "GITHUB_PULL_REQUEST", ["READ", "UPDATE"]),
 	},
@@ -81,17 +84,17 @@ export const SYSTEM_ROLE_CATALOG: readonly SystemRoleDefinition[] = [
 			matchesAny(p, "PROFILE", ["READ", "UPDATE"], "OWN") || matchesAny(p, "ANALYTICS", ["READ", "LIST"], "OWN") || matches(p, "READ", "GITHUB"),
 	},
 	{
-		name: "Store Manager",
-		description: "Store membership role — runs one store (details, rewards, redemptions)",
+		name: LOCATION_MANAGER_ROLE_NAME,
+		description: "Location role — runs a location (details, rewards, redemptions)",
 		grants: (p: PermissionKey): boolean =>
-			matchesAny(p, "STORE", ["READ", "UPDATE"], "STORE") ||
-			matchesAny(p, "REWARD", ["READ", "LIST"], "STORE") ||
-			matchesAny(p, "REDEMPTION", ["CREATE", "READ", "LIST"], "STORE"),
+			matchesAny(p, "LOCATION", ["READ", "UPDATE"], "LOCATION") ||
+			matchesAny(p, "REWARD", ["READ", "LIST"], "LOCATION") ||
+			matchesAny(p, "REDEMPTION", ["CREATE", "READ", "LIST"], "LOCATION"),
 	},
 	{
-		name: "Store Staff",
-		description: "Store membership role — front-of-house redemptions at one store",
+		name: LOCATION_STAFF_ROLE_NAME,
+		description: "Location role — front-of-house redemptions at a location",
 		grants: (p: PermissionKey): boolean =>
-			matches(p, "READ", "STORE", "STORE") || matchesAny(p, "REWARD", ["READ", "LIST"], "STORE") || matches(p, "CREATE", "REDEMPTION", "STORE"),
+			matches(p, "READ", "LOCATION", "LOCATION") || matchesAny(p, "REWARD", ["READ", "LIST"], "LOCATION") || matches(p, "CREATE", "REDEMPTION", "LOCATION"),
 	},
 ];

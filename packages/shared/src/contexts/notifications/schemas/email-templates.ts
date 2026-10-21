@@ -121,7 +121,7 @@ export type AdminAlertEmailProps = z.output<typeof AdminAlertEmailPropsSchema>;
 export const ApiKeyCreatedEmailPropsSchema = BaseEmailPropsSchema.extend({
 	keyName: z.string().min(1),
 	createdAt: EpochMsSchema,
-	/** Absolute URL of the tenant's API-keys page (merchant app, org-scoped). */
+	/** Absolute URL of the tenant's API-keys page (merchant app, tenant-scoped). */
 	manageKeysUrl: z.url(),
 }).strict();
 

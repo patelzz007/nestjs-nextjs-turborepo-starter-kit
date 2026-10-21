@@ -32,22 +32,18 @@ const ALL_ACTIONS: readonly PermissionAction[] = ["CREATE", "READ", "UPDATE", "D
 function requestedTenant(subject: AuthorizationContext): RequestedTenant {
 	return {
 		...(subject.tenantId === undefined ? {} : { tenantId: subject.tenantId }),
-		...(subject.storeId === undefined ? {} : { storeId: subject.storeId }),
 		...(subject.locationId === undefined ? {} : { locationId: subject.locationId }),
 	};
 }
 
 /** Replace claimed tenant ids with the verified ones (unverified ids are dropped). */
 function withVerifiedTenant(subject: AuthorizationContext, verified: VerifiedTenantContext): AuthorizationContext {
-	return { ...subject, tenantId: verified.tenantId, storeId: verified.storeId, locationId: verified.locationId };
+	return { ...subject, tenantId: verified.tenantId, locationId: verified.locationId };
 }
 
 function tenantRejectionReason(tenant: TenantVerification): string | null {
 	if (tenant.tenantRejected) {
 		return "Subject is not an active member of the requested tenant";
-	}
-	if (tenant.storeRejected) {
-		return "Subject cannot act in the requested store";
 	}
 	if (tenant.locationRejected) {
 		return "Requested location is outside the subject's membership scope";
@@ -55,9 +51,41 @@ function tenantRejectionReason(tenant: TenantVerification): string | null {
 	return null;
 }
 
+function grantSourceReason(source: SubjectGrant["source"]): string {
+	switch (source) {
+		case "role":
+			return "Granted via role";
+		case "location":
+			return "Granted via location role";
+		case "override":
+			return "Granted via user override";
+		case "implicit":
+			return "Implicit self grant";
+	}
+}
+
 /** Matches no rows — used whenever a list request holds no applicable grant. */
 function denyAllRows(): AuthorizationRowFilter {
 	return { id: { in: [] } };
+}
+
+/**
+ * The rows a LOCATION grant widens a list to. A location role reaches its own location (every
+ * location of its tenant for an ALL_LOCATIONS scope) and, when the request selected a location, only
+ * that one. A LOCATION permission held another way needs a verified location context.
+ */
+function locationRowAlternative(grant: SubjectGrant, context: VerifiedTenantContext): RowScopeAlternative | null {
+	const binding = grant.location;
+	if (binding === undefined) {
+		return context.tenantId !== undefined && context.locationId !== undefined ? { tenantId: context.tenantId, locationId: context.locationId } : null;
+	}
+	if (context.tenantId !== undefined && context.tenantId !== binding.tenantId) {
+		return null;
+	}
+	if (context.locationId !== undefined) {
+		return binding.locationId === null || binding.locationId === context.locationId ? { tenantId: binding.tenantId, locationId: context.locationId } : null;
+	}
+	return binding.locationId === null ? { tenantId: binding.tenantId } : { tenantId: binding.tenantId, locationId: binding.locationId };
 }
 
 function readStringAttribute(attributes: AuthorizationAttributes | undefined, key: string): string | undefined {
@@ -148,7 +176,7 @@ export class AuthorizationKernelService implements AuthorizationKernelPort {
 		}
 		const required: PermissionPair = pair.data;
 
-		// ── Tenant verification (relationship: user → member → org → store → location) ──
+		// ── Tenant verification (relationship: user → member → tenant → location) ──
 		const tenant = await this.tenantMembership.verify(request.subject.userId, requestedTenant(request.subject));
 		const rejection = tenantRejectionReason(tenant);
 		if (rejection !== null) {
@@ -248,7 +276,7 @@ export class AuthorizationKernelService implements AuthorizationKernelPort {
 		evaluation.push({
 			source: "role",
 			effect: "ALLOW",
-			reason: satisfiedBy.source === "role" ? "Granted via role" : satisfiedBy.source === "override" ? "Granted via user override" : "Implicit self grant",
+			reason: grantSourceReason(satisfiedBy.source),
 		});
 
 		// ── Conditional policies ──
@@ -324,23 +352,13 @@ export class AuthorizationKernelService implements AuthorizationKernelPort {
 						alternatives.push({ tenantId: tenant.context.tenantId });
 					}
 					break;
-				case "STORE": {
-					const store =
-						grant.store ??
-						(tenant.context.tenantId !== undefined && tenant.context.storeId !== undefined
-							? { tenantId: tenant.context.tenantId, storeId: tenant.context.storeId }
-							: undefined);
-					// A store-bound grant only widens the filter for its own store (and only the active store, when one is selected).
-					if (store !== undefined && (tenant.context.storeId === undefined || tenant.context.storeId === store.storeId)) {
-						alternatives.push({ tenantId: store.tenantId, storeId: store.storeId });
+				case "LOCATION": {
+					const alternative = locationRowAlternative(grant, tenant.context);
+					if (alternative !== null) {
+						alternatives.push(alternative);
 					}
 					break;
 				}
-				case "LOCATION":
-					if (tenant.context.tenantId !== undefined && tenant.context.locationId !== undefined) {
-						alternatives.push({ tenantId: tenant.context.tenantId, locationId: tenant.context.locationId });
-					}
-					break;
 				case "OWN":
 					alternatives.push(resource === "USER" || resource === "PROFILE" ? { id: { in: [context.userId] } } : { userId: context.userId });
 					break;
@@ -413,10 +431,8 @@ export class AuthorizationKernelService implements AuthorizationKernelPort {
 
 	private async evaluateScope(grant: SubjectGrant, request: AuthorizationRequest, resolveOwnership: () => Promise<OwnershipLookup>): Promise<ScopeOutcome> {
 		const tenantId = request.subject.tenantId;
-		const storeId = request.subject.storeId;
 		const locationId = request.subject.locationId;
 		const resourceTenantId = readStringAttribute(request.resourceAttributes, "tenantId");
-		const resourceStoreId = readStringAttribute(request.resourceAttributes, "storeId");
 		const resourceLocationId = readStringAttribute(request.resourceAttributes, "locationId");
 		const targetsResource = request.resourceId !== undefined;
 
@@ -435,24 +451,12 @@ export class AuthorizationKernelService implements AuthorizationKernelPort {
 				}
 				return { satisfied: true, reason: "TENANT grant within verified tenant" };
 			}
-			case "STORE": {
-				if (tenantId === undefined || storeId === undefined) {
-					return { satisfied: false, reason: "STORE grant requires a verified store context" };
-				}
-				if (grant.store !== undefined && grant.store.storeId !== storeId) {
-					return { satisfied: false, reason: "Store membership role applies to another store" };
-				}
-				if (targetsResource && resourceStoreId === undefined) {
-					return { satisfied: false, reason: "STORE grant requires the resource's store" };
-				}
-				if ((resourceStoreId !== undefined && resourceStoreId !== storeId) || (resourceTenantId !== undefined && resourceTenantId !== tenantId)) {
-					return { satisfied: false, reason: "Resource belongs to another store" };
-				}
-				return { satisfied: true, reason: "STORE grant within verified store" };
-			}
 			case "LOCATION": {
 				if (tenantId === undefined || locationId === undefined) {
 					return { satisfied: false, reason: "LOCATION grant requires a verified location context" };
+				}
+				if (grant.location !== undefined && (grant.location.tenantId !== tenantId || (grant.location.locationId !== null && grant.location.locationId !== locationId))) {
+					return { satisfied: false, reason: "Location role applies to another location" };
 				}
 				if (targetsResource && resourceLocationId === undefined) {
 					return { satisfied: false, reason: "LOCATION grant requires the resource's location" };

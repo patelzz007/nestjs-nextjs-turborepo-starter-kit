@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
-import type { UseFormRegister } from "react-hook-form";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -10,8 +9,8 @@ import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
 import { busyRegionAnnouncements } from "@/test/skeleton";
 import { contextQueryState, TWO_STORE_CONTEXT } from "@/test/tenant-context";
 import { ApiError } from "@workspace/client/lib/api/use-api";
-import { epochMs, type MerchantRewardFormValues, type RewardResponse } from "@workspace/shared";
-import { optionalNumberInput } from "@/lib/forms/optional-number-input";
+import { epochMs, type RewardResponse } from "@workspace/shared";
+import { RewardEditorTextFieldSchema, type RewardEditorState } from "@/contexts/rewards/lib/reward-editor-form";
 import { rewardFixture } from "@/test/rewards";
 import { tenantRoutes } from "@/lib/routes";
 
@@ -48,19 +47,31 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 }));
 
 interface FormFieldsStubProps {
-	readonly register: UseFormRegister<MerchantRewardFormValues>;
+	readonly editor: RewardEditorState;
 }
 
-// Real, registered inputs stand in for the full form — the minimum spend read as the real form reads it.
-vi.mock("@/contexts/rewards/components/merchant-reward-form-fields", () => ({
-	MerchantRewardFormFields: ({ register }: FormFieldsStubProps): React.JSX.Element => (
+/** Real inputs bound to the editor's state stand in for the full form — the minimum spend held as the real form holds it. */
+function FormFieldsStub({ editor }: FormFieldsStubProps): React.JSX.Element {
+	const { values, setField } = editor;
+	const handleChange = React.useCallback(
+		(event: React.ChangeEvent<HTMLInputElement>): void => {
+			const field = RewardEditorTextFieldSchema.safeParse(event.currentTarget.name);
+			if (field.success) {
+				setField(field.data, event.currentTarget.value);
+			}
+		},
+		[setField],
+	);
+	return (
 		<>
-			<input aria-label="Title" {...register("title")} />
-			<input aria-label="Description" {...register("description")} />
-			<input aria-label="Minimum purchase" type="number" {...register("minPurchase", { setValueAs: optionalNumberInput })} />
+			<input aria-label="Title" name="title" value={values.title} onChange={handleChange} />
+			<input aria-label="Description" name="description" value={values.description} onChange={handleChange} />
+			<input aria-label="Minimum purchase" type="number" name="minPurchase" value={values.minPurchase} onChange={handleChange} />
 		</>
-	),
-}));
+	);
+}
+
+vi.mock("@/contexts/rewards/components/merchant-reward-form-fields", () => ({ MerchantRewardFormFields: FormFieldsStub }));
 
 function draftReward(description: string, status: RewardResponse["status"] = "DRAFT"): RewardResponse {
 	return rewardFixture({

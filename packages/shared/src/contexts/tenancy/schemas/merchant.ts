@@ -7,7 +7,7 @@ import { JsonObjectSchema } from "../../../schemas/runtime/json";
 import { REWARD_LIST_DEFAULT_LIMIT } from "../../rewards/schemas/reward";
 import { MerchantKybDocumentRecordSchema } from "./merchant-kyb";
 import { TenantLifecycleStateSchema, LocationResponseSchema, MembershipRoleSchema, TenantSlugSchema } from "./tenant";
-import { KybStatusSchema, MerchantOrgStatusSchema, PilotCitySchema } from "./tenant-enums";
+import { KybStatusSchema, MerchantTenantStatusSchema, PilotCitySchema } from "./tenant-enums";
 
 // ── Merchant tenants: admin directory, merchant invites, tenant memberships ──
 
@@ -18,7 +18,7 @@ export const adminMerchantListQuery = defineListQuery({
 	filter: {
 		city: listFilter.enumeration(PilotCitySchema, { eq: true, in: true }),
 		kybStatus: listFilter.enumeration(KybStatusSchema, { eq: true, in: true }),
-		status: listFilter.enumeration(MerchantOrgStatusSchema, { eq: true, in: true }),
+		status: listFilter.enumeration(MerchantTenantStatusSchema, { eq: true, in: true }),
 	},
 	params: { search: ListSearchSchema },
 	defaultLimit: REWARD_LIST_DEFAULT_LIMIT,
@@ -77,7 +77,7 @@ export const AdminMerchantInviteAvailabilitySchema = z.object({
 
 export type AdminMerchantInviteAvailability = z.output<typeof AdminMerchantInviteAvailabilitySchema>;
 
-export const MerchantOrgResponseSchema = BaseResponseSchema.extend({
+export const MerchantTenantResponseSchema = BaseResponseSchema.extend({
 	id: z.uuid(),
 	businessName: z.string(),
 	legalName: z.string().nullable(),
@@ -85,17 +85,17 @@ export const MerchantOrgResponseSchema = BaseResponseSchema.extend({
 	addressText: z.string().nullable(),
 	city: PilotCitySchema,
 	kybStatus: KybStatusSchema,
-	status: MerchantOrgStatusSchema,
+	status: MerchantTenantStatusSchema,
 	contactEmail: z.string(),
 	contactPhone: z.string().nullable(),
 	/** Populated on admin merchant directory responses when an owner member exists. */
 	ownerUserId: z.uuid().nullable().optional(),
 });
 
-export type MerchantOrgResponse = z.output<typeof MerchantOrgResponseSchema>;
+export type MerchantTenantResponse = z.output<typeof MerchantTenantResponseSchema>;
 
 /** Admin merchant detail for KYB review — includes verification payload and owner context. */
-export const AdminMerchantDetailResponseSchema = MerchantOrgResponseSchema.extend({
+export const AdminMerchantDetailResponseSchema = MerchantTenantResponseSchema.extend({
 	kybFields: JsonObjectSchema.nullable(),
 	documents: z.array(MerchantKybDocumentRecordSchema),
 	locations: z.array(LocationResponseSchema),

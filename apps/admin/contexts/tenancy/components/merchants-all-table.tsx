@@ -11,8 +11,8 @@ import { MERCHANTS_PAGE_SIZE_OPTIONS, MERCHANTS_TABLE_URL_STATE, toMerchantsList
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth, useImpersonation } from "@workspace/client/lib/contexts/identity";
 import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
-import type { Envelope, MerchantOrgResponse } from "@workspace/shared";
-import { adminMerchantListQuery, KybStatusSchema, MerchantOrgStatusSchema, PERMISSION } from "@workspace/shared";
+import type { Envelope, MerchantTenantResponse } from "@workspace/shared";
+import { adminMerchantListQuery, KybStatusSchema, MerchantTenantStatusSchema, PERMISSION } from "@workspace/shared";
 import { ALL_FILTER_OPTION, parseFilterOption, toListSearch } from "@workspace/client/lib/api/list-query";
 import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
@@ -28,7 +28,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { ROUTES } from "@/lib/routes";
 import { pilotCityLabel } from "@/lib/format/pilot-city";
-import { enumFilterOptions, KYB_STATUS_LABELS, MERCHANT_ORG_STATUS_LABELS } from "@/lib/data-table/enum-filter-options";
+import { enumFilterOptions, KYB_STATUS_LABELS, MERCHANT_TENANT_STATUS_LABELS } from "@/lib/data-table/enum-filter-options";
 
 const MERCHANT_SEARCH_PLACEHOLDER = "Search name or email…";
 
@@ -41,11 +41,11 @@ const MERCHANT_TABLE_LABELS: UiKitLabelsOverride<"dataTable"> = {
 
 export interface MerchantsAllTableProps {
 	/** The page the server prefetched for the URL it rendered. */
-	readonly initialPage?: PrefetchedQuery<Envelope<MerchantOrgResponse[]>> | undefined;
+	readonly initialPage?: PrefetchedQuery<Envelope<MerchantTenantResponse[]>> | undefined;
 }
 
 /**
- * `/merchants` table. Search, KYB / org status filters and page live in the
+ * `/merchants` table. Search, KYB / merchant status filters and page live in the
  * URL (lib/url-state/merchants); the only local state is the search draft.
  */
 export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProps): React.JSX.Element {
@@ -73,7 +73,7 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 		...initialDataOption(prefetchedDataFor(initialPage, stateKey)),
 	});
 
-	const rows: readonly MerchantOrgResponse[] = merchantsQuery.data?.data ?? [];
+	const rows: readonly MerchantTenantResponse[] = merchantsQuery.data?.data ?? [];
 	// The server's count of every matching row — not just the rows on this page.
 	const matchingTotal: number = readPaginatedTotal(merchantsQuery.data?.meta);
 	const { pagination } = useUrlListPaging({
@@ -90,7 +90,7 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 	const tableError: string | null = merchantsQuery.isError ? "Could not load merchants. Clear search and try again." : null;
 
 	const handleReviewKyb = React.useCallback(
-		(merchant: MerchantOrgResponse): void => {
+		(merchant: MerchantTenantResponse): void => {
 			router.push(ROUTES.merchants.verificationFor(merchant.id));
 		},
 		[router],
@@ -108,7 +108,7 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 	const canImpersonateOwner = useCanStartImpersonation();
 
 	const handleImpersonateOwner = React.useCallback(
-		(merchant: MerchantOrgResponse): void => {
+		(merchant: MerchantTenantResponse): void => {
 			if (merchant.ownerUserId === undefined || merchant.ownerUserId === null) {
 				return;
 			}
@@ -117,8 +117,8 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 		[requestImpersonation],
 	);
 
-	const actions = React.useMemo((): Action<MerchantOrgResponse>[] => {
-		const base: Action<MerchantOrgResponse>[] = [
+	const actions = React.useMemo((): Action<MerchantTenantResponse>[] => {
+		const base: Action<MerchantTenantResponse>[] = [
 			{
 				key: "kyb",
 				label: canManageKyb ? "Review KYB" : "View KYB",
@@ -142,7 +142,7 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 	}, [canImpersonateOwner, canManageKyb, handleImpersonateOwner, handleReviewKyb]);
 
 	const mobileCardRender = React.useCallback(
-		(merchant: MerchantOrgResponse, cardActions?: Action<MerchantOrgResponse>[]): React.ReactNode => (
+		(merchant: MerchantTenantResponse, cardActions?: Action<MerchantTenantResponse>[]): React.ReactNode => (
 			<DataTableMobileCard
 				item={merchant}
 				title={merchant.businessName}
@@ -159,12 +159,16 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 		[],
 	);
 
-	const columns = React.useMemo((): ColumnDef<DataTableFeatures, MerchantOrgResponse>[] => {
+	const columns = React.useMemo((): ColumnDef<DataTableFeatures, MerchantTenantResponse>[] => {
 		return [
 			{
 				id: "businessName",
 				header: "Business",
-				cell: ({ row }) => <span className="font-medium">{row.original.businessName}</span>,
+				cell: ({ row }) => (
+					<Link href={ROUTES.merchants.detail(row.original.id)} className="font-medium text-primary hover:underline">
+						{row.original.businessName}
+					</Link>
+				),
 			},
 			{
 				id: "city",
@@ -200,7 +204,7 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 				updateUrlState({ kybStatus: parseFilterOption(value ?? "", KybStatusSchema), page: LIST_FIRST_PAGE, cursor: undefined });
 			}
 			if (filterKey === "status") {
-				updateUrlState({ status: parseFilterOption(value ?? "", MerchantOrgStatusSchema), page: LIST_FIRST_PAGE, cursor: undefined });
+				updateUrlState({ status: parseFilterOption(value ?? "", MerchantTenantStatusSchema), page: LIST_FIRST_PAGE, cursor: undefined });
 			}
 		},
 		[updateUrlState],
@@ -223,8 +227,8 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 			},
 			{
 				key: "status",
-				label: "Org status",
-				options: enumFilterOptions(MerchantOrgStatusSchema.options, MERCHANT_ORG_STATUS_LABELS),
+				label: "Merchant status",
+				options: enumFilterOptions(MerchantTenantStatusSchema.options, MERCHANT_TENANT_STATUS_LABELS),
 			},
 		],
 		[],
@@ -281,6 +285,6 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 	);
 }
 
-function getMerchantRowId(merchant: MerchantOrgResponse): string {
+function getMerchantRowId(merchant: MerchantTenantResponse): string {
 	return merchant.id;
 }

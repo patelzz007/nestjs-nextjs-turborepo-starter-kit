@@ -1,6 +1,6 @@
 import { MerchantCapabilityGate } from "@/contexts/tenancy/components/access/merchant-capability-gate";
 import { MerchantKybVerificationSectionSkeleton } from "@/components/loading/merchant-page-skeletons";
-import { guardOrgPage } from "@/contexts/tenancy/lib/org/org-page-guard";
+import { guardTenantPage } from "@/contexts/tenancy/lib/tenant/tenant-page-guard";
 import { tenantRoutes } from "@/lib/routes";
 import { MerchantKybVerificationView } from "@workspace/client/lib/contexts/tenancy/kyb/verification-view";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
@@ -17,7 +17,7 @@ interface MerchantVerificationPageProps {
 /** Business verification (KYB) — submit or resubmit details for admin review; `merchant:manage_verification` (owner-only). */
 export default async function MerchantVerificationPage({ params }: MerchantVerificationPageProps): Promise<React.JSX.Element> {
 	const { tenantSlug } = await params;
-	const denied = await guardOrgPage(tenantSlug, "/settings/verification");
+	const denied = await guardTenantPage(tenantSlug, "/settings/verification");
 	if (denied !== null) {
 		return denied;
 	}

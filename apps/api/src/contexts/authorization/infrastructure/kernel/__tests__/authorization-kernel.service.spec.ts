@@ -87,8 +87,9 @@ function grant(action: PermissionAction, resource: PermissionResource, scope: Pe
 	return { action, resource, scope, source, sourceId: `${source}-1`, conditions: null };
 }
 
-function storeGrant(action: PermissionAction, resource: PermissionResource, storeId: string): SubjectGrant {
-	return { action, resource, scope: "STORE", source: "store", sourceId: "sm-1", store: { storeId, tenantId: ORG_A }, conditions: null };
+/** A location-role grant; `locationId: null` is an ALL_LOCATIONS scope. */
+function locationGrant(action: PermissionAction, resource: PermissionResource, locationId: string | null): SubjectGrant {
+	return { action, resource, scope: "LOCATION", source: "location", sourceId: "scope-1", location: { tenantId: ORG_A, locationId }, conditions: null };
 }
 
 function subjectGrants(overrides: Partial<SubjectGrants> = {}): SubjectGrants {
@@ -96,7 +97,7 @@ function subjectGrants(overrides: Partial<SubjectGrants> = {}): SubjectGrants {
 }
 
 function tenant(overrides: Partial<TenantVerification> = {}): TenantVerification {
-	return { context: {}, target: null, tenantRejected: false, storeRejected: false, locationRejected: false, ...overrides };
+	return { context: {}, target: null, tenantRejected: false, locationRejected: false, ...overrides };
 }
 
 function acl(effect: "ALLOW" | "DENY", resourceId: string | null, id = `acl-${effect}`): ResourceAcl {
@@ -330,62 +331,79 @@ describe("AuthorizationKernelService", () => {
 		});
 	});
 
-	describe("stores (STORE scope)", () => {
-		const inStore = (storeId: string): AuthorizationContext => subject({ tenantId: ORG_A, storeId });
+	describe("location roles (LOCATION scope from a member's location scope)", () => {
+		const atLocation = (locationId: string): AuthorizationContext => subject({ tenantId: ORG_A, locationId });
 
-		it("forwards the requested store to tenant verification and rejects a forged store", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [storeGrant("READ", "REWARD", "store-1")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A }, storeRejected: true }));
+		it("forwards the requested location to tenant verification and rejects a location outside the scope", async () => {
+			mocks.load.mockResolvedValue(subjectGrants({ grants: [locationGrant("READ", "REWARD", "loc-1")] }));
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A }, locationRejected: true }));
 
-			const result = await createKernel().explain(request({ resource: "REWARD", subject: inStore("store-9") }));
+			const result = await createKernel().explain(request({ resource: "REWARD", subject: atLocation("loc-9") }));
 
-			expect(mocks.verify).toHaveBeenCalledWith(USER_ID, { tenantId: ORG_A, storeId: "store-9" });
+			expect(mocks.verify).toHaveBeenCalledWith(USER_ID, { tenantId: ORG_A, locationId: "loc-9" });
 			expect(result.decision).toBe("DENY");
 			expect(result.evaluation.at(-1)).toEqual(expect.objectContaining({ source: "tenant" }));
 		});
 
-		it("allows a store-membership grant only inside its own store", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [storeGrant("CREATE", "REDEMPTION", "store-1")] }));
+		it("allows a location-role grant only at its own location", async () => {
+			mocks.load.mockResolvedValue(subjectGrants({ grants: [locationGrant("CREATE", "REDEMPTION", "loc-1")] }));
 			const kernel = createKernel();
 
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, storeId: "store-1" } }));
-			expect(await kernel.can(request({ action: "CREATE", resource: "REDEMPTION", subject: inStore("store-1") }))).toBe("ALLOW");
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, locationId: "loc-1" } }));
+			expect(await kernel.can(request({ action: "CREATE", resource: "REDEMPTION", subject: atLocation("loc-1") }))).toBe("ALLOW");
 
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, storeId: "store-2" } }));
-			expect(await kernel.can(request({ action: "CREATE", resource: "REDEMPTION", subject: inStore("store-2") }))).toBe("DENY");
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, locationId: "loc-2" } }));
+			expect(await kernel.can(request({ action: "CREATE", resource: "REDEMPTION", subject: atLocation("loc-2") }))).toBe("DENY");
 		});
 
-		it("never applies a store grant without a verified store context", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [storeGrant("READ", "REWARD", "store-1")] }));
+		it("applies an ALL_LOCATIONS location role at every location of its tenant, and never in another tenant", async () => {
+			mocks.load.mockResolvedValue(subjectGrants({ grants: [locationGrant("CREATE", "REDEMPTION", null)] }));
+			const kernel = createKernel();
+
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, locationId: "loc-2" } }));
+			expect(await kernel.can(request({ action: "CREATE", resource: "REDEMPTION", subject: atLocation("loc-2") }))).toBe("ALLOW");
+
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_B, locationId: "loc-b" } }));
+			expect(await kernel.can(request({ action: "CREATE", resource: "REDEMPTION", subject: subject({ tenantId: ORG_B, locationId: "loc-b" }) }))).toBe("DENY");
+		});
+
+		it("never applies a location role without a verified location context", async () => {
+			mocks.load.mockResolvedValue(subjectGrants({ grants: [locationGrant("READ", "REWARD", "loc-1")] }));
 
 			expect(await createKernel().can(request({ resource: "REWARD" }))).toBe("DENY");
 		});
 
-		it("denies a store resource belonging to another store", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [storeGrant("READ", "REWARD", "store-1")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, storeId: "store-1" } }));
+		it("denies a resource at another location", async () => {
+			mocks.load.mockResolvedValue(subjectGrants({ grants: [locationGrant("READ", "REWARD", "loc-1")] }));
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, locationId: "loc-1" } }));
 			const kernel = createKernel();
 
-			expect(await kernel.can(request({ resource: "REWARD", subject: inStore("store-1"), resourceId: "r1", resourceAttributes: { storeId: "store-1" } }))).toBe("ALLOW");
-			expect(await kernel.can(request({ resource: "REWARD", subject: inStore("store-1"), resourceId: "r2", resourceAttributes: { storeId: "store-2" } }))).toBe("DENY");
-			expect(await kernel.can(request({ resource: "REWARD", subject: inStore("store-1"), resourceId: "r3" }))).toBe("DENY");
+			expect(await kernel.can(request({ resource: "REWARD", subject: atLocation("loc-1"), resourceId: "r1", resourceAttributes: { locationId: "loc-1" } }))).toBe("ALLOW");
+			expect(await kernel.can(request({ resource: "REWARD", subject: atLocation("loc-1"), resourceId: "r2", resourceAttributes: { locationId: "loc-2" } }))).toBe("DENY");
+			expect(await kernel.can(request({ resource: "REWARD", subject: atLocation("loc-1"), resourceId: "r3" }))).toBe("DENY");
 		});
 
-		it("filters rows to the member's stores", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [storeGrant("LIST", "REDEMPTION", "store-1"), storeGrant("LIST", "REDEMPTION", "store-2")] }));
+		it("filters rows to the member's locations", async () => {
+			mocks.load.mockResolvedValue(subjectGrants({ grants: [locationGrant("LIST", "REDEMPTION", "loc-1"), locationGrant("LIST", "REDEMPTION", "loc-2")] }));
 			const kernel = createKernel();
 
-			const everyStore = await kernel.filter(subject(), "LIST", "REDEMPTION");
-			expect(everyStore).toEqual({
+			const everyLocation = await kernel.filter(subject(), "LIST", "REDEMPTION");
+			expect(everyLocation).toEqual({
 				OR: [
-					{ tenantId: ORG_A, storeId: "store-1" },
-					{ tenantId: ORG_A, storeId: "store-2" },
+					{ tenantId: ORG_A, locationId: "loc-1" },
+					{ tenantId: ORG_A, locationId: "loc-2" },
 				],
 			});
-			expect(AuthorizationRowFilterSchema.safeParse(everyStore).success).toBe(true);
+			expect(AuthorizationRowFilterSchema.safeParse(everyLocation).success).toBe(true);
 
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, storeId: "store-2" } }));
-			expect(await kernel.filter(inStore("store-2"), "LIST", "REDEMPTION")).toEqual({ tenantId: ORG_A, storeId: "store-2" });
+			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, locationId: "loc-2" } }));
+			expect(await kernel.filter(atLocation("loc-2"), "LIST", "REDEMPTION")).toEqual({ tenantId: ORG_A, locationId: "loc-2" });
+		});
+
+		it("filters an ALL_LOCATIONS location role to its whole tenant", async () => {
+			mocks.load.mockResolvedValue(subjectGrants({ grants: [locationGrant("LIST", "REDEMPTION", null)] }));
+
+			expect(await createKernel().filter(subject(), "LIST", "REDEMPTION")).toEqual({ tenantId: ORG_A });
 		});
 	});
 

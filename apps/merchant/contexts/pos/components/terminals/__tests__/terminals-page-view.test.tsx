@@ -102,7 +102,7 @@ const MONT_KIARA = store(STORE_B.id, STORE_B.name);
 const TWO_STORES: TenantContextResponse = tenantContextFixture({ locations: [BANGSAR, MONT_KIARA] });
 const ONE_STORE: TenantContextResponse = tenantContextFixture({ locations: [BANGSAR] });
 
-/** What the org layout seeds the tenant context with (the member's store choice + tenant context). */
+/** What the tenant layout seeds the tenant context with (the member's store choice + tenant context). */
 let tenantSeed: TenantContextSeed = { initialLocationId: null };
 
 function seedTenant(context: TenantContextResponse, selectedLocationId: string | null): void {

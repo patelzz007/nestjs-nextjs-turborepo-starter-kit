@@ -1,8 +1,9 @@
 import { TenantAccessRequestStatusSchema, type EpochMs, type TenantAccessRequestStatus } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
-import { AccessRequestAlreadyReviewedError, AccessRequestPendingError, AlreadyMemberError, TenantsCorruptStateError } from "../errors/tenants.errors";
+import { AccessRequestAlreadyReviewedError, AccessRequestPendingError, AlreadyMemberError } from "../errors/tenants.errors";
 import { AccessRequestReviewed, type TenantsDomainEvent } from "../events/tenants.events";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 export interface AccessRequestState {
 	readonly id: string;
@@ -37,7 +38,7 @@ export class AccessRequest extends AggregateRoot<TenantsDomainEvent> {
 	public static rehydrate(state: AccessRequestState): AccessRequest {
 		const status = TenantAccessRequestStatusSchema.safeParse(state.status);
 		if (!status.success) {
-			throw new TenantsCorruptStateError(state.id);
+			throw new CorruptAggregateStateError("tenant", state.id);
 		}
 		return new AccessRequest(state.id, state.tenantId, state.userId, state.message, status.data, status.data);
 	}

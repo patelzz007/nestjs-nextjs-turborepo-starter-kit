@@ -606,7 +606,7 @@ async function captureRbac(context) {
 		body: { userId: context.userIds["manager@example.com"], action: "READ", resource: "GEO" },
 	});
 	const existing = new Set(firstArray(allPermissions.json?.data).map((permission) => `${permission.action}:${permission.resource}`));
-	const freeResource = ["REPORT", "INVENTORY", "ORDER", "PAYMENT", "DEVTOOLS", "STORE"].find((resource) => !existing.has(`MANAGE:${resource}`)) ?? "REPORT";
+	const freeResource = ["REPORT", "INVENTORY", "ORDER", "PAYMENT", "DEVTOOLS"].find((resource) => !existing.has(`MANAGE:${resource}`)) ?? "REPORT";
 	const created = await capture("PermissionsController_create", admin, {
 		method: "POST",
 		path: api("/admin/permissions"),
@@ -975,6 +975,20 @@ async function captureMerchantAdmin(context) {
 		path: api(`/admin/merchants/${SEED.klTenantId}/documents/${documentId}/download`),
 	});
 	context.klDocumentId = documentId;
+	// The seeded banned merchant (Lucky Gold Traders): read its lifecycle, lift the ban, and ban it again.
+	const banned = await send(admin, { method: "GET", path: api("/admin/merchants"), query: { "filter[status]": "BANNED", limit: "1" } });
+	const bannedTenantId = banned.json?.data?.[0]?.id;
+	await capture("RewardsAdminMerchantsController_getLifecycle", admin, { method: "GET", path: api(`/admin/merchants/${bannedTenantId}/lifecycle`) });
+	await capture("RewardsAdminMerchantsController_unban", admin, {
+		method: "POST",
+		path: api(`/admin/merchants/${bannedTenantId}/unban`),
+		body: { reason: "The risk team cleared the merchant after a review." },
+	});
+	await capture("RewardsAdminMerchantsController_ban", admin, {
+		method: "POST",
+		path: api(`/admin/merchants/${bannedTenantId}/ban`),
+		body: { reason: "Sold counterfeit vouchers to customers." },
+	});
 	await capture("RewardsAdminLocationRequestsController_listLocationRequests", admin, { method: "GET", path: api("/admin/location-requests") });
 	await capture("RewardsAdminAnalyticsController_getSales", admin, { method: "GET", path: api("/admin/analytics/sales") });
 	await capture("RewardsAdminAnalyticsController_getDashboard", admin, { method: "GET", path: api("/admin/analytics/dashboard"), query: { interval: "week" } });
@@ -1190,22 +1204,22 @@ async function captureTenant(context) {
 
 	// Team: invite a member by email, revoke a pending invite, remove a member from one store.
 	// Invites name an APPROVED store: the seeded primary store (Bukit Bintang).
-	const storeId = SEED.klLocationId;
+	const locationId = SEED.klLocationId;
 	const invited = await capture("TenantController_inviteMember", owner, {
 		method: "POST",
 		path: api(`/tenants/${slug}/members/invite`),
-		body: { email: "barista.bangsar@kl-rewards.demo", role: "CASHIER", locationScopeType: "SELECTED", locationIds: [storeId] },
+		body: { email: "barista.bangsar@kl-rewards.demo", role: "CASHIER", locationScopeType: "SELECTED", locationIds: [locationId] },
 	});
 	await capture("TenantController_revokeMemberInvite", owner, { method: "POST", path: api(`/tenants/${slug}/members/invites/${invited?.inviteId}/revoke`) });
 	await capture(
-		"TenantController_removeMemberFromStore",
+		"TenantController_removeMemberFromLocation",
 		jonker,
 		{
 			method: "POST",
-			path: api(`/tenants/${SEED.mlkSlug}/members/${SEED.mlkCashierMembershipId}/stores/${SEED.mlkLocationBeruangId}/remove`),
-			body: { allowNoStores: true },
+			path: api(`/tenants/${SEED.mlkSlug}/members/${SEED.mlkCashierMembershipId}/locations/${SEED.mlkLocationBeruangId}/remove`),
+			body: { allowNoLocations: true },
 		},
-		{ note: "Jonker Street Kitchen removes its cashier from the Bukit Beruang store (the cashier's only store, hence allowNoStores)." },
+		{ note: "Jonker Street Kitchen removes its cashier from the Bukit Beruang store (the cashier's only store, hence allowNoLocations)." },
 	);
 
 	// A member's own display name in one tenant (set, then cleared again so the seed state is kept).
@@ -1229,7 +1243,7 @@ async function captureTenant(context) {
 	await send(owner, {
 		method: "POST",
 		path: api(`/tenants/${slug}/members/invite`),
-		body: { email: "barista.bangsar@kl-rewards.demo", role: "CASHIER", locationScopeType: "SELECTED", locationIds: [storeId] },
+		body: { email: "barista.bangsar@kl-rewards.demo", role: "CASHIER", locationScopeType: "SELECTED", locationIds: [locationId] },
 	});
 	const freshToken = await nextFromLog(/team-invite\?token=([\w.-]+)/g, offset);
 	await capture("TenantTeamInviteController_registerAndAcceptTeamInvite", newSession("barista", { email: "barista", client: "merchant", ip: "203.0.113.32" }), {
@@ -1249,9 +1263,9 @@ async function captureTenant(context) {
 	await capture("TenantController_reviewAccessRequest", owner, {
 		method: "POST",
 		path: api(`/tenants/${slug}/access-requests/${request?.id ?? request?.requestId}/review`),
-		body: { approve: true, role: "CASHIER", locationScopeType: "SELECTED", locationIds: [storeId] },
+		body: { approve: true, role: "CASHIER", locationScopeType: "SELECTED", locationIds: [locationId] },
 	});
-	context.bangsarLocationId = storeId;
+	context.bangsarLocationId = locationId;
 }
 
 /**
@@ -1259,12 +1273,12 @@ async function captureTenant(context) {
  * needs at least one, uploaded before the draft names it.
  */
 async function uploadRewardImage(session) {
-	const imageTicket = await send(session, {
+	const imageTicket = await capture("TenantFilesController_createUploadUrl", session, {
 		method: "POST",
-		path: api("/files/upload-url"),
-		body: { category: "REWARD_IMAGE", tenantId: SEED.klTenantId, ...rewardImageInfo },
+		path: api(`/tenants/${SEED.klSlug}/files/upload-url`),
+		body: { category: "REWARD_IMAGE", ...rewardImageInfo },
 	});
-	const imageTicketData = imageTicket.json?.data;
+	const imageTicketData = imageTicket;
 	const imageUpload = await uploadToTicket(imageTicketData?.upload ?? imageTicketData, rewardImageBytes, rewardImageInfo.fileName);
 	const rewardImageFileId = imageTicketData?.fileId ?? imageTicketData?.file?.id ?? imageTicketData?.id;
 	await send(null, { method: "POST", path: imageUpload.path, form: imageUpload.form });
@@ -1413,7 +1427,15 @@ async function capturePos(context) {
 		register,
 	);
 
-	await capture("TenantRedemptionsController_listRedemptions", owner, { method: "GET", path: api(`/tenants/${slug}/redemptions`), query: { limit: "2" } });
+	const redemptions = await capture("TenantRedemptionsController_listRedemptions", owner, { method: "GET", path: api(`/tenants/${slug}/redemptions`), query: { limit: "2" } });
+	// Ban the customer behind the newest redemption, list the bans, and lift it again (later steps need the customer unbanned).
+	const customerBan = await capture("TenantCustomerBansController_ban", owner, {
+		method: "POST",
+		path: api(`/tenants/${slug}/customer-bans`),
+		body: { redemptionId: redemptions?.[0]?.redemptionId, reason: "Showed a screenshot of a voucher already redeemed." },
+	});
+	await capture("TenantCustomerBansController_list", owner, { method: "GET", path: api(`/tenants/${slug}/customer-bans`), query: { limit: "2" } });
+	await capture("TenantCustomerBansController_lift", owner, { method: "POST", path: api(`/tenants/${slug}/customer-bans/${customerBan?.id}/lift`), body: {} });
 	await capture("TenantAnalyticsController_getAnalytics", owner, { method: "GET", path: api(`/tenants/${slug}/analytics`) });
 	await capture("TenantAnalyticsController_getDashboard", owner, { method: "GET", path: api(`/tenants/${slug}/analytics/dashboard`), query: { interval: "week" } });
 	await capture(

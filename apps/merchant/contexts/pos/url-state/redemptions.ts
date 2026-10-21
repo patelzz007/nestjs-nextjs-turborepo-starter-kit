@@ -17,7 +17,7 @@ const REDEMPTIONS_PAGE_SIZES: readonly number[] = [MERCHANT_REDEMPTIONS_PAGE_SIZ
 
 /**
  * `/t/[tenantSlug]/redemptions?page=&cursor=&sort=` — the list keys of
- * `GET /t/:orgSlug/redemptions`, so the URL maps 1:1 onto the request.
+ * `GET /t/:tenantSlug/redemptions`, so the URL maps 1:1 onto the request.
  */
 export const REDEMPTIONS_URL_STATE = defineUrlState({
 	...listUrlParams(merchantRedemptionListQuery, { pageSizes: REDEMPTIONS_PAGE_SIZES, defaultLimit: MERCHANT_REDEMPTIONS_PAGE_SIZE }),
@@ -33,7 +33,7 @@ export type RedemptionsQueryInput = Pick<TableListQueryInput<TableFilterState>, 
 };
 
 /**
- * The `GET /t/:orgSlug/redemptions` input for a URL state and store scope —
+ * The `GET /t/:tenantSlug/redemptions` input for a URL state and store scope —
  * built by the server page (prefetch) and the view (query) from the same
  * inputs, so the prefetched page lands under the client's query key.
  */

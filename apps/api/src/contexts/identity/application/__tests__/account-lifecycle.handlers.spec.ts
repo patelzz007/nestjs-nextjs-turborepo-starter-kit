@@ -2,13 +2,23 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { OwnProfileSchema, epochMs } from "@workspace/shared";
 
 import { UserProfile } from "../../domain/aggregates/user-profile.aggregate";
-import { AccountNotFoundError, ProfileUpdateDuringImpersonationError } from "../../domain/errors/identity.errors";
+import {
+	AccountAlreadyBannedError,
+	AccountNotBannedError,
+	AccountNotFoundError,
+	CannotBanSelfError,
+	ProfileUpdateDuringImpersonationError,
+} from "../../domain/errors/identity.errors";
 import { EmailAddress } from "../../domain/value-objects/email-address.value-object";
 import { LockoutState } from "../../domain/value-objects/lockout-state.value-object";
 import { ResendVerificationEmailCommand } from "../commands/resend-verification-email/resend-verification-email.command";
 import { ResendVerificationEmailHandler } from "../commands/resend-verification-email/resend-verification-email.handler";
 import { GENERIC_SIGNUP_RESPONSE, SignUpHandler } from "../commands/sign-up/sign-up.handler";
 import { SignUpCommand } from "../commands/sign-up/sign-up.command";
+import { BanUserCommand } from "../commands/ban-user/ban-user.command";
+import { BanUserHandler } from "../commands/ban-user/ban-user.handler";
+import { UnbanUserCommand } from "../commands/unban-user/unban-user.command";
+import { UnbanUserHandler } from "../commands/unban-user/unban-user.handler";
 import { UnlockAccountCommand } from "../commands/unlock-account/unlock-account.command";
 import { UnlockAccountHandler } from "../commands/unlock-account/unlock-account.handler";
 import { UpdateOwnProfileCommand } from "../commands/update-own-profile/update-own-profile.command";
@@ -133,6 +143,48 @@ describe("UnlockAccountHandler", () => {
 		await expect(new UnlockAccountHandler(store.uow, clock).execute(new UnlockAccountCommand(userActor("admin-1"), { userId: "ghost" }))).rejects.toBeInstanceOf(
 			AccountNotFoundError,
 		);
+	});
+});
+
+describe("BanUserHandler / UnbanUserHandler", () => {
+	const ADMIN_ID = "admin-1";
+	const admin = userActor(ADMIN_ID, { isSuperAdmin: true });
+
+	beforeEach(() => {
+		store.accounts.seed(accountState({ id: ADMIN_ID, email: EmailAddress.of("admin@example.com"), fullName: "Ada Admin", isSuperAdmin: true }));
+	});
+
+	function ban(userId: string, reason = "Chargeback fraud"): ReturnType<BanUserHandler["execute"]> {
+		return new BanUserHandler(store.uow, clock).execute(new BanUserCommand(admin, { userId, adminUserId: ADMIN_ID, reason }));
+	}
+
+	it("bans: the account is deactivated with the ban, every session is revoked and the change is broadcast", async () => {
+		await expect(ban("user-1")).resolves.toEqual({
+			userId: "user-1",
+			ban: { bannedAt: clock.now(), reason: "Chargeback fraud", bannedBy: { id: ADMIN_ID, fullName: "Ada Admin" } },
+		});
+
+		const row = store.accounts.rows.get("user-1");
+		expect(row?.isActive).toBe(false);
+		expect(row?.ban).toEqual({ bannedAt: clock.now(), bannedByUserId: ADMIN_ID, reason: "Chargeback fraud" });
+		expect(store.eventNames()).toEqual(["identity.UserCredentialsChanged", "identity.DeviceSessionsRevoked"]);
+	});
+
+	it("refuses a second ban, a self-ban and an unknown account, leaving nothing half-written", async () => {
+		await ban("user-1");
+
+		await expect(ban("user-1")).rejects.toBeInstanceOf(AccountAlreadyBannedError);
+		await expect(ban(ADMIN_ID)).rejects.toBeInstanceOf(CannotBanSelfError);
+		await expect(ban("ghost")).rejects.toBeInstanceOf(AccountNotFoundError);
+		expect(store.accounts.rows.get(ADMIN_ID)?.isActive).toBe(true);
+	});
+
+	it("unbans a banned account and refuses one that is not banned", async () => {
+		await ban("user-1");
+
+		await expect(new UnbanUserHandler(store.uow, clock).execute(new UnbanUserCommand(admin, { userId: "user-1" }))).resolves.toEqual({ userId: "user-1", ban: null });
+		expect(store.accounts.rows.get("user-1")).toMatchObject({ isActive: true, ban: null });
+		await expect(new UnbanUserHandler(store.uow, clock).execute(new UnbanUserCommand(admin, { userId: "user-1" }))).rejects.toBeInstanceOf(AccountNotBannedError);
 	});
 });
 

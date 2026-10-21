@@ -1,10 +1,10 @@
-import { getFileCategoryPolicy, type CreateFileUploadUrlInput } from "@workspace/shared";
+import { getFileCategoryPolicy, type FileUploadRequest } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { FileMimeTypeNotAllowedError, FileOwnerUnresolvedError, FileTooLargeError, FileUploadForbiddenError } from "../errors/files.errors";
 import { assertAvatarIsUploadersOwn, assertUploadWithinCategoryPolicy, isOwnPersonalUpload, resolveFileOwnerId, resolveUploadOwnerId } from "../policies/file-upload.policy";
 
-const upload: Pick<CreateFileUploadUrlInput, "fileName" | "mimeType" | "sizeBytes" | "checksumSha256"> = {
+const upload: Pick<FileUploadRequest, "fileName" | "mimeType" | "sizeBytes" | "checksumSha256"> = {
 	fileName: "f.png",
 	mimeType: "image/png",
 	sizeBytes: 10,

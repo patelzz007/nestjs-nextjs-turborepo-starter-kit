@@ -1,15 +1,10 @@
 import { AclEffectSchema, type EpochMs } from "@workspace/shared";
 import { z } from "zod";
 
-import {
-	AllowDenyConflictError,
-	CorruptAuthorizationStateError,
-	PermissionOverrideNotFoundError,
-	RoleAssignmentNotFoundError,
-	RoleLimitExceededError,
-} from "../errors/authorization.errors";
+import { AllowDenyConflictError, PermissionOverrideNotFoundError, RoleAssignmentNotFoundError, RoleLimitExceededError } from "../errors/authorization.errors";
 import type { RbacTargetAccount } from "../policies/rbac-escalation.policy";
 import { MAX_ROLES_PER_USER } from "../rbac-catalog";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 export type PermissionOverrideEffect = z.output<typeof AclEffectSchema>;
 
@@ -97,7 +92,7 @@ export class UserAuthorizationAggregate {
 	public static rehydrate(state: UserAuthorizationState): UserAuthorizationAggregate {
 		const parsed = UserAuthorizationStateSchema.safeParse(state);
 		if (!parsed.success) {
-			throw new CorruptAuthorizationStateError("UserAuthorization", state.userId);
+			throw new CorruptAggregateStateError("UserAuthorization", state.userId);
 		}
 		return new UserAuthorizationAggregate(parsed.data);
 	}

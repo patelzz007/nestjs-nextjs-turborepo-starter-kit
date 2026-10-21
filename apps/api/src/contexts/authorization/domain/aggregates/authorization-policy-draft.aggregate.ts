@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
 import {
-	CorruptAuthorizationStateError,
 	PolicyDraftNotPublishableError,
 	PolicyImpersonationForbiddenError,
 	PolicySelfApprovalForbiddenError,
@@ -13,6 +12,7 @@ import {
 	TenantPolicyDraftTenantRequiredError,
 } from "../errors/authorization.errors";
 import { PolicyPublished } from "../events/policy-published.event";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** `AuthorizationPolicyDraft.name` column width. */
 export const POLICY_DRAFT_NAME_MAX_LENGTH = 120;
@@ -137,7 +137,7 @@ export class AuthorizationPolicyDraftAggregate extends AggregateRoot<PolicyPubli
 	public static rehydrate(state: PolicyDraftState): AuthorizationPolicyDraftAggregate {
 		const parsed = PolicyDraftStateSchema.safeParse(state);
 		if (!parsed.success) {
-			throw new CorruptAuthorizationStateError("AuthorizationPolicyDraft", state.id);
+			throw new CorruptAggregateStateError("AuthorizationPolicyDraft", state.id);
 		}
 		return new AuthorizationPolicyDraftAggregate(parsed.data, parsed.data.status);
 	}

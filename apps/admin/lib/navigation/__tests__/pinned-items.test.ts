@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { LIST_SLOT_INDEX, PERMISSION } from "@workspace/shared";
 
-import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
-import { resolvePinnedMenuItems } from "@/lib/navigation/pinned-items";
+import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
+import { resolvePinnedMenuItems } from "@workspace/ui/lib/palette/resolve-pinned-menu-items";
 import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { buildSearchableItems } from "@/lib/palette/search";
 

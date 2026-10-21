@@ -24,13 +24,15 @@ export class PosScopeFactory implements ScopeFactory<PosScope, Prisma.Transactio
 
 	public create(db: Prisma.TransactionClient, events: TransactionalEventCollector): PosScope {
 		const rewards = createRewardsTransactionalPorts(db);
+		const tenants = createTenantsTransactionalPorts(db);
 		return {
 			sales: new PrismaRewardSaleRepository(db),
 			lockout: new PrismaCodeLockoutRepository(db),
 			terminals: new PrismaTenantTerminalRepository(db),
 			terminalViews: new PrismaTerminalView(db),
 			apiKeys: new PrismaTenantApiKeyRepository(db),
-			posSettings: createTenantsTransactionalPorts(db).merchantPosSettings,
+			posSettings: tenants.merchantPosSettings,
+			customerStanding: tenants.customerStanding,
 			claims: createClaimsTransactionalPorts(db, this.codeHasher, events).redemption,
 			rewards: rewards.inventory,
 			rewardFacts: rewards.redemptionFacts,

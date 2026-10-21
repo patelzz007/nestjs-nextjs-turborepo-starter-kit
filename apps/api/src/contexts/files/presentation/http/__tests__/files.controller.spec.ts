@@ -8,10 +8,20 @@ import { DeleteFileCommand } from "../../../application/commands/delete-file/del
 import { RequestFileUploadCommand } from "../../../application/commands/request-file-upload/request-file-upload.command";
 import { GetFileDownloadUrlQuery } from "../../../application/queries/get-file-download-url/get-file-download-url.query";
 import { GetFileQuery } from "../../../application/queries/get-file/get-file.query";
-import { FilesController, type FilesCommandDispatch, type FilesQueryDispatch } from "../files.controller";
+import { FileUploadForbiddenError } from "../../../domain/errors/files.errors";
+import { FilesController, TenantFilesController, type FilesCommandDispatch, type FilesQueryDispatch } from "../files.controller";
 
 const FILE_ID = "0b7c2a5e-6f1d-4c2e-9d3a-1f2e3d4c5b6a";
 const ACTOR: ActorContext = systemActor("files.delete", "job", null, "controller test", null);
+const TENANT_ID = "0199a1b2-0000-7000-8000-000000000001";
+const LOGO_UPLOAD = {
+	category: "STORE_LOGO",
+	assetType: "LOGO",
+	fileName: "logo.png",
+	mimeType: "image/png",
+	sizeBytes: 1,
+	checksumSha256: "a".repeat(64),
+} satisfies Parameters<TenantFilesController["createUploadUrl"]>[2];
 
 /** Raised by the recording bus after it recorded the message, so the route's own result is not needed. */
 class Dispatched extends Error {}
@@ -61,5 +71,25 @@ describe("FilesController", () => {
 
 		await expect(files.processingCallback(ACTOR, undefined, { fileId: FILE_ID, status: "FAILED" })).rejects.toBeInstanceOf(Dispatched);
 		expect(bus.dispatched.at(0)).toMatchObject({ callbackSecret: null });
+	});
+});
+
+describe("TenantFilesController", () => {
+	it("uploads for the tenant the guard bound to the request, never one from the body", async () => {
+		const bus = new RecordingBus();
+		const controller = new TenantFilesController(bus);
+		const actor = { ...ACTOR, tenantId: TENANT_ID };
+
+		await expect(controller.createUploadUrl(actor, { tenantSlug: "jonker-street-kitchen" }, LOGO_UPLOAD)).rejects.toBeInstanceOf(Dispatched);
+
+		expect(bus.dispatched).toEqual([new RequestFileUploadCommand(actor, { ...LOGO_UPLOAD, tenantId: TENANT_ID })]);
+	});
+
+	it("refuses a request the guard bound to no tenant before anything is dispatched", async () => {
+		const bus = new RecordingBus();
+		const controller = new TenantFilesController(bus);
+
+		await expect(controller.createUploadUrl(ACTOR, { tenantSlug: "jonker-street-kitchen" }, LOGO_UPLOAD)).rejects.toBeInstanceOf(FileUploadForbiddenError);
+		expect(bus.dispatched).toEqual([]);
 	});
 });

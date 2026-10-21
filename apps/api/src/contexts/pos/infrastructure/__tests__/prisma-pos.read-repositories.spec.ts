@@ -41,21 +41,36 @@ class RecordingRunner implements RlsTransactionRunner<Prisma.TransactionClient> 
 
 describe("PrismaRedemptionReadRepository", () => {
 	it("reads one page of the history within the granted stores, in one query per page, under the caller's RLS session", async () => {
-		const count = vi.fn<(args: Prisma.RewardRedemptionCountArgs) => Promise<number>>().mockResolvedValue(1);
-		const findMany = vi
-			.fn<(args: Prisma.RewardRedemptionFindManyArgs) => Promise<readonly object[]>>()
-			.mockResolvedValue([
-				{ id: "redemption-1", redeemedAt: BigInt(NOW), terminalId: "TERM-AAAA2222", redemptionMethod: "MANUAL", claim: { reward: { title: "Free latte" } } },
-			]);
-		const runner = new RecordingRunner(Object.assign(new PrismaService(createTestTypedConfig()), { rewardRedemption: { count, findMany } }));
+		const count = vi.fn<(args: Prisma.RewardRedemptionCountArgs) => Promise<number>>().mockResolvedValue(2);
+		const findMany = vi.fn<(args: Prisma.RewardRedemptionFindManyArgs) => Promise<readonly object[]>>().mockResolvedValue([
+			{
+				id: "redemption-1",
+				userId: "customer-1",
+				redeemedAt: BigInt(NOW),
+				terminalId: "TERM-AAAA2222",
+				redemptionMethod: "MANUAL",
+				claim: { reward: { title: "Free latte" } },
+			},
+			{ id: "redemption-2", userId: "customer-2", redeemedAt: BigInt(NOW), terminalId: "TERM-AAAA2222", redemptionMethod: "SCAN", claim: { reward: { title: "Free latte" } } },
+		]);
+		const bans = vi.fn<(args: Prisma.TenantCustomerBanFindManyArgs) => Promise<readonly object[]>>().mockResolvedValue([{ customerUserId: "customer-2" }]);
+		const runner = new RecordingRunner(
+			Object.assign(new PrismaService(createTestTypedConfig()), { rewardRedemption: { count, findMany }, tenantCustomerBan: { findMany: bans } }),
+		);
 
 		await expect(
 			new PrismaRedemptionReadRepository(new PrismaReadExecutor(runner)).list(MEMBER, STORE_GRANT, MerchantRedemptionListQuerySchema.parse({ limit: "10" })),
 		).resolves.toMatchObject({
-			items: [{ redemptionId: "redemption-1", rewardTitle: "Free latte", redeemedAt: NOW, terminalId: "TERM-AAAA2222", redemptionMethod: "MANUAL" }],
-			total: 1,
+			items: [
+				{ redemptionId: "redemption-1", rewardTitle: "Free latte", redeemedAt: NOW, terminalId: "TERM-AAAA2222", redemptionMethod: "MANUAL", customerBanned: false },
+				{ redemptionId: "redemption-2", customerBanned: true },
+			],
+			total: 2,
 			limit: 10,
 		});
+		// The page's customers are checked against the tenant's active bans in one query.
+		expect(bans).toHaveBeenCalledOnce();
+		expect(bans.mock.calls.at(0)?.at(0)?.where).toEqual({ tenantId: "org-1", customerUserId: { in: ["customer-1", "customer-2"] }, liftedAt: null, isDeleted: false });
 		expect(findMany).toHaveBeenCalledOnce();
 		expect(findMany.mock.calls.at(0)?.at(0)).toMatchObject({ include: { claim: { select: { reward: { select: { title: true } } } } }, take: 10 });
 		expect(count.mock.calls.at(0)?.at(0)?.where).toEqual({

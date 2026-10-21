@@ -112,15 +112,18 @@ export class PrismaRbacGraphReader implements RbacGraphReader {
 		return lineage;
 	}
 
-	/** Users holding any of `roleIds`: directly (`UserRole`) or through an active store membership. */
+	/** Users holding any of `roleIds`: directly (`UserRole`) or as the location role of a live location scope. */
 	private async activeHolderIds(roleIds: readonly string[]): Promise<string[]> {
 		if (roleIds.length === 0) {
 			return [];
 		}
-		const [userRoles, storeMemberships] = await Promise.all([
+		const [userRoles, locationScopes] = await Promise.all([
 			this.db.userRole.findMany({ where: { roleId: { in: [...roleIds] }, isDeleted: false }, select: { userId: true } }),
-			this.db.storeMembership.findMany({ where: { roleId: { in: [...roleIds] }, isDeleted: false }, select: { userId: true } }),
+			this.db.membershipLocationScope.findMany({
+				where: { roleId: { in: [...roleIds] }, isDeleted: false, membership: { isDeleted: false } },
+				select: { membership: { select: { userId: true } } },
+			}),
 		]);
-		return [...new Set<string>([...userRoles, ...storeMemberships].map((row): string => row.userId))];
+		return [...new Set<string>([...userRoles.map((row): string => row.userId), ...locationScopes.map((row): string => row.membership.userId)])];
 	}
 }

@@ -161,8 +161,8 @@ beforeEach(() => {
 	rbac.seedPermission({ id: "p-delete", action: "DELETE", resource: "USER" });
 	rbac.seedRole({ id: "role-viewer", name: "Viewer" }, ["p-read"]);
 	rbac.seedRole({ id: "role-editor", name: "Editor", parentId: "role-viewer" }, ["p-update"]);
-	rbac.seedRole({ id: "role-manager", name: "Store Manager" });
-	rbac.seedRole({ id: "role-staff", name: "Store Staff" });
+	rbac.seedRole({ id: "role-manager", name: "Location Manager" });
+	rbac.seedRole({ id: "role-staff", name: "Location Staff" });
 	rbac.seedUser("user-1", ["role-viewer", "role-manager"], [{ id: "ov-1", permissionId: "p-delete", effect: "DENY", expiresAt: null }]);
 });
 
@@ -217,10 +217,10 @@ describe("Role assignment dry runs", () => {
 		);
 
 		expect(preview).toEqual({
-			currentRoles: ["Viewer", "Store Manager"],
+			currentRoles: ["Viewer", "Location Manager"],
 			newRoles: ["Editor"],
 			roleAdded: ["Editor"],
-			roleRemoved: ["Viewer", "Store Manager"],
+			roleRemoved: ["Viewer", "Location Manager"],
 			permissionsGained: ["UPDATE:USER"],
 			permissionsLost: [],
 		});

@@ -167,7 +167,7 @@ export class TenantContextService {
 		};
 	}
 
-	/** Ensures a location belongs to the org and is within the caller's membership scope. */
+	/** Ensures a location belongs to the tenant and is within the caller's membership scope. */
 	public async assertAccessibleLocation(userId: string, tenantSlug: string, locationId: string): Promise<void> {
 		const resolved = await this.resolveBySlug(userId, tenantSlug);
 

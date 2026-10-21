@@ -9,13 +9,6 @@ export interface PersistedLocation extends LocationState {
 	readonly updatedAt: EpochMs;
 }
 
-/** What closing a store removed from the tenant's own tables. */
-export interface StoreAccessRemoval {
-	readonly storeId: string;
-	readonly storeMembershipsRemoved: number;
-	readonly memberScopesRemoved: number;
-}
-
 /** Persistence port of the {@link Location} aggregate (bound to one unit of work). */
 export interface LocationRepository {
 	nextId(): string;
@@ -28,10 +21,10 @@ export interface LocationRepository {
 	activeNamesAmong(tenantId: string, locationIds: readonly string[]): Promise<readonly string[]>;
 	findLive(tenantId: string, locationId: string): Promise<Location | null>;
 	findLivePrimary(tenantId: string): Promise<Location | null>;
-	/** Inserts the location (allocating its code) and its store mirror. */
+	/** Inserts the location (allocating its code). */
 	add(location: Location): Promise<PersistedLocation>;
-	/** Compare-and-set on the loaded status; mirrors the result onto the store. */
+	/** Compare-and-set on the loaded status. */
 	save(location: Location): Promise<PersistedLocation>;
-	/** For a closed location: soft-deletes its store memberships and removes member scope rows pointing at it. */
-	removeStoreAccess(location: Location, closedByUserId: string, at: EpochMs): Promise<StoreAccessRemoval>;
+	/** For a closed location: soft-deletes the SELECTED member scope rows (and the location roles they carry) pointing at it; returns how many. */
+	removeMemberScopes(location: Location, closedByUserId: string, at: EpochMs): Promise<number>;
 }

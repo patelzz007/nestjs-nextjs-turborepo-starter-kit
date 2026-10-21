@@ -19,10 +19,9 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| 403 on **every** request with an `x-store-id` header | The user is not an active member of that tenant / store (or the store is inactive / belongs to another org) | Check `TenantMembership` / `StoreMembership`. The header is only accepted when proven. |
 | 403 on a self-service route (change password, 2FA) | `@Authorize` with `resourceId` but no `self()`, or the caller is anonymous | Use `resourceId: self()` |
 | 403 although the role has the permission | a `DENY` override or ACL `DENY` exists | `explain()` shows `source: "override"` or `"acl"` |
-| 403 with an `TENANT` / `STORE` scoped role | no verified tenant, or the record's tenant attributes were not passed | send the tenant header; pass `resourceAttributes: { tenantId, storeId }` |
+| 403 with a `TENANT` / `LOCATION` scoped role | no verified tenant or location, or the record's tenant attributes were not passed | call the `:tenantSlug` route (and name the `locationId`); pass `resourceAttributes: { tenantId, locationId }` |
 | 403 with an `OWN` scoped role on a list | `OWN` grants never satisfy collection-level checks | use `kernel.filter()` for lists; `OWN` applies per record |
 | 403 on a tenant member with no roles | membership is not permission | assign a role / store membership role |
 | 403 from a policy | a DENY policy matched, or ALLOW policies exist and none matched | `explain()` shows `source: "policy"` with the policy id |

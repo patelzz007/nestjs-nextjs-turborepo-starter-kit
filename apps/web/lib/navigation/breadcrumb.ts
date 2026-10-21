@@ -1,6 +1,7 @@
-import { FileText, LayoutDashboard, type LucideIcon } from "lucide-react";
+import { FileText, LayoutDashboard } from "lucide-react";
 
 import type { BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
+import { menuIconResolver } from "@workspace/ui/lib/sidebar/navigation/menu-icon";
 import { normalizePath } from "@workspace/ui/lib/sidebar/navigation/breadcrumb-tree";
 import { resolveSidebarMenuTrail, withTrailTailLabel } from "@workspace/ui/lib/sidebar/navigation/resolve-sidebar-menu-trail";
 
@@ -9,15 +10,8 @@ import { resolveWebTrailPage } from "@/lib/navigation/route-access";
 import { USER_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { isPathWithin, ROUTE_PREFIXES } from "@/lib/routes";
 
-function resolveIcon(iconName: string | undefined): LucideIcon {
-	if (iconName !== undefined) {
-		const resolved = WEB_MENU_ICON_MAP[iconName];
-		if (resolved !== undefined) {
-			return resolved;
-		}
-	}
-	return FileText;
-}
+/** Crumb icons from the sidebar map; a page without one shows a document. */
+const resolveIcon = menuIconResolver(WEB_MENU_ICON_MAP, FileText);
 
 export { withTrailTailLabel };
 

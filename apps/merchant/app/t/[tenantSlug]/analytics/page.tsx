@@ -2,8 +2,8 @@ import { MerchantAnalyticsPageView } from "@/contexts/reporting/components/merch
 import { toLocationQueryInput } from "@/features/tenant-context/selectors";
 import { reportTimeZone } from "@/contexts/reporting/lib/merchant-analytics";
 import { loadMerchantServerContext } from "@/lib/merchant-server-api";
-import { guardOrgPage } from "@/contexts/tenancy/lib/org/org-page-guard";
-import { loadServerLocationScope } from "@/contexts/tenancy/lib/org/server-location-scope";
+import { guardTenantPage } from "@/contexts/tenancy/lib/tenant/tenant-page-guard";
+import { loadServerLocationScope } from "@/contexts/tenancy/lib/tenant/server-location-scope";
 import { prefetchedDataOrUndefined } from "@/lib/server/server-query-outcome";
 import { analyticsPrefetchKey, ANALYTICS_URL_STATE, resolveAnalyticsRange, toAnalyticsRangeQuery } from "@workspace/client/lib/contexts/reporting/analytics-range";
 import { MerchantAnalyticsDashboardQuerySchema, nowEpochMs } from "@workspace/shared";
@@ -30,7 +30,7 @@ const PREFETCH_LABEL = "tenants.analyticsDashboard";
  */
 export default async function MerchantAnalyticsPage({ params, searchParams }: MerchantAnalyticsPageProps): Promise<React.JSX.Element> {
 	const { tenantSlug } = await params;
-	const denied = await guardOrgPage(tenantSlug, "/analytics");
+	const denied = await guardTenantPage(tenantSlug, "/analytics");
 	if (denied !== null) {
 		return denied;
 	}

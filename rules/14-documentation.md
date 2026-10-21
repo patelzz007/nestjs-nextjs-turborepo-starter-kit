@@ -179,13 +179,13 @@ The AI agent tooling landscape (which tools read `AGENTS.md` natively, which nee
 ## Examples of good vs weak documentation, side by side
 
 ```markdown
-❌ WEAK — packages/database/README.md, in its entirety:
+❌ WEAK — a package README, in its entirety:
 # Database
 Prisma stuff goes here.
 ```
 
 ```markdown
-✅ GOOD — packages/database/README.md:
+✅ GOOD — a package README:
 # Database
 
 Prisma schema, generated client, and seed data for the whole monorepo.

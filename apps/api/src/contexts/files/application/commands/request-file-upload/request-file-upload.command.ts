@@ -1,5 +1,5 @@
 import { Command } from "@nestjs/cqrs";
-import type { CreateFileUploadUrlInput, CreateFileUploadUrlResponse } from "@workspace/shared";
+import type { FileUploadRequest, CreateFileUploadUrlResponse } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 
@@ -7,7 +7,7 @@ import type { ActorContext } from "../../../../../platform/application/actor-con
 export class RequestFileUploadCommand extends Command<CreateFileUploadUrlResponse> {
 	public constructor(
 		public readonly actor: ActorContext,
-		public readonly input: CreateFileUploadUrlInput,
+		public readonly input: FileUploadRequest,
 	) {
 		super();
 	}

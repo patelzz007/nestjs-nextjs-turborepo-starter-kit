@@ -46,7 +46,7 @@ function contextOrDetached(context: RequestContext | undefined, request: Fastify
 		edgeLocation: undefined,
 		principal: undefined,
 		apiKey: undefined,
-		tenant: { tenantId: undefined, storeId: undefined, locationId: undefined },
+		tenant: { tenantId: undefined, locationId: undefined },
 		systemOperations: [],
 		receivedAtEpochMs: nowEpochMs(),
 		supportAccessGrantId: undefined,

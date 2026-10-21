@@ -77,7 +77,7 @@ afterEach((): void => {
 	vi.unstubAllGlobals();
 });
 
-/** The org dashboard's two columns of shortcut links. */
+/** The tenant dashboard's two columns of shortcut links. */
 const DASHBOARD_LINK_COLUMNS = 2;
 /** The analytics page's time-series charts. */
 const ANALYTICS_CHARTS = 4;

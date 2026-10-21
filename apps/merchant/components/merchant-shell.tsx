@@ -1,8 +1,9 @@
 "use client";
 
 import { MerchantAuthorizationProvider } from "@/contexts/tenancy/components/access/merchant-authorization-provider";
-import { SWITCHER_MEMBERSHIPS_QUERY } from "@/contexts/tenancy/lib/org/memberships-query";
+import { SWITCHER_MEMBERSHIPS_QUERY } from "@/contexts/tenancy/lib/tenant/memberships-query";
 import { MerchantAccessLoading } from "@/contexts/tenancy/components/access/merchant-capability-gate";
+import { lifecycleScreenStateOf, TenantLifecycleScreen } from "@/contexts/tenancy/components/lifecycle/tenant-lifecycle-screen";
 import { MerchantBreadcrumbProvider } from "@/components/common/merchant-breadcrumb";
 import { MerchantShellBanners } from "@/components/merchant-shell-banners";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
@@ -12,7 +13,7 @@ import type { ServerUser } from "@/contexts/identity/lib/server";
 import { initialDataOption, readPaginatedHasNext, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { MERCHANT_ME_QUERY_OPTIONS } from "@/lib/session/me-query";
 import { TenantContextProvider, TenantRequestScope } from "@/features/tenant-context/facade";
-import { useSwitchTenant } from "@/contexts/tenancy/lib/org/use-switch-tenant";
+import { useSwitchTenant } from "@/contexts/tenancy/lib/tenant/use-switch-tenant";
 import { useAuth, useAuthUser } from "@workspace/client/lib/contexts/identity";
 import type { Envelope, TenantContextResponse, TenantRewardMembershipResponse } from "@workspace/shared";
 import { StoreBoundAppPanelShell } from "@workspace/client/lib/features/sidebar/store-bound-panel-shell";
@@ -81,6 +82,9 @@ function MerchantShellContent({
 	const hasMemberships = membershipCount > 0;
 	const showMembershipGate = membershipsQuery.isFetched && !hasMemberships;
 	const showMembershipLoading = !hasMemberships && membershipsQuery.isLoading;
+	// A suspended or pending-deletion tenant serves only its lifecycle routes (C1): its screen replaces every page.
+	const activeMembership = memberships.find((membership) => membership.tenantSlug === tenantSlug);
+	const lifecycleScreen = lifecycleScreenStateOf(activeMembership) === null ? undefined : activeMembership;
 
 	return (
 		<TenantContextProvider tenantSlug={tenantSlug} initialLocationId={initialLocationId} initialTenantContext={initialTenantContext}>
@@ -98,6 +102,8 @@ function MerchantShellContent({
 						topbar={<MerchantTopbar />}>
 						{showMembershipLoading ? (
 							<MerchantAccessLoading />
+						) : lifecycleScreen !== undefined ? (
+							<TenantLifecycleScreen membership={lifecycleScreen} />
 						) : showMembershipGate ? (
 							<div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
 								<p className="text-sm font-medium text-foreground">No merchant membership found</p>

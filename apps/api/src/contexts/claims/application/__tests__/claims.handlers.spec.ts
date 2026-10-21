@@ -7,10 +7,12 @@ import { ReferrerCredited } from "../../../referrals/public-api";
 import { RewardApproved, RewardRejected } from "../../../rewards/public-api";
 import {
 	ClaimantNotFoundError,
+	ClaimCustomerBannedError,
 	ClaimLimitReachedError,
 	ClaimNoLongerRedeemableError,
 	ClaimNotActiveError,
 	ClaimNotFoundError,
+	ClaimRewardUnavailableError,
 	LegalAcceptanceRequiredError,
 	OtpInvalidError,
 	OtpMissingError,
@@ -70,6 +72,24 @@ describe("ClaimRewardHandler", () => {
 		store.legal.accepted.add("ghost");
 		await expect(claim(PHONE, undefined, customer("ghost"))).rejects.toBeInstanceOf(ClaimantNotFoundError);
 		expect(store.inventory.remaining).toBe(10);
+	});
+
+	it("refuses a customer the merchant banned, without reserving a unit", async () => {
+		store.customerStanding.ban("org-1", USER);
+
+		await expect(claim()).rejects.toBeInstanceOf(ClaimCustomerBannedError);
+
+		expect(store.inventory).toMatchObject({ remaining: 10, reserved: 0 });
+		expect(store.claims.rows.size).toBe(0);
+	});
+
+	it("answers a merchant that does not operate (suspended, banned) like a missing reward", async () => {
+		store.customerStanding.stop("org-1");
+
+		await expect(claim()).rejects.toBeInstanceOf(ClaimRewardUnavailableError);
+
+		expect(store.inventory.remaining).toBe(10);
+		expect(store.claims.rows.size).toBe(0);
 	});
 
 	it("caps the claims one customer holds, rolling the reservation back", async () => {

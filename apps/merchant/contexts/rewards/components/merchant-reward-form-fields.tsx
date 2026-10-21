@@ -3,9 +3,9 @@
 import { MerchantRewardImagesField, REWARD_IMAGES_GUIDANCE, type SavedRewardImage } from "@/contexts/rewards/components/merchant-reward-images-field";
 import { MAX_CLAIMS_OPTIONS, MIN_SPEND_PREFIX, REWARD_TYPE_OPTIONS, getRewardValueField } from "@/contexts/rewards/components/merchant-reward-form.constants";
 import { RewardEditorSection } from "@/contexts/rewards/components/reward-editor-section";
-import { optionalNumberInput } from "@/lib/forms/optional-number-input";
 import { formatClaimLimitCount } from "@/contexts/rewards/lib/reward-detail";
-import { RewardTypeSchema, type MerchantRewardFormValues } from "@workspace/shared";
+import { RewardEditorTextFieldSchema, type RewardEditorField, type RewardEditorState } from "@/contexts/rewards/lib/reward-editor-form";
+import { RewardTypeSchema } from "@workspace/shared";
 import { DatePicker } from "@workspace/ui/components/date-picker";
 import { Input } from "@workspace/ui/components/input";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@workspace/ui/components/input-group";
@@ -14,8 +14,6 @@ import { RadioGroup, RadioGroupItem } from "@workspace/ui/components/radio-group
 import { Select, SelectContent, SelectItem, type SelectOption, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Textarea } from "@workspace/ui/components/textarea";
 import * as React from "react";
-import type { Control, ControllerRenderProps, FieldErrors, UseFormRegister, UseFormSetValue } from "react-hook-form";
-import { Controller, useWatch } from "react-hook-form";
 
 /** The per-customer claim limits as `{ value, label }` — the select's `items` and its rendered options. */
 const MAX_CLAIMS_SELECT_OPTIONS: readonly SelectOption<string>[] = MAX_CLAIMS_OPTIONS.map((option): SelectOption<string> => ({
@@ -24,12 +22,12 @@ const MAX_CLAIMS_SELECT_OPTIONS: readonly SelectOption<string>[] = MAX_CLAIMS_OP
 }));
 
 /** The id of a field's error message — the input points at it with `aria-describedby`. */
-function errorIdOf(field: keyof MerchantRewardFormValues): string {
+function errorIdOf(field: RewardEditorField): string {
 	return `${field}-error`;
 }
 
 interface FieldMessageProps {
-	readonly field: keyof MerchantRewardFormValues;
+	readonly field: RewardEditorField;
 	readonly message: string | undefined;
 }
 
@@ -46,17 +44,15 @@ function FieldMessage({ field, message }: FieldMessageProps): React.JSX.Element 
 }
 
 /** `aria-invalid` / `aria-describedby` for an input whose field may carry an error. */
-function invalidProps(field: keyof MerchantRewardFormValues, message: string | undefined): Pick<React.AriaAttributes, "aria-invalid" | "aria-describedby"> {
+function invalidProps(field: RewardEditorField, message: string | undefined): Pick<React.AriaAttributes, "aria-invalid" | "aria-describedby"> {
 	return message === undefined ? {} : { "aria-invalid": true, "aria-describedby": errorIdOf(field) };
 }
 
 export interface MerchantRewardFormFieldsProps {
-	readonly register: UseFormRegister<MerchantRewardFormValues>;
-	readonly control: Control<MerchantRewardFormValues>;
-	readonly errors: FieldErrors<MerchantRewardFormValues>;
-	readonly setValue: UseFormSetValue<MerchantRewardFormValues>;
-	/** The tenant photos are uploaded to (`undefined` while it loads). */
-	readonly tenantId: string | undefined;
+	/** The editor's values, its messages and its setter (`useRewardEditorForm`). */
+	readonly editor: RewardEditorState;
+	/** The tenant route photos are uploaded through. */
+	readonly tenantSlug: string;
 	/** The saved photos in display order when editing; none for a new reward. */
 	readonly initialImages: readonly SavedRewardImage[];
 	/** The ready photos changed — the editor saves their ids and previews the cover. */
@@ -69,65 +65,55 @@ export interface MerchantRewardFormFieldsProps {
 
 /**
  * The reward editor's sections — the offer, its photos, when and how many,
- * where, and the fine print — bound to one react-hook-form instance. Shared
- * by creating and editing a reward; validation comes from the form's resolver
- * (the shared reward schema), never from rules written here.
+ * where, and the fine print — every input controlled by the editor's state.
+ * Shared by creating and editing a reward; validation comes from the shared
+ * reward schema (`useRewardEditorForm`), never from rules written here.
  */
-export function MerchantRewardFormFields({
-	register,
-	control,
-	errors,
-	setValue,
-	tenantId,
-	initialImages,
-	onImagesChange,
-	stores,
-	disabled = false,
-}: MerchantRewardFormFieldsProps): React.JSX.Element {
-	const rewardType = useWatch({ control, name: "rewardType" });
-	const maxClaimsPerUser = useWatch({ control, name: "maxClaimsPerUser" });
-	const startDate = useWatch({ control, name: "startDate" });
-	const valueField = getRewardValueField(rewardType);
+export function MerchantRewardFormFields({ editor, tenantSlug, initialImages, onImagesChange, stores, disabled = false }: MerchantRewardFormFieldsProps): React.JSX.Element {
+	const { values, errors, setField } = editor;
+	const valueField = getRewardValueField(values.rewardType);
 
 	const handleTypeChange = React.useCallback(
 		(value: string): void => {
 			const parsed = RewardTypeSchema.safeParse(value);
 			if (parsed.success) {
-				setValue("rewardType", parsed.data, { shouldValidate: true, shouldDirty: true });
+				setField("rewardType", parsed.data);
 			}
 		},
-		[setValue],
+		[setField],
 	);
 
 	const handleMaxClaimsChange = React.useCallback(
 		(value: string | null): void => {
 			if (value !== null) {
-				setValue("maxClaimsPerUser", Number(value), { shouldValidate: true, shouldDirty: true });
+				setField("maxClaimsPerUser", Number(value));
 			}
 		},
-		[setValue],
+		[setField],
 	);
 
-	const renderStartDateField = React.useCallback(
-		({ field }: { readonly field: ControllerRenderProps<MerchantRewardFormValues, "startDate"> }): React.JSX.Element => (
-			<DatePicker id="startDate" value={field.value} onValueChange={field.onChange} onBlur={field.onBlur} disabled={disabled} placeholder="Select start date" />
-		),
-		[disabled],
+	// Every text box names its field (`name`), so one handler keeps them all in the editor's state.
+	const handleTextChange = React.useCallback(
+		(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+			const field = RewardEditorTextFieldSchema.safeParse(event.currentTarget.name);
+			if (field.success) {
+				setField(field.data, event.currentTarget.value);
+			}
+		},
+		[setField],
 	);
 
-	const renderExpiryDateField = React.useCallback(
-		({ field }: { readonly field: ControllerRenderProps<MerchantRewardFormValues, "expiryDate"> }): React.JSX.Element => (
-			<DatePicker
-				id="expiryDate"
-				value={field.value}
-				onValueChange={field.onChange}
-				onBlur={field.onBlur}
-				disabled={disabled}
-				fromDate={startDate}
-				placeholder="Select end date"
-			/>
-		),
-		[disabled, startDate],
+	const handleStartDateChange = React.useCallback(
+		(value: string): void => {
+			setField("startDate", value);
+		},
+		[setField],
+	);
+	const handleExpiryDateChange = React.useCallback(
+		(value: string): void => {
+			setField("expiryDate", value);
+		},
+		[setField],
 	);
 
 	return (
@@ -137,7 +123,7 @@ export function MerchantRewardFormFields({
 					<p id="rewardType-label" className="text-sm font-medium text-foreground">
 						Reward type
 					</p>
-					<RadioGroup aria-labelledby="rewardType-label" value={rewardType} onValueChange={handleTypeChange} disabled={disabled} className="flex flex-wrap gap-2">
+					<RadioGroup aria-labelledby="rewardType-label" value={values.rewardType} onValueChange={handleTypeChange} disabled={disabled} className="flex flex-wrap gap-2">
 						{REWARD_TYPE_OPTIONS.map((option): React.JSX.Element => {
 							const Icon = option.icon;
 							return (
@@ -165,8 +151,10 @@ export function MerchantRewardFormFields({
 								min={0}
 								placeholder="0"
 								disabled={disabled}
-								{...invalidProps("rewardValue", errors.rewardValue?.message)}
-								{...register("rewardValue", { valueAsNumber: true })}
+								name="rewardValue"
+								value={values.rewardValue}
+								onChange={handleTextChange}
+								{...invalidProps("rewardValue", errors.rewardValue)}
 							/>
 							{valueField.prefix === undefined ? null : (
 								<InputGroupAddon>
@@ -179,7 +167,7 @@ export function MerchantRewardFormFields({
 								</InputGroupAddon>
 							)}
 						</InputGroup>
-						<FieldMessage field="rewardValue" message={errors.rewardValue?.message} />
+						<FieldMessage field="rewardValue" message={errors.rewardValue} />
 					</div>
 
 					<div className="flex flex-col gap-2">
@@ -194,21 +182,31 @@ export function MerchantRewardFormFields({
 								min={0}
 								placeholder="No minimum"
 								disabled={disabled}
-								{...invalidProps("minPurchase", errors.minPurchase?.message)}
-								{...register("minPurchase", { setValueAs: optionalNumberInput })}
+								name="minPurchase"
+								value={values.minPurchase}
+								onChange={handleTextChange}
+								{...invalidProps("minPurchase", errors.minPurchase)}
 							/>
 							<InputGroupAddon>
 								<InputGroupText>{MIN_SPEND_PREFIX}</InputGroupText>
 							</InputGroupAddon>
 						</InputGroup>
-						<FieldMessage field="minPurchase" message={errors.minPurchase?.message} />
+						<FieldMessage field="minPurchase" message={errors.minPurchase} />
 					</div>
 				</div>
 
 				<div className="flex flex-col gap-2">
 					<Label htmlFor="title">Title</Label>
-					<Input id="title" placeholder="e.g. 20% off your first nasi lemak" disabled={disabled} {...invalidProps("title", errors.title?.message)} {...register("title")} />
-					<FieldMessage field="title" message={errors.title?.message} />
+					<Input
+						id="title"
+						name="title"
+						value={values.title}
+						onChange={handleTextChange}
+						placeholder="e.g. 20% off your first nasi lemak"
+						disabled={disabled}
+						{...invalidProps("title", errors.title)}
+					/>
+					<FieldMessage field="title" message={errors.title} />
 				</div>
 
 				<div className="flex flex-col gap-2">
@@ -218,19 +216,21 @@ export function MerchantRewardFormFields({
 						placeholder="What customers get, and anything they should know before they come in."
 						rows={3}
 						disabled={disabled}
-						{...invalidProps("description", errors.description?.message)}
-						{...register("description")}
+						name="description"
+						value={values.description}
+						onChange={handleTextChange}
+						{...invalidProps("description", errors.description)}
 					/>
-					<FieldMessage field="description" message={errors.description?.message} />
+					<FieldMessage field="description" message={errors.description} />
 				</div>
 			</RewardEditorSection>
 
 			<RewardEditorSection id="reward-photos" title="Photos" description={REWARD_IMAGES_GUIDANCE}>
 				<MerchantRewardImagesField
-					tenantId={tenantId}
+					tenantSlug={tenantSlug}
 					initialImages={initialImages}
 					onImagesChange={onImagesChange}
-					errorMessage={errors.imageFileIds?.message}
+					errorMessage={errors.imageFileIds}
 					disabled={disabled}
 				/>
 			</RewardEditorSection>
@@ -239,14 +239,21 @@ export function MerchantRewardFormFields({
 				<div className="grid gap-5 sm:grid-cols-2">
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="startDate">Starts</Label>
-						<Controller name="startDate" control={control} render={renderStartDateField} />
-						<FieldMessage field="startDate" message={errors.startDate?.message} />
+						<DatePicker id="startDate" value={values.startDate} onValueChange={handleStartDateChange} disabled={disabled} placeholder="Select start date" />
+						<FieldMessage field="startDate" message={errors.startDate} />
 					</div>
 
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="expiryDate">Ends</Label>
-						<Controller name="expiryDate" control={control} render={renderExpiryDateField} />
-						<FieldMessage field="expiryDate" message={errors.expiryDate?.message} />
+						<DatePicker
+							id="expiryDate"
+							value={values.expiryDate}
+							onValueChange={handleExpiryDateChange}
+							disabled={disabled}
+							fromDate={values.startDate}
+							placeholder="Select end date"
+						/>
+						<FieldMessage field="expiryDate" message={errors.expiryDate} />
 					</div>
 
 					<div className="flex flex-col gap-2">
@@ -257,16 +264,18 @@ export function MerchantRewardFormFields({
 							inputMode="numeric"
 							min={1}
 							disabled={disabled}
-							{...invalidProps("quantityTotal", errors.quantityTotal?.message)}
-							{...register("quantityTotal", { valueAsNumber: true })}
+							name="quantityTotal"
+							value={values.quantityTotal}
+							onChange={handleTextChange}
+							{...invalidProps("quantityTotal", errors.quantityTotal)}
 						/>
-						<FieldMessage field="quantityTotal" message={errors.quantityTotal?.message} />
+						<FieldMessage field="quantityTotal" message={errors.quantityTotal} />
 					</div>
 
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="maxClaimsPerUser">Each customer can claim it</Label>
-						<Select<string> items={MAX_CLAIMS_SELECT_OPTIONS} value={String(maxClaimsPerUser)} onValueChange={handleMaxClaimsChange} disabled={disabled}>
-							<SelectTrigger id="maxClaimsPerUser" {...invalidProps("maxClaimsPerUser", errors.maxClaimsPerUser?.message)}>
+						<Select<string> items={MAX_CLAIMS_SELECT_OPTIONS} value={String(values.maxClaimsPerUser)} onValueChange={handleMaxClaimsChange} disabled={disabled}>
+							<SelectTrigger id="maxClaimsPerUser" {...invalidProps("maxClaimsPerUser", errors.maxClaimsPerUser)}>
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
@@ -277,7 +286,7 @@ export function MerchantRewardFormFields({
 								))}
 							</SelectContent>
 						</Select>
-						<FieldMessage field="maxClaimsPerUser" message={errors.maxClaimsPerUser?.message} />
+						<FieldMessage field="maxClaimsPerUser" message={errors.maxClaimsPerUser} />
 					</div>
 				</div>
 			</RewardEditorSection>
@@ -298,10 +307,12 @@ export function MerchantRewardFormFields({
 						placeholder="e.g. Dine-in only. Not valid with other promotions."
 						rows={3}
 						disabled={disabled}
-						{...invalidProps("termsConditions", errors.termsConditions?.message)}
-						{...register("termsConditions")}
+						name="termsConditions"
+						value={values.termsConditions}
+						onChange={handleTextChange}
+						{...invalidProps("termsConditions", errors.termsConditions)}
 					/>
-					<FieldMessage field="termsConditions" message={errors.termsConditions?.message} />
+					<FieldMessage field="termsConditions" message={errors.termsConditions} />
 				</div>
 			</RewardEditorSection>
 		</>

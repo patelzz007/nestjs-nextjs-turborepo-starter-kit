@@ -1,8 +1,8 @@
 import type { EpochMs, OwnProfileEditableFields } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
-import { CorruptIdentityStateError } from "../errors/identity.errors";
 import { UserProfileChanged, type IdentityEvent } from "../events/identity.events";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** The profile fields one edit writes; an absent field is left unchanged. */
 export type OwnProfileChanges = Partial<OwnProfileEditableFields>;
@@ -30,7 +30,7 @@ export class UserProfile extends AggregateRoot<IdentityEvent> {
 
 	public static rehydrate(state: UserProfileState): UserProfile {
 		if (!Number.isInteger(state.version) || state.version < 0) {
-			throw new CorruptIdentityStateError("user_profile", `profile ${state.userId} has an invalid version`);
+			throw new CorruptAggregateStateError("user_profile", null, `profile ${state.userId} has an invalid version`);
 		}
 		return new UserProfile(state);
 	}

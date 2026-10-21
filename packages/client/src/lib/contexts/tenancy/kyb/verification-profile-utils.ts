@@ -6,7 +6,7 @@ import type { MerchantKybFieldValues } from "./fields";
 
 const NonEmptyStringSchema = z.string().min(1);
 
-export function readOrgString(value: string | null): string {
+export function readTenantString(value: string | null): string {
 	const parsed = NonEmptyStringSchema.safeParse(value);
 	return parsed.success ? parsed.data : "";
 }
@@ -31,9 +31,9 @@ export function readKybStringField(profile: MerchantKybProfileResponse, key: str
 export function profileToFieldValues(profile: MerchantKybProfileResponse): MerchantKybFieldValues {
 	return {
 		businessName: profile.businessName,
-		legalName: readOrgString(profile.legalName),
-		addressText: readOrgString(profile.addressText),
-		contactPhone: readOrgString(profile.contactPhone),
+		legalName: readTenantString(profile.legalName),
+		addressText: readTenantString(profile.addressText),
+		contactPhone: readTenantString(profile.contactPhone),
 		registrationNo: readKybStringField(profile, "registrationNo"),
 		taxId: readKybStringField(profile, "taxId"),
 		documentType: readKybStringField(profile, "documentType"),

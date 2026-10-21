@@ -657,7 +657,6 @@ export class AccountSecuritySeeder {
 			impersonatorUserId: null,
 			...NO_MACHINE_PRINCIPAL,
 			tenantId: supportAccess.tenantId,
-			storeId: null,
 			locationId: null,
 			requestParams: toAuditPayload({ params: { tenantSlug: tenant.slug }, query: {} }),
 			requestBody: null,

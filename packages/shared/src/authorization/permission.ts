@@ -60,7 +60,6 @@ export const PERMISSION: PermissionRegistry = {
 	INVENTORY: actionSlugs("INVENTORY"),
 	TENANT: actionSlugs("TENANT"),
 	LOCATION: actionSlugs("LOCATION"),
-	STORE: actionSlugs("STORE"),
 	GITHUB: actionSlugs("GITHUB"),
 	GITHUB_PULL_REQUEST: actionSlugs("GITHUB_PULL_REQUEST"),
 };

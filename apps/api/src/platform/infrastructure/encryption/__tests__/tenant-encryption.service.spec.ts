@@ -8,11 +8,11 @@ import { RequestContextService } from "../../context/request-context";
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import { createCedarPolicyEvaluator } from "../../../../contexts/authorization/public-api";
 import { createTenantAuditPort } from "../../../../contexts/tenancy/public-api";
-import { formatGcmEnvelope, GCM_AUTH_TAG_BYTES, gcmEncrypt, GcmEnvelopeError, parseGcmEnvelope } from "../aes-256-gcm";
+import { AES_256_KEY_BYTES, formatGcmEnvelope, gcmEncrypt } from "../aes-256-gcm";
 import { LEGACY_PILOT_KEK_ID, LocalDevelopmentKeyManagementService, localKekId } from "../kms/local-development-key-management.service";
 import { TenantKekUnavailableError } from "../kms/tenant-key-management.port";
 import { TenantEncryptionKeyRepository, type NewTenantKeyRecord } from "../tenant-encryption-key.repository";
-import { TENANT_KEY_AUDIT_ACTIONS, TenantEncryptionService, TenantKeyMaintenanceActorError, TenantKeyNotFoundError } from "../tenant-encryption.service";
+import { TENANT_KEY_AUDIT_ACTIONS, TenantEncryptionService, TenantKeyMaintenanceActorError } from "../tenant-encryption.service";
 import { LIVE_ROW_FIELDS } from "../../persistence/__tests__/base-row-fields";
 
 interface AuditRow {
@@ -131,41 +131,38 @@ describe("TenantEncryptionService", () => {
 		db.operations.length = 0;
 	});
 
-	it("round-trips plaintext and audits the decrypt with the real actor, purpose and policy version", async () => {
-		const encryption = service(kekV1());
+	it("creates the first data key wrapped with the current KEK and audits it with the real actor and policy version", async () => {
+		const version = await service(kekV1()).ensureTenantKey(ORG, ACTOR);
 
-		const ciphertext = await encryption.encrypt(ORG, "4111 1111 1111 1111", ACTOR);
-
-		expect(ciphertext).toMatch(/^1:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+$/);
-		expect(ciphertext).not.toContain("4111");
-		expect(await encryption.decrypt(ORG, ciphertext, ACTOR, "kyb.review")).toBe("4111 1111 1111 1111");
+		expect(version).toBe(1);
 		expect(onlyRow().kmsKeyId).toBe(localKekId(1));
-		expect(db.auditRows.map((row) => row.data.action)).toEqual([TENANT_KEY_AUDIT_ACTIONS.created, TENANT_KEY_AUDIT_ACTIONS.decrypted]);
-		expect(db.auditRows[LIST_SLOT_INDEX.second]?.data).toMatchObject({
+		expect(await kekV1().unwrapDataKey(onlyRow())).toHaveLength(AES_256_KEY_BYTES);
+		expect(db.auditRows.map((row) => row.data.action)).toEqual([TENANT_KEY_AUDIT_ACTIONS.created]);
+		expect(db.auditRows[LIST_SLOT_INDEX.first]?.data).toMatchObject({
 			tenantId: ORG,
 			actorUserId: ACTOR,
 			policyVersion: POLICY_VERSION,
-			metadata: { purpose: "kyb.review", keyVersion: 1 },
+			metadata: { kmsKeyId: localKekId(1), keyVersion: 1 },
 		});
 	});
 
 	it("keeps data keys wrapped by a retired KEK readable after rotation, and wraps new keys with the current KEK", async () => {
-		const ciphertext = await service(kekV1()).encrypt(ORG, "secret", ACTOR);
+		await service(kekV1()).ensureTenantKey(ORG, ACTOR);
+		const dataKey = await kekV1().unwrapDataKey(onlyRow());
 
-		const rotated = service(kekV2WithRetiredV1());
-
-		expect(await rotated.decrypt(ORG, ciphertext, ACTOR, "test")).toBe("secret");
+		expect(await kekV2WithRetiredV1().unwrapDataKey(onlyRow())).toEqual(dataKey);
 		expect(kekV2WithRetiredV1().currentKeyId()).toBe(localKekId(2));
 	});
 
 	it("names the missing KEK instead of failing obscurely once a retired key is removed before re-wrap", async () => {
-		const ciphertext = await service(kekV1()).encrypt(ORG, "secret", ACTOR);
-		await expect(service(kekV2Only()).decrypt(ORG, ciphertext, ACTOR, "test")).rejects.toBeInstanceOf(TenantKekUnavailableError);
+		await service(kekV1()).ensureTenantKey(ORG, ACTOR);
+		await expect(kekV2Only().unwrapDataKey(onlyRow())).rejects.toBeInstanceOf(TenantKekUnavailableError);
 	});
 
 	it("re-wraps every data key to the current KEK, audited, after which the retired KEK can be removed", async () => {
-		const ciphertext = await service(kekV1()).encrypt(ORG, "secret", ACTOR);
+		await service(kekV1()).ensureTenantKey(ORG, ACTOR);
 		const before = onlyRow().wrappedKey;
+		const dataKey = await kekV1().unwrapDataKey(onlyRow());
 
 		const summary = await service(kekV2WithRetiredV1()).rewrapToCurrentKek(ACTOR);
 
@@ -178,7 +175,7 @@ describe("TenantEncryptionService", () => {
 			actorUserId: ACTOR,
 			metadata: { fromKmsKeyId: localKekId(1), toKmsKeyId: localKekId(2) },
 		});
-		expect(await service(kekV2Only()).decrypt(ORG, ciphertext, ACTOR, "test")).toBe("secret");
+		expect(await kekV2Only().unwrapDataKey(onlyRow())).toEqual(dataKey);
 		// Idempotent: nothing left to re-wrap.
 		expect((await service(kekV2Only()).rewrapToCurrentKek(ACTOR)).rewrapped).toBe(0);
 	});
@@ -221,28 +218,11 @@ describe("TenantEncryptionService", () => {
 			createdAt: BigInt(0),
 			updatedAt: BigInt(0),
 		});
-		const ciphertext = `1:${formatGcmEnvelope(gcmEncrypt(dataKey, Buffer.from("legacy secret")))}`;
 
-		expect(await service(kekV1()).decrypt(ORG, ciphertext, ACTOR, "test")).toBe("legacy secret");
+		expect(await kekV1().unwrapDataKey(onlyRow())).toEqual(dataKey);
 		expect((await service(kekV1()).rewrapToCurrentKek(ACTOR)).rewrapped).toBe(1);
 		expect(onlyRow().kmsKeyId).toBe(localKekId(1));
-		expect(await service(kekV1()).decrypt(ORG, ciphertext, ACTOR, "test")).toBe("legacy secret");
-	});
-
-	it("detects tampered ciphertext and a truncated authentication tag", async () => {
-		const encryption = service(kekV1());
-		const ciphertext = await encryption.encrypt(ORG, "secret", ACTOR);
-		const [version, envelopeText] = [ciphertext.slice(0, 1), ciphertext.slice(2)];
-		const envelope = parseGcmEnvelope(envelopeText);
-
-		const flipped = Buffer.from(envelope.data);
-		flipped[LIST_SLOT_INDEX.first] = (flipped[LIST_SLOT_INDEX.first] ?? 0) ^ 1;
-		await expect(encryption.decrypt(ORG, `${version}:${formatGcmEnvelope({ ...envelope, data: flipped })}`, ACTOR, "test")).rejects.toBeInstanceOf(GcmEnvelopeError);
-
-		const truncated = envelope.tag.subarray(0, GCM_AUTH_TAG_BYTES / 4);
-		await expect(encryption.decrypt(ORG, `${version}:${formatGcmEnvelope({ ...envelope, tag: truncated })}`, ACTOR, "test")).rejects.toBeInstanceOf(GcmEnvelopeError);
-		await expect(encryption.decrypt(ORG, "1:not-an-envelope", ACTOR, "test")).rejects.toBeInstanceOf(GcmEnvelopeError);
-		await expect(encryption.decrypt(ORG, `9:${envelopeText}`, ACTOR, "test")).rejects.toBeInstanceOf(TenantKeyNotFoundError);
+		expect(await kekV1().unwrapDataKey(onlyRow())).toEqual(dataKey);
 	});
 
 	it("creates exactly one data key when two requests race to create the first one", async () => {
@@ -253,12 +233,12 @@ describe("TenantEncryptionService", () => {
 		expect(versions).toEqual([1, 1]);
 		expect(keys.rows).toHaveLength(1);
 		expect(db.auditRows.filter((row) => row.data.action === TENANT_KEY_AUDIT_ACTIONS.created)).toHaveLength(1);
-		// Both callers can use the surviving key.
-		expect(await encryption.decrypt(ORG, await encryption.encrypt(ORG, "x", ACTOR), ACTOR, "test")).toBe("x");
+		// Both callers got the surviving key.
+		expect(await kekV1().unwrapDataKey(onlyRow())).toHaveLength(AES_256_KEY_BYTES);
 	});
 
 	it("counts a key another process re-wrapped meanwhile as concurrently updated", async () => {
-		await service(kekV1()).encrypt(ORG, "secret", ACTOR);
+		await service(kekV1()).ensureTenantKey(ORG, ACTOR);
 		const rotated = service(kekV2WithRetiredV1());
 		const swap = vi.spyOn(keys, "swapWrappedKey").mockResolvedValueOnce(0);
 

@@ -1,9 +1,9 @@
 import { MerchantRedemptionsPageView } from "@/contexts/pos/components/redemptions/merchant-redemptions-page-view";
 import { toLocationQueryInput } from "@/features/tenant-context/selectors";
 import { loadMerchantServerContext } from "@/lib/merchant-server-api";
-import type { LocationScopedPrefetch } from "@/contexts/tenancy/lib/org/location-prefetch";
-import { guardOrgPage } from "@/contexts/tenancy/lib/org/org-page-guard";
-import { loadServerLocationScope } from "@/contexts/tenancy/lib/org/server-location-scope";
+import type { LocationScopedPrefetch } from "@/contexts/tenancy/lib/tenant/location-prefetch";
+import { guardTenantPage } from "@/contexts/tenancy/lib/tenant/tenant-page-guard";
+import { loadServerLocationScope } from "@/contexts/tenancy/lib/tenant/server-location-scope";
 import { dayWindowContaining } from "@/contexts/pos/lib/redemptions/today-window";
 import { prefetchedDataOrUndefined, rethrowUnexpectedFailure } from "@/lib/server/server-query-outcome";
 import { REDEMPTIONS_URL_STATE, toRedemptionsDayCountQuery, toRedemptionsQuery } from "@/contexts/pos/url-state/redemptions";
@@ -26,7 +26,7 @@ interface MerchantRedemptionsPageProps {
  */
 export default async function MerchantRedemptionsPage({ params, searchParams }: MerchantRedemptionsPageProps): Promise<React.JSX.Element> {
 	const { tenantSlug } = await params;
-	const denied = await guardOrgPage(tenantSlug, "/redemptions");
+	const denied = await guardTenantPage(tenantSlug, "/redemptions");
 	if (denied !== null) {
 		return denied;
 	}

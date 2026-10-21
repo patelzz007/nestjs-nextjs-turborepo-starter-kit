@@ -35,7 +35,6 @@ export function toHttpAuditLogSummary(row: AuditLogSummaryRow, references: Audit
 		apiKeyId: row.apiKeyId,
 		terminalId: row.terminalId,
 		tenant: toAuditLogTenant(row.tenantId, references),
-		storeId: row.storeId,
 		locationId: row.locationId,
 		ipAddress: row.ipAddress,
 		userAgent: row.userAgent,

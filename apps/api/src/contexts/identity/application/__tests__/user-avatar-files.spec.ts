@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { epochMs, type CreateFileUploadUrlInput, type EpochMs } from "@workspace/shared";
+import { epochMs, type FileUploadRequest, type EpochMs } from "@workspace/shared";
 
 import { FileDeleted, FileVerdictReached, type FileAccessSubject, type FileActor } from "../../../files/public-api";
 import { BindUserAvatarOnFileVerdict } from "../event-handlers/in-transaction/bind-user-avatar-on-file-verdict.in-transaction-handler";
@@ -10,7 +10,7 @@ import { UserAvatarFileAccessRule } from "../services/user-avatar-file-access.ru
 const FILE_ID = "0b7c2a5e-6f1d-4c2e-9d3a-1f2e3d4c5b6a";
 const NOW: EpochMs = epochMs(1_800_000_000_000);
 const ACTOR: FileActor = { userId: "user-1", isSuperAdmin: false };
-const UPLOAD: Omit<CreateFileUploadUrlInput, "userId"> = { category: "USER_AVATAR", fileName: "me.png", mimeType: "image/png", sizeBytes: 10, checksumSha256: "a".repeat(64) };
+const UPLOAD: Omit<FileUploadRequest, "userId"> = { category: "USER_AVATAR", fileName: "me.png", mimeType: "image/png", sizeBytes: 10, checksumSha256: "a".repeat(64) };
 const AVATAR: FileAccessSubject = { id: FILE_ID, category: "USER_AVATAR", uploadedById: "user-1", tenantId: null, productId: null };
 
 /** Avatar rows in memory: what was bound and released. */

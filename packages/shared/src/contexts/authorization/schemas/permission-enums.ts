@@ -43,7 +43,6 @@ export const PermissionResourceSchema = z.enum([
 	"INVENTORY",
 	"TENANT",
 	"LOCATION",
-	"STORE",
 	"GITHUB",
 	"GITHUB_PULL_REQUEST",
 ]);

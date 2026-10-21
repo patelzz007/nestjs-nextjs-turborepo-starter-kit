@@ -15,10 +15,12 @@ export interface MembershipRepository {
 	existsLive(tenantId: string, userId: string): Promise<boolean>;
 	/** A live membership read under its row lock. */
 	getLiveForUpdate(tenantId: string, membershipId: string): Promise<Membership | null>;
+	/** The caller's live membership in any status (leaving accepts a suspended or pending one), under its row lock. */
+	getOwnLiveForUpdate(tenantId: string, userId: string): Promise<Membership | null>;
 	/** The caller's live ACTIVE membership read under its row lock. */
 	getOwnActiveForUpdate(tenantId: string, userId: string): Promise<Membership | null>;
 	/** Inserts the membership with its scope rows. A second live membership of the same user throws `AlreadyMemberError(duplicateMessage)`. */
 	add(membership: Membership, duplicateMessage: string): Promise<void>;
-	/** Writes the recorded changes (rename, store removal) and returns the stored row. */
+	/** Writes the recorded changes (rename, store removal, leaving) and returns the stored row (soft-deleted after leaving). */
 	save(membership: Membership): Promise<PersistedMembership>;
 }

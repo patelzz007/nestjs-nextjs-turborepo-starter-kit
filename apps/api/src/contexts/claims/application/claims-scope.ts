@@ -2,6 +2,7 @@ import type { TransactionalEventCollector } from "../../../platform/application/
 import type { EmailRequestTransactionalPort } from "../../notifications/public-api";
 import type { ReferrerCreditNoticesPort, SignupSuccessNoticesPort } from "../../referrals/public-api";
 import type { LegalAcceptanceCheck, RewardAuditPort, RewardInventoryPort, RewardRedemptionFactsPort } from "../../rewards/public-api";
+import type { CustomerStandingPort } from "../../tenancy/public-api";
 import type { OtpChallengeRepository, RewardClaimRepository } from "../domain/repositories/claims.repositories";
 import type { ClaimantPort, ClaimViewPort, ReferralAttributionPort, RewardNotificationInbox } from "./ports/claims-transactional.ports";
 
@@ -22,6 +23,8 @@ export interface ClaimsScope {
 	readonly rewardFacts: RewardRedemptionFactsPort;
 	readonly legal: LegalAcceptanceCheck;
 	readonly rewardAudit: RewardAuditPort;
+	/** Tenants' answer to "may this customer take this merchant's rewards", in this same transaction. */
+	readonly customerStanding: CustomerStandingPort;
 	readonly emails: EmailRequestTransactionalPort;
 	readonly events: TransactionalEventCollector;
 }

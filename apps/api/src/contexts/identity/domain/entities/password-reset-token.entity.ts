@@ -1,6 +1,7 @@
 import { PASSWORD_RESET_LINK_TTL_HOURS, epochMs, type EpochMs } from "@workspace/shared";
 
-import { CorruptIdentityStateError, PasswordResetTokenInvalidError } from "../errors/identity.errors";
+import { PasswordResetTokenInvalidError } from "../errors/identity.errors";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** Milliseconds per hour — converts the shared reset-link lifetime (hours) to an expiry. */
 const MS_PER_HOUR = 3_600_000;
@@ -42,7 +43,7 @@ export class PasswordResetToken {
 
 	public static rehydrate(state: PasswordResetTokenState): PasswordResetToken {
 		if (state.tokenHash.length === 0 || state.tokenDigest.length === 0) {
-			throw new CorruptIdentityStateError("password_reset_token", `token ${state.id} has no hash`);
+			throw new CorruptAggregateStateError("password_reset_token", null, `token ${state.id} has no hash`);
 		}
 		return new PasswordResetToken(state);
 	}

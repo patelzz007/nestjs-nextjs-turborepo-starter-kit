@@ -61,6 +61,16 @@ describe("ValidateRedemptionCodesHandler", () => {
 		});
 	});
 
+	it("says a customer the merchant banned cannot redeem, without failing the scan", async () => {
+		const { token } = store.claims.seed("claim-01");
+		store.customerStanding.ban(TENANT_ID, CUSTOMER);
+
+		await expect(handler.execute(new ValidateRedemptionCodesCommand(apiKeyActor(), POINT, { token }))).resolves.toMatchObject({
+			valid: false,
+			invalidReason: "CUSTOMER_BANNED",
+		});
+	});
+
 	it("answers an unknown code (and another merchant's) as not valid for this merchant, counting an unknown backup code", async () => {
 		store.claims.seed("claim-01", { reward: { tenantId: "another-org" } });
 
@@ -200,6 +210,18 @@ describe("CheckoutSaleHandler", () => {
 		await expect(
 			handler.execute(new CheckoutSaleCommand(apiKeyActor(), { ...POINT, locationId: null }, bill([{ token: expired.token }], { idempotencyKey: "idem-3" }))),
 		).rejects.toMatchObject({ code: "STORE_REQUIRED", httpStatus: 422 });
+	});
+
+	it("refuses a banned customer's codes at checkout (403 CUSTOMER_BANNED), redeeming nothing", async () => {
+		const { token } = store.claims.seed("claim-01");
+		store.customerStanding.ban(TENANT_ID, CUSTOMER);
+
+		await expect(handler.execute(new CheckoutSaleCommand(apiKeyActor(), POINT, bill([{ token }])))).rejects.toMatchObject({
+			code: "CUSTOMER_BANNED",
+			httpStatus: 403,
+			details: { claimId: "claim-01" },
+		});
+		expect(store.sales.rows.size).toBe(0);
 	});
 
 	it("is all-or-nothing: a refused minimum leaves every claim, counter and audit untouched", async () => {

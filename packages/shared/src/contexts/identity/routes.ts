@@ -28,6 +28,9 @@ export const authRoutes = {
 	verifyEmail: "/auth/verify-email",
 	adminUsers: "/auth/admin/users",
 	adminUserDetail: "/auth/admin/users/:userId",
+	/** A platform admin bans an account (it can no longer sign in; every session is revoked). */
+	adminUserBan: "/auth/admin/users/:userId/ban",
+	adminUserUnban: "/auth/admin/users/:userId/unban",
 	impersonate: "/auth/impersonate/:userId",
 	stopImpersonation: "/auth/stop-impersonation",
 	changePassword: "/auth/change-password",

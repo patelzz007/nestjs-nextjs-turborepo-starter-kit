@@ -5,5 +5,6 @@
 export * from "./contract";
 export * from "./routes";
 export * from "./schemas/referral-enums";
+export * from "./schemas/reward-referrals";
 export * from "./schemas/signup-referral.constants";
 export * from "./schemas/signup-referrals";

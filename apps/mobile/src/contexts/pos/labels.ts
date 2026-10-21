@@ -21,6 +21,7 @@ export const INVALID_REASON_LABELS: Readonly<Record<RedemptionInvalidReason, str
 	EXPIRED: "This reward has expired.",
 	NOT_VALID_AT_STORE: "This reward can't be redeemed at this store.",
 	STORE_REQUIRED: "This till isn't registered to a store yet, and this reward is limited to selected stores.",
+	CUSTOMER_BANNED: "This business has banned this customer from its rewards.",
 };
 
 export const TILL_COPY = {

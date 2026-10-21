@@ -13,7 +13,7 @@ import { ACCORDION_FAQ_ITEMS, ACCORDION_REORDER_ITEMS, ACCORDION_STATUS_ITEMS, A
 // ── Lazy demo sections ────────────────────────────────────────────────────
 // Every showcase below the fold (chart, table, accordion, …) is code-split so
 // the initial bundle only contains the chrome + platform sales cards. Heavy deps
-// (recharts, react-table, dnd-kit, react-hook-form, …) load in parallel with
+// (recharts, react-table, dnd-kit, TanStack Form, …) load in parallel with
 // hydration instead of blocking first paint — LCP and TBT both drop. The
 // `loading` skeletons reserve each section's height, so nothing jumps.
 

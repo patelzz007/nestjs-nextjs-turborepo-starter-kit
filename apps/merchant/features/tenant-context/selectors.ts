@@ -1,4 +1,4 @@
-import { canSelectAllLocations, type MemberLocationAccess } from "@/contexts/tenancy/lib/org/location-access";
+import { canSelectAllLocations, type MemberLocationAccess } from "@/contexts/tenancy/lib/tenant/location-access";
 import type { LocationResponse } from "@workspace/shared";
 
 import type { TenantContextState } from "./state";
@@ -26,10 +26,10 @@ export function withoutRejectedLocations(access: MemberLocationAccess, rejectedL
  * prefetches with exactly the filter the client's first render asks for.
  *
  * - Access not loaded: the choice as made — provisional, re-derived once the
- *   tenant context arrives (the org layout seeds it, so a member's first
+ *   tenant context arrives (the tenant layout seeds it, so a member's first
  *   render already has it).
  * - A choice the member can still access wins.
- * - Otherwise "all stores" when the member may see org-wide rollups, else
+ * - Otherwise "all stores" when the member may see tenant-wide rollups, else
  *   their first (for a single-store member: only) store.
  */
 export function resolveEffectiveLocationId(selectedLocationId: string | null, access: MemberLocationAccess | undefined): string | null {

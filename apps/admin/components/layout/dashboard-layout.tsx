@@ -7,9 +7,9 @@ import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import { buildSidebarView } from "@workspace/ui/lib/sidebar/menu-view";
-import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
+import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
-import { resolvePinnedMenuItems } from "@/lib/navigation/pinned-items";
+import { resolvePinnedMenuItems } from "@workspace/ui/lib/palette/resolve-pinned-menu-items";
 import { ADMIN_ROUTE_AUTHORIZATION, canAccessRoute, filterMenuByRouteAccess, type RouteAccessSession } from "@/lib/navigation/route-authorization";
 import { buildSearchableItems } from "@/lib/palette/search";
 import { useSessionPermissionsQuery } from "@/lib/session/capabilities";

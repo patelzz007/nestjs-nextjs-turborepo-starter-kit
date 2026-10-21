@@ -12,8 +12,8 @@ export const MERCHANT_MFA_ENROLLMENT_DISABLED_TOOLTIP = "Set up two-factor authe
 /**
  * Whether a merchant route stays reachable while enrollment is pending — only
  * the personal account, where email verification / MFA enrollment happens.
- * Accepts org-relative menu URLs (`/account`), the top-level `/account` entry,
- * and org-scoped hrefs (`/t/{slug}/account/**`). Mirrors the proxy's
+ * Accepts tenant-relative menu URLs (`/account`), the top-level `/account` entry,
+ * and tenant-scoped hrefs (`/t/{slug}/account/**`). Mirrors the proxy's
  * `isEnrollmentAllowedPath` for the merchant surface.
  */
 export function isMerchantEnrollmentAllowedPath(pathname: string): boolean {
@@ -21,8 +21,8 @@ export function isMerchantEnrollmentAllowedPath(pathname: string): boolean {
 		return true;
 	}
 
-	const orgRelativePath = toTenantRelativePath(pathname);
-	return orgRelativePath !== undefined && isPathWithin(orgRelativePath, TENANT_ROUTES.account);
+	const tenantRelativePath = toTenantRelativePath(pathname);
+	return tenantRelativePath !== undefined && isPathWithin(tenantRelativePath, TENANT_ROUTES.account);
 }
 
 export interface MerchantEnrollmentLock {

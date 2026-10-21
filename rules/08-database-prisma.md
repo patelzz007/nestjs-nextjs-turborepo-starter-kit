@@ -242,7 +242,7 @@ Purely transient/junction/log-table data (e.g. a rate-limit counter, a short-liv
 
 ## Prisma client
 
-Keep Prisma imports isolated to `packages/database` and the API app — never import Prisma types into mobile code, and never expose Prisma-generated types as the public API contract (map to the zod-derived domain type instead, per `02-backend-nestjs.md` and `05-contracts-zod-api.md`).
+Keep Prisma imports isolated to the API app (`apps/api/prisma`, `apps/api/src/**/infrastructure`) — never import Prisma types into mobile code, and never expose Prisma-generated types as the public API contract (map to the zod-derived domain type instead, per `02-backend-nestjs.md` and `05-contracts-zod-api.md`).
 
 ## Query efficiency — avoiding N+1
 
@@ -274,7 +274,7 @@ Every schema change needs: a migration, a test/verification step, a deployment c
 
 ## Seed data — mandatory on every schema change
 
-`packages/database/prisma/seed.ts` must be updated in the **same PR** as any migration that adds or changes a table or column:
+The seed (`apps/api/prisma/seed/`, run per scenario from `seed/scenarios/`) must be updated in the **same PR** as any migration that adds or changes a table or column:
 
 ```ts
 // ❌ DON'T — a migration adds a required `taxRate` column to Order, but

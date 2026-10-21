@@ -86,7 +86,8 @@ function lastOptions(): DashboardQueryOptions | undefined {
 
 /** Opens a labelled filter menu and picks an option (the shared DropdownMenu). */
 async function chooseFilter(label: string, option: string): Promise<void> {
-	fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${label} `) }));
+	// The range controls are their own `next/dynamic` chunk: wait for it, not just the first render.
+	fireEvent.click(await screen.findByRole("button", { name: new RegExp(`^${label} `) }));
 	fireEvent.click(await screen.findByRole("menuitemradio", { name: option }));
 }
 
@@ -128,13 +129,15 @@ describe("MerchantAnalyticsPageView authorization", () => {
 });
 
 describe("MerchantAnalyticsPageView data", () => {
-	it("queries the last 30 days in the merchant's own days and shows KPIs, charts and breakdowns", () => {
+	it("queries the last 30 days in the merchant's own days and shows KPIs, charts and breakdowns", async () => {
 		mocks.dashboardQuery.mockReturnValue(ready());
 		renderView();
 
 		expect(lastInput()).toEqual({ tenantSlug: TEST_ORG_SLUG, from: DEFAULT_FROM, to: DEFAULT_TO, interval: "day", locationId: undefined });
 		// The range and the zone its days are cut in.
-		expect(screen.getAllByRole("status").map((status) => spaced(status.textContent))).toContain("6 Sept – 5 Oct 2026 · Asia/Kuala_Lumpur");
+		await waitFor((): void => {
+			expect(screen.getAllByRole("status").map((status) => spaced(status.textContent))).toContain("6 Sept – 5 Oct 2026 · Asia/Kuala_Lumpur");
+		});
 
 		const sales = within(screen.getByRole("group", { name: "Sales" }));
 		expect(sales.getAllByText((_content, element) => spaced(element?.textContent) === "RM 2,500.00").length).toBeGreaterThan(0);

@@ -2,8 +2,8 @@
 
 import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/contexts/identity/lib/enrollment";
 import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
-import { useTenantSlug } from "@/contexts/tenancy/lib/org/use-tenant-slug";
-import { useTenantPath } from "@/contexts/tenancy/lib/org/use-tenant-path";
+import { useTenantSlug } from "@/contexts/tenancy/lib/tenant/use-tenant-slug";
+import { useTenantPath } from "@/contexts/tenancy/lib/tenant/use-tenant-path";
 import { TENANT_ROUTES } from "@/lib/routes";
 import { buildMerchantPaletteItems, renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { useAuthorization } from "@workspace/client/lib/contexts/authorization";

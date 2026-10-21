@@ -255,9 +255,9 @@ describe("Merchant store scope (e2e)", () => {
 				expiryDate: Date.now() + 30 * DAY_MS,
 			};
 
-			const orgWide = await post(storeAdmin, "/rewards", base);
-			expect(orgWide.statusCode).toBe(403);
-			expect(errorCodeOf(orgWide)).toBe("TENANT_LOCATION_FORBIDDEN");
+			const tenantWide = await post(storeAdmin, "/rewards", base);
+			expect(tenantWide.statusCode).toBe(403);
+			expect(errorCodeOf(tenantWide)).toBe("TENANT_LOCATION_FORBIDDEN");
 
 			const otherStore = await post(storeAdmin, "/rewards", { ...base, locationScopeType: "SELECTED", locationIds: [KATIL] });
 			expect(otherStore.statusCode).toBe(403);
@@ -287,9 +287,9 @@ describe("Merchant store scope (e2e)", () => {
 
 	describe("API keys", () => {
 		it("lets a store-limited admin create keys only for its own store", async () => {
-			const orgWide = await createKey(storeAdmin, {});
-			expect(orgWide.statusCode).toBe(403);
-			expect(errorCodeOf(orgWide)).toBe("API_KEY_LOCATION_REQUIRED");
+			const tenantWide = await createKey(storeAdmin, {});
+			expect(tenantWide.statusCode).toBe(403);
+			expect(errorCodeOf(tenantWide)).toBe("API_KEY_LOCATION_REQUIRED");
 
 			expect((await createKey(storeAdmin, { locationId: KATIL })).statusCode).toBe(403);
 
@@ -300,13 +300,13 @@ describe("Merchant store scope (e2e)", () => {
 
 		it("lists only the admin's store's keys and hides others' from revocation", async () => {
 			const katilKey = parseSuccessEnvelope(await createKey(owner, { locationId: KATIL }), MerchantApiKeyCreatedSchema).data;
-			const orgWideKey = parseSuccessEnvelope(await createKey(owner, {}), MerchantApiKeyCreatedSchema).data;
+			const tenantWideKey = parseSuccessEnvelope(await createKey(owner, {}), MerchantApiKeyCreatedSchema).data;
 
 			const listed = parseSuccessEnvelope(await get(storeAdmin, "/api-keys"), KeyListSchema).data;
 			expect(listed.length).toBeGreaterThan(0);
 			expect(listed.every((key) => key.locationId === BERUANG)).toBe(true);
 
-			for (const keyId of [katilKey.id, orgWideKey.id]) {
+			for (const keyId of [katilKey.id, tenantWideKey.id]) {
 				const revoked = await post(storeAdmin, `/api-keys/${keyId}/revoke`);
 				expect(revoked.statusCode).toBe(404);
 			}

@@ -12,15 +12,33 @@ export const INVITE_TOKENS = Symbol("INVITE_TOKENS");
 export const KYB_FILE_ACCESS = Symbol("KYB_FILE_ACCESS");
 /** {@link ApiKeyCapabilitiesPort}: provided by pos (it owns API keys), consumed by the merchant capability gate. */
 export const API_KEY_CAPABILITIES = Symbol("API_KEY_CAPABILITIES");
-/** `StoreClosureFactory`: provided by pos (it owns terminals and keys), bound to the store-closure transaction. */
-export const STORE_CLOSURE_FACTORY = Symbol("STORE_CLOSURE_FACTORY");
+/** `LocationClosureFactory`: provided by pos (it owns terminals and keys), bound to the store-closure transaction. */
+export const LOCATION_CLOSURE_FACTORY = Symbol("LOCATION_CLOSURE_FACTORY");
+/** Pos's `RedemptionCustomerPort` factory (the customer behind a redemption, for a customer ban). */
+export const REDEMPTION_CUSTOMER_FACTORY = Symbol("REDEMPTION_CUSTOMER_FACTORY");
 export const TENANT_CONTEXT_READ = Symbol("TENANT_CONTEXT_READ");
 export const TEAM_READ = Symbol("TEAM_READ");
+export const CUSTOMER_BAN_READ = Symbol("CUSTOMER_BAN_READ");
 export const MERCHANT_ADMIN_READ = Symbol("MERCHANT_ADMIN_READ");
 export const KYB_READ = Symbol("KYB_READ");
+export const TENANT_LIFECYCLE_READ = Symbol("TENANT_LIFECYCLE_READ");
 export const TENANTS_SCOPE_FACTORY = Symbol("TENANTS_SCOPE_FACTORY");
 /** {@link TenantFileAccessPort}: builds the access rule of a tenant-owned file category. */
 export const TENANT_FILE_ACCESS = Symbol("TENANT_FILE_ACCESS");
+
+/** The tenant lifecycle routes and their reads / commands (MT-23). */
+export const TENANT_LIFECYCLE_READ_OPERATION: SystemOperationName = "tenant.lifecycle.read";
+export const TENANT_LIFECYCLE_APPEAL_OPERATION: SystemOperationName = "tenant.lifecycle.appeal";
+export const TENANT_LIFECYCLE_REACTIVATE_OPERATION: SystemOperationName = "tenant.lifecycle.reactivate";
+export const TENANT_MEMBERSHIP_LEAVE_OPERATION: SystemOperationName = "tenant.membership.leave";
+export const TENANT_LIFECYCLE_ADMIN_SUSPEND_OPERATION: SystemOperationName = "tenant.lifecycle.admin_suspend";
+export const TENANT_LIFECYCLE_ADMIN_BAN_OPERATION: SystemOperationName = "tenant.lifecycle.admin_ban";
+export const TENANT_CUSTOMER_BAN_CREATE_OPERATION: SystemOperationName = "tenant.customer_ban.create";
+export const TENANT_CUSTOMER_BAN_LIFT_OPERATION: SystemOperationName = "tenant.customer_ban.lift";
+export const TENANT_CUSTOMER_BAN_READ_OPERATION: SystemOperationName = "tenant.customer_ban.read";
+export const TENANT_LIFECYCLE_ADMIN_UNBAN_OPERATION: SystemOperationName = "tenant.lifecycle.admin_unban";
+export const TENANT_LIFECYCLE_ADMIN_REINSTATE_OPERATION: SystemOperationName = "tenant.lifecycle.admin_reinstate";
+export const TENANT_LIFECYCLE_ADMIN_REJECT_APPEAL_OPERATION: SystemOperationName = "tenant.lifecycle.admin_reject_appeal";
 
 /** A platform admin approves or rejects a merchant's KYB: the route and its command. */
 export const KYB_ADMIN_DECIDE_OPERATION: SystemOperationName = "tenant.kyb.admin_decide";

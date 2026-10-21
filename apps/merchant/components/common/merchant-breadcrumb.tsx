@@ -6,7 +6,7 @@ import * as React from "react";
 
 import { resolveMerchantTrail } from "@/lib/navigation/breadcrumb";
 import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
-import { useTenantSlug } from "@/contexts/tenancy/lib/org/use-tenant-slug";
+import { useTenantSlug } from "@/contexts/tenancy/lib/tenant/use-tenant-slug";
 
 const { provider: BreadcrumbProvider, useBreadcrumb } = createBreadcrumbContext(resolveMerchantTrail);
 

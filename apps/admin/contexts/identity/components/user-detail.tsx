@@ -5,6 +5,7 @@ import type { PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched
 import { UserAccessPanel } from "@/contexts/authorization";
 import { ImpersonateUserButton } from "@/components/impersonation/impersonate-user-button";
 import { UserDetailPageSkeleton } from "@/components/loading/user-skeletons";
+import { UserBanPanel } from "@/contexts/identity/components/users/user-ban-panel";
 import { UserMfaRecoveryPanel } from "@/contexts/identity/components/users/user-mfa-recovery-panel";
 import { UserProfileOverview } from "@/contexts/identity/components/users/user-profile-overview";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
@@ -60,6 +61,8 @@ export default function UserDetailView({ userId, initialUser, initialGrantsPage 
 					</header>
 
 					<UserProfileOverview user={user} />
+
+					<UserBanPanel user={user} />
 
 					<UserMfaRecoveryPanel userId={userId} userFullName={user.fullName} userEmail={user.email} twoFactorEnabled={user.twoFactorEnabled} />
 

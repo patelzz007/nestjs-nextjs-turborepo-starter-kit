@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import type { NextResponse } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TENANT_SLUG_COOKIE_NAME } from "@/contexts/tenancy/lib/org/slug";
+import { TENANT_SLUG_COOKIE_NAME } from "@/contexts/tenancy/lib/tenant/slug";
 
 import { proxy, resetMerchantProxyRefreshCooldownForTests } from "../proxy";
 
@@ -96,7 +96,7 @@ describe("merchant proxy route protection", () => {
 		expect(location(response)).toBeUndefined();
 	});
 
-	it("lets a signed-in merchant through to org pages", async () => {
+	it("lets a signed-in merchant through to tenant pages", async () => {
 		const response = await runProxy({ pathname: "/t/acme-coffee/dashboard", accessToken: token(), refreshToken: "rt" });
 
 		expect(response.status).toBe(200);

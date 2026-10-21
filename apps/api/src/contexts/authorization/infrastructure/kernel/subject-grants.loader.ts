@@ -8,12 +8,13 @@ import { TenantTransactionService } from "../../../../prisma/tenant-transaction.
 import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../platform/application/shared-system-operations";
 
 /** Where a grant or denial came from — surfaced in explain() output. */
-export type GrantSource = "role" | "store" | "override" | "implicit";
+export type GrantSource = "role" | "location" | "override" | "implicit";
 
-/** The store a store-membership grant is bound to — it applies nowhere else. */
-export interface GrantStoreBinding {
-	readonly storeId: string;
+/** Where a location-role grant applies — nowhere else. */
+export interface GrantLocationBinding {
 	readonly tenantId: string;
+	/** The scope's location; null for an ALL_LOCATIONS scope (every location of the tenant). */
+	readonly locationId: string | null;
 }
 
 /** One `(action, resource, scope)` capability held (or explicitly denied) by a subject. */
@@ -22,10 +23,10 @@ export interface SubjectGrant {
 	readonly resource: PermissionResource;
 	readonly scope: PermissionScope;
 	readonly source: GrantSource;
-	/** Role id, store membership id, override id, or `"self"` for implicit grants. */
+	/** Role id, location scope id, override id, or `"self"` for implicit grants. */
 	readonly sourceId: string;
-	/** Set for grants that come from a store membership role (always STORE scope). */
-	readonly store?: GrantStoreBinding;
+	/** Set for grants that come from a location role (always LOCATION scope). */
+	readonly location?: GrantLocationBinding;
 	/** Stored policy-DSL conditions on the permission (`null` = unconditional). */
 	readonly conditions: Permission["conditions"];
 }
@@ -98,7 +99,7 @@ export class SubjectGrantsLoader {
 
 	public async load(userId: string): Promise<SubjectGrants> {
 		return this.transactions.withSystemOperation(
-			{ operation: PRINCIPAL_LOOKUP_OPERATION, reason: "Load the caller's roles, grants, and store-membership roles", actorUserId: userId },
+			{ operation: PRINCIPAL_LOOKUP_OPERATION, reason: "Load the caller's roles, grants, and location roles", actorUserId: userId },
 			(tx) => this.loadOn(tx, userId),
 		);
 	}
@@ -126,7 +127,7 @@ export class SubjectGrantsLoader {
 			db,
 			userRoles.map((userRole) => userRole.role),
 		);
-		const storeGrants = await this.loadStoreGrants(db, userId);
+		const locationGrants = await this.loadLocationGrants(db, userId);
 
 		const rolePermissions =
 			roleIds.length === 0
@@ -162,7 +163,7 @@ export class SubjectGrantsLoader {
 			}
 		}
 
-		grants.push(...storeGrants);
+		grants.push(...locationGrants);
 
 		for (const implicit of IMPLICIT_SELF_GRANTS) {
 			grants.push({ action: implicit.action, resource: implicit.resource, scope: "OWN", source: "implicit", sourceId: "self", conditions: null });
@@ -177,22 +178,30 @@ export class SubjectGrantsLoader {
 	}
 
 	/**
-	 * Store membership roles (spec §36): each role's permissions (with its
-	 * hierarchy) apply only inside that store, whatever scope the permission
-	 * row carries — a store role can never grant platform-wide access.
+	 * Location roles: the role a member's location scope carries (`MembershipLocationScope.roleId`).
+	 * Its permissions (with its hierarchy) apply only at the scope's location — every location of the
+	 * tenant for an ALL_LOCATIONS scope — whatever scope the permission row carries, so a location
+	 * role can never grant tenant-wide or platform-wide access. Only an ACTIVE membership of a live
+	 * tenant counts.
 	 */
-	private async loadStoreGrants(db: Prisma.TransactionClient, userId: string): Promise<SubjectGrant[]> {
-		const memberships = await db.storeMembership.findMany({
-			where: { userId, status: "ACTIVE", isDeleted: false, store: { isDeleted: false, status: "ACTIVE" }, role: { isActive: true, isDeleted: false } },
-			select: { id: true, storeId: true, tenantId: true, role: { select: { id: true, parentId: true } } },
+	private async loadLocationGrants(db: Prisma.TransactionClient, userId: string): Promise<SubjectGrant[]> {
+		const scopes = await db.membershipLocationScope.findMany({
+			where: {
+				isDeleted: false,
+				roleId: { not: null },
+				membership: { userId, status: "ACTIVE", isDeleted: false, tenant: { isDeleted: false } },
+				role: { isActive: true, isDeleted: false },
+				OR: [{ locationId: null }, { location: { isDeleted: false, status: "ACTIVE" } }],
+			},
+			select: { id: true, tenantId: true, locationId: true, role: { select: { id: true, parentId: true } } },
 		});
-		if (memberships.length === 0) {
-			return [];
-		}
 
 		const grants: SubjectGrant[] = [];
-		for (const membership of memberships) {
-			const roleIds = await collectRoleHierarchy(db, [membership.role]);
+		for (const scope of scopes) {
+			if (scope.role === null) {
+				continue;
+			}
+			const roleIds = await collectRoleHierarchy(db, [scope.role]);
 			const rolePermissions = await db.rolePermission.findMany({
 				where: { roleId: { in: roleIds }, isDeleted: false, permission: { isDeleted: false } },
 				select: { permission: { select: { action: true, resource: true, conditions: true } } },
@@ -201,10 +210,10 @@ export class SubjectGrantsLoader {
 				grants.push({
 					action: rolePermission.permission.action,
 					resource: rolePermission.permission.resource,
-					scope: "STORE",
-					source: "store",
-					sourceId: membership.id,
-					store: { storeId: membership.storeId, tenantId: membership.tenantId },
+					scope: "LOCATION",
+					source: "location",
+					sourceId: scope.id,
+					location: { tenantId: scope.tenantId, locationId: scope.locationId },
 					conditions: rolePermission.permission.conditions,
 				});
 			}

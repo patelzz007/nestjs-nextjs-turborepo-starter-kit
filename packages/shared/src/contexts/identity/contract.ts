@@ -51,7 +51,14 @@ import {
 	VerifyBackupCodeResponseSchema,
 	VerifyBackupCodeSchema,
 } from "./schemas/two-factor";
-import { AdminUserDetailSchema, AdminUserListQuerySchema, SessionPermissionsResponseSchema, UserResponseSchema } from "./schemas/user";
+import {
+	AdminUserBanResultSchema,
+	AdminUserBanSchema,
+	AdminUserDetailSchema,
+	AdminUserListQuerySchema,
+	SessionPermissionsResponseSchema,
+	UserResponseSchema,
+} from "./schemas/user";
 
 // ── Authentication & user management ───────────────────────────────
 // Login, signup, token refresh, password reset, email verification,
@@ -232,6 +239,18 @@ export const authContract = {
 		path: authRoutes.adminUserDetail,
 		input: z.object({ userId: UuidParamSchema }).strict(),
 		response: singleResponse(AdminUserDetailSchema),
+	}),
+	adminUserBan: defineContract({
+		method: "POST",
+		path: authRoutes.adminUserBan,
+		input: z.intersection(z.object({ userId: UuidParamSchema }).strict(), AdminUserBanSchema),
+		response: singleResponse(AdminUserBanResultSchema),
+	}),
+	adminUserUnban: defineContract({
+		method: "POST",
+		path: authRoutes.adminUserUnban,
+		input: z.object({ userId: UuidParamSchema }).strict(),
+		response: singleResponse(AdminUserBanResultSchema),
 	}),
 	impersonate: defineContract({
 		method: "POST",

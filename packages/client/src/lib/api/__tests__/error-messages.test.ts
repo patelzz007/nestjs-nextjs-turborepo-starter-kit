@@ -22,6 +22,14 @@ describe("ApiError", () => {
 });
 
 describe("resolveAuthErrorMessage", () => {
+	it.each([
+		["TENANT_SUSPENDED", "This business is suspended. Only its status and appeal pages are available until it is reinstated."],
+		["MEMBERSHIP_INACTIVE", "Your membership in this business is not active. Ask its owner to reactivate it, or leave the business."],
+		["TENANT_OWNER_CANNOT_LEAVE", "The owner cannot leave the business."],
+	])("maps the tenant-access code %s to the app's own message, never the server text", (code, message) => {
+		expect(resolveAuthErrorMessage(new ApiError({ message: "Server text", error: code, statusCode: 403 }))).toBe(message);
+	});
+
 	it("maps a known auth error code to the friendly catalog string", () => {
 		const err = new ApiError({ message: "Invalid email or password", error: "INVALID_CREDENTIALS" });
 		expect(resolveAuthErrorMessage(err)).toBe("Incorrect email or password. Please try again.");

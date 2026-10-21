@@ -1,6 +1,6 @@
 "use client";
 
-import { MerchantCapabilityGate } from "@/contexts/tenancy";
+import { BanCustomerControl, MerchantCapabilityGate } from "@/contexts/tenancy";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import {
 	MERCHANT_REDEMPTIONS_LOADING_LABELS,
@@ -17,6 +17,7 @@ import { useActiveLocationFilter } from "@/features/tenant-context/facade";
 import { prefetchForLocation, type LocationScopedPrefetch } from "@/contexts/tenancy";
 import type { DayWindow } from "@/contexts/pos/lib/redemptions/today-window";
 import { REDEMPTIONS_URL_STATE, toRedemptionsDayCountQuery, toRedemptionsQuery } from "@/contexts/pos/url-state/redemptions";
+import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { LIST_FIRST_PAGE, listPagePatch } from "@workspace/client/lib/url-state/list-url-state";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
@@ -52,6 +53,9 @@ export function MerchantRedemptionsPageView(props: MerchantRedemptionsPageViewPr
 
 function MerchantRedemptionsPageViewContent({ tenantSlug, initialRedemptions, today, initialTodayCount }: MerchantRedemptionsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const { can } = useAuthorization();
+	// Banning a customer from the log needs `merchant:manage_rewards` (the API enforces it).
+	const canBanCustomers = can(MERCHANT_CAPABILITY.manageRewards);
 	const { locationId } = useActiveLocationFilter();
 
 	// The page is URL state (`?page=`); the store is the tenant-context filter.
@@ -168,6 +172,15 @@ function MerchantRedemptionsPageViewContent({ tenantSlug, initialRedemptions, to
 									{formatEpochMs(row.redeemedAt, "dateTime", PLATFORM_DISPLAY_REGION)}
 								</time>
 							</div>
+							{row.customerBanned ? (
+								<div className="mt-3">
+									<Badge variant="destructive">Customer banned</Badge>
+								</div>
+							) : canBanCustomers ? (
+								<div className="mt-3">
+									<BanCustomerControl tenantSlug={tenantSlug} redemptionId={row.redemptionId} />
+								</div>
+							) : null}
 						</Card>
 					))}
 					{!isFirstPage || hasNext ? (

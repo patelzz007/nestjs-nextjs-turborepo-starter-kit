@@ -5,7 +5,7 @@ import type { StoredFile } from "@prisma/client";
 import type {
 	CompleteFileUploadInput,
 	CompleteFileUploadResponse,
-	CreateFileUploadUrlInput,
+	FileUploadRequest,
 	CreateFileUploadUrlResponse,
 	FileDownloadDisposition,
 	FileDownloadResponse,
@@ -51,7 +51,7 @@ export interface FileServiceDependencies {
 export class StoredFileAccess {
 	public constructor(private readonly deps: FileServiceDependencies) {}
 
-	public async createUploadUrl(userId: string, input: CreateFileUploadUrlInput): Promise<CreateFileUploadUrlResponse> {
+	public async createUploadUrl(userId: string, input: FileUploadRequest): Promise<CreateFileUploadUrlResponse> {
 		return requestFileUpload(this.deps.storage, userId, input, (file) =>
 			this.deps.transactions.withBoundSession("Insert a stored-file upload ticket", (tx) => new PrismaStoredFileRepository(tx).add(file)),
 		);

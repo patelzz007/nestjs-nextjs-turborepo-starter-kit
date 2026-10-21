@@ -40,7 +40,7 @@ sequenceDiagram
     participant API
     participant S as Storage (local / S3 / GCS)
     participant Q as storage.scan job (BullMQ)
-    B->>API: POST /files/upload-url {category, fileName, mimeType, sizeBytes, checksumSha256}
+    B->>API: POST /files/upload-url (or /tenants/{tenantSlug}/files/upload-url) {category, fileName, mimeType, sizeBytes, checksumSha256}
     API-->>B: fileId + ticket (POST multipart for local/S3, signed PUT for Firebase), expires in 300 s
     B->>S: upload bytes directly (staging/… key)
     B->>API: POST /files/{fileId}/complete {checksumSha256}
@@ -225,7 +225,7 @@ What each `ObjectStorage` / `PublicDelivery` method is used for:
 
 | Method | Used when |
 | --- | --- |
-| `createBrowserUploadTicket` | `POST /files/upload-url`: the browser gets a one-time direct-upload pass |
+| `createBrowserUploadTicket` | `POST /files/upload-url` (product images, avatars, GitHub comment pictures) or `POST /tenants/{tenantSlug}/files/upload-url` (store logo and banner, reward images, KYB evidence — the tenant is the route's, never a body field): the browser gets a one-time direct-upload pass |
 | `headObject`, `getObjectStream` | `complete`: size, SHA-256 (streamed) and magic bytes are checked |
 | `copyObject` | Promotion `staging/…` → final key |
 | `deleteObject` | Staging cleanup, quarantine, failed promotion, delayed physical delete |

@@ -3,7 +3,7 @@ title: "10. Account and security"
 description: "Profile and avatar, password, email verification, two-factor authentication, MFA recovery, sessions, impersonation and support access."
 order: 11
 author: "Product & Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1792540800000
 coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
 tags: ["user-guide", "security", "mfa", "impersonation", "support-access"]
 ---
@@ -85,6 +85,14 @@ sequenceDiagram
 
 The delay gives the real owner time to notice a fraudulent request.
 
+## GitHub token (admins)
+
+The pull-request screens use **your own** fine-grained GitHub token. Link it in the admin panel
+under **Account → GitHub token** (the profile menu has the same link), or on the phone under
+**Profile → GitHub token**. The page lists the permissions the token needs and links to GitHub's
+token page; the token is checked with GitHub, stored encrypted, and never shown again. **Remove
+token** forgets it. Details: [GitHub pull requests](../technical/github-pull-requests.md#3-linking-a-token).
+
 ## Impersonation (SuperAdmin only)
 
 A SuperAdmin can act as another user to reproduce a problem:
@@ -113,6 +121,12 @@ a reason, an optional ticket reference, a mode (`READ_ONLY` by default, or `WRIT
 duration (15–480 minutes, default 60). Only an active **owner** of that tenant can approve
 it. Every step is written to the tenant's audit trail; a revoked or expired grant can never
 be revived.
+
+- **Admin panel → Users → Support access**: request a grant (merchant, mode, duration, reason,
+  ticket), see every grant with its state, and revoke one that is not over yet.
+- **Merchant portal → Settings**: the owner sees pending requests and approves them.
+- A job marks every grant past its end **Expired** within five minutes; access already ended at
+  the end time.
 
 ## For platform admins: locked accounts and sessions
 

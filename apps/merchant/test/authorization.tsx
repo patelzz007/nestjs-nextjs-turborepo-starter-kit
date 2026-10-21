@@ -25,7 +25,7 @@ export interface AuthorizationFixture {
 	/** Active membership role; `undefined` means no membership (every check denies). */
 	readonly role?: MembershipRole | undefined;
 	readonly isLoading?: boolean;
-	/** Server seed of the tenant context (store filter + tenant context), as the org layout passes it. */
+	/** Server seed of the tenant context (store filter + tenant context), as the tenant layout passes it. */
 	readonly tenantContext?: TenantContextSeed;
 }
 
@@ -37,7 +37,7 @@ export interface TenantContextSeed {
 const NO_TENANT_CONTEXT_SEED: TenantContextSeed = { initialLocationId: null };
 
 /**
- * Wraps `ui` like the app root and the org shell do: the UI kit's English
+ * Wraps `ui` like the app root and the tenant shell do: the UI kit's English
  * labels (the root layout's language provider), the merchant authorization providers with
  * the capabilities the role maps to, and the tenant context for `TEST_ORG_SLUG`
  * (location-aware views also need `api.tenants.context.useQuery` mocked —

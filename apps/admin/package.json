@@ -17,7 +17,6 @@
 	"dependencies": {
 		"@headless-tree/core": "^1.7.0",
 		"@headless-tree/react": "^1.7.0",
-		"@hookform/resolvers": "^5.9.1",
 		"@tanstack/react-form": "^1.33.5",
 		"@tanstack/react-query": "^5.104.1",
 		"@tanstack/react-table": "^9.2.6",
@@ -33,7 +32,6 @@
 		"next-themes": "^0.4.6",
 		"react": "19.3.0",
 		"react-dom": "19.3.0",
-		"react-hook-form": "^7.89.0",
 		"recharts": "3.10.1",
 		"rxjs": "^7.8.2",
 		"server-only": "^0.0.1",

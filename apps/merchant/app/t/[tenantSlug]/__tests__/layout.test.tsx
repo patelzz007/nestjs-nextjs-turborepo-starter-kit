@@ -10,7 +10,7 @@ import { membershipFixture, TEST_ORG_SLUG } from "@/test/authorization";
 import { testEnvelope } from "@/test/envelope";
 import { TWO_STORE_CONTEXT } from "@/test/tenant-context";
 
-import OrgLayout from "../layout";
+import TenantLayout from "../layout";
 
 const { serverContext, preferredSlug, tenantContext, sidebarOpen, shellProps, redirect } = vi.hoisted(() => ({
 	serverContext: vi.fn<() => Promise<Pick<MerchantServerContext, "membershipsEnvelope" | "tenantSlug">>>(),
@@ -32,7 +32,7 @@ vi.mock("@/lib/merchant-server-api", () => ({
 	readSidebarOpen: sidebarOpen,
 }));
 vi.mock("@/contexts/identity/lib/server", () => ({ getMerchantServerSession: (): Promise<object> => Promise.resolve({ user: null, isImpersonating: false }) }));
-vi.mock("@/contexts/tenancy/lib/org/server-location-scope", () => ({
+vi.mock("@/contexts/tenancy/lib/tenant/server-location-scope", () => ({
 	loadServerLocationScope: (): Promise<object> => Promise.resolve({ selectedLocationId: null, effectiveLocationId: null, tenantContext: undefined }),
 }));
 vi.mock("@/components/merchant-shell", () => ({
@@ -41,7 +41,7 @@ vi.mock("@/components/merchant-shell", () => ({
 		return <>{children}</>;
 	},
 }));
-vi.mock("@/contexts/tenancy/components/org/org-tenant-bootstrap", () => ({ OrgTenantBootstrap: (): React.JSX.Element => <p>bootstrap</p> }));
+vi.mock("@/contexts/tenancy/components/tenant/tenant-bootstrap", () => ({ TenantBootstrap: (): React.JSX.Element => <p>bootstrap</p> }));
 
 const OWNER = membershipFixture("OWNER");
 const OTHER_ORG: TenantRewardMembershipResponse = { ...OWNER, tenantId: "0d5c7a3e-2b8f-4e61-9c4d-7a1b2c3d4e5f", tenantSlug: "other-cafe" };
@@ -60,7 +60,7 @@ function memberOf(memberships: readonly TenantRewardMembershipResponse[]): void 
 }
 
 async function renderLayout(tenantSlug: string): Promise<void> {
-	render(await OrgLayout({ params: Promise.resolve({ tenantSlug }), children: <p>page</p> }));
+	render(await TenantLayout({ params: Promise.resolve({ tenantSlug }), children: <p>page</p> }));
 }
 
 beforeEach((): void => {
@@ -74,7 +74,7 @@ afterEach((): void => {
 	vi.clearAllMocks();
 });
 
-describe("OrgLayout tenant resolution", () => {
+describe("TenantLayout tenant resolution", () => {
 	it("renders the tenant the member belongs to", async () => {
 		await renderLayout(TEST_ORG_SLUG);
 
@@ -111,7 +111,7 @@ describe("OrgLayout tenant resolution", () => {
 	});
 });
 
-describe("OrgLayout sidebar", () => {
+describe("TenantLayout sidebar", () => {
 	it("renders the shell with the sidebar as the member left it (its cookie), so a reload does not flash it open", async () => {
 		sidebarOpen.mockResolvedValue(false);
 

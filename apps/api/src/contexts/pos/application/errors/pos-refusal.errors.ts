@@ -18,6 +18,7 @@ const REFUSALS: Readonly<Record<RedemptionInvalidReason, { readonly code: string
 		httpStatus: HttpStatus.UNPROCESSABLE_ENTITY,
 		message: "This reward is only valid at selected stores; register this terminal to its store before redeeming it",
 	},
+	CUSTOMER_BANNED: { code: "CUSTOMER_BANNED", httpStatus: HttpStatus.FORBIDDEN, message: "This merchant has banned this customer from its rewards" },
 };
 
 /** A claim that cannot be redeemed here and now, answered with its reason's legacy code. */

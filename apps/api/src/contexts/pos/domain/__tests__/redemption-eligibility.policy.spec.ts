@@ -31,6 +31,13 @@ describe("redemptionInvalidReason", () => {
 		expect(redemptionInvalidReason(redeemableClaim({ claimExpiresAt: epochMs(NOW + 1) }), STORE_A, NOW)).toBeNull();
 	});
 
+	it("refuses a customer the merchant banned, after a redemption or an expiry but before the store", () => {
+		expect(redemptionInvalidReason(redeemableClaim({ customerBanned: true }), STORE_A, NOW)).toBe("CUSTOMER_BANNED");
+		expect(redemptionInvalidReason(redeemableClaim({ customerBanned: true, locationScopeType: "SELECTED", locationIds: [STORE_B] }), STORE_A, NOW)).toBe("CUSTOMER_BANNED");
+		expect(redemptionInvalidReason(redeemableClaim({ customerBanned: true, claimStatus: "REDEEMED" }), STORE_A, NOW)).toBe("ALREADY_REDEEMED");
+		expect(redemptionInvalidReason(redeemableClaim({ customerBanned: true, claimExpiresAt: epochMs(NOW - 1) }), STORE_A, NOW)).toBe("EXPIRED");
+	});
+
 	it("names a redemption before an expiry, and an expiry before the store", () => {
 		expect(redemptionInvalidReason(redeemableClaim({ claimStatus: "REDEEMED", claimExpiresAt: epochMs(NOW - 1) }), STORE_A, NOW)).toBe("ALREADY_REDEEMED");
 		expect(redemptionInvalidReason(redeemableClaim({ claimStatus: "EXPIRED", locationScopeType: "SELECTED", locationIds: [STORE_B] }), STORE_A, NOW)).toBe("EXPIRED");

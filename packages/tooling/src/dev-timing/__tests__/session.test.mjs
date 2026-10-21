@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { cookieHeaderFrom, signIn } from "../session.mjs";
+import { DEFAULT_RATE_LIMIT_WAIT_MS, cookieHeaderFrom, rateLimitWaitMs, signIn } from "../session.mjs";
 import { startFakeServer } from "./fake-server.mjs";
 
 const ACCOUNT = { email: "admin@example.com", password: "Admin@123", clientType: "web", origin: "http://localhost:3000" };
@@ -104,5 +104,56 @@ describe("signIn", () => {
 	it("fails on an answer that is not the API envelope", async () => {
 		const api = await fakeApi({ "/api/v1/auth/login": { body: { ok: true } } });
 		await expect(signIn({ apiUrl: api.url(""), account: ACCOUNT, readLoginCode: failIfAskedForCode, readCurrentCode: noCode })).rejects.toThrow();
+	});
+});
+
+describe("rateLimitWaitMs", () => {
+	it("waits the longest Retry-After the throttler names, in milliseconds", () => {
+		expect(rateLimitWaitMs(new Headers({ "retry-after-login": "12", "retry-after": "3" }))).toBe(12_000);
+	});
+
+	it("falls back to the default window without a readable header", () => {
+		expect(rateLimitWaitMs(new Headers({ "retry-after": "soon" }))).toBe(DEFAULT_RATE_LIMIT_WAIT_MS);
+		expect(rateLimitWaitMs(new Headers())).toBe(DEFAULT_RATE_LIMIT_WAIT_MS);
+	});
+});
+
+describe("signIn under the login rate limit", () => {
+	const limited = () => new Response(JSON.stringify({ success: false, error: { code: "RATE_LIMITED" } }), { status: 429, headers: { "retry-after-login": "7" } });
+	const signedIn = () => new Response(JSON.stringify({ data: {} }), { status: 201, headers: [["set-cookie", "access_token=aaa; Path=/"]] });
+
+	it("waits out a 429 once and signs in on the second attempt", async () => {
+		const answers = [limited(), signedIn()];
+		const waits = [];
+		const cookie = await signIn({
+			apiUrl: "http://api.test",
+			account: ACCOUNT,
+			readLoginCode: failIfAskedForCode,
+			readCurrentCode: noCode,
+			fetchImpl: async () => answers.shift() ?? signedIn(),
+			sleep: async (ms) => {
+				waits.push(ms);
+			},
+		});
+		expect(cookie).toBe("access_token=aaa");
+		expect(waits).toEqual([7000]);
+		expect(answers).toEqual([]);
+	});
+
+	it("reports a second 429 instead of waiting again", async () => {
+		const waits = [];
+		await expect(
+			signIn({
+				apiUrl: "http://api.test",
+				account: ACCOUNT,
+				readLoginCode: failIfAskedForCode,
+				readCurrentCode: noCode,
+				fetchImpl: async () => limited(),
+				sleep: async (ms) => {
+					waits.push(ms);
+				},
+			}),
+		).rejects.toThrow(/answered HTTP 429.*RATE_LIMITED/);
+		expect(waits).toEqual([7000]);
 	});
 });

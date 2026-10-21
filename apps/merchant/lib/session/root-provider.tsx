@@ -17,7 +17,7 @@ export interface MerchantRootProviderProps {
 /**
  * Merchant portal root — session only. The active tenant is not held
  * here: the `/t/[tenantSlug]` URL owns it (`useTenantSlug`), and the
- * org layout's `OrgTenantBootstrap` is the one writer of the
+ * tenant layout's `TenantBootstrap` is the one writer of the
  * `tenantSlug` preference cookie. It does own the request scope holder: every
  * API call reads the open tenant and chosen store from it (`X-Tenant-Id`,
  * `X-Location-Id`), and the tenant layout's context provider writes it.

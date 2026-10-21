@@ -5,7 +5,9 @@ import { z } from "zod";
 
 import { defineContract } from "../../contracts/define-contract";
 import { paginatedResponse, singleResponse } from "../../contracts/response";
-import { signupReferralsAuthRoutes } from "./routes";
+import { UuidParamSchema } from "../../schemas/domain/platform/param-schemas";
+import { rewardReferralsRoutes, signupReferralsAuthRoutes } from "./routes";
+import { RewardReferralAttributionResponseSchema, RewardReferralAttributionSchema, RewardReferralLinkResponseSchema } from "./schemas/reward-referrals";
 import { SignupReferralDashboardSchema, SignupReferralRefereeItemSchema, SignupReferralRefereeListQuerySchema } from "./schemas/signup-referrals";
 
 /** Contract leaves composed into `apiContract.auth` (signupReferralsDashboard, signupReferralsReferees). */
@@ -21,5 +23,21 @@ export const signupReferralsAuthContract = {
 		path: signupReferralsAuthRoutes.signupReferralsReferees,
 		input: SignupReferralRefereeListQuerySchema,
 		response: paginatedResponse(SignupReferralRefereeItemSchema),
+	}),
+};
+
+/** Contract leaves composed into `apiContract.referrals`. */
+export const rewardReferralsContract = {
+	createLink: defineContract({
+		method: "POST",
+		path: rewardReferralsRoutes.createLink,
+		input: z.object({ rewardId: UuidParamSchema }).strict(),
+		response: singleResponse(RewardReferralLinkResponseSchema),
+	}),
+	recordAttribution: defineContract({
+		method: "POST",
+		path: rewardReferralsRoutes.recordAttribution,
+		input: RewardReferralAttributionSchema,
+		response: singleResponse(RewardReferralAttributionResponseSchema),
 	}),
 };

@@ -8,19 +8,20 @@ import { TestQueryClientProvider } from "@/test/query-client";
 import { REWARD_IMAGE_FILE_RULES, REWARD_IMAGE_RULES, RewardImageNotPublishedError, useUploadRewardImage, type UploadedRewardImage } from "../use-upload-reward-image";
 
 const TENANT_ID = "0d5c7a3e-2b8f-4e61-9c4d-7a1b2c3d4e5f";
+const TENANT_SLUG = "jonker-street-kitchen";
 const FILE_ID = "4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b";
 const PUBLIC_URL = `https://cdn.example.com/stores/${TENANT_ID}/reward-images/${FILE_ID}.webp`;
 const API = { files: {} };
 
-const { uploadFileDirect, waitForFileReady } = vi.hoisted(() => ({
-	uploadFileDirect: vi.fn(),
+const { uploadTenantFileDirect, waitForFileReady } = vi.hoisted(() => ({
+	uploadTenantFileDirect: vi.fn(),
 	waitForFileReady: vi.fn<(api: object, fileId: string) => Promise<CompleteFileUploadResponse>>(),
 }));
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({ useAuth: (): object => ({ api: API }) }));
 vi.mock("@workspace/client/lib/storage/direct-upload", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@workspace/client/lib/storage/direct-upload")>();
-	return { ...actual, uploadFileDirect, waitForFileReady };
+	return { ...actual, uploadTenantFileDirect, waitForFileReady };
 });
 
 function readyFile(publicUrl: string | null): CompleteFileUploadResponse {
@@ -46,23 +47,23 @@ function imageFile(type = "image/webp", sizeBytes = 2048): File {
 
 afterEach((): void => {
 	cleanup();
-	uploadFileDirect.mockReset();
+	uploadTenantFileDirect.mockReset();
 	waitForFileReady.mockReset();
 });
 
 describe("useUploadRewardImage", () => {
 	it("uploads the image as the tenant's REWARD_IMAGE, waits for the checks, and returns the published image", async () => {
-		uploadFileDirect.mockResolvedValue({ fileId: FILE_ID });
+		uploadTenantFileDirect.mockResolvedValue({ fileId: FILE_ID });
 		waitForFileReady.mockResolvedValue(readyFile(PUBLIC_URL));
 		const { result } = renderHook(useUploadRewardImage, { wrapper: TestQueryClientProvider });
 		const file = imageFile();
 
 		let image: UploadedRewardImage | undefined;
 		await act(async (): Promise<void> => {
-			image = await result.current.mutateAsync({ tenantId: TENANT_ID, file });
+			image = await result.current.mutateAsync({ tenantSlug: TENANT_SLUG, file });
 		});
 
-		expect(uploadFileDirect).toHaveBeenCalledWith(API, { category: "REWARD_IMAGE", tenantId: TENANT_ID, fileName: "kuih.webp", mimeType: "image/webp" }, file);
+		expect(uploadTenantFileDirect).toHaveBeenCalledWith(API, TENANT_SLUG, { category: "REWARD_IMAGE", fileName: "kuih.webp", mimeType: "image/webp" }, file);
 		expect(waitForFileReady).toHaveBeenCalledWith(API, FILE_ID);
 		expect(image).toEqual({ fileId: FILE_ID, url: PUBLIC_URL });
 	});
@@ -71,22 +72,22 @@ describe("useUploadRewardImage", () => {
 		const { result } = renderHook(useUploadRewardImage, { wrapper: TestQueryClientProvider });
 
 		act((): void => {
-			result.current.mutate({ tenantId: TENANT_ID, file: imageFile("application/pdf") });
+			result.current.mutate({ tenantSlug: TENANT_SLUG, file: imageFile("application/pdf") });
 		});
 
 		await waitFor((): void => {
 			expect(result.current.error?.name).toBe("ImageFileRejectedError");
 		});
-		expect(uploadFileDirect).not.toHaveBeenCalled();
+		expect(uploadTenantFileDirect).not.toHaveBeenCalled();
 	});
 
 	it("refuses an image that passed the checks but has no public copy", async () => {
-		uploadFileDirect.mockResolvedValue({ fileId: FILE_ID });
+		uploadTenantFileDirect.mockResolvedValue({ fileId: FILE_ID });
 		waitForFileReady.mockResolvedValue(readyFile(null));
 		const { result } = renderHook(useUploadRewardImage, { wrapper: TestQueryClientProvider });
 
 		act((): void => {
-			result.current.mutate({ tenantId: TENANT_ID, file: imageFile() });
+			result.current.mutate({ tenantSlug: TENANT_SLUG, file: imageFile() });
 		});
 
 		await waitFor((): void => {

@@ -91,7 +91,7 @@ export const PolicyConditionsSchema = PolicyRuleSchema;
 
 export type PolicyConditions = z.infer<typeof PolicyConditionsSchema>;
 
-export const PermissionScopeSchema = z.enum(["GLOBAL", "TENANT", "STORE", "LOCATION", "RESOURCE", "OWN"]);
+export const PermissionScopeSchema = z.enum(["GLOBAL", "TENANT", "LOCATION", "RESOURCE", "OWN"]);
 
 export type PermissionScope = z.infer<typeof PermissionScopeSchema>;
 
@@ -122,7 +122,7 @@ export type AuthorizationAttributes = z.infer<typeof AuthorizationAttributesSche
 /**
  * Authorization context - the subject performing an action.
  *
- * `tenantId` / `storeId` / `locationId` must only ever be populated from a
+ * `tenantId` / `locationId` must only ever be populated from a
  * server-verified membership (see `AuthorizationContextResolver`); the kernel
  * re-verifies them before any TENANT / LOCATION scoped grant applies.
  */
@@ -130,8 +130,6 @@ export const AuthorizationContextSchema = z
 	.object({
 		userId: z.string(),
 		tenantId: z.string().optional(),
-		/** Active store — only honoured after the kernel verifies a store membership. */
-		storeId: z.string().optional(),
 		locationId: z.string().optional(),
 		roles: z.array(z.string()).optional(),
 		attributes: AuthorizationAttributesSchema.optional(),
@@ -225,15 +223,9 @@ export type OwnershipRowFilter = z.output<typeof OwnershipRowFilterSchema>;
 /**
  * Restricts rows to a tenant scope: the tenant (optionally narrowed to
  * one location) or a single location. When both are present they are
- * conjunctive — a location condition never widens past the org boundary.
+ * conjunctive — a location condition never widens past the tenant boundary.
  */
 export const TenantRowFilterSchema = z.union([
-	z
-		.object({
-			tenantId: z.string(),
-			storeId: z.string(),
-		})
-		.strict(),
 	z
 		.object({
 			tenantId: z.string(),

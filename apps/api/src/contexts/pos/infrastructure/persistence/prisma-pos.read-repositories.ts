@@ -17,6 +17,7 @@ import type { MerchantAccessGrant } from "../../../../platform/application/ports
 import { fetchListPage, mapListResult, toPaginatedServiceResult } from "../../../../platform/infrastructure/persistence/list-page";
 import { timestampIdKeyset, type ListKeyset } from "../../../../platform/infrastructure/persistence/list-query/keyset-cursor";
 import type { PrismaReadExecutor } from "../../../../platform/infrastructure/unit-of-work/prisma-read-executor";
+import { createTenantsTransactionalPorts } from "../../../tenancy/public-api";
 import type { ApiKeyReadPort, RedemptionReadPort, TerminalReadPort } from "../../application/ports/pos-read.port";
 import {
 	buildApiKeyListOrder,
@@ -154,6 +155,11 @@ export class PrismaRedemptionReadRepository implements RedemptionReadPort {
 				count: (where: Prisma.RewardRedemptionWhereInput): Promise<number> => db.rewardRedemption.count({ where }),
 				findMany: (args): Promise<RedemptionListRow[]> => db.rewardRedemption.findMany({ ...args, include: REDEMPTION_LIST_INCLUDE }),
 			});
+			// One query for the page: which of its customers the merchant banned (the log's "Banned" badge).
+			const banned = await createTenantsTransactionalPorts(db).customerStanding.bannedCustomers(
+				grant.tenantId,
+				page.items.map((row: RedemptionListRow): string => row.userId),
+			);
 			return toPaginatedServiceResult(
 				mapListResult(page, (row: RedemptionListRow): MerchantRedemptionListItem => ({
 					redemptionId: row.id,
@@ -161,6 +167,7 @@ export class PrismaRedemptionReadRepository implements RedemptionReadPort {
 					redeemedAt: epochMs(Number(row.redeemedAt)),
 					terminalId: row.terminalId,
 					redemptionMethod: row.redemptionMethod,
+					customerBanned: banned.has(row.userId),
 				})),
 				query,
 			);

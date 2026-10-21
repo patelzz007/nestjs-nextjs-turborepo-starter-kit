@@ -27,7 +27,7 @@ This is what happens to every HTTP request, step by step (spec §74):
  4. RestrictedSessionGuard    blocks restricted sessions (email / MFA not done)
  5. AuthorizationGuard        ← THIS PAGE
       a. validate the token version (revoked tokens → 401)
-      b. resolve + verify the tenant (:tenantSlug) and any store / location (x-store-id, route, query, body)
+      b. resolve + verify the tenant (:tenantSlug) and any location (route, query, body)
       c. SuperAdmin? → audited bypass
       d. enforce every decorator through the Kernel (audited)
       e. compute hasAdminAccess
@@ -111,16 +111,16 @@ An `AuthorizationRequest` looks like:
 
 ```ts
 {
-  subject: { userId: "u-1", tenantId: "org-a", storeId: "store-1", isSuperAdmin: false },
+  subject: { userId: "u-1", tenantId: "tenant-a", locationId: "location-1", isSuperAdmin: false },
   action: "UPDATE",
   resource: "ORDER",
   resourceId: "order-123",                          // optional
-  resourceAttributes: { tenantId: "org-a", storeId: "store-1", status: "PENDING" }, // optional
+  resourceAttributes: { tenantId: "tenant-a", locationId: "location-1", status: "PENDING" }, // optional
 }
 ```
 
 > [!IMPORTANT]
-> `subject.tenantId`, `storeId` and `locationId` are **claims**. The kernel
+> `subject.tenantId` and `locationId` are **claims**. The kernel
 > re-verifies them against memberships every time. Passing a forged tenant gets
 > `DENY`, not "access to that tenant".
 
@@ -172,7 +172,7 @@ batched queries (no N+1, spec §58):
 | Source | Scope used |
 |---|---|
 | Role permissions (`UserRole` → `RolePermission`), **including parent roles** | the permission row's scope |
-| Store membership roles (`StoreMembership.roleId`) | **always `STORE`, bound to that store** — a store role can never grant platform-wide access |
+| Location roles (`MembershipLocationScope.roleId`) | **always `LOCATION`, bound to that location** — a location role can never grant tenant- or platform-wide access |
 | User `ALLOW` overrides (`user_permissions.effect = ALLOW`) | the permission row's scope |
 | Implicit self grants | `OWN` — see below |
 | User `DENY` overrides | collected separately as **denials** |
@@ -187,14 +187,13 @@ complete list. Deleting your own account still needs an assigned permission.
 |---|---|---|
 | `GLOBAL` | always | platform staff (`Admin`, `Manager`) |
 | `TENANT` | the request has a **verified** tenant **and** (for a specific record) the record's `tenantId` matches | tenant-wide roles |
-| `STORE` | the request has a **verified** store, the grant is bound to that store (store memberships), and the record's `storeId` matches | `Store Manager`, `Store Staff` |
-| `LOCATION` | verified location, record's `locationId` matches | location-scoped roles |
+| `LOCATION` | the request has a **verified** location, the grant is bound to it (a location role) or covers it, and the record's `locationId` matches | `Location Manager`, `Location Staff` |
 | `OWN` | a specific record is targeted **and** the DB says the caller owns it | customers (`User` role) |
 | `RESOURCE` | never by itself — only through explicit ACL entries | — |
 
 > [!WARNING]
-> For `TENANT` / `STORE` / `LOCATION` grants on a **specific record**, the kernel
-> needs to know the record's tenant (`resourceAttributes.tenantId` / `storeId` /
+> For `TENANT` / `LOCATION` grants on a **specific record**, the kernel
+> needs to know the record's tenant (`resourceAttributes.tenantId` /
 > `locationId`). If you do not pass it, the grant does **not** apply (fail closed).
 
 ### 5.3 Ownership
@@ -254,7 +253,7 @@ There is **no** `eval`, no stored JavaScript (spec §43).
 - **Operators:** `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`,
   `starts_with`, `ends_with`, `greater_than`, `greater_than_or_equals`, `less_than`,
   `less_than_or_equals`, `exists`, `not_exists`.
-- **Fields:** `$user.<key>` (subject: `userId`, `tenantId`, `storeId`, `locationId`,
+- **Fields:** `$user.<key>` (subject: `userId`, `tenantId`, `locationId`,
   `Role`, `isSuperAdmin`, or custom attributes), `$resource.<key>`, `<resource>.<key>`
   (e.g. `order.status`), or a bare key (resource attribute).
 - `value` is a literal; `valueRef` points at another field.
@@ -304,7 +303,7 @@ Never load everything and filter in JavaScript (spec §32, §57). Ask the kernel
 `where` fragment:
 
 ```ts
-const where = await kernel.filter({ userId, tenantId, storeId }, "LIST", "REDEMPTION");
+const where = await kernel.filter({ userId, tenantId, locationId }, "LIST", "REDEMPTION");
 return prisma.rewardRedemption.findMany({ where: { AND: [where, { /* your own filters */ }] } });
 ```
 
@@ -312,15 +311,14 @@ return prisma.rewardRedemption.findMany({ where: { AND: [where, { /* your own fi
 |---|---|
 | SuperAdmin, a `GLOBAL` grant, or a type-wide ACL `ALLOW` | `{}` (no restriction — RLS still applies) |
 | `TENANT` grant + verified org | `{ tenantId }` |
-| `STORE` grants | `{ tenantId, storeId }` per store (only the active store when one is selected) |
-| `LOCATION` grant | `{ tenantId, locationId }` |
+| `LOCATION` grants (location roles, location-scoped members) | `{ tenantId, locationId }` per location (only the selected location when one is named) |
 | `OWN` grant | `{ userId }` (`{ id: { in: [userId] } }` for `USER` / `PROFILE`) |
 | resource-specific ACL `ALLOW`s | `{ id: { in: [...] } }` |
 | several of the above | `{ OR: [...] }` |
 | resource-specific ACL `DENY`s | wrapped as `{ AND: [base, { NOT: { id: { in: [...] } } }] }` |
 | nothing / DENY override / type-wide ACL DENY / unconditional DENY policy / forged tenant | `{ id: { in: [] } }` → **no rows** |
 
-> Your table must use these column names (`tenantId`, `storeId`, `locationId`,
+> Your table must use these column names (`tenantId`, `locationId`,
 > `userId`, `id`) for the filter to apply. Row-level **conditions** (e.g. "status must be
 > PAID") are enforced per operation with `authorize()`, not in the filter.
 
@@ -459,11 +457,12 @@ new capability does not compile until it is mapped.
 
 ## 13. Files
 
-Every authenticated `/files` operation is authorized per file category by `FileAuthorizationService`
-(`modules/files/services/file-authorization.service.ts`). The controller loads the file, asks the
-service, then acts.
+Every authenticated `/files` operation is authorized per file category by `FileCategoryAccessRegistry`
+(`contexts/files/application/ports/file-category-access.port.ts`), into which each category's owner
+registers its rule. Tenant-owned categories upload through `POST /tenants/:tenantSlug/files/upload-url`:
+the tenant is the one the route resolved and the guard verified, never a body field.
 
-| Category | Upload (`POST /files/upload-url`), complete, delete | Read (`GET /files/:id`, `GET /files/:id/download-url`) |
+| Category | Upload (`POST /files/upload-url`, tenant categories `POST /tenants/:tenantSlug/files/upload-url`), complete, delete | Read (`GET /files/:id`, `GET /files/:id/download-url`) |
 |---|---|---|
 | `USER_AVATAR` | upload: own account only; afterwards the uploader | the uploader |
 | `PRODUCT_IMAGE` | upload: `PRODUCT:UPDATE` on that product (kernel); afterwards the uploader | the uploader |
@@ -508,8 +507,8 @@ POST /api/v1/authorization/decisions
 | `Admin` | admin-panel permissions (users, reports, geo, rewards, merchants, stores, …) — `GLOBAL` |
 | `Manager` | limited admin panel — `GLOBAL` |
 | `User` | customers: **`OWN`-scoped** `PROFILE`, `ANALYTICS` |
-| `Store Manager` | `STORE`-scoped: store read / update, rewards read / list, redemptions create / read / list |
-| `Store Staff` | `STORE`-scoped: store read, rewards read / list, redemptions create |
+| `Location Manager` | `LOCATION`-scoped: location read / update, rewards read / list, redemptions create / read / list |
+| `Location Staff` | `LOCATION`-scoped: location read, rewards read / list, redemptions create |
 
 Seeded ABAC examples (`prisma/seed/authorization-kernel.ts`): *completed orders are immutable*
 (DENY), *payment update limit* (conditional ALLOW), *inventory same tenant* (conditional ALLOW).

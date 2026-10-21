@@ -22,6 +22,7 @@ import {
 	ShieldCheck,
 	TrendingUp,
 	Users,
+	UserX,
 	Zap,
 	type LucideIcon,
 } from "lucide-react";
@@ -51,4 +52,5 @@ export const MERCHANT_MENU_ICON_MAP: Readonly<Record<string, LucideIcon>> = {
 	CircleUser,
 	MonitorSmartphone,
 	Palette,
+	UserX,
 };

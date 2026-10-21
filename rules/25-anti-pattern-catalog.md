@@ -119,7 +119,7 @@ const r = Schema.safeParse(x); if (!r.success) throw new ValidationError(r.error
 
 ```ts
 // ❌ separate DTO class + separate zod schema + hand-written Swagger
-// ✅ one schema in packages/contracts feeding validation, types, and OpenAPI
+// ✅ one schema in packages/shared feeding validation, types, and OpenAPI
 ```
 
 ```ts

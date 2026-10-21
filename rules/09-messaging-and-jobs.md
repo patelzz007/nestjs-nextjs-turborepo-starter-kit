@@ -273,7 +273,7 @@ await flow.add({
 
 ## Kafka schema registry
 
-For a Kafka deployment of any real scale, register event schemas in a schema registry (Confluent Schema Registry or equivalent) rather than relying purely on the zod schema living in `packages/contracts` as the only enforcement point — a schema registry additionally protects against a producer accidentally publishing a schema-incompatible message that a consumer written in a completely different language/stack (outside this TypeScript monorepo) would have no way to validate against the same zod schema. Treat the zod schema in `packages/contracts` and the registry schema as two views of the same contract, kept in sync deliberately, not as redundant, independently-evolving sources of truth (echoing `05-contracts-zod-api.md`'s "never hand-maintain a second source of truth" principle, applied at the cross-service level).
+For a Kafka deployment of any real scale, register event schemas in a schema registry (Confluent Schema Registry or equivalent) rather than relying purely on the zod schema living in `packages/shared` as the only enforcement point — a schema registry additionally protects against a producer accidentally publishing a schema-incompatible message that a consumer written in a completely different language/stack (outside this TypeScript monorepo) would have no way to validate against the same zod schema. Treat the zod schema in `packages/shared` and the registry schema as two views of the same contract, kept in sync deliberately, not as redundant, independently-evolving sources of truth (echoing `05-contracts-zod-api.md`'s "never hand-maintain a second source of truth" principle, applied at the cross-service level).
 
 ## Poison messages and quarantine
 
@@ -393,4 +393,4 @@ Backoff: exponential with jitter (base delay × 2^attempt ± random), capped, wi
 
 ## Event catalog
 
-Maintain a catalog (in `packages/contracts`, next to the schemas) listing every event: name+version, producer, consumers, partition key, retention, and the schema. "Who consumes `order.created.v1`?" must be answerable by search, before you change it.
+Maintain a catalog (in `packages/shared`, next to the schemas) listing every event: name+version, producer, consumers, partition key, retention, and the schema. "Who consumes `order.created.v1`?" must be answerable by search, before you change it.

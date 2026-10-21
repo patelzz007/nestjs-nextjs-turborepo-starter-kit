@@ -98,7 +98,7 @@ describe("RLS hardening (integration)", () => {
 		});
 	});
 
-	it("allows MLK owner to create org-wide API keys when tenant org context matches", async () => {
+	it("allows MLK owner to create tenant-wide API keys when tenant tenant context matches", async () => {
 		await withRlsSession(pool, { userId: REWARD_SEED_IDS.mlkOwnerUser, tenantId: TENANT_SEED_IDS.mlkTenant, bypass: false }, async (client) => {
 			await client.query("BEGIN");
 			try {

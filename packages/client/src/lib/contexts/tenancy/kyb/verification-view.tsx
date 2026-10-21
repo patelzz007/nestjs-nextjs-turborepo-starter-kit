@@ -259,7 +259,7 @@ function MerchantKybVerificationContent({ tenantSlug, profile }: MerchantKybVeri
 			const uploadController = new AbortController();
 			uploadAbortRef.current = uploadController;
 			void catchCaught(
-				submitMerchantKyb(api, tenantSlug, parsed.data, values.documents, profile.tenantId, uploadController.signal).then((response): void => {
+				submitMerchantKyb(api, tenantSlug, parsed.data, values.documents, uploadController.signal).then((response): void => {
 					setValues(profileToFieldValues(response));
 					setStep("business");
 					setSuccessMessage(
@@ -268,7 +268,7 @@ function MerchantKybVerificationContent({ tenantSlug, profile }: MerchantKybVeri
 							: "Business verification updated. Our team will review your details.",
 					);
 					// This tenant's KYB profile (restarts the SCANNING poll) and the
-					// views that carry its KYB status: the org context and the memberships.
+					// views that carry its KYB status: the tenant context and the memberships.
 					void queryClient.invalidateQueries({ queryKey: apiRouter.tenants.kyb.get.scopeKey({ tenantSlug }) });
 					void queryClient.invalidateQueries({ queryKey: apiRouter.tenants.context.scopeKey({ tenantSlug }) });
 					void queryClient.invalidateQueries({ queryKey: apiRouter.tenants.membershipsBootstrap.scopeKey(undefined) });
@@ -283,7 +283,7 @@ function MerchantKybVerificationContent({ tenantSlug, profile }: MerchantKybVeri
 				setIsSubmitting(false);
 			});
 		},
-		[api, tenantSlug, profile.kybStatus, profile.tenantId, queryClient, values],
+		[api, tenantSlug, profile.kybStatus, queryClient, values],
 	);
 
 	const handleBack = React.useCallback((): void => {

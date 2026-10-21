@@ -58,10 +58,17 @@ code as **Code expired** until then. Admins see the referrer and referral status
 and profile, and can filter the list with **Referred by** and **Referral status**. Detail:
 [ADR 035](../adr/035-signup-referrals.md).
 
-> [!IMPORTANT]
-> **Reward referrals — not built yet:** the API has no endpoint for a customer to *create* a
-> reward-scoped referral (invite link or attribution token). Sub-pages under Referrals (Invite
-> Friends, My Referrals, Earnings) stay disabled. Crediting reward referrals at checkout is
-> implemented. See [known gaps](../technical/README.md#known-gaps).
+### Sharing a reward with a friend
+
+On a reward whose referrals are on, a signed-in customer sees **Share with a friend** under the
+offer. Each press makes a new link (`/rewards/<reward>?ref=<token>`) — one link credits one
+friend — and opens the phone's share sheet, or copies the link on a computer. Up to 20 unused
+links per reward can be open at a time.
+
+A friend who opens the link is remembered on their account for **7 days**: signed in, it is saved
+at once (a guest keeps the link through sign-in). When they claim that reward within the window,
+the claim is attached to the referral, and the referrer is credited when the friend redeems it at
+checkout. Opening your own link does nothing. Sub-pages under Referrals (Invite Friends, My
+Referrals, Earnings) stay disabled.
 
 Technical detail: [POS integration → Referrals](../technical/pos-integration.md#checkout).

@@ -25,6 +25,7 @@ export function redeemableClaim(patch: Partial<RedeemableClaim> = {}): Redeemabl
 		locationScopeType: "ALL_LOCATIONS",
 		locationIds: [],
 		minSpendMinor: null,
+		customerBanned: false,
 		...patch,
 	};
 }

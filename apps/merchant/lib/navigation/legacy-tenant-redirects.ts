@@ -6,7 +6,7 @@ export interface RedirectRule {
 }
 
 /**
- * The merchant app's tenant URLs moved from `/orgs/[orgSlug]` to `/t/[tenantSlug]`
+ * The merchant app's tenant URLs moved from `/orgs/[tenantSlug]` to `/t/[tenantSlug]`
  * (multi-tenancy plan MT-07). Old bookmarks, email links and `?redirect=` targets keep
  * working: every `/orgs/<slug>` path, and everything below it, redirects permanently to
  * the same path under `/t/<slug>`. Next.js answers a permanent redirect with 308, which,

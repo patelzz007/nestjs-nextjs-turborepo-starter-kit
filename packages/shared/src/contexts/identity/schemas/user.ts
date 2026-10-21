@@ -115,6 +115,39 @@ export type UpdateUserInput = z.output<typeof UpdateUserSchema>;
  * This schema should ONLY be used for SuperAdmin/Admin endpoints where the
  * caller has explicit permission to view account security state.
  */
+/** Longest reason a platform admin can record when banning an account. */
+export const USER_BAN_REASON_MAX_LENGTH = 500;
+
+/** A platform ban on an account (`POST /auth/admin/users/:userId/ban`); visible to platform admins only. */
+export const AdminUserBanStateSchema = z.object({
+	bannedAt: EpochMsSchema,
+	reason: z.string(),
+	/** The admin who banned the account; null when that account no longer exists. */
+	bannedBy: z.object({ id: z.uuid(), fullName: z.string() }).nullable(),
+});
+
+export type AdminUserBanState = z.output<typeof AdminUserBanStateSchema>;
+
+/** Ban an account: it can no longer sign in, and every session it has is revoked. */
+export const AdminUserBanSchema = z
+	.object({
+		reason: z.string().trim().min(1).max(USER_BAN_REASON_MAX_LENGTH).meta({
+			description: "Why the account is banned (shown to platform admins only)",
+			example: "Repeated chargeback fraud reported by three merchants",
+		}),
+	})
+	.strict();
+
+export type AdminUserBanInput = z.output<typeof AdminUserBanSchema>;
+
+/** The account's ban state after a ban or an unban. */
+export const AdminUserBanResultSchema = z.object({
+	userId: z.uuid(),
+	ban: AdminUserBanStateSchema.nullable(),
+});
+
+export type AdminUserBanResult = z.output<typeof AdminUserBanResultSchema>;
+
 export const AdminUserDetailSchema = UserResponseSchema.extend({
 	permissions: z.array(PermissionDetailsSchema),
 	failedLoginAttempts: z.number().int().min(0).meta({
@@ -134,12 +167,15 @@ export const AdminUserDetailSchema = UserResponseSchema.extend({
 	signupReferralStatus: SignupReferralStatusSchema.nullable().meta({
 		description: "Whether the user's signup referral has been redeemed at checkout",
 	}),
+	ban: AdminUserBanStateSchema.nullable().meta({
+		description: "The platform ban on the account (null = not banned)",
+	}),
 });
 
 export type AdminUserDetail = z.output<typeof AdminUserDetailSchema>;
 
-/** Derived account state the admin user list filters on (`isActive` + `lockedUntil`). */
-export const AdminUserStatusSchema = z.enum(["active", "inactive", "locked"]);
+/** Derived account state the admin user list filters on (`isActive` + `lockedUntil` + `bannedAt`). */
+export const AdminUserStatusSchema = z.enum(["active", "inactive", "locked", "banned"]);
 export type AdminUserStatus = z.output<typeof AdminUserStatusSchema>;
 
 /** `GET /auth/admin/users` list query — see docs/technical/api/list-queries.md. */

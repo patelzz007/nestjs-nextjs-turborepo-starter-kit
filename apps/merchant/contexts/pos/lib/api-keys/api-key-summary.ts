@@ -22,7 +22,7 @@ interface ApiKeyRevokedAtFilter {
 	readonly revokedAt: { readonly isNull: boolean };
 }
 
-/** `GET /t/:orgSlug/api-keys` input for one view of the list. */
+/** `GET /t/:tenantSlug/api-keys` input for one view of the list. */
 export interface ApiKeyListQueryInput {
 	readonly tenantSlug: string;
 	readonly page: number;

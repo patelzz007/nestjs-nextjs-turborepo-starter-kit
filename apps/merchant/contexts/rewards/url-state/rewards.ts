@@ -1,6 +1,6 @@
 // The rewards catalog's view lives in the URL (ADR 023, docs/technical/api/list-queries.md §7): the status
 // tab and the page within it — shareable, refresh-safe and undone by Back. The tab is a server filter: the
-// catalog asks `GET /t/:orgSlug/rewards` for that tab's statuses, one page at a time. The STORE is not URL
+// catalog asks `GET /t/:tenantSlug/rewards` for that tab's statuses, one page at a time. The STORE is not URL
 // state — it is the member's choice, owned by the tenant-context feature store, and joins the request as the
 // `locationId` scope.
 
@@ -34,7 +34,7 @@ export type RewardsQueryInput = Pick<TableListQueryInput<TableFilterState>, "pag
 	readonly filter: { readonly status: { readonly in: RewardStatus[] } };
 };
 
-/** The `GET /t/:orgSlug/rewards` input for the open tab (`groupId`, already resolved) and the URL's page. */
+/** The `GET /t/:tenantSlug/rewards` input for the open tab (`groupId`, already resolved) and the URL's page. */
 export function toRewardsQuery(tenantSlug: string, locationId: string | undefined, state: RewardsUrlState, groupId: RewardStatusGroupId): RewardsQueryInput {
 	const { page, limit, cursor, sort } = listStateToListQuery(merchantRewardListQuery, { pagination: state, sort: state.sort });
 	return {

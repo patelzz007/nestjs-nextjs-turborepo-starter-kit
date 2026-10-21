@@ -1,4 +1,4 @@
-import type { CreateFileUploadUrlInput, FileCategory } from "@workspace/shared";
+import type { FileUploadRequest, FileCategory } from "@workspace/shared";
 
 import {
 	fileForbidden,
@@ -14,7 +14,7 @@ import {
 export class UserAvatarFileAccessRule implements FileCategoryAccessRule {
 	public readonly categories: readonly FileCategory[] = ["USER_AVATAR"];
 
-	public assertCanUpload(actor: FileActor, request: CreateFileUploadUrlInput): Promise<void> {
+	public assertCanUpload(actor: FileActor, request: FileUploadRequest): Promise<void> {
 		return isOwnPersonalUpload(actor.userId, request) ? Promise.resolve() : Promise.reject(fileForbidden("upload", "Cannot upload an avatar for another user"));
 	}
 

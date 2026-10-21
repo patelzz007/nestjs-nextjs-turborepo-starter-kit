@@ -75,7 +75,7 @@ describe("POS checkout (e2e)", () => {
 	const referredRewardId = randomUUID();
 	const referrerRewardId = randomUUID();
 	/** Extra KL keys (removed afterwards): a tenant-wide one and a throwaway one to lock. */
-	const orgWideKey = `mk_test_${randomBytes(TOKEN_BYTES).toString("base64url")}`;
+	const tenantWideKey = `mk_test_${randomBytes(TOKEN_BYTES).toString("base64url")}`;
 	const lockoutKey = `mk_test_${randomBytes(TOKEN_BYTES).toString("base64url")}`;
 	/** Unknown backup codes count toward a key's lockout — this file never sends them with the shared demo key. */
 	const guessingKey = `mk_test_${randomBytes(TOKEN_BYTES).toString("base64url")}`;
@@ -220,7 +220,7 @@ describe("POS checkout (e2e)", () => {
 		await insertReward(storeOnlyRewardId, "E2E store-only reward", { scope: "SELECTED" });
 		await insertReward(referrerRewardId, "E2E referrer reward", { kind: "REFERRER" });
 		await insertReward(referredRewardId, "E2E referred reward", { referrerRewardId });
-		await insertKlKey(orgWideKey, "E2E tenant-wide key", null);
+		await insertKlKey(tenantWideKey, "E2E tenant-wide key", null);
 		await insertKlKey(lockoutKey, "E2E lockout key", TENANT_SEED_IDS.klLocation);
 		await insertKlKey(guessingKey, "E2E unknown-code key", TENANT_SEED_IDS.klLocation);
 	});
@@ -448,7 +448,7 @@ describe("POS checkout (e2e)", () => {
 			"checkout",
 			{ idempotencyKey: randomUUID(), billTotalMinor: BILL_MINOR, currency: "MYR", codes: [{ token: claim.token }] },
 			"E2E-ORG-WIDE-TILL",
-			orgWideKey,
+			tenantWideKey,
 		);
 		expect(unknownStore.statusCode).toBe(422);
 		expect(errorCodeOf(unknownStore)).toBe("STORE_REQUIRED");
@@ -511,7 +511,7 @@ describe("POS checkout (e2e)", () => {
 			"checkout",
 			{ idempotencyKey, billTotalMinor: BILL_MINOR, currency: "MYR", codes: [{ token: unknownStoreClaim.token }] },
 			"E2E-ORG-WIDE-TILL",
-			orgWideKey,
+			tenantWideKey,
 		);
 		expect(first.statusCode, first.body).toBe(201);
 		const storeClaim = await createClaim(aliceId);

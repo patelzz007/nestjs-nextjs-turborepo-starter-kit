@@ -1,6 +1,6 @@
 "use client";
 
-import { useMerchantCapabilities } from "@/contexts/tenancy/lib/org/capabilities";
+import { useMerchantCapabilities } from "@/contexts/tenancy/lib/tenant/capabilities";
 import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
 import type { CapabilitySlug } from "@workspace/shared";
 import * as React from "react";

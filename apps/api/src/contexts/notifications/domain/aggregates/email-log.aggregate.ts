@@ -1,8 +1,8 @@
 import { EmailLogStatusSchema, type EmailLogStatus, type EpochMs } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
-import { CorruptEmailLogStateError } from "../errors/notifications.errors";
 import { EmailAttemptFinalized } from "../events/email-log-updated.event";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /**
  * Allowed source statuses for each incoming status. A row only moves FORWARD
@@ -53,7 +53,7 @@ export class EmailLog extends AggregateRoot<EmailAttemptFinalized> {
 	public static rehydrate(state: EmailLogState): EmailLog {
 		const status = EmailLogStatusSchema.safeParse(state.status);
 		if (!status.success) {
-			throw new CorruptEmailLogStateError(state.id);
+			throw new CorruptAggregateStateError("email log", state.id);
 		}
 		return new EmailLog(state.id, state.templateKey, state.to, status.data);
 	}
@@ -62,7 +62,7 @@ export class EmailLog extends AggregateRoot<EmailAttemptFinalized> {
 	public static parseStoredStatus(emailLogId: string, status: string): EmailLogStatus {
 		const parsed = EmailLogStatusSchema.safeParse(status);
 		if (!parsed.success) {
-			throw new CorruptEmailLogStateError(emailLogId);
+			throw new CorruptAggregateStateError("email log", emailLogId);
 		}
 		return parsed.data;
 	}

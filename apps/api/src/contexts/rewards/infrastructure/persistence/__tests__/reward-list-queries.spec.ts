@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { MerchantAccessGrant } from "../../../../tenancy/public-api";
+import type { MerchantAccessGrant } from "../../../../../platform/application/ports/authorization.port";
 import { buildTenantRewardListOrder, buildTenantRewardListWhere, tenantRewardWhere, rewardAvailabilityWhere } from "../reward-list-queries";
 
 const TENANT_ID = "7a2d3b63-0b4f-4e49-8b66-1e2f3a4b5c6d";

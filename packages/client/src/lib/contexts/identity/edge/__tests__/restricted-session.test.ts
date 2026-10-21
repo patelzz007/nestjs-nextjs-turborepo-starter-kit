@@ -35,7 +35,7 @@ describe("getEnrollmentRedirectPath", () => {
 		expect(getEnrollmentRedirectPath("web", "mfa_enrollment")).toBe("/dashboard/account");
 	});
 
-	it("sends merchant to the org-scoped account page when the tenant slug is known", () => {
+	it("sends merchant to the tenant-scoped account page when the tenant slug is known", () => {
 		expect(getEnrollmentRedirectPath("merchant", "email_verification", "brew-bean-kl")).toBe("/t/brew-bean-kl/account");
 	});
 

@@ -3,7 +3,7 @@ import { LIST_SLOT_INDEX, PERMISSION, type CapabilitySlug } from "@workspace/sha
 import { describe, expect, it } from "vitest";
 
 import { MERCHANT_INVITES_FEATURE } from "@/lib/feature-flags";
-import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
+import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import { ADMIN_MENU_AUTHORIZATION, applyMenuAuthorization } from "@/lib/navigation/menu-authorization";
 import { ADMIN_ROUTE_AUTHORIZATION, filterMenuByRouteAccess, type RouteAccessSession } from "@/lib/navigation/route-authorization";
 import type { SidebarMenuData } from "@/lib/navigation/sidebar";

@@ -1,6 +1,6 @@
 "use client";
 
-import type { FileCategory, FileRecord } from "@workspace/shared";
+import type { FileRecord, PlatformFileCategory } from "@workspace/shared";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Label } from "@workspace/ui/components/label";
@@ -13,7 +13,7 @@ import { catchCaught } from "../caught";
 
 export interface DirectUploadFileFieldProps {
 	readonly api: ApiClient<ApiRouter>;
-	readonly category: FileCategory;
+	readonly category: PlatformFileCategory;
 	readonly label: string;
 	readonly binding: Omit<DirectUploadInput, "category" | "fileName" | "mimeType">;
 	readonly value: FileRecord | null;

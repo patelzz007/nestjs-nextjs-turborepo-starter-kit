@@ -1,10 +1,18 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { hasGlobalConstructor, hasGlobalValue, isBrowserRuntime } from "../global-runtime";
+import { hasGlobalConstructor, hasGlobalValue, hasMethod, isBrowserRuntime } from "../global-runtime";
 
 describe("global-runtime", () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();
+	});
+
+	it("hasMethod is true only for a callable member of the host object", () => {
+		const host = { share: (): void => undefined, title: "not callable" };
+
+		expect(hasMethod(host, "share")).toBe(true);
+		expect(hasMethod(host, "title")).toBe(false);
+		expect(hasMethod(host, "missing")).toBe(false);
 	});
 
 	it("hasGlobalConstructor is true for a callable global", () => {

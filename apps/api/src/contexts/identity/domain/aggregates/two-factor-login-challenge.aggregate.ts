@@ -1,14 +1,9 @@
 import { epochMs, type EpochMs } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
-import {
-	CorruptIdentityStateError,
-	MfaChallengeAlreadyUsedError,
-	MfaChallengeAttemptsExhaustedError,
-	MfaChallengeExpiredError,
-	MfaChallengePurposeMismatchError,
-} from "../errors/identity.errors";
+import { MfaChallengeAlreadyUsedError, MfaChallengeAttemptsExhaustedError, MfaChallengeExpiredError, MfaChallengePurposeMismatchError } from "../errors/identity.errors";
 import type { IdentityEvent } from "../events/identity.events";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** Milliseconds per minute. */
 const MS_PER_MINUTE = 60_000;
@@ -74,7 +69,7 @@ export class TwoFactorLoginChallenge extends AggregateRoot<IdentityEvent> {
 
 	public static rehydrate(state: TwoFactorLoginChallengeState): TwoFactorLoginChallenge {
 		if (state.attemptCount < 0 || state.maxAttempts < 1) {
-			throw new CorruptIdentityStateError("two_factor_login_challenge", `challenge ${state.id} has invalid attempt counters`);
+			throw new CorruptAggregateStateError("two_factor_login_challenge", null, `challenge ${state.id} has invalid attempt counters`);
 		}
 		return new TwoFactorLoginChallenge(state);
 	}

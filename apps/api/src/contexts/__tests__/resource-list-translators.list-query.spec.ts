@@ -102,8 +102,9 @@ describe("admin users", () => {
 			AND: [{ OR: [{ fullName: { contains: "ann", mode: "insensitive" } }, { email: { contains: "ann", mode: "insensitive" } }] }, { lockedUntil: { gt: NOW } }],
 		});
 		expect(buildAdminUserListWhere(AdminUserListQuerySchema.parse({ filter: { status: "inactive", role: "Editor" } }), NOW)).toEqual({
-			AND: [{ isActive: false }, { userRoles: { some: { isDeleted: false, role: { name: "Editor", isDeleted: false } } } }],
+			AND: [{ isActive: false, bannedAt: null }, { userRoles: { some: { isDeleted: false, role: { name: "Editor", isDeleted: false } } } }],
 		});
+		expect(buildAdminUserListWhere(AdminUserListQuerySchema.parse({ filter: { status: "banned" } }), NOW)).toEqual({ AND: [{ bannedAt: { not: null } }] });
 	});
 
 	it("sorts by name with a tie-breaker", () => {
@@ -167,11 +168,12 @@ describe("audit and email logs", () => {
 });
 
 describe("rewards", () => {
-	it("only lists live consumer rewards in the marketplace, filtering city through the merchant profile and by merchant", () => {
+	it("only lists live consumer rewards of operating merchants in the marketplace, filtering city through the merchant profile and by merchant", () => {
 		const query = RewardListQuerySchema.parse({ filter: { category: "cafe", city: { in: "MELAKA" } } });
 		expect(buildMarketplaceWhere(query, NOW)).toEqual({
 			AND: [
 				{ isDeleted: false, status: "PUBLISHED", rewardKind: "CONSUMER", quantityRemaining: { gt: 0 }, expiryDate: { gte: NOW } },
+				{ tenant: { isDeleted: false, lifecycleState: "ACTIVE" } },
 				{ category: { equals: "cafe" } },
 				{ tenant: { merchantProfile: { city: { in: ["MELAKA"] } } } },
 			],

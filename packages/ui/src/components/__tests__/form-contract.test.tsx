@@ -13,7 +13,7 @@ afterEach((): void => {
 	cleanup();
 });
 
-// Rule 20 — ref forwarding: RHF `register()` and focus management attach a
+// Rule 20 — ref forwarding: form libraries and focus management attach a
 // ref to the actual DOM control, so every form primitive must forward it.
 describe("form primitives forward refs (rule 20)", () => {
 	it("Input forwards its ref to the native input", (): void => {

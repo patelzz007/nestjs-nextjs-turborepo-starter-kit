@@ -83,7 +83,8 @@ function lastOptions(): DashboardQueryOptions | undefined {
 
 /** Opens a labelled filter menu and picks an option (the shared DropdownMenu). */
 async function chooseFilter(label: string, option: string): Promise<void> {
-	fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${label} `) }));
+	// The range controls are their own `next/dynamic` chunk: wait for it, not just the first render.
+	fireEvent.click(await screen.findByRole("button", { name: new RegExp(`^${label} `) }));
 	fireEvent.click(await screen.findByRole("menuitemradio", { name: option }));
 }
 

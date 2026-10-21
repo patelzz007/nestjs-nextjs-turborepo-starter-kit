@@ -88,15 +88,6 @@ export class KybEvidenceRetainedError extends DomainError {
 	}
 }
 
-/** A persisted stored-file row violates an invariant; it is never loaded as a valid aggregate (§spec-7.3). */
-export class CorruptStoredFileStateError extends DomainError {
-	public readonly code: DomainErrorCode = "CORRUPT_AGGREGATE_STATE";
-
-	public constructor(fileId: string) {
-		super("Stored file state cannot be loaded.", { aggregateId: fileId });
-	}
-}
-
 /**
  * Thrown by an owner's in-transaction handler when the resource a READY file is
  * bound to no longer exists (a product removed mid-scan). The verdict

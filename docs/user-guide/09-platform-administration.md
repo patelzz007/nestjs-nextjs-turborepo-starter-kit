@@ -3,7 +3,7 @@ title: "9. Platform administration"
 description: "Users, roles and permissions, the audit log, email templates and log, geography and catalog data in the admin panel."
 order: 10
 author: "Product & Platform Team"
-lastUpdated: 1791244800000
+lastUpdated: 1792540800000
 coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
 tags: ["user-guide", "admin", "rbac", "audit"]
 ---
@@ -18,6 +18,25 @@ Everything here happens in the **admin panel**. Each screen needs a permission (
 **Users → All users**: search, open a user, see roles and status, unlock a locked account.
 **Users → MFA recovery**: approve or deny recovery requests
 ([Account and security](./10-account-and-security.md#lost-your-authenticator-mfa-recovery)).
+**Ban / unban** (SuperAdmin, on a user's page): a ban needs a reason, signs the account out on
+every device and stops it signing in; unban restores it. You cannot ban yourself or another
+SuperAdmin. Both are audited, and **Banned** is a status filter on the user list.
+**Users → Support access**: time-boxed access to a merchant's data
+([Account and security](./10-account-and-security.md#support-access-time-boxed-access-to-a-merchant)).
+
+## Merchants: suspension, bans and appeals
+
+Open a merchant (**Merchants → All merchants → its name**) to see its lifecycle. **Suspend** (with a
+reason) pauses its portal and rewards; its members see a suspension screen, the owner can send one
+appeal at a time, and other members can leave the merchant. **Reinstate** (with a reason) ends the
+suspension; **Reject** answers a pending appeal with a note the owner sees. A merchant whose owner
+asked for deletion can be reactivated by that owner until the grace period ends.
+
+**Ban merchant** (SuperAdmin only, with a reason) is harder than a suspension: the merchant cannot
+appeal, a pending appeal is closed, its rewards leave the marketplace and cannot be claimed, and
+its tills stop working. Its members see a "banned" screen; everyone but the owner can leave.
+**Lift ban** (with a reason) makes the merchant active again. **Banned** is a status filter on the
+merchant list. The seeded **Lucky Gold Traders** is banned, for trying it out.
 
 ## Roles and permissions (Settings → Access control)
 

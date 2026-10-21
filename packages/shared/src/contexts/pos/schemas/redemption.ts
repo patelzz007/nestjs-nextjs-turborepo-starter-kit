@@ -118,9 +118,10 @@ export type RedemptionCheckoutInput = z.output<typeof RedemptionCheckoutSchema>;
  * Why a scanned code cannot be redeemed right now (`null` when it can).
  * `STORE_REQUIRED`: the reward is limited to selected stores, but the call
  * carries no store (a tenant-wide key with an unregistered terminal id),
- * so the till must be registered to its store first.
+ * so the till must be registered to its store first. `CUSTOMER_BANNED`: the
+ * merchant banned this customer from its rewards.
  */
-export const RedemptionInvalidReasonSchema = z.enum(["ALREADY_REDEEMED", "EXPIRED", "NOT_VALID_AT_STORE", "STORE_REQUIRED"]);
+export const RedemptionInvalidReasonSchema = z.enum(["ALREADY_REDEEMED", "EXPIRED", "NOT_VALID_AT_STORE", "STORE_REQUIRED", "CUSTOMER_BANNED"]);
 
 export type RedemptionInvalidReason = z.output<typeof RedemptionInvalidReasonSchema>;
 
@@ -163,6 +164,8 @@ export const MerchantRedemptionListItemSchema = z.object({
 	redeemedAt: EpochMsSchema,
 	terminalId: z.string(),
 	redemptionMethod: RewardRedemptionMethodSchema,
+	/** The customer behind this redemption is banned from the merchant's rewards right now. */
+	customerBanned: z.boolean(),
 });
 
 export type MerchantRedemptionListItem = z.output<typeof MerchantRedemptionListItemSchema>;

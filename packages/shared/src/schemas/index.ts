@@ -246,6 +246,10 @@ export {
 	CompleteFileUploadSchema,
 	CreateFileUploadUrlResponseSchema,
 	CreateFileUploadUrlSchema,
+	CreateTenantFileUploadUrlSchema,
+	parseFileUploadRequest,
+	PlatformFileCategorySchema,
+	TenantFileCategorySchema,
 	DEFAULT_DOCUMENT_UPLOAD_POLICY,
 	DocumentMimeTypeSchema,
 	FILE_CATEGORY_POLICIES,
@@ -286,6 +290,10 @@ export type {
 	CompleteFileUploadResponse,
 	CreateFileUploadUrlInput,
 	CreateFileUploadUrlResponse,
+	CreateTenantFileUploadUrlInput,
+	FileUploadRequest,
+	PlatformFileCategory,
+	TenantFileCategory,
 	DocumentMimeType,
 	FileCategory,
 	FileCategoryPolicy,
@@ -802,8 +810,12 @@ export type {
 } from "../contexts/reference-data/schemas/geo";
 
 export {
+	AdminUserBanResultSchema,
+	AdminUserBanSchema,
+	AdminUserBanStateSchema,
 	AdminUserDetailSchema,
 	AdminUserListQuerySchema,
+	USER_BAN_REASON_MAX_LENGTH,
 	adminUserListQuery,
 	AdminUserStatusSchema,
 	PermissionDetailsSchema,
@@ -815,6 +827,9 @@ export {
 	UserPermissionsSchema,
 } from "../contexts/identity/schemas/user";
 export type {
+	AdminUserBanInput,
+	AdminUserBanResult,
+	AdminUserBanState,
 	AdminUserDetail,
 	AdminUserListQuery,
 	AdminUserListSortField,
@@ -949,6 +964,8 @@ export {
 	GITHUB_TIMELINE_EVENT_DETAIL_MAX_LENGTH,
 	GITHUB_TIMELINE_PAGE_SIZE,
 	GITHUB_TOKEN_MAX_LENGTH,
+	GITHUB_NEW_TOKEN_URL,
+	GITHUB_TOKEN_REQUIRED_PERMISSIONS,
 	GithubAccountHealthSchema,
 	GithubAccountStatusSchema,
 	GithubActorSchema,
@@ -1158,7 +1175,7 @@ export {
 	AdminMerchantListQuerySchema,
 	adminMerchantListQuery,
 	TenantRewardMembershipResponseSchema,
-	MerchantOrgResponseSchema,
+	MerchantTenantResponseSchema,
 	OwnMembershipListQuerySchema,
 	ownMembershipListQuery,
 } from "../contexts/tenancy/schemas/merchant";
@@ -1249,7 +1266,7 @@ export {
 	UNCATEGORISED_MERCHANT_CATEGORY_LABEL,
 	MerchantBusinessCategorySchema,
 	MerchantMemberRoleSchema,
-	MerchantOrgStatusSchema,
+	MerchantTenantStatusSchema,
 	PilotCitySchema,
 	PILOT_CITY_LABELS,
 	PILOT_CITY_TIME_ZONES,
@@ -1317,6 +1334,15 @@ export {
 } from "../contexts/rewards/schemas/reward-enums";
 export { RewardRedemptionMethodSchema, RewardTerminalIdHeaderSchema } from "../contexts/pos/schemas/pos-enums";
 export { RewardReferralStatusSchema } from "../contexts/referrals/schemas/referral-enums";
+export {
+	REWARD_REFERRAL_ATTRIBUTION_TTL_DAYS,
+	REWARD_REFERRAL_OPEN_LINK_LIMIT,
+	REWARD_REFERRAL_QUERY_PARAM,
+	RewardReferralAttributionResponseSchema,
+	RewardReferralAttributionSchema,
+	RewardReferralAttributionTokenSchema,
+	RewardReferralLinkResponseSchema,
+} from "../contexts/referrals/schemas/reward-referrals";
 export {
 	CapabilityCatalogQuerySchema,
 	CapabilityDefinitionSchema,
@@ -1493,7 +1519,7 @@ export type {
 	OwnMembershipListQuery,
 	OwnMembershipListSortField,
 	TenantRewardMembershipResponse,
-	MerchantOrgResponse,
+	MerchantTenantResponse,
 } from "../contexts/tenancy/schemas/merchant";
 export type {
 	AdminKybUpdateInput,
@@ -1569,7 +1595,7 @@ export type {
 	KybDocumentScanStatus,
 	MerchantBusinessCategory,
 	MerchantMemberRole,
-	MerchantOrgStatus,
+	MerchantTenantStatus,
 	PilotCity,
 	DisplayRegion,
 } from "../contexts/tenancy/schemas/tenant-enums";
@@ -1614,8 +1640,53 @@ export type { RewardBackupCode, RewardClaimStatus, RewardOtpPurpose } from "../c
 export type { RewardCategory, RewardKind, RewardRules, RewardStatus, RewardType } from "../contexts/rewards/schemas/reward-enums";
 export type { RewardRedemptionMethod } from "../contexts/pos/schemas/pos-enums";
 export type { RewardReferralStatus } from "../contexts/referrals/schemas/referral-enums";
-export { MerchantErrorCodeSchema, MerchantErrorCodes, type MerchantErrorCode } from "../contexts/tenancy/schemas/merchant-error-codes";
+export type {
+	RewardReferralAttributionInput,
+	RewardReferralAttributionResponse,
+	RewardReferralAttributionToken,
+	RewardReferralLinkResponse,
+} from "../contexts/referrals/schemas/reward-referrals";
+export {
+	MerchantErrorCodeSchema,
+	MerchantErrorCodes,
+	TenantAccessErrorCodeSchema,
+	type MerchantErrorCode,
+	type TenantAccessErrorCode,
+} from "../contexts/tenancy/schemas/merchant-error-codes";
 export { TenancyModeSchema, TenantIdSchema, type TenancyMode, type TenantId } from "../contexts/tenancy/schemas/tenancy-mode";
+export {
+	AdminTenantAppealParamSchema,
+	AdminTenantAppealRejectSchema,
+	AdminTenantLifecycleChangeSchema,
+	TENANT_LIFECYCLE_TEXT_MAX_LENGTH,
+	TenantAppealCreateSchema,
+	TenantAppealStatusSchema,
+	TenantLifecycleResponseSchema,
+	TenantMembershipLeaveResponseSchema,
+	TenantSuspensionAppealResponseSchema,
+	type AdminTenantAppealParam,
+	type AdminTenantAppealRejectInput,
+	type AdminTenantLifecycleChangeInput,
+	type TenantAppealCreateInput,
+	type TenantAppealStatus,
+	type TenantLifecycleResponse,
+	type TenantMembershipLeaveResponse,
+	type TenantSuspensionAppealResponse,
+} from "../contexts/tenancy/schemas/tenant-lifecycle";
+export {
+	TENANT_CUSTOMER_BAN_LIST_DEFAULT_LIMIT,
+	TENANT_CUSTOMER_BAN_REASON_MAX_LENGTH,
+	TenantCustomerBanCreateSchema,
+	TenantCustomerBanListQuerySchema,
+	TenantCustomerBanParamSchema,
+	TenantCustomerBanResponseSchema,
+	tenantCustomerBanListQuery,
+	type TenantCustomerBanCreateInput,
+	type TenantCustomerBanListQuery,
+	type TenantCustomerBanListSortField,
+	type TenantCustomerBanParam,
+	type TenantCustomerBanResponse,
+} from "../contexts/tenancy/schemas/customer-bans";
 export {
 	AdminCreateTenantInviteSchema,
 	AuthorizationPolicyDraftResponseSchema,
@@ -1639,6 +1710,7 @@ export {
 	TenantTeamInvitePreviewSchema,
 	TenantTeamInviteRegisterAcceptSchema,
 	TenantTeamInviteTokenSchema,
+	TENANT_OPERATING_LIFECYCLE_STATE,
 	TenantLifecycleStateSchema,
 	AdminLocationRequestListQuerySchema,
 	adminLocationRequestListQuery,
@@ -1654,9 +1726,9 @@ export {
 	LocationIdParamSchema,
 	LocationCloseSchema,
 	LocationCloseResponseSchema,
-	TenantMemberStoreParamSchema,
-	TenantMemberStoreRemoveSchema,
-	TenantMemberStoreRemoveResponseSchema,
+	TenantMemberLocationParamSchema,
+	TenantMemberLocationRemoveSchema,
+	TenantMemberLocationRemoveResponseSchema,
 	TENANT_LOCATION_CLOSURE_REASON_MAX_LENGTH,
 	LocationResponseSchema,
 	LocationScopeTypeSchema,
@@ -1681,8 +1753,13 @@ export {
 	TenantTeamGrantableRoleSchema,
 	TENANT_SCOPE_MAX_LOCATION_IDS,
 	SupportAccessGrantModeSchema,
+	SupportAccessGrantDetailSchema,
+	SupportAccessGrantDetailListSchema,
+	SupportAccessGrantListQuerySchema,
+	supportAccessGrantListQuery,
 	SupportAccessGrantRequestSchema,
 	SupportAccessGrantResponseSchema,
+	TENANT_SUPPORT_ACCESS_LIST_LIMIT,
 	SupportAccessGrantStatusSchema,
 	TenantPlacementKindSchema,
 	TenantMemberInviteListQuerySchema,
@@ -1732,9 +1809,9 @@ export type {
 	LocationIdParam,
 	LocationCloseInput,
 	LocationCloseResponse,
-	TenantMemberStoreParam,
-	TenantMemberStoreRemoveInput,
-	TenantMemberStoreRemoveResponse,
+	TenantMemberLocationParam,
+	TenantMemberLocationRemoveInput,
+	TenantMemberLocationRemoveResponse,
 	LocationResponse,
 	LocationScopeType,
 	LocationStatus,
@@ -1757,6 +1834,9 @@ export type {
 	TenantTeamGrantableRole,
 	SupportAccessGrantMode,
 	SupportAccessGrantRequestInput,
+	SupportAccessGrantDetail,
+	SupportAccessGrantListQuery,
+	SupportAccessGrantListSortField,
 	SupportAccessGrantResponse,
 	SupportAccessGrantStatus,
 	TenantPlacementKind,

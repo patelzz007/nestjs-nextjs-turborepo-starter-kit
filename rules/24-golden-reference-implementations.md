@@ -17,7 +17,7 @@ Which of those two styles a new use case uses is the tree in `rules/23-quick-ref
 
 ---
 
-## 1. Shared contract (`packages/contracts/src/reward.ts`)
+## 1. Shared contract (`packages/shared/src/contexts/rewards/schemas/reward.ts`)
 
 ```ts
 import { z } from 'zod';

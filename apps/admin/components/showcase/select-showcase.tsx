@@ -1,6 +1,6 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "@tanstack/react-form";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Button } from "@workspace/ui/components/button";
@@ -25,8 +25,9 @@ import {
 import { toastMessage } from "@workspace/ui/components/toast";
 import * as React from "react";
 import { useCallback, useState } from "react";
-import { Controller, useForm, type ControllerFieldState, type ControllerRenderProps } from "react-hook-form";
 import { z } from "zod";
+
+import { useFormSubmitHandler } from "@/components/common/form-fields";
 
 // ── Demo data — the smart layer owns every option and value (rule 9/10) ─────
 
@@ -88,7 +89,7 @@ function groupOptions(options: readonly DemoOption[]): readonly (readonly DemoOp
 	return DEPARTMENTS.map((department) => options.filter((option) => option.group === department)).filter((group) => group.length > 0);
 }
 
-/** Zod schema for the RHF demo — lives at the smart/page layer (rule 18: validation is external). */
+/** Zod schema for the TanStack Form demo — lives at the smart/page layer (rule 18: validation is external). */
 const teamFormSchema = z.object({
 	language: z.string().min(1, "Pick a language"),
 	teams: z.array(z.string()).min(2, "Pick at least 2 teams"),
@@ -139,112 +140,6 @@ export function SelectShowcase(): React.JSX.Element {
 	const clearTeams = useCallback((): void => {
 		setTeams([]);
 	}, []);
-
-	// ── RHF + zod (rule 18) ──────────────────────────────────────────────────
-	const {
-		control,
-		handleSubmit,
-		reset,
-		setValue,
-		getValues,
-		formState: { errors, isSubmitting },
-	} = useForm<TeamFormValues>({
-		resolver: zodResolver(teamFormSchema),
-		defaultValues: teamFormDefaultValues,
-	});
-
-	// Chip removal inside the RHF card mutates the *form* field, not the demo's
-	// standalone `teams` state (rule 9/10: the smart component owns the data).
-	// `getValues` reads the live form state and is referentially stable, so this
-	// callback stays stable for the memoized `SelectChip` (rule 16).
-	const removeFormTeam = useCallback(
-		(value: string): void => {
-			setValue(
-				"teams",
-				getValues("teams").filter((item) => item !== value),
-				{ shouldValidate: true },
-			);
-		},
-		[getValues, setValue],
-	);
-
-	const clearFormTeams = useCallback((): void => {
-		setValue("teams", [], { shouldValidate: true });
-	}, [setValue]);
-
-	const onSubmit = useCallback(
-		(values: TeamFormValues): void => {
-			toastMessage.success({ title: `Saved: ${values.language} · ${values.teams.join(", ")}` });
-			reset(teamFormDefaultValues);
-		},
-		[reset],
-	);
-
-	// RHF's `handleSubmit` returns a promise; the form's onSubmit expects a void
-	// callback, so delegate explicitly (rule 15: explicit return type).
-	const handleFormSubmit = useCallback(
-		(event: React.SyntheticEvent<HTMLFormElement>): void => {
-			void handleSubmit(onSubmit)(event);
-		},
-		[handleSubmit, onSubmit],
-	);
-
-	// Clearing the RHF language field resets it to the schema's empty-string
-	// default and re-validates immediately — the min(1) error reappears (the
-	// exact behaviour a form user expects from a clear affordance).
-	const clearLanguageField = useCallback((): void => {
-		setValue("language", "", { shouldValidate: true });
-	}, [setValue]);
-
-	// Named render-props for the two Controller fields (rule 16: no inline
-	// arrows in props). Each returns the controlled Select for its field.
-	const renderLanguageField = useCallback(
-		({ field, fieldState }: { readonly field: ControllerRenderProps<TeamFormValues, "language">; readonly fieldState: ControllerFieldState }): React.JSX.Element => (
-			<Select items={LANGUAGES} value={field.value} onValueChange={field.onChange} invalid={fieldState.invalid} ariaLabel="Language">
-				<SelectTrigger>
-					<SelectValue placeholder="Pick a language…" />
-					{field.value !== "" ? <SelectClear onClear={clearLanguageField} /> : null}
-				</SelectTrigger>
-				<SelectContent>
-					{LANGUAGES.map((option) => (
-						<SelectItem key={option.value} value={option.value}>
-							{option.label}
-						</SelectItem>
-					))}
-				</SelectContent>
-			</Select>
-		),
-		[clearLanguageField],
-	);
-
-	const renderTeamsField = useCallback(
-		({ field, fieldState }: { readonly field: ControllerRenderProps<TeamFormValues, "teams">; readonly fieldState: ControllerFieldState }): React.JSX.Element => (
-			<div className="flex items-center gap-2">
-				<Select multiple items={TEAMS} value={field.value} onValueChange={field.onChange} invalid={fieldState.invalid} ariaLabel="Teams">
-					<SelectTrigger>
-						{field.value.length > 0 ? (
-							<SelectChips>
-								{field.value.map((value) => (
-									<SelectChip key={value} value={value} label={formatTeamLabel(value)} onRemove={removeFormTeam} />
-								))}
-							</SelectChips>
-						) : (
-							<SelectValue placeholder="Pick teams…" />
-						)}
-					</SelectTrigger>
-					<SelectContent>
-						{TEAMS.map((option) => (
-							<SelectItem key={option.value} value={option.value}>
-								{option.label}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-				{field.value.length > 0 ? <SelectClearAll onClearAll={clearFormTeams} /> : null}
-			</div>
-		),
-		[removeFormTeam, clearFormTeams],
-	);
 
 	return (
 		<div className="grid gap-4 px-4 py-4 lg:grid-cols-2 lg:px-6">
@@ -465,39 +360,132 @@ export function SelectShowcase(): React.JSX.Element {
 				</CardContent>
 			</Card>
 
-			{/* ── 6. React Hook Form + zod (rule 18) ── */}
-			<Card>
-				<CardHeader>
-					<CardTitle>React Hook Form + zod</CardTitle>
-					<CardDescription>Controller pattern · zodResolver · aria-invalid + FieldError · clear resets + re-validates</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<form onSubmit={handleFormSubmit} className="grid gap-4" noValidate>
-						<Field>
-							<FieldLabel>Language</FieldLabel>
-							<FieldContent>
-								<Controller control={control} name="language" render={renderLanguageField} />
-								<FieldError>{errors.language?.message}</FieldError>
-							</FieldContent>
-						</Field>
-
-						<Field>
-							<FieldLabel>Teams (min 2)</FieldLabel>
-							<FieldContent>
-								{" "}
-								<Controller control={control} name="teams" render={renderTeamsField} />
-								<FieldError>{errors.teams?.message}</FieldError>
-							</FieldContent>
-						</Field>
-
-						<div className="flex items-center justify-end gap-2">
-							<Button type="submit" disabled={isSubmitting}>
-								{isSubmitting ? "Saving…" : "Save assignment"}
-							</Button>
-						</div>
-					</form>
-				</CardContent>
-			</Card>
+			{/* ── 6. TanStack Form + zod (rule 18) ── */}
+			<TeamAssignmentForm />
 		</div>
 	);
+}
+
+/**
+ * TanStack Form + zod (rule 18): both selects are controlled `form.Field`s, the schema validates on
+ * change and on submit, and clearing a field re-validates at once (the min-length error comes back,
+ * as a form user expects from a clear affordance). The chips edit the form's value, not the demo's
+ * standalone state (rule 9/10).
+ */
+function TeamAssignmentForm(): React.JSX.Element {
+	const form = useForm({
+		defaultValues: teamFormDefaultValues,
+		validators: { onChange: teamFormSchema, onSubmit: teamFormSchema },
+		onSubmit: ({ value, formApi }): void => {
+			toastMessage.success({ title: `Saved: ${value.language} · ${value.teams.join(", ")}` });
+			formApi.reset(teamFormDefaultValues);
+		},
+	});
+	const submit = useCallback((): Promise<void> => form.handleSubmit(), [form]);
+	const handleFormSubmit = useFormSubmitHandler(submit);
+
+	const clearLanguageField = useCallback((): void => {
+		form.setFieldValue("language", "");
+	}, [form]);
+	// The single select reports `null` once cleared; the form keeps the schema's empty-string default instead.
+	const handleLanguageChange = useCallback(
+		(value: string | null): void => {
+			form.setFieldValue("language", value ?? "");
+		},
+		[form],
+	);
+	const removeFormTeam = useCallback(
+		(value: string): void => {
+			form.setFieldValue("teams", (current: string[]): string[] => current.filter((item) => item !== value));
+		},
+		[form],
+	);
+	const clearFormTeams = useCallback((): void => {
+		form.setFieldValue("teams", []);
+	}, [form]);
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle>TanStack Form + zod</CardTitle>
+				<CardDescription>Controlled fields · Standard Schema validation · aria-invalid + FieldError · clear resets + re-validates</CardDescription>
+			</CardHeader>
+			<CardContent>
+				<form onSubmit={handleFormSubmit} className="grid gap-4" noValidate>
+					<form.Field name="language">
+						{(field) => (
+							<Field>
+								<FieldLabel>Language</FieldLabel>
+								<FieldContent>
+									<Select items={LANGUAGES} value={field.state.value} onValueChange={handleLanguageChange} invalid={field.state.meta.errors.length > 0} ariaLabel="Language">
+										<SelectTrigger>
+											<SelectValue placeholder="Pick a language…" />
+											{field.state.value !== "" ? <SelectClear onClear={clearLanguageField} /> : null}
+										</SelectTrigger>
+										<SelectContent>
+											{LANGUAGES.map((option) => (
+												<SelectItem key={option.value} value={option.value}>
+													{option.label}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<FieldError errors={field.state.meta.errors} />
+								</FieldContent>
+							</Field>
+						)}
+					</form.Field>
+
+					<form.Field name="teams">
+						{(field) => (
+							<Field>
+								<FieldLabel>Teams (min 2)</FieldLabel>
+								<FieldContent>
+									<div className="flex items-center gap-2">
+										<Select multiple items={TEAMS} value={field.state.value} onValueChange={field.handleChange} invalid={field.state.meta.errors.length > 0} ariaLabel="Teams">
+											<SelectTrigger>
+												{field.state.value.length > 0 ? (
+													<SelectChips>
+														{field.state.value.map((value) => (
+															<SelectChip key={value} value={value} label={formatTeamLabel(value)} onRemove={removeFormTeam} />
+														))}
+													</SelectChips>
+												) : (
+													<SelectValue placeholder="Pick teams…" />
+												)}
+											</SelectTrigger>
+											<SelectContent>
+												{TEAMS.map((option) => (
+													<SelectItem key={option.value} value={option.value}>
+														{option.label}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+										{field.state.value.length > 0 ? <SelectClearAll onClearAll={clearFormTeams} /> : null}
+									</div>
+									<FieldError errors={field.state.meta.errors} />
+								</FieldContent>
+							</Field>
+						)}
+					</form.Field>
+
+					<div className="flex items-center justify-end gap-2">
+						<form.Subscribe selector={selectIsSubmitting}>
+							{(isSubmitting) => (
+								<Button type="submit" disabled={isSubmitting}>
+									{isSubmitting ? "Saving…" : "Save assignment"}
+								</Button>
+							)}
+						</form.Subscribe>
+					</div>
+				</form>
+			</CardContent>
+		</Card>
+	);
+}
+
+/** The slice of form state the submit button follows. */
+function selectIsSubmitting(state: { readonly isSubmitting: boolean }): boolean {
+	return state.isSubmitting;
 }

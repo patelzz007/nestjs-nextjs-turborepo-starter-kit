@@ -9,7 +9,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
-import { LinkGithubAccountSchema, type GithubAccountStatus } from "@workspace/shared";
+import { GITHUB_NEW_TOKEN_URL, LinkGithubAccountSchema, type GithubAccountStatus } from "@workspace/shared";
 import * as React from "react";
 import { Linking, Text, View } from "react-native";
 
@@ -31,8 +31,6 @@ import { useToast } from "../../../features/toast/facade";
 import { accountSummary, REQUIRED_TOKEN_PERMISSIONS, TOKEN_LINKED_MESSAGE, TOKEN_UNLINKED_MESSAGE } from "./labels";
 import { refreshAllPullRequests } from "./refresh";
 
-/** GitHub's page that creates a fine-grained personal access token. */
-export const GITHUB_NEW_TOKEN_URL = "https://github.com/settings/personal-access-tokens/new";
 export const OPEN_GITHUB_TOKENS_FAILED_MESSAGE = "Couldn't open GitHub. Create the token on github.com and paste it here.";
 
 /** "Linked as … 3 days ago" is re-read this often. */

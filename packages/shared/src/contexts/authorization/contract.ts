@@ -1,14 +1,26 @@
 // API contract leaves owned by the `authorization` context (plan §7: the backend owner of each
 // endpoint). Composed into `apiContract` (`src/contracts/index.ts`) with identical keys.
 
+import { z } from "zod";
+
 import { defineContract } from "../../contracts/define-contract";
 import { paginatedResponse, singleResponse } from "../../contracts/response";
-import { adminRbacRoutes, capabilitiesRoutes } from "./routes";
+import { adminRbacRoutes, capabilitiesRoutes, supportAccessRoutes } from "./routes";
 import { CapabilityCatalogQuerySchema, CapabilityCatalogResponseSchema } from "./schemas/capabilities";
 import { AssignPermissionToUserSchema, AssignRoleToUserSchema, CheckPermissionSchema, SyncUserPermissionsSchema, SyncUserRolesSchema } from "./schemas/rbac";
 import { RbacMessageResponseSchema } from "./schemas/rbac-inspection";
 import { CheckPermissionResponseSchema, PermissionListItemSchema, PermissionListQuerySchema } from "./schemas/rbac-permissions";
 import { RoleListItemSchema, RoleListQuerySchema } from "./schemas/rbac-roles";
+import { MessageResponseSchema } from "../../schemas/api/message";
+import { UuidParamSchema } from "../../schemas/domain/platform/param-schemas";
+import {
+	SupportAccessGrantDetailListSchema,
+	SupportAccessGrantDetailSchema,
+	SupportAccessGrantListQuerySchema,
+	SupportAccessGrantRequestSchema,
+	SupportAccessGrantResponseSchema,
+	TenantSlugParamSchema,
+} from "../tenancy/schemas/tenant";
 
 /** Contract leaves composed into `apiContract.capabilities`. */
 export const capabilitiesContract = {
@@ -65,4 +77,38 @@ export const adminRbacContract = {
 			response: singleResponse(RbacMessageResponseSchema),
 		}),
 	},
+};
+
+/** Just-in-time support access: a platform admin requests a grant, the tenant owner approves it, it expires or is revoked. */
+export const supportAccessContract = {
+	list: defineContract({
+		method: "GET",
+		path: supportAccessRoutes.list,
+		input: SupportAccessGrantListQuerySchema,
+		response: paginatedResponse(SupportAccessGrantDetailSchema),
+	}),
+	tenantList: defineContract({
+		method: "GET",
+		path: supportAccessRoutes.tenantList,
+		input: TenantSlugParamSchema,
+		response: singleResponse(SupportAccessGrantDetailListSchema),
+	}),
+	request: defineContract({
+		method: "POST",
+		path: supportAccessRoutes.request,
+		input: SupportAccessGrantRequestSchema,
+		response: singleResponse(SupportAccessGrantResponseSchema),
+	}),
+	approve: defineContract({
+		method: "POST",
+		path: supportAccessRoutes.approve,
+		input: z.object({ grantId: UuidParamSchema }).strict(),
+		response: singleResponse(MessageResponseSchema),
+	}),
+	revoke: defineContract({
+		method: "POST",
+		path: supportAccessRoutes.revoke,
+		input: z.object({ grantId: UuidParamSchema }).strict(),
+		response: singleResponse(MessageResponseSchema),
+	}),
 };

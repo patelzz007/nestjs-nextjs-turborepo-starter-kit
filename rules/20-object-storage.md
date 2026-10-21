@@ -2,7 +2,7 @@
 
 ## Principle
 
-File/media storage goes through a dedicated storage adapter in `packages/database` or a dedicated `packages/storage` package — never direct, ad hoc SDK calls scattered through controllers or components.
+File/media storage goes through the API's storage adapter (`apps/api/src/platform/infrastructure/storage`, behind the files context's ports) — never direct, ad hoc SDK calls scattered through controllers or components.
 
 ```ts
 export interface ObjectStorage {

@@ -12,7 +12,7 @@ import type { SearchableMenuItem } from "@/lib/navigation/searchable-menu-items"
 import { ADMIN_PANEL_SIDEBAR_NAV_LABELS, ADMIN_SHELL_LABELS } from "@/lib/sidebar-labels";
 import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import type { CompiledSidebarMenuData, SidebarMenuData } from "@/lib/navigation/sidebar";
-import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
+import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import {
 	SidebarStoreProvider,
 	useSidebarCommands,

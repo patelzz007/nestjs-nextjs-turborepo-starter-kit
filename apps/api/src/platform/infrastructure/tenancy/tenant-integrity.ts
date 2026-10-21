@@ -26,8 +26,6 @@ export const TENANT_INTEGRITY_RELATIONS: readonly TenantIntegrityRelation[] = [
 	{ child: "RewardRedemption", foreignKey: "locationId", parent: "Location" },
 	{ child: "RewardSale", foreignKey: "apiKeyId", parent: "TenantApiKey" },
 	{ child: "RewardSale", foreignKey: "locationId", parent: "Location" },
-	{ child: "Store", foreignKey: "locationId", parent: "Location" },
-	{ child: "StoreMembership", foreignKey: "storeId", parent: "Store" },
 	{ child: "TenantApiKey", foreignKey: "locationId", parent: "Location" },
 	{ child: "TenantInvitationLocationScope", foreignKey: "locationId", parent: "Location" },
 	{ child: "TenantTerminal", foreignKey: "apiKeyId", parent: "TenantApiKey" },

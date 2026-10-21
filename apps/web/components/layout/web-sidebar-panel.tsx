@@ -4,7 +4,7 @@ import { useCanAccessWebPath } from "@/contexts/identity/components/route-access
 import { useWebSession } from "@/contexts/identity/components/web-authorization-provider";
 import { useWebBreadcrumb } from "@/components/breadcrumb-provider";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
-import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
+import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import { WEB_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
 import { USER_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveWebPinnedMenuItems } from "@/lib/navigation/pinned-items";
@@ -27,6 +27,7 @@ import { webProfileMenuItems } from "@/components/layout/web-profile-menu";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
+import { menuIconResolver } from "@workspace/ui/lib/sidebar/navigation/menu-icon";
 
 export interface WebSidebarPanelProps {
 	readonly userName: string | null;
@@ -36,8 +37,11 @@ function renderWebLink(href: string): React.ReactElement<PanelSidebarLinkProps> 
 	return <Link href={href} />;
 }
 
+/** Sidebar icons from the app's map; an unknown name shows an alert so the typo is visible. */
+const resolveMenuIcon = menuIconResolver(WEB_MENU_ICON_MAP, AlertCircle);
+
 function renderWebMenuIcon(iconName: string | undefined, className: string): React.ReactNode {
-	const Icon = iconName !== undefined ? (WEB_MENU_ICON_MAP[iconName] ?? AlertCircle) : AlertCircle;
+	const Icon = resolveMenuIcon(iconName);
 	return <Icon className={className} aria-hidden="true" />;
 }
 

@@ -4,6 +4,7 @@ import type { EpochMs } from "@workspace/shared";
 import type { MerchantPosSettingsPort, TenantsTransactionalPorts, TillTenantFacts } from "../../application/ports/merchant-pos-settings.port";
 import { isTenantOperating } from "../../domain/policies/tenant-operating.policy";
 import type { TenantExistencePort } from "../../application/ports/tenant-existence.port";
+import type { CustomerStandingPort } from "../../application/ports/customer-standing.port";
 import { createTenantAuditPort, TransactionTenantAuditWriter } from "../audit/tenant-audit.adapter";
 
 /** The merchant profile's POS policy on the caller's transaction. */
@@ -69,6 +70,27 @@ class TransactionTenantExistence implements TenantExistencePort {
 	}
 }
 
+/** The tenant's operating state and its customer bans on the caller's transaction. */
+class TransactionCustomerStanding implements CustomerStandingPort {
+	public constructor(private readonly db: Prisma.TransactionClient) {}
+
+	public async tenantOperates(tenantId: string): Promise<boolean> {
+		const tenant = await this.db.tenant.findUnique({ where: { id: tenantId }, select: { lifecycleState: true, isDeleted: true } });
+		return tenant !== null && isTenantOperating(tenant);
+	}
+
+	public async bannedCustomers(tenantId: string, customerUserIds: readonly string[]): Promise<ReadonlySet<string>> {
+		if (customerUserIds.length === 0) {
+			return new Set();
+		}
+		const rows = await this.db.tenantCustomerBan.findMany({
+			where: { tenantId, customerUserId: { in: [...new Set(customerUserIds)] }, liftedAt: null, isDeleted: false },
+			select: { customerUserId: true },
+		});
+		return new Set(rows.map((row): string => row.customerUserId));
+	}
+}
+
 /**
  * Tenant ports bound to ANOTHER context's unit-of-work transaction
  * (plan §5.4 cross-context scopes). Only other contexts' `infrastructure/`
@@ -78,6 +100,7 @@ export function createTenantsTransactionalPorts(db: Prisma.TransactionClient): T
 	return {
 		merchantPosSettings: new TransactionMerchantPosSettings(db),
 		existence: new TransactionTenantExistence(db),
+		customerStanding: new TransactionCustomerStanding(db),
 		audit: new TransactionTenantAuditWriter(db, createTenantAuditPort()),
 	};
 }

@@ -44,15 +44,15 @@ The exact package list can evolve as the product grows, but ownership of each pa
 
 | Adding... | Goes in | Why |
 |---|---|---|
-| A REST endpoint, NestJS module | `apps/api/src/modules/<feature>` | API-specific, owns HTTP concerns |
+| A REST endpoint, NestJS module | `apps/api/src/contexts/<context>` | API-specific, owns HTTP concerns |
 | A web page/route | `apps/web/src/app/...` | Web-specific routing/rendering |
 | A mobile screen | `apps/mobile/src/app/...` | Mobile-specific navigation |
 | A component used only on web, reused across 2+ features | `packages/ui` | Real reuse, web-only (shadcn/Radix) |
 | A low-level React Native component (button, input, sheet, badge, …) | `packages/ui-native` | Shared by every mobile app; the twin of `packages/ui`, same names (packages/ui-native/README.md) |
 | A component specific to one page | co-located with that route | Not yet reused — don't promote speculatively |
-| A zod schema shared between api and web/mobile | `packages/contracts` | Must be the same definition everywhere |
+| A zod schema shared between api and web/mobile | `packages/shared` | Must be the same definition everywhere |
 | A pure, framework-agnostic function used by 2+ apps | `packages/shared` | No framework dependency, genuine reuse |
-| Prisma schema/client/seed | `packages/database` | Single source of DB truth |
+| Prisma schema/migrations/seed | `apps/api/prisma` | Single source of DB truth; only the API touches the database |
 | Shared eslint/tsconfig | `packages/eslint-config`, `packages/typescript-config` | Config consistency across apps |
 | An API endpoint's client leaf, request/response handling, session transport, or a TanStack Query hook over the router | `packages/api-client` (core in `src/`, hooks in `src/react/`) | One client for web and mobile; it must stay free of Next, DOM and Node code |
 | Web-only API glue (Next server prefetch, route proxy refresh, cookie names, auth forms) | `packages/client` | Depends on `next` / `react-dom` / `server-only`, which the mobile app must never pull in |
@@ -62,18 +62,18 @@ The exact package list can evolve as the product grows, but ownership of each pa
 
 Say you're building a "resend invoice email" feature. Ask, in order:
 
-1. **Does this need HTTP-specific logic (auth, request parsing, response shaping)?** Yes → the endpoint/controller part lives in `apps/api/src/modules/invoices/`.
+1. **Does this need HTTP-specific logic (auth, request parsing, response shaping)?** Yes → the endpoint/controller part lives in `apps/api/src/contexts/invoices/`.
 2. **Does the actual "format an invoice email" logic need to run anywhere other than the API?** If web/mobile never need to independently render the same email template, that formatting logic stays inside `apps/api` — don't promote it to `packages/shared` just because it feels "generic." If, on the other hand, the web app *also* needs to render an invoice preview using the same formatting rules, then and only then does that formatting function move to `packages/shared`.
-3. **Does the invoice shape need to be known by web/mobile at all** (e.g. to render a confirmation)? If yes, the `Invoice` zod schema goes in `packages/contracts`, not hand-duplicated as a separate TypeScript type inside `apps/web`.
+3. **Does the invoice shape need to be known by web/mobile at all** (e.g. to render a confirmation)? If yes, the `Invoice` zod schema goes in `packages/shared`, not hand-duplicated as a separate TypeScript type inside `apps/web`.
 
 ```text
 ✅ DO:
-  apps/api/src/modules/invoices/application/resend-invoice.service.ts   (API-only orchestration)
-  packages/contracts/src/invoice.ts                                       (shared schema, if FE needs it)
+  apps/api/src/contexts/invoices/application/resend-invoice.service.ts   (API-only orchestration)
+  packages/shared/src/contexts/invoices/schemas/invoice.ts                                       (shared schema, if FE needs it)
 
 ❌ DON'T:
   apps/web/src/lib/invoice-email-formatter.ts   (duplicating API-only logic "just in case")
-  apps/api/src/modules/invoices/invoice.types.ts  (hand-duplicating packages/contracts's schema)
+  apps/api/src/contexts/invoices/invoice.types.ts  (hand-duplicating packages/shared's schema)
 ```
 
 ### The rule of thumb, restated
@@ -126,15 +126,15 @@ class UserRepository {
 ## Package dependency graph
 
 ```text
-apps/api      → packages/contracts, packages/database, packages/shared, packages/observability, packages/config
-apps/web      → packages/contracts, packages/shared, packages/ui, packages/config
+apps/api      → packages/shared, packages/messaging, packages/eslint-config + typescript-config (dev)
+apps/web      → packages/client, packages/shared, packages/ui, packages/tokens, packages/eslint-config + typescript-config (dev)
 apps/mobile   → packages/shared, packages/api-client (both entries), packages/ui-native, packages/tokens (generated mobile.css only), packages/eslint-config + typescript-config (dev)
                NEVER packages/client, packages/ui, next, react-dom, server-only, Node built-ins or AsyncStorage (lint-enforced: mobileImportBoundaryConfig)
 packages/client     → packages/api-client, packages/shared, packages/ui
 packages/api-client → packages/shared (core "."); + react, @tanstack/react-query ("./react" entry only)
-packages/ui   → packages/shared, packages/tokens (generated web.css), packages/config
+packages/ui   → packages/shared, packages/tokens (generated web.css), packages/eslint-config + typescript-config (dev)
 packages/ui-native → packages/shared, packages/tokens; react-native, Reanimated, Uniwind, Expo modules as PEER dependencies (the app's one copy)
-packages/shared → packages/config only
+packages/shared → no workspace package at runtime (zod only); eslint-config + typescript-config (dev)
 packages/tokens → nothing (no runtime dependencies; zod is a dev-only dependency for its own validation)
 ```
 
@@ -195,17 +195,17 @@ Circular dependencies show up at two levels here, and both are real, recurring r
 
 ### Package-level cycles
 
-If `packages/contracts` needs something from `packages/shared`, and `packages/shared` needs something from `packages/contracts`, one of two things is true: either a piece of code is living in the wrong package, or a third package needs to exist to hold the genuinely shared piece both of them depend on.
+If `packages/shared` needs something from `packages/shared`, and `packages/shared` needs something from `packages/shared`, one of two things is true: either a piece of code is living in the wrong package, or a third package needs to exist to hold the genuinely shared piece both of them depend on.
 
 ```text
 ❌ DON'T:
-  packages/contracts/src/order.ts    imports formatCurrency from packages/shared
-  packages/shared/src/format.ts       imports OrderSchema from packages/contracts
+  packages/shared/src/contexts/orders/schemas/order.ts    imports formatCurrency from packages/shared
+  packages/shared/src/format.ts       imports OrderSchema from packages/shared
   → this is a cycle. Turborepo's task graph will fail to build.
 
 ✅ DO:
   Move the currency-formatting-that-needs-to-know-about-Order-shape logic
-  either fully into packages/contracts (if it's schema-adjacent), or make
+  either fully into packages/shared (if it's schema-adjacent), or make
   formatCurrency generic enough that it doesn't need to import OrderSchema
   at all (it just takes a number and a currency code).
 ```
@@ -239,14 +239,14 @@ Where a genuine bidirectional relationship is truly unavoidable, NestJS's `forwa
 
 ```text
 ❌ DON'T — importing a Node-only API (fs, path with Node semantics, process.env
-   accessed directly) into packages/ui or packages/contracts, which Expo consumes.
+   accessed directly) into packages/ui or packages/shared, which Expo consumes.
    This will build fine locally on your machine and then crash at runtime on a
    physical device or in the Expo Go sandbox, because those APIs don't exist there.
 
 ❌ DON'T — importing a browser-only/DOM API (window, document, localStorage)
    into a package NestJS consumes. This will crash the API process on startup.
 
-✅ DO — packages/contracts contains only pure zod schemas and z.infer types,
+✅ DO — packages/shared contains only pure zod schemas and z.infer types,
    with zero runtime dependency on Node or DOM globals, so it's safe to import
    from all three apps without any of them pulling in code they can't run.
 ```
@@ -282,7 +282,7 @@ modules/
     different top-level folders every time.
 
 ✅ DO:
-  src/modules/orders/
+  src/contexts/orders/
     application/orders.service.ts
     presentation/http/orders.controller.ts
     domain/order.entity.ts
@@ -309,7 +309,7 @@ These are the recurring, recognizable signs that a change is drifting away from 
 ```text
 ❌ DON'T:
   apps/web/src/lib/something.ts:
-    import { OrdersService } from '../../../../apps/api/src/modules/orders/orders.service';
+    import { OrdersService } from '../../../../apps/api/src/contexts/orders/orders.service';
 
   This is a structural violation, not a style nitpick — apps/web now has
   a hard, buildable dependency on apps/api's internals, which means
@@ -319,7 +319,7 @@ These are the recurring, recognizable signs that a change is drifting away from 
 
 ✅ DO:
   If apps/web genuinely needs something apps/api has, that something
-  belongs in packages/contracts or packages/shared, and apps/api ALSO
+  belongs in packages/shared or packages/shared, and apps/api ALSO
   imports it from there — neither app imports from the other, ever.
 ```
 
@@ -339,7 +339,7 @@ These are the recurring, recognizable signs that a change is drifting away from 
   is meant to be framework-agnostic (04-mobile-expo.md, 01 above) — it
   belongs in packages/ui (web), packages/ui-native (a mobile UI primitive) or
   apps/mobile (mobile-specific).
-  A Kafka topic constant belongs in packages/contracts, next to the event
+  A Kafka topic constant belongs in packages/shared, next to the event
   schema it names.
 ```
 
@@ -368,10 +368,10 @@ export { DataTable } from './components/data-table';
 
 ### Smell: version drift between a shared package and what consumes it
 
-If `packages/contracts` changes its zod schema for `Order` in a way that's incompatible with what `apps/mobile` currently expects (a field renamed, a field's type changed), and `apps/mobile` isn't rebuilt/redeployed at the same time, you have a live version-skew bug in production — the mobile app is running old code against a new contract.
+If `packages/shared` changes its zod schema for `Order` in a way that's incompatible with what `apps/mobile` currently expects (a field renamed, a field's type changed), and `apps/mobile` isn't rebuilt/redeployed at the same time, you have a live version-skew bug in production — the mobile app is running old code against a new contract.
 
 ```text
-✅ DO — for any change to a schema in packages/contracts that isn't purely
+✅ DO — for any change to a schema in packages/shared that isn't purely
    additive (i.e. anything beyond "added a new optional field"), treat it
    with the same care as a breaking public API change (05-contracts-zod-api.md's
    versioning section): identify every consumer, and don't ship the
@@ -381,9 +381,9 @@ If `packages/contracts` changes its zod schema for `Order` in a way that's incom
    updates on every page load.
 ```
 
-### Smell: business logic creeping into `packages/config`
+### Smell: business logic creeping into `packages/eslint-config` or `packages/typescript-config`
 
-`packages/config` exists for build tooling configuration (eslint rules, tsconfig compiler options, tailwind theme setup) — it should never contain a runtime value that affects application behavior (a feature flag default, a business rule threshold). If you find an actual business decision living in a config package, it belongs in `packages/contracts` (if it's a shared constant/schema) or directly in the app that owns the decision.
+`packages/eslint-config` and `packages/typescript-config` exist for build tooling configuration (eslint rules, tsconfig compiler options) — it should never contain a runtime value that affects application behavior (a feature flag default, a business rule threshold). If you find an actual business decision living in a config package, it belongs in `packages/shared` (if it's a shared constant/schema) or directly in the app that owns the decision.
 
 ### Smell: a `tools/scripts` script that duplicates application logic instead of importing it
 
@@ -482,14 +482,14 @@ turbo run test lint typecheck --filter='...[origin/main]'
 To make "where does this go?" fully concrete across the entire monorepo, here's every file a single feature (letting a customer download an invoice, the same example used in `15-feature-development-process.md`) actually touches, and why each one lives where it does:
 
 ```text
-packages/contracts/src/invoice.ts
+packages/shared/src/contexts/invoices/schemas/invoice.ts
   — the InvoiceSchema and the request/response schemas for the new
     endpoint. Lives here because BOTH apps/api (to validate/type the
     endpoint) and apps/web (to type the response it receives) need the
     identical definition (01's dependency-graph rule: neither app
     reimplements what the other already has access to).
 
-apps/api/src/modules/invoices/
+apps/api/src/contexts/invoices/
   — the actual endpoint, service, and repository. Lives entirely in
     apps/api because generating a PDF and checking access to it are
     API-only concerns; apps/web never needs this logic itself, only the
@@ -534,7 +534,7 @@ Rules that only live in documents decay. Encode the structural ones as automated
 ```text
 - dependency-cruiser / eslint-plugin-boundaries: forbid apps → apps imports, packages → apps imports, and cycles
 - a script asserting every apps/* and packages/* has a README and the standard turbo scripts
-- a check that packages/contracts has no Node/DOM-only imports (build it for the Expo runtime in CI)
+- a check that packages/shared has no Node/DOM-only imports (build it for the Expo runtime in CI)
 - a check that migrations changed ⇒ seed.ts changed in the same PR (or an explicit override label)
 - a check that every controller method has an explicit permission decorator (custom lint rule)
 - a check that no `prisma.*.delete(` / `deleteMany(` appears outside an allowlisted retention-purge job

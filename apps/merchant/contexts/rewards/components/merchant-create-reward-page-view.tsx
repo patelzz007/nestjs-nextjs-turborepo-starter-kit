@@ -8,27 +8,20 @@ import type { SavedRewardImage } from "@/contexts/rewards/components/merchant-re
 import { MerchantRewardLocationFields } from "@/contexts/rewards/components/merchant-reward-location-fields";
 import { MerchantRewardPreview } from "@/contexts/rewards/components/merchant-reward-preview";
 import type { RewardVoucherCover } from "@/contexts/rewards/components/reward-voucher";
-import { useActiveTenantId, useActiveTenantName, useMerchantLocation } from "@/features/tenant-context/facade";
+import { useActiveTenantName, useMerchantLocation } from "@/features/tenant-context/facade";
 import { describeDraftRewardStores } from "@/contexts/rewards/lib/reward-draft";
+import { useRewardEditorForm, type RewardEditorInput } from "@/contexts/rewards/lib/reward-editor-form";
 import { applyMerchantRewardChange } from "@/contexts/rewards/lib/query-cache";
 import { tenantRoutes } from "@/lib/routes";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-	MERCHANT_CAPABILITY,
-	mapMerchantCreateRewardFormToInput,
-	MerchantRewardFormFieldsSchema,
-	type MerchantRewardFormValues,
-	type RewardCategory,
-} from "@workspace/shared";
+import { MERCHANT_CAPABILITY, mapMerchantCreateRewardFormToInput, type MerchantRewardFormValues, type RewardCategory } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/button";
 import { Spinner } from "@workspace/ui/components/spinner";
 import { toastMessage } from "@workspace/ui/components/toast";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { addDays, format } from "date-fns";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 /** A new reward runs for this many days unless the merchant picks another end date. */
@@ -50,7 +43,7 @@ function resolveSaveIntent(submitter: HTMLElement | null): RewardSaveIntent {
 	return parsed.success ? parsed.data : RewardSaveIntentSchema.enum.draft;
 }
 
-function buildDefaultFormValues(activeLocationId: string | undefined, hasMultipleLocations: boolean): MerchantRewardFormValues {
+function buildDefaultFormValues(activeLocationId: string | undefined, hasMultipleLocations: boolean): RewardEditorInput {
 	const startDate = new Date();
 	const expiryDate = addDays(startDate, DEFAULT_RUN_DAYS);
 	const limitToActiveStore = hasMultipleLocations && activeLocationId !== undefined;
@@ -61,10 +54,12 @@ function buildDefaultFormValues(activeLocationId: string | undefined, hasMultipl
 		description: "",
 		// Empty until a photo is uploaded — the schema then asks for one ("Add at least one image").
 		imageFileIds: [],
-		rewardValue: 0,
+		rewardValue: "0",
+		minPurchase: "",
+		termsConditions: "",
 		startDate: format(startDate, "yyyy-MM-dd"),
 		expiryDate: format(expiryDate, "yyyy-MM-dd"),
-		quantityTotal: DEFAULT_QUANTITY,
+		quantityTotal: String(DEFAULT_QUANTITY),
 		maxClaimsPerUser: 1,
 		locationScopeType: limitToActiveStore ? "SELECTED" : "ALL_LOCATIONS",
 		locationIds: limitToActiveStore ? [activeLocationId] : [],
@@ -96,29 +91,10 @@ function MerchantCreateRewardPageContent({ tenantSlug, defaultCategory }: Mercha
 	const queryClient = useQueryClient();
 	const router = useRouter();
 	const { locationId: activeLocationId, accessibleLocations } = useMerchantLocation();
-	const tenantId = useActiveTenantId();
 	const tenantName = useActiveTenantName();
 	const hasMultipleLocations = accessibleLocations.length > 1;
 	const routes = tenantRoutes(tenantSlug);
 	const [cover, setCover] = React.useState<RewardVoucherCover | undefined>(undefined);
-
-	const {
-		register,
-		handleSubmit,
-		setValue,
-		control,
-		formState: { errors },
-	} = useForm<MerchantRewardFormValues>({
-		resolver: zodResolver(MerchantRewardFormFieldsSchema),
-		defaultValues: buildDefaultFormValues(activeLocationId, hasMultipleLocations),
-	});
-
-	const locationScopeType = useWatch({ control, name: "locationScopeType" });
-	const locationIds = useWatch({ control, name: "locationIds" });
-	const stores = React.useMemo(
-		() => describeDraftRewardStores({ locationScopeType, locationIds }, accessibleLocations, tenantName),
-		[accessibleLocations, locationIds, locationScopeType, tenantName],
-	);
 
 	const createMutation = api.tenants.rewards.create.useMutation({
 		onSuccess: (response, input): void => {
@@ -134,29 +110,42 @@ function MerchantCreateRewardPageContent({ tenantSlug, defaultCategory }: Mercha
 			toastMessage.error({ title: "Reward not saved", description: "Check your connection and try again." });
 		},
 	});
+	const { mutate } = createMutation;
+
+	// Built once: the starting values are the page's first render (a later store switch does not reset what is typed).
+	const [defaultValues] = React.useState((): RewardEditorInput => buildDefaultFormValues(activeLocationId, hasMultipleLocations));
+	const handleValid = React.useCallback(
+		(form: MerchantRewardFormValues, intent: RewardSaveIntent): void => {
+			mutate({ tenantSlug, ...mapMerchantCreateRewardFormToInput({ ...form, saveAsDraft: intent === "draft" }, defaultCategory) });
+		},
+		[defaultCategory, mutate, tenantSlug],
+	);
+	const { editor, submit } = useRewardEditorForm<RewardSaveIntent>({ defaultValues, defaultMeta: RewardSaveIntentSchema.enum.draft, onValid: handleValid });
+	const { setField } = editor;
+	const { locationScopeType, locationIds } = editor.values;
+	const stores = React.useMemo(
+		() => describeDraftRewardStores({ locationScopeType, locationIds }, accessibleLocations, tenantName),
+		[accessibleLocations, locationIds, locationScopeType, tenantName],
+	);
 
 	const handleImagesChange = React.useCallback(
 		(images: readonly SavedRewardImage[]): void => {
-			setValue(
+			setField(
 				"imageFileIds",
 				images.map((image) => image.fileId),
-				{ shouldValidate: true, shouldDirty: true },
 			);
 			const [first] = images;
 			setCover(first);
 		},
-		[setValue],
+		[setField],
 	);
 
-	const { mutate } = createMutation;
 	const handleFormSubmit = React.useCallback(
 		(event: React.SubmitEvent<HTMLFormElement>): void => {
-			const saveAsDraft = resolveSaveIntent(event.submitter) === "draft";
-			void handleSubmit((form): void => {
-				mutate({ tenantSlug, ...mapMerchantCreateRewardFormToInput({ ...form, saveAsDraft }, defaultCategory) });
-			})(event);
+			event.preventDefault();
+			void submit(resolveSaveIntent(event.submitter));
 		},
-		[defaultCategory, handleSubmit, mutate, tenantSlug],
+		[submit],
 	);
 
 	const isSaving = createMutation.isPending;
@@ -170,20 +159,17 @@ function MerchantCreateRewardPageContent({ tenantSlug, defaultCategory }: Mercha
 			onSubmit={handleFormSubmit}
 			fields={
 				<MerchantRewardFormFields
-					register={register}
-					control={control}
-					errors={errors}
-					setValue={setValue}
-					tenantId={tenantId}
+					editor={editor}
+					tenantSlug={tenantSlug}
 					initialImages={NO_IMAGES}
 					onImagesChange={handleImagesChange}
-					stores={hasMultipleLocations ? <MerchantRewardLocationFields control={control} errors={errors} setValue={setValue} disabled={isSaving} /> : null}
+					stores={hasMultipleLocations ? <MerchantRewardLocationFields editor={editor} disabled={isSaving} /> : null}
 					disabled={isSaving}
 				/>
 			}
 			preview={
 				<MerchantRewardPreview
-					control={control}
+					values={editor.values}
 					category={defaultCategory}
 					status={undefined}
 					cover={cover}

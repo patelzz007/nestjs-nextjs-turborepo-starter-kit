@@ -15,7 +15,7 @@ export type MerchantRewardState =
 	| { readonly kind: "ready"; readonly reward: RewardResponse };
 
 /**
- * One of the tenant's rewards, for the reward page and its editor (`GET /t/:orgSlug/rewards/:rewardId`),
+ * One of the tenant's rewards, for the reward page and its editor (`GET /t/:tenantSlug/rewards/:rewardId`),
  * seeded by the server's read (`initialReward`). A reward not offered at any of the member's stores answers 404:
  * that is "missing", not a failure to retry.
  */

@@ -2,6 +2,7 @@ import type { Membership as MembershipRecord, MembershipLocationScope, Prisma } 
 import { epochMs, newRowId } from "@workspace/shared";
 
 import { Membership } from "../../domain/aggregates/membership.aggregate";
+import { ConcurrentModificationError } from "../../../../platform/infrastructure/persistence/persistence.errors";
 import { AlreadyMemberError } from "../../domain/errors/tenants.errors";
 import type { MembershipRepository, PersistedMembership } from "../../domain/repositories/membership.repository";
 import type { TenantsDb } from "./tenant-db";
@@ -41,6 +42,11 @@ export class PrismaMembershipRepository implements MembershipRepository {
 		return this.load({ id: membershipId, tenantId, isDeleted: false });
 	}
 
+	public async getOwnLiveForUpdate(tenantId: string, userId: string): Promise<Membership | null> {
+		await this.db.$queryRaw`SELECT id FROM "Membership" WHERE "tenantId" = ${tenantId} AND "userId" = ${userId} AND "isDeleted" = false FOR UPDATE`;
+		return this.load({ tenantId, userId, isDeleted: false });
+	}
+
 	public async getOwnActiveForUpdate(tenantId: string, userId: string): Promise<Membership | null> {
 		await this.db.$queryRaw`SELECT id FROM "Membership" WHERE "tenantId" = ${tenantId} AND "userId" = ${userId} AND "isDeleted" = false AND status = 'ACTIVE' FOR UPDATE`;
 		return this.load({ tenantId, userId, isDeleted: false, status: "ACTIVE" });
@@ -74,19 +80,24 @@ export class PrismaMembershipRepository implements MembershipRepository {
 			if (change.kind === "renamed") {
 				await this.db.membership.update({ where: { id: membership.id }, data: { displayName: change.displayName, updatedAt: BigInt(Date.now()) } });
 			}
-			if (change.kind === "removed_from_store") {
-				// Soft-deleted like every business row: the scope history stays, and access reads only live rows.
+			if (change.kind === "left") {
+				const left = { isDeleted: true, deletedAt: change.leftAt, deletedBy: membership.userId, updatedAt: change.leftAt };
+				await this.db.membershipLocationScope.updateMany({ where: { membershipId: membership.id, isDeleted: false }, data: left });
+				const written = await this.db.membership.updateMany({ where: { id: membership.id, isDeleted: false }, data: left });
+				if (written.count !== 1) {
+					throw new ConcurrentModificationError(membership.id);
+				}
+			}
+			if (change.kind === "removed_from_location") {
+				// Soft-deleted like every business row: the scope history stays, and access (with the location
+				// role the row carries) reads only live rows.
 				await this.db.membershipLocationScope.updateMany({
 					where: { membershipId: membership.id, locationId: change.locationId, scopeType: "SELECTED", isDeleted: false },
 					data: { isDeleted: true, deletedAt: change.removedAt, deletedBy: change.removedByUserId, updatedAt: change.removedAt },
 				});
-				await this.db.storeMembership.updateMany({
-					where: { userId: membership.userId, isDeleted: false, store: { locationId: change.locationId } },
-					data: { isDeleted: true, deletedAt: change.removedAt, deletedBy: change.removedByUserId, updatedAt: change.removedAt },
-				});
 			}
 		}
-		const row = await this.db.membership.findUniqueOrThrow({ where: { id: membership.id }, include: SCOPES_SELECT });
+		const row = await this.db.membership.findFirstOrThrow({ where: { id: membership.id }, include: SCOPES_SELECT });
 		return toPersistedMembership(row);
 	}
 

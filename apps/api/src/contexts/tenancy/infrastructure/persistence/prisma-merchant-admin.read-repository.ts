@@ -11,8 +11,8 @@ import {
 	type AdminMerchantDetailResponse,
 	type AdminMerchantListQuery,
 	type AdminMerchantListSortField,
-	type MerchantOrgResponse,
-	type MerchantOrgStatus,
+	type MerchantTenantResponse,
+	type MerchantTenantStatus,
 	type PaginatedServiceResult,
 } from "@workspace/shared";
 
@@ -26,7 +26,7 @@ import type { TenantTransactionService } from "../../../../prisma/tenant-transac
 import { toKybDocumentRecord } from "../../application/kyb-documents";
 import type { KybFileAccessPort } from "../../application/ports/kyb-files.port";
 import type { MerchantAdminReadPort } from "../../application/ports/merchant-admin-read.port";
-import { toMerchantDetailResponse, toMerchantOrgResponse } from "./merchant-admin.mapper";
+import { toMerchantDetailResponse, toMerchantTenantResponse } from "./merchant-admin.mapper";
 import { mapLocationToResponse } from "./tenant-location.mapper";
 import { LOCATION_ADMIN_LIST_OPERATION, MERCHANT_ADMIN_READ_OPERATION } from "../../application/ports/tenants.tokens";
 
@@ -65,7 +65,7 @@ const ADMIN_MERCHANT_LIST_KEYSET: ListKeyset<TenantAdminListRow, Prisma.TenantWh
 );
 
 /** Public merchant status → the tenant lifecycle state it is stored as. */
-function toLifecycleState(status: MerchantOrgStatus): TenantLifecycleState {
+function toLifecycleState(status: MerchantTenantStatus): TenantLifecycleState {
 	switch (status) {
 		case "ONBOARDING":
 			return "PROVISIONING";
@@ -73,13 +73,15 @@ function toLifecycleState(status: MerchantOrgStatus): TenantLifecycleState {
 			return "ACTIVE";
 		case "SUSPENDED":
 			return "SUSPENDED";
+		case "BANNED":
+			return "BANNED";
 		default:
 			return assertNever(status, "merchant status");
 	}
 }
 
 /** Maps a translated status filter onto lifecycle states, operator by operator. */
-function toLifecycleStateFilter(filter: PrismaEqualityFilter<MerchantOrgStatus>): PrismaEqualityFilter<TenantLifecycleState> {
+function toLifecycleStateFilter(filter: PrismaEqualityFilter<MerchantTenantStatus>): PrismaEqualityFilter<TenantLifecycleState> {
 	return {
 		...(filter.equals !== undefined ? { equals: toLifecycleState(filter.equals) } : {}),
 		...(filter.not !== undefined ? { not: toLifecycleState(filter.not) } : {}),
@@ -184,7 +186,7 @@ export class PrismaMerchantAdminReadRepository implements MerchantAdminReadPort 
 		private readonly files: KybFileAccessPort,
 	) {}
 
-	public async listMerchants(actor: ActorContext, query: AdminMerchantListQuery): Promise<PaginatedServiceResult<MerchantOrgResponse>> {
+	public async listMerchants(actor: ActorContext, query: AdminMerchantListQuery): Promise<PaginatedServiceResult<MerchantTenantResponse>> {
 		const result = await this.adminRead(actor, MERCHANT_ADMIN_READ_OPERATION, "List merchant tenants", async (tx) =>
 			fetchListPage(query, {
 				where: buildAdminMerchantListWhere(query),
@@ -196,7 +198,7 @@ export class PrismaMerchantAdminReadRepository implements MerchantAdminReadPort 
 			}),
 		);
 		return toPaginatedServiceResult(
-			mapListResult(result, (row): MerchantOrgResponse => ({ ...toMerchantOrgResponse(row), ownerUserId: row.memberships[LIST_SLOT_INDEX.first]?.userId ?? null })),
+			mapListResult(result, (row): MerchantTenantResponse => ({ ...toMerchantTenantResponse(row), ownerUserId: row.memberships[LIST_SLOT_INDEX.first]?.userId ?? null })),
 			query,
 		);
 	}

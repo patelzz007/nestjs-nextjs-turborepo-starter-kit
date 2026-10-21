@@ -16,19 +16,16 @@ type Row = Record<string, string | number | boolean | null>;
 
 /**
  * A merchant OWNER requesting a new store and resubmitting a rejected one.
- * Both run in the owner's TENANT transaction (not a system operation), and the
- * location write mirrors onto its 1:1 `Store` row in the same transaction —
- * so the `Store` RLS policy must accept that mirror write for a member of the
- * session's tenant, and only for a store that mirrors one of that tenant's
- * locations.
+ * Both run in the owner's TENANT transaction (not a system operation), so the
+ * `Location` RLS policy must accept the write for a member of the session's
+ * tenant, and only for that tenant.
  */
-describe("Merchant store requests mirror onto stores under tenant RLS (e2e)", () => {
+describe("Merchant store requests under tenant RLS (e2e)", () => {
 	let app: NestFastifyApplication;
 	let pool: Pool;
 	let owner: LoginResult;
 	const createdLocationIds: string[] = [];
 	const rejectedLocationId = randomUUID();
-	const rejectedStoreId = randomUUID();
 	const rejectedCode = `e2e-rej-${rejectedLocationId.slice(0, 8)}`;
 
 	/** Fixture setup / assertions as the migrating (owner) connection, like the other store suites. */
@@ -52,44 +49,37 @@ describe("Merchant store requests mirror onto stores under tenant RLS (e2e)", ()
        VALUES ($1, $2, 'E2E rejected store', $3, '1 Jalan Ditolak, Kuala Lumpur', 'REJECTED', false, 'E2E: address could not be verified')`,
 			[rejectedLocationId, ORG_ID, rejectedCode],
 		);
-		await query(`INSERT INTO public."Store" (id, "tenantId", "locationId", name, code, status) VALUES ($1, $2, $3, 'E2E rejected store', $4, 'INACTIVE')`, [
-			rejectedStoreId,
-			ORG_ID,
-			rejectedLocationId,
-			rejectedCode,
-		]);
 		owner = await login(app, "brew.owner@kl-rewards.demo", "BrewOwner@123", "merchant");
 	});
 
 	afterAll(async () => {
 		const locationIds = [...createdLocationIds, rejectedLocationId];
-		await query(`DELETE FROM public."Store" WHERE "locationId" = ANY($1::text[])`, [`{${locationIds.join(",")}}`]);
 		await query(`DELETE FROM public."Location" WHERE id = ANY($1::text[])`, [`{${locationIds.join(",")}}`]);
 		await pool.end();
 		await app.close();
 	});
 
-	it("creates a PENDING_APPROVAL location and its INACTIVE store mirror in one transaction", async () => {
+	it("creates a PENDING_APPROVAL location in the owner's tenant transaction", async () => {
 		const response = await send("POST", "/locations", { name: "E2E Bangsar outlet", addressText: "8 Jalan Telawi, Bangsar, Kuala Lumpur" });
 
 		expect(response.statusCode, response.body).toBe(201);
 		const location = parseSuccessEnvelope(response, LocationResponseSchema).data;
 		createdLocationIds.push(location.id);
 		expect(location.status).toBe("PENDING_APPROVAL");
-		const stores = await query(`SELECT "tenantId", name, code, status, "isDeleted" FROM public."Store" WHERE "locationId" = $1`, [location.id]);
-		expect(stores).toEqual([{ tenantId: ORG_ID, name: "E2E Bangsar outlet", code: location.code, status: "INACTIVE", isDeleted: false }]);
+		const rows = await query(`SELECT "tenantId", name, code, status, "isDeleted" FROM public."Location" WHERE id = $1`, [location.id]);
+		expect(rows).toEqual([{ tenantId: ORG_ID, name: "E2E Bangsar outlet", code: location.code, status: "PENDING_APPROVAL", isDeleted: false }]);
 	});
 
-	it("resubmits a REJECTED location and mirrors the corrected name onto its store", async () => {
+	it("resubmits a REJECTED location with the corrected name", async () => {
 		const response = await send("PATCH", `/locations/${rejectedLocationId}`, { name: "E2E corrected store", addressText: "2 Jalan Betul, Kuala Lumpur" });
 
 		expect(response.statusCode, response.body).toBe(200);
 		expect(parseSuccessEnvelope(response, LocationResponseSchema).data.status).toBe("PENDING_APPROVAL");
-		const [store] = await query(`SELECT name, status FROM public."Store" WHERE id = $1`, [rejectedStoreId]);
-		expect(store).toEqual({ name: "E2E corrected store", status: "INACTIVE" });
+		const [row] = await query(`SELECT name, status, "rejectionReason" FROM public."Location" WHERE id = $1`, [rejectedLocationId]);
+		expect(row).toMatchObject({ name: "E2E corrected store", status: "PENDING_APPROVAL" });
 	});
 
-	it("still refuses a tenant session writing a store that does not mirror one of its own locations", async () => {
+	it("refuses a tenant session writing a location of another tenant", async () => {
 		const [ownerRow] = await query(`SELECT "userId" FROM public."Membership" WHERE "tenantId" = $1 AND role = 'OWNER' AND "isDeleted" = false`, [ORG_ID]);
 		const client = await pool.connect();
 		try {
@@ -100,12 +90,10 @@ describe("Merchant store requests mirror onto stores under tenant RLS (e2e)", ()
 			const orphanCode = `e2e-orphan-${randomUUID().slice(0, 8)}`;
 
 			await expect(
-				client.query(`INSERT INTO public."Store" (id, "tenantId", "locationId", name, code, status) VALUES ($1, $2, $3, 'E2E orphan store', $4, 'ACTIVE')`, [
-					randomUUID(),
-					ORG_ID,
-					TENANT_SEED_IDS.mlkLocationKatil,
-					orphanCode,
-				]),
+				client.query(
+					`INSERT INTO public."Location" (id, "tenantId", name, code, "addressText", status, "isPrimary") VALUES ($1, $2, 'E2E foreign store', $3, '1 Jalan Asing', 'PENDING_APPROVAL', false)`,
+					[randomUUID(), TENANT_SEED_IDS.mlkTenant, orphanCode],
+				),
 			).rejects.toThrow(/row-level security/);
 		} finally {
 			await client.query("ROLLBACK");

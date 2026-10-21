@@ -137,7 +137,7 @@ describe("loadMerchantServerContext", () => {
 	});
 
 	it("ignores a cookie naming a tenant the user does not belong to (the context answers 404)", async () => {
-		cookieJar.set("tenantSlug", "someone-elses-org");
+		cookieJar.set("tenantSlug", "someone-elses-tenant");
 		apiRoutes(() => membershipsPage([membershipFixture("OWNER")]));
 
 		expect((await loadMerchantServerContext()).tenantSlug).toBe(TEST_ORG_SLUG);

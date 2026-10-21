@@ -7,7 +7,7 @@ import { CapabilitiesCatalogController } from "./capabilities-catalog.controller
 import { PermissionsController } from "./permissions.controller";
 import { PolicyControlPlaneController } from "./policy-control-plane.controller";
 import { RolesController } from "./roles.controller";
-import { SupportAccessController } from "./support-access.controller";
+import { SupportAccessController, TenantSupportAccessController } from "./support-access.controller";
 
 /**
  * The authorization HTTP surface and the boot-time catalog sync. Not global: its
@@ -23,6 +23,7 @@ import { SupportAccessController } from "./support-access.controller";
 		AuthorizationDecisionsController,
 		PolicyControlPlaneController,
 		SupportAccessController,
+		TenantSupportAccessController,
 	],
 	providers: [AuthorizationCatalogSyncBootstrap],
 })

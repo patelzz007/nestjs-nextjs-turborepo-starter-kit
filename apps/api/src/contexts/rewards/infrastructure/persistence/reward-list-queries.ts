@@ -1,6 +1,7 @@
 import type { Prisma, Reward } from "@prisma/client";
 
 import {
+	TENANT_OPERATING_LIFECYCLE_STATE,
 	adminPendingRewardListQuery,
 	rewardListQuery,
 	type AdminPendingRewardListQuery,
@@ -108,12 +109,19 @@ export function rewardListKeyset<TRow extends Pick<Reward, "id" | "createdAt">>(
 	);
 }
 
-/** Published, in-stock, unexpired consumer rewards + the filter AST + search. */
+/**
+ * A reward the public sees belongs to a merchant that operates: a suspended, banned or not-yet-live
+ * merchant's rewards leave the marketplace (and their detail page) until it operates again.
+ */
+export const OPERATING_MERCHANT_WHERE: Prisma.RewardWhereInput = { tenant: { isDeleted: false, lifecycleState: TENANT_OPERATING_LIFECYCLE_STATE } };
+
+/** Published, in-stock, unexpired consumer rewards of operating merchants + the filter AST + search. */
 export function buildMarketplaceWhere(query: RewardListQuery, now = BigInt(Date.now())): Prisma.RewardWhereInput {
 	const filter = query.filter;
 	return {
 		AND: [
 			{ isDeleted: false, status: "PUBLISHED", rewardKind: "CONSUMER", quantityRemaining: { gt: 0 }, expiryDate: { gte: now } },
+			OPERATING_MERCHANT_WHERE,
 			...fieldWhere(toPrismaEqualityFilter(filter?.category), (category) => ({ category })),
 			...fieldWhere(toPrismaEqualityFilter(filter?.city), (city): Prisma.RewardWhereInput => ({ tenant: { merchantProfile: { city } } })),
 			...fieldWhere(toPrismaEqualityFilter(filter?.tenantId), (tenantId) => ({ tenantId })),

@@ -19,8 +19,8 @@ import type { NextRequest } from "next/server";
 import { isAllowedMerchantPostLoginRedirect, isMerchantAuthPath, isMerchantProtectedPath, isMerchantTokenAuthPath } from "@/contexts/identity/lib/routes";
 import { clientEnv } from "@/lib/env/env.client";
 import { serverEnv } from "@/lib/env/env.server";
-import { isCanonicalTenantSlug } from "@/contexts/tenancy/lib/org/resolve-slug";
-import { TENANT_SLUG_COOKIE_NAME } from "@/contexts/tenancy/lib/org/slug";
+import { isCanonicalTenantSlug } from "@/contexts/tenancy/lib/tenant/resolve-slug";
+import { TENANT_SLUG_COOKIE_NAME } from "@/contexts/tenancy/lib/tenant/slug";
 import { ROUTES } from "@/lib/routes";
 
 const ACCESS_TOKEN_COOKIE = "merchantAccessToken";
@@ -70,7 +70,7 @@ function serveGuestResponse(response: NextResponse, rotatedCookies: readonly str
 /**
  * The `tenantSlug` preference for the enrollment redirect, only when it
  * is a canonical slug — a cookie is client input, so a tampered value never
- * becomes part of a redirect path. (Membership is checked by the org layout
+ * becomes part of a redirect path. (Membership is checked by the tenant layout
  * the redirect lands on; the proxy stays cheap and does not call the API.)
  */
 function readPreferredTenantSlug(request: NextRequest): string | undefined {

@@ -109,7 +109,7 @@ approve it — choosing the role and the stores — or reject it.
 ### Remove a member from a store
 
 On the member's row, remove a single store from their access. Removing their **last** store needs
-an explicit confirmation (`allowNoStores`): they stay a member but can no longer see any store.
+an explicit confirmation (`allowNoLocations`): they stay a member but can no longer see any store.
 The removal is audited.
 
 ### Your display name in a tenant
@@ -136,7 +136,7 @@ with the old and the new value.
 
 | Action | Who | Guarantees | Errors |
 | --- | --- | --- | --- |
-| Remove a member from a store | `merchant:manage_team` and a location scope covering the store (else `403 TENANT_STORE_OUT_OF_SCOPE`) | One transaction with its audit row (real actor). Deletes the member's SELECTED scope row and soft-deletes their store membership (`deletedAt`, `deletedBy`). The member row is locked (`FOR UPDATE`) first, so two removals cannot both pass the last-store check. | `404` unknown member or not scoped to that store · `409 TENANT_OWNER_PROTECTED` · `409 TENANT_MEMBER_COVERS_ALL_STORES` (narrow them first) · `409 TENANT_MEMBER_LAST_STORE` (send `allowNoStores: true`) |
+| Remove a member from a store | `merchant:manage_team` and a location scope covering the store (else `403 TENANT_STORE_OUT_OF_SCOPE`) | One transaction with its audit row (real actor). Deletes the member's SELECTED scope row and soft-deletes their store membership (`deletedAt`, `deletedBy`). The member row is locked (`FOR UPDATE`) first, so two removals cannot both pass the last-store check. | `404` unknown member or not scoped to that store · `409 TENANT_OWNER_PROTECTED` · `409 TENANT_MEMBER_COVERS_ALL_STORES` (narrow them first) · `409 TENANT_MEMBER_LAST_STORE` (send `allowNoLocations: true`) |
 | Close a store | `merchant:manage_locations` and a covering location scope; body `{ "reason": "<1–500 chars>" }` | One transaction: the location (`status = INACTIVE`, `closureReason`, `deletedAt`, `deletedBy`) and its store are soft-deleted, the store's memberships soft-deleted, SELECTED scope rows to it deleted, terminals removed and their keys revoked, one audit row. A reward offered only at closed stores cannot be claimed (out of stock); held claims stay redeemable at the reward's other open stores. | `409` primary store · `400` missing reason · `404` already closed |
 | Set or clear your display name | Any live ACTIVE member, for their **own** membership only | One tenant transaction: the caller's membership row is locked (`FOR UPDATE`) and updated, then `membership.display_name_updated` is audited (actor = the member, `previousDisplayName` → `displayName`). | `400` blank, longer than 100 characters, or unknown fields · `404` not a member of that tenant · `403 TENANT_MEMBERSHIP_UPDATE_DURING_IMPERSONATION` |
 

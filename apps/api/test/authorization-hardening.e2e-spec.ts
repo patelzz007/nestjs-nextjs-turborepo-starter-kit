@@ -116,20 +116,38 @@ describe("Authorization hardening (e2e)", () => {
 		});
 	});
 
-	describe("stores", () => {
-		async function storeIdForOwner(ownerEmail: string): Promise<string> {
+	describe("location roles", () => {
+		/** A location where the member's live location scope carries a location role (seeded: Location Staff for a cashier). */
+		async function roleLocationFor(email: string): Promise<string> {
 			return idFor(
 				pool,
-				`SELECT s.id FROM public."Store" s
-         JOIN public."StoreMembership" m ON m."storeId" = s.id
+				`SELECT s."locationId" AS id FROM public."MembershipLocationScope" s
+         JOIN public."Membership" m ON m.id = s."membershipId"
          JOIN public."User" u ON u.id = m."userId"
-         WHERE u.email = $1 AND s.status = 'ACTIVE' ORDER BY s.code LIMIT 1`,
-				ownerEmail,
+         WHERE u.email = $1 AND s."isDeleted" = false AND s."locationId" IS NOT NULL AND s."roleId" IS NOT NULL
+         ORDER BY s."locationId" LIMIT 1`,
+				email,
 			);
 		}
 
-		it("grants store-membership permissions only inside the member's own store", async () => {
-			const klStoreId = await storeIdForOwner("brew.cashier@kl-rewards.demo");
+		async function decide(session: Awaited<ReturnType<typeof login>>, locationId: string): Promise<readonly boolean[]> {
+			const response = await app.inject({
+				method: "POST",
+				url: `${API_VERSION_PREFIX}/authorization/decisions?locationId=${locationId}`,
+				headers: mutationHeaders({ cookie: cookieHeader(session) }),
+				payload: {
+					checks: [
+						{ action: "CREATE", resource: "REDEMPTION" },
+						{ action: "UPDATE", resource: "LOCATION" },
+					],
+				},
+			});
+			expect(response.statusCode, response.body).toBe(200);
+			return parseSuccessEnvelope(response, AuthorizationDecisionsResponseSchema).data.results.map((result) => result.allowed);
+		}
+
+		it("grants a location role's permissions only at the member's own location", async () => {
+			const klLocationId = await roleLocationFor("brew.cashier@kl-rewards.demo");
 			await pool.query(`UPDATE public."User" SET "emailVerifiedAt" = $1, "mfaEnrollmentDeadline" = $2 WHERE email = $3`, [
 				Date.now(),
 				Date.now() + 86_400_000,
@@ -137,33 +155,22 @@ describe("Authorization hardening (e2e)", () => {
 			]);
 			const cashier = await login(app, "brew.cashier@kl-rewards.demo", "BrewCashier@123");
 
-			const response = await app.inject({
-				method: "POST",
-				url: `${API_VERSION_PREFIX}/authorization/decisions`,
-				headers: mutationHeaders({ cookie: cookieHeader(cashier), "x-store-id": klStoreId }),
-				payload: {
-					checks: [
-						{ action: "CREATE", resource: "REDEMPTION" },
-						{ action: "UPDATE", resource: "STORE" },
-					],
-				},
-			});
-
-			expect(response.statusCode, response.body).toBe(200);
-			expect(parseSuccessEnvelope(response, AuthorizationDecisionsResponseSchema).data.results.map((result) => result.allowed)).toEqual([true, false]);
+			expect(await decide(cashier, klLocationId)).toEqual([true, false]);
 		});
 
-		it("rejects a forged x-store-id for another tenant's store", async () => {
-			const mlkStoreId = await storeIdForOwner("jonker.cashier@melaka-rewards.demo");
+		it("grants nothing at another tenant's location", async () => {
+			const mlkLocationId = await roleLocationFor("jonker.cashier@melaka-rewards.demo");
 			const cashier = await login(app, "brew.cashier@kl-rewards.demo", "BrewCashier@123");
 
-			const response = await app.inject({
-				method: "GET",
-				url: `${API_VERSION_PREFIX}/auth/me`,
-				headers: { cookie: cookieHeader(cashier), "x-store-id": mlkStoreId },
-			});
+			expect(await decide(cashier, mlkLocationId)).toEqual([false, false]);
+		});
 
-			expect(response.statusCode, response.body).toBe(403);
+		it("reads nothing from the retired x-store-id header", async () => {
+			const cashier = await login(app, "brew.cashier@kl-rewards.demo", "BrewCashier@123");
+
+			const response = await app.inject({ method: "GET", url: `${API_VERSION_PREFIX}/auth/me`, headers: { cookie: cookieHeader(cashier), "x-store-id": "not-a-store" } });
+
+			expect(response.statusCode, response.body).toBe(200);
 		});
 	});
 

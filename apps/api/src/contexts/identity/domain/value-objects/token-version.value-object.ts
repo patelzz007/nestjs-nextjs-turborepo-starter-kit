@@ -1,5 +1,4 @@
-import { CorruptIdentityStateError } from "../errors/identity.errors";
-
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 /**
  * The account's token generation (`User.tokenVersion`). Every access token carries it; bumping it
  * invalidates every token issued before (password change or reset, 2FA enable or rotate, MFA
@@ -10,7 +9,7 @@ export class TokenVersion {
 
 	public static of(value: number): TokenVersion {
 		if (!Number.isInteger(value) || value < 0) {
-			throw new CorruptIdentityStateError("token_version", "must be a non-negative integer");
+			throw new CorruptAggregateStateError("token_version", null, "must be a non-negative integer");
 		}
 		return new TokenVersion(value);
 	}

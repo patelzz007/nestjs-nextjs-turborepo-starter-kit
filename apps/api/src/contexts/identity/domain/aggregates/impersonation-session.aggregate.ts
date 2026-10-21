@@ -3,7 +3,6 @@ import { epochMs, type EpochMs } from "@workspace/shared";
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
 import {
 	CannotImpersonateSelfError,
-	CorruptIdentityStateError,
 	ImpersonationAlreadyActiveError,
 	ImpersonationSessionInvalidError,
 	ImpersonationTargetInactiveError,
@@ -15,6 +14,7 @@ import {
 } from "../errors/identity.errors";
 import { ImpersonationStarted, ImpersonationStopped, type IdentityEvent } from "../events/identity.events";
 import type { AuditOrigin } from "../value-objects/audit-origin.value-object";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** Milliseconds per second. */
 const MS_PER_SECOND = 1000;
@@ -143,7 +143,7 @@ export class ImpersonationSession extends AggregateRoot<IdentityEvent> {
 
 	public static rehydrate(state: ImpersonationSessionState): ImpersonationSession {
 		if (state.expiresAt < state.startedAt) {
-			throw new CorruptIdentityStateError("impersonation_session", `session ${state.id} expires before it starts`);
+			throw new CorruptAggregateStateError("impersonation_session", null, `session ${state.id} expires before it starts`);
 		}
 		return new ImpersonationSession(state, false);
 	}

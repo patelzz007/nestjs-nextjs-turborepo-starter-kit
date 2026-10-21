@@ -2,7 +2,7 @@
 
 import { Button } from "@workspace/ui/components/button";
 import { UserAvatar } from "@workspace/ui/components/user-avatar";
-import { CircleUserRound, LogOut, Settings, Shield } from "lucide-react";
+import { CircleUserRound, KeyRound, LogOut, Settings, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
@@ -26,7 +26,7 @@ interface ProfileMenuItem {
 
 /**
  * Profile dropdown content shown in the topbar: the signed-in user's card
- * (avatar, name, email) followed by the profile, account-security and settings links
+ * (avatar, name, email) followed by the profile, account-security, GitHub-token and settings links
  * the session may open, and a logout button. Personal pages live under
  * `/account`; Settings is platform configuration.
  */
@@ -38,6 +38,7 @@ export function Profile01({ user, onLogout }: Profile01Props): React.JSX.Element
 	const allMenuItems: readonly ProfileMenuItem[] = [
 		{ label: "Profile", href: ROUTES.account.profile, icon: <CircleUserRound className="size-4" /> },
 		{ label: "Security", href: ROUTES.account.security, icon: <Shield className="size-4" /> },
+		{ label: "GitHub token", href: ROUTES.account.github, icon: <KeyRound className="size-4" /> },
 		{ label: "Settings", href: ROUTES.settings.index, icon: <Settings className="size-4" /> },
 	];
 	const menuItems = allMenuItems.filter((item) => canAccessRoute(item.href));

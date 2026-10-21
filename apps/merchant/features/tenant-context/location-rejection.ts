@@ -6,8 +6,8 @@ import { z } from "zod";
 /**
  * Detects the API refusing a store for this member: a query of THIS
  * tenant that failed with 403 `TENANT_LOCATION_FORBIDDEN`. The
- * store it asked for is read from the query's key — every org-scoped query key
- * is `["tenant", orgSlug, …, input]`, and a location-scoped input carries
+ * store it asked for is read from the query's key — every tenant-scoped query key
+ * is `["tenant", tenantSlug, …, input]`, and a location-scoped input carries
  * its `locationId` — and validated, never assumed.
  */
 
@@ -24,7 +24,7 @@ export function isLocationForbiddenError(error: Error): boolean {
 	return error instanceof ApiError && error.code === MerchantErrorCodes.TENANT_LOCATION_FORBIDDEN;
 }
 
-/** The store a failed query of `orgSlug` asked for, when its error is a location refusal; otherwise `undefined`. */
+/** The store a failed query of `tenantSlug` asked for, when its error is a location refusal; otherwise `undefined`. */
 export function readRejectedLocationId(queryKey: QueryKey, error: Error, tenantSlug: string): string | undefined {
 	if (!isLocationForbiddenError(error)) {
 		return undefined;
@@ -37,7 +37,7 @@ export function readRejectedLocationId(queryKey: QueryKey, error: Error, tenantS
 	return input.success ? input.data.locationId : undefined;
 }
 
-/** Calls `onRejected` with each store the API refuses for `orgSlug`; returns the unsubscribe. */
+/** Calls `onRejected` with each store the API refuses for `tenantSlug`; returns the unsubscribe. */
 export function subscribeToLocationRejections(queryCache: QueryCache, tenantSlug: string, onRejected: (locationId: string) => void): () => void {
 	return queryCache.subscribe((event): void => {
 		if (event.type !== "updated" || event.action.type !== "error") {

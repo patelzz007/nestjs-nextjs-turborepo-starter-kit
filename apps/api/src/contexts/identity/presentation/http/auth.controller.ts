@@ -3,6 +3,8 @@ import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiBearerAuth, ApiHeader, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type {
 	AccessTokenPayload,
+	AdminUserBanInput,
+	AdminUserBanResult,
 	AdminUserDetail,
 	AdminUserListQuery,
 	AuthClientTypeQuery,
@@ -32,6 +34,8 @@ import type {
 	VerifyLoginInput,
 } from "@workspace/shared";
 import {
+	AdminUserBanResultSchema,
+	AdminUserBanSchema,
 	AdminUserDetailSchema,
 	apiContract,
 	apiPath,
@@ -78,6 +82,8 @@ import { ResendVerificationEmailCommand } from "../../application/commands/resen
 import { ResetPasswordCommand } from "../../application/commands/reset-password/reset-password.command";
 import { SignUpCommand } from "../../application/commands/sign-up/sign-up.command";
 import { UnlockAccountCommand } from "../../application/commands/unlock-account/unlock-account.command";
+import { BanUserCommand } from "../../application/commands/ban-user/ban-user.command";
+import { UnbanUserCommand } from "../../application/commands/unban-user/unban-user.command";
 import { VerifyEmailCommand } from "../../application/commands/verify-email/verify-email.command";
 import { VerifyNewDeviceLoginCommand } from "../../application/commands/verify-new-device-login/verify-new-device-login.command";
 import { CheckPasswordResetTokenQuery } from "../../application/queries/check-password-reset-token/check-password-reset-token.query";
@@ -96,6 +102,8 @@ import {
 	PASSWORD_RESET_REQUEST_OPERATION,
 	ADMIN_USERS_READ_OPERATION,
 	ADMIN_USERS_UNLOCK_OPERATION,
+	ADMIN_USERS_BAN_OPERATION,
+	ADMIN_USERS_UNBAN_OPERATION,
 } from "../../application/ports/identity.tokens";
 import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../platform/application/shared-system-operations";
 
@@ -361,5 +369,43 @@ export class AuthController {
 	@ApiResponse({ status: 404, type: ApiErrorResponseDto, description: "User not found" })
 	public async unlockUser(@ZodParam("userId", UuidParamSchema) userId: string, @CurrentActor() actor: ActorContext): Promise<MessageResponse> {
 		return this.commandBus.execute(new UnlockAccountCommand(actor, { userId }));
+	}
+
+	@ApiBearerAuth()
+	@SuperAdminOnly()
+	@EmailVerified()
+	@RequirePermission("DELETE", "USER")
+	@PlatformOperation(ADMIN_USERS_BAN_OPERATION)
+	@Authorize({ action: "DELETE", resource: "USER", resourceId: "userId", description: "A platform admin bans an account" })
+	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
+	@Post("/admin/users/:userId/ban")
+	@ApiOperation({ summary: "SuperAdmin: ban an account — it can no longer sign in, and every session it has is revoked" })
+	@ZodResponse(AdminUserBanResultSchema, { status: HttpStatus.CREATED, description: "Account banned" })
+	@ApiResponse({ status: 403, type: ApiErrorResponseDto, description: "USER_BAN_SELF or USER_BAN_SUPERADMIN" })
+	@ApiResponse({ status: 404, type: ApiErrorResponseDto, description: "User not found" })
+	@ApiResponse({ status: 409, type: ApiErrorResponseDto, description: "USER_ALREADY_BANNED" })
+	public async banUser(
+		@ZodParam("userId", UuidParamSchema) userId: string,
+		@ZodBody(AdminUserBanSchema) body: AdminUserBanInput,
+		@GetUser("sub") adminUserId: string,
+		@CurrentActor() actor: ActorContext,
+	): Promise<AdminUserBanResult> {
+		return this.commandBus.execute(new BanUserCommand(actor, { userId, adminUserId, reason: body.reason }));
+	}
+
+	@ApiBearerAuth()
+	@SuperAdminOnly()
+	@EmailVerified()
+	@RequirePermission("DELETE", "USER")
+	@PlatformOperation(ADMIN_USERS_UNBAN_OPERATION)
+	@Authorize({ action: "DELETE", resource: "USER", resourceId: "userId", description: "A platform admin lifts an account's ban" })
+	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
+	@Post("/admin/users/:userId/unban")
+	@ApiOperation({ summary: "SuperAdmin: lift an account's ban — it may sign in again" })
+	@ZodResponse(AdminUserBanResultSchema, { status: HttpStatus.CREATED, description: "Ban lifted" })
+	@ApiResponse({ status: 404, type: ApiErrorResponseDto, description: "User not found" })
+	@ApiResponse({ status: 409, type: ApiErrorResponseDto, description: "USER_NOT_BANNED" })
+	public async unbanUser(@ZodParam("userId", UuidParamSchema) userId: string, @CurrentActor() actor: ActorContext): Promise<AdminUserBanResult> {
+		return this.commandBus.execute(new UnbanUserCommand(actor, { userId }));
 	}
 }

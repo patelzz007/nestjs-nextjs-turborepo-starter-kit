@@ -7,7 +7,7 @@ import { NotFoundError } from "../../../../../platform/application/errors/app-er
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import { requireUserActor } from "../../tenant-actor";
 import type { TenantsScope } from "../../tenants-scope";
-import type { MerchantAccessPort } from "../../ports/merchant-access.port";
+import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { TenantDirectoryPort } from "../../ports/tenant-directory.port";
 import { MERCHANT_ACCESS, TENANT_DIRECTORY, TENANTS_UNIT_OF_WORK } from "../../ports/tenants.tokens";
 import { RevokeInviteCommand } from "./revoke-invite.command";

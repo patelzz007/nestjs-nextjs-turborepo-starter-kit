@@ -76,7 +76,6 @@ async function findPairedTill(): Promise<{
 	readonly apiKeyId: string;
 	readonly terminalId: string;
 	readonly locationId: string;
-	readonly storeId: string | null;
 } | null> {
 	const till = await prisma.tenantTerminal.findFirst({
 		where: { tenantId: TENANT_SEED_IDS.klTenant, isDeleted: false, apiKeyId: { not: null } },
@@ -85,8 +84,7 @@ async function findPairedTill(): Promise<{
 	if (till?.apiKeyId === undefined || till.apiKeyId === null) {
 		return null;
 	}
-	const store = await prisma.store.findFirst({ where: { locationId: till.locationId, isDeleted: false } });
-	return { id: till.id, apiKeyId: till.apiKeyId, terminalId: till.terminalId, locationId: till.locationId, storeId: store?.id ?? null };
+	return { id: till.id, apiKeyId: till.apiKeyId, terminalId: till.terminalId, locationId: till.locationId };
 }
 
 export interface HttpAuditSeedSummary {
@@ -125,7 +123,7 @@ async function ensureIdempotencyRecord(adminId: string, row: HttpAuditEntry, res
 		edgeLocation: undefined,
 		principal: { userId: adminId, impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" },
 		apiKey: undefined,
-		tenant: { tenantId: undefined, storeId: undefined, locationId: undefined },
+		tenant: { tenantId: undefined, locationId: undefined },
 		systemOperations: [],
 		receivedAtEpochMs: row.occurredAt,
 		supportAccessGrantId: undefined,
@@ -292,7 +290,7 @@ async function recordPosTerminalCall(till: { readonly id: string; readonly apiKe
 }
 
 /** Audit columns of a request with no tenant scope. */
-export const NO_TENANT = { tenantId: null, storeId: null, locationId: null };
+export const NO_TENANT = { tenantId: null, locationId: null };
 /** Audit columns of a request made by a user (no API key / POS terminal). */
 export const NO_MACHINE_PRINCIPAL = { apiKeyId: null, terminalId: null };
 
@@ -516,7 +514,6 @@ export async function seedHttpAuditTrail(actors: HttpAuditSeedActors): Promise<H
 				apiKeyId: till.apiKeyId,
 				terminalId: till.terminalId,
 				tenantId: TENANT_SEED_IDS.klTenant,
-				storeId: till.storeId,
 				locationId: till.locationId,
 				requestParams: toAuditPayload({ params: {}, query: {} }),
 				requestBody: toAuditPayload({ idempotencyKey: "seed-pos-checkout-0001", billTotalMinor: 4590, codes: ["QR-SEED-0001"] }),

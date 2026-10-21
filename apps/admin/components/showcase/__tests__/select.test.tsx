@@ -26,7 +26,7 @@ import {
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 
-/** The language options shared by the value/label, live-region and RHF-clear tests. */
+/** The language options shared by the value/label, live-region and form-clear tests. */
 const LANGUAGE_OPTIONS: readonly SelectOption<string>[] = [
 	{ value: "ts", label: "TypeScript" },
 	{ value: "js", label: "JavaScript" },
@@ -424,7 +424,7 @@ describe("Select", () => {
 		expect(onClearAll).toHaveBeenCalledTimes(1);
 	});
 
-	it("renders SelectClear inside a controlled single-select trigger and clears without toggling (RHF pattern)", () => {
+	it("renders SelectClear inside a controlled single-select trigger and clears without toggling (form pattern)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 
 		function ClearHarness(): React.JSX.Element {

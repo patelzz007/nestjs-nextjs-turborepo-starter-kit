@@ -7,7 +7,7 @@ import { TenantTransactionService } from "../../../prisma/tenant-transaction.ser
 import { CEDAR_POLICY_EVALUATOR, type CedarPolicyEvaluatorPort } from "../../authorization/public-api";
 import { MERCHANT_PORTAL_ACCESS } from "../../identity/public-api";
 import type { ApiKeyCapabilitiesPort } from "../application/ports/api-key-capabilities.port";
-import type { MerchantAccessPort } from "../application/ports/merchant-access.port";
+import type { MerchantAccessPort } from "../../../platform/application/ports/authorization.port";
 import type { TenantReadPort } from "../application/ports/tenant-read.port";
 import type { TenantFileAccessPort } from "../application/ports/tenant-file-access.port";
 import {

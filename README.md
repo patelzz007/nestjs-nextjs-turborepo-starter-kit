@@ -150,6 +150,32 @@ pnpm dev:api
 pnpm dev:mobile   # Expo Go on your phone — see apps/mobile/README.md
 ```
 
+### Rebuild the dev database (and keep your GitHub token)
+
+Run these from the repository root, with the dev servers stopped. The GitHub token is stored encrypted in the database, so a rebuild deletes it unless you carry it across:
+
+```bash
+pnpm kill:all                                   # 1. stop the dev servers (ports 3000–3003, 8080)
+
+pnpm db:carry-github-link -- export             # 2. save the superadmin's GitHub link to ~/.rewardhub/github-link.json
+                                                #    (skip when no token is linked yet)
+
+# 3. drop and rebuild — pick ONE:
+pnpm db:reset                                   #    a. drop every table, re-apply the migrations, generate, apply RLS, seed
+# or, to drop the database itself:
+# dropdb <db-name> && createdb <db-name>        #    b. <db-name> is the database in DATABASE_URL (apps/api/.env)
+# pnpm setup:db                                 #       then build shared → generate → deploy → RLS → seed
+
+pnpm db:carry-github-link -- import --in ~/.rewardhub/github-link.json
+                                                # 4. put the GitHub link back on the superadmin (matched by email)
+
+pnpm dev                                        # 5. start everything again
+```
+
+- The import only works while `GITHUB_CREDENTIAL_ENCRYPTION_KEYS` in `apps/api/.env` still holds the key it was saved under, because the token is carried as ciphertext and never decrypted.
+- With no saved link, or a new token, link one in the admin panel instead: **Account → GitHub token** (`http://localhost:3001/account/github`), or on the phone under **Profile → GitHub token**.
+- `pnpm db:reset` already covers migrate, generate, RLS and seed. You don't need to chain `prisma migrate reset`, `prisma generate`, `prisma migrate dev`, `db:seed` and `db:apply-security` yourself.
+
 > **New here?** Follow [Getting started](./docs/technical/getting-started.md) — prerequisites, env files, database, demo accounts and troubleshooting.
 
 ---
@@ -166,6 +192,7 @@ pnpm dev:mobile   # Expo Go on your phone — see apps/mobile/README.md
 | `pnpm build` | Build all workspaces |
 | `pnpm lint` / `pnpm format` / `pnpm typecheck` / `pnpm test` | Quality gates across the monorepo |
 | `pnpm db:all` / `db:migrate` / `db:generate` / `db:seed` / `db:studio` / `db:reset` | Database — see [docs/technical/database.md](./docs/technical/database.md) |
+| `pnpm db:carry-github-link -- export` / `-- import --in <file>` | Carry the superadmin's GitHub link across a database rebuild — see [Rebuild the dev database](#rebuild-the-dev-database-and-keep-your-github-token) |
 | `pnpm db:seed -- --scenario empty\|development\|enterprise [--seed <n>]` | Seed a specific dataset — see [seed data](./docs/technical/database.md#seed-data) |
 | `pnpm docker:up` / `docker:down` / `docker:ps` / `docker:logs` | Local infrastructure — see [docs/technical/operations/local-infrastructure.md](./docs/technical/operations/local-infrastructure.md) |
 | `pnpm test:e2e` / `db:check-rls-manifest` / `docs:check-links` / `secrets:scan` | The extra checks CI runs — see [docs/technical/operations/ci.md](./docs/technical/operations/ci.md) |

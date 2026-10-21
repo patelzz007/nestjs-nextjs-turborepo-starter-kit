@@ -126,7 +126,7 @@ When a request matches one of these common shapes, use the corresponding breakdo
 ### "Add a new API endpoint"
 
 ```text
-1. Define/locate the zod schema for request + response in packages/contracts
+1. Define/locate the zod schema for request + response in packages/shared
    (05-contracts-zod-api.md) — check if one already exists before writing a new one.
 2. Write the controller method: guards, permission decorator, ownership/
    tenant checks explicitly mapped (10-security-auth-authorization.md).
@@ -154,7 +154,7 @@ When a request matches one of these common shapes, use the corresponding breakdo
    defer this to a follow-up.
 4. Add indexes matching the query patterns this table/column will
    actually be used with (08-database-prisma.md, 19-performance-...).
-5. Update the corresponding zod schema in packages/contracts if this
+5. Update the corresponding zod schema in packages/shared if this
    table's data is exposed via the API.
 6. Consider: does this table hold PII? Does it need audit-log-adjacent
    redaction handling anywhere it's logged?

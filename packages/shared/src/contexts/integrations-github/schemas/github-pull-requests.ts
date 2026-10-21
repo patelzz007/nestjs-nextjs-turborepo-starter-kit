@@ -64,6 +64,17 @@ export const LinkGithubAccountSchema = z
 
 export type LinkGithubAccountInput = z.output<typeof LinkGithubAccountSchema>;
 
+/** GitHub's page that creates a fine-grained personal access token (the admin panel and the app link to it). */
+export const GITHUB_NEW_TOKEN_URL = "https://github.com/settings/personal-access-tokens/new";
+
+/** The repository permissions a linked token needs for every pull-request screen, in GitHub's own words. */
+export const GITHUB_TOKEN_REQUIRED_PERMISSIONS: readonly string[] = [
+	"Pull requests: Read and write",
+	"Contents: Read and write (to attach pictures)",
+	"Metadata: Read-only",
+	"Webhooks: Read and write (for live updates)",
+];
+
 /** Whether the linked token still works: GitHub answering 401 for it marks it `rejected`. */
 export const GithubAccountHealthSchema = z.enum(["active", "rejected"]);
 export type GithubAccountHealth = z.output<typeof GithubAccountHealthSchema>;

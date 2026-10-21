@@ -36,7 +36,7 @@ import type { AccountView, AdminAccountView, IdentityReadPort } from "../../appl
 import { ACCOUNT_LOOKUP_OPERATION, ADMIN_USERS_READ_OPERATION, MFA_RECOVERY_LIST_OPERATION, PASSWORD_RESET_LOOKUP_OPERATION } from "../../application/ports/identity.tokens";
 import { toMfaRecoveryStatusResponse } from "../../application/services/mfa-recovery-status";
 import { buildSessionDeviceLabel } from "../../domain/value-objects/session-device.value-object";
-import { ACCOUNT_VIEW_SELECT, epochOrNull, toAccountView, toAdminAccountView, type AccountViewRow } from "./identity-row.mappers";
+import { ACCOUNT_VIEW_SELECT, ADMIN_ACCOUNT_VIEW_SELECT, epochOrNull, toAccountView, toAdminAccountView, type AdminAccountViewRow } from "./identity-row.mappers";
 import { readOwnProfile } from "./own-profile.projection";
 
 // ── Admin user list: query → Prisma (explicit field → column mapping; docs/technical/api/list-queries.md) ──
@@ -48,8 +48,8 @@ const ADMIN_USER_SORT_COLUMNS: SortColumns<AdminUserListSortField, Prisma.UserOr
 };
 
 /** Keyset for the default order (`createdAt desc, id desc`). */
-const ADMIN_USER_LIST_KEYSET: ListKeyset<AccountViewRow, Prisma.UserWhereInput> = timestampIdKeyset(
-	(row: AccountViewRow) => ({ at: Number(row.createdAt), id: row.id }),
+const ADMIN_USER_LIST_KEYSET: ListKeyset<AdminAccountViewRow, Prisma.UserWhereInput> = timestampIdKeyset(
+	(row: AdminAccountViewRow) => ({ at: Number(row.createdAt), id: row.id }),
 	({ at, id }): Prisma.UserWhereInput => ({ OR: [{ createdAt: { lt: at } }, { createdAt: at, id: { lt: id } }] }),
 );
 
@@ -59,7 +59,9 @@ function buildAdminUserStatusWhere(status: AdminUserStatus, now: bigint): Prisma
 		case "active":
 			return { isActive: true, OR: [{ lockedUntil: null }, { lockedUntil: { lte: now } }] };
 		case "inactive":
-			return { isActive: false };
+			return { isActive: false, bannedAt: null };
+		case "banned":
+			return { bannedAt: { not: null } };
 		case "locked":
 			return { lockedUntil: { gt: now } };
 		default:
@@ -233,7 +235,7 @@ export class PrismaIdentityReadRepository implements IdentityReadPort {
 				keyset: ADMIN_USER_LIST_KEYSET,
 				and: (left, right) => ({ AND: [left, right] }),
 				count: (where) => db.user.count({ where }),
-				findMany: (args): Promise<AccountViewRow[]> => db.user.findMany({ ...args, select: ACCOUNT_VIEW_SELECT }),
+				findMany: (args): Promise<AdminAccountViewRow[]> => db.user.findMany({ ...args, select: ADMIN_ACCOUNT_VIEW_SELECT }),
 			});
 			return toPaginatedServiceResult(mapListResult(result, toAdminAccountView), query);
 		});
@@ -241,7 +243,7 @@ export class PrismaIdentityReadRepository implements IdentityReadPort {
 
 	public findAdminAccount(actor: ActorContext, userId: string): Promise<AdminAccountView | null> {
 		return this.asNamedRead(actor, ADMIN_USERS_READ_OPERATION, async (db) => {
-			const row = await db.user.findUnique({ where: { id: userId }, select: ACCOUNT_VIEW_SELECT });
+			const row = await db.user.findUnique({ where: { id: userId }, select: ADMIN_ACCOUNT_VIEW_SELECT });
 			return row === null ? null : toAdminAccountView(row);
 		});
 	}

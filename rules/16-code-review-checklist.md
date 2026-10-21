@@ -215,7 +215,7 @@ If an AI coding agent produced the diff under review, it does not get a lighter 
 | A queue/event consumer | idempotency, retry classification, dead-letter path, schema version, correlation ids |
 | File upload/download | multipart for large files, size/type limits, signed short-lived URLs, scoped credentials, scan-before-serve |
 | Auth/session/token code | token lifetimes, rotation/revocation, no secrets in client, enumeration-safe responses, MFA step-up |
-| A shared contract (`packages/contracts`) | change safety matrix (`05`), every consumer identified, mobile version lag considered |
+| A shared contract (`packages/shared`) | change safety matrix (`05`), every consumer identified, mobile version lag considered |
 | A reusable UI component | component API checklist (`07`), no data/business logic, tokens only, a11y, light/dark, responsive |
 | A page / smart component | data ownership at the page, URL state, loading/empty/error, client boundary as small as possible |
 | Dependencies | necessity, bundle/size impact, maintenance health, license, audit result |

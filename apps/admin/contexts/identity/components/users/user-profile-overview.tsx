@@ -107,6 +107,7 @@ export const UserProfileOverview = React.forwardRef<HTMLDivElement, UserProfileO
 
 					<UserProfileSection title="Account status" description="How the account behaves in the product and admin panel.">
 						<UserProfileField label="Active" value={user.isActive ? "Yes" : "No"} />
+						<UserProfileField label="Banned" value={user.ban === null ? "No" : `Yes, since ${formatDateTimeWithSeconds(user.ban.bannedAt)}`} />
 						<UserProfileField label="Email verified" value={user.isEmailVerified ? "Yes" : "No"} />
 						<UserProfileField label="Super admin" value={user.isSuperAdmin ? "Yes" : "No"} />
 						<UserProfileField label="Admin panel access" value={user.hasAdminAccess ? "Yes" : "No"} />

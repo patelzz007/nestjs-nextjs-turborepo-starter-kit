@@ -1,4 +1,4 @@
-import { type CreateFileUploadUrlInput, type CreateFileUploadUrlResponse, CreateFileUploadUrlSchema, newRowId } from "@workspace/shared";
+import { type CreateFileUploadUrlResponse, type FileUploadRequest, newRowId, parseFileUploadRequest } from "@workspace/shared";
 
 import { StoredFileAggregate } from "../../../domain/aggregates/stored-file.aggregate";
 import { assertAvatarIsUploadersOwn, assertUploadWithinCategoryPolicy, resolveUploadOwnerId } from "../../../domain/policies/file-upload.policy";
@@ -12,10 +12,10 @@ import type { FileObjectStoragePort } from "../../ports/file-object-storage.port
 export async function requestFileUpload(
 	storage: FileObjectStoragePort,
 	uploaderId: string,
-	input: CreateFileUploadUrlInput,
+	input: FileUploadRequest,
 	persist: (file: StoredFileAggregate) => Promise<void>,
 ): Promise<CreateFileUploadUrlResponse> {
-	const parsed = CreateFileUploadUrlSchema.parse(input);
+	const parsed = parseFileUploadRequest(input);
 	assertAvatarIsUploadersOwn(uploaderId, parsed);
 	const policy = assertUploadWithinCategoryPolicy(parsed);
 	const fileId = newRowId();

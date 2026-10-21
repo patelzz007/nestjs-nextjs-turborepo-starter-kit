@@ -112,20 +112,20 @@ function idOfUrl(url: string): string | undefined {
 describe("merchant route table ↔ app/ pages", () => {
 	it("discovers the page files it guards", () => {
 		expect(PAGE_PATTERNS.length).toBeGreaterThan(0);
-		expect(hasPage("/t/any-org/rewards/any-id/edit")).toBe(true);
-		expect(hasPage("/t/any-org/rewards/any-id")).toBe(true);
-		expect(hasPage("/t/any-org/rewards/any-id/history")).toBe(false);
+		expect(hasPage("/t/any-tenant/rewards/any-id/edit")).toBe(true);
+		expect(hasPage("/t/any-tenant/rewards/any-id")).toBe(true);
+		expect(hasPage("/t/any-tenant/rewards/any-id/history")).toBe(false);
 	});
 
 	it.each(APP_STATIC_ROUTES)("top-level route %s has a page", (route: string): void => {
 		expect(hasPage(route)).toBe(true);
 	});
 
-	it.each(TENANT_STATIC_ROUTES)("org route %s has a page under /t/[tenantSlug]", (route: AppPath): void => {
+	it.each(TENANT_STATIC_ROUTES)("tenant route %s has a page under /t/[tenantSlug]", (route: AppPath): void => {
 		expect(hasPage(tenantPath(ORG_SLUG, route))).toBe(true);
 	});
 
-	it("has a page for the dynamic reward view and edit routes and the org root", () => {
+	it("has a page for the dynamic reward view and edit routes and the tenant root", () => {
 		expect(hasPage(tenantRoutes(ORG_SLUG).rewards.detail(SAMPLE_REWARD_ID))).toBe(true);
 		expect(hasPage(tenantRoutes(ORG_SLUG).rewards.edit(SAMPLE_REWARD_ID))).toBe(true);
 		expect(hasPage(tenantRoutes(ORG_SLUG).root)).toBe(true);
@@ -152,7 +152,7 @@ describe("merchant route table ↔ app/ pages", () => {
 });
 
 describe("merchant sidebar menu", () => {
-	it("every enabled item (after org resolution) points at an existing page", () => {
+	it("every enabled item (after tenant resolution) points at an existing page", () => {
 		const missing = ENABLED_ROWS.filter((row) => !hasPage(row.item.url)).map((row) => `${row.item.title} → ${row.item.url}`);
 		expect(missing).toEqual([]);
 	});

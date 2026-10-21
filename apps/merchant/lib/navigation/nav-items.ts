@@ -11,16 +11,17 @@ import {
 	ShieldCheck,
 	Ticket,
 	Users,
+	UserX,
 	type LucideIcon,
 } from "lucide-react";
 
 import type { CapabilitySlug } from "@workspace/shared";
 
-import { canOpenOrgPath } from "@/lib/navigation/org-route-authorization";
+import { canOpenTenantPath } from "@/lib/navigation/tenant-route-authorization";
 import { TENANT_ROUTES, type AppPath } from "@/lib/routes";
 
 /**
- * Command-palette / pinned entry. `url` is org-relative (`TENANT_ROUTES.*`),
+ * Command-palette / pinned entry. `url` is tenant-relative (`TENANT_ROUTES.*`),
  * resolved like sidebar URLs. Visibility comes from the page's rule in
  * `ORG_PAGE_RULES` — an entry is listed exactly when its page would render.
  */
@@ -103,9 +104,9 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 		title: "Tenant settings",
 		url: TENANT_ROUTES.settings.index,
 		section: "Settings",
-		description: "Team, locations, branding, and verification",
+		description: "Team, locations, branding, verification, and banned customers",
 		icon: Settings,
-		keywords: ["settings", "tenant", "team", "locations", "branding", "logo", "verification", "kyb"],
+		keywords: ["settings", "tenant", "team", "locations", "branding", "logo", "verification", "kyb", "ban", "banned"],
 	},
 	{
 		id: "settings-team",
@@ -144,6 +145,15 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 		keywords: ["verification", "kyb", "business", "documents"],
 	},
 	{
+		id: "settings-banned-customers",
+		title: "Banned customers",
+		url: TENANT_ROUTES.settings.bannedCustomers,
+		section: "Settings",
+		description: "Customers banned from your rewards",
+		icon: UserX,
+		keywords: ["ban", "banned", "block", "customers", "abuse"],
+	},
+	{
 		id: "account",
 		title: "Account",
 		url: TENANT_ROUTES.account,
@@ -158,7 +168,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 export type MerchantCapabilityPredicate = (permission: CapabilitySlug) => boolean;
 
 export function filterMerchantNavItems(items: readonly MerchantNavItem[], can: MerchantCapabilityPredicate): readonly MerchantNavItem[] {
-	return items.filter((item) => canOpenOrgPath(item.url, can));
+	return items.filter((item) => canOpenTenantPath(item.url, can));
 }
 
 export function resolvePinnedMerchantNavItems(pinnedUrls: readonly string[], can: MerchantCapabilityPredicate): readonly MerchantNavItem[] {

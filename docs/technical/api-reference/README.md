@@ -1,9 +1,9 @@
 ---
 title: "API reference"
-description: "Every endpoint of the API (271 operations), generated from the OpenAPI export with real seed-data samples."
+description: "Every endpoint of the API (291 operations), generated from the OpenAPI export with real seed-data samples."
 order: 1
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792454400000
+lastUpdated: 1792540800000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
@@ -12,7 +12,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference
 
-Every endpoint of `apps/api` — 271 operations, 225 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+Every endpoint of `apps/api` — 291 operations, 232 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
 
 **Content type.** Every endpoint takes and returns `application/json` unless its *Content type* line names another (a file upload, a download, a live stream). Errors are always `application/json`.
 
@@ -23,13 +23,13 @@ Every endpoint of `apps/api` — 271 operations, 225 with a sample captured from
 
 | Page | Endpoints | Covers |
 | --- | --- | --- |
-| [Auth, sessions and account security](./auth-and-sessions.md) | 40 | Login, signup, email verification, password reset, two-factor authentication, MFA recovery, sessions, impersonation and support access. |
+| [Auth, sessions and account security](./auth-and-sessions.md) | 44 | Login, signup, email verification, password reset, two-factor authentication, MFA recovery, sessions, impersonation and support access. |
 | [Roles, permissions, policies and audit](./access-control.md) | 37 | Platform RBAC administration, authorization decisions, Cedar policy drafts, the capability catalog and the HTTP audit log. |
-| [Platform administration (merchants, rewards review, analytics)](./platform-admin.md) | 19 | What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales. |
-| [Merchant tenants (portal API)](./merchant-tenants.md) | 49 | Everything the merchant portal calls under /orgs/{orgSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
-| [Customer rewards and claims](./customer-rewards.md) | 13 | The consumer app's API: browse rewards, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics. |
+| [Platform administration (merchants, rewards review, analytics)](./platform-admin.md) | 25 | What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales. |
+| [Merchant tenants (portal API)](./merchant-tenants.md) | 56 | Everything the merchant portal calls under /tenants/{tenantSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
+| [Customer rewards and claims](./customer-rewards.md) | 15 | The consumer app's API: browse rewards, share them with friends, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics. |
 | [Point of sale and integrations (machine-to-machine)](./pos.md) | 13 | Terminal pairing, validating a customer's QR / backup code and recording the paid bill, plus the integration API (`/integration/*`: rewards, analytics, redemption history). Authenticated with a merchant API key, which names its own tenant. |
-| [Files and object storage](./files.md) | 10 | Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback. |
+| [Files and object storage](./files.md) | 11 | Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback. |
 | [Email log, templates and delivery webhooks](./email.md) | 7 | The outbound email log, template previews and test sends, and the Resend delivery webhook. |
 | [Geography reference data](./geography.md) | 31 | Regions, subregions, countries, states and cities: CRUD, autocomplete, import and export. |
 | [GitHub contributions](./github.md) | 5 | Read-only summary, commit history with line counts and contributor totals of the GitHub repositories the API is configured with. |
@@ -50,6 +50,8 @@ Every endpoint of `apps/api` — 271 operations, 225 with a sample captured from
 | POST | [`/api/v1/auth/admin/mfa/recovery/review`](./auth-and-sessions.md#post-apiv1authadminmfarecoveryreview) | SuperAdmin: approve or deny an MFA recovery request |
 | GET | [`/api/v1/auth/admin/users`](./auth-and-sessions.md#get-apiv1authadminusers) | SuperAdmin: list all users with roles and lockout status |
 | GET | [`/api/v1/auth/admin/users/{userId}`](./auth-and-sessions.md#get-apiv1authadminusersuserid) | SuperAdmin: get detailed user info including security state |
+| POST | [`/api/v1/auth/admin/users/{userId}/ban`](./auth-and-sessions.md#post-apiv1authadminusersuseridban) | SuperAdmin: ban an account — it can no longer sign in, and every session it has is revoked |
+| POST | [`/api/v1/auth/admin/users/{userId}/unban`](./auth-and-sessions.md#post-apiv1authadminusersuseridunban) | SuperAdmin: lift an account's ban — it may sign in again |
 | PATCH | [`/api/v1/auth/admin/users/{userId}/unlock`](./auth-and-sessions.md#patch-apiv1authadminusersuseridunlock) | SuperAdmin: unlock a locked user account |
 | POST | [`/api/v1/auth/change-password`](./auth-and-sessions.md#post-apiv1authchange-password) | Change password for the authenticated user |
 | POST | [`/api/v1/auth/forgot-password`](./auth-and-sessions.md#post-apiv1authforgot-password) | Request a password reset email |
@@ -78,9 +80,11 @@ Every endpoint of `apps/api` — 271 operations, 225 with a sample captured from
 | POST | [`/api/v1/auth/verify-email`](./auth-and-sessions.md#post-apiv1authverify-email) | Verify email address using a verification token |
 | POST | [`/api/v1/auth/verify-login`](./auth-and-sessions.md#post-apiv1authverify-login) | Complete login with an email verification code |
 | GET | [`/api/v1/session`](./auth-and-sessions.md#get-apiv1session) | Current session status (requires a valid access token) |
+| GET | [`/api/v1/support-access`](./auth-and-sessions.md#get-apiv1support-access) |  |
 | POST | [`/api/v1/support-access/{grantId}/approve`](./auth-and-sessions.md#post-apiv1support-accessgrantidapprove) |  |
 | POST | [`/api/v1/support-access/{grantId}/revoke`](./auth-and-sessions.md#post-apiv1support-accessgrantidrevoke) |  |
 | POST | [`/api/v1/support-access/request`](./auth-and-sessions.md#post-apiv1support-accessrequest) |  |
+| GET | [`/api/v1/tenants/{tenantSlug}/support-access`](./auth-and-sessions.md#get-apiv1tenantstenantslugsupport-access) |  |
 | GET | [`/api/v1/admin/audit`](./access-control.md#get-apiv1adminaudit) |  |
 | GET | [`/api/v1/admin/audit-logs`](./access-control.md#get-apiv1adminaudit-logs) | List audit records (newest first) |
 | GET | [`/api/v1/admin/audit-logs/{id}`](./access-control.md#get-apiv1adminaudit-logsid) | Get one complete audit record |
@@ -127,10 +131,16 @@ Every endpoint of `apps/api` — 271 operations, 225 with a sample captured from
 | GET | [`/api/v1/admin/location-requests`](./platform-admin.md#get-apiv1adminlocation-requests) | List pending tenant store location requests |
 | GET | [`/api/v1/admin/merchants`](./platform-admin.md#get-apiv1adminmerchants) | List merchant tenants |
 | GET | [`/api/v1/admin/merchants/{tenantId}`](./platform-admin.md#get-apiv1adminmerchantstenantid) | Get merchant tenant detail for KYB review |
+| POST | [`/api/v1/admin/merchants/{tenantId}/appeals/{appealId}/reject`](./platform-admin.md#post-apiv1adminmerchantstenantidappealsappealidreject) | Reject a tenant's pending appeal against its suspension |
+| POST | [`/api/v1/admin/merchants/{tenantId}/ban`](./platform-admin.md#post-apiv1adminmerchantstenantidban) | SuperAdmin: ban an active, restricted or suspended tenant |
 | GET | [`/api/v1/admin/merchants/{tenantId}/documents/{documentId}/download`](./platform-admin.md#get-apiv1adminmerchantstenantiddocumentsdocumentiddownload) | Get a short-lived signed download URL for a merchant KYB document |
 | PATCH | [`/api/v1/admin/merchants/{tenantId}/kyb`](./platform-admin.md#patch-apiv1adminmerchantstenantidkyb) | Update merchant KYB status (REJECTED / ACTION_REQUIRED require kybFields.rejectionReason) |
+| GET | [`/api/v1/admin/merchants/{tenantId}/lifecycle`](./platform-admin.md#get-apiv1adminmerchantstenantidlifecycle) | Read a tenant's lifecycle state, current suspension and appeals |
 | POST | [`/api/v1/admin/merchants/{tenantId}/locations`](./platform-admin.md#post-apiv1adminmerchantstenantidlocations) | Create a tenant store location |
 | PATCH | [`/api/v1/admin/merchants/{tenantId}/locations/{locationId}/review`](./platform-admin.md#patch-apiv1adminmerchantstenantidlocationslocationidreview) | Approve or reject a tenant store location request |
+| POST | [`/api/v1/admin/merchants/{tenantId}/reinstate`](./platform-admin.md#post-apiv1adminmerchantstenantidreinstate) | Reinstate a suspended tenant (its pending appeal is accepted with this reason) |
+| POST | [`/api/v1/admin/merchants/{tenantId}/suspend`](./platform-admin.md#post-apiv1adminmerchantstenantidsuspend) | Suspend an active or restricted tenant: only its lifecycle routes keep working |
+| POST | [`/api/v1/admin/merchants/{tenantId}/unban`](./platform-admin.md#post-apiv1adminmerchantstenantidunban) | SuperAdmin: lift a tenant's ban (it is active again) |
 | GET | [`/api/v1/admin/rewards/{rewardId}`](./platform-admin.md#get-apiv1adminrewardsrewardid) | Get one reward in full, whatever its status (moderation detail) |
 | POST | [`/api/v1/admin/rewards/{rewardId}/approve`](./platform-admin.md#post-apiv1adminrewardsrewardidapprove) | Approve a pending reward (no body required) |
 | GET | [`/api/v1/admin/rewards/{rewardId}/images/{fileId}/download`](./platform-admin.md#get-apiv1adminrewardsrewardidimagesfileiddownload) | Get a short-lived signed URL that downloads one of a reward's images (the original upload) |
@@ -147,18 +157,25 @@ Every endpoint of `apps/api` — 271 operations, 225 with a sample captured from
 | POST | [`/api/v1/tenants/{tenantSlug}/api-keys`](./merchant-tenants.md#post-apiv1tenantstenantslugapi-keys) | Create a POS API key |
 | POST | [`/api/v1/tenants/{tenantSlug}/api-keys/{keyId}/revoke`](./merchant-tenants.md#post-apiv1tenantstenantslugapi-keyskeyidrevoke) | Revoke a POS API key (no body required) |
 | GET | [`/api/v1/tenants/{tenantSlug}/context`](./merchant-tenants.md#get-apiv1tenantstenantslugcontext) |  |
+| GET | [`/api/v1/tenants/{tenantSlug}/customer-bans`](./merchant-tenants.md#get-apiv1tenantstenantslugcustomer-bans) | List the tenant's active customer bans, newest first |
+| POST | [`/api/v1/tenants/{tenantSlug}/customer-bans`](./merchant-tenants.md#post-apiv1tenantstenantslugcustomer-bans) | Ban the customer behind one of the tenant's redemptions |
+| POST | [`/api/v1/tenants/{tenantSlug}/customer-bans/{banId}/lift`](./merchant-tenants.md#post-apiv1tenantstenantslugcustomer-bansbanidlift) | Lift a customer ban: the customer may claim and redeem again |
 | GET | [`/api/v1/tenants/{tenantSlug}/kyb`](./merchant-tenants.md#get-apiv1tenantstenantslugkyb) | Get the tenant KYB profile (owner only) |
 | PATCH | [`/api/v1/tenants/{tenantSlug}/kyb`](./merchant-tenants.md#patch-apiv1tenantstenantslugkyb) | Submit or resubmit business verification details (owner only) |
 | GET | [`/api/v1/tenants/{tenantSlug}/kyb/documents/{documentId}/download`](./merchant-tenants.md#get-apiv1tenantstenantslugkybdocumentsdocumentiddownload) | Get a short-lived signed download URL for a CLEAN KYB document (owner only) |
+| GET | [`/api/v1/tenants/{tenantSlug}/lifecycle`](./merchant-tenants.md#get-apiv1tenantstenantsluglifecycle) |  |
+| POST | [`/api/v1/tenants/{tenantSlug}/lifecycle/appeals`](./merchant-tenants.md#post-apiv1tenantstenantsluglifecycleappeals) |  |
+| POST | [`/api/v1/tenants/{tenantSlug}/lifecycle/reactivate`](./merchant-tenants.md#post-apiv1tenantstenantsluglifecyclereactivate) |  |
 | POST | [`/api/v1/tenants/{tenantSlug}/locations`](./merchant-tenants.md#post-apiv1tenantstenantsluglocations) |  |
 | PATCH | [`/api/v1/tenants/{tenantSlug}/locations/{locationId}`](./merchant-tenants.md#patch-apiv1tenantstenantsluglocationslocationid) |  |
 | POST | [`/api/v1/tenants/{tenantSlug}/locations/{locationId}/close`](./merchant-tenants.md#post-apiv1tenantstenantsluglocationslocationidclose) |  |
 | GET | [`/api/v1/tenants/{tenantSlug}/members`](./merchant-tenants.md#get-apiv1tenantstenantslugmembers) |  |
-| POST | [`/api/v1/tenants/{tenantSlug}/members/{membershipId}/stores/{locationId}/remove`](./merchant-tenants.md#post-apiv1tenantstenantslugmembersmembershipidstoreslocationidremove) |  |
+| POST | [`/api/v1/tenants/{tenantSlug}/members/{membershipId}/locations/{locationId}/remove`](./merchant-tenants.md#post-apiv1tenantstenantslugmembersmembershipidlocationslocationidremove) |  |
 | POST | [`/api/v1/tenants/{tenantSlug}/members/invite`](./merchant-tenants.md#post-apiv1tenantstenantslugmembersinvite) |  |
 | GET | [`/api/v1/tenants/{tenantSlug}/members/invites`](./merchant-tenants.md#get-apiv1tenantstenantslugmembersinvites) |  |
 | POST | [`/api/v1/tenants/{tenantSlug}/members/invites/{inviteId}/revoke`](./merchant-tenants.md#post-apiv1tenantstenantslugmembersinvitesinviteidrevoke) |  |
 | PATCH | [`/api/v1/tenants/{tenantSlug}/members/me`](./merchant-tenants.md#patch-apiv1tenantstenantslugmembersme) |  |
+| POST | [`/api/v1/tenants/{tenantSlug}/members/me/leave`](./merchant-tenants.md#post-apiv1tenantstenantslugmembersmeleave) |  |
 | GET | [`/api/v1/tenants/{tenantSlug}/redemptions`](./merchant-tenants.md#get-apiv1tenantstenantslugredemptions) | List tenant redemptions |
 | GET | [`/api/v1/tenants/{tenantSlug}/rewards`](./merchant-tenants.md#get-apiv1tenantstenantslugrewards) | List tenant rewards |
 | POST | [`/api/v1/tenants/{tenantSlug}/rewards`](./merchant-tenants.md#post-apiv1tenantstenantslugrewards) | Create a draft reward |
@@ -195,6 +212,8 @@ Every endpoint of `apps/api` — 271 operations, 225 with a sample captured from
 | POST | [`/api/v1/claims/otp`](./customer-rewards.md#post-apiv1claimsotp) | Request claim OTP (emailed to your account — no SMS in dev) |
 | POST | [`/api/v1/legal/accept`](./customer-rewards.md#post-apiv1legalaccept) | Accept rewards terms and privacy policy |
 | GET | [`/api/v1/legal/status`](./customer-rewards.md#get-apiv1legalstatus) | Get rewards legal acceptance and verified phone status |
+| POST | [`/api/v1/referrals/attribution`](./customer-rewards.md#post-apiv1referralsattribution) | Remember the referral link the caller opened |
+| POST | [`/api/v1/referrals/rewards/{rewardId}/links`](./customer-rewards.md#post-apiv1referralsrewardsrewardidlinks) | Mint a share link for a reward |
 | GET | [`/api/v1/reward-notifications`](./customer-rewards.md#get-apiv1reward-notifications) | List in-app reward notifications |
 | POST | [`/api/v1/reward-notifications/read`](./customer-rewards.md#post-apiv1reward-notificationsread) | Mark reward notifications as read |
 | GET | [`/api/v1/rewards`](./customer-rewards.md#get-apiv1rewards) | Browse published consumer rewards |
@@ -222,6 +241,7 @@ Every endpoint of `apps/api` — 271 operations, 225 with a sample captured from
 | GET | [`/api/v1/files/local-download`](./files.md#get-apiv1fileslocal-download) | Download a private object through a signed, expiring local-storage link (development only) |
 | POST | [`/api/v1/files/processing-callback`](./files.md#post-apiv1filesprocessing-callback) | External processing callback for file lifecycle updates |
 | POST | [`/api/v1/files/upload-url`](./files.md#post-apiv1filesupload-url) | Create a browser upload ticket |
+| POST | [`/api/v1/tenants/{tenantSlug}/files/upload-url`](./files.md#post-apiv1tenantstenantslugfilesupload-url) | Create a browser upload ticket for a tenant-owned file |
 | GET | [`/api/v1/notifications/email-log`](./email.md#get-apiv1notificationsemail-log) | List sent emails |
 | GET | [`/api/v1/notifications/email-log/events`](./email.md#get-apiv1notificationsemail-logevents) | Live EmailLog update stream (SSE) |
 | GET | [`/api/v1/notifications/email-preview`](./email.md#get-apiv1notificationsemail-preview) | List email template metadata |

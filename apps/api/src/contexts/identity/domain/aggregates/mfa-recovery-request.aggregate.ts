@@ -2,7 +2,6 @@ import { epochMs, type EpochMs } from "@workspace/shared";
 
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
 import {
-	CorruptIdentityStateError,
 	MfaRecoveryAlreadyOpenError,
 	MfaRecoveryNotPendingError,
 	MfaRecoveryReviewerNotEligibleError,
@@ -11,6 +10,7 @@ import {
 } from "../errors/identity.errors";
 import { UserCredentialsChanged, type IdentityEvent } from "../events/identity.events";
 import type { AuditOrigin } from "../value-objects/audit-origin.value-object";
+import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 export type MfaRecoveryStatus = "PENDING" | "APPROVED" | "DENIED" | "COMPLETED";
 
@@ -111,7 +111,7 @@ export class MfaRecoveryRequest extends AggregateRoot<IdentityEvent> {
 
 	public static rehydrate(state: MfaRecoveryRequestState): MfaRecoveryRequest {
 		if (state.status === "APPROVED" && (state.reviewedBy === null || state.scheduledUnlockAt === null)) {
-			throw new CorruptIdentityStateError("mfa_recovery_request", `request ${state.id} is APPROVED but has no reviewer or unlock time`);
+			throw new CorruptAggregateStateError("mfa_recovery_request", null, `request ${state.id} is APPROVED but has no reviewer or unlock time`);
 		}
 		return new MfaRecoveryRequest(state, state.status);
 	}
@@ -190,7 +190,7 @@ export class MfaRecoveryRequest extends AggregateRoot<IdentityEvent> {
 		}
 		const reviewerId: string | null = this.state.reviewedBy;
 		if (reviewerId === null) {
-			throw new CorruptIdentityStateError("mfa_recovery_request", `request ${this.state.id} is APPROVED but has no reviewer`);
+			throw new CorruptAggregateStateError("mfa_recovery_request", null, `request ${this.state.id} is APPROVED but has no reviewer`);
 		}
 		this.state = { ...this.state, status: "COMPLETED", completedAt: now };
 		this.audits.push({ action: MfaRecoveryAuditAction.COMPLETED, actorUserId: reviewerId, fromStatus: "APPROVED", toStatus: "COMPLETED", origin });

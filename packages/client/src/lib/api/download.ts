@@ -54,7 +54,7 @@ export function defineDownload<Input extends SerializableInput>(contract: ApiFil
 /** Every file download of the API (the counterpart of `apiRouter` for files). */
 export const apiDownloads = {
 	tenants: {
-		/** `GET /tenants/:orgSlug/analytics/export` — the merchant report (`format`: csv | xlsx | pdf; `from` / `to` required). */
+		/** `GET /tenants/:tenantSlug/analytics/export` — the merchant report (`format`: csv | xlsx | pdf; `from` / `to` required). */
 		analyticsExport: defineDownload(apiContract.tenants.analyticsExport),
 	},
 	rewardsAdmin: {

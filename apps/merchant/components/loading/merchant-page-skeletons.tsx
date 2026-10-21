@@ -59,12 +59,13 @@ export const MERCHANT_SETTINGS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegi
 export const MERCHANT_LOCATIONS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading store locations…" };
 export const MERCHANT_BRANDING_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading store branding…" };
 export const MERCHANT_TEAM_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading team…" };
+export const MERCHANT_BANNED_CUSTOMERS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading banned customers…" };
 export const MERCHANT_VERIFICATION_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading business verification…" };
 export const MERCHANT_ACCOUNT_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading account…" };
 
 // ── Counts (what a typical page holds; the real rows replace them) ───────────
 
-/** Org dashboard KPI tiles: role, locations, KYB status, policy version. */
+/** Tenant dashboard KPI tiles: role, locations, KYB status, policy version. */
 const DASHBOARD_STAT_CARDS = 4;
 /** Shortcut links per dashboard column (administration, operations). */
 const DASHBOARD_LINKS_PER_COLUMN = 3;
@@ -137,7 +138,7 @@ function NavLinkCardSkeleton({ index }: { readonly index: number }): React.JSX.E
 }
 
 /** An integration guide card: its header, then numbered steps of an icon and two lines. */
-function GuideCardSkeleton(): React.JSX.Element {
+export function GuideCardSkeleton(): React.JSX.Element {
 	return (
 		<MerchantSectionCardSkeleton>
 			<div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
@@ -174,7 +175,7 @@ export function MerchantPageSkeleton({ labels = MERCHANT_PAGE_LOADING_LABELS }: 
 	);
 }
 
-// ── Workspace (before the org shell mounts) ─────────────────────────────────
+// ── Workspace (before the tenant shell mounts) ─────────────────────────────────
 
 /** The sidebar's outline, from the merchant menu itself — every section and row the real sidebar can show. */
 const MERCHANT_SIDEBAR_SKELETON_SHAPE: SidebarMenuSkeletonShape = sidebarMenuSkeletonShape(MERCHANT_SIDEBAR_MENU);
@@ -189,7 +190,7 @@ export interface MerchantWorkspaceSkeletonProps {
 /**
  * The merchant shell itself while the workspace loads — the entry routes
  * (`/`, `/account`) that resolve the member's tenant and redirect into
- * it, and the org layout's first render. It is the real `AppPanelShell` (frame,
+ * it, and the tenant layout's first render. It is the real `AppPanelShell` (frame,
  * sidebar width, page panel) with the real sidebar header; only what loads is
  * a placeholder: the menu (outlined from the merchant menu), the header's
  * breadcrumb and actions, and a dashboard-shaped page.
@@ -673,6 +674,30 @@ export function MerchantTeamPageSkeleton(): React.JSX.Element {
 				<Skeleton className="h-28 w-full rounded-xl" />
 				<Skeleton className="h-9 w-36" />
 			</Card>
+		</SkeletonRegion>
+	);
+}
+
+/** Rows the banned-customers list shows while loading. */
+export const BANNED_CUSTOMER_SKELETON_ROWS = 3;
+/** Lines of one ban row: the redemption it was made from, and the reason. */
+export const BANNED_CUSTOMER_LINES = 2;
+
+/** `/t/[tenantSlug]/settings/banned-customers`: the header, then the ban rows with their lift button. */
+export function MerchantBannedCustomersPageSkeleton(): React.JSX.Element {
+	return (
+		<SkeletonRegion labels={MERCHANT_BANNED_CUSTOMERS_LOADING_LABELS} className={PAGE_STACK}>
+			<MerchantPageHeaderSkeleton />
+			<MerchantBorderedRowsSkeleton rows={BANNED_CUSTOMER_SKELETON_ROWS} lines={BANNED_CUSTOMER_LINES} trailing="button" surface="card" />
+		</SkeletonRegion>
+	);
+}
+
+/** The ban rows alone — what the page draws below its real header while the list loads. */
+export function BannedCustomerRowsSkeleton(): React.JSX.Element {
+	return (
+		<SkeletonRegion labels={MERCHANT_BANNED_CUSTOMERS_LOADING_LABELS}>
+			<MerchantBorderedRowsSkeleton rows={BANNED_CUSTOMER_SKELETON_ROWS} lines={BANNED_CUSTOMER_LINES} trailing="button" surface="card" />
 		</SkeletonRegion>
 	);
 }

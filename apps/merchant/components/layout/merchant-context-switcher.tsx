@@ -8,9 +8,9 @@ import {
 	useTenantContextCommands,
 	type TenantContextCommands,
 } from "@/features/tenant-context/facade";
-import { resolveLocationShortLabel } from "@/contexts/tenancy/lib/org/location-display";
-import { TENANT_ROLE_LABELS } from "@/contexts/tenancy/lib/org/role-labels";
-import { useTenantPath } from "@/contexts/tenancy/lib/org/use-tenant-path";
+import { resolveLocationShortLabel } from "@/contexts/tenancy/lib/tenant/location-display";
+import { TENANT_ROLE_LABELS } from "@/contexts/tenancy/lib/tenant/role-labels";
+import { useTenantPath } from "@/contexts/tenancy/lib/tenant/use-tenant-path";
 import { TENANT_ROUTES } from "@/lib/routes";
 import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
 import type { MembershipRole, TenantRewardMembershipResponse } from "@workspace/shared";
@@ -39,7 +39,7 @@ const LOCATION_VISUAL: React.ReactNode = (
 	</IconTile>
 );
 
-/** The org-wide rollup's mark: stacked layers in the brand tone, set apart from the single locations. */
+/** The tenant-wide rollup's mark: stacked layers in the brand tone, set apart from the single locations. */
 const ALL_LOCATIONS_VISUAL: React.ReactNode = (
 	<IconTile tone="brand" size="sm">
 		<Layers aria-hidden="true" />
@@ -52,7 +52,7 @@ interface SwitcherLocation {
 	readonly code: string;
 }
 
-/** Applies a location choice (`ALL_LOCATIONS_VALUE` = the org-wide rollup) through the named tenant-context commands. */
+/** Applies a location choice (`ALL_LOCATIONS_VALUE` = the tenant-wide rollup) through the named tenant-context commands. */
 export function applyLocationChoice(commands: Pick<TenantContextCommands, "selectAllLocations" | "selectLocation">, value: string): void {
 	if (value === ALL_LOCATIONS_VALUE) {
 		commands.selectAllLocations();
@@ -69,7 +69,7 @@ export function locationSwitcherDescription(location: SwitcherLocation): string 
 	return location.name.endsWith(resolveLocationShortLabel(location)) ? undefined : location.name;
 }
 
-/** The Locations group's options: "All locations" first when the member may see org-wide rollups, then each store location. */
+/** The Locations group's options: "All locations" first when the member may see tenant-wide rollups, then each store location. */
 export function locationSwitcherOptions(locations: readonly SwitcherLocation[], canSelectAllLocations: boolean): readonly PanelSidebarSwitcherOption[] {
 	return [
 		...(canSelectAllLocations ? [{ value: ALL_LOCATIONS_VALUE, label: ALL_LOCATIONS_LABEL, visual: ALL_LOCATIONS_VISUAL }] : []),
@@ -123,7 +123,7 @@ export function storeSwitcherStores(memberships: readonly TenantRewardMembership
 /**
  * The merchant sidebar's header (app shell 3): the active store and the store
  * location the portal is scoped to, opening a menu to change either — the
- * locations of this store (and "All locations" for members with org-wide
+ * locations of this store (and "All locations" for members with tenant-wide
  * access), then the member's stores (the first page; "All stores" opens the
  * rest). Choosing a location goes through the tenant-context commands;
  * choosing a store navigates to it. Members who may see locations also get

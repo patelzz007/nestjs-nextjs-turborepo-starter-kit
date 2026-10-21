@@ -21,7 +21,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 | --- | --- |
 | Put a decorator (`@RequirePermission`, `@Authorize`, `@SuperAdminOnly`) or a `kernel.authorize()` call on **every** mutation and privileged read | The frontend can be bypassed with `curl`. |
 | Use `@Authorize({ …, resourceId })` or `kernel.authorize()` with the record when the answer depends on **which** record | A permission is a capability "somewhere", not "on every record". |
-| Pass the record's `tenantId` / `storeId` / `locationId` as resource attributes | Tenant-scoped grants fail closed without them ([kernel §5.2](./backend.md#52-what-each-scope-means)). |
+| Pass the record's `tenantId` / `locationId` as resource attributes | Tenant-scoped grants fail closed without them ([kernel §5.2](./backend.md#52-what-each-scope-means)). |
 | Read the tenant from the request context (`requestContext.current()?.tenant`) | It is verified; headers and bodies are not ([tenancy §2](./tenancy-and-rls.md#2-client-tenant-ids-are-requests-not-facts)). |
 | Use `kernel.filter()` for list endpoints | One query, no data leak, no N+1. |
 | Keep business validation separate from authorization | "May they?" and "is this state change valid?" are different questions with different errors. |
@@ -36,7 +36,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 | --- | --- |
 | `if (user.role === "ADMIN")` in business code (merchant: `role === "OWNER"`, role lists) | Roles are data; permissions are the vocabulary. Use the kernel; merchant code uses `MERCHANT_CAPABILITY.*` (`requireMembershipCapability`). |
 | Treat tenant membership as permission | Membership only lets **scoped** permissions apply; it grants nothing by itself. |
-| Trust `tenantId` / `storeId` / `ownerId` from the body or headers | Forged tenant ids and ownership claims are the classic multi-tenant bug. |
+| Trust `tenantId` / `locationId` / `ownerId` from the body or headers | Forged tenant ids and ownership claims are the classic multi-tenant bug. |
 | Load all rows and filter in JavaScript | Leaks data into memory and logs, and is slow. |
 | Store JavaScript or SQL as policies, or `eval` anything | Remote code execution. Conditions use the validated JSON rule language. |
 | Create an RLS policy per role | Roles are dynamic; RLS protects stable tenant concepts. |
@@ -63,7 +63,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 | ❌ Don't | Why |
 | --- | --- |
 | Treat a hidden button as protection | UX only. |
-| `user.role === "MANAGER" && user.storeId === order.storeId` in a component | Re-implements the kernel badly. |
+| `user.role === "MANAGER" && user.locationId === order.locationId` in a component | Re-implements the kernel badly. |
 | Type slug strings (`"platform:user.delete"`) | See the constants rule above. |
 | Call the API for every `can()` | Checks are local; use the decisions endpoint only for batches of per-record checks. |
 | Mark unauthorized menu items `disabled` | `disabled` means "switched off", not "forbidden" — hide them. |

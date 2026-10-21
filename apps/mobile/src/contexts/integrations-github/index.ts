@@ -11,7 +11,8 @@ export { GithubContributionsSection } from "./github/github-contributions-sectio
 export { commitScreenTitle, MORE_FILES_ON_GITHUB } from "./github/labels";
 export { refreshGithubContributions } from "./github/refresh";
 export { EDIT_HISTORY_TITLE } from "./pull-requests/edit-history-sheet";
-export { GITHUB_NEW_TOKEN_URL, GithubAccountScreen } from "./pull-requests/github-account-screen";
+export { GITHUB_NEW_TOKEN_URL } from "@workspace/shared";
+export { GithubAccountScreen } from "./pull-requests/github-account-screen";
 export { useGithubPullRequestAccess } from "./pull-requests/github-pull-request-access";
 export {
 	accountRowValue,

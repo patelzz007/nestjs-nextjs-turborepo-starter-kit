@@ -25,12 +25,15 @@ import {
 	TENANTS_SCOPE_FACTORY,
 	KYB_FILE_ACCESS,
 	KYB_READ,
+	TENANT_LIFECYCLE_READ,
 	MERCHANT_ADMIN_READ,
 	TENANT_AUDIT,
-	STORE_CLOSURE_FACTORY,
+	LOCATION_CLOSURE_FACTORY,
+	REDEMPTION_CUSTOMER_FACTORY,
 	TENANT_EMAILS,
 	TENANTS_UNIT_OF_WORK,
 	TEAM_READ,
+	CUSTOMER_BAN_READ,
 } from "./application/ports/tenants.tokens";
 import { AcceptTeamInviteHandler } from "./application/commands/accept-team-invite/accept-team-invite.handler";
 import { CloseLocationHandler } from "./application/commands/close-location/close-location.handler";
@@ -44,7 +47,7 @@ import { ProposeLocationHandler } from "./application/commands/propose-location/
 import { ProvisionMerchantFromAdminInviteHandler } from "./application/commands/provision-merchant-from-admin-invite/provision-merchant-from-admin-invite.handler";
 import { ProvisionTenantFromPlatformInviteHandler } from "./application/commands/provision-tenant-from-platform-invite/provision-tenant-from-platform-invite.handler";
 import { RegisterAndAcceptTeamInviteHandler } from "./application/commands/register-and-accept-team-invite/register-and-accept-team-invite.handler";
-import { RemoveMemberFromStoreHandler } from "./application/commands/remove-member-from-store/remove-member-from-store.handler";
+import { RemoveMemberFromLocationHandler } from "./application/commands/remove-member-from-location/remove-member-from-location.handler";
 import { RenameOwnMembershipHandler } from "./application/commands/rename-own-membership/rename-own-membership.handler";
 import { RequestOnboardingDocumentUploadHandler } from "./application/commands/request-onboarding-document-upload/request-onboarding-document-upload.handler";
 import { RequestOnboardingDocumentUploadsHandler } from "./application/commands/request-onboarding-document-uploads/request-onboarding-document-uploads.handler";
@@ -75,8 +78,24 @@ import { TenantsFileRegistrations } from "./infrastructure/persistence/tenants-f
 import { MerchantInviteEmailPreviewAdapter } from "./infrastructure/adapters/tenant-emails.adapter";
 import type { TenantAuditTransaction } from "./infrastructure/audit/tenant-audit.adapter";
 import { TenantAccessModule } from "./infrastructure/tenant-access.module";
-import { TenantsScopeFactory, type StoreClosureFactory } from "./infrastructure/persistence/tenants-scope.factory";
+import { TenantsScopeFactory, type LocationClosureFactory, type RedemptionCustomerFactory } from "./infrastructure/persistence/tenants-scope.factory";
 import { PrismaKybReadRepository } from "./infrastructure/persistence/prisma-kyb.read-repository";
+import { PrismaTenantLifecycleReadRepository } from "./infrastructure/persistence/prisma-tenant-lifecycle.read-repository";
+import { LeaveTenantHandler } from "./application/commands/leave-tenant/leave-tenant.handler";
+import { ReactivateTenantHandler } from "./application/commands/reactivate-tenant/reactivate-tenant.handler";
+import { ReinstateTenantHandler } from "./application/commands/reinstate-tenant/reinstate-tenant.handler";
+import { BanTenantHandler } from "./application/commands/ban-tenant/ban-tenant.handler";
+import { BanCustomerHandler } from "./application/commands/ban-customer/ban-customer.handler";
+import { LiftCustomerBanHandler } from "./application/commands/lift-customer-ban/lift-customer-ban.handler";
+import { ListCustomerBansHandler } from "./application/queries/list-customer-bans/list-customer-bans.handler";
+import { PrismaCustomerBanReadRepository } from "./infrastructure/persistence/prisma-customer-ban.read-repository";
+import { TenantCustomerBansController } from "./presentation/http/tenant-customer-bans.controller";
+import { UnbanTenantHandler } from "./application/commands/unban-tenant/unban-tenant.handler";
+import { RejectSuspensionAppealHandler } from "./application/commands/reject-suspension-appeal/reject-suspension-appeal.handler";
+import { SubmitSuspensionAppealHandler } from "./application/commands/submit-suspension-appeal/submit-suspension-appeal.handler";
+import { SuspendTenantHandler } from "./application/commands/suspend-tenant/suspend-tenant.handler";
+import { GetTenantLifecycleForAdminHandler } from "./application/queries/get-tenant-lifecycle-for-admin/get-tenant-lifecycle-for-admin.handler";
+import { GetTenantLifecycleHandler } from "./application/queries/get-tenant-lifecycle/get-tenant-lifecycle.handler";
 import { PrismaMerchantAdminReadRepository } from "./infrastructure/persistence/prisma-merchant-admin.read-repository";
 import { PrismaTeamReadRepository } from "./infrastructure/persistence/prisma-team.read-repository";
 import { MerchantOnboardingController } from "./presentation/http/merchant-onboarding.controller";
@@ -100,7 +119,7 @@ const HANDLERS = [
 	ProvisionMerchantFromAdminInviteHandler,
 	ProvisionTenantFromPlatformInviteHandler,
 	RegisterAndAcceptTeamInviteHandler,
-	RemoveMemberFromStoreHandler,
+	RemoveMemberFromLocationHandler,
 	RenameOwnMembershipHandler,
 	RequestOnboardingDocumentUploadHandler,
 	RequestOnboardingDocumentUploadsHandler,
@@ -125,6 +144,19 @@ const HANDLERS = [
 	GetMerchantInviteAvailabilityHandler,
 	PreviewOnboardingInviteHandler,
 	PreviewTeamInviteHandler,
+	SuspendTenantHandler,
+	ReinstateTenantHandler,
+	BanTenantHandler,
+	UnbanTenantHandler,
+	BanCustomerHandler,
+	LiftCustomerBanHandler,
+	ListCustomerBansHandler,
+	RejectSuspensionAppealHandler,
+	SubmitSuspensionAppealHandler,
+	ReactivateTenantHandler,
+	LeaveTenantHandler,
+	GetTenantLifecycleHandler,
+	GetTenantLifecycleForAdminHandler,
 ];
 
 /**
@@ -136,6 +168,7 @@ const HANDLERS = [
 	imports: [PrismaModule, UnitOfWorkModule, SystemCommandModule, TenantAccessModule, FilesModule, NotificationsModule],
 	controllers: [
 		TenantController,
+		TenantCustomerBansController,
 		TenantTeamInviteController,
 		TenantAdminController,
 		MembershipsBootstrapController,
@@ -148,15 +181,16 @@ const HANDLERS = [
 	providers: [
 		{
 			provide: TENANTS_SCOPE_FACTORY,
-			inject: [STORE_CLOSURE_FACTORY, TENANT_AUDIT, StoredFileAccess, NotificationsTransactionalPortsFactory, TypedConfigService, LogService],
+			inject: [LOCATION_CLOSURE_FACTORY, REDEMPTION_CUSTOMER_FACTORY, TENANT_AUDIT, StoredFileAccess, NotificationsTransactionalPortsFactory, TypedConfigService, LogService],
 			useFactory: (
-				storeClosure: StoreClosureFactory,
+				locationClosure: LocationClosureFactory,
+				redemptionCustomers: RedemptionCustomerFactory,
 				audit: TenantAuditPort<TenantAuditTransaction>,
 				storedFiles: StoredFileAccess,
 				notifications: NotificationsTransactionalPortsFactory,
 				config: TypedConfigService,
 				logs: LogService,
-			): TenantsScopeFactory => new TenantsScopeFactory({ storeClosure, audit, storedFiles, notifications, config, logs }),
+			): TenantsScopeFactory => new TenantsScopeFactory({ locationClosure, redemptionCustomers, audit, storedFiles, notifications, config, logs }),
 		},
 		{
 			provide: TENANTS_UNIT_OF_WORK,
@@ -180,6 +214,11 @@ const HANDLERS = [
 				new PrismaKybReadRepository(new PrismaReadExecutor<Prisma.TransactionClient>(transactions), transactions, files),
 		},
 		{
+			provide: CUSTOMER_BAN_READ,
+			inject: [TenantTransactionService],
+			useFactory: (transactions: TenantTransactionService): PrismaCustomerBanReadRepository => new PrismaCustomerBanReadRepository(transactions),
+		},
+		{
 			provide: TEAM_READ,
 			inject: [TenantTransactionService],
 			useFactory: (transactions: TenantTransactionService): PrismaTeamReadRepository =>
@@ -190,6 +229,11 @@ const HANDLERS = [
 			inject: [TenantTransactionService, KYB_FILE_ACCESS],
 			useFactory: (transactions: TenantTransactionService, files: KybFileAccessPort): PrismaMerchantAdminReadRepository =>
 				new PrismaMerchantAdminReadRepository(transactions, files),
+		},
+		{
+			provide: TENANT_LIFECYCLE_READ,
+			inject: [TenantTransactionService],
+			useFactory: (transactions: TenantTransactionService): PrismaTenantLifecycleReadRepository => new PrismaTenantLifecycleReadRepository(transactions),
 		},
 		{ provide: INVITE_TOKENS, useClass: RandomInviteTokens },
 		{

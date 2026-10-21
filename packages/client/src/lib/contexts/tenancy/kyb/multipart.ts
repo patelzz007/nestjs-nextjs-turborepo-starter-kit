@@ -9,7 +9,7 @@ import type { ApiClient } from "../../../api/use-api";
 import type { ApiRouter } from "../../../api/endpoints";
 import {
 	calculateFileSha256Hex,
-	uploadFileDirect,
+	uploadTenantFileDirect,
 	uploadFileWithTicket,
 	toDocumentMimeType,
 	waitForFileReady,
@@ -37,19 +37,19 @@ export async function awaitUploadedDocumentReady(reader: FileStatusReader, uploa
  */
 async function uploadKybDocuments(
 	api: ApiClient<ApiRouter>,
-	tenantId: string,
+	tenantSlug: string,
 	documents: readonly MerchantKybPendingDocument[],
 	signal: AbortSignal | undefined,
 ): Promise<string[]> {
 	const fileIds: string[] = [];
 	for (const document of documents) {
-		const result = await uploadFileDirect(
+		const result = await uploadTenantFileDirect(
 			api,
+			tenantSlug,
 			{
 				category: "MERCHANT_KYB",
 				fileName: document.fileName,
 				mimeType: toDocumentMimeType(document.file),
-				tenantId,
 			},
 			document.file,
 		);
@@ -113,10 +113,9 @@ export async function submitMerchantKyb(
 	tenantSlug: string,
 	fields: MerchantKybSubmissionFormInput,
 	documents: readonly MerchantKybPendingDocument[],
-	tenantId: string,
 	signal?: AbortSignal,
 ): Promise<MerchantKybProfileResponse> {
-	const uploadedIds = await uploadKybDocuments(api, tenantId, documents, signal);
+	const uploadedIds = await uploadKybDocuments(api, tenantSlug, documents, signal);
 	const submission: MerchantKybSubmissionFieldsInput = { ...fields, documentFileIds: uploadedIds };
 	const response = await api.tenants.kyb.submit.mutate({ tenantSlug, ...submission });
 	return MerchantKybProfileResponseSchema.parse(response.data);

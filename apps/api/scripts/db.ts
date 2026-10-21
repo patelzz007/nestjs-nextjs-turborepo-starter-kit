@@ -122,7 +122,7 @@ function formatSection(title: string, items: readonly string[]): string {
 }
 
 function hasManifestIssues(report: RlsManifestDriftReport): boolean {
-	return [report.missingFromManifest, report.unknownManifestTables, report.orgModelsMissingManifest, report.locationProfileMismatch, report.manifestNotInRlsSql].some(
+	return [report.missingFromManifest, report.unknownManifestTables, report.tenantModelsMissingManifest, report.locationProfileMismatch, report.manifestNotInRlsSql].some(
 		(items: readonly string[]): boolean => items.length > 0,
 	);
 }
@@ -151,7 +151,7 @@ function checkRlsManifest(): number {
 	const body = [
 		formatSection("Tables in Prisma but missing from manifest", report.missingFromManifest),
 		formatSection("Manifest entries with no Prisma model", report.unknownManifestTables),
-		formatSection("Models with tenant_id missing from manifest", report.orgModelsMissingManifest),
+		formatSection("Models with tenant_id missing from manifest", report.tenantModelsMissingManifest),
 		formatSection("Location profile mismatches", report.locationProfileMismatch),
 		formatSection("Manifest tables not found in RLS SQL enable list", report.manifestNotInRlsSql),
 		formatSection("Withheld-privilege entries with no Prisma model (prisma/rls/withheld-privileges.ts)", unknownWithheldTables),

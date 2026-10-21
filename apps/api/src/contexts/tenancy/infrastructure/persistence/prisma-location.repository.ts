@@ -1,13 +1,11 @@
 import type { Location as LocationRecord } from "@prisma/client";
 import { epochMs, type EpochMs, newRowId } from "@workspace/shared";
 
-import { NotFoundError } from "../../../../platform/application/errors/app-error";
 import { Location } from "../../domain/aggregates/location.aggregate";
 import { LocationStatusConflictError } from "../../domain/errors/tenants.errors";
-import type { LocationRepository, PersistedLocation, StoreAccessRemoval } from "../../domain/repositories/location.repository";
+import type { LocationRepository, PersistedLocation } from "../../domain/repositories/location.repository";
 import { allocateUniqueLocationCode } from "./location-code";
 import type { TenantsDb } from "./tenant-db";
-import { syncStoreForLocation } from "./store-sync";
 
 /** Namespace of the per-tenant advisory lock that serializes location writes (code allocation, pending quota, primary). */
 const LOCATION_WRITE_LOCK_NAMESPACE = "tenant-locations:";
@@ -106,7 +104,6 @@ export class PrismaLocationRepository implements LocationRepository {
 				updatedAt: now,
 			},
 		});
-		await syncStoreForLocation(this.db, row);
 		return toPersistedLocation(row);
 	}
 
@@ -139,24 +136,16 @@ export class PrismaLocationRepository implements LocationRepository {
 			throw new LocationStatusConflictError(LOCATION_CHANGED_MESSAGE);
 		}
 		const row = await this.db.location.findFirstOrThrow({ where: { id: snapshot.id, tenantId: snapshot.tenantId } });
-		await syncStoreForLocation(this.db, row);
 		return toPersistedLocation(row);
 	}
 
-	public async removeStoreAccess(location: Location, closedByUserId: string, at: EpochMs): Promise<StoreAccessRemoval> {
-		const store = await this.db.store.findUnique({ where: { locationId: location.id }, select: { id: true } });
-		if (store === null) {
-			throw new NotFoundError();
-		}
-		const memberships = await this.db.storeMembership.updateMany({
-			where: { storeId: store.id, isDeleted: false },
-			data: { isDeleted: true, deletedAt: at, deletedBy: closedByUserId, updatedAt: at },
-		});
-		// Soft-deleted like every business row: the scope history stays, and access reads only live rows.
+	public async removeMemberScopes(location: Location, closedByUserId: string, at: EpochMs): Promise<number> {
+		// Soft-deleted like every business row: the scope history stays, and access (with the location
+		// role a row carries) reads only live rows.
 		const scopes = await this.db.membershipLocationScope.updateMany({
 			where: { locationId: location.id, scopeType: "SELECTED", isDeleted: false },
 			data: { isDeleted: true, deletedAt: at, deletedBy: closedByUserId, updatedAt: at },
 		});
-		return { storeId: store.id, storeMembershipsRemoved: memberships.count, memberScopesRemoved: scopes.count };
+		return scopes.count;
 	}
 }

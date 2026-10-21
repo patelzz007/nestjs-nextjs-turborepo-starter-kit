@@ -1,5 +1,5 @@
 import { MerchantRewardsPageView } from "@/contexts/rewards/components/merchant-rewards-page-view";
-import { guardOrgPage } from "@/contexts/tenancy/lib/org/org-page-guard";
+import { guardTenantPage } from "@/contexts/tenancy/lib/tenant/tenant-page-guard";
 import * as React from "react";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ interface MerchantRewardsPageProps {
 /** Merchant rewards catalog — client-fetched so location scope and cache stay consistent. */
 export default async function MerchantRewardsPage({ params }: MerchantRewardsPageProps): Promise<React.JSX.Element> {
 	const { tenantSlug } = await params;
-	const denied = await guardOrgPage(tenantSlug, "/rewards");
+	const denied = await guardTenantPage(tenantSlug, "/rewards");
 	if (denied !== null) {
 		return denied;
 	}

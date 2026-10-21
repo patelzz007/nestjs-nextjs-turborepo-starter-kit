@@ -1,14 +1,13 @@
 "use client";
 
-import { ApiKeyIntegrationGuide } from "@/contexts/pos/components/api-keys/api-key-integration-guide";
 import { ApiKeyList } from "@/contexts/pos/components/api-keys/api-key-list";
 import { CreateApiKeyCard } from "@/contexts/pos/components/api-keys/create-api-key-card";
-import { CreatedApiKeyNotice } from "@/contexts/pos/components/api-keys/created-api-key-notice";
-import { FLEET_STAT_CARDS, MerchantApiKeysPageSkeleton } from "@/components/loading/merchant-page-skeletons";
+import { FLEET_STAT_CARDS, GuideCardSkeleton, MerchantApiKeysPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantStatCardsSkeleton } from "@/components/loading/merchant-skeleton-parts";
 import { MerchantAccessDenied, MerchantCapabilityGate } from "@/contexts/tenancy";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import { StatCard } from "@workspace/ui/components/stat-card";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import {
@@ -43,7 +42,20 @@ import { MERCHANT_CAPABILITY, type Envelope, type MerchantApiKeySummary } from "
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogMedia, AlertDialogTitle } from "@workspace/ui/components/alert-dialog";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
 import { Ban, KeyRound, ShieldCheck, Store } from "lucide-react";
+import dynamic from "next/dynamic";
 import * as React from "react";
+
+function renderGuideSkeleton(): React.JSX.Element {
+	return <GuideCardSkeleton />;
+}
+
+function renderCreatedKeyNoticeSkeleton(): React.JSX.Element {
+	return <Skeleton className="h-52 rounded-xl" />;
+}
+
+/** The code-block panels (`CodeBlock` is large) are their own chunk; both still render on the server (rules/19, T43). */
+const ApiKeyIntegrationGuide = dynamic(() => import("./api-key-integration-guide").then((module) => module.ApiKeyIntegrationGuide), { loading: renderGuideSkeleton });
+const CreatedApiKeyNotice = dynamic(() => import("./created-api-key-notice").then((module) => module.CreatedApiKeyNotice), { loading: renderCreatedKeyNoticeSkeleton });
 
 const DEFAULT_TERMINAL_NAME = "POS Terminal";
 const CREATE_KEY_FAILED_MESSAGE = "The key could not be created. Try again.";

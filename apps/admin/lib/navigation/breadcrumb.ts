@@ -1,20 +1,14 @@
-import { FileText, Home, type LucideIcon } from "lucide-react";
+import { FileText, Home } from "lucide-react";
 
 import type { BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
+import { menuIconResolver } from "@workspace/ui/lib/sidebar/navigation/menu-icon";
 import { resolveSidebarMenuTrail, withTrailTailLabel } from "@workspace/ui/lib/sidebar/navigation/resolve-sidebar-menu-trail";
 
 import { ICON_MAP } from "@/lib/navigation/menu-icons";
 import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 
-function resolveIcon(iconName: string | undefined): LucideIcon {
-	if (iconName !== undefined) {
-		const resolved = ICON_MAP[iconName];
-		if (resolved !== undefined) {
-			return resolved;
-		}
-	}
-	return FileText;
-}
+/** Crumb icons from the sidebar map; a page without one shows a document. */
+const resolveIcon = menuIconResolver(ICON_MAP, FileText);
 
 export { withTrailTailLabel };
 

@@ -139,6 +139,7 @@ const USER = AdminUserDetailSchema.parse({
 	deletedAt: null,
 	signupReferrer: null,
 	signupReferralStatus: null,
+	ban: null,
 });
 
 function renderPanel(capabilities: readonly CapabilitySlug[], queryClient: QueryClient = new QueryClient()): void {

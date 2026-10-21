@@ -6,7 +6,7 @@
 // the size, `popupClassName`, `scrollAreaClassName`, every
 // react-phone-number-input prop, `onChange(value)` with "" for an empty field)
 // match ReUI, so its examples apply, with these deliberate deviations:
-// - The ref lands on the number `<input>` (RHF `register`, focus on error).
+// - The ref lands on the number `<input>` (a form library's ref, focus on error).
 // - `disabled` and `aria-invalid` drive a CVA `state` axis: an invalid field
 //   reddens the country button too; `aria-invalid` reaches the input.
 // - The country search placeholder, its empty state and the country button's

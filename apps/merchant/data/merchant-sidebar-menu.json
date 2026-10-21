@@ -175,13 +175,13 @@
       "title": "Settings",
       "url": "/settings",
       "icon": "Settings",
-      "authorization": { "permissions": ["merchant:manage_team", "merchant:view_locations", "merchant:manage_verification"], "mode": "any" },
+      "authorization": { "permissions": ["merchant:manage_team", "merchant:view_locations", "merchant:manage_verification", "merchant:manage_rewards"], "mode": "any" },
       "children": [
         {
           "title": "Overview",
           "url": "/settings",
           "icon": "Settings",
-          "authorization": { "permissions": ["merchant:manage_team", "merchant:view_locations", "merchant:manage_verification"], "mode": "any" }
+          "authorization": { "permissions": ["merchant:manage_team", "merchant:view_locations", "merchant:manage_verification", "merchant:manage_rewards"], "mode": "any" }
         },
         {
           "title": "Team",
@@ -206,6 +206,12 @@
           "url": "/settings/verification",
           "icon": "ShieldCheck",
           "authorization": { "permissions": ["merchant:manage_verification"] }
+        },
+        {
+          "title": "Banned customers",
+          "url": "/settings/banned-customers",
+          "icon": "UserX",
+          "authorization": { "permissions": ["merchant:manage_rewards"] }
         }
       ]
     },

@@ -1,8 +1,13 @@
+import { readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { Linter } from "eslint";
 import tseslint from "typescript-eslint";
 import { describe, expect, it } from "vitest";
 
-import { apiArchitectureBoundaryConfigs } from "../import-boundaries.js";
+import { DDD_CONTEXTS, apiArchitectureBoundaryConfigs } from "../import-boundaries.js";
+
+const API_CONTEXTS_DIRECTORY = fileURLToPath(new URL("../../../apps/api/src/contexts/", import.meta.url));
 
 function boundaryMessages(code, filePath) {
 	const linter = new Linter({ configType: "flat" });
@@ -39,8 +44,21 @@ describe("API architecture import boundaries (§12.1)", () => {
 
 	it("rejects another context's internals and allows its public-api", () => {
 		const file = "src/contexts/rewards/application/checkout.handler.ts";
-		expect(boundaryMessages('import { Org } from "../../tenants/domain/tenant";', file).length).toBeGreaterThan(0);
-		expect(boundaryMessages('import { TenantReadPort } from "../../tenants/public-api";', file)).toEqual([]);
+		expect(boundaryMessages('import { Tenant } from "../../tenancy/domain/tenant";', file).length).toBeGreaterThan(0);
+		expect(boundaryMessages('import { TenantReadPort } from "../../tenancy/public-api";', file)).toEqual([]);
+	});
+
+	it("applies the layer rules to the tenancy context", () => {
+		const file = "src/contexts/tenancy/domain/tenant.ts";
+		expect(boundaryMessages('import { Injectable } from "@nestjs/common";', file).length).toBeGreaterThan(0);
+		expect(boundaryMessages('import { Reward } from "../../rewards/domain/reward";', "src/contexts/tenancy/application/x.handler.ts").length).toBeGreaterThan(0);
+	});
+
+	it("names every context folder of the API, so no context escapes the rules", () => {
+		const folders = readdirSync(API_CONTEXTS_DIRECTORY, { withFileTypes: true })
+			.filter((entry) => entry.isDirectory() && entry.name !== "__tests__")
+			.map((entry) => entry.name);
+		expect([...DDD_CONTEXTS].sort()).toEqual(folders.sort());
 	});
 
 	it("rejects PrismaBaseRepository outside infrastructure and allows it there", () => {

@@ -84,7 +84,7 @@ export interface SelectProps<Value, Multiple extends boolean | undefined = false
 	readonly shortcut?: string;
 	/** Accessible name for the trigger when there is no visible label (improvement 3). */
 	readonly ariaLabel?: string;
-	/** Validation state — threads to the trigger as `aria-invalid` for RHF/zod (rule 18). */
+	/** Validation state — threads to the trigger as `aria-invalid` for form validation (rule 18). */
 	readonly invalid?: boolean;
 	/**
 	 * Per-usage overrides of the `select` copy from `UiKitLabelsProvider`, for

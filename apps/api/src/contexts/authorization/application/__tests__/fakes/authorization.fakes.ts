@@ -537,6 +537,17 @@ export class InMemorySupportGrants implements SupportAccessGrantRepository {
 		return Promise.resolve(state);
 	}
 
+	public findDueForExpiry(now: EpochMs, limit: number): Promise<SupportAccessGrantAggregate[]> {
+		const expirable: ReadonlySet<string> = new Set<string>(["PENDING_APPROVAL", "PENDING_TENANT_APPROVAL", "ACTIVE"]);
+		return Promise.resolve(
+			[...this.rows.values()]
+				.filter((row) => expirable.has(row.status) && row.expiresAt <= now)
+				.sort((left, right) => left.expiresAt - right.expiresAt || left.id.localeCompare(right.id))
+				.slice(0, limit)
+				.map((row) => SupportAccessGrantAggregate.rehydrate(row)),
+		);
+	}
+
 	public save(grant: SupportAccessGrantAggregate): Promise<"saved" | "lost"> {
 		if (this.rows.get(grant.id)?.status !== grant.concurrencyToken) {
 			return Promise.resolve("lost");

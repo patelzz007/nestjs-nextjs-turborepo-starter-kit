@@ -30,6 +30,7 @@ describe("merchant nav authorization", () => {
 			"settings-locations",
 			"settings-branding",
 			"settings-verification",
+			"settings-banned-customers",
 			"account",
 		]);
 	});
