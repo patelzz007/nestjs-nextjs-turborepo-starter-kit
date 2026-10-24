@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 import PencilIcon from "lucide-react-native/icons/pencil";
 import TrashIcon from "lucide-react-native/icons/trash";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 import { z } from "zod";
 
 import { DropdownMenu, type DropdownMenuItemData, type DropdownMenuProps } from "../dropdown-menu";
@@ -112,7 +112,7 @@ describe("DropdownMenu", () => {
 	});
 
 	it("forwards its ref to the trigger and merges the caller's className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<DropdownMenu ref={ref} label="More" items={ITEMS} onSelect={jest.fn()} className="self-start px-6" testID="menu" />);
 
 		expect(ref.current).not.toBeNull();

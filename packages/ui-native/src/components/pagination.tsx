@@ -7,7 +7,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text, View } from "react-native";
+import { Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
@@ -72,7 +72,7 @@ export interface PaginationProps {
 }
 
 export const Pagination = React.memo(
-	React.forwardRef<View, PaginationProps>(function Pagination(
+	React.forwardRef<ViewInstance, PaginationProps>(function Pagination(
 		{
 			page,
 			pageCount,

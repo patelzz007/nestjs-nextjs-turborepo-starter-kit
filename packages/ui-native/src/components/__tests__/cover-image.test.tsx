@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { Text, type View } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 
 import { CoverImage } from "../cover-image";
 
@@ -61,7 +61,7 @@ describe("CoverImage", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<CoverImage ref={ref} uri={PHOTO_URI} alt="Photo" />);
 		expect(ref.current).not.toBeNull();
 	});

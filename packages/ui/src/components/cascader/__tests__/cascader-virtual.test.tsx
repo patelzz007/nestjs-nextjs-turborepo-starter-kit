@@ -23,7 +23,10 @@ const MANY: readonly CascaderNode<Produce>[] = Array.from({ length: ROW_COUNT },
 
 beforeEach((): void => {
 	stubCascaderResizeObserver();
-	// jsdom lays nothing out: give every element the viewport's height, so the virtualizer has a window to fill.
+	// jsdom lays nothing out: give every element the viewport's size, so the virtualizer has a window to
+	// fill. It reads the scroll element's client size (the viewport) and each row's offset size.
+	vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(VIEWPORT_PX);
+	vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(VIEWPORT_PX);
 	vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(VIEWPORT_PX);
 	vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(VIEWPORT_PX);
 });

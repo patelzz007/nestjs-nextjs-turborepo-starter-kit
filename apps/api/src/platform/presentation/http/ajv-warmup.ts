@@ -1,11 +1,14 @@
 /**
- * Pre-compile all Ajv validators at boot time.
+ * Pre-compile the Ajv validators of every `apiContract` input schema, once the API is up.
  *
- * The ZodValidationPipe compiles Zod → JSON Schema → Ajv on first use per schema.
- * This function walks the apiContract tree and warms up every input schema so
- * the first request to each endpoint doesn't pay the compilation cost.
+ * The ZodValidationPipe compiles Zod → JSON Schema → Ajv on first use per schema, into one
+ * cache every pipe shares. Compiling them all takes about two seconds of CPU, so it runs
+ * AFTER the server listens and in small batches, yielding to the event loop between them:
+ * requests are served meanwhile, and one that needs a schema not compiled yet compiles it
+ * itself, as it would without the warmup.
  */
-import { apiContract, isArrayValue } from "@workspace/shared";
+import { apiContract, CaughtValueSchema, isArrayValue } from "@workspace/shared";
+import { readCaughtErrorMessage } from "../../infrastructure/utils/caught-error";
 import { ZodValidationPipe } from "./validation/pipes/zod-validation.pipe";
 import { Logger } from "@nestjs/common";
 import type { z as ZodV4 } from "zod/v4";
@@ -62,20 +65,37 @@ export function collectSchemas(obj: ContractTreeValue, schemas: ZodV4.ZodType[] 
 	return schemas;
 }
 
-export function warmupAjvValidators(): void {
-	const start = performance.now();
-	const schemas = collectSchemas(apiContract);
+/** Schemas compiled per turn of the event loop: a few milliseconds of work between requests. */
+export const AJV_WARMUP_BATCH_SIZE = 8;
 
+/** Lets the event loop run (pending I/O, timers, requests) before the next batch. */
+function yieldToEventLoop(): Promise<void> {
+	return new Promise((resolve): void => {
+		setImmediate(resolve);
+	});
+}
+
+/**
+ * Compiles `schemas` (by default every `apiContract` input schema) in batches of
+ * {@link AJV_WARMUP_BATCH_SIZE}, yielding between batches; resolves with how many compiled.
+ */
+export async function warmupAjvValidators(schemas: readonly ZodV4.ZodType[] = collectSchemas(apiContract)): Promise<number> {
+	const start = performance.now();
 	let warmed = 0;
-	for (const schema of schemas) {
-		try {
-			ZodValidationPipe.warmup(schema);
-			warmed++;
-		} catch {
-			// Some schemas may not be JSON-schema-compatible — skip silently
+	for (let first = 0; first < schemas.length; first += AJV_WARMUP_BATCH_SIZE) {
+		await yieldToEventLoop();
+		for (const schema of schemas.slice(first, first + AJV_WARMUP_BATCH_SIZE)) {
+			try {
+				ZodValidationPipe.warmup(schema);
+				warmed++;
+			} catch (error) {
+				// Not JSON-schema-compatible: the pipe compiles (or reports) it on first use, as without the warmup.
+				logger.debug(`Skipped an Ajv warmup schema: ${readCaughtErrorMessage(CaughtValueSchema.parse(error))}`);
+			}
 		}
 	}
 
 	const elapsed = (performance.now() - start).toFixed(0);
-	logger.log(`Pre-compiled ${String(warmed)} Ajv validators in ${elapsed}ms`);
+	logger.log(`Pre-compiled ${String(warmed)} Ajv validators in ${elapsed}ms, between requests`);
+	return warmed;
 }

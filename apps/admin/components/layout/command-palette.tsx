@@ -1,7 +1,9 @@
 "use client";
 
+import { KanbanPaletteResults, useKanbanPaletteSearch } from "@/contexts/kanban/components/kanban-palette-results";
 import { ICON_MAP } from "@/lib/navigation/menu-icons";
-import { SEARCH_ALIAS_MAP } from "@/lib/palette/search";
+import { matchingFocusActions, useFocusActions, type FocusAction } from "@/lib/palette/focus-actions";
+import { parseInput, SEARCH_ALIAS_MAP } from "@/lib/palette/search";
 import { useAuthorizedSearchableItems, useCanAccessRoute } from "@/components/layout/authorized-navigation";
 import { ROUTES } from "@/lib/routes";
 import { useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPaletteRecentSearches } from "@workspace/client/lib/features/command-palette/facade";
@@ -46,6 +48,31 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 	const closePalette = React.useCallback((): void => {
 		externalSetOpen?.(false);
 	}, [externalSetOpen]);
+
+	// The palette's text, read here too: the kanban items it finds and the item-in-focus actions it matches.
+	const [searchText, setSearchText] = React.useState("");
+	const { scope, query } = parseInput(searchText);
+	const itemQuery = scope === "all" ? query : "";
+	const items = useKanbanPaletteSearch(itemQuery);
+	const focus = useFocusActions();
+	const focusActions = React.useMemo(
+		(): readonly FocusAction[] => (focus === null || (scope !== "all" && scope !== "commands") ? [] : matchingFocusActions(focus, query)),
+		[focus, query, scope],
+	);
+	const handleRunFocusAction = React.useCallback(
+		(action: FocusAction): void => {
+			closePalette();
+			action.run();
+		},
+		[closePalette],
+	);
+	const handleOpenItem = React.useCallback(
+		(itemId: string): void => {
+			closePalette();
+			router.push(ROUTES.kanban.task(itemId));
+		},
+		[closePalette, router],
+	);
 
 	const quickActions = React.useMemo((): readonly AppCommandPaletteQuickAction[] => {
 		const navigateTo = (href: string): void => {
@@ -126,7 +153,11 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 			{...(externalOpen !== undefined ? { open: externalOpen } : {})}
 			{...(externalSetOpen !== undefined ? { setOpen: externalSetOpen } : {})}
 			title="Command palette"
-			description="Search commands, pages, and actions"
+			description="Search commands, pages, items and actions"
+			searchText={searchText}
+			onSearchTextChange={setSearchText}
+			extraResults={<KanbanPaletteResults focus={focus} actions={focusActions} items={items} onRunAction={handleRunFocusAction} onOpenItem={handleOpenItem} />}
+			hasExtraResults={focusActions.length > 0 || items.length > 0}
 			searchableItems={searchableItems}
 			quickActions={quickActions}
 			recentSearches={recentSearches}

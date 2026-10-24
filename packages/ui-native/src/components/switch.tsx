@@ -6,7 +6,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Pressable, Text, View, type NativeSyntheticEvent, type TargetedEvent } from "react-native";
+import { type NativeSyntheticEvent, Pressable, type TargetedEvent, Text, View, type ViewInstance } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { withUniwind } from "uniwind";
 
@@ -97,7 +97,7 @@ export interface SwitchProps {
 }
 
 export const Switch = React.memo(
-	React.forwardRef<View, SwitchProps>(function Switch(
+	React.forwardRef<ViewInstance, SwitchProps>(function Switch(
 		{
 			label,
 			description,

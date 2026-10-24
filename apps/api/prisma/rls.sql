@@ -404,6 +404,7 @@ BEGIN
     'ProductImage',
     'TenantAsset',
     'UserAvatar',
+    'UserPreference',
     'TenantKybFile'
   ]
   LOOP
@@ -477,6 +478,12 @@ DROP POLICY IF EXISTS user_avatars_owner ON public."UserAvatar";
 CREATE POLICY user_avatars_owner ON public."UserAvatar"
   USING (app_owns("userId") OR (SELECT app_rls_bypass_on('UserAvatar')))
   WITH CHECK (app_owns("userId") OR (SELECT app_rls_bypass_on('UserAvatar')));
+
+-- A person's remembered choices (board grouping, …): their own rows only.
+DROP POLICY IF EXISTS user_preferences_owner ON public."UserPreference";
+CREATE POLICY user_preferences_owner ON public."UserPreference"
+  USING (app_owns("userId") OR (SELECT app_rls_bypass_on('UserPreference')))
+  WITH CHECK (app_owns("userId") OR (SELECT app_rls_bypass_on('UserPreference')));
 
 DROP POLICY IF EXISTS tenant_kyb_files_org ON public."TenantKybFile";
 CREATE POLICY tenant_kyb_files_org ON public."TenantKybFile"
@@ -943,3 +950,105 @@ CREATE POLICY product_select ON "Product" FOR SELECT USING ((SELECT app_rls_bypa
 CREATE POLICY product_insert ON "Product" FOR INSERT WITH CHECK ((SELECT app_rls_bypass_on('Product')));
 CREATE POLICY product_update ON "Product" FOR UPDATE USING ((SELECT app_rls_bypass_on('Product'))) WITH CHECK ((SELECT app_rls_bypass_on('Product')));
 CREATE POLICY product_delete ON "Product" FOR DELETE USING ((SELECT app_rls_bypass_on('Product')));
+
+-- RLS for the kanban boards (platform staff only). Bypass-only: reached through
+-- `kanban.board.read` / `kanban.board.write` after the KANBAN_TASK permission
+-- check; `files.delete` also updates KanbanTaskAttachment when an attached file
+-- is deleted. No DELETE policy: board rows are soft-deleted, never removed
+-- (and app_runtime holds no DELETE on them — rls/withheld-privileges.ts).
+ALTER TABLE "KanbanColumn" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "KanbanColumn" FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS kanban_column_select ON "KanbanColumn";
+DROP POLICY IF EXISTS kanban_column_insert ON "KanbanColumn";
+DROP POLICY IF EXISTS kanban_column_update ON "KanbanColumn";
+CREATE POLICY kanban_column_select ON "KanbanColumn" FOR SELECT USING ((SELECT app_rls_bypass_on('KanbanColumn')));
+CREATE POLICY kanban_column_insert ON "KanbanColumn" FOR INSERT WITH CHECK ((SELECT app_rls_bypass_on('KanbanColumn')));
+CREATE POLICY kanban_column_update ON "KanbanColumn" FOR UPDATE USING ((SELECT app_rls_bypass_on('KanbanColumn'))) WITH CHECK ((SELECT app_rls_bypass_on('KanbanColumn')));
+ALTER TABLE "KanbanPlanningColumn" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "KanbanPlanningColumn" FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS kanban_planning_column_select ON "KanbanPlanningColumn";
+DROP POLICY IF EXISTS kanban_planning_column_insert ON "KanbanPlanningColumn";
+DROP POLICY IF EXISTS kanban_planning_column_update ON "KanbanPlanningColumn";
+CREATE POLICY kanban_planning_column_select ON "KanbanPlanningColumn" FOR SELECT USING ((SELECT app_rls_bypass_on('KanbanPlanningColumn')));
+CREATE POLICY kanban_planning_column_insert ON "KanbanPlanningColumn" FOR INSERT WITH CHECK ((SELECT app_rls_bypass_on('KanbanPlanningColumn')));
+CREATE POLICY kanban_planning_column_update ON "KanbanPlanningColumn" FOR UPDATE USING ((SELECT app_rls_bypass_on('KanbanPlanningColumn'))) WITH CHECK ((SELECT app_rls_bypass_on('KanbanPlanningColumn')));
+ALTER TABLE "KanbanExecutionColumn" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "KanbanExecutionColumn" FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS kanban_execution_column_select ON "KanbanExecutionColumn";
+DROP POLICY IF EXISTS kanban_execution_column_insert ON "KanbanExecutionColumn";
+DROP POLICY IF EXISTS kanban_execution_column_update ON "KanbanExecutionColumn";
+CREATE POLICY kanban_execution_column_select ON "KanbanExecutionColumn" FOR SELECT USING ((SELECT app_rls_bypass_on('KanbanExecutionColumn')));
+CREATE POLICY kanban_execution_column_insert ON "KanbanExecutionColumn" FOR INSERT WITH CHECK ((SELECT app_rls_bypass_on('KanbanExecutionColumn')));
+CREATE POLICY kanban_execution_column_update ON "KanbanExecutionColumn" FOR UPDATE USING ((SELECT app_rls_bypass_on('KanbanExecutionColumn'))) WITH CHECK ((SELECT app_rls_bypass_on('KanbanExecutionColumn')));
+ALTER TABLE "KanbanLevelCounter" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "KanbanLevelCounter" FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS kanban_level_counter_select ON "KanbanLevelCounter";
+DROP POLICY IF EXISTS kanban_level_counter_insert ON "KanbanLevelCounter";
+DROP POLICY IF EXISTS kanban_level_counter_update ON "KanbanLevelCounter";
+CREATE POLICY kanban_level_counter_select ON "KanbanLevelCounter" FOR SELECT USING ((SELECT app_rls_bypass_on('KanbanLevelCounter')));
+CREATE POLICY kanban_level_counter_insert ON "KanbanLevelCounter" FOR INSERT WITH CHECK ((SELECT app_rls_bypass_on('KanbanLevelCounter')));
+CREATE POLICY kanban_level_counter_update ON "KanbanLevelCounter" FOR UPDATE USING ((SELECT app_rls_bypass_on('KanbanLevelCounter'))) WITH CHECK ((SELECT app_rls_bypass_on('KanbanLevelCounter')));
+ALTER TABLE "KanbanConversionStage" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "KanbanConversionStage" FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS kanban_conversion_stage_select ON "KanbanConversionStage";
+DROP POLICY IF EXISTS kanban_conversion_stage_insert ON "KanbanConversionStage";
+DROP POLICY IF EXISTS kanban_conversion_stage_update ON "KanbanConversionStage";
+CREATE POLICY kanban_conversion_stage_select ON "KanbanConversionStage" FOR SELECT USING ((SELECT app_rls_bypass_on('KanbanConversionStage')));
+CREATE POLICY kanban_conversion_stage_insert ON "KanbanConversionStage" FOR INSERT WITH CHECK ((SELECT app_rls_bypass_on('KanbanConversionStage')));
+CREATE POLICY kanban_conversion_stage_update ON "KanbanConversionStage" FOR UPDATE USING ((SELECT app_rls_bypass_on('KanbanConversionStage'))) WITH CHECK ((SELECT app_rls_bypass_on('KanbanConversionStage')));
+ALTER TABLE "KanbanTask" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "KanbanTask" FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS kanban_task_select ON "KanbanTask";
+DROP POLICY IF EXISTS kanban_task_insert ON "KanbanTask";
+DROP POLICY IF EXISTS kanban_task_update ON "KanbanTask";
+CREATE POLICY kanban_task_select ON "KanbanTask" FOR SELECT USING ((SELECT app_rls_bypass_on('KanbanTask')));
+CREATE POLICY kanban_task_insert ON "KanbanTask" FOR INSERT WITH CHECK ((SELECT app_rls_bypass_on('KanbanTask')));
+CREATE POLICY kanban_task_update ON "KanbanTask" FOR UPDATE USING ((SELECT app_rls_bypass_on('KanbanTask'))) WITH CHECK ((SELECT app_rls_bypass_on('KanbanTask')));
+ALTER TABLE "KanbanTaskComment" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "KanbanTaskComment" FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS kanban_task_comment_select ON "KanbanTaskComment";
+DROP POLICY IF EXISTS kanban_task_comment_insert ON "KanbanTaskComment";
+DROP POLICY IF EXISTS kanban_task_comment_update ON "KanbanTaskComment";
+CREATE POLICY kanban_task_comment_select ON "KanbanTaskComment" FOR SELECT USING ((SELECT app_rls_bypass_on('KanbanTaskComment')));
+CREATE POLICY kanban_task_comment_insert ON "KanbanTaskComment" FOR INSERT WITH CHECK ((SELECT app_rls_bypass_on('KanbanTaskComment')));
+CREATE POLICY kanban_task_comment_update ON "KanbanTaskComment" FOR UPDATE USING ((SELECT app_rls_bypass_on('KanbanTaskComment'))) WITH CHECK ((SELECT app_rls_bypass_on('KanbanTaskComment')));
+ALTER TABLE "KanbanTaskAttachment" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "KanbanTaskAttachment" FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS kanban_task_attachment_select ON "KanbanTaskAttachment";
+DROP POLICY IF EXISTS kanban_task_attachment_insert ON "KanbanTaskAttachment";
+DROP POLICY IF EXISTS kanban_task_attachment_update ON "KanbanTaskAttachment";
+CREATE POLICY kanban_task_attachment_select ON "KanbanTaskAttachment" FOR SELECT USING ((SELECT app_rls_bypass_on('KanbanTaskAttachment')));
+CREATE POLICY kanban_task_attachment_insert ON "KanbanTaskAttachment" FOR INSERT WITH CHECK ((SELECT app_rls_bypass_on('KanbanTaskAttachment')));
+CREATE POLICY kanban_task_attachment_update ON "KanbanTaskAttachment" FOR UPDATE USING ((SELECT app_rls_bypass_on('KanbanTaskAttachment'))) WITH CHECK ((SELECT app_rls_bypass_on('KanbanTaskAttachment')));
+ALTER TABLE "KanbanChecklistItem" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "KanbanChecklistItem" FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS kanban_checklist_item_select ON "KanbanChecklistItem";
+DROP POLICY IF EXISTS kanban_checklist_item_insert ON "KanbanChecklistItem";
+DROP POLICY IF EXISTS kanban_checklist_item_update ON "KanbanChecklistItem";
+CREATE POLICY kanban_checklist_item_select ON "KanbanChecklistItem" FOR SELECT USING ((SELECT app_rls_bypass_on('KanbanChecklistItem')));
+CREATE POLICY kanban_checklist_item_insert ON "KanbanChecklistItem" FOR INSERT WITH CHECK ((SELECT app_rls_bypass_on('KanbanChecklistItem')));
+CREATE POLICY kanban_checklist_item_update ON "KanbanChecklistItem" FOR UPDATE USING ((SELECT app_rls_bypass_on('KanbanChecklistItem'))) WITH CHECK ((SELECT app_rls_bypass_on('KanbanChecklistItem')));
+ALTER TABLE "KanbanTaskWatcher" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "KanbanTaskWatcher" FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS kanban_task_watcher_select ON "KanbanTaskWatcher";
+DROP POLICY IF EXISTS kanban_task_watcher_insert ON "KanbanTaskWatcher";
+DROP POLICY IF EXISTS kanban_task_watcher_update ON "KanbanTaskWatcher";
+CREATE POLICY kanban_task_watcher_select ON "KanbanTaskWatcher" FOR SELECT USING ((SELECT app_rls_bypass_on('KanbanTaskWatcher')));
+CREATE POLICY kanban_task_watcher_insert ON "KanbanTaskWatcher" FOR INSERT WITH CHECK ((SELECT app_rls_bypass_on('KanbanTaskWatcher')));
+CREATE POLICY kanban_task_watcher_update ON "KanbanTaskWatcher" FOR UPDATE USING ((SELECT app_rls_bypass_on('KanbanTaskWatcher'))) WITH CHECK ((SELECT app_rls_bypass_on('KanbanTaskWatcher')));
+ALTER TABLE "KanbanTaskLink" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "KanbanTaskLink" FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS kanban_task_link_select ON "KanbanTaskLink";
+DROP POLICY IF EXISTS kanban_task_link_insert ON "KanbanTaskLink";
+DROP POLICY IF EXISTS kanban_task_link_update ON "KanbanTaskLink";
+CREATE POLICY kanban_task_link_select ON "KanbanTaskLink" FOR SELECT USING ((SELECT app_rls_bypass_on('KanbanTaskLink')));
+CREATE POLICY kanban_task_link_insert ON "KanbanTaskLink" FOR INSERT WITH CHECK ((SELECT app_rls_bypass_on('KanbanTaskLink')));
+CREATE POLICY kanban_task_link_update ON "KanbanTaskLink" FOR UPDATE USING ((SELECT app_rls_bypass_on('KanbanTaskLink'))) WITH CHECK ((SELECT app_rls_bypass_on('KanbanTaskLink')));
+ALTER TABLE "KanbanTaskActivity" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "KanbanTaskActivity" FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS kanban_task_activity_select ON "KanbanTaskActivity";
+DROP POLICY IF EXISTS kanban_task_activity_insert ON "KanbanTaskActivity";
+DROP POLICY IF EXISTS kanban_task_activity_update ON "KanbanTaskActivity";
+CREATE POLICY kanban_task_activity_select ON "KanbanTaskActivity" FOR SELECT USING ((SELECT app_rls_bypass_on('KanbanTaskActivity')));
+CREATE POLICY kanban_task_activity_insert ON "KanbanTaskActivity" FOR INSERT WITH CHECK ((SELECT app_rls_bypass_on('KanbanTaskActivity')));
+CREATE POLICY kanban_task_activity_update ON "KanbanTaskActivity" FOR UPDATE USING ((SELECT app_rls_bypass_on('KanbanTaskActivity'))) WITH CHECK ((SELECT app_rls_bypass_on('KanbanTaskActivity')));

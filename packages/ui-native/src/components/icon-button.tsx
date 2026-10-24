@@ -6,7 +6,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { ActivityIndicator, Pressable, type GestureResponderEvent, type NativeSyntheticEvent, type TargetedEvent, type View } from "react-native";
+import { ActivityIndicator, type GestureResponderEvent, type NativeSyntheticEvent, Pressable, type TargetedEvent, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
@@ -70,7 +70,7 @@ export interface IconButtonProps {
 }
 
 export const IconButton = React.memo(
-	React.forwardRef<View, IconButtonProps>(function IconButton(
+	React.forwardRef<ViewInstance, IconButtonProps>(function IconButton(
 		{ icon, label, onPress, onFocus, onBlur, variant = "secondary", size = "md", loading = false, disabled = false, invalid = false, accessibilityHint, className, testID },
 		ref,
 	): React.JSX.Element {

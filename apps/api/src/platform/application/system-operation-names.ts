@@ -26,6 +26,8 @@ export const SystemOperationNameSchema = z.enum([
 	"geo.reference_data.write",
 	"catalog.product_catalog.read",
 	"catalog.product_catalog.write",
+	"kanban.board.read",
+	"kanban.board.write",
 	"reference_data.sync",
 	"authorization.capability_catalog.sync",
 	"authorization.capability_catalog.read",
@@ -137,6 +139,7 @@ export const SystemOperationNameSchema = z.enum([
 	// ── Authorization administration (RBAC) ──────────────────────────────
 	"authorization.rbac.mutate",
 	"authorization.rbac.inspect",
+	"authorization.permission_holders.read",
 	"authorization.rbac.catalog.read",
 	"authorization.health.system_roles",
 	"authorization.audit_log.read",
@@ -160,5 +163,6 @@ export const SystemOperationNameSchema = z.enum([
 	"github.webhook.subscriptions",
 	"github.webhook.deliveries",
 	"seed.github_link.carry",
+	"kanban.board.convert",
 ]);
 export type SystemOperationName = z.output<typeof SystemOperationNameSchema>;

@@ -15,7 +15,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import CheckIcon from "lucide-react-native/icons/check";
 import XIcon from "lucide-react-native/icons/x";
 import * as React from "react";
-import { Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
@@ -64,7 +64,7 @@ export interface BottomSheetProps {
 }
 
 export const BottomSheet = React.memo(
-	React.forwardRef<View, BottomSheetProps>(function BottomSheet(
+	React.forwardRef<ViewInstance, BottomSheetProps>(function BottomSheet(
 		{ visible, title, onClose, children, scrollsItself = false, variant = "default", size = "md", closeLabel = DEFAULT_CLOSE_LABEL, className, testID },
 		ref,
 	): React.JSX.Element {
@@ -147,11 +147,11 @@ export interface SheetOptionRowProps<TValue extends string> {
 }
 
 /** `SheetOptionRow`'s call signature: generic over the value, which `forwardRef` / `memo` alone would erase. */
-export type SheetOptionRowComponent = <TValue extends string>(props: SheetOptionRowProps<TValue> & React.RefAttributes<View>) => React.ReactNode;
+export type SheetOptionRowComponent = <TValue extends string>(props: SheetOptionRowProps<TValue> & React.RefAttributes<ViewInstance>) => React.ReactNode;
 
 /** One choice in a sheet: a radio row, its label bold and ticked while chosen. */
 export const SheetOptionRow: SheetOptionRowComponent = React.memo(
-	React.forwardRef<View, SheetOptionRowProps<string>>(function SheetOptionRow(
+	React.forwardRef<ViewInstance, SheetOptionRowProps<string>>(function SheetOptionRow(
 		{ value, label, description, selected, disabled = false, onSelect, className, testID },
 		ref,
 	): React.JSX.Element {

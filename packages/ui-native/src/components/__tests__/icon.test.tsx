@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react-native";
 import HouseIcon from "lucide-react-native/icons/house";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { Icon, ICON_SIZES, ICON_STROKE_WIDTHS, iconVariants } from "../icon";
 
@@ -36,7 +36,7 @@ describe("Icon", () => {
 	});
 
 	it("forwards its ref to the box and merges the caller's className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<Icon ref={ref} icon={HouseIcon} size="sm" colorClassName="accent-primary" className="mt-0.5 size-5" testID="icon" />);
 
 		expect(ref.current).not.toBeNull();

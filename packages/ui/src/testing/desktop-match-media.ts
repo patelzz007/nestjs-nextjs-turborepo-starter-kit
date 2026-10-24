@@ -13,18 +13,35 @@
 /** The desktop breakpoint query the kit's viewport hooks use. */
 const DESKTOP_QUERY = "min-width: 1024px";
 
+/**
+ * A `MediaQueryList` that matches only the desktop breakpoint. A real `EventTarget`, so
+ * `addEventListener` / `removeEventListener` behave; it never fires `change` (the viewport never
+ * changes under jsdom). The legacy `addListener` / `removeListener` are part of the interface and
+ * do nothing.
+ */
+class DesktopMediaQueryList extends EventTarget implements MediaQueryList {
+	public readonly matches: boolean;
+	public readonly media: string;
+	public onchange: MediaQueryList["onchange"] = null;
+
+	public constructor(query: string) {
+		super();
+		this.matches = query.includes(DESKTOP_QUERY) && !query.includes("max-width");
+		this.media = query;
+	}
+
+	public addListener(): void {
+		// Legacy API: nothing ever changes, so there is nothing to notify.
+	}
+
+	public removeListener(): void {
+		// Legacy API: see addListener.
+	}
+}
+
 /** A `MediaQueryList` for `query`, matching only the desktop breakpoint. */
 export function desktopMediaQueryList(query: string): MediaQueryList {
-	return {
-		matches: query.includes(DESKTOP_QUERY) && !query.includes("max-width"),
-		media: query,
-		onchange: null,
-		addListener: (): void => undefined,
-		removeListener: (): void => undefined,
-		addEventListener: (): void => undefined,
-		removeEventListener: (): void => undefined,
-		dispatchEvent: (): boolean => false,
-	};
+	return new DesktopMediaQueryList(query);
 }
 
 /** Installs {@link desktopMediaQueryList} as the global `matchMedia`. */

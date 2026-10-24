@@ -6,14 +6,8 @@
 import { BrowserHistoryProbe } from "@workspace/client/lib/url-state/browser-history-probe";
 import { expect, test } from "@playwright/test";
 
-import { adminBrowserE2eEnv } from "./browser-env.e2e";
-
 test.beforeEach(async ({ page }) => {
-	await page.goto("/auth/login?redirect=/users");
-	await page.getByLabel("Email").fill(adminBrowserE2eEnv.ADMIN_E2E_EMAIL);
-	await page.getByLabel("Password", { exact: true }).fill(adminBrowserE2eEnv.ADMIN_E2E_PASSWORD);
-	await page.getByRole("button", { name: "Sign in" }).click();
-	await page.waitForURL((url: URL) => url.pathname === "/users");
+	await page.goto("/users");
 });
 
 test("typing replaces the entry, a filter pushes one, and Back/Forward restore the table", async ({ page }) => {

@@ -5,7 +5,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { View } from "react-native";
+import { View, type ViewInstance } from "react-native";
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming, type WithTimingConfig } from "react-native-reanimated";
 import { withUniwind } from "uniwind";
 
@@ -96,7 +96,7 @@ export interface ProgressProps {
 }
 
 export const Progress = React.memo(
-	React.forwardRef<View, ProgressProps>(function Progress(
+	React.forwardRef<ViewInstance, ProgressProps>(function Progress(
 		{ value, max = DEFAULT_MAX, accessibilityLabel, valueText, variant = "default", size = "md", disabled = false, loading = false, invalid = false, className, testID },
 		ref,
 	): React.JSX.Element {

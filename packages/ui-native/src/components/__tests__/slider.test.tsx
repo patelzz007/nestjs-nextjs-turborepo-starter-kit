@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { clampSliderValue, Slider, sliderFractionOf, sliderValueAt, snapSliderValue } from "../slider";
 
@@ -103,7 +103,7 @@ describe("Slider", () => {
 	});
 
 	it("forwards its ref and merges the caller's className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<Slider ref={ref} accessibilityLabel="Volume" value={40} onChange={jest.fn()} className="mx-2 min-h-12" />);
 
 		expect(ref.current).not.toBeNull();

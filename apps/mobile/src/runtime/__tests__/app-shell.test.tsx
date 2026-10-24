@@ -25,7 +25,7 @@ function shellLayout(runtime: ReadyAppRuntime, fontsReady: boolean): () => React
 }
 
 async function renderShell(runtime: ReadyAppRuntime, fontsReady = true): Promise<void> {
-	const view = renderRouter(
+	await renderRouter(
 		{
 			_layout: shellLayout(runtime, fontsReady),
 			"config-error": markerScreen("config-error screen"),
@@ -39,7 +39,6 @@ async function renderShell(runtime: ReadyAppRuntime, fontsReady = true): Promise
 		},
 		{ initialUrl: "/" },
 	);
-	await view;
 }
 
 describe("AppShell — start sequence and root guard transitions", () => {

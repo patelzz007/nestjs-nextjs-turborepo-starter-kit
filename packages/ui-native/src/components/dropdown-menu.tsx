@@ -11,7 +11,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import ChevronDownIcon from "lucide-react-native/icons/chevron-down";
 import * as React from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
@@ -112,10 +112,10 @@ export interface DropdownMenuProps<TValue extends string> {
 }
 
 /** `DropdownMenu`'s call signature: generic over the item value, which `forwardRef` / `memo` alone would erase. */
-export type DropdownMenuComponent = <TValue extends string>(props: DropdownMenuProps<TValue> & React.RefAttributes<View>) => React.ReactNode;
+export type DropdownMenuComponent = <TValue extends string>(props: DropdownMenuProps<TValue> & React.RefAttributes<ViewInstance>) => React.ReactNode;
 
 export const DropdownMenu: DropdownMenuComponent = React.memo(
-	React.forwardRef<View, DropdownMenuProps<string>>(function DropdownMenu(
+	React.forwardRef<ViewInstance, DropdownMenuProps<string>>(function DropdownMenu(
 		{
 			label,
 			items,

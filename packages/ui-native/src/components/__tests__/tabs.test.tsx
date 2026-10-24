@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import ActivityIcon from "lucide-react-native/icons/activity";
 import * as React from "react";
-import { Text, type View } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 import { z } from "zod";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger, type TabsProps } from "../tabs";
@@ -88,10 +88,10 @@ describe("Tabs", () => {
 	});
 
 	it("forwards refs from every part and merges the caller's className last", async () => {
-		const root = React.createRef<View>();
-		const list = React.createRef<View>();
-		const trigger = React.createRef<View>();
-		const content = React.createRef<View>();
+		const root = React.createRef<ViewInstance>();
+		const list = React.createRef<ViewInstance>();
+		const trigger = React.createRef<ViewInstance>();
+		const content = React.createRef<ViewInstance>();
 		await render(
 			<Tabs ref={root} value="a" onChange={jest.fn()} className="gap-6" testID="tabs">
 				<TabsList ref={list} className="p-0" testID="list">

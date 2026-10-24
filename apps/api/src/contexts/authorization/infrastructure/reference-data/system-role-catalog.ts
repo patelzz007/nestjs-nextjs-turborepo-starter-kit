@@ -34,8 +34,9 @@ export interface SystemRoleDefinition {
  *
  * - SuperAdmin: the full matrix (the `isSuperAdmin` flag on the user row still bypasses checks; the role is for assigned operators).
  * - Admin: the admin panel except DELETE:USER and MANAGE:SYSTEM_SETTINGS (granted directly where needed), plus
- *   GitHub pull requests with their own linked token (ADR 052 — no other role gets them).
- * - Manager: a limited admin panel (team lead): no RBAC, system settings, geo or email tools.
+ *   GitHub pull requests with their own linked token (ADR 052 — no other role gets them), plus the whole kanban board.
+ * - Manager: a limited admin panel (team lead): no RBAC, system settings, geo or email tools; works the kanban board
+ *   (create, edit, move, comment, attach) but neither deletes tasks nor rearranges columns.
  * - User: customer app only, every grant OWN-scoped except READ:GITHUB (the configured repositories are shared,
  *   not owned — every signed-in person sees the same contributions), no ADMIN_DASHBOARD.
  * - Location Manager / Location Staff: LOCATION-scoped rows, applied only at the locations a member's location
@@ -63,7 +64,8 @@ export const SYSTEM_ROLE_CATALOG: readonly SystemRoleDefinition[] = [
 			matchesAny(p, "MERCHANT_ORG", ["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"]) ||
 			matchesAny(p, "LOCATION", ["CREATE", "READ", "UPDATE", "LIST"]) ||
 			matches(p, "READ", "GITHUB") ||
-			matchesAny(p, "GITHUB_PULL_REQUEST", ["READ", "UPDATE"]),
+			matchesAny(p, "GITHUB_PULL_REQUEST", ["READ", "UPDATE"]) ||
+			matchesAny(p, "KANBAN_TASK", ["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"]),
 	},
 	{
 		name: "Manager",
@@ -75,7 +77,8 @@ export const SYSTEM_ROLE_CATALOG: readonly SystemRoleDefinition[] = [
 			matchesAny(p, "REPORT", ["READ", "LIST"]) ||
 			matchesAny(p, "ANALYTICS", ["READ", "LIST"]) ||
 			matchesAny(p, "AUDIT_LOG", ["READ", "LIST"]) ||
-			matches(p, "READ", "GITHUB"),
+			matches(p, "READ", "GITHUB") ||
+			matchesAny(p, "KANBAN_TASK", ["CREATE", "READ", "UPDATE", "LIST"]),
 	},
 	{
 		name: "User",

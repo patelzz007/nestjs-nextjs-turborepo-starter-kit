@@ -9,7 +9,7 @@ import { UserBanPanel } from "@/contexts/identity/components/users/user-ban-pane
 import { UserMfaRecoveryPanel } from "@/contexts/identity/components/users/user-mfa-recovery-panel";
 import { UserProfileOverview } from "@/contexts/identity/components/users/user-profile-overview";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
-import { UserDetailBreadcrumb } from "@/contexts/identity/components/users/user-detail-breadcrumb";
+import { DetailBreadcrumb } from "@/components/common/detail-breadcrumb";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import Link from "next/link";
 import * as React from "react";
@@ -34,7 +34,7 @@ export default function UserDetailView({ userId, initialUser, initialGrantsPage 
 
 	return (
 		<>
-			<UserDetailBreadcrumb displayName={user?.fullName} />
+			<DetailBreadcrumb label={user?.fullName} />
 
 			{userQuery.isLoading && user === undefined ? (
 				<UserDetailPageSkeleton />

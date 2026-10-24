@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { Combobox, type ComboboxOption } from "../combobox";
 
@@ -61,7 +61,7 @@ describe("Combobox", () => {
 	});
 
 	it("forwards its ref to the trigger and takes a compact size", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<Combobox<Country> ref={ref} label="Country" options={OPTIONS} value={null} onChange={jest.fn()} size="sm" />);
 
 		expect(ref.current).not.toBeNull();

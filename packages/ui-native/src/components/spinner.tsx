@@ -7,7 +7,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { resolveControlState } from "../lib/control-state";
@@ -74,7 +74,7 @@ export interface SpinnerProps {
 }
 
 export const Spinner = React.memo(
-	React.forwardRef<View, SpinnerProps>(function Spinner(
+	React.forwardRef<ViewInstance, SpinnerProps>(function Spinner(
 		{ variant = "default", size = "sm", accessibilityLabel, disabled = false, invalid = false, colorClassName, className, testID },
 		ref,
 	): React.JSX.Element {

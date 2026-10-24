@@ -10,7 +10,7 @@
 //    node_modules, so its `import "react"` would otherwise load a second React
 //    (invalid hook calls) and a second TanStack Query (no QueryClient in its
 //    context). These imports always resolve from this app, whose versions are
-//    the ones Expo SDK 57 pins.
+//    the ones Expo SDK 58 pins.
 // 2. `@workspace/*` packages resolve through their `development` export
 //    (TypeScript source), like the Next apps and `tsc` do, so no stale `dist/`
 //    is ever bundled and edits to the shared packages reload live.

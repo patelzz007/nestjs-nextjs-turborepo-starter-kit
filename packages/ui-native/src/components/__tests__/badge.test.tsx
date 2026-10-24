@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react-native";
 import CheckIcon from "lucide-react-native/icons/check";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { Badge, type BadgeTone } from "../badge";
 
@@ -54,7 +54,7 @@ describe("Badge", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<Badge ref={ref} label="On" />);
 		expect(ref.current).not.toBeNull();
 	});

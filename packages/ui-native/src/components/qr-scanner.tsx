@@ -23,7 +23,7 @@ import FlashlightIcon from "lucide-react-native/icons/flashlight";
 import FlashlightOffIcon from "lucide-react-native/icons/flashlight-off";
 import XIcon from "lucide-react-native/icons/x";
 import * as React from "react";
-import { Linking, Modal, Platform, Pressable, Text, View, type ViewStyle } from "react-native";
+import { Linking, Modal, Platform, Pressable, Text, View, type ViewInstance, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
 
@@ -100,7 +100,7 @@ function deviceEngine(): QrScannerEngine {
 
 /** The ref reaches the camera scanner's surface while it is open (Google's scanner draws nothing of ours). */
 export const QrScanner = React.memo(
-	React.forwardRef<View, QrScannerProps>(function QrScanner({ visible, onScan, onClose, labels, engine, variant = "default", testID }, ref): React.JSX.Element | null {
+	React.forwardRef<ViewInstance, QrScannerProps>(function QrScanner({ visible, onScan, onClose, labels, engine, variant = "default", testID }, ref): React.JSX.Element | null {
 		const text = React.useMemo((): QrScannerLabels => ({ ...DEFAULT_QR_SCANNER_LABELS, ...labels }), [labels]);
 		const [preferredEngine] = React.useState((): QrScannerEngine => engine ?? deviceEngine());
 		/** Google's scanner could not start on this device: the camera scanner stands in for the rest of the app's life. */
@@ -154,7 +154,10 @@ interface CameraScannerProps {
  * is mounted only while it is open, so each opening starts fresh — one code to
  * read, the torch off, the permission asked again if still undecided.
  */
-const CameraScanner = React.forwardRef<View, CameraScannerProps>(function CameraScanner({ visible, onScan, onClose, labels, variant, testID }, ref): React.JSX.Element {
+const CameraScanner = React.forwardRef<ViewInstance, CameraScannerProps>(function CameraScanner(
+	{ visible, onScan, onClose, labels, variant, testID },
+	ref,
+): React.JSX.Element {
 	return (
 		<Modal visible={visible} animationType="slide" presentationStyle="fullScreen" statusBarTranslucent onRequestClose={onClose}>
 			{visible ? <CameraScannerSurface ref={ref} onScan={onScan} onClose={onClose} labels={labels} variant={variant} testID={testID} /> : null}
@@ -164,7 +167,7 @@ const CameraScanner = React.forwardRef<View, CameraScannerProps>(function Camera
 
 type CameraScannerSurfaceProps = Omit<CameraScannerProps, "visible">;
 
-const CameraScannerSurface = React.forwardRef<View, CameraScannerSurfaceProps>(function CameraScannerSurface(
+const CameraScannerSurface = React.forwardRef<ViewInstance, CameraScannerSurfaceProps>(function CameraScannerSurface(
 	{ onScan, onClose, labels, variant, testID },
 	ref,
 ): React.JSX.Element {

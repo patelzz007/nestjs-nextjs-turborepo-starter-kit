@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { Text, type View } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 
 import { CalendarField } from "../calendar-field";
 
@@ -91,7 +91,7 @@ describe("CalendarField", () => {
 	});
 
 	it("forwards its ref to the trigger, and merges the caller's className onto the field", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await renderField({ ref, className: "flex-1 gap-2" });
 		expect(ref.current).not.toBeNull();
 		const className = String(screen.getByText("Start date").parent?.props.className);

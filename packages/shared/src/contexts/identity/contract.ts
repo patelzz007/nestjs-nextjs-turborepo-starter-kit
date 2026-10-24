@@ -38,6 +38,7 @@ import {
 	MfaRecoveryStatusResponseSchema,
 } from "./schemas/mfa-recovery";
 import { OwnProfileSchema, UpdateOwnProfileSchema } from "./schemas/profile";
+import { SetUserPreferenceSchema, UserPreferencePathSchema, UserPreferenceSchema, UserPreferencesSchema } from "./schemas/user-preferences";
 import { SessionStatusSchema } from "./schemas/session-status";
 import {
 	BackupCodesRemainingResponseSchema,
@@ -72,6 +73,12 @@ export const authContract = {
 	profile: defineContract({ method: "GET", path: authRoutes.profile, input: z.undefined(), response: singleResponse(OwnProfileSchema) }),
 	/** Edit the signed-in user's own profile — 409 CONFLICT when `version` is stale; refused during impersonation. */
 	updateProfile: defineContract({ method: "PATCH", path: authRoutes.profile, input: UpdateOwnProfileSchema, response: singleResponse(OwnProfileSchema) }),
+	/** The signed-in user's remembered choices (board grouping, …) the registry still accepts. */
+	preferences: defineContract({ method: "GET", path: authRoutes.preferences, input: z.undefined(), response: singleResponse(UserPreferencesSchema) }),
+	/** Remember one choice — 400 when the key does not accept the value. */
+	setPreference: defineContract({ method: "PUT", path: authRoutes.preference, input: SetUserPreferenceSchema, response: singleResponse(UserPreferenceSchema) }),
+	/** "Reset to default": forget one choice (soft delete). */
+	resetPreference: defineContract({ method: "DELETE", path: authRoutes.preference, input: UserPreferencePathSchema, response: singleResponse(UserPreferencesSchema) }),
 	/** Session roles + permissions (refetch after RBAC mutations). */
 	permissions: defineContract({ method: "GET", path: authRoutes.permissions, input: z.undefined(), response: singleResponse(SessionPermissionsResponseSchema) }),
 	/** Basic protected endpoint — proves the access token is valid. */

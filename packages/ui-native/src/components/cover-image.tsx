@@ -11,7 +11,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Image } from "expo-image";
 import ImageOffIcon from "lucide-react-native/icons/image-off";
 import * as React from "react";
-import { View } from "react-native";
+import { View, type ViewInstance } from "react-native";
 import { withUniwind } from "uniwind";
 
 import { cn } from "../lib/cn";
@@ -60,7 +60,10 @@ export interface CoverImageProps {
 }
 
 export const CoverImage = React.memo(
-	React.forwardRef<View, CoverImageProps>(function CoverImage({ uri, alt, variant = "rounded", ratio = "video", fallback, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, CoverImageProps>(function CoverImage(
+		{ uri, alt, variant = "rounded", ratio = "video", fallback, className, testID },
+		ref,
+	): React.JSX.Element {
 		// Display state only: the address that failed, so a new address tries again.
 		const [failedUri, setFailedUri] = React.useState<string | null>(null);
 		const showsPicture = uri !== null && uri !== failedUri;

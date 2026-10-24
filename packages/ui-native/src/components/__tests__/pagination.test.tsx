@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { Pagination } from "../pagination";
 
@@ -76,7 +76,7 @@ describe("Pagination", () => {
 	});
 
 	it("forwards its ref and merges className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<Pagination ref={ref} page={1} pageCount={1} onChange={jest.fn()} className="gap-1" testID="pager" />);
 
 		expect(ref.current).not.toBeNull();

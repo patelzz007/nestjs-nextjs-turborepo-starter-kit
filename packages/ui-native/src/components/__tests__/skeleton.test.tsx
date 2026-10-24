@@ -1,7 +1,7 @@
 import { act, render, screen } from "@testing-library/react-native";
 import * as React from "react";
 import { SKELETON_MOTION } from "@workspace/tokens";
-import { AccessibilityInfo, Dimensions, type View } from "react-native";
+import { AccessibilityInfo, Dimensions, type ViewInstance } from "react-native";
 import { getAnimatedStyle } from "react-native-reanimated";
 import { z } from "zod";
 
@@ -140,9 +140,9 @@ describe("SkeletonText", () => {
 
 describe("refs and classes", () => {
 	it("forwards the ref of every part", async () => {
-		const group = React.createRef<View>();
-		const block = React.createRef<View>();
-		const line = React.createRef<View>();
+		const group = React.createRef<ViewInstance>();
+		const block = React.createRef<ViewInstance>();
+		const line = React.createRef<ViewInstance>();
 		await render(
 			<SkeletonGroup ref={group} accessibilityLabel="Loading">
 				<Skeleton ref={block} className="size-14 rounded-full" />

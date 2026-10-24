@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { SegmentedControl, type SegmentedOption } from "../segmented-control";
 
@@ -68,7 +68,7 @@ describe("SegmentedControl", () => {
 	});
 
 	it("forwards its ref and merges the caller's className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<SegmentedControl ref={ref} label="Date range" options={OPTIONS} value="week" onChange={jest.fn()} className="self-stretch p-2" />);
 
 		expect(ref.current).not.toBeNull();

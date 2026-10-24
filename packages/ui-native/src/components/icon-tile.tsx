@@ -9,7 +9,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { View } from "react-native";
+import { View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { Icon, type IconSize, type LucideIcon } from "./icon";
@@ -75,7 +75,7 @@ export interface IconTileProps {
 }
 
 export const IconTile = React.memo(
-	React.forwardRef<View, IconTileProps>(function IconTile({ icon, tone = "neutral", size = "md", className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, IconTileProps>(function IconTile({ icon, tone = "neutral", size = "md", className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" testID={testID} className={cn(iconTileVariants({ tone, size }), className)}>
 				<Icon icon={icon} size={GLYPH_SIZE[size]} colorClassName={iconTileGlyphVariants({ tone })} />

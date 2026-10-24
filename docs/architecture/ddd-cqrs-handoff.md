@@ -351,6 +351,7 @@ The PL agent was stopped before it reported, so **the status of each item below 
   - `turbo.json` concurrency raised to 16
   - docs `--force` dropped
   - a rspack `WatchWorkspaceDistPlugin` that restarts the API when a package's `dist/` changes (pinned by `scripts/__tests__/dev-script-runtime.spec.ts`)
+    — superseded 2026-10-24: the dev bundle now reads `@workspace/*` from their TypeScript source (`development` condition, bundled; `apps/api/turbo.json` drops `^build` from `dev`), so the API starts without waiting on `tsc` builds of `shared` and `messaging`, and an edit there rebuilds the API directly
 - **Baseline (snapshot, medians, ms):**
 
   | Run | A (all apps up) | B (API ready) | C (first page: web / admin / merchant) | D (Metro, iOS) |

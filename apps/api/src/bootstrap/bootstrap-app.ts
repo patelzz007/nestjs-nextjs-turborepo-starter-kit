@@ -102,9 +102,6 @@ export async function bootstrapApp(config: ApiConfig): Promise<void> {
 	const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter, nestOptions);
 	markPhase("NestJS app created");
 
-	// Ajv warmup runs AFTER listen — first request compiles on-demand.
-	setImmediate(warmupAjvValidators);
-
 	// ── API versioning (explicit paths — see @workspace/shared apiPath) ────
 	// Every business controller builds its physical path with `apiPath()` from
 	// `@workspace/shared` (e.g. `@Controller(apiPath("/auth"))` → `/api/v1/auth`),
@@ -175,6 +172,9 @@ export async function bootstrapApp(config: ApiConfig): Promise<void> {
 	const healthService = app.get(HealthService);
 	const logService = app.get(LogService);
 	healthService.markReady();
+	// Only now, with the server answering: compile the request validators in the background, in
+	// batches between requests (ajv-warmup.ts). A request that needs one first compiles it itself.
+	void warmupAjvValidators();
 	registerGracefulShutdown(app, healthService, logService, app.get(BullMqWorkerDrainService), config.http.shutdownTimeoutMs);
 	if (docsPolicy.enabled) {
 		process.stdout.write(`✓ Swagger docs at http://${listenHost}:${String(port)}${apiDocsPath()}\n`);

@@ -21,6 +21,12 @@ only `fetch`, the native modules and the theme engine are faked
 `jest.resolver.cjs` mirrors Metro's two resolution rules (singleton React / React Native / TanStack
 Query, `development` export of `@workspace/*`), so tests load exactly what the bundle loads.
 
+Updated (2026-10-24, Expo SDK 58): jest-expo `~58.0.12` on Jest 30 with `@react-native/jest-preset`
+0.88.0. Both Jest resolvers also apply `@workspace/ui-native/jest/native-runtime-resolver`, so
+Reanimated 4.7 and Worklets load their JavaScript build under Jest, as their own Jest resolvers
+intend but keyed on each library's install folder (theirs match pnpm's peer-named store folders)
+([`mobile-app.md` §9.11](../technical/mobile/mobile-app.md#911-the-sdk-58-upgrade)).
+
 ## Context
 
 `rules/11-testing-vitest.md` makes Vitest the test runner for the whole repository. React Native's

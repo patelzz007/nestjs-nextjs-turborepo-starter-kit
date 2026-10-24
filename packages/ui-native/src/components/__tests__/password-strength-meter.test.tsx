@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { PasswordStrengthMeter, passwordStrengthBarVariants, strengthToneOf } from "../password-strength-meter";
 
@@ -56,7 +56,7 @@ describe("PasswordStrengthMeter", () => {
 	});
 
 	it("forwards its ref and merges the caller's className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<PasswordStrengthMeter ref={ref} score={4} label="Strong" percent={100} size="sm" className="mt-2 gap-3" testID="meter" />);
 
 		expect(ref.current).not.toBeNull();

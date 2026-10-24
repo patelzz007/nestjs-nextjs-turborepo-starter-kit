@@ -12,7 +12,13 @@ import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-ima
 import { expectNoNPlusOne } from "./support/sql-statement-counter";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
-const FIXTURE_EPOCH = 1_790_812_800_000;
+/**
+ * 2020-01-01T00:00:00Z: years before anything the seed writes. The seed's analytics history fills the
+ * last 365 days of the KL store's opening hours with redemptions, so a window inside that year (this
+ * spec once used 2026-10-01, the other e2e specs' epoch) can hold a seeded row and the page total is
+ * off by one depending on the day the database was seeded.
+ */
+const FIXTURE_EPOCH = 1_577_836_800_000;
 
 /**
  * GET /tenants/:tenantSlug/redemptions (plan §7.3) must issue the same number of SQL statements for a 1-row
@@ -21,7 +27,7 @@ const FIXTURE_EPOCH = 1_790_812_800_000;
 describe("merchant redemption history has no N+1 (e2e)", () => {
 	const marker = `n1r${randomUUID().slice(0, 8)}`;
 	const rewardId = randomUUID();
-	/** The fixture redemptions are dated inside this window, which no other row of the tenant uses. */
+	/** The fixture redemptions are dated inside this window, which no other row of the tenant uses (see FIXTURE_EPOCH). */
 	const windowStart = FIXTURE_EPOCH - 1_000_000;
 	const windowEnd = FIXTURE_EPOCH + 1_000_000;
 	let app: NestFastifyApplication;

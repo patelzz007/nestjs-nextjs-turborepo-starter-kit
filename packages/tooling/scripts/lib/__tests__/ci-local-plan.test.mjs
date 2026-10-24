@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+	BROWSER_ADMIN_FEATURE_ENV,
 	BROWSER_API_ENV,
 	BROWSER_READINESS_URLS,
 	LOCAL_APP_PORTS,
@@ -173,6 +174,14 @@ describe("browser job mirrors .github/workflows/ci.yml → browser-e2e", () => {
 		for (const [name, value] of Object.entries(BROWSER_SUITE_ENV)) {
 			expect(WORKFLOW).toContain(`${name}: ${value}`);
 			expect(job.suites.find((step) => step.id === "browser:admin-suite")?.env?.[name]).toBe(value);
+		}
+	});
+
+	it("builds and serves the admin with the features its suite drives, as the workflow does", () => {
+		for (const [name, value] of Object.entries(BROWSER_ADMIN_FEATURE_ENV)) {
+			expect(WORKFLOW).toContain(`${name}: "${value}"`);
+			expect(job.setup.find((step) => step.id === "browser:build")?.env?.[name]).toBe(value);
+			expect(job.servers.find((server) => server.id === "browser:admin")?.env?.[name]).toBe(value);
 		}
 	});
 

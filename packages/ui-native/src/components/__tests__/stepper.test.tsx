@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { Stepper, stepStateFor, type StepState, type StepperStep } from "../stepper";
 
@@ -78,7 +78,7 @@ describe("Stepper", () => {
 	});
 
 	it("forwards its ref and merges className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<Stepper ref={ref} steps={STEPS} value={1} className="gap-4" testID="stepper" />);
 
 		expect(ref.current).not.toBeNull();

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { Text, type View } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 import { z } from "zod";
 
 import { Tooltip, type TooltipProps } from "../tooltip";
@@ -93,7 +93,7 @@ describe("Tooltip", () => {
 	});
 
 	it("forwards its ref and merges the caller's className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(
 			<Tooltip ref={ref} content={CONTENT} accessibilityLabel="Verified" className="items-start self-start" testID="tooltip">
 				<Text className="font-sans">Verified</Text>

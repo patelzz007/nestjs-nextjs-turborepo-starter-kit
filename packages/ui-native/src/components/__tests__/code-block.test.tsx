@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { CodeBlock } from "../code-block";
 
@@ -61,7 +61,7 @@ describe("CodeBlock", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<CodeBlock ref={ref} code={CODE} />);
 		expect(ref.current).not.toBeNull();
 	});

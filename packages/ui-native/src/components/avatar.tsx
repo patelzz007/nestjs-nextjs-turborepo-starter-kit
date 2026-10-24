@@ -8,7 +8,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Image, Text, View, type ImageURISource } from "react-native";
+import { Image, type ImageURISource, Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 
@@ -83,7 +83,7 @@ export function initialsOf(name: string): string {
 }
 
 export const Avatar = React.memo(
-	React.forwardRef<View, AvatarProps>(function Avatar(
+	React.forwardRef<ViewInstance, AvatarProps>(function Avatar(
 		{ name, imageUrl, tone = "default", size = "lg", shape = "circle", accessibilityLabel, className, testID },
 		ref,
 	): React.JSX.Element {

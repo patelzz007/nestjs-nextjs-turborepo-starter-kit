@@ -100,9 +100,9 @@ record; everything else is recorded here.
 | 2   | Platforms               | iOS and Android; Expo's web target off                                                                                                                                                                                                                                 | this page                                                      |
 | 3   | Accounts and builds     | Free Expo account for Expo Go sign-in only; no EAS, no store pipeline                                                                                                                                                                                                  | this page                                                      |
 | 4   | Development runtime     | Expo Go; native folders generated, never committed                                                                                                                                                                                                                     | this page                                                      |
-| 5   | Expo SDK                | Latest **stable** SDK that Expo Go runs: **SDK 57** today, 58 when stable                                                                                                                                                                                              | this page                                                      |
+| 5   | Expo SDK                | Latest **stable** SDK that Expo Go runs: **SDK 58** today (§9.11)                                                                                                                                                                                                      | this page                                                      |
 | 6   | Dependency versions     | Expo packages pinned by `npx expo install`, enforced by `--check`; everything else latest stable under syncpack                                                                                                                                                        | this page                                                      |
-| 7   | React version           | `apps/mobile` gets its own syncpack version group (SDK 57 = React 19.2)                                                                                                                                                                                                | this page                                                      |
+| 7   | React version           | React is the web's (SDK 58 = React 19.3); RN / Metro / Jest keep mobile groups                                                                                                                                                                                                | this page                                                      |
 | 8   | Styling                 | Uniwind (free tier) on Tailwind v4                                                                                                                                                                                                                                     | [ADR 032](../../adr/032-uniwind-for-mobile-styling.md)         |
 | 9   | Design tokens           | `packages/tokens` generates committed CSS for web and mobile                                                                                                                                                                                                           | [ADR 030](../../adr/030-shared-design-token-source.md)         |
 | 10  | Token format            | Same names and values on both platforms, two thin wrappers                                                                                                                                                                                                             | [ADR 030](../../adr/030-shared-design-token-source.md)         |
@@ -868,8 +868,8 @@ tests in [ADR 031](../../adr/031-jest-expo-for-mobile-tests.md).
 
 | Concern        | Choice                                                                                     | Version policy                                                       |
 | -------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
-| Framework      | Expo                                                                                       | **SDK 57** (latest stable that Expo Go runs); move to 58 when stable |
-| Runtime        | React Native 0.86, React 19.2                                                              | whatever SDK 57 pins; mobile has its own syncpack version group      |
+| Framework      | Expo                                                                                       | **SDK 58** (latest stable that Expo Go runs); see §9.11              |
+| Runtime        | React Native 0.88, React 19.3                                                              | whatever SDK 58 pins; RN, Metro and Jest have mobile syncpack groups |
 | Navigation     | Expo Router                                                                                | SDK-pinned via `npx expo install`                                    |
 | Styling        | Uniwind (free) + Tailwind v4                                                               | latest stable Uniwind; Tailwind v4 shared with web                   |
 | Server state   | TanStack Query via `@workspace/api-client/react`                                           | same major as web                                                    |
@@ -880,7 +880,7 @@ tests in [ADR 031](../../adr/031-jest-expo-for-mobile-tests.md).
 | Biometrics     | `expo-local-authentication`                                                                | SDK-pinned                                                           |
 | Device details | `expo-device`, `expo-application`                                                          | SDK-pinned                                                           |
 | Connectivity   | `expo-network` (the online / offline pill, §10.16)                                         | SDK-pinned                                                           |
-| Tests          | jest-expo `~57.0.2` + `@react-native/jest-preset` 0.86.x + `@testing-library/react-native` | 57.0.0 has a known install failure; pin `~57.0.2`                    |
+| Tests          | jest-expo `~58.0.12` + `@react-native/jest-preset` 0.88.x + `@testing-library/react-native` | on Jest 30; see §9.11 for the Reanimated resolver                    |
 
 Expo-managed packages are always installed with `npx expo install <pkg>`, never `pnpm add`, so
 they match the SDK. `npx expo install --check` runs in tests and CI and fails on a mismatch.
@@ -1120,6 +1120,57 @@ See [section 19, piece 5](#piece-5-appsmobile).
 - **The API must listen on the network for a phone.** Its default bind address (`HOST=127.0.0.1`)
   refuses a phone's requests; phone development sets `HOST=0.0.0.0` in `apps/api/.env` (the Android
   emulator alone reaches `127.0.0.1` through `10.0.2.2`).
+
+### 9.11 The SDK 58 upgrade
+
+Done 2026-10-24, when Expo Go moved to SDK 58 (it runs one SDK only). `npx expo install` cannot
+launch pnpm here, so `apps/mobile` and `packages/ui-native` took the versions in
+`expo/bundledNativeModules.json` of `expo@58.0.19`; `expo install --check` passes.
+
+- **Versions.** Expo 58.0.19, React 19.3.0 (the web's: the mobile React / `@types/react` syncpack
+  groups are gone), React Native 0.88.0, Reanimated 4.7.1 + Worklets 0.13.0, Metro 0.87.1, jest-expo
+  58.0.12 on **Jest 30**. The Expo 58 releases younger than the one-day `minimumReleaseAge` were
+  taken through dated `minimumReleaseAgeExclude` entries in `pnpm-workspace.yaml`.
+- **Held back, with the reason.** `react` 19.3.1 and `react-native-keyboard-controller` 1.22.8:
+  SDK 58 pins 19.3.0 and 1.22.7 exactly, and `expo install --check` fails on anything else.
+- **`marked` 18 (ES modules only).** Jest compiles it like React Native's own packages
+  (`ES_MODULE_ONLY_PACKAGES` in `jest.config.js`, added to jest-expo's `transformIgnorePatterns`
+  allow-list). `marked` splices one regex's `.source` into another, so its named capture groups
+  must stay native: Metro's Hermes build keeps them, but Jest's non-Hermes compile rewrote them
+  to numbered groups and inline code then swallowed the rest of a line's formatting.
+  `babel/keep-native-named-groups.cjs` (in `babel.config.js`; it changes `marked`'s own files only,
+  checked per file — Metro loads the config without a filename, so an `overrides.test` pattern
+  breaks bundling) keeps them native under Jest too; the markdown tests fail without it.
+- **Metro and `expo install --check`.** Expo's version API lists `metro ^0.84.6` for SDK 58, yet
+  `@expo/metro` 58, React Native 0.88's CLI plugin and its Metro config all run 0.87.1. `metro` is
+  pinned to 0.87.1 (one Metro for Expo and Uniwind) and left out of the check with
+  `expo.install.exclude: ["metro"]` in `apps/mobile/package.json`. Re-check on each SDK patch.
+- **Strict TypeScript API.** React Native 0.88 types its core components as functions, so a ref is
+  typed with the exported instance type — `React.forwardRef<ViewInstance, …>`,
+  `useRef<ScrollViewInstance>`, `createRef<TextInputInstance>()` — never `View` / `Text`. Both
+  tsconfigs set `moduleSuffixes: [".native", ""]`, so TypeScript reads a library's `.native`
+  declarations as Metro bundles them (Reanimated 4.7's `getAnimatedStyle` is typed only there).
+  `react-native-keyboard-controller` still declares its ref as the legacy `View`, so the kit's
+  `KeyboardAvoidingView` forwards `KeyboardAvoidingViewInstance` (the library's declared ref).
+- **API changes absorbed.** Expo Router's `renderRouter` is awaited (it returns a promise); the
+  custom tab bar uses the bar's `emitter` + `navigateToTab` (no `navigation` prop);
+  `AppState.currentState` is typed as any string; `expo-file-system` reads and writes
+  asynchronously by default (`readBytesSync` / `writeSync` keep the PDF checks synchronous);
+  `NativeEventSubscription` → `EventSubscription`; `Linking.openURL` resolves to nothing.
+- **The root guard names its redirect.** Expo Router 58 sends a URL a guard turns away to the first
+  allowed group's own path; for the pathless `(auth)` group that is `/`, which it has no screen
+  for — the signed-out app showed "Unmatched Route". `RootStack` now gives every
+  `Stack.Protected` a `redirectTo`: the entry screen of the current state (`/sign-in` when signed
+  out). Inside `(auth)`, a restricted session's guards still turn `/sign-in` away to its
+  enrollment step.
+- **Reanimated under Jest.** Reanimated 4.7 runs its JavaScript build in Jest and ships a Jest
+  resolver for it, but that resolver (and Worklets') recognises its own files with
+  `basedir.includes("react-native-worklets")`, which pnpm's peer-named store folders match for
+  every package that peers on Worklets. `@workspace/ui-native/jest/native-runtime-resolver`
+  applies the same rules keyed on each library's install folder; both `jest.resolver.cjs` use it,
+  and `packages/tooling/src/mobile-jest` tests it. Reanimated's JavaScript build imports
+  `react-native-web`'s style helpers, so `react-native-web` ~0.21.4 and `react-dom` 19.3.0 are
+  devDependencies (test-only; the phone bundle loads the `.native` files).
 
 ---
 
@@ -1581,7 +1632,7 @@ automatically. `turbo.json` gains the `expo export` output folder in `build.outp
 - `.syncpackrc.json`: a version group for `apps/mobile` that pins `react` (and React-coupled
   packages Expo dictates) to the SDK's versions, exactly; every other workspace keeps the
   repo-wide pins. When the SDK's React matches the repo's, the group is a no-op.
-- pnpm workspaces work with Expo SDK 57 without `nodeLinker: hoisted`; switch only if a specific
+- pnpm workspaces work with Expo SDK 58 without `nodeLinker: hoisted`; switch only if a specific
   React Native library proves it needs hoisting, and record why.
 - Metro needs no manual monorepo configuration with `expo/metro-config`; do not add
   `watchFolders` or `extraNodeModules` by hand.
@@ -1608,7 +1659,7 @@ automatically. `turbo.json` gains the `expo export` output folder in `build.outp
 ### 15.3 SDK versions and Expo Go
 
 - Each Expo Go build runs exactly **one** SDK version, and the project must match it. The starter
-  targets the latest stable SDK that Expo Go runs (SDK 57 today).
+  targets the latest stable SDK that Expo Go runs (SDK 58 today).
 - When Expo releases the next SDK as stable and updates Expo Go: upgrade with
   `npx expo install expo@<next> --fix`, run the full gate, test on both phones, update this page.
 - Beta SDKs are not used: running a beta in Expo Go on iPhone needs a private TestFlight build
@@ -1676,7 +1727,7 @@ generated (`npx expo prebuild`), not committed, so the switch does not change th
 | Body tokens leak into a browser path                               | Low                  | Weaker web security                | Server-side transport selection by client type; tests that browser types never receive body tokens |
 | `sid` check adds latency                                           | Low                  | Slower requests                    | Served from the existing token-state cache; no hot-path query                                      |
 | Expo Go and SDK drift (store builds lag)                           | Medium               | Developers cannot open the app     | Target only stable SDKs Expo Go runs; document upgrade steps                                       |
-| React version split (19.2 mobile vs 19.3 web)                      | Certain until SDK 58 | Two React versions in the lockfile | Explicit syncpack group; disappears when SDK 58 is stable                                          |
+| React version split (19.2 mobile vs 19.3 web)                      | Resolved (SDK 58)    | —                                  | SDK 58 runs React 19.3; the mobile React groups were removed (§9.11)                               |
 | Uniwind free tier gaps                                             | Low                  | Missing styling features           | ADR 032 lists the escape hatch (Pro needs dev builds)                                              |
 | pnpm isolated linker breaks a React Native library                 | Low                  | Metro resolution errors            | `expo export` bundle check in CI catches it; hoisting only with a recorded reason                  |
 | Client-reported device details are misleading                      | Certain (by nature)  | Confusing labels                   | Shown as reported, never trusted; server-observed fields shown alongside                           |
@@ -1735,7 +1786,7 @@ touches shared packages.
 
 ### Piece 5: `apps/mobile`
 
-- [x] SDK 57, Expo-managed packages installed with `npx expo install`; `--check` passes in tests.
+- [x] SDK 58 (was 57; §9.11), Expo-managed packages installed with `npx expo install`; `--check` passes in tests.
 - [x] syncpack version group for mobile; `deps:check` passes. (The `apps/mobile` groups pin React 19.2.3, `@types/react`, React Native / `@react-native/*`, Metro and Jest. Note: `pnpm deps:check` runs `syncpack lint` inside `packages/tooling`, where it only reads that package; run from the repo root, the mobile groups leave no mobile mismatch, and the 8 remaining root-level findings predate this work.)
 - [ ] Uniwind configured (`withUniwindConfig` outermost, CSS imported in the root layout); generated tokens imported; System / Light / Dark works from the first frame. (Configuration, token compilation and "theme applied before the navigator renders" are verified by `expo export` and tests; the visual check on a phone is NOT VERIFIED ON DEVICE.)
 - [x] All screens in section 10 implemented with shared zod schemas.

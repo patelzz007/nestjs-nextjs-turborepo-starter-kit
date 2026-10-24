@@ -5,7 +5,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { ActivityIndicator, Pressable, Text, type NativeSyntheticEvent, type TargetedEvent, type View } from "react-native";
+import { ActivityIndicator, type NativeSyntheticEvent, Pressable, type TargetedEvent, Text, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
@@ -87,7 +87,7 @@ export interface ToggleProps {
 }
 
 export const Toggle = React.memo(
-	React.forwardRef<View, ToggleProps>(function Toggle(
+	React.forwardRef<ViewInstance, ToggleProps>(function Toggle(
 		{
 			label,
 			icon,

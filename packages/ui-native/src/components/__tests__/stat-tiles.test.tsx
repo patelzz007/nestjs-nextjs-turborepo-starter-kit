@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { StatTiles, type StatTile } from "../stat-tiles";
 
@@ -26,7 +26,7 @@ describe("StatTiles", () => {
 	});
 
 	it("forwards its ref and merges className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<StatTiles ref={ref} items={ITEMS} className="gap-4" testID="tiles" />);
 
 		expect(ref.current).not.toBeNull();

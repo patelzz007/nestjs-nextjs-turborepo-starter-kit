@@ -32,6 +32,7 @@ import { integrationRedemptionsContract, tenantApiKeysContract, tenantRedemption
 import { filesContract } from "../contexts/files/contract";
 import { adminTenantsContract, tenantsContract, rewardsAdminTenantContract } from "../contexts/tenancy/contract";
 import { productContract, sampleCategoryContract } from "../contexts/catalog/contract";
+import { kanbanContract } from "../contexts/kanban/contract";
 
 // ── JSON-safe value types (shared by the contract and the client pipeline) ─
 // Canonical definitions live in `schemas/api/common.ts` to avoid duplicate
@@ -115,6 +116,7 @@ export const apiContract = {
 	},
 	sampleCategory: sampleCategoryContract,
 	product: productContract,
+	kanban: kanbanContract,
 };
 
 /** The full contract tree — used to derive the client router + API pipes. */

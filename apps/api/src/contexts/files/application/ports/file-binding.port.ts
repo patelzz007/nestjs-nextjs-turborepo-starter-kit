@@ -1,4 +1,4 @@
-import type { FileCategory, FileStatus } from "@workspace/shared";
+import type { DocumentMimeType, FileCategory, FileStatus } from "@workspace/shared";
 
 /** Which files an owner is about to bind, and whose they must be. */
 export interface FileBindingRequest {
@@ -17,6 +17,8 @@ export interface BindableFile {
 	readonly tenantId: string | null;
 	readonly uploadedById: string;
 	readonly originalName: string;
+	/** The verified content type (a stored file whose type is outside the accepted set is never bindable). */
+	readonly mimeType: DocumentMimeType;
 }
 
 /**

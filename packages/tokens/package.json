@@ -8,7 +8,7 @@
 		"generate": "tsx scripts/generate.ts",
 		"lint": "eslint",
 		"format": "prettier --write \"**/*.ts\" --ignore-path ../../.prettierignore",
-		"typecheck": "tsc --noEmit",
+		"typecheck": "tsrs --noEmit",
 		"test": "vitest run"
 	},
 	"exports": {
@@ -19,13 +19,14 @@
 		"./icons/*": "./generated/*"
 	},
 	"devDependencies": {
-		"@types/node": "^26.6.4",
+		"@types/node": "^26.6.5",
 		"@workspace/eslint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
 		"eslint": "^9.39.5",
+		"tsrs": "0.18.0-ts7.1.0-dev.20260929",
 		"tsx": "^4.23.15",
 		"typescript": "6.0.3",
-		"vitest": "^5.0.3",
-		"zod": "4.6.5"
+		"vitest": "^5.0.5",
+		"zod": "4.6.7"
 	}
 }

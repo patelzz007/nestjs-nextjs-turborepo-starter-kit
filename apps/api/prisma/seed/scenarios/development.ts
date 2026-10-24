@@ -11,6 +11,7 @@ import { alignCustomerAccountAges } from "../customer-account-age";
 import { SeededRandom } from "../prng";
 import type { SeedRunOptions } from "../seed-options";
 import { seedFileLifecycle } from "../files";
+import { seedKanbanBoard } from "../kanban";
 import { seedGeo } from "../geo-seed";
 import { seedGeoDemo } from "../geo-demo";
 import { seedKernelDecisionAudits } from "../kernel-decision-audit";
@@ -198,6 +199,12 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	seedLog("Seeding file lifecycle demo data (KYB evidence, product image, deleted uploads)...");
 	const fileSummary = await seedFileLifecycle();
 	seedLog(`✅ Files: ${String(fileSummary.files)} stored files (objects written through the ${fileSummary.provider} storage adapter)`);
+
+	seedLog("Seeding the staff kanban board (columns, tasks, comments, attachments)...");
+	const kanbanSummary = await seedKanbanBoard();
+	seedLog(
+		`✅ Kanban: ${String(kanbanSummary.columns)} columns, ${String(kanbanSummary.tasks)} tasks, ${String(kanbanSummary.comments)} comments, ${String(kanbanSummary.attachments)} attachments`,
+	);
 
 	const customerUser = requireRow(
 		users.find((u) => u.email === "user@example.com"),

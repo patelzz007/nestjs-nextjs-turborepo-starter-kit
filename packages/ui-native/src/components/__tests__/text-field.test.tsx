@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { TextInput } from "react-native";
+import type { TextInputInstance } from "react-native";
 
 import { TextField } from "../text-field";
 
@@ -65,7 +65,7 @@ describe("TextField", () => {
 	it("reports focus and blur, and forwards its ref", async () => {
 		const onBlur = jest.fn();
 		const onFocus = jest.fn();
-		const ref = React.createRef<TextInput>();
+		const ref = React.createRef<TextInputInstance>();
 		await render(<TextField ref={ref} label="Name" value="" onChange={jest.fn()} onBlur={onBlur} onFocus={onFocus} />);
 
 		await fireEvent(screen.getByLabelText("Name"), "focus");

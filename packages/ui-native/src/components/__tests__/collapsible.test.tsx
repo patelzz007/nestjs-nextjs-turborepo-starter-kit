@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { AccessibilityInfo, Text, type View } from "react-native";
+import { AccessibilityInfo, Text, type ViewInstance } from "react-native";
 import { z } from "zod";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, type CollapsibleProps } from "../collapsible";
@@ -86,9 +86,9 @@ describe("Collapsible", () => {
 	});
 
 	it("forwards refs from every part and merges the caller's className last", async () => {
-		const root = React.createRef<View>();
-		const trigger = React.createRef<View>();
-		const content = React.createRef<View>();
+		const root = React.createRef<ViewInstance>();
+		const trigger = React.createRef<ViewInstance>();
+		const content = React.createRef<ViewInstance>();
 		await render(
 			<Collapsible ref={root} open onOpenChange={jest.fn()} animated={false} className="gap-2" testID="collapsible">
 				<CollapsibleTrigger ref={trigger} label="Details" className="py-1" testID="trigger" />

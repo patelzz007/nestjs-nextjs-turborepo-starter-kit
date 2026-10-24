@@ -10,7 +10,7 @@
 // state; it starts hidden every time the field mounts.
 
 import * as React from "react";
-import type { TextInput } from "react-native";
+import type { TextInputInstance } from "react-native";
 
 import { Field } from "./field";
 import { Input, type InputProps, type InputSize, type InputVariant } from "./input";
@@ -61,7 +61,7 @@ export interface TextFieldProps extends PassThroughInputProps {
 }
 
 export const TextField = React.memo(
-	React.forwardRef<TextInput, TextFieldProps>(function TextField(
+	React.forwardRef<TextInputInstance, TextFieldProps>(function TextField(
 		{ label, error, hint, multiline = false, secureTextEntry = false, disabled = false, loading = false, editable = true, className, ...inputProps },
 		ref,
 	): React.JSX.Element {

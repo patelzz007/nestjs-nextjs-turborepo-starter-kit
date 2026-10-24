@@ -14,7 +14,7 @@
 import { UTC_TIME_ZONE, type LocalDate } from "@workspace/shared";
 import XIcon from "lucide-react-native/icons/x";
 import * as React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, type ViewInstance } from "react-native";
 
 import { calendarDayMsOf, calendarMonthOf, clampCalendarMonth, toggleCalendarDay, type CalendarMonth, type RangeDayRole } from "../lib/calendar";
 import { playSelectionFeedback } from "../lib/haptics";
@@ -46,7 +46,10 @@ function shortFormatOf(locale: string): Intl.DateTimeFormat {
 }
 
 export const MultiDateField = React.memo(
-	React.forwardRef<View, MultiDateFieldProps>(function MultiDateField({ value, onChange, minDate, maxDate, today, locale, maxDates, ...fieldProps }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, MultiDateFieldProps>(function MultiDateField(
+		{ value, onChange, minDate, maxDate, today, locale, maxDates, ...fieldProps },
+		ref,
+	): React.JSX.Element {
 		const { testID } = fieldProps;
 		const shortFormat = React.useMemo(() => shortFormatOf(locale), [locale]);
 		const summary = React.useMemo(

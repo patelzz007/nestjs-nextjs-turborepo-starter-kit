@@ -11,7 +11,10 @@
 //   of `UiKitLabels`; `labels` overrides single strings, `accessibility` dnd-kit.
 // - The move rules are pure, exported functions (`findKanbanItem`,
 //   `moveKanbanItem`, `reorderKanbanColumns`).
-// - `KanbanColumn` and `KanbanItem` take a CVA `state` (`disabled`).
+// - `KanbanColumn` and `KanbanItem` take a CVA `state` (`disabled`), and a
+//   `locked` prop: the part stays where it is (it cannot be dragged) but looks
+//   live — a board whose columns are fixed, or whose cards are sorted, is not
+//   an unavailable board. `disabled` keeps meaning "unavailable" and dims it.
 // - `KanbanOverlay` renders dnd-kit's `DragOverlay`, which has no ref of its own.
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
@@ -501,9 +504,14 @@ function Kanban<T>({
 		state: { slot: "kanban", dragging: activeId !== null },
 	});
 
+	// dnd-kit numbers its screen-reader description ids from a global counter, which differs between
+	// the server render and the browser; a stable id from React keeps hydration matching.
+	const dndContextId = React.useId();
+
 	return (
 		<KanbanContext.Provider value={contextValue}>
 			<DndContext
+				id={dndContextId}
 				sensors={sensors}
 				modifiers={modifiers}
 				accessibility={resolvedAccessibility}
@@ -549,17 +557,21 @@ const KanbanBoard = React.forwardRef<HTMLDivElement, KanbanBoardProps>(function 
 export interface KanbanColumnProps extends useRender.ComponentProps<"div"> {
 	/** The column's id — its key in the Kanban `value`. */
 	readonly value: string;
+	/** Unavailable: cannot be dragged, and is drawn dimmed. */
 	readonly disabled?: boolean | undefined;
+	/** Fixed in place: cannot be dragged, but is drawn as usual (`data-locked`). */
+	readonly locked?: boolean | undefined;
 }
 
 const KanbanColumn = React.forwardRef<HTMLDivElement, KanbanColumnProps>(function KanbanColumn(
-	{ value, className, render, disabled = false, "aria-invalid": ariaInvalid, children, ...props },
+	{ value, className, render, disabled = false, locked = false, "aria-invalid": ariaInvalid, children, ...props },
 	ref,
 ): React.ReactElement {
 	const isOverlay = React.useContext(DragOverlayContext);
+	const isFixed = disabled || locked;
 	const { setNodeRef, transform, transition, attributes, listeners, isDragging } = useSortable({
 		id: value,
-		disabled: disabled || isOverlay,
+		disabled: isFixed || isOverlay,
 		animateLayoutChanges: DRAG_AND_DROP_PRESETS.animateLayoutChanges,
 	});
 	const { activeId, isColumn } = React.useContext(KanbanContext);
@@ -567,8 +579,8 @@ const KanbanColumn = React.forwardRef<HTMLDivElement, KanbanColumnProps>(functio
 	const state = resolveFieldState({ disabled, ariaInvalid });
 	const style = React.useMemo((): React.CSSProperties => ({ transition, transform: CSS.Transform.toString(transform) }), [transition, transform]);
 	const columnContext = React.useMemo(
-		(): ColumnContextValue => (isOverlay ? OVERLAY_COLUMN_CONTEXT : { attributes, listeners, isDragging: isColumnDragging, disabled }),
-		[isOverlay, attributes, listeners, isColumnDragging, disabled],
+		(): ColumnContextValue => (isOverlay ? OVERLAY_COLUMN_CONTEXT : { attributes, listeners, isDragging: isColumnDragging, disabled: isFixed }),
+		[isOverlay, attributes, listeners, isColumnDragging, isFixed],
 	);
 
 	const element = useRender({
@@ -586,7 +598,9 @@ const KanbanColumn = React.forwardRef<HTMLDivElement, KanbanColumnProps>(functio
 					},
 			props,
 		),
-		state: isOverlay ? { slot: "kanban-column", value, dragging: true, disabled: false } : { slot: "kanban-column", value, dragging: isDragging, disabled },
+		state: isOverlay
+			? { slot: "kanban-column", value, dragging: true, disabled: false, locked: false }
+			: { slot: "kanban-column", value, dragging: isDragging, disabled, locked: locked && !disabled },
 	});
 
 	return <ColumnContext.Provider value={columnContext}>{element}</ColumnContext.Provider>;
@@ -634,17 +648,21 @@ const KanbanColumnHandle = React.forwardRef<HTMLDivElement, KanbanColumnHandlePr
 export interface KanbanItemProps extends useRender.ComponentProps<"div"> {
 	/** The item's id — what `getItemValue` returns for it. */
 	readonly value: string;
+	/** Unavailable: cannot be dragged, and is drawn dimmed. */
 	readonly disabled?: boolean | undefined;
+	/** Fixed in place: cannot be dragged, but is drawn as usual (`data-locked`). */
+	readonly locked?: boolean | undefined;
 }
 
 const KanbanItem = React.forwardRef<HTMLDivElement, KanbanItemProps>(function KanbanItem(
-	{ value, className, render, disabled = false, "aria-invalid": ariaInvalid, children, ...props },
+	{ value, className, render, disabled = false, locked = false, "aria-invalid": ariaInvalid, children, ...props },
 	ref,
 ): React.ReactElement {
 	const isOverlay = React.useContext(DragOverlayContext);
+	const isFixed = disabled || locked;
 	const { setNodeRef, transform, transition, attributes, listeners, isDragging } = useSortable({
 		id: value,
-		disabled: disabled || isOverlay,
+		disabled: isFixed || isOverlay,
 		animateLayoutChanges: DRAG_AND_DROP_PRESETS.animateLayoutChanges,
 	});
 	const { activeId, isColumn } = React.useContext(KanbanContext);
@@ -652,8 +670,8 @@ const KanbanItem = React.forwardRef<HTMLDivElement, KanbanItemProps>(function Ka
 	const state = resolveFieldState({ disabled, ariaInvalid });
 	const style = React.useMemo((): React.CSSProperties => ({ transition, transform: CSS.Transform.toString(transform) }), [transition, transform]);
 	const itemContext = React.useMemo(
-		(): ItemContextValue => (isOverlay ? OVERLAY_ITEM_CONTEXT : { listeners, isDragging: isItemDragging, disabled }),
-		[isOverlay, listeners, isItemDragging, disabled],
+		(): ItemContextValue => (isOverlay ? OVERLAY_ITEM_CONTEXT : { listeners, isDragging: isItemDragging, disabled: isFixed }),
+		[isOverlay, listeners, isItemDragging, isFixed],
 	);
 
 	const element = useRender({
@@ -672,7 +690,9 @@ const KanbanItem = React.forwardRef<HTMLDivElement, KanbanItemProps>(function Ka
 					},
 			props,
 		),
-		state: isOverlay ? { slot: "kanban-item", value, dragging: true, disabled: false } : { slot: "kanban-item", value, dragging: isDragging, disabled },
+		state: isOverlay
+			? { slot: "kanban-item", value, dragging: true, disabled: false, locked: false }
+			: { slot: "kanban-item", value, dragging: isDragging, disabled, locked: locked && !disabled },
 	});
 
 	return <ItemContext.Provider value={itemContext}>{element}</ItemContext.Provider>;

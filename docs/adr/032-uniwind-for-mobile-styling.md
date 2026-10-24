@@ -20,7 +20,8 @@ showed Uniwind compiling both `@variant`s (oklch converted to hex, alpha kept), 
 `var()` mapping (`bg-card` → `--card` per theme) and the radius scale (`rounded-lg` → 10).
 `rules/04-mobile-expo.md` now names Uniwind instead of NativeWind. With pnpm, Uniwind's Metro peers
 are pinned in `apps/mobile` to the Metro version Expo SDK 57 bundles (`0.84.5`); otherwise pnpm
-auto-installs the newest Metro for Uniwind alone.
+auto-installs the newest Metro for Uniwind alone. Updated (2026-10-24): SDK 58 bundles Metro
+`0.87.1`, which the pins now follow.
 
 ## Context
 

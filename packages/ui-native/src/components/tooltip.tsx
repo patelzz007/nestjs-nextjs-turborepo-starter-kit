@@ -11,7 +11,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
@@ -76,7 +76,7 @@ export interface TooltipProps {
 }
 
 export const Tooltip = React.memo(
-	React.forwardRef<View, TooltipProps>(function Tooltip(
+	React.forwardRef<ViewInstance, TooltipProps>(function Tooltip(
 		{ content, children, accessibilityLabel, onPress, open, onOpenChange, side = "top", variant = "default", size = "md", disabled = false, className, testID },
 		ref,
 	): React.JSX.Element {

@@ -37,9 +37,20 @@ export type FileStatus = z.output<typeof FileStatusSchema>;
  * GitHub has no API for its own uploads, so it is uploaded here first — checked
  * like any upload — and committed to the repository only when a comment that
  * links it is posted; this copy is then deleted. One no comment used is
- * deleted once its `stagingRetentionMs` has passed.
+ * deleted once its `stagingRetentionMs` has passed. `KANBAN_TASK_ATTACHMENT` is
+ * a picture or PDF a staff member attaches to a kanban task: uploaded first,
+ * then attached to the task by `POST /admin/kanban/tasks/:taskId/attachments`.
  */
-export const FileCategorySchema = z.enum(["PRODUCT_IMAGE", "STORE_LOGO", "STORE_BANNER", "USER_AVATAR", "MERCHANT_KYB", "REWARD_IMAGE", "GITHUB_COMMENT_IMAGE"]);
+export const FileCategorySchema = z.enum([
+	"PRODUCT_IMAGE",
+	"STORE_LOGO",
+	"STORE_BANNER",
+	"USER_AVATAR",
+	"MERCHANT_KYB",
+	"REWARD_IMAGE",
+	"GITHUB_COMMENT_IMAGE",
+	"KANBAN_TASK_ATTACHMENT",
+]);
 
 export type FileCategory = z.output<typeof FileCategorySchema>;
 
@@ -220,6 +231,16 @@ export const FILE_CATEGORY_POLICIES: Record<FileCategory, FileCategoryPolicy> = 
 		allowedMimeTypes: ["application/pdf", "image/jpeg", "image/png", "image/webp"],
 		generatesVariants: false,
 	},
+	KANBAN_TASK_ATTACHMENT: {
+		category: "KANBAN_TASK_ATTACHMENT",
+		// Private: downloaded through the board's own signed-link route, by staff who may read the task.
+		visibility: "PRIVATE",
+		// Within rules/20's single-shot upload size (multipart above ~10 MB).
+		maxBytes: 10_485_760,
+		allowedMimeTypes: ["application/pdf", "image/jpeg", "image/png", "image/webp"],
+		// Downloaded as uploaded; the board shows file names, never thumbnails.
+		generatesVariants: false,
+	},
 };
 
 /** How far an image's width/height may stray from the exact ratio (0.5%) — absorbs a pixel of rounding from a crop. */
@@ -324,7 +345,7 @@ export const FileVariantRecordSchema = z
 export type FileVariantRecord = z.output<typeof FileVariantRecordSchema>;
 
 /** Categories a signed-in person uploads for themselves or the platform (`POST /files/upload-url`). */
-export const PlatformFileCategorySchema = FileCategorySchema.extract(["PRODUCT_IMAGE", "USER_AVATAR", "GITHUB_COMMENT_IMAGE"]);
+export const PlatformFileCategorySchema = FileCategorySchema.extract(["PRODUCT_IMAGE", "USER_AVATAR", "GITHUB_COMMENT_IMAGE", "KANBAN_TASK_ATTACHMENT"]);
 
 export type PlatformFileCategory = z.output<typeof PlatformFileCategorySchema>;
 
@@ -341,7 +362,7 @@ const UPLOAD_FILE_FIELDS = {
 	checksumSha256: z.string().length(64),
 };
 
-/** `POST /files/upload-url`: a product image, the caller's avatar or a GitHub comment image. No tenant: those uploads go through the tenant route. */
+/** `POST /files/upload-url`: a product image, the caller's avatar, a GitHub comment image or a kanban task attachment. No tenant: those uploads go through the tenant route. */
 export const CreateFileUploadUrlSchema = z
 	.object({
 		category: PlatformFileCategorySchema,
@@ -354,7 +375,7 @@ export const CreateFileUploadUrlSchema = z
 		if (value.category === "PRODUCT_IMAGE" && value.productId === undefined) {
 			ctx.addIssue({ code: "custom", message: "productId is required for PRODUCT_IMAGE uploads", path: ["productId"] });
 		}
-		if ((value.category === "USER_AVATAR" || value.category === "GITHUB_COMMENT_IMAGE") && value.userId === undefined) {
+		if ((value.category === "USER_AVATAR" || value.category === "GITHUB_COMMENT_IMAGE" || value.category === "KANBAN_TASK_ATTACHMENT") && value.userId === undefined) {
 			ctx.addIssue({ code: "custom", message: `userId is required for ${value.category} uploads`, path: ["userId"] });
 		}
 	});

@@ -684,7 +684,7 @@ describe("GitHub pull requests: pictures in comments", () => {
 	});
 
 	it("says a picture can't be shown, and offers it in the browser, when it fails to load", async () => {
-		const openUrl = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+		const openUrl = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
 		stubApi({ [`GET ${PULL}`]: ok(WITH_SCREENSHOT) });
 		await renderSignedIn(PULL_URL);
 
@@ -998,7 +998,7 @@ describe("GitHub pull requests: the token", () => {
 	});
 
 	it("says when GitHub stopped accepting the token, and opens GitHub's token page", async () => {
-		const openUrl = jest.spyOn(Linking, "openURL").mockResolvedValueOnce(true);
+		const openUrl = jest.spyOn(Linking, "openURL").mockResolvedValueOnce(undefined);
 		stubApi({ "GET /github/account": ok(githubAccountLinkedJson("rejected")) });
 		await renderSignedIn("/profile/github-account");
 

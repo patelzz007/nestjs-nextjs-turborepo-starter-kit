@@ -367,9 +367,14 @@ function Sortable<T>({
 		state: { slot: "sortable", dragging: activeId !== null },
 	});
 
+	// dnd-kit numbers its screen-reader description ids from a global counter, which differs between
+	// the server render and the browser; a stable id from React keeps hydration matching.
+	const dndContextId = React.useId();
+
 	return (
 		<SortableInternalContext.Provider value={contextValue}>
 			<DndContext
+				id={dndContextId}
 				sensors={sensors}
 				modifiers={modifiers}
 				accessibility={resolvedAccessibility}

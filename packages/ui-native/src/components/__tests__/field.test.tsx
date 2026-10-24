@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { Text, View } from "react-native";
+import type { TextInstance, ViewInstance } from "react-native";
 
 import { Field, FieldError, FieldHint, FieldLabel } from "../field";
 import { Input } from "../input";
@@ -72,7 +72,7 @@ describe("Field", () => {
 	});
 
 	it("forwards its ref and merges the caller's className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(
 			<Field ref={ref} label="Name" className="gap-4" testID="field">
 				<Input value="" onChange={jest.fn()} />
@@ -86,7 +86,7 @@ describe("Field", () => {
 	});
 
 	it("exports its parts for a custom layout, each forwarding its ref", async () => {
-		const ref = React.createRef<Text>();
+		const ref = React.createRef<TextInstance>();
 		await render(
 			<>
 				<FieldLabel ref={ref} className="text-base">

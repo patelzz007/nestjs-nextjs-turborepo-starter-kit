@@ -1,6 +1,6 @@
 import type { AdminServerEnv } from "@/lib/env/env.schema";
 
-/** The developer component gallery (`/components`): its sidebar item carries this flag. */
+/** The sidebar's Components section (`/components`): the developer gallery and the kanban board. Its sidebar group carries this flag. */
 export const COMPONENT_GALLERY_FEATURE = "component-gallery";
 
 /** Merchant invites (`/merchants/invites`): off on a single-tenant deployment, which serves only its seeded tenant. */
@@ -30,7 +30,7 @@ export function isComponentGalleryEnabled(env: FeatureFlagEnv): boolean {
  * to the client shell as data. Feature flags
  * are orthogonal to authorization: an item shows only when the permission is
  * allowed AND its feature is enabled. A flagged route also refuses itself
- * (`app/(panel)/components/layout.tsx` answers 404 while the gallery is off).
+ * (`app/(panel)/components/(gallery)/layout.tsx` answers 404 while the gallery is off).
  */
 export function resolveEnabledFeatureFlags(env: FeatureFlagEnv, deployment: DeploymentFeatures): readonly string[] {
 	return [...(isComponentGalleryEnabled(env) ? [COMPONENT_GALLERY_FEATURE] : []), ...(deployment.merchantInvitesOffered ? [MERCHANT_INVITES_FEATURE] : [])];

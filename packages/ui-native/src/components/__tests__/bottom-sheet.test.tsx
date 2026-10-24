@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react-native";
 import * as React from "react";
-import { AccessibilityInfo, FlatList, Text, type ListRenderItemInfo, type View } from "react-native";
+import { AccessibilityInfo, FlatList, type ListRenderItemInfo, Text, type ViewInstance } from "react-native";
 import { z } from "zod";
 
 import { BottomSheet, SheetOptionRow, type BottomSheetSize } from "../bottom-sheet";
@@ -148,7 +148,7 @@ describe("BottomSheet", () => {
 	});
 
 	it("forwards its ref and merges the caller's className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(
 			<BottomSheet ref={ref} visible title="Filter" onClose={jest.fn()} className="max-h-full pt-6" testID="sheet">
 				<Text>Options</Text>
@@ -197,7 +197,7 @@ describe("SheetOptionRow", () => {
 	});
 
 	it("forwards its ref and merges the caller's className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<SheetOptionRow ref={ref} value="merge" label="Merge" selected={false} onSelect={jest.fn()} className="border-b-0 py-4" testID="row" />);
 
 		expect(ref.current).not.toBeNull();

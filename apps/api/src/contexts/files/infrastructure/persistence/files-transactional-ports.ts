@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { DocumentMimeTypeSchema } from "@workspace/shared";
 
 import type { BindableFile, FileBindingRequest, FileReferencePort, FilesTransactionalPorts } from "../../application/ports/file-binding.port";
 
@@ -19,9 +20,14 @@ class PrismaFileReferencePort implements FileReferencePort {
 				...(request.tenantId === null ? {} : { tenantId: request.tenantId }),
 				...(request.uploadedById === null ? {} : { uploadedById: request.uploadedById }),
 			},
-			select: { id: true, category: true, status: true, tenantId: true, uploadedById: true, originalName: true },
+			select: { id: true, category: true, status: true, tenantId: true, uploadedById: true, originalName: true, mimeType: true },
 		});
-		const byId = new Map(rows.map((row): [string, BindableFile] => [row.id, row]));
+		const byId = new Map(
+			rows.flatMap((row): [string, BindableFile][] => {
+				const mimeType = DocumentMimeTypeSchema.safeParse(row.mimeType);
+				return mimeType.success ? [[row.id, { ...row, mimeType: mimeType.data }]] : [];
+			}),
+		);
 		return ids.flatMap((id: string): BindableFile[] => {
 			const row = byId.get(id);
 			return row === undefined ? [] : [row];

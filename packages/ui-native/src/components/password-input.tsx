@@ -10,7 +10,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import EyeIcon from "lucide-react-native/icons/eye";
 import EyeOffIcon from "lucide-react-native/icons/eye-off";
 import * as React from "react";
-import { Pressable, type TextInput } from "react-native";
+import { Pressable, type TextInputInstance } from "react-native";
 
 import { Icon } from "./icon";
 import { Input, type InputProps } from "./input";
@@ -47,7 +47,7 @@ export interface PasswordInputProps extends Omit<InputProps, "secureTextEntry" |
 }
 
 export const PasswordInput = React.memo(
-	React.forwardRef<TextInput, PasswordInputProps>(function PasswordInput(
+	React.forwardRef<TextInputInstance, PasswordInputProps>(function PasswordInput(
 		{ visible, onVisibleChange, showLabel = "Show password", hideLabel = "Hide password", size = "md", className, testID, ...props },
 		ref,
 	): React.JSX.Element {

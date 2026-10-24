@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import BoldIcon from "lucide-react-native/icons/bold";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { Toggle } from "../toggle";
 
@@ -61,7 +61,7 @@ describe("Toggle", () => {
 	});
 
 	it("forwards its ref, merges the caller's className last and reports focus and blur", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		const onFocus = jest.fn();
 		const onBlur = jest.fn();
 		await render(<Toggle ref={ref} label="Bold" pressed={false} onChange={jest.fn()} onFocus={onFocus} onBlur={onBlur} className="px-6" />);

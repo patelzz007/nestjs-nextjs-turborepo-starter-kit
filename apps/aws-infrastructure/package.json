@@ -11,22 +11,23 @@
 		"deploy": "cdk deploy --all",
 		"diff": "cdk diff",
 		"test": "vitest run",
-		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"typecheck": "tsrs --noEmit -p tsconfig.json",
 		"lint": "eslint ."
 	},
 	"dependencies": {
-		"aws-cdk-lib": "^2.272.0",
+		"aws-cdk-lib": "^2.274.0",
 		"constructs": "^10.8.1"
 	},
 	"devDependencies": {
-		"@types/node": "^26.6.4",
+		"@types/node": "^26.6.5",
 		"@workspace/eslint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
-		"aws-cdk": "^2.1144.0",
+		"aws-cdk": "^2.1146.1",
 		"eslint": "^9.39.5",
+		"tsrs": "0.18.0-ts7.1.0-dev.20260929",
 		"tsx": "^4.23.15",
 		"typescript": "6.0.3",
-		"vitest": "^5.0.3",
-		"zod": "^4.6.5"
+		"vitest": "^5.0.5",
+		"zod": "^4.6.7"
 	}
 }

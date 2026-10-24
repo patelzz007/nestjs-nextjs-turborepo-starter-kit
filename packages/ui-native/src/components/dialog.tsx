@@ -16,7 +16,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Modal, Pressable, Text, View } from "react-native";
+import { Modal, Pressable, Text, type TextInstance, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { resolveControlState } from "../lib/control-state";
@@ -78,7 +78,7 @@ export interface DialogProps {
 }
 
 export const Dialog = React.memo(
-	React.forwardRef<View, DialogProps>(function Dialog(
+	React.forwardRef<ViewInstance, DialogProps>(function Dialog(
 		{
 			open,
 			onOpenChange,
@@ -146,7 +146,7 @@ export interface DialogPartProps {
 
 /** The title and description, stacked. */
 export const DialogHeader = React.memo(
-	React.forwardRef<View, DialogPartProps>(function DialogHeader({ children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, DialogPartProps>(function DialogHeader({ children, className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} testID={testID} className={cn("gap-1.5", className)}>
 				{children}
@@ -157,7 +157,7 @@ export const DialogHeader = React.memo(
 
 /** The dialog's heading; announced as a header. */
 export const DialogTitle = React.memo(
-	React.forwardRef<Text, DialogPartProps>(function DialogTitle({ children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<TextInstance, DialogPartProps>(function DialogTitle({ children, className, testID }, ref): React.JSX.Element {
 		return (
 			<Text ref={ref} accessibilityRole="header" testID={testID} className={cn("font-heading text-lg text-foreground", className)}>
 				{children}
@@ -168,7 +168,7 @@ export const DialogTitle = React.memo(
 
 /** What the dialog is about, or what will happen. */
 export const DialogDescription = React.memo(
-	React.forwardRef<Text, DialogPartProps>(function DialogDescription({ children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<TextInstance, DialogPartProps>(function DialogDescription({ children, className, testID }, ref): React.JSX.Element {
 		return (
 			<Text ref={ref} testID={testID} className={cn("font-sans text-base text-muted-foreground", className)}>
 				{children}
@@ -179,7 +179,7 @@ export const DialogDescription = React.memo(
 
 /** The dialog's actions, stacked full width (a phone's thumb-reach order: the primary action first). */
 export const DialogFooter = React.memo(
-	React.forwardRef<View, DialogPartProps>(function DialogFooter({ children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, DialogPartProps>(function DialogFooter({ children, className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} testID={testID} className={cn("gap-2", className)}>
 				{children}

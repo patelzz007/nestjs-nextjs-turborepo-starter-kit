@@ -7,7 +7,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { View } from "react-native";
+import { View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 
@@ -81,7 +81,7 @@ export interface ButtonGroupProps {
 }
 
 export const ButtonGroup = React.memo(
-	React.forwardRef<View, ButtonGroupProps>(function ButtonGroup(
+	React.forwardRef<ViewInstance, ButtonGroupProps>(function ButtonGroup(
 		{ children, variant = "attached", orientation = "horizontal", size = "md", accessibilityLabel, className, testID },
 		ref,
 	): React.JSX.Element {

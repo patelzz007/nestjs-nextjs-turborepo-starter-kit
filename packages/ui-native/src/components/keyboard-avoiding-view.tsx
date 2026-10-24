@@ -12,7 +12,6 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import type { View } from "react-native";
 import { KeyboardAvoidingView as KeyboardControllerAvoidingView } from "react-native-keyboard-controller";
 import { withUniwind } from "uniwind";
 
@@ -21,6 +20,14 @@ import { KEYBOARD_AVOIDING_BEHAVIOR } from "../lib/keyboard-avoidance";
 
 /** keyboard-controller's view, with Uniwind's `className` (see screen.tsx). */
 const StyledKeyboardControllerAvoidingView = withUniwind(KeyboardControllerAvoidingView);
+
+/**
+ * What the ref points at: whatever `react-native-keyboard-controller` declares. It still types the
+ * ref as `View` (React Native's legacy class typing); under the strict TypeScript API React Native
+ * 0.88 makes the default, that is no longer the host instance type `ViewInstance`. Follows the
+ * library's declaration until it ships strict-API types.
+ */
+export type KeyboardAvoidingViewInstance = React.ComponentRef<typeof KeyboardControllerAvoidingView>;
 
 export const keyboardAvoidingViewVariants = cva("", {
 	variants: {
@@ -44,7 +51,10 @@ export interface KeyboardAvoidingViewProps {
 }
 
 export const KeyboardAvoidingView = React.memo(
-	React.forwardRef<View, KeyboardAvoidingViewProps>(function KeyboardAvoidingView({ variant = "fill", className, children, testID }, ref): React.JSX.Element {
+	React.forwardRef<KeyboardAvoidingViewInstance, KeyboardAvoidingViewProps>(function KeyboardAvoidingView(
+		{ variant = "fill", className, children, testID },
+		ref,
+	): React.JSX.Element {
 		return (
 			<StyledKeyboardControllerAvoidingView
 				ref={ref}

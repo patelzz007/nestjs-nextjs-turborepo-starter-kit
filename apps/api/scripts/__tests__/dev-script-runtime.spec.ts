@@ -39,12 +39,16 @@ describe("API dev/build scripts", () => {
 		expect(source).toContain('isDev ? "cheap-module-source-map" : "source-map"');
 	});
 
-	it("restarts the dev API when a workspace package's dist/ is re-emitted (decision #69)", () => {
-		const rspackPath: string = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "rspack.config.mjs");
-		const source: string = readFileSync(rspackPath, "utf8");
-		expect(source).toContain('["shared", "messaging", "api-client"]');
-		expect(source).toContain("compilation.contextDependencies.add(directory)");
-		expect(source).toContain("new WatchWorkspaceDistPlugin(),");
+	it("bundles @workspace/* from their TypeScript source in development, so dev waits on no package build", () => {
+		const apiDir: string = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+		const source: string = readFileSync(path.join(apiDir, "rspack.config.mjs"), "utf8");
+		// The `development` export condition points each workspace package at its src/ …
+		expect(source).toContain('conditionNames: isDev ? [WORKSPACE_SOURCE_CONDITION, "..."] : ["..."]');
+		expect(source).toContain('const WORKSPACE_SOURCE_CONDITION = "development";');
+		// … which is bundled rather than left external, in development only.
+		expect(source).toContain("allowlist: isDev ? [WORKSPACE_PACKAGES] : []");
+		// So the API's `dev` task needs no `^build` of those packages first.
+		expect(readFileSync(path.join(apiDir, "turbo.json"), "utf8")).toMatch(/"dev":\s*\{\s*"dependsOn":\s*\[\]/u);
 	});
 
 	it("leaves the production build to rspack's production default", () => {

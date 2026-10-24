@@ -21,7 +21,17 @@
 
 import { BlurTargetView, BlurView } from "expo-blur";
 import * as React from "react";
-import { BackHandler, PanResponder, Platform, Pressable, useWindowDimensions, View, type GestureResponderEvent, type PanResponderGestureState } from "react-native";
+import {
+	BackHandler,
+	type GestureResponderEvent,
+	PanResponder,
+	type PanResponderGestureState,
+	Platform,
+	Pressable,
+	useWindowDimensions,
+	View,
+	type ViewInstance,
+} from "react-native";
 import Animated, { useAnimatedProps, useAnimatedStyle, useSharedValue, withSpring, type SharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
@@ -76,7 +86,7 @@ export function Drawer({ open, onOpen, onClose, panel, accessibilityLabel, close
 	const insets = useSafeAreaInsets();
 	const panelWidth = Math.min(screenWidth * PANEL_SCREEN_SHARE, PANEL_MAX_WIDTH);
 	const progress = useSharedValue(open ? OPEN : CLOSED);
-	const blurTarget = React.useRef<View>(null);
+	const blurTarget = React.useRef<ViewInstance>(null);
 	/**
 	 * Whether the drawer is on screen: from the moment it opens (or an opening
 	 * drag starts) until a close has fully settled, so the panel, the scrim and
@@ -243,7 +253,7 @@ const FADES_BLUR = Platform.OS === "android";
 
 interface DrawerBlurProps {
 	readonly progress: SharedValue<number>;
-	readonly blurTarget: React.RefObject<View | null>;
+	readonly blurTarget: React.RefObject<ViewInstance | null>;
 	readonly testID: string | undefined;
 }
 

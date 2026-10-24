@@ -1,4 +1,13 @@
-import type { AdminMfaRecoveryRequest, EpochMs, MfaRecoveryStatusResponse, OwnProfile, PaginatedServiceResult, Session } from "@workspace/shared";
+import type {
+	AdminMfaRecoveryRequest,
+	EpochMs,
+	MfaRecoveryStatusResponse,
+	OwnProfile,
+	PaginatedServiceResult,
+	Session,
+	UserPreference,
+	UserPreferences,
+} from "@workspace/shared";
 
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import type { AccountView, AdminAccountView, IdentityReadPort } from "../../ports/identity-read.port";
@@ -13,6 +22,7 @@ export function singlePage<Item>(items: Item[]): PaginatedServiceResult<Item> {
 export class InMemoryIdentityReads implements IdentityReadPort {
 	public readonly accounts = new Map<string, AdminAccountView>();
 	public readonly profiles = new Map<string, OwnProfile>();
+	public readonly preferences = new Map<string, readonly UserPreference[]>();
 	public readonly sessions = new Map<string, Session[]>();
 	public readonly backupCodeHashes = new Map<string, readonly string[]>();
 	public readonly recoveries = new Map<string, MfaRecoveryStatusResponse>();
@@ -35,6 +45,10 @@ export class InMemoryIdentityReads implements IdentityReadPort {
 
 	public findOwnProfile(_actor: ActorContext, userId: string): Promise<OwnProfile | null> {
 		return Promise.resolve(this.profiles.get(userId) ?? null);
+	}
+
+	public listOwnPreferences(_actor: ActorContext, userId: string): Promise<UserPreferences> {
+		return Promise.resolve({ preferences: [...(this.preferences.get(userId) ?? [])] });
 	}
 
 	public listActiveSessions(_actor: ActorContext, userId: string, currentSessionId: string | null): Promise<PaginatedServiceResult<Session>> {

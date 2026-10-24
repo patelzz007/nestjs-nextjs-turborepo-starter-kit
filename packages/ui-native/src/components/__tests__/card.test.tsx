@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { Text, View } from "react-native";
+import type { TextInstance, ViewInstance } from "react-native";
 
 import { Button } from "../button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../card";
@@ -66,12 +66,12 @@ describe("Card", () => {
 	});
 
 	it("forwards the ref of every part", async () => {
-		const card = React.createRef<View>();
-		const header = React.createRef<View>();
-		const title = React.createRef<Text>();
-		const description = React.createRef<Text>();
-		const content = React.createRef<View>();
-		const footer = React.createRef<View>();
+		const card = React.createRef<ViewInstance>();
+		const header = React.createRef<ViewInstance>();
+		const title = React.createRef<TextInstance>();
+		const description = React.createRef<TextInstance>();
+		const content = React.createRef<ViewInstance>();
+		const footer = React.createRef<ViewInstance>();
 		await render(
 			<Card ref={card}>
 				<CardHeader ref={header}>

@@ -7,7 +7,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import ChevronDownIcon from "lucide-react-native/icons/chevron-down";
 import * as React from "react";
-import { ActivityIndicator, Pressable, Text, View, type NativeSyntheticEvent, type TargetedEvent } from "react-native";
+import { ActivityIndicator, type NativeSyntheticEvent, Pressable, type TargetedEvent, Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
@@ -80,7 +80,7 @@ export interface FilterChipProps<TValue extends string> {
 
 /** `FilterChip` keeps its option type through `memo` and `forwardRef`. The ref reaches the chip. */
 export interface FilterChipComponent {
-	<TValue extends string>(props: FilterChipProps<TValue> & React.RefAttributes<View>): React.ReactNode;
+	<TValue extends string>(props: FilterChipProps<TValue> & React.RefAttributes<ViewInstance>): React.ReactNode;
 	displayName?: string | undefined;
 }
 
@@ -102,7 +102,7 @@ export const FilterChip: FilterChipComponent = React.memo(
 			className,
 			testID,
 		}: FilterChipProps<string>,
-		ref: React.ForwardedRef<View>,
+		ref: React.ForwardedRef<ViewInstance>,
 	): React.JSX.Element {
 		const [open, setOpen] = React.useState(false);
 		const state = resolveControlState({ disabled, loading, invalid });

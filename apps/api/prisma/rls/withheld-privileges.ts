@@ -38,6 +38,21 @@ export const APP_RUNTIME_WITHHELD_PRIVILEGES: Readonly<Record<string, readonly W
 	Country: NEVER_DELETED,
 	State: NEVER_DELETED,
 	City: NEVER_DELETED,
+	// ── Kanban board: soft-deleted, never hard-deleted ──
+	KanbanColumn: NEVER_DELETED,
+	KanbanPlanningColumn: NEVER_DELETED,
+	KanbanExecutionColumn: NEVER_DELETED,
+	KanbanLevelCounter: NEVER_DELETED,
+	KanbanConversionStage: NEVER_DELETED,
+	KanbanTask: NEVER_DELETED,
+	KanbanTaskComment: NEVER_DELETED,
+	KanbanTaskAttachment: NEVER_DELETED,
+	KanbanChecklistItem: NEVER_DELETED,
+	KanbanTaskWatcher: NEVER_DELETED,
+	KanbanTaskLink: NEVER_DELETED,
+	KanbanTaskActivity: NEVER_DELETED,
+	// ── A person's preferences: "Reset to default" soft-deletes ──
+	UserPreference: NEVER_DELETED,
 };
 
 /** A PostgreSQL identifier this module will interpolate (a table name: letters, digits and underscores). */

@@ -15,7 +15,7 @@ import ShieldIcon from "lucide-react-native/icons/shield";
 import ShieldAlertIcon from "lucide-react-native/icons/shield-alert";
 import ShieldCheckIcon from "lucide-react-native/icons/shield-check";
 import * as React from "react";
-import { Text, View, type LayoutChangeEvent } from "react-native";
+import { type LayoutChangeEvent, Text, View, type ViewInstance } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { withUniwind } from "uniwind";
 
@@ -164,7 +164,7 @@ export interface PasswordStrengthMeterProps {
 const EMPTY_MISSING: readonly string[] = [];
 
 export const PasswordStrengthMeter = React.memo(
-	React.forwardRef<View, PasswordStrengthMeterProps>(function PasswordStrengthMeter(
+	React.forwardRef<ViewInstance, PasswordStrengthMeterProps>(function PasswordStrengthMeter(
 		{
 			score,
 			label,

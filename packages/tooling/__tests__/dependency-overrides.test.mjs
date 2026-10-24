@@ -6,7 +6,9 @@
  * works. A future override bump that breaks the CJS `v4` export fails here
  * instead of at runtime inside firebase-admin. The scoped `concurrently>shell-quote`
  * security override is checked the same way: concurrently loads the overridden
- * version and the one function it imports (`quote`) still quotes as it expects.
+ * version and the one function it imports (`quote`) still quotes as it expects. The scoped
+ * `@expo/cli>zod` security override (zod 3 → 4): @expo/cli loads the overridden version and its
+ * own DevTools plugin schema still accepts a valid plugin and reports an invalid one by issue.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -21,6 +23,8 @@ const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}
 const UUID_OVERRIDE_PATTERN = /^\s+["']?([^"'\s>]+)>uuid["']?:\s*["']?([^"'\s#]+)["']?/gm;
 /** `  "concurrently>shell-quote": "1.12.0"` (quotes optional, trailing comment allowed). */
 const SHELL_QUOTE_OVERRIDE_PATTERN = /^\s+["']?concurrently>shell-quote["']?:\s*["']?([^"'\s#]+)["']?/m;
+/** `  "@expo/cli>zod": "4.6.7"` (quotes optional, trailing comment allowed). */
+const EXPO_CLI_ZOD_OVERRIDE_PATTERN = /^\s+["']?@expo\/cli>zod["']?:\s*["']?([^"'\s#]+)["']?/m;
 const WORKSPACE_YAML = readFileSync(path.join(REPO_ROOT, "pnpm-workspace.yaml"), "utf8");
 
 function readUuidOverrides() {
@@ -82,6 +86,35 @@ describe("pnpm overrides: concurrently>shell-quote", () => {
 			const { quote } = requireFromParent("shell-quote");
 			// Same output as the 1.9.0 concurrently pins: spaces single-quoted, `$` backslash-escaped.
 			expect(quote(["echo", "a b", "$HOME"])).toBe("echo 'a b' \\$HOME");
+		}
+	});
+});
+
+describe("pnpm overrides: @expo/cli>zod", () => {
+	const version = WORKSPACE_YAML.match(EXPO_CLI_ZOD_OVERRIDE_PATTERN)?.[1];
+
+	it("is declared (the parser below still matches pnpm-workspace.yaml)", () => {
+		expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+	});
+
+	it("@expo/cli loads the overridden zod and its DevTools plugin schema still parses as it expects", () => {
+		// The @expo/cli that `expo start` runs: resolved from the mobile app's `expo`, as expo resolves it
+		// (a store scan would also find copies a past install left behind, outside the lockfile).
+		const requireFromMobile = createRequire(path.join(REPO_ROOT, "apps/mobile/package.json"));
+		const requireFromExpo = createRequire(requireFromMobile.resolve("expo/package.json"));
+		const copies = [path.dirname(requireFromExpo.resolve("@expo/cli/package.json"))];
+
+		for (const packageDir of copies) {
+			const requireFromParent = createRequire(path.join(packageDir, "package.json"));
+			const zodManifestPath = requireFromParent.resolve("zod/package.json");
+			expect(readManifest(path.dirname(zodManifestPath)).version).toBe(version);
+
+			// @expo/cli's own schema module, exactly as `expo start` loads it for a DevTools plugin.
+			const { PluginSchema } = requireFromParent("./build/src/start/server/DevToolsPlugin.schema.js");
+			expect(PluginSchema.safeParse({ packageName: "plugin", packageRoot: "/plugin", bannerTitle: true }).success).toBe(true);
+			const invalid = PluginSchema.safeParse({ packageName: "", packageRoot: "/plugin" });
+			expect(invalid.success).toBe(false);
+			expect(invalid.error.issues.map((issue) => issue.path.join("."))).toEqual(["packageName"]);
 		}
 	});
 });

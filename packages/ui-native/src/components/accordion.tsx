@@ -11,7 +11,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { View } from "react-native";
+import { View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { resolveControlState } from "../lib/control-state";
@@ -100,7 +100,7 @@ export interface AccordionProps {
 }
 
 export const Accordion = React.memo(
-	React.forwardRef<View, AccordionProps>(function Accordion(
+	React.forwardRef<ViewInstance, AccordionProps>(function Accordion(
 		{ value, onChange, children, type = "single", collapsible = true, variant = "default", size = "md", disabled = false, animated = true, className, testID },
 		ref,
 	): React.JSX.Element {
@@ -134,7 +134,7 @@ export interface AccordionItemProps {
 }
 
 export const AccordionItem = React.memo(
-	React.forwardRef<View, AccordionItemProps>(function AccordionItem({ value: item, children, disabled = false, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, AccordionItemProps>(function AccordionItem({ value: item, children, disabled = false, className, testID }, ref): React.JSX.Element {
 		const { value, toggle, disabled: groupDisabled, animated, variant, size } = useAccordionContext();
 		const changeOpen = React.useCallback((): void => {
 			toggle(item);
@@ -160,7 +160,7 @@ export type AccordionTriggerProps = CollapsibleTriggerProps;
 
 /** The item's heading: presses open or close it. */
 export const AccordionTrigger = React.memo(
-	React.forwardRef<View, AccordionTriggerProps>(function AccordionTrigger(props, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, AccordionTriggerProps>(function AccordionTrigger(props, ref): React.JSX.Element {
 		return <CollapsibleTrigger ref={ref} {...props} />;
 	}),
 );
@@ -169,7 +169,7 @@ export type AccordionContentProps = CollapsibleContentProps;
 
 /** The item's body, rendered only while it is open. */
 export const AccordionContent = React.memo(
-	React.forwardRef<View, AccordionContentProps>(function AccordionContent(props, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, AccordionContentProps>(function AccordionContent(props, ref): React.JSX.Element {
 		return <CollapsibleContent ref={ref} {...props} />;
 	}),
 );

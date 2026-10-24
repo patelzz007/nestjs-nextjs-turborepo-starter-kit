@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { DateRangePicker, type LocalDateRange } from "../date-range-picker";
 
@@ -118,7 +118,7 @@ describe("DateRangePicker", () => {
 	});
 
 	it("forwards its ref while open, and merges the caller's className onto the sheet", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await renderPicker({ ref, className: "pb-12" });
 		expect(ref.current).not.toBeNull();
 		const className = String(screen.getByTestId("picker").props.className);

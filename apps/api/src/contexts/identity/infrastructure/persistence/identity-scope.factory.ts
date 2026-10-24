@@ -17,6 +17,7 @@ import { PrismaMfaRecoveryRequestRepository } from "./prisma-mfa-recovery-reques
 import { PrismaPasswordResetTokenRepository } from "./prisma-password-reset-token.repository";
 import { PrismaTwoFactorEnrollmentRepository, PrismaTwoFactorLoginChallengeRepository } from "./prisma-two-factor.repository";
 import { PrismaUserAccountRepository } from "./prisma-user-account.repository";
+import { PrismaUserPreferenceRepository } from "./prisma-user-preference.repository";
 import { PrismaUserProfileRepository } from "./prisma-user-profile.repository";
 
 /** What the scope factory is built from (module singletons; none holds a transaction). */
@@ -47,6 +48,7 @@ export class IdentityScopeFactory implements ScopeFactory<IdentityScope, Prisma.
 			sessions: new PrismaDeviceSessionRepository(db),
 			impersonations: new PrismaImpersonationSessionRepository(db),
 			profiles: new PrismaUserProfileRepository(db, resolvePublicUrl),
+			preferences: new PrismaUserPreferenceRepository(db),
 			signupReferrals: createReferralsTransactionalPorts(db).signupReferrals,
 			roles: createAuthorizationTransactionalPorts(db).defaultRoleAssignment,
 			emails: new IdentityEmailAdapter(() => notifications.create(db, events).emailRequests, config),

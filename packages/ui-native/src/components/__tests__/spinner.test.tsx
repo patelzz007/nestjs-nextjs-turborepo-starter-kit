@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { Spinner, type SpinnerVariant } from "../spinner";
 
@@ -62,7 +62,7 @@ describe("Spinner", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<Spinner testID="spinner" ref={ref} />);
 		expect(ref.current).not.toBeNull();
 	});

@@ -13,7 +13,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text, View } from "react-native";
+import { Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 
@@ -67,7 +67,7 @@ export interface BubbleProps {
 }
 
 export const Bubble = React.memo(
-	React.forwardRef<View, BubbleProps>(function Bubble(
+	React.forwardRef<ViewInstance, BubbleProps>(function Bubble(
 		{ text, children, variant = "received", size = "md", accessibilityLabel, className, textClassName, testID },
 		ref,
 	): React.JSX.Element {

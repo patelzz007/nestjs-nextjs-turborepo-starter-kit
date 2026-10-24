@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { Text, type View } from "react-native";
+import { Text } from "react-native";
 
-import { KeyboardAvoidingView } from "../keyboard-avoiding-view";
+import { KeyboardAvoidingView, type KeyboardAvoidingViewInstance } from "../keyboard-avoiding-view";
 
 describe("KeyboardAvoidingView", () => {
 	it("pads by the keyboard and fills its parent by default", async () => {
@@ -28,7 +28,7 @@ describe("KeyboardAvoidingView", () => {
 	});
 
 	it("forwards its ref, and merges the caller's className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<KeyboardAvoidingViewInstance>();
 		await render(
 			<KeyboardAvoidingView ref={ref} className="justify-end" testID="avoiding">
 				<Text>Body</Text>

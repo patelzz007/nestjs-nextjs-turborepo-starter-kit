@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react-native";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as React from "react";
-import { AppState, type AppStateStatus, type NativeEventSubscription } from "react-native";
+import { AppState, type AppStateStatus, type EventSubscription } from "react-native";
 
 import { memorySecureStore } from "../../../../test/secure-store-memory";
 import { preferencesActions } from "../../preferences/actions";
@@ -31,7 +31,7 @@ interface Harness {
 
 async function setup(lockEnabled: boolean, timeoutMs: 0 | 60_000 | 300_000 = 60_000): Promise<Harness> {
 	let listener: ((state: AppStateStatus) => void) | null = null;
-	jest.spyOn(AppState, "addEventListener").mockImplementation((_type, handler): NativeEventSubscription => {
+	jest.spyOn(AppState, "addEventListener").mockImplementation((_type, handler): EventSubscription => {
 		listener = handler;
 		return { remove: jest.fn() };
 	});

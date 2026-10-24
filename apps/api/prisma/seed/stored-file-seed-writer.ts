@@ -35,7 +35,7 @@ import { prisma } from "./client";
 import { sha256BytesHex } from "./helpers";
 
 /** The categories seeds store bytes for. */
-export type SeedFileCategory = Extract<FileCategory, "MERCHANT_KYB" | "PRODUCT_IMAGE" | "USER_AVATAR" | "STORE_LOGO" | "REWARD_IMAGE">;
+export type SeedFileCategory = Extract<FileCategory, "MERCHANT_KYB" | "PRODUCT_IMAGE" | "USER_AVATAR" | "STORE_LOGO" | "REWARD_IMAGE" | "KANBAN_TASK_ATTACHMENT">;
 
 /** The MIME types of the seed files on disk / in memory (each matches its magic bytes). */
 export type SeedFileMimeType = "application/pdf" | "image/png" | "image/webp";
@@ -198,6 +198,7 @@ export function createSeedFileWriter(): SeedFileWriter {
 		await prisma.productImage.updateMany({ where: { fileId }, data: { ...softDelete, isPrimary: false } });
 		await prisma.tenantAsset.updateMany({ where: { fileId }, data: softDelete });
 		await prisma.userAvatar.updateMany({ where: { fileId }, data: softDelete });
+		await prisma.kanbanTaskAttachment.updateMany({ where: { fileId }, data: softDelete });
 		await prisma.fileVariant.updateMany({ where: { fileId }, data: softDelete });
 		await storage.deleteObject(locatorFor(stored.storagePath));
 	};

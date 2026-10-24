@@ -10,6 +10,9 @@ export const authRoutes = {
 	me: "/auth/me",
 	/** The signed-in user's own profile — GET reads it, PATCH edits it. */
 	profile: "/auth/profile",
+	/** The signed-in user's remembered choices — GET lists them; PUT and DELETE on `/:key` set one or reset it to the default. */
+	preferences: "/auth/preferences",
+	preference: "/auth/preferences/:key",
 	permissions: "/auth/permissions",
 	sessionStatus: "/session",
 	login: "/auth/login",

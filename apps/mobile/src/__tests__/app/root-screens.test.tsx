@@ -21,7 +21,7 @@ describe("Update required (§10.13)", () => {
 	}
 
 	it("explains the update and opens the store", async () => {
-		const openUrl = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+		const openUrl = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
 		await renderUpdate("https://apps.apple.com/app/id1");
 
 		expect(screen.getByText("Installed version: 1.0.0. Oldest supported version: 2.0.0.")).toBeOnTheScreen();

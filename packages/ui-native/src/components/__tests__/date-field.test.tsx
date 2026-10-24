@@ -2,7 +2,7 @@ import type { LocalDate } from "@workspace/shared";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { DateField } from "../date-field";
 
@@ -114,7 +114,7 @@ describe("DateField", () => {
 	});
 
 	it("forwards its ref to the field's trigger", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await renderField({ ref });
 		expect(ref.current).not.toBeNull();
 	});

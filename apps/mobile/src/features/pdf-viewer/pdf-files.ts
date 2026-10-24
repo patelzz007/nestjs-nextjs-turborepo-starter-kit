@@ -38,7 +38,7 @@ export function checkLocalPdf(uri: string): PdfFileCheck {
 	const sizeBytes = file.size;
 	const handle = file.open();
 	try {
-		return checkPdfFile({ sizeBytes, leadingBytes: handle.readBytes(Math.min(sizeBytes, PDF_HEADER_SEARCH_WINDOW_BYTES)) });
+		return checkPdfFile({ sizeBytes, leadingBytes: handle.readBytesSync(Math.min(sizeBytes, PDF_HEADER_SEARCH_WINDOW_BYTES)) });
 	} finally {
 		handle.close();
 	}
@@ -73,7 +73,7 @@ const SAMPLE_PDF_PAGES = [
 export function writeSamplePdf(): PdfSource {
 	const file = new File(Paths.cache, PDF_DOWNLOADS_FOLDER, SAMPLE_PDF_NAME);
 	file.create({ intermediates: true, overwrite: true });
-	file.write(buildTextPdf(SAMPLE_PDF_PAGES));
+	file.writeSync(buildTextPdf(SAMPLE_PDF_PAGES));
 	return { kind: "picked", uri: file.uri, fileName: SAMPLE_PDF_NAME };
 }
 

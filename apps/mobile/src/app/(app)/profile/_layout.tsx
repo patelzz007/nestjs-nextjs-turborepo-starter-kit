@@ -10,7 +10,7 @@ import { PUSH_TRANSITION } from "../../../lib/screen-transitions";
 const SCREEN_OPTIONS = { headerShown: false, animation: PUSH_TRANSITION } satisfies React.ComponentProps<typeof Stack>["screenOptions"];
 
 /** The profile is always the stack's first screen, even when a commit is opened directly: going back from it lands on the profile. */
-const PROFILE_STACK_SETTINGS = { initialRouteName: "index" };
+const PROFILE_STACK_SETTINGS = { anchor: "index" };
 
 // Expo Router reads the stack's settings from this exact export name.
 export { PROFILE_STACK_SETTINGS as unstable_settings };

@@ -18,7 +18,7 @@ import ChevronRightIcon from "lucide-react-native/icons/chevron-right";
 import ChevronUpIcon from "lucide-react-native/icons/chevron-up";
 import { cva } from "class-variance-authority";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View, type LayoutChangeEvent } from "react-native";
+import { type LayoutChangeEvent, Pressable, ScrollView, type ScrollViewInstance, Text, View, type ViewInstance } from "react-native";
 
 import {
 	addCalendarMonths,
@@ -108,7 +108,7 @@ function navigatorFormatsOf(locale: string): NavigatorFormats {
 }
 
 export const CalendarNavigator = React.memo(
-	React.forwardRef<View, CalendarNavigatorProps>(function CalendarNavigator(
+	React.forwardRef<ViewInstance, CalendarNavigatorProps>(function CalendarNavigator(
 		{ month, minMonth, maxMonth, locale, onMonthChange, children, className, testID },
 		ref,
 	): React.JSX.Element {
@@ -311,7 +311,7 @@ interface YearChooserProps {
 }
 
 const YearChooser = React.memo(function YearChooser({ month, minMonth, maxMonth, onChoose }: YearChooserProps): React.JSX.Element {
-	const scrollRef = React.useRef<ScrollView>(null);
+	const scrollRef = React.useRef<ScrollViewInstance>(null);
 	const shownMonthNumber = month.month;
 	/** Every year in range at the shown month, row by row (choosing one keeps the month). */
 	const rows = React.useMemo(

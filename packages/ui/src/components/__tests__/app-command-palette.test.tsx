@@ -112,6 +112,17 @@ describe("AppCommandPalette", () => {
 		expect(input).toHaveProperty("value", "zzz-no-match");
 	});
 
+	it("lists the app's own results first, and shows no empty state while they hold something", (): void => {
+		const extra = <div data-testid="extra-results">STORY-142</div>;
+		const { rerender } = renderPalette({ searchText: "story-142", extraResults: extra, hasExtraResults: true });
+
+		expect(screen.getByTestId("extra-results").textContent).toBe("STORY-142");
+		expect(screen.queryByText(UI_KIT_LABELS_EN.appCommandPalette.noResultsTitle)).toBeNull();
+
+		rerender(<PaletteHarness searchText="story-142" extraResults={null} hasExtraResults={false} />);
+		expect(screen.queryByTestId("extra-results")).toBeNull();
+	});
+
 	it("keeps its own search text when uncontrolled", (): void => {
 		renderPalette();
 		const input = screen.getByPlaceholderText(UI_KIT_LABELS_EN.appCommandPalette.placeholder);

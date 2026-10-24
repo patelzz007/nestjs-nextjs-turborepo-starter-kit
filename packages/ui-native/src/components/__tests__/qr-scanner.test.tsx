@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { Linking, type View } from "react-native";
+import { Linking, type ViewInstance } from "react-native";
 import { SafeAreaProvider, type Metrics } from "react-native-safe-area-context";
 
 import * as mockExpoCamera from "../../../test/expo-camera-mock";
@@ -131,7 +131,7 @@ describe("QrScanner — the kit's camera scanner", () => {
 
 	it("forwards its ref to the scanner's surface while open", async () => {
 		cameraPermission.current = permissionOf(true, true);
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(onPhone(<QrScanner ref={ref} visible engine="camera" {...handlers()} testID={SCANNER} />));
 
 		expect(ref.current).not.toBeNull();

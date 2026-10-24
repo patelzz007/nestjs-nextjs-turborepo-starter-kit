@@ -31,7 +31,7 @@ A PR that adds new logic — of any size — without a corresponding test is inc
 
 ## The one exception to Vitest: `apps/mobile` uses jest-expo
 
-[ADR 031](../docs/adr/031-jest-expo-for-mobile-tests.md): the Expo app is tested with **jest-expo** (`~57.0.2`, on Jest 29 and `@react-native/jest-preset` 0.86) and **`@testing-library/react-native`** (v14: `render`, `fireEvent` and `act` are async — `await` them). React Native's transforms and native-module mocks are built for Jest; running them under Vitest is unsupported. Everything else in this document still applies to those suites, word for word: tests for everything, no `.skip` / `.only`, no weakened assertions, and **mock only boundaries**.
+[ADR 031](../docs/adr/031-jest-expo-for-mobile-tests.md): the Expo app is tested with **jest-expo** (`~58.0.12`, on Jest 30 and `@react-native/jest-preset` 0.88) and **`@testing-library/react-native`** (v14: `render`, `fireEvent` and `act` are async — `await` them). React Native's transforms and native-module mocks are built for Jest; running them under Vitest is unsupported. Everything else in this document still applies to those suites, word for word: tests for everything, no `.skip` / `.only`, no weakened assertions, and **mock only boundaries**.
 
 What counts as a boundary in `apps/mobile`, and how it is faked:
 

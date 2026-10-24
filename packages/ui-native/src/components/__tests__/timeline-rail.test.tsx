@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react-native";
 import TagIcon from "lucide-react-native/icons/tag";
 import * as React from "react";
-import { Text, type View } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 
 import { TimelineRailIcon, TimelineRailItem, type TimelineRailTone } from "../timeline-rail";
 
@@ -46,7 +46,7 @@ describe("TimelineRailItem", () => {
 	});
 
 	it("forwards its ref and merges className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(
 			<TimelineRailItem ref={ref} node={<TimelineRailIcon icon={TagIcon} />} className="gap-4" testID="entry">
 				<Text>entry</Text>
@@ -73,7 +73,7 @@ describe("TimelineRailIcon", () => {
 	});
 
 	it("has a small size, forwards its ref and merges className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<TimelineRailIcon ref={ref} icon={TagIcon} size="sm" className="size-7" testID="disc" />);
 
 		expect(ref.current).not.toBeNull();

@@ -60,6 +60,21 @@ describe("SYSTEM_ROLE_CATALOG", () => {
 		expect(keys(grantsOf("Admin")).has("MANAGE:SYSTEM_SETTINGS:GLOBAL")).toBe(false);
 	});
 
+	it("gives Admin the whole kanban board and Manager every board action except deleting tasks and rearranging columns", () => {
+		const kanbanOf = (roleName: string): string[] => [...keys(grantsOf(roleName).filter((permission) => permission.resource === "KANBAN_TASK"))].sort();
+
+		expect(kanbanOf("Admin")).toEqual([
+			"CREATE:KANBAN_TASK:GLOBAL",
+			"DELETE:KANBAN_TASK:GLOBAL",
+			"LIST:KANBAN_TASK:GLOBAL",
+			"MANAGE:KANBAN_TASK:GLOBAL",
+			"READ:KANBAN_TASK:GLOBAL",
+			"UPDATE:KANBAN_TASK:GLOBAL",
+		]);
+		expect(kanbanOf("Manager")).toEqual(["CREATE:KANBAN_TASK:GLOBAL", "LIST:KANBAN_TASK:GLOBAL", "READ:KANBAN_TASK:GLOBAL", "UPDATE:KANBAN_TASK:GLOBAL"]);
+		expect(kanbanOf("User")).toEqual([]);
+	});
+
 	it("makes Location Staff a subset of Location Manager, both only LOCATION-scoped", () => {
 		const manager = grantsOf(LOCATION_MANAGER_ROLE_NAME);
 		const managerKeys = keys(manager);

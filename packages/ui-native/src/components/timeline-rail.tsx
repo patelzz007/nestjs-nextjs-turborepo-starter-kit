@@ -6,7 +6,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { View } from "react-native";
+import { View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { Icon, type LucideIcon } from "./icon";
@@ -57,7 +57,7 @@ export interface TimelineRailItemProps {
 }
 
 export const TimelineRailItem = React.memo(
-	React.forwardRef<View, TimelineRailItemProps>(function TimelineRailItem(
+	React.forwardRef<ViewInstance, TimelineRailItemProps>(function TimelineRailItem(
 		{ node, children, isLast = false, compact = false, variant = "default", size = "md", className, testID },
 		ref,
 	): React.JSX.Element {
@@ -115,7 +115,7 @@ export interface TimelineRailIconProps {
 
 /** A small disc on the line holding an event's glyph; it covers the line behind it. Decorative: the entry beside it says what happened. */
 export const TimelineRailIcon = React.memo(
-	React.forwardRef<View, TimelineRailIconProps>(function TimelineRailIcon({ icon, tone = "neutral", size = "md", className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, TimelineRailIconProps>(function TimelineRailIcon({ icon, tone = "neutral", size = "md", className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} className={cn(timelineRailIconVariants({ variant: tone, size }), className)} testID={testID}>
 				<Icon icon={icon} size="sm" colorClassName={GLYPH_COLOR[tone]} />

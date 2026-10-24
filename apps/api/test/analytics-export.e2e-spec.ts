@@ -13,7 +13,7 @@ import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { sha256Hex } from "../src/platform/infrastructure/crypto/sha256";
 import { REPORT_FONT_FAMILIES } from "../src/contexts/reporting/infrastructure/report/fonts/report-fonts";
 import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
-import { createE2eApp, login, markSeedUserEmailVerified, type InjectResponse, type LoginResult } from "./e2e-helpers";
+import { createE2eApp, grantSeedUsersFullSession, login, type InjectResponse, type LoginResult } from "./e2e-helpers";
 import { pdfTextRuns } from "./support/report-files";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
@@ -120,7 +120,15 @@ describe("Analytics exports (e2e)", () => {
 	beforeAll(async () => {
 		app = await createE2eApp();
 		pool = new Pool({ connectionString: DATABASE_URL });
-		await markSeedUserEmailVerified(pool, "alice.johnson@example.com");
+		// Full sessions for everyone the spec signs in as (a verified email, an MFA enrollment not yet due).
+		await grantSeedUsersFullSession(pool, [
+			"alice.johnson@example.com",
+			"superadmin@example.com",
+			"jonker.owner@melaka-rewards.demo",
+			"jonker.cashier@melaka-rewards.demo",
+			"brew.cashier@kl-rewards.demo",
+			"brew.owner@kl-rewards.demo",
+		]);
 		const users = await pool.query<{ id: string; email: string }>('SELECT id, email FROM public."User" WHERE email = ANY($1::text[])', [
 			["alice.johnson@example.com", "jonker.owner@melaka-rewards.demo"],
 		]);

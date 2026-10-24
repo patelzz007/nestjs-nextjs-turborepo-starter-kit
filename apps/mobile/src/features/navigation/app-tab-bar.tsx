@@ -12,7 +12,7 @@ import { playSelectionFeedback } from "@workspace/ui-native/lib/haptics";
 import { useKeyboardVisible } from "../../lib/use-keyboard-visible";
 import { appTabOf } from "./app-tabs";
 
-export function AppTabBar({ state, navigation, insets }: BottomTabBarProps): React.JSX.Element | null {
+export function AppTabBar({ state, emitter, navigateToTab, insets }: BottomTabBarProps): React.JSX.Element | null {
 	const keyboardVisible = useKeyboardVisible();
 	// Set by the navigator: what it reports to screens as the tab bar's height (src/components/screen.tsx).
 	const reportHeight = React.use(BottomTabBarHeightCallbackContext);
@@ -33,19 +33,19 @@ export function AppTabBar({ state, navigation, insets }: BottomTabBarProps): Rea
 						selected,
 						testID: `tab-${tab.name}`,
 						onPress: (): void => {
-							const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
+							const event = emitter.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
 							if (!selected && !event.defaultPrevented) {
 								playSelectionFeedback();
-								navigation.navigate(route.name, route.params);
+								navigateToTab(route.key);
 							}
 						},
 						onLongPress: (): void => {
-							navigation.emit({ type: "tabLongPress", target: route.key });
+							emitter.emit({ type: "tabLongPress", target: route.key });
 						},
 					},
 				];
 			}),
-		[navigation, state.index, state.routes],
+		[emitter, navigateToTab, state.index, state.routes],
 	);
 
 	if (keyboardVisible) {

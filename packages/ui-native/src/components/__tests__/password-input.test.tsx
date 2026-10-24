@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { TextInput } from "react-native";
+import type { TextInputInstance } from "react-native";
 
 import { PasswordInput } from "../password-input";
 
@@ -68,7 +68,7 @@ describe("PasswordInput", () => {
 	});
 
 	it("forwards its ref and merges the caller's className last", async () => {
-		const ref = React.createRef<TextInput>();
+		const ref = React.createRef<TextInputInstance>();
 		await render(<PasswordInput ref={ref} accessibilityLabel="Password" value="" onChange={jest.fn()} className="bg-muted" />);
 
 		expect(ref.current).not.toBeNull();

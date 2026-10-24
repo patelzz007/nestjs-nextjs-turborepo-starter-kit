@@ -5,7 +5,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import type { TextInput } from "react-native";
+import type { TextInputInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { Input, type InputProps } from "./input";
@@ -27,7 +27,7 @@ export type TextareaSize = NonNullable<VariantProps<typeof textareaVariants>["si
 export type TextareaProps = Omit<InputProps, "multiline" | "secureTextEntry">;
 
 export const Textarea = React.memo(
-	React.forwardRef<TextInput, TextareaProps>(function Textarea({ size = "md", className, ...props }, ref): React.JSX.Element {
+	React.forwardRef<TextInputInstance, TextareaProps>(function Textarea({ size = "md", className, ...props }, ref): React.JSX.Element {
 		return <Input ref={ref} multiline size={size} className={cn(textareaVariants({ size }), className)} {...props} />;
 	}),
 );

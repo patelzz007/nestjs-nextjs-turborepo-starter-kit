@@ -229,6 +229,13 @@ model User {
   githubAccountLink                    GithubAccountLink?
   githubWebhookSubscriptions           GithubWebhookSubscription[]
   storedFilesUploaded                  StoredFile[]                    @relation("StoredFileUploader")
+  kanbanTasksOwned                     KanbanTask[]                    @relation("KanbanTaskOwner")
+  kanbanTasksAssigned                  KanbanTask[]                    @relation("KanbanTaskAssignee")
+  kanbanTaskComments                   KanbanTaskComment[]             @relation("KanbanTaskCommentAuthor")
+  kanbanChecklistItemsAssigned         KanbanChecklistItem[]           @relation("KanbanChecklistItemAssignee")
+  kanbanTasksWatched                   KanbanTaskWatcher[]             @relation("KanbanTaskWatcherUser")
+  kanbanActivity                       KanbanTaskActivity[]            @relation("KanbanTaskActivityActor")
+  preferences                          UserPreference[]
 
   @@index([pendingAttributionToken])
   @@index([authorizationChangedAt])
@@ -609,6 +616,35 @@ model UserAvatar {
   file StoredFile @relation(fields: [fileId], references: [id], onDelete: Restrict)
 }
 
+/// One remembered choice of a person (`board.execution.groupBy`), its value checked against the shared
+/// preference registry (`USER_PREFERENCE_REGISTRY`) on every write and every read — a stored value the
+/// registry no longer accepts reads as unset. "Reset to default" soft-deletes the row.
+/// @extends BaseModel
+model UserPreference {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  userId  String
+  /// A registry key (`USER_PREFERENCE_KEY_MAX_LENGTH`).
+  key     String @db.VarChar(120)
+  value   Json
+  /// Optimistic-lock token: each write increments it.
+  version Int    @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, key], where: { isDeleted: false })
+  @@index([userId, isDeleted])
+}
+
 // ============================================================================
 // Authorization
 // ============================================================================
@@ -648,6 +684,7 @@ enum PermissionResource {
   LOCATION
   GITHUB
   GITHUB_PULL_REQUEST
+  KANBAN_TASK
 }
 
 enum PermissionScope {
@@ -1890,6 +1927,8 @@ enum FileCategory {
   REWARD_IMAGE
   /// A picture an admin attaches to a GitHub comment from the app (ADR 052) — public, linked from the comment.
   GITHUB_COMMENT_IMAGE
+  /// A picture or PDF a staff member attaches to a kanban task — private, listed in `KanbanTaskAttachment`.
+  KANBAN_TASK_ATTACHMENT
 }
 
 enum FileVisibility {
@@ -1953,15 +1992,16 @@ model StoredFile {
   /// Product a PRODUCT_IMAGE upload is bound to (set at upload-url time, never parsed from the object path).
   productId        String?
 
-  uploadedBy    User            @relation("StoredFileUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
-  tenant        Tenant?         @relation("StoredFileTenant", fields: [tenantId], references: [id], onDelete: SetNull)
-  product       Product?        @relation("StoredFileProduct", fields: [productId], references: [id], onDelete: SetNull)
-  variants      FileVariant[]
-  productImages ProductImage[]
-  tenantAssets  TenantAsset[]
-  userAvatar    UserAvatar?
-  kybFiles      TenantKybFile[]
-  rewardImages  RewardImage[]
+  uploadedBy            User                   @relation("StoredFileUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  tenant                Tenant?                @relation("StoredFileTenant", fields: [tenantId], references: [id], onDelete: SetNull)
+  product               Product?               @relation("StoredFileProduct", fields: [productId], references: [id], onDelete: SetNull)
+  variants              FileVariant[]
+  productImages         ProductImage[]
+  tenantAssets          TenantAsset[]
+  userAvatar            UserAvatar?
+  kybFiles              TenantKybFile[]
+  rewardImages          RewardImage[]
+  kanbanTaskAttachments KanbanTaskAttachment[]
 
   @@index([uploadedById])
   @@index([tenantId])
@@ -2719,6 +2759,520 @@ model Product {
   category         SampleCategory? @relation(fields: [categoryId], references: [id])
   images           ProductImage[]
   storedFiles      StoredFile[]    @relation("StoredFileProduct")
+}
+
+// ============================================================================
+// Kanban
+// ============================================================================
+// The platform staff's two linked boards (apps/api/src/contexts/kanban): a
+// PLANNING board of epics and features and an EXECUTION board of stories and
+// their tasks, joined by each item's parent. Every table is bypass-only under
+// RLS: reached through `kanban.board.read` / `kanban.board.write` after the
+// KANBAN_TASK permission check. Positions are 0-based per board (columns) and
+// per column (items), rewritten under the board's advisory lock, so they never collide.
+
+/// Which board a column belongs to (shared `KanbanBoardKindSchema`).
+enum KanbanBoardKind {
+  PLANNING
+  EXECUTION
+}
+
+/// What a column stands for in the workflow (shared `KanbanColumnKindSchema`): the card reads it.
+enum KanbanColumnKind {
+  BACKLOG
+  REFINING
+  READY
+  PLANNED
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+/// An item's level in the hierarchy (shared `KanbanItemTypeSchema`): EPIC → FEATURE → STORY → TASK → SUBTASK.
+/// Epics and features live on the PLANNING board; stories, tasks and subtasks on the EXECUTION board.
+/// The levels below a subtask (sub-subtask, sub-sub-subtask) are its nested checklist (`STEPS`).
+enum KanbanItemType {
+  EPIC
+  FEATURE
+  STORY
+  TASK
+  SUBTASK
+}
+
+/// A planning column's stage (shared `KanbanPlanningStageSchema`). Columns are renamed freely; the stage never changes.
+enum KanbanPlanningStage {
+  BACKLOG
+  REFINING
+  READY
+  PLANNED
+  DELIVERED
+}
+
+/// An execution column's work state (shared `KanbanWorkStateSchema`). Columns are renamed freely; the state never changes.
+enum KanbanWorkState {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+/// One stage of the one-off board conversion (`pnpm db:kanban-convert`), in the order it runs.
+enum KanbanConversionStep {
+  /// Level counters seeded and every item given its key, in creation order.
+  KEYS
+  /// The shared columns split into planning and execution columns.
+  COLUMNS
+  /// Planning items in the retired "In progress" stage moved to Refining or Ready.
+  PLANNING_TRIAGE
+  /// Each task's subtask checklist turned into subtask items.
+  CHECKLISTS
+}
+
+/// Which list of an item a checklist row belongs to (shared `KanbanChecklistKindSchema`).
+enum KanbanChecklistKind {
+  /// Retired: a task's checklist breakdown before subtasks became items. The conversion script turns
+  /// these rows into SUBTASK items and their steps; migration 2 drops the value.
+  SUBTASKS
+  /// A subtask's breakdown: sub-subtask (depth 0), sub-sub-subtask (1).
+  STEPS
+  /// A feature's or story's acceptance criteria (always depth 0).
+  ACCEPTANCE_CRITERIA
+}
+
+/// How two items are linked, stored one way round: `BLOCKS` reads "source blocks target".
+enum KanbanLinkKind {
+  BLOCKS
+  RELATES_TO
+}
+
+/// What an activity row records (shared `KanbanActivityKindSchema`).
+enum KanbanActivityKind {
+  CREATED
+  UPDATED
+  MOVED
+  COMMENTED
+  ATTACHED
+  DETACHED
+  LINKED
+  UNLINKED
+  CHECKED
+  UNCHECKED
+}
+
+/// The field an `UPDATED` activity row changed (shared `KanbanActivityFieldSchema`).
+enum KanbanActivityField {
+  TITLE
+  DESCRIPTION
+  PRIORITY
+  TEAM
+  START
+  DUE
+  STORY_POINTS
+  PROGRESS
+  ASSIGNEE
+  PARENT
+  LABELS
+  SUBTASKS
+  STEPS
+  ACCEPTANCE_CRITERIA
+}
+
+enum KanbanTaskPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum KanbanTeam {
+  BACKEND
+  DATA
+  DESIGN
+  PLATFORM
+  PRODUCT
+  QA
+  SECURITY
+}
+
+/// A PDF is a `DOCUMENT`; an image is an `ATTACHMENT` — decided from the stored file's type.
+enum KanbanAttachmentKind {
+  ATTACHMENT
+  DOCUMENT
+}
+
+/// Retired: the column both boards shared before the planning/execution split. Read only by the
+/// conversion script (`pnpm db:kanban-convert`); migration 2 drops it with `KanbanTask.columnId`.
+/// @extends BaseModel
+model KanbanColumn {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// The board the column belongs to; existing rows predate the planning board.
+  board    KanbanBoardKind  @default(EXECUTION)
+  title    String           @db.VarChar(60)
+  kind     KanbanColumnKind
+  /// 0-based place on its board among the board's live columns.
+  position Int
+  /// Soft work-in-progress limit: the board warns when the column holds more live items. NULL = no limit.
+  wipLimit Int?
+  /// Optimistic-lock token: a column move or edit must send the version it read; each one increments it.
+  version  Int              @default(0)
+
+  tasks KanbanTask[]
+
+  @@index([board, isDeleted, position])
+}
+
+/// One planning-board column (epics and features), left to right by `position`. Planning has no WIP limit.
+/// @extends BaseModel
+model KanbanPlanningColumn {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  title    String              @db.VarChar(60)
+  /// What the column stands for; renaming the column never changes it.
+  stage    KanbanPlanningStage
+  /// 0-based place on the planning board among its live columns.
+  position Int
+  /// Optimistic-lock token: a column move must send the version it read; each one increments it.
+  version  Int                 @default(0)
+
+  tasks KanbanTask[] @relation("KanbanTaskPlanningColumn")
+
+  @@index([isDeleted, position])
+}
+
+/// One execution-board column (stories, tasks and subtasks), left to right by `position`.
+/// @extends BaseModel
+model KanbanExecutionColumn {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  title    String          @db.VarChar(60)
+  /// What the column stands for; renaming the column never changes it.
+  state    KanbanWorkState
+  /// 0-based place on the execution board among its live columns.
+  position Int
+  /// Soft work-in-progress limit on stories and tasks (subtasks never count). NULL = no limit.
+  wipLimit Int?
+  /// Optimistic-lock token: a column move or edit must send the version it read; each one increments it.
+  version  Int             @default(0)
+
+  tasks KanbanTask[] @relation("KanbanTaskExecutionColumn")
+
+  @@index([isDeleted, position])
+}
+
+/// The last key number handed out per level (`STORY-142` → 142). Incremented in the transaction that
+/// creates the item, so a number is never handed out twice — nor reused after a soft delete.
+/// @extends BaseModel
+model KanbanLevelCounter {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  level      KanbanItemType @unique
+  lastNumber Int            @default(0)
+}
+
+/// A finished stage of the one-off board conversion (`pnpm db:kanban-convert`): its resume marker and report.
+/// @extends BaseModel
+model KanbanConversionStage {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  stage       KanbanConversionStep @unique
+  /// Epoch ms the stage committed.
+  completedAt BigInt
+  /// What the stage changed (counts and the item mapping), as the script printed it.
+  report      Json
+}
+
+/// One card, top to bottom in its column by `position`. The person who creates it owns it.
+/// @extends BaseModel
+model KanbanTask {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// Retired shared column; NULL for items created after the planning/execution split. Dropped by migration 2.
+  columnId          String?
+  /// The planning column an epic or feature sits in; NULL for every other level.
+  planningColumnId  String?
+  /// The execution column a story, task or subtask sits in; NULL for epics and features.
+  executionColumnId String?
+  /// The item's key, its level and a number (`STORY-142`), from `KanbanLevelCounter`; never reused.
+  /// NULL only on rows the conversion script has not keyed yet.
+  key               String?            @unique @db.VarChar(24)
+  /// The item's level; existing rows predate the hierarchy and were stories.
+  type              KanbanItemType     @default(STORY)
+  /// The item one level up (a feature's epic, a story's feature, a task's story); NULL = none.
+  /// Required for a task; never set on an epic. Checked under the board lock.
+  parentId          String?
+  /// The reporter: who created the item.
+  ownerId           String
+  /// Who works on it; NULL = unassigned.
+  assigneeId        String?
+  title             String             @db.VarChar(120)
+  description       String             @db.VarChar(2000)
+  priority          KanbanTaskPriority
+  team              KanbanTeam
+  /// Epoch ms the item starts; NULL = no start date. A task has none: it inherits its story's.
+  startAt           BigInt?
+  /// Epoch ms the item is due; NULL = no due date. A task has none: it inherits its story's.
+  dueAt             BigInt?
+  /// Estimate in story points (`KANBAN_STORY_POINT_OPTIONS`); stories only, NULL = not estimated.
+  /// Epics and features show the sum of their stories instead.
+  storyPoints       Int?
+  /// Percent complete, 0–100 (`KANBAN_TASK_PROGRESS_MAX`).
+  progress          Int                @default(0)
+  /// Lower-case labels (`KanbanLabelSchema`), at most `KANBAN_TASK_LABEL_LIMIT`.
+  labels            String[]           @default([]) @db.VarChar(24)
+  /// 0-based place in its column among live items.
+  position          Int
+  /// Optimistic-lock token: an edit or a move must send the version it read; each one increments it.
+  version           Int                @default(0)
+
+  column          KanbanColumn?          @relation(fields: [columnId], references: [id], onDelete: Restrict)
+  planningColumn  KanbanPlanningColumn?  @relation("KanbanTaskPlanningColumn", fields: [planningColumnId], references: [id], onDelete: Restrict)
+  executionColumn KanbanExecutionColumn? @relation("KanbanTaskExecutionColumn", fields: [executionColumnId], references: [id], onDelete: Restrict)
+  parent          KanbanTask?            @relation("KanbanTaskHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children        KanbanTask[]           @relation("KanbanTaskHierarchy")
+  owner           User                   @relation("KanbanTaskOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  assignee        User?                  @relation("KanbanTaskAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
+  comments        KanbanTaskComment[]
+  attachments     KanbanTaskAttachment[]
+  checklist       KanbanChecklistItem[]
+  watchers        KanbanTaskWatcher[]
+  outgoingLinks   KanbanTaskLink[]       @relation("KanbanTaskLinkSource")
+  incomingLinks   KanbanTaskLink[]       @relation("KanbanTaskLinkTarget")
+  activity        KanbanTaskActivity[]
+
+  @@index([columnId, isDeleted, position])
+  @@index([planningColumnId, isDeleted, position])
+  @@index([executionColumnId, isDeleted, position])
+  @@index([parentId, isDeleted])
+  @@index([ownerId])
+  @@index([assigneeId])
+}
+
+/// A comment on a task, newest first on the task page.
+/// @extends BaseModel
+model KanbanTaskComment {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  taskId   String
+  authorId String
+  body     String @db.VarChar(2000)
+
+  task        KanbanTask             @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  author      User                   @relation("KanbanTaskCommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  /// Files posted with the comment (they are the item's attachments too).
+  attachments KanbanTaskAttachment[]
+
+  @@index([taskId, isDeleted, createdAt])
+  @@index([authorId])
+}
+
+/// A READY `KANBAN_TASK_ATTACHMENT` file attached to a task. Its uploader is the file's.
+/// A file is attached to at most one task; deleting the file releases the row.
+/// @extends BaseModel
+model KanbanTaskAttachment {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  taskId    String
+  /// The comment the file was posted with; NULL = attached to the item directly.
+  commentId String?
+  fileId    String
+  kind      KanbanAttachmentKind
+
+  task    KanbanTask         @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  comment KanbanTaskComment? @relation(fields: [commentId], references: [id], onDelete: Restrict)
+  file    StoredFile         @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@unique([fileId], where: { isDeleted: false })
+  @@index([taskId, isDeleted, createdAt])
+  @@index([commentId])
+}
+
+/// One row of an item's checklist: a task's subtask breakdown (nested by `depth`) or a feature's or
+/// story's acceptance criteria. Rows are ordered by `position` within (task, list); a row's depth is at
+/// most one more than the row above it, so the order alone draws the tree.
+/// @extends BaseModel
+model KanbanChecklistItem {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  taskId     String
+  list       KanbanChecklistKind
+  /// STEPS: 0 = sub-subtask, 1 = sub-sub-subtask (`KANBAN_STEP_MAX_DEPTH`); retired SUBTASKS rows: 0–2; always 0 for acceptance criteria.
+  depth      Int                 @default(0)
+  title      String              @db.VarChar(200)
+  isDone     Boolean             @default(false)
+  /// Who does this step; NULL = whoever owns the task. Subtasks only.
+  assigneeId String?
+  /// 0-based place in its list among live rows.
+  position   Int
+
+  task     KanbanTask @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  assignee User?      @relation("KanbanChecklistItemAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
+
+  @@index([taskId, list, isDeleted, position])
+  @@index([assigneeId])
+}
+
+/// A staff member following an item. Unwatching soft-deletes the row; watching again writes a new one.
+/// @extends BaseModel
+model KanbanTaskWatcher {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  taskId String
+  userId String
+
+  task KanbanTask @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  user User       @relation("KanbanTaskWatcherUser", fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([taskId, userId], where: { isDeleted: false })
+  @@index([userId])
+}
+
+/// A link between two items, stored one way round (`BLOCKS`: source blocks target; `RELATES_TO`
+/// either way, never stored twice). Removing a link soft-deletes it.
+/// @extends BaseModel
+model KanbanTaskLink {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  sourceTaskId String
+  targetTaskId String
+  kind         KanbanLinkKind
+
+  source KanbanTask @relation("KanbanTaskLinkSource", fields: [sourceTaskId], references: [id], onDelete: Restrict)
+  target KanbanTask @relation("KanbanTaskLinkTarget", fields: [targetTaskId], references: [id], onDelete: Restrict)
+
+  @@unique([sourceTaskId, targetTaskId, kind], where: { isDeleted: false })
+  @@index([targetTaskId, isDeleted])
+}
+
+/// What happened to an item, newest last: written in the same transaction as the change, never edited.
+/// `fromValue` / `toValue` keep the values as they were then (a column title, a person's name, an
+/// enum value, epoch ms as text), so the history reads the same after later renames.
+/// @extends BaseModel
+model KanbanTaskActivity {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  taskId    String
+  actorId   String
+  kind      KanbanActivityKind
+  /// The field an `UPDATED` row changed; NULL for every other kind.
+  field     KanbanActivityField?
+  /// The value before the change (or the link kind of a `LINKED` row); NULL when there was none.
+  fromValue String?              @db.VarChar(200)
+  /// The value after the change (or the column, file, item or checklist row it names); NULL when cleared.
+  toValue   String?              @db.VarChar(200)
+
+  task  KanbanTask @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  actor User       @relation("KanbanTaskActivityActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([taskId, createdAt])
+  @@index([actorId])
 }
 
 // ============================================================================

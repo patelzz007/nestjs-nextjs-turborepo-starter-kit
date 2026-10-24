@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { SidebarAuthorizationSchema, type SidebarAuthorization, type SidebarMenuData, type SidebarMenuItem } from "@/lib/navigation/sidebar";
 import { SIDEBAR_MENU_DATA } from "@/lib/navigation/sidebar-menu";
+import { COMPONENT_GALLERY_FEATURE } from "@/lib/feature-flags";
 import { ROUTE_PATTERNS, ROUTES } from "@/lib/routes";
 
 /**
@@ -148,6 +149,20 @@ const EXPLICIT_ROUTE_RULES: readonly RouteAuthorizationRule[] = [
 	{
 		prefix: ROUTE_PATTERNS.catalog.products.edit,
 		authorization: { permissions: [PERMISSION.PRODUCT.READ, PERMISSION.PRODUCT.UPDATE, PERMISSION.SAMPLE_CATEGORY.LIST, PERMISSION.SAMPLE_CATEGORY.READ], mode: "all" },
+	},
+	// GET /admin/kanban/tasks/:taskId (READ) and its comments, GET …/comments (LIST KANBAN_TASK).
+	// The deeper edit pattern below wins for `…/tasks/x/edit` (most specific match).
+	// Like the board, only where the Components section is enabled (its sidebar group carries the flag).
+	{
+		prefix: ROUTE_PATTERNS.kanban.task,
+		authorization: { permissions: [PERMISSION.KANBAN_TASK.READ, PERMISSION.KANBAN_TASK.LIST], mode: "all" },
+		featureFlag: COMPONENT_GALLERY_FEATURE,
+	},
+	// GET + PATCH /admin/kanban/tasks/:taskId (READ + UPDATE)
+	{
+		prefix: ROUTE_PATTERNS.kanban.editTask,
+		authorization: { permissions: [PERMISSION.KANBAN_TASK.READ, PERMISSION.KANBAN_TASK.UPDATE], mode: "all" },
+		featureFlag: COMPONENT_GALLERY_FEATURE,
 	},
 	// GET + PATCH /sample-category/:id (READ + UPDATE)
 	{ prefix: ROUTE_PATTERNS.catalog.categories.edit, authorization: { permissions: [PERMISSION.SAMPLE_CATEGORY.READ, PERMISSION.SAMPLE_CATEGORY.UPDATE], mode: "all" } },

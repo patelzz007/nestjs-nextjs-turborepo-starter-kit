@@ -1,6 +1,6 @@
 import { act, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { AccessibilityInfo, type View } from "react-native";
+import { AccessibilityInfo, type ViewInstance } from "react-native";
 import { getAnimatedStyle } from "react-native-reanimated";
 
 import { PULSE } from "../../lib/motion";
@@ -59,7 +59,7 @@ describe("PulseDot", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<PulseDot ref={ref} />);
 		expect(ref.current).not.toBeNull();
 	});

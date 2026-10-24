@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { TextLink, textLinkVariants } from "../text-link";
 
@@ -53,7 +53,7 @@ describe("TextLink", () => {
 	});
 
 	it("forwards its ref to the pressable and merges the caller's className last on its row", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<TextLink ref={ref} label="Help" onPress={jest.fn()} className="justify-start gap-2" />);
 
 		expect(ref.current).not.toBeNull();

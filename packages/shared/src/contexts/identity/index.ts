@@ -20,3 +20,4 @@ export * from "./schemas/session-status";
 export * from "./schemas/token";
 export * from "./schemas/two-factor";
 export * from "./schemas/user";
+export * from "./schemas/user-preferences";

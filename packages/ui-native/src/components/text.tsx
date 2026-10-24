@@ -14,7 +14,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text, type TextProps } from "react-native";
+import { Text, type TextInstance, type TextProps } from "react-native";
 
 import { cn } from "../lib/cn";
 
@@ -48,49 +48,49 @@ export interface AppTextProps extends TextProps {
 
 /** A screen or section title; announced as a header by screen readers. The role comes first, so a caller can override it. */
 export const Heading = React.memo(
-	React.forwardRef<Text, AppTextProps>(function Heading({ className, ...props }, ref): React.JSX.Element {
+	React.forwardRef<TextInstance, AppTextProps>(function Heading({ className, ...props }, ref): React.JSX.Element {
 		return <Text ref={ref} accessibilityRole="header" className={cn(textVariants({ variant: "heading" }), className)} {...props} />;
 	}),
 );
 
 /** A section title inside a screen; announced as a header. */
 export const Subheading = React.memo(
-	React.forwardRef<Text, AppTextProps>(function Subheading({ className, ...props }, ref): React.JSX.Element {
+	React.forwardRef<TextInstance, AppTextProps>(function Subheading({ className, ...props }, ref): React.JSX.Element {
 		return <Text ref={ref} accessibilityRole="header" className={cn(textVariants({ variant: "subheading" }), className)} {...props} />;
 	}),
 );
 
 /** Running text. */
 export const BodyText = React.memo(
-	React.forwardRef<Text, AppTextProps>(function BodyText({ className, ...props }, ref): React.JSX.Element {
+	React.forwardRef<TextInstance, AppTextProps>(function BodyText({ className, ...props }, ref): React.JSX.Element {
 		return <Text ref={ref} className={cn(textVariants({ variant: "body" }), className)} {...props} />;
 	}),
 );
 
 /** Secondary text: hints, captions, metadata. */
 export const MutedText = React.memo(
-	React.forwardRef<Text, AppTextProps>(function MutedText({ className, ...props }, ref): React.JSX.Element {
+	React.forwardRef<TextInstance, AppTextProps>(function MutedText({ className, ...props }, ref): React.JSX.Element {
 		return <Text ref={ref} className={cn(textVariants({ variant: "muted" }), className)} {...props} />;
 	}),
 );
 
 /** A form field's label (inside a form, prefer `FieldLabel`, which ties it to its control). */
 export const Label = React.memo(
-	React.forwardRef<Text, AppTextProps>(function Label({ className, ...props }, ref): React.JSX.Element {
+	React.forwardRef<TextInstance, AppTextProps>(function Label({ className, ...props }, ref): React.JSX.Element {
 		return <Text ref={ref} className={cn(textVariants({ variant: "label" }), className)} {...props} />;
 	}),
 );
 
 /** A field or form error. */
 export const ErrorText = React.memo(
-	React.forwardRef<Text, AppTextProps>(function ErrorText({ className, ...props }, ref): React.JSX.Element {
+	React.forwardRef<TextInstance, AppTextProps>(function ErrorText({ className, ...props }, ref): React.JSX.Element {
 		return <Text ref={ref} className={cn(textVariants({ variant: "error" }), className)} {...props} />;
 	}),
 );
 
 /** A code, key or identifier the user may copy: monospaced, selectable by the caller. */
 export const CodeText = React.memo(
-	React.forwardRef<Text, AppTextProps>(function CodeText({ className, ...props }, ref): React.JSX.Element {
+	React.forwardRef<TextInstance, AppTextProps>(function CodeText({ className, ...props }, ref): React.JSX.Element {
 		return <Text ref={ref} className={cn(textVariants({ variant: "code" }), className)} {...props} />;
 	}),
 );

@@ -10,7 +10,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { resolveControlState } from "../lib/control-state";
@@ -91,7 +91,7 @@ export interface TabsProps {
 }
 
 export const Tabs = React.memo(
-	React.forwardRef<View, TabsProps>(function Tabs(
+	React.forwardRef<ViewInstance, TabsProps>(function Tabs(
 		{ value, onChange, children, variant = "default", size = "md", disabled = false, className, testID },
 		ref,
 	): React.JSX.Element {
@@ -117,7 +117,7 @@ export interface TabsListProps {
 }
 
 export const TabsList = React.memo(
-	React.forwardRef<View, TabsListProps>(function TabsList({ children, accessibilityLabel, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, TabsListProps>(function TabsList({ children, accessibilityLabel, className, testID }, ref): React.JSX.Element {
 		const { disabled, variant, size } = useTabsContext("TabsList");
 		const state = resolveControlState({ disabled });
 		return (
@@ -147,7 +147,7 @@ export interface TabsTriggerProps {
 }
 
 export const TabsTrigger = React.memo(
-	React.forwardRef<View, TabsTriggerProps>(function TabsTrigger({ value: tab, label, icon, disabled = false, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, TabsTriggerProps>(function TabsTrigger({ value: tab, label, icon, disabled = false, className, testID }, ref): React.JSX.Element {
 		const { value, onChange, disabled: groupDisabled, variant, size } = useTabsContext("TabsTrigger");
 		const selected = value === tab;
 		const isInactive = disabled || groupDisabled;
@@ -188,7 +188,7 @@ export interface TabsContentProps {
 
 /** The chosen tab's panel; the others are not rendered. */
 export const TabsContent = React.memo(
-	React.forwardRef<View, TabsContentProps>(function TabsContent({ value: tab, children, className, testID }, ref): React.JSX.Element | null {
+	React.forwardRef<ViewInstance, TabsContentProps>(function TabsContent({ value: tab, children, className, testID }, ref): React.JSX.Element | null {
 		const { value } = useTabsContext("TabsContent");
 		if (value !== tab) {
 			return null;

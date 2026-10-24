@@ -6,7 +6,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text, View } from "react-native";
+import { Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { Icon, type LucideIcon } from "./icon";
@@ -88,7 +88,7 @@ export interface BadgeProps {
 }
 
 export const Badge = React.memo(
-	React.forwardRef<View, BadgeProps>(function Badge({ label, tone = "neutral", variant = "soft", size = "md", icon, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, BadgeProps>(function Badge({ label, tone = "neutral", variant = "soft", size = "md", icon, className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} testID={testID} className={cn(badgeVariants({ variant, tone, size }), className)}>
 				{icon === undefined ? null : <Icon icon={icon} size="sm" colorClassName={badgeIconVariants({ variant, tone })} />}

@@ -29,7 +29,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Image } from "expo-image";
 import ImageOffIcon from "lucide-react-native/icons/image-off";
 import * as React from "react";
-import { View, type AccessibilityActionEvent, type GestureResponderEvent } from "react-native";
+import { type AccessibilityActionEvent, type GestureResponderEvent, View, type ViewInstance } from "react-native";
 import { withUniwind } from "uniwind";
 
 import { cn } from "../lib/cn";
@@ -220,7 +220,7 @@ const ImageResizerHandle = React.memo(function ImageResizerHandle({
 });
 
 export const ImageResizer = React.memo(
-	React.forwardRef<View, ImageResizerProps>(function ImageResizer(
+	React.forwardRef<ViewInstance, ImageResizerProps>(function ImageResizer(
 		{
 			uri,
 			alt,

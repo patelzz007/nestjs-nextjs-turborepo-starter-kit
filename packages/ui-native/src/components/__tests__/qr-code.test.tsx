@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react-native";
 import { encodeQr, qrMatrixToSvgPath } from "@workspace/shared";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { QR_CODE_SIZES, QrCode } from "../qr-code";
 
@@ -84,7 +84,7 @@ describe("QrCode", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<QrCode ref={ref} value={VALUE} label="QR" />);
 		expect(ref.current).not.toBeNull();
 	});

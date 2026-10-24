@@ -6,13 +6,13 @@
 
 import type { BlurViewProps } from "expo-blur";
 import * as React from "react";
-import { View, type ViewProps } from "react-native";
+import { View, type ViewInstance, type ViewProps } from "react-native";
 
 /** The blur props (`intensity`, `tint`, …) are passed through: a test view ignores what it does not know. */
-export const BlurView = React.forwardRef<View, BlurViewProps>(function BlurView(props, ref): React.JSX.Element {
+export const BlurView = React.forwardRef<ViewInstance, BlurViewProps>(function BlurView(props, ref): React.JSX.Element {
 	return <View ref={ref} {...props} />;
 });
 
-export const BlurTargetView = React.forwardRef<View, ViewProps>(function BlurTargetView(props, ref): React.JSX.Element {
+export const BlurTargetView = React.forwardRef<ViewInstance, ViewProps>(function BlurTargetView(props, ref): React.JSX.Element {
 	return <View ref={ref} {...props} />;
 });

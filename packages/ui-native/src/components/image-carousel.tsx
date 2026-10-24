@@ -9,7 +9,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text, View } from "react-native";
+import { Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { Carousel, type CarouselSize } from "./carousel";
@@ -68,7 +68,7 @@ const POSITION_OFFSET = 1;
 const ONE_PICTURE = 1;
 
 export const ImageCarousel = React.memo(
-	React.forwardRef<View, ImageCarouselProps>(function ImageCarousel(
+	React.forwardRef<ViewInstance, ImageCarouselProps>(function ImageCarousel(
 		{
 			images,
 			index,

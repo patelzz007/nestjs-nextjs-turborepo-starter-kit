@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { AccessibilityInfo, type Text, type View } from "react-native";
+import { AccessibilityInfo, type TextInstance, type ViewInstance } from "react-native";
 import { z } from "zod";
 
 import { Button } from "../button";
@@ -123,11 +123,11 @@ describe("Dialog", () => {
 	});
 
 	it("forwards refs from the dialog and every part", async () => {
-		const card = React.createRef<View>();
-		const header = React.createRef<View>();
-		const title = React.createRef<Text>();
-		const description = React.createRef<Text>();
-		const footer = React.createRef<View>();
+		const card = React.createRef<ViewInstance>();
+		const header = React.createRef<ViewInstance>();
+		const title = React.createRef<TextInstance>();
+		const description = React.createRef<TextInstance>();
+		const footer = React.createRef<ViewInstance>();
 		await render(
 			<Dialog ref={card} open onOpenChange={jest.fn()}>
 				<DialogHeader ref={header}>

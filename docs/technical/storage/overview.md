@@ -66,6 +66,7 @@ pointing at nothing and fail the retry as "uploaded object is missing".
 | Category | Visibility | Max size | Types |
 | --- | --- | --- | --- |
 | `MERCHANT_KYB` | private (signed links only) | 25 MB | PDF, JPEG, PNG, WebP |
+| `KANBAN_TASK_ATTACHMENT` | private | 10 MB | PDF, JPEG, PNG, WebP — no renditions. A file attached to a kanban task: uploaded unbound for the caller (`userId` = the caller, `UPDATE:KANBAN_TASK`), then attached by `POST /admin/kanban/tasks/:taskId/attachments` once READY; a PDF counts as a document, an image as an attachment. Staff who may read the task download it through the board's own signed-link route; deleting the file releases its attachment row ([Kanban board](../kanban.md)). Key `users/{userId}/kanban-attachments/{fileId}.{ext}` |
 | `PRODUCT_IMAGE`, `STORE_BANNER` | public | 25 MB | JPEG, PNG, WebP, AVIF |
 | `STORE_LOGO`, `USER_AVATAR` | public | 10 MB | JPEG, PNG, WebP, AVIF — exactly 1:1 (square), at least 256 × 256 |
 | `REWARD_IMAGE` | public | 10 MB | JPEG, PNG, WebP, AVIF — exactly 16:9, at least 1920 × 1080 |

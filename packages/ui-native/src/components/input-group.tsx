@@ -9,7 +9,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text, View, type TextInput } from "react-native";
+import { Text, type TextInputInstance, type TextInstance, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { Icon, type IconSize, type LucideIcon } from "./icon";
@@ -57,7 +57,7 @@ export interface InputGroupTextProps {
 
 /** A short, muted text addon ("https://", "USD"). Hidden from screen readers: the label names the input. */
 export const InputGroupText = React.memo(
-	React.forwardRef<Text, InputGroupTextProps>(function InputGroupText({ children, size = "md", className }, ref): React.JSX.Element {
+	React.forwardRef<TextInstance, InputGroupTextProps>(function InputGroupText({ children, size = "md", className }, ref): React.JSX.Element {
 		return (
 			<Text ref={ref} accessible={false} importantForAccessibility="no" className={cn(inputGroupTextVariants({ size }), className)}>
 				{children}
@@ -75,7 +75,7 @@ export interface InputGroupIconProps {
 
 /** A muted glyph addon (a search glass, an at sign). */
 export const InputGroupIcon = React.memo(
-	React.forwardRef<View, InputGroupIconProps>(function InputGroupIcon({ icon, size = "md", className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, InputGroupIconProps>(function InputGroupIcon({ icon, size = "md", className, testID }, ref): React.JSX.Element {
 		return <Icon ref={ref} icon={icon} size={ADDON_ICON_SIZE[size]} colorClassName="accent-muted-foreground" className={className} testID={testID} />;
 	}),
 );
@@ -94,7 +94,7 @@ export interface InputGroupProps extends Omit<InputProps, "leading" | "trailing"
 }
 
 export const InputGroup = React.memo(
-	React.forwardRef<TextInput, InputGroupProps>(function InputGroup(
+	React.forwardRef<TextInputInstance, InputGroupProps>(function InputGroup(
 		{ leadingIcon, leadingText, trailingIcon, trailingText, trailing, size = "md", ...props },
 		ref,
 	): React.JSX.Element {

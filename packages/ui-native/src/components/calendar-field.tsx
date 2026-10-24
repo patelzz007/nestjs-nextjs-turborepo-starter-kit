@@ -14,7 +14,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import CalendarIcon from "lucide-react-native/icons/calendar";
 import * as React from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
@@ -98,7 +98,7 @@ export interface CalendarFieldProps extends CalendarFieldTriggerProps {
 }
 
 export const CalendarField = React.memo(
-	React.forwardRef<View, CalendarFieldProps>(function CalendarField(
+	React.forwardRef<ViewInstance, CalendarFieldProps>(function CalendarField(
 		{
 			label,
 			summary,

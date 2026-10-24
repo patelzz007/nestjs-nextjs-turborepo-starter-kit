@@ -7,8 +7,6 @@
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { adminBrowserE2eEnv } from "./browser-env.e2e";
-
 /** A landscape photo, drawn on a canvas in the page — wider than square, so it needs the crop step. */
 async function landscapePhoto(page: Page): Promise<Buffer> {
 	const dataUrl = await page.evaluate((): string => {
@@ -30,11 +28,7 @@ async function landscapePhoto(page: Page): Promise<Buffer> {
 }
 
 test("crops a landscape photo to a square profile picture, uploads it, and removes it again", async ({ page }) => {
-	await page.goto("/auth/login?redirect=/account/profile");
-	await page.getByLabel("Email").fill(adminBrowserE2eEnv.ADMIN_E2E_EMAIL);
-	await page.getByLabel("Password", { exact: true }).fill(adminBrowserE2eEnv.ADMIN_E2E_PASSWORD);
-	await page.getByRole("button", { name: "Sign in" }).click();
-	await page.waitForURL((url: URL) => url.pathname === "/account/profile");
+	await page.goto("/account/profile");
 
 	await page.locator('input[type="file"]').setInputFiles({ name: "stripes.png", mimeType: "image/png", buffer: await landscapePhoto(page) });
 

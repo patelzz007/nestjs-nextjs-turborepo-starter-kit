@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react-native";
 import WifiIcon from "lucide-react-native/icons/wifi";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { StatusBadge, type StatusBadgeTone } from "../status-badge";
 
@@ -73,8 +73,8 @@ describe("StatusBadge", () => {
 	});
 
 	it("forwards its ref, still or breathing", async () => {
-		const stillRef = React.createRef<View>();
-		const pulsingRef = React.createRef<View>();
+		const stillRef = React.createRef<ViewInstance>();
+		const pulsingRef = React.createRef<ViewInstance>();
 		await render(
 			<>
 				<StatusBadge ref={stillRef} icon={WifiIcon} label="Online" accessibilityLabel="Online" />

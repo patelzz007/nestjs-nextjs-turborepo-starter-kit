@@ -57,6 +57,14 @@ export interface AppCommandPaletteProps {
 	readonly onNavigate: (url: string) => void;
 	readonly renderIcon: (iconName: string | undefined, className: string) => React.ReactNode;
 	readonly aliasMap?: Readonly<Record<string, readonly string[]>>;
+	/**
+	 * The app's own result groups (cmdk `CommandGroup`s: records found by the
+	 * search text, actions for the page in focus), listed first. `hasExtraResults`
+	 * says whether they hold anything, so the empty state and the suggestion only
+	 * show when nothing at all matched.
+	 */
+	readonly extraResults?: React.ReactNode;
+	readonly hasExtraResults?: boolean | undefined;
 }
 
 /**
@@ -87,6 +95,8 @@ export const AppCommandPalette = React.forwardRef<HTMLDivElement, AppCommandPale
 		onNavigate,
 		renderIcon,
 		aliasMap = NO_ALIASES,
+		extraResults = null,
+		hasExtraResults = false,
 	},
 	ref,
 ): React.JSX.Element {
@@ -330,11 +340,11 @@ export const AppCommandPalette = React.forwardRef<HTMLDivElement, AppCommandPale
 	/* ── Find closest suggestion for no-match queries ──────────── */
 
 	const suggestion = React.useMemo((): PaletteSearchableItem | null => {
-		if (isSearching && !showQuickSection && !showNavSection) {
+		if (isSearching && !showQuickSection && !showNavSection && !hasExtraResults) {
 			return findSuggestion(effectiveQuery, searchableItems);
 		}
 		return null;
-	}, [effectiveQuery, isSearching, showQuickSection, showNavSection, searchableItems]);
+	}, [effectiveQuery, isSearching, showQuickSection, showNavSection, hasExtraResults, searchableItems]);
 
 	const handleSelectSuggestion = React.useCallback((): void => {
 		if (suggestion !== null) {
@@ -380,6 +390,9 @@ export const AppCommandPalette = React.forwardRef<HTMLDivElement, AppCommandPale
 				) : null}
 
 				<CommandList className="max-h-none min-h-0 flex-1">
+					{extraResults}
+					{hasExtraResults && (showQuickSection || showNavSection) ? <AppCommandPaletteDivider /> : null}
+
 					{showQuickSection ? (
 						<AppCommandPaletteQuickActionsSection
 							actions={filteredQuickActions}
@@ -410,7 +423,7 @@ export const AppCommandPalette = React.forwardRef<HTMLDivElement, AppCommandPale
 						/>
 					) : null}
 
-					{isSearching && !showQuickSection && !showNavSection && suggestion === null ? (
+					{isSearching && !showQuickSection && !showNavSection && !hasExtraResults && suggestion === null ? (
 						<AppCommandPaletteEmptyState onClearSearch={handleClearSearch} labels={labels} />
 					) : null}
 

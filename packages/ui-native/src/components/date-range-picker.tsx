@@ -17,7 +17,7 @@ import { inclusiveLocalDayCount, UTC_TIME_ZONE, type LocalDate } from "@workspac
 import XIcon from "lucide-react-native/icons/x";
 import { cva } from "class-variance-authority";
 import * as React from "react";
-import { Modal, Pressable, Text, View } from "react-native";
+import { Modal, Pressable, Text, View, type ViewInstance } from "react-native";
 
 import { calendarDayMsOf, calendarMonthOf, pickRangeDay, rangeDayRoleOf, type CalendarMonth, type DateRangeDraft, type RangeDayRole } from "../lib/calendar";
 import { cn } from "../lib/cn";
@@ -74,7 +74,7 @@ export const dateRangeStatusVariants = cva("font-sans text-sm", {
 const CLOSE_HIT_SLOP = 8;
 
 export const DateRangePicker = React.memo(
-	React.forwardRef<View, DateRangePickerProps>(function DateRangePicker({ visible, onClose, ...props }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, DateRangePickerProps>(function DateRangePicker({ visible, onClose, ...props }, ref): React.JSX.Element {
 		return (
 			<Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
 				<View ref={ref} className="flex-1 justify-end">

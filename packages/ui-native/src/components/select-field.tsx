@@ -16,14 +16,15 @@ import * as React from "react";
 import {
 	ActivityIndicator,
 	FlatList,
-	Pressable,
-	Text,
-	TextInput,
-	View,
 	type GestureResponderEvent,
 	type ListRenderItemInfo,
 	type NativeSyntheticEvent,
+	Pressable,
 	type TargetedEvent,
+	Text,
+	TextInput,
+	View,
+	type ViewInstance,
 } from "react-native";
 
 import { cn } from "../lib/cn";
@@ -129,7 +130,7 @@ export interface SelectTriggerProps {
 
 /** The pressable field of a picker: the chosen value (or a placeholder) and a chevron. */
 export const SelectTrigger = React.memo(
-	React.forwardRef<View, SelectTriggerProps>(function SelectTrigger(
+	React.forwardRef<ViewInstance, SelectTriggerProps>(function SelectTrigger(
 		{
 			label,
 			valueLabel,
@@ -217,7 +218,7 @@ export interface SelectOptionSheetProps<TValue extends string> {
 
 /** `SelectOptionSheet` keeps its option type through `memo` and `forwardRef`. */
 export interface SelectOptionSheetComponent {
-	<TValue extends string>(props: SelectOptionSheetProps<TValue> & React.RefAttributes<View>): React.ReactNode;
+	<TValue extends string>(props: SelectOptionSheetProps<TValue> & React.RefAttributes<ViewInstance>): React.ReactNode;
 	displayName?: string | undefined;
 }
 
@@ -240,7 +241,7 @@ export const SelectOptionSheet: SelectOptionSheetComponent = React.memo(
 			className,
 			testID,
 		}: SelectOptionSheetProps<string>,
-		ref: React.ForwardedRef<View>,
+		ref: React.ForwardedRef<ViewInstance>,
 	): React.JSX.Element {
 		const shown = React.useMemo(() => filterSelectOptions(options, searchable ? query : ""), [options, query, searchable]);
 		const renderOption = React.useCallback(
@@ -330,7 +331,7 @@ export interface SelectFieldProps<TValue extends string> {
 
 /** `SelectField` keeps its option type through `memo` and `forwardRef`. The ref reaches the trigger. */
 export interface SelectFieldComponent {
-	<TValue extends string>(props: SelectFieldProps<TValue> & React.RefAttributes<View>): React.ReactNode;
+	<TValue extends string>(props: SelectFieldProps<TValue> & React.RefAttributes<ViewInstance>): React.ReactNode;
 	displayName?: string | undefined;
 }
 
@@ -367,7 +368,7 @@ export const SelectField: SelectFieldComponent = React.memo(
 			className,
 			testID,
 		}: SelectFieldProps<string>,
-		ref: React.ForwardedRef<View>,
+		ref: React.ForwardedRef<ViewInstance>,
 	): React.JSX.Element {
 		const [open, setOpen] = React.useState(false);
 		const [query, setQuery] = React.useState("");

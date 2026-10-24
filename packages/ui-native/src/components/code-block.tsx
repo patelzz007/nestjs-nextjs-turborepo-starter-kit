@@ -12,7 +12,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import CheckIcon from "lucide-react-native/icons/check";
 import CopyIcon from "lucide-react-native/icons/copy";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { Icon } from "./icon";
@@ -71,7 +71,7 @@ export interface CodeBlockProps {
 }
 
 export const CodeBlock = React.memo(
-	React.forwardRef<View, CodeBlockProps>(function CodeBlock(
+	React.forwardRef<ViewInstance, CodeBlockProps>(function CodeBlock(
 		{ code, language, caption, onCopy, copied = false, labels = DEFAULT_CODE_BLOCK_LABELS, variant = "muted", size = "md", className, testID },
 		ref,
 	): React.JSX.Element {

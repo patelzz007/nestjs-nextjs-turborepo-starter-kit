@@ -15,6 +15,11 @@ const AdminBrowserE2eEnvSchema = z.strictObject({
 	/** A seeded account that may open `/users` — the platform super admin (`apps/api/prisma/seed/users.ts`). */
 	ADMIN_E2E_EMAIL: z.email(),
 	ADMIN_E2E_PASSWORD: z.string().min(1),
+	/**
+	 * The local Mailpit inbox the API delivers to (`EMAIL_PROVIDER=mailpit`): a sign-in from a device the
+	 * API does not recognise yet asks for the emailed code, which the suite reads from there.
+	 */
+	ADMIN_E2E_MAILPIT_URL: HttpUrlEnvSchema.default("http://localhost:8025"),
 });
 
 export const adminBrowserE2eEnv: Readonly<z.output<typeof AdminBrowserE2eEnvSchema>> = parseEnvOrThrow(
@@ -23,6 +28,7 @@ export const adminBrowserE2eEnv: Readonly<z.output<typeof AdminBrowserE2eEnvSche
 		ADMIN_E2E_BASE_URL: process.env.ADMIN_E2E_BASE_URL,
 		ADMIN_E2E_EMAIL: process.env.ADMIN_E2E_EMAIL,
 		ADMIN_E2E_PASSWORD: process.env.ADMIN_E2E_PASSWORD,
+		ADMIN_E2E_MAILPIT_URL: process.env.ADMIN_E2E_MAILPIT_URL,
 	} satisfies Record<keyof z.input<typeof AdminBrowserE2eEnvSchema>, string | undefined>,
 	"apps/admin browser e2e",
 );

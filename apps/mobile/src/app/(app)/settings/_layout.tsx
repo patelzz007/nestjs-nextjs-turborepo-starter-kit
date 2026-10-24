@@ -11,7 +11,7 @@ const SCREEN_OPTIONS = { headerShown: false, animation: PUSH_TRANSITION } satisf
  * Settings is always the stack's first screen, even when a sub-screen is opened
  * directly (from the app drawer, ADR 038): going back from it lands on Settings.
  */
-const SETTINGS_STACK_SETTINGS = { initialRouteName: "index" };
+const SETTINGS_STACK_SETTINGS = { anchor: "index" };
 
 // Expo Router reads the stack's settings from this exact export name.
 export { SETTINGS_STACK_SETTINGS as unstable_settings };

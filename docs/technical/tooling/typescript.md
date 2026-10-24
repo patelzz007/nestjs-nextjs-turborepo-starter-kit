@@ -277,23 +277,38 @@ App code imports **types** (`LoginInput`) for annotations and props. Import the
 
 ## 5. Typechecking the repo
 
-Every workspace exposes a `typecheck` script:
+Every workspace exposes a `typecheck` script, run by **[tsrs](https://github.com/oxc-project/tsrs)**
+— a Rust port of the TypeScript 7 compiler (`tsrs --noEmit`, the same flags and tsconfig as `tsc`):
 
-| Workspace           | `typecheck` command |
-| ------------------- | ------------------- |
-| `@workspace/web`    | `tsc --noEmit`      |
-| `@workspace/admin`  | `tsc --noEmit`      |
-| `@workspace/api`    | `tsc --noEmit`      |
-| `@workspace/client` | `tsc --noEmit`      |
-| `@workspace/ui`     | `tsc --noEmit`      |
-| `@workspace/shared` | `tsc --noEmit`      |
+| Workspace                                       | `typecheck` command                                                            |
+| ----------------------------------------------- | ------------------------------------------------------------------------------ |
+| web, admin, merchant, mobile, analytics-consumer | `tsrs --noEmit`                                                                |
+| `@workspace/api`                                | `tsrs --noEmit -p tsconfig.typecheck.json && tsrs --noEmit -p tsconfig.check.json` |
+| aws-infrastructure                              | `tsrs --noEmit -p tsconfig.json`                                               |
+| ui, ui-native, shared, api-client, messaging, tokens, client | `tsrs --noEmit`                                                   |
+| docs                                            | `astro check`                                                                  |
+
+What tsrs does and does not replace:
+
+- **Type checking only.** `tsc` 6 still emits each package's `dist/` (`build`), and TypeScript 6
+  stays the library the editor, Next.js and typescript-eslint load (see
+  [Why the repo stays on TypeScript 6](#why-the-repo-stays-on-typescript-6-not-7)). tsrs checks
+  with TypeScript 7's rules, so a pass also means the code is ready for TS7.
+- **Verified before adoption (2026-10-24):** the same diagnostics as `tsc` 6 on every workspace
+  (zero errors each) and byte-identical messages on planted errors; the whole repo checks in
+  about 4 s (`apps/api` alone: 5,313 files in 1.5 s).
+- **Pinned exactly** (`0.18.0-ts7.1.0-dev.20260929`, a pre-release that tracks TypeScript 7.1's
+  development line). Bump it deliberately and re-run `pnpm typecheck`.
+- **Platforms:** prebuilt binaries for macOS on Apple silicon and Linux (x64 / arm64, glibc and
+  musl) — which covers CI (`ubuntu-latest`). There is no Windows or Intel-Mac binary; on those,
+  run `pnpm exec tsc --noEmit` in the workspace instead.
 
 Run them all from the repo root:
 
 ```bash
 pnpm typecheck                    # turbo typecheck → runs the script in every workspace
 pnpm typecheck --filter @workspace/web    # just web
-pnpm typecheck --filter @workspace/api    # just api (tsc --noEmit)
+pnpm typecheck --filter @workspace/api    # just api (tsrs --noEmit)
 ```
 
 Or inside one workspace:

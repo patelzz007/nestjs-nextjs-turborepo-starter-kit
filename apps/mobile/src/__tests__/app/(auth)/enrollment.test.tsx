@@ -71,8 +71,8 @@ describe("Forced 2FA enrollment (§10.5)", () => {
 			"POST /auth/2fa/enable": ok({ message: "Two-factor authentication enabled" }, 201),
 			"POST /auth/refresh": refreshAnswer(FULL),
 		});
-		const openUrl = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
-		const share = jest.spyOn(Share, "share").mockResolvedValue({ action: "sharedAction" });
+		const openUrl = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+		const share = jest.spyOn(Share, "share").mockResolvedValue({ action: "sharedAction", activityType: undefined });
 		const runtime = await renderRestricted(RESTRICTED_MFA, "/enroll-two-factor");
 
 		await fireEvent.press(screen.getByRole("button", { name: "Set up authenticator app" }));

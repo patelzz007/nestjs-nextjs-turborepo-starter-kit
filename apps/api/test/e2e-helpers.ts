@@ -139,6 +139,42 @@ export async function markSeedUserEmailVerified(pool: Pool, email: string): Prom
 	}
 }
 
+/** How long an e2e precondition stays true: a full run, with room to spare, never outlives it. */
+const E2E_PRECONDITION_MS = 7 * 86_400_000;
+
+/**
+ * Gives seed users a full (unrestricted) session for this run: a verified email and an MFA
+ * enrollment deadline a week ahead. A spec that signs in sets this itself — the seed's deadline
+ * runs out a month after seeding, and other specs move it, so what is stored is never a given.
+ */
+export async function grantSeedUsersFullSession(pool: Pool, emails: readonly string[]): Promise<void> {
+	const now = Date.now();
+	// The deadline is moot for anyone already enrolled in MFA; it is set for every listed user alike.
+	const result = await pool.query(`UPDATE public."User" SET "emailVerifiedAt" = COALESCE("emailVerifiedAt", $1), "mfaEnrollmentDeadline" = $2 WHERE email = ANY($3)`, [
+		now,
+		now + E2E_PRECONDITION_MS,
+		[...emails],
+	]);
+	if (result.rowCount !== emails.length) {
+		throw new Error(`A seed user among ${emails.join(", ")} is missing — run pnpm db:seed`);
+	}
+}
+
+/**
+ * Puts a seed reward back in the review queue for this run. The seed lets it auto-publish a day
+ * after seeding (the dev API's scheduler does so), so a spec that needs it pending says so.
+ */
+export async function resetSeedRewardToPendingReview(pool: Pool, rewardId: string): Promise<void> {
+	const now = Date.now();
+	const result = await pool.query(
+		`UPDATE public."Reward" SET status = 'PENDING_REVIEW', "submittedForReviewAt" = $1, "autoPublishAt" = $2, "reviewedAt" = NULL, "reviewedByUserId" = NULL WHERE id = $3`,
+		[now, now + E2E_PRECONDITION_MS, rewardId],
+	);
+	if (result.rowCount !== 1) {
+		throw new Error(`Seed reward ${rewardId} is missing — run pnpm db:seed`);
+	}
+}
+
 export function mutationHeaders(extra: Record<string, string> = {}): Record<string, string> {
 	return {
 		origin: CLIENT_ORIGIN,

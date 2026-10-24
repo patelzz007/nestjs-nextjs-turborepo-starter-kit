@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import CircleAlertIcon from "lucide-react-native/icons/circle-alert";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { Alert, type AlertTone } from "../alert";
 import { Button } from "../button";
@@ -48,7 +48,7 @@ describe("Alert", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<Alert ref={ref} tone="info" message="Note" />);
 		expect(ref.current).not.toBeNull();
 	});

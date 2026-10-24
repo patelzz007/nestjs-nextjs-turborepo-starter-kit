@@ -115,6 +115,45 @@ export const SEED_COVERAGE_EXEMPTIONS: readonly SeedCoverageExemption[] = [
 		"A tenant data key is rotated (status, rotatedAt), never removed: an old key must stay to decrypt the data it wrapped, so nothing soft-deletes one.",
 	),
 	neverSoftDeleted("TenantPlacement", "A tenant's placement is created with its tenant and updated in place for the tenant's whole life; nothing soft-deletes one."),
+	{
+		kind: "empty-table",
+		table: "KanbanColumn",
+		reason:
+			"Retired by the planning/execution column split: a database created after it never holds a shared column; only `pnpm db:kanban-convert` reads the rows an older board left, and migration 2 drops the table.",
+	},
+	{
+		kind: "null-column",
+		table: "KanbanTask",
+		column: "columnId",
+		reason:
+			"Retired by the planning/execution column split: an item created after it sits in `planningColumnId` or `executionColumnId` and never fills this; migration 2 drops the column.",
+	},
+	{
+		kind: "empty-table",
+		table: "KanbanConversionStage",
+		reason:
+			"The resume markers of the one-off board conversion (`pnpm db:kanban-convert`): a board seeded in the new shape has nothing to convert, so no stage ever ran; migration 2 drops the table with the conversion.",
+	},
+	neverSoftDeleted(
+		"KanbanPlanningColumn",
+		"The planning board's columns are its fixed stages: they are renamed and reordered in place, and no endpoint or job soft-deletes a column.",
+	),
+	neverSoftDeleted(
+		"KanbanExecutionColumn",
+		"The execution board's columns are its fixed work states: they are renamed, reordered and limited in place, and no endpoint or job soft-deletes a column.",
+	),
+	neverSoftDeleted(
+		"KanbanLevelCounter",
+		"A level's key counter only ever counts up so that no key is handed out twice; removing one would reuse numbers, so nothing soft-deletes a counter.",
+	),
+	neverSoftDeleted(
+		"KanbanTaskActivity",
+		"An item's history is append-only: each row is written in the transaction of the change it records and never edited or removed (a deleted item hides its history with it).",
+	),
+	neverSoftDeleted(
+		"KanbanTaskComment",
+		"A task comment is written once and kept as the task's discussion record; no endpoint or job edits or soft-deletes one (a deleted task hides its comments with it).",
+	),
 	neverSoftDeleted("TwoFactorLoginChallenge", "A login challenge ends through consumedAt or expiresAt and is kept for the sign-in audit; nothing soft-deletes one."),
 	neverSoftDeleted(
 		"TwoFactorPendingSetup",

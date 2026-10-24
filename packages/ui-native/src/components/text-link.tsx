@@ -7,7 +7,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Pressable, Text, View, type GestureResponderEvent, type NativeSyntheticEvent, type TargetedEvent } from "react-native";
+import { type GestureResponderEvent, type NativeSyntheticEvent, Pressable, type TargetedEvent, Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
@@ -72,7 +72,7 @@ export interface TextLinkProps {
 }
 
 export const TextLink = React.memo(
-	React.forwardRef<View, TextLinkProps>(function TextLink(
+	React.forwardRef<ViewInstance, TextLinkProps>(function TextLink(
 		{ label, onPress, onFocus, onBlur, leadIn, role = "link", variant = "primary", size = "sm", disabled = false, loading = false, accessibilityHint, className, testID },
 		ref,
 	): React.JSX.Element {

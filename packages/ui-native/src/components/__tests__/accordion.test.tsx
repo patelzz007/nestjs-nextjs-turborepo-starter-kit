@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { Text, type View } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 import { z } from "zod";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, nextAccordionValue, type AccordionProps } from "../accordion";
@@ -106,10 +106,10 @@ describe("Accordion", () => {
 	});
 
 	it("forwards refs from every part and merges the caller's className last", async () => {
-		const root = React.createRef<View>();
-		const item = React.createRef<View>();
-		const trigger = React.createRef<View>();
-		const content = React.createRef<View>();
+		const root = React.createRef<ViewInstance>();
+		const item = React.createRef<ViewInstance>();
+		const trigger = React.createRef<ViewInstance>();
+		const content = React.createRef<ViewInstance>();
 		await render(
 			<Accordion ref={root} value={["faq"]} onChange={jest.fn()} animated={false} className="gap-4" testID="accordion">
 				<AccordionItem ref={item} value="faq" className="border-b-0" testID="item">

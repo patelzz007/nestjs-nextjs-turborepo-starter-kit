@@ -1,6 +1,12 @@
 // Every route of the app, by name — screens never hand-type a path (rules/00, "No magic").
 
 export const ROUTES = {
+	/** The configuration problem screen (the app cannot reach its API as configured). */
+	configError: "/config-error",
+	/** This build is too old for the API: update from the store. */
+	updateRequired: "/update-required",
+	/** The app lock, over a signed-in session. */
+	lock: "/lock",
 	onboarding: "/onboarding",
 	signIn: "/sign-in",
 	signUp: "/sign-up",

@@ -32,7 +32,7 @@ export function useAppLockLifecycle({ resetAppLock, now = Date.now }: AppLockLif
 	const getSession = useSessionSnapshot();
 	const session = useSessionCommands();
 	const backgroundedAt = React.useRef<number | null>(null);
-	const [appState, setAppState] = React.useState<AppStateStatus>(AppState.currentState);
+	const [appState, setAppState] = React.useState<string | null | undefined>(AppState.currentState);
 
 	React.useEffect((): (() => void) => {
 		const lockIfDue = async (): Promise<void> => {

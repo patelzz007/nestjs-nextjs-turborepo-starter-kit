@@ -10,7 +10,7 @@ import { AppState, type AppStateStatus } from "react-native";
  * answer React Native reports `unknown` (or nothing) — the app is on screen
  * then, starting up.
  */
-export function isForeground(state: AppStateStatus | null): boolean {
+export function isForeground(state: string | null | undefined): boolean {
 	return state !== "background" && state !== "inactive";
 }
 

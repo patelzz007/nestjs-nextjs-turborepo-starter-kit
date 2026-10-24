@@ -12,7 +12,7 @@
 
 import { UTC_TIME_ZONE, type LocalDate } from "@workspace/shared";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { calendarDayMsOf, calendarMonthOf, clampCalendarMonth, type CalendarMonth, type RangeDayRole } from "../lib/calendar";
 import { playSelectionFeedback } from "../lib/haptics";
@@ -38,7 +38,7 @@ function summaryFormatOf(locale: string): Intl.DateTimeFormat {
 }
 
 export const DateField = React.memo(
-	React.forwardRef<View, DateFieldProps>(function DateField({ value, onChange, minDate, maxDate, today, locale, ...fieldProps }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, DateFieldProps>(function DateField({ value, onChange, minDate, maxDate, today, locale, ...fieldProps }, ref): React.JSX.Element {
 		const summaryFormat = React.useMemo(() => summaryFormatOf(locale), [locale]);
 		const summary = React.useMemo(() => (value === null ? null : summaryFormat.format(calendarDayMsOf(value))), [summaryFormat, value]);
 		const renderSheet = React.useCallback(

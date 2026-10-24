@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react-native";
 import WalletIcon from "lucide-react-native/icons/wallet";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { IconTile, iconTileGlyphVariants, type IconTileTone } from "../icon-tile";
 
@@ -47,7 +47,7 @@ describe("IconTile", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<IconTile ref={ref} icon={WalletIcon} />);
 		expect(ref.current).not.toBeNull();
 	});

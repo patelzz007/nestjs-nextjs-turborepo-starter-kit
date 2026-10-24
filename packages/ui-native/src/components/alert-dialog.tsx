@@ -7,7 +7,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { resolveControlState } from "../lib/control-state";
@@ -51,7 +51,7 @@ export interface AlertDialogProps {
 }
 
 export const AlertDialog = React.memo(
-	React.forwardRef<View, AlertDialogProps>(function AlertDialog(
+	React.forwardRef<ViewInstance, AlertDialogProps>(function AlertDialog(
 		{
 			visible,
 			title,

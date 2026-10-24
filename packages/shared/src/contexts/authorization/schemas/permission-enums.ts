@@ -45,5 +45,6 @@ export const PermissionResourceSchema = z.enum([
 	"LOCATION",
 	"GITHUB",
 	"GITHUB_PULL_REQUEST",
+	"KANBAN_TASK",
 ]);
 export type PermissionResource = z.output<typeof PermissionResourceSchema>;

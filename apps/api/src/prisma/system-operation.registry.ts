@@ -180,6 +180,39 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 		"Create, revise, soft-delete or restore bypass-only product and sample-category rows after the catalog permission check",
 		tables("Product", "SampleCategory", "OutboxEvent"),
 	),
+	"kanban.board.read": runtime(
+		"Read the bypass-only kanban boards (columns, items, comments, attachments, checklists, links, watchers, history) with their people's names and the attached files, after the KANBAN_TASK permission check",
+		tables(
+			"KanbanPlanningColumn",
+			"KanbanExecutionColumn",
+			"KanbanTask",
+			"KanbanTaskComment",
+			"KanbanTaskAttachment",
+			"KanbanChecklistItem",
+			"KanbanTaskWatcher",
+			"KanbanTaskLink",
+			"KanbanTaskActivity",
+			"User",
+			"StoredFile",
+		),
+	),
+	"kanban.board.write": runtime(
+		"Create, edit, move or soft-delete kanban items (keyed from the level counters), reorder or limit columns, comment, attach a READY file the caller uploaded (row-locked), edit checklists, links and watchers, and record each change's history, under the board lock, after the KANBAN_TASK permission check",
+		tables(
+			"KanbanPlanningColumn",
+			"KanbanExecutionColumn",
+			"KanbanLevelCounter",
+			"KanbanTask",
+			"KanbanTaskComment",
+			"KanbanTaskAttachment",
+			"KanbanChecklistItem",
+			"KanbanTaskWatcher",
+			"KanbanTaskLink",
+			"KanbanTaskActivity",
+			"User",
+			"StoredFile",
+		),
+	),
 	"authorization.capability_catalog.sync": runtime(
 		"API boot: converge the PLATFORM capability definitions to the permission catalog — creates missing rows and corrects changed ones, writes nothing else",
 		tables("CapabilityDefinition", "Permission"),
@@ -577,6 +610,10 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 		"Read a target user's role assignments and direct grants (own-row RLS) for an RBAC preview or conflict check — only after the route permission check",
 		tables("UserRole", "Role", "RolePermission", "Permission", "UserPermission", "Membership", "MembershipLocationScope"),
 	),
+	"authorization.permission_holders.read": runtime(
+		"Read who holds one platform permission (role grants down the role hierarchy, location roles, live direct overrides, SuperAdmins; active accounts only) for another context's picker or check — only after that context's route permission check",
+		tables("User", "UserRole", "Role", "RolePermission", "Permission", "UserPermission", "Membership", "MembershipLocationScope"),
+	),
 	"authorization.rbac.catalog.read": runtime(
 		"Read the role and permission catalog for the admin lists — only after the ROLE or PERMISSION permission check",
 		tables("Role", "Permission"),
@@ -619,8 +656,8 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 		tables("GithubWebhookDelivery"),
 	),
 	"files.delete": runtime(
-		"Soft-delete a stored file and the binding rows that reference it, after the caller's permission check (product images are bypass-only)",
-		tables("StoredFile", "FileVariant", "ProductImage"),
+		"Soft-delete a stored file and the binding rows that reference it, after the caller's permission check (product images and kanban task attachments are bypass-only); a released kanban attachment is recorded in its item's history under the deleting user",
+		tables("StoredFile", "FileVariant", "ProductImage", "KanbanTaskAttachment", "KanbanTaskActivity", "User"),
 	),
 	"files.authorization": runtime("Resolve the caller's tenant membership role to authorize a file operation", tables("Membership", "Tenant", "StoredFile")),
 	"files.scan_verdict.apply": runtime(
@@ -629,6 +666,20 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	),
 	"files.local_object.read": runtime("Read a stored file for a signed local-storage download or upload ticket", tables("StoredFile")),
 	"files.local_variant.read": runtime("Read a public file's rendition for local storage", tables("StoredFile", "FileVariant")),
+	"kanban.board.convert": runtime(
+		"CLI only (pnpm db:kanban-convert): the one-off board conversion — key every item, split the shared columns into planning and execution columns, triage planning items, turn task checklists into subtask items — under the board lock, each stage recorded",
+		tables(
+			"KanbanColumn",
+			"KanbanPlanningColumn",
+			"KanbanExecutionColumn",
+			"KanbanLevelCounter",
+			"KanbanConversionStage",
+			"KanbanTask",
+			"KanbanChecklistItem",
+			"KanbanTaskWatcher",
+			"KanbanTaskActivity",
+		),
+	),
 	"seed.github_link.carry": runtime("Export or import the superadmin GitHub account link across a baseline reset, ciphertext unchanged", tables("GithubAccountLink", "User")),
 };
 

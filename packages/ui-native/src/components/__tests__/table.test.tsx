@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { Table, describeTableRow, type TableColumn, type TableRow } from "../table";
 
@@ -61,7 +61,7 @@ describe("Table", () => {
 	});
 
 	it("forwards its ref and merges className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<Table ref={ref} caption="Claimed vs redeemed" columns={COLUMNS} rows={ROWS} className="gap-2" testID="table" />);
 
 		expect(ref.current).not.toBeNull();

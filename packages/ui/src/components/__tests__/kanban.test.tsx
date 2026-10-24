@@ -2,6 +2,8 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import * as React from "react";
+import { hydrateRoot, type Root } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
@@ -52,8 +54,8 @@ function idsByColumn(value: KanbanValue<Card>): Record<string, string[]> {
 	return Object.fromEntries(Object.entries(value).map(([key, cards]): [string, string[]] => [key, cards.map(getCardId)]));
 }
 
-function renderBoard(overrides: Partial<KanbanRootProps<Card>> = {}): void {
-	render(
+function board(overrides: Partial<KanbanRootProps<Card>> = {}): React.JSX.Element {
+	return (
 		<Kanban<Card> value={BOARD} onValueChange={noop} getItemValue={getCardId} {...overrides}>
 			<KanbanBoard>
 				{Object.entries(BOARD).map(([columnId, cards]): React.JSX.Element => (
@@ -70,9 +72,12 @@ function renderBoard(overrides: Partial<KanbanRootProps<Card>> = {}): void {
 				))}
 			</KanbanBoard>
 			<KanbanOverlay />
-		</Kanban>,
-		{ wrapper: UiKitTestProviders },
+		</Kanban>
 	);
+}
+
+function renderBoard(overrides: Partial<KanbanRootProps<Card>> = {}): void {
+	render(board(overrides), { wrapper: UiKitTestProviders });
 }
 
 /** jsdom has no layout: stack the `todo` items so the keyboard sensor can move between them. */
@@ -158,6 +163,48 @@ describe("Kanban", () => {
 		const column = screen.getByLabelText("Move column done").closest<HTMLElement>("[data-slot=kanban-column]");
 		expect(column?.dataset.disabled).toBe("");
 		expect(column?.className).toContain("opacity-50");
+	});
+
+	it("hydrates the server's markup without a mismatch", async (): Promise<void> => {
+		const consoleError = vi.spyOn(console, "error").mockImplementation(noop);
+		const tree = <UiKitTestProviders>{board()}</UiKitTestProviders>;
+		const container = document.createElement("div");
+		container.innerHTML = renderToString(tree);
+		document.body.append(container);
+
+		const root = await act((): Root => hydrateRoot(container, tree));
+
+		expect(consoleError).not.toHaveBeenCalled();
+		act((): void => {
+			root.unmount();
+		});
+		container.remove();
+	});
+
+	it("keeps a locked column and item live: fixed in place, but not drawn as disabled", (): void => {
+		render(
+			<Kanban<Card> value={BOARD} onValueChange={noop} getItemValue={getCardId}>
+				<KanbanBoard>
+					<KanbanColumn value="todo" locked>
+						<KanbanColumnContent value="todo">
+							<KanbanItem value="t1" locked>
+								<KanbanItemHandle aria-label="Drag Write spec">Write spec</KanbanItemHandle>
+							</KanbanItem>
+						</KanbanColumnContent>
+					</KanbanColumn>
+				</KanbanBoard>
+			</Kanban>,
+			{ wrapper: UiKitTestProviders },
+		);
+		const column = screen.getByText("Write spec").closest<HTMLElement>("[data-slot=kanban-column]");
+		const item = screen.getByText("Write spec").closest<HTMLElement>("[data-slot=kanban-item]");
+
+		for (const part of [column, item]) {
+			expect(part?.dataset.locked).toBe("");
+			expect(part?.dataset.disabled).toBeUndefined();
+			expect(part?.className).not.toContain("opacity-50");
+		}
+		expect(item?.getAttribute("aria-disabled")).toBe("true");
 	});
 
 	it("reorders a column's items with the keyboard sensor", async (): Promise<void> => {

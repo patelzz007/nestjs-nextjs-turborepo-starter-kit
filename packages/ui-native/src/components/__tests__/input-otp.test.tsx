@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { TextInput } from "react-native";
+import type { TextInputInstance } from "react-native";
 
 import { Field } from "../field";
 import { InputOTP } from "../input-otp";
@@ -74,7 +74,7 @@ describe("InputOTP", () => {
 	});
 
 	it("forwards its ref and merges the caller's className last", async () => {
-		const ref = React.createRef<TextInput>();
+		const ref = React.createRef<TextInputInstance>();
 		await render(<InputOTP ref={ref} accessibilityLabel="Code" value="" onChange={jest.fn()} className="justify-center gap-4" />);
 
 		expect(ref.current).not.toBeNull();
