@@ -13,7 +13,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text, View } from "react-native";
+import { Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 
@@ -68,7 +68,7 @@ export interface MessageProps {
 }
 
 export const Message = React.memo(
-	React.forwardRef<View, MessageProps>(function Message(
+	React.forwardRef<ViewInstance, MessageProps>(function Message(
 		{ children, variant = "received", size = "md", avatar, author, timestamp, className, testID },
 		ref,
 	): React.JSX.Element {

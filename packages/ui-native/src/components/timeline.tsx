@@ -8,7 +8,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text, View } from "react-native";
+import { Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { Badge, type BadgeTone } from "./badge";
@@ -68,7 +68,7 @@ export function describeTimelineItem(item: TimelineItem): string {
 }
 
 export const Timeline = React.memo(
-	React.forwardRef<View, TimelineProps>(function Timeline({ items, variant = "default", size = "md", className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, TimelineProps>(function Timeline({ items, variant = "default", size = "md", className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} className={cn(timelineVariants({ variant, size }), className)} testID={testID}>
 				{items.map((item: TimelineItem, index: number): React.JSX.Element => (

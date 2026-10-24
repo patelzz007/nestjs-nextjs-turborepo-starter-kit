@@ -6,7 +6,7 @@
 import ChevronRightIcon from "lucide-react-native/icons/chevron-right";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { ActivityIndicator, Pressable, Text, View, type GestureResponderEvent, type NativeSyntheticEvent, type TargetedEvent } from "react-native";
+import { ActivityIndicator, type GestureResponderEvent, type NativeSyntheticEvent, Pressable, type TargetedEvent, Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
@@ -75,7 +75,7 @@ export interface ListRowProps {
 }
 
 export const ListRow = React.memo(
-	React.forwardRef<View, ListRowProps>(function ListRow(
+	React.forwardRef<ViewInstance, ListRowProps>(function ListRow(
 		{
 			label,
 			onPress,

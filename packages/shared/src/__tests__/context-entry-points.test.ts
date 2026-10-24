@@ -10,6 +10,7 @@ import * as claimsEntry from "../contexts/claims/index";
 import * as filesEntry from "../contexts/files/index";
 import * as identityEntry from "../contexts/identity/index";
 import * as integrationsGithubEntry from "../contexts/integrations-github/index";
+import * as kanbanEntry from "../contexts/kanban/index";
 import * as notificationsEntry from "../contexts/notifications/index";
 import * as tenancyEntry from "../contexts/tenancy/index";
 import * as posEntry from "../contexts/pos/index";
@@ -35,6 +36,7 @@ const ENTRIES: Readonly<Record<string, Readonly<Record<string, ExportedValue>>>>
 	files: filesEntry,
 	identity: identityEntry,
 	"integrations-github": integrationsGithubEntry,
+	kanban: kanbanEntry,
 	notifications: notificationsEntry,
 	tenancy: tenancyEntry,
 	pos: posEntry,

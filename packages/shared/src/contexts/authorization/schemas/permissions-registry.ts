@@ -182,6 +182,13 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
 	{ action: "DELETE", resource: "PRODUCT", description: "Delete products", group: "Platform Samples", isSystem: true },
 	{ action: "LIST", resource: "PRODUCT", description: "List products", group: "Platform Samples", isSystem: true },
 	{ action: "MANAGE", resource: "PRODUCT", description: "Full product management", group: "Platform Samples", isSystem: true },
+	// Kanban board (platform staff: one shared board of task cards)
+	{ action: "LIST", resource: "KANBAN_TASK", description: "View the kanban board and task comments", group: "Kanban Board", isSystem: true },
+	{ action: "READ", resource: "KANBAN_TASK", description: "View a task and download its attachments", group: "Kanban Board", isSystem: true },
+	{ action: "CREATE", resource: "KANBAN_TASK", description: "Create tasks", group: "Kanban Board", isSystem: true },
+	{ action: "UPDATE", resource: "KANBAN_TASK", description: "Edit and move tasks, comment on them and attach files", group: "Kanban Board", isSystem: true },
+	{ action: "DELETE", resource: "KANBAN_TASK", description: "Delete tasks", group: "Kanban Board", isSystem: true },
+	{ action: "MANAGE", resource: "KANBAN_TASK", description: "Rearrange the board's columns", group: "Kanban Board", isSystem: true },
 ];
 
 type PermissionActionMap = Partial<Record<PermissionAction, string>>;

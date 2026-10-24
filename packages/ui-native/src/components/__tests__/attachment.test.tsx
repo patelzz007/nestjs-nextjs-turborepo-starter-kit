@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import ImageIcon from "lucide-react-native/icons/image";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { Attachment } from "../attachment";
 
@@ -85,7 +85,7 @@ describe("Attachment", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<Attachment ref={ref} name={NAME} />);
 		expect(ref.current).not.toBeNull();
 	});

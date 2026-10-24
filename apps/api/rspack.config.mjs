@@ -1,6 +1,5 @@
 // NestJS 12 + Fastify — Rspack bundle (SWC decorators, Node ESM, external deps).
 // Mode comes from the CLI (`--mode development` / `--mode production`), not NODE_ENV.
-import path from "node:path";
 
 import { defineConfig } from "@rspack/cli";
 import { rspack } from "@rspack/core";
@@ -8,24 +7,15 @@ import { RunScriptWebpackPlugin } from "run-script-webpack-plugin";
 import nodeExternals from "webpack-node-externals";
 
 /**
- * Workspace packages the API loads from their built `dist/` at runtime (node externals keep them
- * out of the bundle). In dev their own `tsc --watch` keeps `dist/` current (decision #69), but rspack
- * never watches externals, so without this the API keeps running stale code after an edit in
- * `packages/shared`. Registering each `dist/` as a context dependency makes rspack rebuild, and
- * RunScriptWebpackPlugin restart the API, whenever one of them is re-emitted. (rspack's
- * `watchOptions` has no way to add watched paths; verified against @rspack/core 2.2.8.)
+ * In development the API bundles `@workspace/*` from their TypeScript source, through the
+ * `development` export condition — as the Next apps, Metro and `tsc` (customConditions) already do.
+ * So `dev` needs no built `dist/` of those packages (no `^build` before it: apps/api/turbo.json), and
+ * an edit in `packages/shared` rebuilds and restarts the API directly, being part of the bundle.
+ * Their npm dependencies stay external: whatever they import at runtime must be a dependency of
+ * this app too (resolved from apps/api/node_modules). Production keeps loading the built `dist/`.
  */
-const WATCHED_WORKSPACE_DIST_DIRS = ["shared", "messaging", "api-client"].map((name) => path.resolve(import.meta.dirname, "..", "..", "packages", name, "dist"));
-
-class WatchWorkspaceDistPlugin {
-	apply(compiler) {
-		compiler.hooks.thisCompilation.tap("WatchWorkspaceDistPlugin", (compilation) => {
-			for (const directory of WATCHED_WORKSPACE_DIST_DIRS) {
-				compilation.contextDependencies.add(directory);
-			}
-		});
-	}
-}
+const WORKSPACE_PACKAGES = /^@workspace\//u;
+const WORKSPACE_SOURCE_CONDITION = "development";
 
 export default defineConfig((_env, argv) => {
 	const isDev = argv.mode === "development";
@@ -48,6 +38,7 @@ export default defineConfig((_env, argv) => {
 		},
 		resolve: {
 			extensions: [".ts", ".tsx", ".js", ".jsx", ".json"],
+			conditionNames: isDev ? [WORKSPACE_SOURCE_CONDITION, "..."] : ["..."],
 		},
 		module: {
 			rules: [
@@ -106,12 +97,12 @@ export default defineConfig((_env, argv) => {
 		externals: [
 			nodeExternals({
 				importType: "module",
+				allowlist: isDev ? [WORKSPACE_PACKAGES] : [],
 			}),
 		],
 		plugins: [
 			...(isDev
 				? [
-						new WatchWorkspaceDistPlugin(),
 						new RunScriptWebpackPlugin({
 							name: "main.js",
 							autoRestart: true,

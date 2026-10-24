@@ -6,7 +6,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import CheckIcon from "lucide-react-native/icons/check";
 import * as React from "react";
-import { Pressable, Text, View, type NativeSyntheticEvent, type TargetedEvent } from "react-native";
+import { type NativeSyntheticEvent, Pressable, type TargetedEvent, Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
@@ -89,7 +89,7 @@ export interface CheckboxProps {
 }
 
 export const Checkbox = React.memo(
-	React.forwardRef<View, CheckboxProps>(function Checkbox(
+	React.forwardRef<ViewInstance, CheckboxProps>(function Checkbox(
 		{
 			label,
 			description,

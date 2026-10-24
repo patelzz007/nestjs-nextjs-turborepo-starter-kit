@@ -15,7 +15,16 @@ import { cva, type VariantProps } from "class-variance-authority";
 import ChevronLeftIcon from "lucide-react-native/icons/chevron-left";
 import ChevronRightIcon from "lucide-react-native/icons/chevron-right";
 import * as React from "react";
-import { Pressable, ScrollView, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
+import {
+	type LayoutChangeEvent,
+	type NativeScrollEvent,
+	type NativeSyntheticEvent,
+	Pressable,
+	ScrollView,
+	type ScrollViewInstance,
+	View,
+	type ViewInstance,
+} from "react-native";
 
 import { cn } from "../lib/cn";
 import { useReduceMotion } from "../lib/use-reduce-motion";
@@ -103,7 +112,7 @@ export interface CarouselProps {
 }
 
 export const Carousel = React.memo(
-	React.forwardRef<View, CarouselProps>(function Carousel(
+	React.forwardRef<ViewInstance, CarouselProps>(function Carousel(
 		{
 			children,
 			index,
@@ -121,7 +130,7 @@ export const Carousel = React.memo(
 		ref,
 	): React.JSX.Element {
 		const reduceMotion = useReduceMotion();
-		const scrollRef = React.useRef<ScrollView>(null);
+		const scrollRef = React.useRef<ScrollViewInstance>(null);
 		// Display state only: the page width, measured once the carousel is laid out.
 		const [pageWidth, setPageWidth] = React.useState(FIRST_INDEX);
 		const slides = React.Children.toArray(children);

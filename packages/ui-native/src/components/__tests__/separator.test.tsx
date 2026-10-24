@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { Separator } from "../separator";
 
@@ -25,7 +25,7 @@ describe("Separator", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<Separator ref={ref} />);
 		expect(ref.current).not.toBeNull();
 	});

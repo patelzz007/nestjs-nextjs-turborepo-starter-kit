@@ -15,7 +15,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { Prisma } from "@prisma/client";
+import type { Prisma as PrismaNamespace } from "@prisma/client";
 import { PostgresUrlEnvSchema } from "@workspace/shared";
 import { Pool } from "pg";
 import { z } from "zod";
@@ -33,7 +33,6 @@ import {
 import { buildSystemOperationScopesSql, SYSTEM_OPERATION_SCOPES_SQL_PATH } from "../prisma/rls/system-operation-scopes";
 import { findHandWrittenAppRuntimeRevokes, findUnknownWithheldPrivilegeTables, listWithheldPrivileges } from "../prisma/rls/withheld-privileges";
 import { SEED_COVERAGE_EXEMPTIONS } from "../prisma/seed/coverage-exemptions";
-import { SYSTEM_OPERATIONS } from "../src/prisma/system-operation.registry";
 import { EXIT_FAILED, EXIT_OK, PROCESS_OUTPUT, runCli, type CliCommand } from "./lib/cli";
 import {
 	buildMigrateDiffArgs,
@@ -55,6 +54,16 @@ import {
 import { BEGIN_READ_ONLY_AUDIT_SQL, parseSeedCoverageConnection, PgSeedCoverageCatalog } from "./lib/seed-coverage-catalog";
 
 const { out, err } = PROCESS_OUTPUT;
+
+// The generated Prisma client is loaded only by the commands that read it (`import()` inside them):
+// `schema` runs before `prisma generate` in `db:generate`, so it must work while no client exists yet
+// (a fresh install, or one that re-created @prisma/client in a new store folder).
+
+/** The generated client's `Prisma` namespace (model metadata). */
+async function loadPrisma(): Promise<typeof PrismaNamespace> {
+	const { Prisma } = await import("@prisma/client");
+	return Prisma;
+}
 const apiDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const prismaDir = resolve(apiDir, "prisma");
 const schemaFile = resolve(prismaDir, "schema.prisma");
@@ -173,7 +182,8 @@ function checkRlsManifest(): number {
 // ── generate-system-operation-scopes ──────────────────────────────────────
 
 /** Renders prisma/rls/00-system-operation-scopes.sql from the registry; run after changing an operation's `scope`. */
-function generateSystemOperationScopes(): number {
+async function generateSystemOperationScopes(): Promise<number> {
+	const { SYSTEM_OPERATIONS } = await import("../src/prisma/system-operation.registry");
 	writeFileSync(resolve(apiDir, SYSTEM_OPERATION_SCOPES_SQL_PATH), buildSystemOperationScopesSql(SYSTEM_OPERATIONS, new Set(listAllManifestTables())));
 	out(`Wrote ${SYSTEM_OPERATION_SCOPES_SQL_PATH}`);
 	return EXIT_OK;
@@ -249,7 +259,7 @@ async function checkSeedCoverage(): Promise<number> {
 		return EXIT_FAILED;
 	}
 	const report = await auditSeedCoverage(env.data.DATABASE_URL, {
-		tables: schemaTablesFromDmmf(Prisma.dmmf.datamodel.models),
+		tables: schemaTablesFromDmmf((await loadPrisma()).dmmf.datamodel.models),
 		schemaFileModelNames: listSchemaFileModelNames(readFileSync(schemaFile, "utf8")),
 	});
 	const text = formatSeedCoverageReport(report);

@@ -15,6 +15,8 @@ import {
 	type JsonValue,
 } from "@workspace/shared";
 
+import { nullableAsTypeLists } from "./json-schema-nullable";
+
 /**
  * How a {@link ZodValidationPipe} validates:
  *
@@ -54,21 +56,6 @@ export interface ZodValidationPipeOptions {
  */
 @Injectable()
 export class ZodValidationPipe implements PipeTransform<JsonValue, JsonValue> {
-	/** Compiled Ajv (matching zod v4's `toJSONSchema` output). */
-	private readonly ajv: Ajv = new Ajv({
-		strict: false,
-		allErrors: true,
-		coerceTypes: true,
-		useDefaults: true,
-		// `removeAdditional` stays OFF so `.strict()` schemas (which emit
-		// `additionalProperties: false`) REJECT unknown keys — matching the
-		// behavior of the Zod pipe this replaces.
-		removeAdditional: false,
-	});
-
-	/** Cache of compiled validators keyed by schema reference. */
-	private readonly cache = new WeakMap<ZodV4.ZodType, ValidateFunction>();
-
 	constructor(
 		private readonly schema: ZodV4.ZodType,
 		private readonly options: ZodValidationPipeOptions = { engine: "ajv+zod" },
@@ -185,12 +172,21 @@ export class ZodValidationPipe implements PipeTransform<JsonValue, JsonValue> {
 	}
 
 	private getValidator(): ValidateFunction {
-		return compileSchema(this.schema, this.ajv, this.cache);
+		return compileSchema(this.schema, sharedAjv, sharedCache);
 	}
 }
 
-/** Shared Ajv instance for pre-compilation (avoids creating a new instance per warmup call). */
+/**
+ * The one Ajv instance every pipe compiles with, matching zod v4's `toJSONSchema` output.
+ * `removeAdditional` stays OFF so `.strict()` schemas (which emit `additionalProperties: false`)
+ * REJECT unknown keys — matching the behavior of the Zod pipe this replaces.
+ */
 const sharedAjv: Ajv = new Ajv({ strict: false, allErrors: true, coerceTypes: true, useDefaults: true, removeAdditional: false });
+/**
+ * Compiled validators keyed by schema reference, shared by every pipe and by
+ * {@link ZodValidationPipe.warmup}: a schema compiled once — at boot by the warmup
+ * (ajv-warmup.ts) or by the first request that needs it — serves every later request.
+ */
 const sharedCache = new WeakMap<ZodV4.ZodType, ValidateFunction>();
 
 function readAjvErrorParams(params: ErrorObject["params"]): Record<string, JsonValue> {
@@ -260,8 +256,9 @@ function compileSchema(schema: ZodV4.ZodType, ajv: Ajv, cache: WeakMap<ZodV4.Zod
 	}
 
 	const jsonSchema: JsonObject = JsonObjectSchema.parse(toJSONSchema(schema));
+	// Nullable unions become type lists, so the coercing check never turns a `null` into `0` / `""` / `false`.
 	const compiledSchema: JsonObject = JsonObjectSchema.parse(
-		Object.fromEntries(Object.entries(jsonSchema).filter(([key]: readonly [string, JsonValue]): boolean => key !== "$schema")),
+		nullableAsTypeLists(Object.fromEntries(Object.entries(jsonSchema).filter(([key]: readonly [string, JsonValue]): boolean => key !== "$schema"))),
 	);
 
 	registerAjvFormats(ajv);

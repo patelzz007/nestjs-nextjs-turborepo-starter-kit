@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { View } from "react-native";
+import { View, type ViewInstance } from "react-native";
 
 import { AspectRatio } from "../aspect-ratio";
 
@@ -27,7 +27,7 @@ describe("AspectRatio", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<AspectRatio ref={ref} ratio={1} />);
 		expect(ref.current).not.toBeNull();
 	});

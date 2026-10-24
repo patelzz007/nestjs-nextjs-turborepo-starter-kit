@@ -13,7 +13,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import FileIcon from "lucide-react-native/icons/file";
 import XIcon from "lucide-react-native/icons/x";
 import * as React from "react";
-import { ActivityIndicator, Pressable, Text, View, type GestureResponderEvent } from "react-native";
+import { ActivityIndicator, type GestureResponderEvent, Pressable, Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
@@ -95,7 +95,7 @@ export interface AttachmentProps {
 }
 
 export const Attachment = React.memo(
-	React.forwardRef<View, AttachmentProps>(function Attachment(
+	React.forwardRef<ViewInstance, AttachmentProps>(function Attachment(
 		{
 			name,
 			description,

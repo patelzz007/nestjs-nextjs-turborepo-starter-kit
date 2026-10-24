@@ -12,7 +12,7 @@
 
 import SearchIcon from "lucide-react-native/icons/search";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { SelectField, selectFieldVariants, type SelectFieldProps, type SelectOption } from "./select-field";
 
@@ -27,14 +27,14 @@ export type ComboboxProps<TValue extends string> = Omit<SelectFieldProps<TValue>
 
 /** `Combobox` keeps its option type through `memo` and `forwardRef`. The ref reaches the trigger. */
 export interface ComboboxComponent {
-	<TValue extends string>(props: ComboboxProps<TValue> & React.RefAttributes<View>): React.ReactNode;
+	<TValue extends string>(props: ComboboxProps<TValue> & React.RefAttributes<ViewInstance>): React.ReactNode;
 	displayName?: string | undefined;
 }
 
 export const Combobox: ComboboxComponent = React.memo(
 	React.forwardRef(function Combobox(
 		{ placeholder = "Select an option", accessibilityHint = "Opens a search of the options", ...props }: ComboboxProps<string>,
-		ref: React.ForwardedRef<View>,
+		ref: React.ForwardedRef<ViewInstance>,
 	): React.JSX.Element {
 		return <SelectField ref={ref} {...props} placeholder={placeholder} accessibilityHint={accessibilityHint} searchable autoFocusSearch leadingIcon={SearchIcon} />;
 	}),

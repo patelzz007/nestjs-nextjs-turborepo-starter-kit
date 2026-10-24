@@ -14,7 +14,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { useWindowDimensions, View, type LayoutChangeEvent, type ViewProps } from "react-native";
+import { type LayoutChangeEvent, useWindowDimensions, View, type ViewInstance, type ViewProps } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { useCSSVariable, useUniwind, withUniwind } from "uniwind";
@@ -87,7 +87,7 @@ function SweepBand({ context, testID }: SweepBandProps): React.JSX.Element {
 	const { width: windowWidth } = useWindowDimensions();
 	// SVG ids are referenced from `url(#…)`: keep only characters every renderer accepts.
 	const gradientId = `skeleton-sheen-${React.useId().replace(SVG_ID_UNSAFE, "")}`;
-	const anchorRef = React.useRef<View>(null);
+	const anchorRef = React.useRef<ViewInstance>(null);
 	const boneX = useSharedValue(UNMEASURED_X);
 	const { progress } = context.sweep;
 	const bandWidth = sweepBandWidth(windowWidth);
@@ -130,7 +130,7 @@ interface BoneProps {
 }
 
 /** A muted block that shows the group's sweep (when there is one and motion is on). */
-const Bone = React.forwardRef<View, BoneProps>(function Bone({ className, testID }, ref): React.JSX.Element {
+const Bone = React.forwardRef<ViewInstance, BoneProps>(function Bone({ className, testID }, ref): React.JSX.Element {
 	const context = React.useContext(SweepContext);
 	return (
 		<View ref={ref} className={cn(skeletonVariants(), className)} testID={testID}>
@@ -147,7 +147,7 @@ export interface SkeletonProps {
 
 /** One block, sized and shaped by `className` (`size-14 rounded-full`). */
 export const Skeleton = React.memo(
-	React.forwardRef<View, SkeletonProps>(function Skeleton({ className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, SkeletonProps>(function Skeleton({ className, testID }, ref): React.JSX.Element {
 		return <Bone ref={ref} className={className} testID={testID} />;
 	}),
 );
@@ -166,7 +166,7 @@ export interface SkeletonTextProps {
 
 /** One line of text: a box exactly the text's line height, with a shorter bar inside, so the placeholder and the text are the same height. */
 export const SkeletonText = React.memo(
-	React.forwardRef<View, SkeletonTextProps>(function SkeletonText({ size, widthClassName, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, SkeletonTextProps>(function SkeletonText({ size, widthClassName, className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} className={cn(skeletonTextVariants({ size }), className)} testID={testID}>
 				<Bone className={cn(skeletonTextBarVariants({ size }), widthClassName)} />
@@ -188,7 +188,7 @@ export interface SkeletonGroupProps {
 
 /** Wraps a placeholder: it owns the sweep and the reveal, and tells screen readers what is loading. */
 export const SkeletonGroup = React.memo(
-	React.forwardRef<View, SkeletonGroupProps>(function SkeletonGroup({ accessibilityLabel, children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, SkeletonGroupProps>(function SkeletonGroup({ accessibilityLabel, children, className, testID }, ref): React.JSX.Element {
 		const sweep = useSkeletonSweep();
 		const { theme } = useUniwind();
 		const sheen = sweepSheen(theme);

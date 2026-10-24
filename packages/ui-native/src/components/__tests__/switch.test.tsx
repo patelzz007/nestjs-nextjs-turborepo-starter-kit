@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { Switch } from "../switch";
 
@@ -60,7 +60,7 @@ describe("Switch", () => {
 	});
 
 	it("forwards its ref, merges the caller's className last and reports focus and blur", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		const onFocus = jest.fn();
 		const onBlur = jest.fn();
 		await render(<Switch ref={ref} label="Notifications" checked onChange={jest.fn()} onFocus={onFocus} onBlur={onBlur} className="gap-6" />);

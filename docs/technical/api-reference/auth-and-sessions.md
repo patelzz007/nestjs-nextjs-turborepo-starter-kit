@@ -1905,6 +1905,116 @@ Response `200 OK` (application/json):
 }
 ```
 
+### GET /api/v1/auth/preferences
+
+The signed-in user's preferences; a key that is absent uses the page's default
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Policy** `READ:PROFILE (own record only)` — A user reads their own preferences.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `PreferencesController_list` · [source](../../../apps/api/src/contexts/identity/presentation/http/preferences.controller.ts)
+
+**Response 200 OK** (`application/json`) — The stored preferences the registry still accepts
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.preferences` | object[] | yes |  |
+| `data.preferences[].key` | "board.planning.groupBy" \| "board.execution.groupBy" \| "board.execution.showSubtasks" | yes |  |
+| `data.preferences[].value` | "none" \| "epic" \| "feature" \| "story" \| boolean | yes |  |
+| `data.preferences[].version` | integer | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### PUT /api/v1/auth/preferences/{key}
+
+Remember one choice
+
+400 when the key does not accept the value (the shared preference registry).
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Policy** `UPDATE:PROFILE (own record only)` — A user remembers one of their own choices.
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `PreferencesController_set` · [source](../../../apps/api/src/contexts/identity/presentation/http/preferences.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `key` | path | "board.planning.groupBy" \| "board.execution.groupBy" \| "board.execution.showSubtasks" | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `value` | "none" \| "epic" \| "feature" \| "story" \| boolean | yes |  |
+
+**Response 200 OK** (`application/json`) — The stored preference, with its new version
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.key` | "board.planning.groupBy" \| "board.execution.groupBy" \| "board.execution.showSubtasks" | yes |  |
+| `data.value` | "none" \| "epic" \| "feature" \| "story" \| boolean | yes |  |
+| `data.version` | integer | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### DELETE /api/v1/auth/preferences/{key}
+
+Reset one choice to the default (soft delete); answers the preferences left
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Policy** `UPDATE:PROFILE (own record only)` — A user resets one of their own choices to the default.
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `PreferencesController_reset` · [source](../../../apps/api/src/contexts/identity/presentation/http/preferences.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `key` | path | "board.planning.groupBy" \| "board.execution.groupBy" \| "board.execution.showSubtasks" | yes |  |
+
+**Response 200 OK** (`application/json`) — The preferences left
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.preferences` | object[] | yes |  |
+| `data.preferences[].key` | "board.planning.groupBy" \| "board.execution.groupBy" \| "board.execution.showSubtasks" | yes |  |
+| `data.preferences[].value` | "none" \| "epic" \| "feature" \| "story" \| boolean | yes |  |
+| `data.preferences[].version` | integer | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
 ### GET /api/v1/auth/profile
 
 Get the signed-in user's own profile (name, avatar, optimistic-lock version)

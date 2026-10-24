@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { Text } from "react-native";
+import type { TextInstance } from "react-native";
 
 import { DEFAULT_RELATIVE_TIME_LABELS, RelativeTime, formatAbsoluteTime, formatRelativeTime, type RelativeTimeLabels, type RelativeTimeUnit } from "../relative-time";
 
@@ -74,7 +74,7 @@ describe("RelativeTime", () => {
 	});
 
 	it("has variants and sizes, forwards its ref and merges className last", async () => {
-		const ref = React.createRef<Text>();
+		const ref = React.createRef<TextInstance>();
 		await render(<RelativeTime ref={ref} value={NOW} now={NOW} locale="en" variant="default" size="xs" className="text-sm" testID="time" />);
 
 		expect(ref.current).not.toBeNull();

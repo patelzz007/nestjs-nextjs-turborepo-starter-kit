@@ -35,8 +35,7 @@ describe("RootStack — exactly one route group per state (§9.6)", () => {
 		["app", "home screen"],
 	] satisfies [Exclude<RootRoute, "starting">, string][])("route %s shows only %s, whatever URL was asked for", async (route, expected) => {
 		for (const initialUrl of ["/", "/lock", "/update-required", "/config-error", "/sign-in"]) {
-			const view = renderRouter(routesFor(route), { initialUrl });
-			await view;
+			await renderRouter(routesFor(route), { initialUrl });
 			expect(screen.getByText(expected)).toBeOnTheScreen();
 			for (const other of SCREEN_NAMES.filter((name: string): boolean => name !== expected)) {
 				expect(screen.queryByText(other)).toBeNull();

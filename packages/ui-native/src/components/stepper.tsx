@@ -9,7 +9,7 @@
 import CheckIcon from "lucide-react-native/icons/check";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
@@ -134,7 +134,7 @@ export interface StepperProps {
 }
 
 export const Stepper = React.memo(
-	React.forwardRef<View, StepperProps>(function Stepper(
+	React.forwardRef<ViewInstance, StepperProps>(function Stepper(
 		{
 			steps,
 			value,

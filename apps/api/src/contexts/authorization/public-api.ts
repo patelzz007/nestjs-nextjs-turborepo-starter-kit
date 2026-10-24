@@ -18,6 +18,7 @@ export type {
 } from "./application/ports/authorization-cache-invalidation.port";
 export { UserInvalidationTriggerSchema } from "./application/ports/authorization-cache-invalidation.port";
 export type { SubjectAuthorizationReadPort } from "./application/ports/subject-authorization-read.port";
+export type { PermissionHoldersReadPort } from "./application/ports/permission-holders-read.port";
 export type { CedarEvaluationInput, CedarPolicyEvaluatorPort } from "./application/ports/cedar-policy-evaluator.port";
 export type { PolicyPrincipal } from "./application/ports/policy-engine.port";
 export type {
@@ -35,6 +36,7 @@ export {
 	AUTHORIZATION_PORT,
 	CEDAR_POLICY_EVALUATOR,
 	REQUEST_TENANT_RESOLVER,
+	PERMISSION_HOLDERS_READ,
 	SUBJECT_AUTHORIZATION_READ,
 	SUPER_ADMIN_BYPASS_AUDIT,
 } from "./application/ports/authorization.tokens";

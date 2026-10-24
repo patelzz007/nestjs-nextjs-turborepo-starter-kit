@@ -7,7 +7,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 import Animated from "react-native-reanimated";
 import { withUniwind } from "uniwind";
 
@@ -45,7 +45,7 @@ export interface PulseDotProps {
 }
 
 export const PulseDot = React.memo(
-	React.forwardRef<View, PulseDotProps>(function PulseDot({ tone = "success", size = "md", className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, PulseDotProps>(function PulseDot({ tone = "success", size = "md", className, testID }, ref): React.JSX.Element {
 		const pulseStyle = usePulseStyle();
 
 		return (

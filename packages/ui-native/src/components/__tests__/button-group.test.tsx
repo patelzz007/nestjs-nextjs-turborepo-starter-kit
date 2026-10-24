@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { Button } from "../button";
 import { ButtonGroup } from "../button-group";
@@ -72,7 +72,7 @@ describe("ButtonGroup", () => {
 	});
 
 	it("forwards its ref and merges className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(
 			<ButtonGroup ref={ref} variant="separated" className="gap-4 self-start" testID="group">
 				<Button label="One" onPress={jest.fn()} />

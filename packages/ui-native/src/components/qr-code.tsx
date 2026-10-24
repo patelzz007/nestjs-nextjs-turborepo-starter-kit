@@ -15,7 +15,7 @@
 import { encodeQr, qrMatrixToSvgPath, type QrSvgPath } from "@workspace/shared";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { View } from "react-native";
+import { View, type ViewInstance } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { withUniwind } from "uniwind";
 
@@ -67,7 +67,7 @@ export interface QrCodeProps {
 }
 
 export const QrCode = React.memo(
-	React.forwardRef<View, QrCodeProps>(function QrCode({ value, label, variant = "framed", size = "md", className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, QrCodeProps>(function QrCode({ value, label, variant = "framed", size = "md", className, testID }, ref): React.JSX.Element {
 		const symbol = React.useMemo((): QrSvgPath => qrMatrixToSvgPath(encodeQr(value), { quietZoneModules: TILE_QUIET_ZONE_MODULES }), [value]);
 		return (
 			<View ref={ref} testID={testID} accessible accessibilityRole="image" accessibilityLabel={label} className={cn(qrCodeVariants({ variant, size }), className)}>

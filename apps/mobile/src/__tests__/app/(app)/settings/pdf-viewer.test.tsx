@@ -3,7 +3,7 @@ import { DEFAULT_PDF_VIEWER_LABELS } from "@workspace/ui-native/components/pdf-v
 import { Slot } from "expo-router";
 import { act } from "@testing-library/react-native";
 import { fireEvent, screen, waitFor, within } from "expo-router/testing-library";
-import { BackHandler, type HardwareBackPressEvent, type NativeEventSubscription } from "react-native";
+import { BackHandler, type EventSubscription } from "react-native";
 import * as React from "react";
 
 import { createTestRuntime, renderInApp } from "../../../../../test/app-harness";
@@ -16,6 +16,9 @@ import { PDF_VIEWER_COPY } from "../../../../features/pdf-viewer/labels";
 import { SAMPLE_PDF_NAME } from "../../../../features/pdf-viewer/pdf-files";
 import { PageHeaderClearanceProvider } from "../../../../lib/page-header-clearance";
 import { ROUTES } from "../../../../runtime/routes";
+
+/** What `BackHandler` calls on a back press (React Native 0.88 no longer exports its event type from the package root). */
+type BackPressHandler = (event: { readonly type: string; readonly timeStamp: number }) => boolean | undefined;
 
 const PDF_BYTES = new TextEncoder().encode(buildTextPdf([{ title: "Statement", lines: ["Balance: 120.00"] }]));
 const PICKED_URI = "file:///cache/DocumentPicker/statement.pdf";
@@ -96,8 +99,8 @@ describe("PDF viewer screen", () => {
 
 	it("closes an open document on Android's back button, and stops listening once it is closed", async () => {
 		/** Every back-button subscription, in order: the router's own, then the document's. */
-		const subscriptions: { readonly handler: (event: HardwareBackPressEvent) => boolean | null | undefined; readonly remove: jest.Mock<undefined, []> }[] = [];
-		jest.spyOn(BackHandler, "addEventListener").mockImplementation((_eventName, handler): NativeEventSubscription => {
+		const subscriptions: { readonly handler: BackPressHandler; readonly remove: jest.Mock<undefined, []> }[] = [];
+		jest.spyOn(BackHandler, "addEventListener").mockImplementation((_eventName, handler): EventSubscription => {
 			const remove = jest.fn<undefined, []>();
 			subscriptions.push({ handler, remove });
 			return { remove };
@@ -111,7 +114,7 @@ describe("PDF viewer screen", () => {
 		expect(documentSubscriptions).toHaveLength(1);
 		const [documentSubscription] = documentSubscriptions;
 
-		const handled: { value: boolean | null | undefined } = { value: false };
+		const handled: { value: boolean | undefined } = { value: false };
 		await act((): void => {
 			handled.value = documentSubscription?.handler({ type: "hardwareBackPress", timeStamp: 0 });
 		});

@@ -144,7 +144,19 @@
 					"title": "Components",
 					"url": "/components",
 					"icon": "Blocks",
-					"featureFlag": "component-gallery"
+					"featureFlag": "component-gallery",
+					"children": [
+						{
+							"title": "Gallery",
+							"url": "/components",
+							"icon": "LayoutGrid"
+						},
+						{
+							"title": "Kanban",
+							"url": "/components/kanban-board",
+							"icon": "SquareKanban"
+						}
+					]
 				}
 			]
 		}

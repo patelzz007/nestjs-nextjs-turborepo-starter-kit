@@ -1,9 +1,12 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import * as React from "react";
-import { BackHandler, Platform, Text, type HardwareBackPressEvent, type NativeEventSubscription } from "react-native";
+import { BackHandler, Platform, Text, type EventSubscription } from "react-native";
 import { SafeAreaProvider, type Metrics } from "react-native-safe-area-context";
 
 import { Drawer, type DrawerProps } from "../drawer";
+
+/** What `BackHandler` calls on a back press (React Native 0.88 no longer exports its event type from the package root). */
+type BackPressHandler = (event: { readonly type: string; readonly timeStamp: number }) => boolean | undefined;
 
 /** The drawer's blur intensity when fully open (`BLUR_MAX_INTENSITY` in drawer.tsx). */
 const FULL_BLUR_INTENSITY = 18;
@@ -81,9 +84,9 @@ describe("Drawer", () => {
 	});
 
 	it("takes the Android back button only while open, and lets go of it once closed", async () => {
-		let pressBack: ((event: HardwareBackPressEvent) => boolean | null | undefined) | null = null;
+		let pressBack: BackPressHandler | null = null;
 		const remove = jest.fn();
-		const subscribe = jest.spyOn(BackHandler, "addEventListener").mockImplementation((_eventName, handler): NativeEventSubscription => {
+		const subscribe = jest.spyOn(BackHandler, "addEventListener").mockImplementation((_eventName, handler): EventSubscription => {
 			pressBack = handler;
 			return { remove };
 		});
@@ -93,7 +96,7 @@ describe("Drawer", () => {
 
 		await view.rerender(drawer(true, drawerHandlers));
 		expect(subscribe).toHaveBeenCalledWith("hardwareBackPress", expect.any(Function));
-		let handled: boolean | null | undefined = false;
+		let handled: boolean | undefined = false;
 		await act((): void => {
 			handled = pressBack?.({ type: "hardwareBackPress", timeStamp: 0 });
 		});

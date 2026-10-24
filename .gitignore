@@ -59,6 +59,8 @@ next-env.d.ts
 
 # Playwright browser-suite output (apps/*/e2e/*.browser.ts)
 test-results/
+# Playwright sessions saved by a sign-in setup project (apps/admin/e2e/sign-in.setup.ts)
+**/e2e/.auth/
 playwright-report/
 
 # Server logs written by the CI browser e2e job / pnpm ci:local

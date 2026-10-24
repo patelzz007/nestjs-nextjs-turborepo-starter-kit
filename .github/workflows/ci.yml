@@ -401,6 +401,9 @@ jobs:
       ADMIN_E2E_BASE_URL: http://localhost:3001
       ADMIN_E2E_EMAIL: superadmin@example.com
       ADMIN_E2E_PASSWORD: SuperAdmin@123
+      # The admin suite drives the kanban board, which lives in the developer component gallery: a
+      # production build serves the gallery only when it is switched on (apps/admin/lib/feature-flags.ts).
+      ADMIN_COMPONENT_GALLERY: "true"
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

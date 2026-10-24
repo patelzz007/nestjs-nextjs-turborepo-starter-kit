@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { ImageCarousel, type ImageCarouselImage } from "../image-carousel";
 
@@ -84,7 +84,7 @@ describe("ImageCarousel", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<ImageCarousel ref={ref} images={IMAGES} index={0} onChange={jest.fn()} />);
 		expect(ref.current).not.toBeNull();
 	});

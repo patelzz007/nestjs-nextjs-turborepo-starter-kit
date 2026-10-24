@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import InboxIcon from "lucide-react-native/icons/inbox";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { Button } from "../button";
 import { EmptyState, ErrorState, LoadingState } from "../empty";
@@ -16,7 +16,7 @@ describe("LoadingState", () => {
 	});
 
 	it("forwards its ref and merges the caller's className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<LoadingState ref={ref} label="Loading" className="py-4" />);
 
 		expect(ref.current).not.toBeNull();
@@ -46,7 +46,7 @@ describe("EmptyState", () => {
 	});
 
 	it("forwards its ref and merges the caller's className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<EmptyState ref={ref} message="Nothing" className="py-10" testID="empty" />);
 
 		expect(ref.current).not.toBeNull();
@@ -77,7 +77,7 @@ describe("ErrorState", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<ErrorState ref={ref} message="Failed" retryLabel="Retry" onRetry={jest.fn()} />);
 		expect(ref.current).not.toBeNull();
 	});

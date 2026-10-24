@@ -14,7 +14,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import type { LucideIcon } from "lucide-react-native";
 import * as React from "react";
-import { View } from "react-native";
+import { View, type ViewInstance } from "react-native";
 import { withUniwind } from "uniwind";
 
 import { cn } from "../lib/cn";
@@ -89,7 +89,7 @@ export interface IconProps {
  * has an `accessibilityLabel`.
  */
 export const Icon = React.memo(
-	React.forwardRef<View, IconProps>(function Icon({ icon, size = "lg", weight = "regular", colorClassName, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, IconProps>(function Icon({ icon, size = "lg", weight = "regular", colorClassName, className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} className={cn(iconVariants({ size }), className)}>
 				<ThemedGlyph icon={icon} size={ICON_SIZES[size]} strokeWidth={ICON_STROKE_WIDTHS[weight]} colorClassName={colorClassName} testID={testID} />

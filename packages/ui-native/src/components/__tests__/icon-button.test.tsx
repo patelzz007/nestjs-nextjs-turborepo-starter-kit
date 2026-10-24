@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import ImagePlusIcon from "lucide-react-native/icons/image-plus";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { IconButton } from "../icon-button";
 
@@ -29,7 +29,7 @@ describe("IconButton", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<IconButton ref={ref} icon={ImagePlusIcon} label="Add a picture" onPress={jest.fn()} />);
 		expect(ref.current).not.toBeNull();
 	});

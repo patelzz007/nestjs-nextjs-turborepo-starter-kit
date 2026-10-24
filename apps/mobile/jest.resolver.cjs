@@ -26,6 +26,11 @@ const WORKSPACE_SOURCE_CONDITION = "development";
 
 const WORKSPACE_SCOPE = "@workspace/";
 
+const { createNativeRuntimeOptions } = require("@workspace/ui-native/jest/native-runtime-resolver");
+
+/** Reanimated and Worklets run their JavaScript build under Jest (see native-runtime-resolver.cjs). */
+const nativeRuntimeOptions = createNativeRuntimeOptions(__dirname);
+
 /**
  * Packages whose React Native build is ES modules only, which Jest would have to
  * transpile out of node_modules. Tests load the same release's CommonJS build
@@ -49,7 +54,8 @@ function commonJsConditions(options) {
 	return ["require", ...(options.conditions ?? []).filter((condition) => !ES_MODULE_CONDITIONS.has(condition))];
 }
 
-module.exports = (request, options) => {
+module.exports = (request, jestOptions) => {
+	const options = nativeRuntimeOptions(request, jestOptions);
 	if (isSingleton(request)) {
 		const fromApp = { ...options, basedir: path.resolve(__dirname) };
 		return options.defaultResolver(request, isCommonJsUnderTest(request) ? { ...fromApp, conditions: commonJsConditions(options) } : fromApp);

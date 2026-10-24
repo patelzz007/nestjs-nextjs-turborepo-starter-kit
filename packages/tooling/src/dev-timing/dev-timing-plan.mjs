@@ -102,6 +102,8 @@ export const COLD_RESET_PATHS = [".turbo", "apps/web/.next", "apps/admin/.next",
  * (`<tmpdir>/metro-cache`, set by expo/metro-config and by uniwind/metro) and
  * the file-map caches (`<tmpdir>/metro-file-map-*`). A cold run deletes them
  * directly because `turbo dev -- --clear` would pass the flag to every app.
+ * (`apps/mobile`'s own `dev` script always passes `--clear` too, so a warm run's
+ * Metro numbers include rebuilding its transform cache.)
  * See `metroCacheRoots` for which temp directories that means.
  */
 export const METRO_CACHE_DIRECTORY = "metro-cache";

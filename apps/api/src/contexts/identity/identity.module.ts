@@ -79,6 +79,9 @@ import { UnlockAccountHandler } from "./application/commands/unlock-account/unlo
 import { BanUserHandler } from "./application/commands/ban-user/ban-user.handler";
 import { UnbanUserHandler } from "./application/commands/unban-user/unban-user.handler";
 import { UpdateOwnProfileHandler } from "./application/commands/update-own-profile/update-own-profile.handler";
+import { ResetOwnPreferenceHandler } from "./application/commands/reset-own-preference/reset-own-preference.handler";
+import { SetOwnPreferenceHandler } from "./application/commands/set-own-preference/set-own-preference.handler";
+import { ListOwnPreferencesHandler } from "./application/queries/list-own-preferences/list-own-preferences.handler";
 import { VerifyEmailHandler } from "./application/commands/verify-email/verify-email.handler";
 import { VerifyNewDeviceLoginHandler } from "./application/commands/verify-new-device-login/verify-new-device-login.handler";
 import { CheckBackupCodeHandler } from "./application/queries/check-backup-code/check-backup-code.handler";
@@ -120,6 +123,7 @@ import { SessionLocationModule } from "./infrastructure/session-location/session
 import { AuthController } from "./presentation/http/auth.controller";
 import { ImpersonationController } from "./presentation/http/impersonation.controller";
 import { MfaRecoveryController } from "./presentation/http/mfa-recovery.controller";
+import { PreferencesController } from "./presentation/http/preferences.controller";
 import { ProfileController } from "./presentation/http/profile.controller";
 import { SessionStatusController } from "./presentation/http/session-status.controller";
 import { SessionsController } from "./presentation/http/sessions.controller";
@@ -157,6 +161,9 @@ const HANDLERS = [
 	BanUserHandler,
 	UnbanUserHandler,
 	UpdateOwnProfileHandler,
+	SetOwnPreferenceHandler,
+	ResetOwnPreferenceHandler,
+	ListOwnPreferencesHandler,
 	VerifyEmailHandler,
 	VerifyNewDeviceLoginHandler,
 	CheckBackupCodeHandler,
@@ -203,7 +210,16 @@ const REDIS_USER_SESSION_CACHE = Symbol("REDIS_USER_SESSION_CACHE");
 		ReferralsModule,
 		SessionLocationModule,
 	],
-	controllers: [AuthController, TwoFactorController, MfaRecoveryController, ProfileController, SessionsController, SessionStatusController, ImpersonationController],
+	controllers: [
+		AuthController,
+		TwoFactorController,
+		MfaRecoveryController,
+		ProfileController,
+		PreferencesController,
+		SessionsController,
+		SessionStatusController,
+		ImpersonationController,
+	],
 	providers: [
 		// Referrals' share-link attribution writer (identity owns `User`); global, so referrals imports no context.
 		{ provide: REFEREE_ATTRIBUTION_FACTORY, useValue: IDENTITY_REFEREE_ATTRIBUTION_FACTORY },

@@ -70,6 +70,12 @@ vi.mock("@workspace/ui/components/app-command-palette", () => ({
 	AppCommandPalette: StubAppCommandPalette,
 }));
 
+// The kanban item search reads the API through the auth context; these tests cover the pages and actions the palette lists.
+vi.mock("@/contexts/kanban/components/kanban-palette-results", () => ({
+	useKanbanPaletteSearch: (): readonly [] => [],
+	KanbanPaletteResults: (): null => null,
+}));
+
 vi.mock("next/navigation", () => ({
 	useRouter: (): { push: () => void } => ({ push: vi.fn() }),
 }));

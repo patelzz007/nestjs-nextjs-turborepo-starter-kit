@@ -2,6 +2,25 @@
 // Vitest standard. Platform-neutral logic is tested with Vitest in the shared
 // packages; these suites cover screens, hooks and mobile-only modules.
 
+const { transformIgnorePatterns: EXPO_TRANSFORM_IGNORE_PATTERNS } = require("jest-expo/jest-preset");
+
+/**
+ * Packages published as ES modules only. Metro bundles them as they are; Jest
+ * runs CommonJS, so Babel compiles them like React Native's own packages.
+ */
+const ES_MODULE_ONLY_PACKAGES = ["marked"];
+
+/** jest-expo's first pattern: skip node_modules except an allow-list, `(?!(a|b|…))`. */
+const ALLOW_LIST_START = "/node_modules/(?!(";
+
+function withEsModuleOnlyPackages(patterns) {
+	const [allowList, ...rest] = patterns;
+	if (allowList === undefined || !allowList.startsWith(ALLOW_LIST_START)) {
+		throw new Error(`jest-expo's transformIgnorePatterns changed shape (${String(allowList)}): update jest.config.js`);
+	}
+	return [`${ALLOW_LIST_START}${ES_MODULE_ONLY_PACKAGES.join("|")}|${allowList.slice(ALLOW_LIST_START.length)}`, ...rest];
+}
+
 /** @type {import("jest").Config} */
 module.exports = {
 	preset: "jest-expo",
@@ -9,6 +28,7 @@ module.exports = {
 	// TanStack Query are singletons from this app, and @workspace/* resolve
 	// through their `development` export (TypeScript source).
 	resolver: "<rootDir>/jest.resolver.cjs",
+	transformIgnorePatterns: withEsModuleOnlyPackages(EXPO_TRANSFORM_IGNORE_PATTERNS),
 	setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
 	moduleNameMapper: {
 		// Uniwind compiles CSS in Metro; tests render without styles.

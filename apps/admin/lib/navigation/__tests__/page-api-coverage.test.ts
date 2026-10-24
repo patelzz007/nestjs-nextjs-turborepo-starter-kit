@@ -56,6 +56,15 @@ const PAGE_API_CALLS: ReadonlyMap<string, readonly PageApiCall[]> = new Map<stri
 		],
 	],
 	[ROUTES.catalog.categories.list, [{ endpoint: "GET /sample-category", permission: PERMISSION.SAMPLE_CATEGORY.LIST }]],
+	[ROUTES.kanban.board, [{ endpoint: "GET /admin/kanban/board", permission: PERMISSION.KANBAN_TASK.LIST }]],
+	[
+		ROUTE_PATTERNS.kanban.task,
+		[
+			{ endpoint: "GET /admin/kanban/tasks/:taskId", permission: PERMISSION.KANBAN_TASK.READ },
+			{ endpoint: "GET /admin/kanban/tasks/:taskId/comments", permission: PERMISSION.KANBAN_TASK.LIST },
+		],
+	],
+	[ROUTE_PATTERNS.kanban.editTask, [{ endpoint: "GET /admin/kanban/tasks/:taskId", permission: PERMISSION.KANBAN_TASK.READ }]],
 	[ROUTES.catalog.categories.create, []],
 	[ROUTE_PATTERNS.catalog.categories.detail, [{ endpoint: "GET /sample-category/:id", permission: PERMISSION.SAMPLE_CATEGORY.READ }]],
 	[ROUTE_PATTERNS.catalog.categories.edit, [{ endpoint: "GET /sample-category/:id", permission: PERMISSION.SAMPLE_CATEGORY.READ }]],

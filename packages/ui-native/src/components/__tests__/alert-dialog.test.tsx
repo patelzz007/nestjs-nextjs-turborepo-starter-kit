@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 import { z } from "zod";
 
 import { AlertDialog, type AlertDialogProps } from "../alert-dialog";
@@ -102,7 +102,7 @@ describe("AlertDialog", () => {
 	});
 
 	it("forwards its ref to the card", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<AlertDialog ref={ref} visible title="T" description="D" confirmLabel="OK" cancelLabel="Cancel" onConfirm={jest.fn()} onCancel={jest.fn()} />);
 		expect(ref.current).not.toBeNull();
 	});

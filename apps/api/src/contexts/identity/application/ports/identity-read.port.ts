@@ -9,6 +9,7 @@ import type {
 	PaginatedServiceResult,
 	Session,
 	SessionListQuery,
+	UserPreferences,
 } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
@@ -45,6 +46,8 @@ export interface IdentityReadPort {
 	listAdminAccounts(actor: ActorContext, query: AdminUserListQuery): Promise<PaginatedServiceResult<AdminAccountView>>;
 	findAdminAccount(actor: ActorContext, userId: string): Promise<AdminAccountView | null>;
 	findOwnProfile(actor: ActorContext, userId: string): Promise<OwnProfile | null>;
+	/** The user's live preferences the registry still accepts; a stored value it no longer accepts is left out (reads as unset). */
+	listOwnPreferences(actor: ActorContext, userId: string): Promise<UserPreferences>;
 	/** One page of the active (live, unexpired) sessions with every device detail; `isCurrent` from `currentSessionId`. */
 	listActiveSessions(actor: ActorContext, userId: string, currentSessionId: string | null, query: SessionListQuery): Promise<PaginatedServiceResult<Session>>;
 	countUnusedBackupCodes(actor: ActorContext, userId: string): Promise<number>;

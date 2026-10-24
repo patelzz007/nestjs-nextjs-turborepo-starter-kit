@@ -9,7 +9,7 @@
 
 import { cva } from "class-variance-authority";
 import * as React from "react";
-import { Text, View } from "react-native";
+import { Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { Alert } from "./alert";
@@ -32,7 +32,7 @@ export interface LoadingStateProps {
 }
 
 export const LoadingState = React.memo(
-	React.forwardRef<View, LoadingStateProps>(function LoadingState({ label, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, LoadingStateProps>(function LoadingState({ label, className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} accessible accessibilityRole="progressbar" accessibilityLabel={label} testID={testID} className={cn(loadingStateVariants(), className)}>
 				<Spinner size="lg" variant="muted" />
@@ -56,7 +56,7 @@ export interface EmptyStateProps {
 }
 
 export const EmptyState = React.memo(
-	React.forwardRef<View, EmptyStateProps>(function EmptyState({ message, title, icon, children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, EmptyStateProps>(function EmptyState({ message, title, icon, children, className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} testID={testID} className={cn(emptyStateVariants(), className)}>
 				{icon === undefined ? null : <IconTile icon={icon} />}
@@ -80,7 +80,7 @@ export interface ErrorStateProps {
 }
 
 export const ErrorState = React.memo(
-	React.forwardRef<View, ErrorStateProps>(function ErrorState({ message, retryLabel, onRetry, retrying = false, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, ErrorStateProps>(function ErrorState({ message, retryLabel, onRetry, retrying = false, className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} testID={testID} className={cn(errorStateVariants(), className)}>
 				<Alert tone="error" message={message} />

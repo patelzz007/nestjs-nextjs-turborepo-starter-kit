@@ -7,6 +7,8 @@ import { AuditLogsController } from "../contexts/audit/presentation/http/audit-l
 import { AuditTrailController } from "../contexts/audit/presentation/http/audit-trail.controller";
 import { DataChangesController } from "../contexts/audit/presentation/http/data-changes.controller";
 import { CATALOG_READ_OPERATION } from "../contexts/catalog/application/catalog.tokens";
+import { KANBAN_READ_OPERATION } from "../contexts/kanban/application/ports/kanban.tokens";
+import { KanbanController } from "../contexts/kanban/presentation/http/kanban.controller";
 import { ProductController } from "../contexts/catalog/presentation/http/product.controller";
 import { SampleCategoryController } from "../contexts/catalog/presentation/http/sample-category.controller";
 import { EmailLogController } from "../contexts/notifications/presentation/http/email-log.controller";
@@ -170,6 +172,9 @@ const PAGE_LOAD_ROUTES: readonly (readonly [string, MetadataTarget, MetadataTarg
 	],
 	["GET /admin/rewards/pending", handlerOf(RewardsAdminRewardsController.prototype, "listPendingRewards"), RewardsAdminRewardsController, REWARDS_ADMIN_REVIEW_OPERATION],
 	["GET /admin/rewards/:rewardId", handlerOf(RewardsAdminRewardsController.prototype, "getReward"), RewardsAdminRewardsController, REWARDS_ADMIN_REVIEW_OPERATION],
+	["GET /admin/kanban/board", handlerOf(KanbanController.prototype, "board"), KanbanController, KANBAN_READ_OPERATION],
+	["GET /admin/kanban/tasks/:taskId", handlerOf(KanbanController.prototype, "task"), KanbanController, KANBAN_READ_OPERATION],
+	["GET /admin/kanban/tasks/:taskId/comments", handlerOf(KanbanController.prototype, "comments"), KanbanController, KANBAN_READ_OPERATION],
 ];
 
 /** Template renders. They do not read a table, so they have no system operation. */

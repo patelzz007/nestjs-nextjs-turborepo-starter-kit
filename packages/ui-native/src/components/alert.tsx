@@ -5,7 +5,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text, View } from "react-native";
+import { Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { Icon, type LucideIcon } from "./icon";
@@ -66,7 +66,7 @@ export interface AlertProps {
 }
 
 export const Alert = React.memo(
-	React.forwardRef<View, AlertProps>(function Alert({ tone, message, title, icon, children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, AlertProps>(function Alert({ tone, message, title, icon, children, className, testID }, ref): React.JSX.Element {
 		const isError = tone === "error";
 		const textClassName = alertTextVariants({ tone });
 		return (

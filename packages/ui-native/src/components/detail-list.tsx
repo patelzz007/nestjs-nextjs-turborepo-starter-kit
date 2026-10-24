@@ -4,7 +4,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text, View } from "react-native";
+import { Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 
@@ -58,7 +58,7 @@ export interface DetailListProps {
 }
 
 export const DetailList = React.memo(
-	React.forwardRef<View, DetailListProps>(function DetailList({ items, variant = "inline", size = "md", className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, DetailListProps>(function DetailList({ items, variant = "inline", size = "md", className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} className={cn(detailListVariants({ variant, size }), className)} testID={testID}>
 				{items.map((item: DetailItem): React.JSX.Element => (

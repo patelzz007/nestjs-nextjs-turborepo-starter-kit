@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { filterSelectOptions, SelectField, type SelectOption } from "../select-field";
 
@@ -132,7 +132,7 @@ describe("SelectField", () => {
 	});
 
 	it("forwards its ref to the trigger, merges the caller's className last and reports focus and blur", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		const onFocus = jest.fn();
 		const onBlur = jest.fn();
 		await render(

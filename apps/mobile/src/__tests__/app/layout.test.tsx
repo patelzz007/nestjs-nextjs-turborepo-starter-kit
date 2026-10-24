@@ -30,8 +30,7 @@ describe("RootLayout", () => {
 		jest
 			.mocked(createDeviceAppRuntime)
 			.mockReturnValue(createAppRuntime(testRuntimeInputs({ rawEnv: { ...TEST_RAW_ENV, isDevelopment: false, apiUrl: "http://plain.example.com" } })));
-		const view = renderRouter({ _layout: RootLayout, "config-error": ConfigErrorScreen, "(app)/index": HomeMarker }, { initialUrl: "/" });
-		await view;
+		await renderRouter({ _layout: RootLayout, "config-error": ConfigErrorScreen, "(app)/index": HomeMarker }, { initialUrl: "/" });
 
 		expect(screen.getByText("The app is not configured")).toBeOnTheScreen();
 		expect(screen.getByText("EXPO_PUBLIC_API_URL must be an https:// URL.")).toBeOnTheScreen();
@@ -46,7 +45,7 @@ describe("RootLayout with a valid environment", () => {
 	it("renders the app shell, which restores the session and opens sign-in", async () => {
 		memorySecureStore.seed("prefs.onboarding.completed", "true");
 		jest.mocked(createDeviceAppRuntime).mockReturnValue(createTestRuntime());
-		const view = renderRouter(
+		await renderRouter(
 			{
 				_layout: RootLayout,
 				"(auth)/_layout": SlotLayout,
@@ -55,7 +54,6 @@ describe("RootLayout with a valid environment", () => {
 			},
 			{ initialUrl: "/" },
 		);
-		await view;
 
 		expect(await screen.findByText("sign-in screen")).toBeOnTheScreen();
 	});
@@ -66,7 +64,7 @@ describe("RootLayout with a valid environment", () => {
 		// router falls back to the (auth) group — a Stack of several screens with no index — which
 		// must land on sign-in, not on a sibling screen or on nothing.
 		jest.mocked(createDeviceAppRuntime).mockReturnValue(createTestRuntime());
-		const view = renderRouter(
+		const view = await renderRouter(
 			{
 				_layout: RootLayout,
 				"(auth)/_layout": AuthLayout,
@@ -79,7 +77,6 @@ describe("RootLayout with a valid environment", () => {
 			},
 			{ initialUrl: "/" },
 		);
-		await view;
 
 		expect(await screen.findByText("sign-in screen")).toBeOnTheScreen();
 		expect(view.getPathname()).toBe("/sign-in");
@@ -92,8 +89,7 @@ describe("RootLayout with a valid environment", () => {
 
 describe("ConfigErrorScreen", () => {
 	it("still renders when no issue was provided", async () => {
-		const view = renderRouter({ "config-error": ConfigErrorScreen }, { initialUrl: "/config-error" });
-		await view;
+		await renderRouter({ "config-error": ConfigErrorScreen }, { initialUrl: "/config-error" });
 		expect(screen.getByText("The configuration could not be read.")).toBeOnTheScreen();
 	});
 });

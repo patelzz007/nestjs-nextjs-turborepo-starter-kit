@@ -14,6 +14,7 @@ export type RlsManifestProfile =
 	| "append_log"
 	| "file_derived"
 	| "product_catalog"
+	| "kanban_board"
 	| "reward_user"
 	| "authorization_simulation";
 
@@ -28,6 +29,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"MfaRecoveryRequest",
 		"UserAvatar",
 		"GithubAccountLink",
+		"UserPreference",
 	],
 	rbac_catalog: ["Role", "Permission", "CapabilityDefinition", "RolePermission", "UserRole", "UserPermission", "PolicyDefinition"],
 	tenant: [
@@ -81,6 +83,20 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 	append_log: ["EmailLog", "ImpersonationAuditLog"],
 	file_derived: ["FileVariant"],
 	product_catalog: ["Product", "SampleCategory"],
+	kanban_board: [
+		"KanbanColumn",
+		"KanbanPlanningColumn",
+		"KanbanExecutionColumn",
+		"KanbanLevelCounter",
+		"KanbanConversionStage",
+		"KanbanTask",
+		"KanbanTaskComment",
+		"KanbanTaskAttachment",
+		"KanbanChecklistItem",
+		"KanbanTaskWatcher",
+		"KanbanTaskLink",
+		"KanbanTaskActivity",
+	],
 	reward_user: [
 		"RewardClaim",
 		"RewardRedemption",

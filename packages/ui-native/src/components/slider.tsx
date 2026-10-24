@@ -8,7 +8,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { View, type AccessibilityActionEvent, type GestureResponderEvent, type LayoutChangeEvent } from "react-native";
+import { type AccessibilityActionEvent, type GestureResponderEvent, type LayoutChangeEvent, View, type ViewInstance } from "react-native";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { withUniwind } from "uniwind";
 
@@ -151,7 +151,7 @@ interface DragStart {
 }
 
 export const Slider = React.memo(
-	React.forwardRef<View, SliderProps>(function Slider(
+	React.forwardRef<ViewInstance, SliderProps>(function Slider(
 		{
 			value,
 			onChange,

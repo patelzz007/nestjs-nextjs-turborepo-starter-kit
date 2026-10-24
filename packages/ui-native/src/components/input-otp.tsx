@@ -11,7 +11,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text, TextInput, View, type TextInputProps } from "react-native";
+import { Text, TextInput, type TextInputInstance, type TextInputProps, View } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
@@ -114,7 +114,7 @@ export interface InputOTPProps {
 }
 
 export const InputOTP = React.memo(
-	React.forwardRef<TextInput, InputOTPProps>(function InputOTP(
+	React.forwardRef<TextInputInstance, InputOTPProps>(function InputOTP(
 		{
 			value,
 			onChange,

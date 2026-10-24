@@ -12,7 +12,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text } from "react-native";
+import { Text, type TextInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 
@@ -121,7 +121,7 @@ export interface RelativeTimeProps {
 }
 
 export const RelativeTime = React.memo(
-	React.forwardRef<Text, RelativeTimeProps>(function RelativeTime(
+	React.forwardRef<TextInstance, RelativeTimeProps>(function RelativeTime(
 		{ value, now, locale, labels = DEFAULT_RELATIVE_TIME_LABELS, timeZone, variant = "muted", size = "sm", accessibilityLabel, className, numberOfLines, testID },
 		ref,
 	): React.JSX.Element {

@@ -13,7 +13,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { View, type Text } from "react-native";
+import { type TextInstance, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { resolveControlState, type ControlState } from "../lib/control-state";
@@ -104,7 +104,7 @@ export interface FieldProps {
 }
 
 export const Field = React.memo(
-	React.forwardRef<View, FieldProps>(function Field(
+	React.forwardRef<ViewInstance, FieldProps>(function Field(
 		{ label, hint, error, invalid = false, disabled = false, loading = false, variant = "default", size = "md", children, className, testID },
 		ref,
 	): React.JSX.Element {
@@ -137,7 +137,7 @@ export interface FieldPartProps {
 
 /** The field's label. Inside a `Field` it carries the id the control is labelled by. */
 export const FieldLabel = React.memo(
-	React.forwardRef<Text, FieldPartProps>(function FieldLabel({ children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<TextInstance, FieldPartProps>(function FieldLabel({ children, className, testID }, ref): React.JSX.Element {
 		const field = useFieldContext();
 		return (
 			<Label ref={ref} nativeID={field?.labelId} testID={testID} className={cn(fieldLabelVariants({ state: field?.state ?? "default" }), className)}>
@@ -149,7 +149,7 @@ export const FieldLabel = React.memo(
 
 /** A hint under the control (format, rules). */
 export const FieldHint = React.memo(
-	React.forwardRef<Text, FieldPartProps>(function FieldHint({ children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<TextInstance, FieldPartProps>(function FieldHint({ children, className, testID }, ref): React.JSX.Element {
 		return (
 			<MutedText ref={ref} testID={testID} className={cn(className)}>
 				{children}
@@ -160,7 +160,7 @@ export const FieldHint = React.memo(
 
 /** The validation message, announced politely as an alert. Renders nothing without a message. */
 export const FieldError = React.memo(
-	React.forwardRef<Text, FieldPartProps>(function FieldError({ children, className, testID }, ref): React.JSX.Element | null {
+	React.forwardRef<TextInstance, FieldPartProps>(function FieldError({ children, className, testID }, ref): React.JSX.Element | null {
 		if (!hasContent(children)) {
 			return null;
 		}

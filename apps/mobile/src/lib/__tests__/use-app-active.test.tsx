@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react-native";
-import { AppState, type AppStateStatus, type NativeEventSubscription } from "react-native";
+import { AppState, type AppStateStatus, type EventSubscription } from "react-native";
 
 import { isForeground, useAppActive } from "../use-app-active";
 
@@ -22,7 +22,7 @@ describe("useAppActive", () => {
 	it("follows the app between the foreground and the background, and stops listening on unmount", async () => {
 		let listener: ((state: AppStateStatus) => void) | null = null;
 		const remove = jest.fn();
-		jest.spyOn(AppState, "addEventListener").mockImplementation((_type, handler): NativeEventSubscription => {
+		jest.spyOn(AppState, "addEventListener").mockImplementation((_type, handler): EventSubscription => {
 			listener = handler;
 			return { remove };
 		});

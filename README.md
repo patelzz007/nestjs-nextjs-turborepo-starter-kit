@@ -61,7 +61,7 @@
 | **Docs** | `@workspace/docs` | `3002` | Astro documentation site for `docs/` + `blog/` (see `apps/docs/README.md`) |
 | **Merchant** | `@workspace/merchant` | `3003` | Merchant portal (isolated auth cookies) |
 | **API** | `@workspace/api` | `8080` | NestJS backend — Swagger at `/v1/docs` |
-| **Mobile** | `@workspace/mobile` | `8081` (Metro) | Expo (SDK 57) iOS + Android starter shell, run in Expo Go (see `apps/mobile/README.md`) |
+| **Mobile** | `@workspace/mobile` | `8081` (Metro) | Expo (SDK 58) iOS + Android starter shell, run in Expo Go (see `apps/mobile/README.md`) |
 
 Shared packages keep the stack consistent: **`@workspace/shared`** (Zod schemas), **`@workspace/client`** (auth + typed API), **`@workspace/ui`** (presentational components).
 

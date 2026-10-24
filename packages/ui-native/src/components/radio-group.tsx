@@ -5,7 +5,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Pressable, Text, View, type NativeSyntheticEvent, type TargetedEvent } from "react-native";
+import { type NativeSyntheticEvent, Pressable, type TargetedEvent, Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState, type ControlState } from "../lib/control-state";
@@ -95,7 +95,7 @@ export interface RadioGroupProps<TValue extends RadioValue> {
 
 /** `RadioGroup` keeps its option type through `memo` and `forwardRef`. */
 export interface RadioGroupComponent {
-	<TValue extends RadioValue>(props: RadioGroupProps<TValue> & React.RefAttributes<View>): React.ReactNode;
+	<TValue extends RadioValue>(props: RadioGroupProps<TValue> & React.RefAttributes<ViewInstance>): React.ReactNode;
 	displayName?: string | undefined;
 }
 
@@ -168,7 +168,7 @@ export const RadioGroup: RadioGroupComponent = React.memo(
 			className,
 			testID,
 		}: RadioGroupProps<RadioValue>,
-		ref: React.ForwardedRef<View>,
+		ref: React.ForwardedRef<ViewInstance>,
 	): React.JSX.Element {
 		const state = resolveControlState({ disabled, loading, invalid });
 		const isInactive = isInactiveState(state);

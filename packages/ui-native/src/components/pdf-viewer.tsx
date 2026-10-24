@@ -28,14 +28,15 @@ import ZoomOutIcon from "lucide-react-native/icons/zoom-out";
 import * as React from "react";
 import {
 	FlatList,
-	PixelRatio,
-	ScrollView,
-	Text,
-	View,
 	type LayoutChangeEvent,
 	type ListRenderItemInfo,
 	type NativeScrollEvent,
 	type NativeSyntheticEvent,
+	PixelRatio,
+	ScrollView,
+	Text,
+	View,
+	type ViewInstance,
 } from "react-native";
 
 import { cn } from "../lib/cn";
@@ -170,7 +171,7 @@ function partTestId(testID: string | undefined, part: string): { readonly testID
 }
 
 export const PdfViewer = React.memo(
-	React.forwardRef<View, PdfViewerProps>(function PdfViewer(
+	React.forwardRef<ViewInstance, PdfViewerProps>(function PdfViewer(
 		{ state, renderPage, onRetry, onOpenExternally, labels, variant = "framed", className, testID },
 		ref,
 	): React.JSX.Element {

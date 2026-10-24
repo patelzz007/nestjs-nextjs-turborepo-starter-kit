@@ -1,0 +1,11 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		// The dev bundle reads @workspace/* from their TypeScript source (rspack.config.mjs), so the
+		// API starts without building them first. `build` and the tests still depend on `^build`.
+		"dev": {
+			"dependsOn": []
+		}
+	}
+}

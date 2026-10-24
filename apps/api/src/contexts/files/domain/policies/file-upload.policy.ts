@@ -10,8 +10,8 @@ export interface FileOwnerFields {
 	readonly userId: string | null;
 }
 
-/** Categories whose files belong to a person (their avatar, the pictures they attach to GitHub comments), not to a tenant. */
-const USER_OWNED_CATEGORIES: ReadonlySet<FileCategory> = new Set<FileCategory>(["USER_AVATAR", "GITHUB_COMMENT_IMAGE"]);
+/** Categories whose files belong to a person (their avatar, the pictures they attach to GitHub comments, their kanban task attachments), not to a tenant. */
+const USER_OWNED_CATEGORIES: ReadonlySet<FileCategory> = new Set<FileCategory>(["USER_AVATAR", "GITHUB_COMMENT_IMAGE", "KANBAN_TASK_ATTACHMENT"]);
 
 /**
  * The category rules every upload request must meet before a row or a ticket
@@ -49,7 +49,7 @@ export function resolveUploadOwnerId(input: Pick<FileUploadRequest, "category" |
 	});
 }
 
-/** A person-owned upload (avatar, GitHub comment picture) may only be requested by that person. */
+/** A person-owned upload (avatar, GitHub comment picture, kanban task attachment) may only be requested by that person. */
 export function isOwnPersonalUpload(actorUserId: string, input: Pick<FileUploadRequest, "userId">): boolean {
 	return input.userId === actorUserId;
 }

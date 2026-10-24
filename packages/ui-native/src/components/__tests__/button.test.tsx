@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { Button } from "../button";
 
@@ -32,7 +32,7 @@ describe("Button", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<Button ref={ref} label="Go" variant="ghost" onPress={jest.fn()} />);
 		expect(ref.current).not.toBeNull();
 	});

@@ -4,7 +4,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { View } from "react-native";
+import { View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 
@@ -28,7 +28,7 @@ export interface SeparatorProps {
 }
 
 export const Separator = React.memo(
-	React.forwardRef<View, SeparatorProps>(function Separator({ orientation = "horizontal", className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, SeparatorProps>(function Separator({ orientation = "horizontal", className, testID }, ref): React.JSX.Element {
 		return (
 			<View
 				ref={ref}

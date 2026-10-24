@@ -1,6 +1,6 @@
 ---
 title: "API reference"
-description: "Every endpoint of the API (291 operations), generated from the OpenAPI export with real seed-data samples."
+description: "Every endpoint of the API (318 operations), generated from the OpenAPI export with real seed-data samples."
 order: 1
 author: "Generated from the OpenAPI export"
 lastUpdated: 1792540800000
@@ -12,7 +12,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference
 
-Every endpoint of `apps/api` — 291 operations, 232 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+Every endpoint of `apps/api` — 318 operations, 232 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
 
 **Content type.** Every endpoint takes and returns `application/json` unless its *Content type* line names another (a file upload, a download, a live stream). Errors are always `application/json`.
 
@@ -23,7 +23,7 @@ Every endpoint of `apps/api` — 291 operations, 232 with a sample captured from
 
 | Page | Endpoints | Covers |
 | --- | --- | --- |
-| [Auth, sessions and account security](./auth-and-sessions.md) | 44 | Login, signup, email verification, password reset, two-factor authentication, MFA recovery, sessions, impersonation and support access. |
+| [Auth, sessions and account security](./auth-and-sessions.md) | 47 | Login, signup, email verification, password reset, two-factor authentication, MFA recovery, sessions, impersonation and support access. |
 | [Roles, permissions, policies and audit](./access-control.md) | 37 | Platform RBAC administration, authorization decisions, Cedar policy drafts, the capability catalog and the HTTP audit log. |
 | [Platform administration (merchants, rewards review, analytics)](./platform-admin.md) | 25 | What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales. |
 | [Merchant tenants (portal API)](./merchant-tenants.md) | 56 | Everything the merchant portal calls under /tenants/{tenantSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
@@ -35,6 +35,7 @@ Every endpoint of `apps/api` — 291 operations, 232 with a sample captured from
 | [GitHub contributions](./github.md) | 5 | Read-only summary, commit history with line counts and contributor totals of the GitHub repositories the API is configured with. |
 | [GitHub pull requests](./github-pull-requests.md) | 25 | Admins link their own fine-grained GitHub token, then list and read pull requests — conversation, commits, files with diffs, line-comment threads and edit histories — as themselves. |
 | [Sample catalog (products and categories)](./catalog-samples.md) | 16 | The reference CRUD modules every new feature copies: list/detail/create/update/soft delete/restore/bulk. |
+| [Kanban boards](./kanban.md) | 24 | The platform staff's two linked boards: the epic → feature → story → task → subtask hierarchy with item keys, moves under the board lock (optimistic locking), Move to… (a new parent), ranked item search, WIP limits, checklists, links, watchers, history, comments with files, CSV import and attachments. |
 | [System: health and version](./system.md) | 6 | Liveness, readiness and deep health probes and the API version manifest. |
 
 ## All endpoints
@@ -65,6 +66,9 @@ Every endpoint of `apps/api` — 291 operations, 232 with a sample captured from
 | POST | [`/api/v1/auth/mfa/recovery`](./auth-and-sessions.md#post-apiv1authmfarecovery) | Initiate an admin-reviewed MFA recovery request |
 | GET | [`/api/v1/auth/mfa/recovery/status`](./auth-and-sessions.md#get-apiv1authmfarecoverystatus) | Get the current MFA recovery request status |
 | GET | [`/api/v1/auth/permissions`](./auth-and-sessions.md#get-apiv1authpermissions) | Get the current session's roles and permissions |
+| GET | [`/api/v1/auth/preferences`](./auth-and-sessions.md#get-apiv1authpreferences) | The signed-in user's preferences; a key that is absent uses the page's default |
+| PUT | [`/api/v1/auth/preferences/{key}`](./auth-and-sessions.md#put-apiv1authpreferenceskey) | Remember one choice |
+| DELETE | [`/api/v1/auth/preferences/{key}`](./auth-and-sessions.md#delete-apiv1authpreferenceskey) | Reset one choice to the default (soft delete); answers the preferences left |
 | GET | [`/api/v1/auth/profile`](./auth-and-sessions.md#get-apiv1authprofile) | Get the signed-in user's own profile (name, avatar, optimistic-lock version) |
 | PATCH | [`/api/v1/auth/profile`](./auth-and-sessions.md#patch-apiv1authprofile) | Edit the signed-in user's own profile |
 | POST | [`/api/v1/auth/refresh`](./auth-and-sessions.md#post-apiv1authrefresh) | Rotate the session tokens (refresh token: the httpOnly cookie for browser client types, the { refreshToken } body for client type mobile) |
@@ -326,6 +330,30 @@ Every endpoint of `apps/api` — 291 operations, 232 with a sample captured from
 | POST | [`/api/v1/sample-category/{id}/restore`](./catalog-samples.md#post-apiv1sample-categoryidrestore) | Restore SampleCategory |
 | POST | [`/api/v1/sample-category/bulk`](./catalog-samples.md#post-apiv1sample-categorybulk) | Bulk create samplecategories |
 | POST | [`/api/v1/sample-category/bulk-delete`](./catalog-samples.md#post-apiv1sample-categorybulk-delete) | Bulk soft delete samplecategories |
+| GET | [`/api/v1/admin/kanban/board`](./kanban.md#get-apiv1adminkanbanboard) | One board: its columns left to right, each with its items top to bottom |
+| PATCH | [`/api/v1/admin/kanban/columns/{columnId}`](./kanban.md#patch-apiv1adminkanbancolumnscolumnid) | Set or clear a column's soft WIP limit (optimistic lock: send the version you read); answers that board |
+| POST | [`/api/v1/admin/kanban/columns/{columnId}/move`](./kanban.md#post-apiv1adminkanbancolumnscolumnidmove) | Move a column right of another on its board (or first); answers that board |
+| GET | [`/api/v1/admin/kanban/items`](./kanban.md#get-apiv1adminkanbanitems) | Live items of either board, by type and title (a parent or link picker), paginated |
+| GET | [`/api/v1/admin/kanban/people`](./kanban.md#get-apiv1adminkanbanpeople) | Everyone an item or a subtask can be assigned to (holds READ on KANBAN_TASK), by name |
+| GET | [`/api/v1/admin/kanban/search`](./kanban.md#get-apiv1adminkanbansearch) | Live items ranked for a lookup: the exact key first, then keys that start with the text, then titles that contain it |
+| POST | [`/api/v1/admin/kanban/tasks`](./kanban.md#post-apiv1adminkanbantasks) | Create an item at the bottom of a column of its board; the caller reports and watches it |
+| GET | [`/api/v1/admin/kanban/tasks/{taskId}`](./kanban.md#get-apiv1adminkanbantaskstaskid) | One item with its column, children, links, checklists, watchers and attachments |
+| PATCH | [`/api/v1/admin/kanban/tasks/{taskId}`](./kanban.md#patch-apiv1adminkanbantaskstaskid) | Edit an item's fields and checklists (optimistic lock: send the version you read; 409 KANBAN_TASK_STALE otherwise) |
+| DELETE | [`/api/v1/admin/kanban/tasks/{taskId}`](./kanban.md#delete-apiv1adminkanbantaskstaskid) | Soft-delete an item with no live children; the items below it move up |
+| GET | [`/api/v1/admin/kanban/tasks/{taskId}/activity`](./kanban.md#get-apiv1adminkanbantaskstaskidactivity) | An item's history, newest first (paginated) |
+| POST | [`/api/v1/admin/kanban/tasks/{taskId}/attachments`](./kanban.md#post-apiv1adminkanbantaskstaskidattachments) | Attach a READY KANBAN_TASK_ATTACHMENT file the caller uploaded (POST /files/upload-url) |
+| DELETE | [`/api/v1/admin/kanban/tasks/{taskId}/attachments/{attachmentId}`](./kanban.md#delete-apiv1adminkanbantaskstaskidattachmentsattachmentid) | Remove an attachment: its file is deleted and its stored copy purged |
+| GET | [`/api/v1/admin/kanban/tasks/{taskId}/attachments/{attachmentId}/download`](./kanban.md#get-apiv1adminkanbantaskstaskidattachmentsattachmentiddownload) | A short-lived signed URL that downloads an attachment's original upload |
+| PATCH | [`/api/v1/admin/kanban/tasks/{taskId}/checklist/{itemId}`](./kanban.md#patch-apiv1adminkanbantaskstaskidchecklistitemid) | Tick a subtask or an acceptance criterion off, or on again (a set, safe to retry); answers the item |
+| GET | [`/api/v1/admin/kanban/tasks/{taskId}/comments`](./kanban.md#get-apiv1adminkanbantaskstaskidcomments) | A task's comments, newest first (paginated) |
+| POST | [`/api/v1/admin/kanban/tasks/{taskId}/comments`](./kanban.md#post-apiv1adminkanbantaskstaskidcomments) | Comment on a task as the signed-in staff member |
+| POST | [`/api/v1/admin/kanban/tasks/{taskId}/links`](./kanban.md#post-apiv1adminkanbantaskstaskidlinks) | Link the item to another live item (blocks, blocked by, relates to); 409 when already linked. Answers the item |
+| DELETE | [`/api/v1/admin/kanban/tasks/{taskId}/links/{linkId}`](./kanban.md#delete-apiv1adminkanbantaskstaskidlinkslinkid) | Remove one of the item's links (either end); answers the item |
+| POST | [`/api/v1/admin/kanban/tasks/{taskId}/move`](./kanban.md#post-apiv1adminkanbantaskstaskidmove) | Move an item into a column of its board, right below another item (or to the top); answers that board |
+| POST | [`/api/v1/admin/kanban/tasks/{taskId}/parent`](./kanban.md#post-apiv1adminkanbantaskstaskidparent) | Move to…: put an item under another parent one level up; it keeps its column and place |
+| PUT | [`/api/v1/admin/kanban/tasks/{taskId}/watch`](./kanban.md#put-apiv1adminkanbantaskstaskidwatch) | Watch the item as the signed-in staff member (idempotent); answers the item |
+| DELETE | [`/api/v1/admin/kanban/tasks/{taskId}/watch`](./kanban.md#delete-apiv1adminkanbantaskstaskidwatch) | Stop watching the item (idempotent); answers the item |
+| POST | [`/api/v1/admin/kanban/tasks/import`](./kanban.md#post-apiv1adminkanbantasksimport) | Create several items on one board at once (a CSV import), each at the bottom of its column; all or none. Answers that board |
 | GET | [`/`](./system.md#get) | Welcome message |
 | GET | [`/health`](./system.md#get-health) | Health check (includes DB status) — deprecated alias, prefer /health/live and /health/ready |
 | GET | [`/health/deep`](./system.md#get-healthdeep) | Deep health check (DB + filesystem + external services) |

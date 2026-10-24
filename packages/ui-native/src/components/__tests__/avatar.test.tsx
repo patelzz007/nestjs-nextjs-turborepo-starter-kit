@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { AVATAR_POINTS, Avatar, initialsOf, type AvatarSize } from "../avatar";
 
@@ -55,8 +55,8 @@ describe("Avatar", () => {
 	});
 
 	it("forwards its ref, with or without a picture", async () => {
-		const initialsRef = React.createRef<View>();
-		const pictureRef = React.createRef<View>();
+		const initialsRef = React.createRef<ViewInstance>();
+		const pictureRef = React.createRef<ViewInstance>();
 		await render(
 			<>
 				<Avatar ref={initialsRef} name="Alex" imageUrl={null} />

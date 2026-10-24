@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import SettingsIcon from "lucide-react-native/icons/settings";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { ListRow } from "../list-row";
 
@@ -51,7 +51,7 @@ describe("ListRow", () => {
 	});
 
 	it("forwards its ref, merges className last and reports focus and blur", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		const onFocus = jest.fn();
 		const onBlur = jest.fn();
 		await render(<ListRow ref={ref} label="Profile" onPress={jest.fn()} onFocus={onFocus} onBlur={onBlur} className="py-4" />);

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { RadioGroup, type RadioOption } from "../radio-group";
 
@@ -94,7 +94,7 @@ describe("RadioGroup", () => {
 	});
 
 	it("forwards its ref and merges the caller's className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<RadioGroup ref={ref} label="Theme" options={OPTIONS} value="dark" onChange={jest.fn()} className="gap-4" />);
 
 		expect(ref.current).not.toBeNull();

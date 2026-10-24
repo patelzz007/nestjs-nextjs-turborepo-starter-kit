@@ -7,7 +7,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { ActivityIndicator, Pressable, Text, View, type NativeSyntheticEvent, type TargetedEvent } from "react-native";
+import { ActivityIndicator, type NativeSyntheticEvent, Pressable, type TargetedEvent, Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState, type ControlState } from "../lib/control-state";
@@ -91,7 +91,7 @@ export type ToggleGroupProps<TValue extends string> = ToggleGroupSingleProps<TVa
 
 /** `ToggleGroup` keeps its option type through `memo` and `forwardRef`. */
 export interface ToggleGroupComponent {
-	<TValue extends string>(props: ToggleGroupProps<TValue> & React.RefAttributes<View>): React.ReactNode;
+	<TValue extends string>(props: ToggleGroupProps<TValue> & React.RefAttributes<ViewInstance>): React.ReactNode;
 	displayName?: string | undefined;
 }
 
@@ -162,7 +162,7 @@ const ToggleGroupItem = React.memo(function ToggleGroupItem({
 });
 
 export const ToggleGroup: ToggleGroupComponent = React.memo(
-	React.forwardRef(function ToggleGroup(props: ToggleGroupProps<string>, ref: React.ForwardedRef<View>): React.JSX.Element {
+	React.forwardRef(function ToggleGroup(props: ToggleGroupProps<string>, ref: React.ForwardedRef<ViewInstance>): React.JSX.Element {
 		const {
 			label,
 			options,

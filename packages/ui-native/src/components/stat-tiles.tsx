@@ -5,7 +5,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text, View } from "react-native";
+import { Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 
@@ -50,7 +50,7 @@ export interface StatTilesProps {
 }
 
 export const StatTiles = React.memo(
-	React.forwardRef<View, StatTilesProps>(function StatTiles({ items, variant = "muted", size = "md", className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, StatTilesProps>(function StatTiles({ items, variant = "muted", size = "md", className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} className={cn(statTilesVariants({ variant, size }), className)} testID={testID}>
 				{items.map((item: StatTile): React.JSX.Element => (

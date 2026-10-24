@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { TextInput } from "react-native";
+import type { TextInputInstance } from "react-native";
 
 import { Input, inputVariants } from "../input";
 
@@ -79,7 +79,7 @@ describe("Input", () => {
 	});
 
 	it("forwards its ref to the TextInput and merges the caller's className last on its box", async () => {
-		const ref = React.createRef<TextInput>();
+		const ref = React.createRef<TextInputInstance>();
 		await render(<Input ref={ref} accessibilityLabel="Name" value="" onChange={jest.fn()} className="flex-1 px-6" testID="name" />);
 
 		expect(ref.current).not.toBeNull();

@@ -10,7 +10,7 @@
 import { DAY_MS, UTC_TIME_ZONE, type LocalDate } from "@workspace/shared";
 import { cva } from "class-variance-authority";
 import * as React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, type ViewInstance } from "react-native";
 
 import { calendarDayMsOf, monthWeeks, type CalendarMonth, type RangeDayRole } from "../lib/calendar";
 import { cn } from "../lib/cn";
@@ -75,7 +75,7 @@ function monthGridFormatsOf(locale: string): MonthGridFormats {
 }
 
 export const CalendarMonthGrid = React.memo(
-	React.forwardRef<View, CalendarMonthGridProps>(function CalendarMonthGrid(
+	React.forwardRef<ViewInstance, CalendarMonthGridProps>(function CalendarMonthGrid(
 		{ month, today, minDate, maxDate, locale, roleOf, onPick, isUnavailable, className, testID },
 		ref,
 	): React.JSX.Element {

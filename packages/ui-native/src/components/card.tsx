@@ -10,7 +10,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text, View } from "react-native";
+import { Text, type TextInstance, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 
@@ -37,7 +37,7 @@ export interface CardProps {
 }
 
 export const Card = React.memo(
-	React.forwardRef<View, CardProps>(function Card({ title, description, size = "md", children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, CardProps>(function Card({ title, description, size = "md", children, className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} className={cn(cardVariants({ size }), className)} testID={testID}>
 				{title === undefined ? null : (
@@ -74,7 +74,7 @@ export type CardDescriptionProps = CardTextProps;
 
 /** The title and description, stacked. */
 export const CardHeader = React.memo(
-	React.forwardRef<View, CardHeaderProps>(function CardHeader({ children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, CardHeaderProps>(function CardHeader({ children, className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} className={cn("gap-1", className)} testID={testID}>
 				{children}
@@ -85,7 +85,7 @@ export const CardHeader = React.memo(
 
 /** The card's name; announced as a header by screen readers. */
 export const CardTitle = React.memo(
-	React.forwardRef<Text, CardTitleProps>(function CardTitle({ children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<TextInstance, CardTitleProps>(function CardTitle({ children, className, testID }, ref): React.JSX.Element {
 		return (
 			<Text ref={ref} accessibilityRole="header" className={cn("font-heading text-lg text-foreground", className)} testID={testID}>
 				{children}
@@ -96,7 +96,7 @@ export const CardTitle = React.memo(
 
 /** A line on what the card is for. */
 export const CardDescription = React.memo(
-	React.forwardRef<Text, CardDescriptionProps>(function CardDescription({ children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<TextInstance, CardDescriptionProps>(function CardDescription({ children, className, testID }, ref): React.JSX.Element {
 		return (
 			<Text ref={ref} className={cn("font-sans text-sm text-muted-foreground", className)} testID={testID}>
 				{children}
@@ -107,7 +107,7 @@ export const CardDescription = React.memo(
 
 /** The card's body. */
 export const CardContent = React.memo(
-	React.forwardRef<View, CardContentProps>(function CardContent({ children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, CardContentProps>(function CardContent({ children, className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} className={cn("gap-3", className)} testID={testID}>
 				{children}
@@ -118,7 +118,7 @@ export const CardContent = React.memo(
 
 /** The card's actions, in a row. */
 export const CardFooter = React.memo(
-	React.forwardRef<View, CardFooterProps>(function CardFooter({ children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, CardFooterProps>(function CardFooter({ children, className, testID }, ref): React.JSX.Element {
 		return (
 			<View ref={ref} className={cn("flex-row flex-wrap items-center gap-2", className)} testID={testID}>
 				{children}

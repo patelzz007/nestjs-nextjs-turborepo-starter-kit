@@ -1,5 +1,5 @@
 {
-	"baseline": "20261021110415_init",
-	"reason": "Third pre-release reset: the owner regenerated the one init migration after the Store → Location merge and the account bans (multi-tenancy plan §11.11). No shared or deployed database has run the previous baseline.",
-	"since": "2026-10-21"
+	"baseline": "20261024184158_init",
+	"reason": "Fourth pre-release reset: the owner regenerated the one init migration after the kanban split (planning and execution columns, item keys, subtasks) and user preferences. No shared or deployed database has run the previous baseline.",
+	"since": "2026-10-25"
 }

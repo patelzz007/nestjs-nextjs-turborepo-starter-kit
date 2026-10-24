@@ -10,17 +10,11 @@ import { readFile } from "node:fs/promises";
 import { expect, test, type Download, type Locator } from "@playwright/test";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 
-import { adminBrowserE2eEnv } from "./browser-env.e2e";
-
 /** The development seed's pending reward (apps/api/prisma/seed/rewards.ts), shown with the three `weekend-brunch` photos. */
 const PENDING_REWARD_TITLE = "20% off weekend brunch";
 
 test.beforeEach(async ({ page }) => {
-	await page.goto("/auth/login?redirect=/rewards/review");
-	await page.getByLabel("Email").fill(adminBrowserE2eEnv.ADMIN_E2E_EMAIL);
-	await page.getByLabel("Password", { exact: true }).fill(adminBrowserE2eEnv.ADMIN_E2E_PASSWORD);
-	await page.getByRole("button", { name: "Sign in" }).click();
-	await page.waitForURL((url: URL) => url.pathname === "/rewards/review");
+	await page.goto("/rewards/review");
 	// The queue row is compact: it opens the reward's own page.
 	const row = page.getByRole("article", { name: PENDING_REWARD_TITLE });
 	await expect(row.locator('[data-slot="image-carousel"]')).toHaveCount(0);

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import * as React from "react";
-import { Text, type View } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 
 import type { CalendarMonth } from "../../lib/calendar";
 import { CalendarNavigator } from "../calendar-navigator";
@@ -98,7 +98,7 @@ describe("CalendarNavigator", () => {
 	});
 
 	it("forwards its ref to its root view, and merges the caller's className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(
 			<CalendarNavigator ref={ref} month={MAX_MONTH} minMonth={MIN_MONTH} maxMonth={MAX_MONTH} locale="en-MY" onMonthChange={jest.fn()} className="gap-4" testID="navigator">
 				<Text>days</Text>

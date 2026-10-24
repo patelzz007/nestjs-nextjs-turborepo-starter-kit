@@ -10,7 +10,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text, View } from "react-native";
+import { Text, View, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 
@@ -98,9 +98,9 @@ export function describeTableRow<TKey extends string>(columns: readonly TableCol
 }
 
 /** The element's ref reaches the table's container `View`. */
-type TableComponent = <TKey extends string>(props: TableProps<TKey> & React.RefAttributes<View>) => React.ReactNode;
+type TableComponent = <TKey extends string>(props: TableProps<TKey> & React.RefAttributes<ViewInstance>) => React.ReactNode;
 
-const TableBase = React.forwardRef<View, TableProps<string>>(function Table(
+const TableBase = React.forwardRef<ViewInstance, TableProps<string>>(function Table(
 	{ caption, columns, rows, footer, variant = "banded", size = "md", className, testID },
 	ref,
 ): React.JSX.Element {

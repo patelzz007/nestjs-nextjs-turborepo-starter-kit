@@ -661,3 +661,12 @@ export class SuperAdminRoleMissingError extends DomainError {
 }
 
 // ── Integrity ───────────────────────────────────────────────────────────────
+
+/** The preference key does not accept the value (the shared `USER_PREFERENCE_REGISTRY`). */
+export class PreferenceValueInvalidError extends DomainError {
+	public readonly code: DomainErrorCode = "VALIDATION_ERROR";
+
+	public constructor(key: string) {
+		super(`That value is not one ${key} accepts.`, { field: "value", key });
+	}
+}

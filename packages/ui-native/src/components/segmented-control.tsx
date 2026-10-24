@@ -8,7 +8,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Pressable, Text, View, type LayoutChangeEvent, type NativeSyntheticEvent, type TargetedEvent } from "react-native";
+import { type LayoutChangeEvent, type NativeSyntheticEvent, Pressable, type TargetedEvent, Text, View, type ViewInstance } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { withUniwind } from "uniwind";
 
@@ -103,7 +103,7 @@ export interface SegmentedControlProps<TValue extends string> {
 
 /** `SegmentedControl` keeps its option type through `memo` and `forwardRef`. */
 export interface SegmentedControlComponent {
-	<TValue extends string>(props: SegmentedControlProps<TValue> & React.RefAttributes<View>): React.ReactNode;
+	<TValue extends string>(props: SegmentedControlProps<TValue> & React.RefAttributes<ViewInstance>): React.ReactNode;
 	displayName?: string | undefined;
 }
 
@@ -131,7 +131,7 @@ export const SegmentedControl: SegmentedControlComponent = React.memo(
 			className,
 			testID,
 		}: SegmentedControlProps<string>,
-		ref: React.ForwardedRef<View>,
+		ref: React.ForwardedRef<ViewInstance>,
 	): React.JSX.Element {
 		const state = resolveControlState({ disabled, loading, invalid });
 		const isInactive = isInactiveState(state);

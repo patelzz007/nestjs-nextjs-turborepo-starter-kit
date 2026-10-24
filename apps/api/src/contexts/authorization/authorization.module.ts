@@ -61,6 +61,7 @@ import {
 	POLICY_TEMPLATE_COMPILER,
 	RBAC_CATALOG_READ,
 	RBAC_INSPECTION_READ,
+	PERMISSION_HOLDERS_READ,
 	REFERENCE_DATA_SYNC,
 	REQUEST_TENANT,
 	REQUEST_TENANT_RESOLVER,
@@ -113,6 +114,7 @@ import { CapabilityCatalogReader } from "./infrastructure/read/capability-catalo
 import { AuthorizationCheckerService } from "./infrastructure/read/authorization-checker.service";
 import { PermissionAuditLogReader } from "./infrastructure/read/permission-audit-log.reader";
 import { PrismaRbacCatalogReader } from "./infrastructure/read/prisma-rbac-catalog.reader";
+import { PrismaPermissionHoldersReader } from "./infrastructure/read/prisma-permission-holders.reader";
 import { PrismaRbacInspectionReadAdapter } from "./infrastructure/read/prisma-rbac-inspection.reader";
 import { RequestTenantAdapter } from "./infrastructure/read/request-tenant.adapter";
 import { createReferenceDataSyncService, systemOperationRunner } from "./infrastructure/reference-data/reference-data.composition";
@@ -232,6 +234,8 @@ import { ExpireSupportAccessGrantsHandler } from "./application/commands/expire-
 		{ provide: RBAC_CATALOG_READ, useExisting: PrismaRbacCatalogReader },
 		PrismaRbacInspectionReadAdapter,
 		{ provide: RBAC_INSPECTION_READ, useExisting: PrismaRbacInspectionReadAdapter },
+		PrismaPermissionHoldersReader,
+		{ provide: PERMISSION_HOLDERS_READ, useExisting: PrismaPermissionHoldersReader },
 		PermissionAuditLogReader,
 		{ provide: PERMISSION_AUDIT_LOG_READ, useExisting: PermissionAuditLogReader },
 		CapabilityCatalogReader,
@@ -270,6 +274,7 @@ import { ExpireSupportAccessGrantsHandler } from "./application/commands/expire-
 		REQUEST_TENANT_RESOLVER,
 		AUTHORIZATION_CACHE_INVALIDATION,
 		SUBJECT_AUTHORIZATION_READ,
+		PERMISSION_HOLDERS_READ,
 		CEDAR_POLICY_EVALUATOR,
 		ACCOUNT_DEFAULT_ROLE,
 		USER_GRANTS_READ,

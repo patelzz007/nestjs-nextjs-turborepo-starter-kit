@@ -28,6 +28,7 @@ import { integrationRedemptionsRoutes, tenantApiKeysRoutes, tenantRedemptionsRou
 import { filesRoutes } from "./contexts/files/routes";
 import { adminTenantsRoutes, tenantsRoutes, rewardsAdminTenantRoutes } from "./contexts/tenancy/routes";
 import { productRoutes, sampleCategoryRoutes } from "./contexts/catalog/routes";
+import { kanbanRoutes } from "./contexts/kanban/routes";
 import type { RouteTree } from "./route-tree";
 
 export type { RouteTree } from "./route-tree";
@@ -83,6 +84,7 @@ export const apiRoutes = {
 	},
 	sampleCategory: sampleCategoryRoutes,
 	product: productRoutes,
+	kanban: kanbanRoutes,
 } satisfies Record<string, RouteTree>;
 
 /** The full route tree — exported for type-level access. */

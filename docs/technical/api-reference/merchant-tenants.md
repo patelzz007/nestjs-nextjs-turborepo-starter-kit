@@ -1979,7 +1979,7 @@ Complete an invite-authorized KYB document upload
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.file` | object | yes |  |
-| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" \| "GITHUB_COMMENT_IMAGE" | yes |  |
+| `data.file.category` | "PRODUCT_IMAGE" \| "STORE_LOGO" \| "STORE_BANNER" \| "USER_AVATAR" \| "MERCHANT_KYB" \| "REWARD_IMAGE" \| "GITHUB_COMMENT_IMAGE" \| "KANBAN_TASK_ATTACHMENT" | yes |  |
 | `data.file.id` | string (uuid) | yes |  |
 | `data.file.mimeType` | "application/pdf" \| "image/jpeg" \| "image/png" \| "image/webp" \| "image/avif" | yes |  |
 | `data.file.originalName` | string | yes |  |

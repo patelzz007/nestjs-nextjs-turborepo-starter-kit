@@ -1,12 +1,15 @@
 import { randomUUID } from "node:crypto";
 
 import { type NestFastifyApplication } from "@nestjs/platform-fastify";
+import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { API_VERSION_PREFIX, ApiErrorResponseSchema, RewardResponseSchema } from "@workspace/shared";
 
 import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
 import { rewardImageSeedId } from "../prisma/seed/reward-images";
-import { createE2eApp, login, type LoginResult, parseSuccessEnvelope } from "./e2e-helpers";
+import { createE2eApp, login, type LoginResult, parseSuccessEnvelope, resetSeedRewardToPendingReview } from "./e2e-helpers";
+
+const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
 
 function rewardPath(rewardId: string): string {
 	return `${API_VERSION_PREFIX}/admin/rewards/${rewardId}`;
@@ -27,6 +30,13 @@ describe("Admin reward detail (e2e)", () => {
 
 	beforeAll(async () => {
 		app = await createE2eApp();
+		// The seed's pending reward auto-publishes a day after seeding; this spec reads it in review.
+		const pool = new Pool({ connectionString: DATABASE_URL });
+		try {
+			await resetSeedRewardToPendingReview(pool, REWARD_SEED_IDS.klRewardPending);
+		} finally {
+			await pool.end();
+		}
 		superAdmin = await login(app, "superadmin@example.com", "SuperAdmin@123");
 		consumer = await login(app, "user@example.com", "User@123");
 	});

@@ -11,7 +11,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Text, View } from "react-native";
+import { Text, View, type ViewInstance } from "react-native";
 import Animated from "react-native-reanimated";
 import { withUniwind } from "uniwind";
 
@@ -93,7 +93,7 @@ export interface StatusBadgeProps {
 }
 
 export const StatusBadge = React.memo(
-	React.forwardRef<View, StatusBadgeProps>(function StatusBadge(
+	React.forwardRef<ViewInstance, StatusBadgeProps>(function StatusBadge(
 		{ icon, label, accessibilityLabel, tone = "neutral", emphasized = false, pulsing = false, tabularLabel = false, className, testID },
 		ref,
 	): React.JSX.Element {
@@ -132,7 +132,7 @@ interface PulsingPillProps {
 }
 
 /** Its own component, so the breathing animation runs only while a pill pulses. */
-const PulsingPill = React.forwardRef<View, PulsingPillProps>(function PulsingPill({ className, accessibilityLabel, testID, children }, ref): React.JSX.Element {
+const PulsingPill = React.forwardRef<ViewInstance, PulsingPillProps>(function PulsingPill({ className, accessibilityLabel, testID, children }, ref): React.JSX.Element {
 	const pulseStyle = usePulseStyle();
 	return (
 		<StyledAnimatedView ref={ref} accessible accessibilityRole="text" accessibilityLabel={accessibilityLabel} className={className} style={pulseStyle} testID={testID}>

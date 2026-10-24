@@ -22,7 +22,7 @@ import OctagonXIcon from "lucide-react-native/icons/octagon-x";
 import TriangleAlertIcon from "lucide-react-native/icons/triangle-alert";
 import XIcon from "lucide-react-native/icons/x";
 import * as React from "react";
-import { PanResponder, Pressable, Text, View, type GestureResponderEvent, type LayoutChangeEvent, type PanResponderGestureState } from "react-native";
+import { type GestureResponderEvent, type LayoutChangeEvent, PanResponder, type PanResponderGestureState, Pressable, Text, View, type ViewInstance } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { withUniwind } from "uniwind";
@@ -120,7 +120,7 @@ export interface ToastProps {
 }
 
 export const Toast = React.memo(
-	React.forwardRef<View, ToastProps>(function Toast(
+	React.forwardRef<ViewInstance, ToastProps>(function Toast(
 		{ tone, message, durationMs, offscreenOffset, leaving, onDismiss, onLeft, size = "md", dismissLabel = DEFAULT_DISMISS_LABEL, className, testID },
 		ref,
 	): React.JSX.Element {

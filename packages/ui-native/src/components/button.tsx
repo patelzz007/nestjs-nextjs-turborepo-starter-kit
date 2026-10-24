@@ -4,7 +4,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { ActivityIndicator, Pressable, Text, type GestureResponderEvent, type NativeSyntheticEvent, type TargetedEvent, type View } from "react-native";
+import { ActivityIndicator, type GestureResponderEvent, type NativeSyntheticEvent, Pressable, type TargetedEvent, Text, type ViewInstance } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
@@ -85,7 +85,7 @@ export interface ButtonProps {
 }
 
 export const Button = React.memo(
-	React.forwardRef<View, ButtonProps>(function Button(
+	React.forwardRef<ViewInstance, ButtonProps>(function Button(
 		{
 			label,
 			onPress,

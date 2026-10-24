@@ -82,8 +82,13 @@ JSON Schema once and validates with **Ajv** (type coercion for query and path va
 `schema.safeParse()` on the coerced value, so transforms, defaults and refinements still apply —
 zod stays the single contract. `@ZodListQuery` uses zod only, because its bracket grammar is
 normalized first. Every JSON-Schema `format` the contracts emit must be registered in
-`AJV_STRING_FORMATS` (a guard test fails otherwise). `warmupAjvValidators` compiles the validators
-right after the server starts listening.
+`AJV_STRING_FORMATS` (a guard test fails otherwise). Every pipe compiles with one shared Ajv
+instance into one shared cache, so a schema is compiled once for the whole API. `warmupAjvValidators`
+(`ajv-warmup.ts`) compiles all of them only once the server is listening and healthy, eight at a time
+with the event loop free between batches, so it never delays startup or a request (about 1.7 s of
+background work; a request that needs a schema first compiles it itself). Before 2026-10-25 it ran
+mid-boot — `setImmediate` queued before the first `await`, so it fired before `listen` — and filled a
+cache no pipe read: boot took ~3.3 s, now ~1 s.
 
 ## Tests
 

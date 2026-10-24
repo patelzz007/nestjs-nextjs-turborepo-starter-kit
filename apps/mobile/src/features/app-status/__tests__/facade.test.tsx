@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react-native";
 import * as React from "react";
-import { AppState, type AppStateStatus, type NativeEventSubscription } from "react-native";
+import { AppState, type AppStateStatus, type EventSubscription } from "react-native";
 
 import { dynamic, fail, ok, stubApi, type ApiStub, type StubResponse } from "../../../../test/api-stub";
 import { AppProviders, createTestRuntime } from "../../../../test/app-harness";
@@ -47,7 +47,7 @@ interface Harness {
 
 async function renderAppStatus(): Promise<Harness> {
 	let appStateListener: ((state: AppStateStatus) => void) | null = null;
-	jest.spyOn(AppState, "addEventListener").mockImplementation((_type, handler): NativeEventSubscription => {
+	jest.spyOn(AppState, "addEventListener").mockImplementation((_type, handler): EventSubscription => {
 		appStateListener = handler;
 		return { remove: jest.fn() };
 	});

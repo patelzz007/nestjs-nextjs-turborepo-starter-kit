@@ -1,7 +1,7 @@
 import type { LocalDate } from "@workspace/shared";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import type { CalendarMonth, RangeDayRole } from "../../lib/calendar";
 import { CalendarMonthGrid } from "../calendar-month-grid";
@@ -69,7 +69,7 @@ describe("CalendarMonthGrid", () => {
 	});
 
 	it("forwards its ref to its root view, and merges the caller's className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await renderGrid({ ref, className: "gap-1 px-2" });
 		expect(ref.current).not.toBeNull();
 		const className = String(screen.getByTestId("grid").props.className);

@@ -12,7 +12,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { ActivityIndicator, TextInput, View, type TextInputProps } from "react-native";
+import { ActivityIndicator, TextInput, type TextInputInstance, type TextInputProps, View } from "react-native";
 
 import { cn } from "../lib/cn";
 import { isInactiveState, resolveControlState } from "../lib/control-state";
@@ -115,7 +115,7 @@ export interface InputProps extends PassThroughInputProps {
 }
 
 export const Input = React.memo(
-	React.forwardRef<TextInput, InputProps>(function Input(
+	React.forwardRef<TextInputInstance, InputProps>(function Input(
 		{
 			value,
 			onChange,

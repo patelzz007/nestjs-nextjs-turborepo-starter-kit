@@ -1,6 +1,6 @@
 # `@workspace/mobile` — the Expo app
 
-The starter's iOS and Android app: Expo SDK 57 (React Native 0.86, React 19.2), Expo Router,
+The starter's iOS and Android app: Expo SDK 58 (React Native 0.88, React 19.3), Expo Router,
 Uniwind on Tailwind v4, TanStack Query / Form and Zustand feature stores, all in strict TypeScript.
 It is a **generic starter shell**, not a product: sign-in with every step the API can ask for
 (password → authenticator or backup code → emailed new-device code), forced 2FA enrollment, sign-up,
@@ -64,7 +64,7 @@ test/                test harness: fetch stub, in-memory secret store, JWTs, fix
 1. Install the repo (`pnpm install` at the root) and set up the API as the root README describes.
 2. Create (or reuse) a **free Expo account** at expo.dev. No paid plan, no EAS, no store accounts.
 3. Install **Expo Go** from the App Store / Google Play on each test phone and sign in to it with
-   that account (Expo Go requires a signed-in account on SDK 57).
+   that account (Expo Go requires a signed-in account).
 4. Sign in on the dev machine too: `npx expo login` (from `apps/mobile`).
 5. Put the phone and the dev machine on the **same network** (the phone loads the bundle and calls
    the API over it).
@@ -93,7 +93,7 @@ dev machine's address: set `EXPO_PUBLIC_API_URL` to an address the phone can rea
 
 | Command                                     | What it does                                                                                                          |
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `pnpm --filter @workspace/mobile dev`       | `expo start` (same as `pnpm dev:mobile` from the root)                                                                |
+| `pnpm --filter @workspace/mobile dev`       | `expo start --clear` (same as `pnpm dev:mobile` from the root): Metro's cache is rebuilt on every start, so a change to `babel.config.js`, `metro.config.js` or an upgraded dependency never runs on stale transforms |
 | `pnpm --filter @workspace/mobile lint`      | ESLint, zero errors                                                                                                 |
 | `pnpm --filter @workspace/mobile typecheck` | `tsc --noEmit` with the repo's strict flags                                                                           |
 | `pnpm --filter @workspace/mobile test`      | jest-expo suites, then `expo install --check` (SDK version drift fails)                                               |
@@ -256,12 +256,13 @@ Details: [ADR 056](../../docs/adr/056-in-house-pdf-viewer.md) and
   moves the app. Route params are parsed with zod (`useRouteParams`).
 - Where code goes (app vs shared package): [`rules/01`](../../rules/01-repository-architecture.md).
 
-### Versions installed (SDK 57)
+### Versions installed (SDK 58)
 
-`expo` 57.0.27, `react` 19.2.3, `react-native` 0.86.3, `expo-router` 57.0.25, `uniwind` 1.12.2 +
-`tailwindcss` 4.3.3, `jest-expo` 57.0.5 + `jest` 29.7.0 + `@react-native/jest-preset` 0.86.3 +
-`@testing-library/react-native` 14.0.1, Metro 0.84.5 (pinned so Uniwind uses the Metro Expo runs).
-`package.json` is the source of truth.
+`expo` 58.0.19, `react` 19.3.0, `react-native` 0.88.0, `expo-router` 58.0.26, `react-native-reanimated`
+4.7.1, `uniwind` 1.13.0 + `tailwindcss` 4.3.3, `jest-expo` 58.0.12 + `jest` 30.5.2 +
+`@react-native/jest-preset` 0.88.0 + `@testing-library/react-native` 14.1.0, Metro 0.87.1 (pinned so
+Uniwind uses the Metro Expo runs). `package.json` is the source of truth; what the SDK 58 upgrade
+changed and why: [`mobile-app.md` §9.11](../../docs/technical/mobile/mobile-app.md#911-the-sdk-58-upgrade).
 
 ## Environment variables
 

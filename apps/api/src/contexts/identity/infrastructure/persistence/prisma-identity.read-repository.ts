@@ -6,6 +6,9 @@ import {
 	assertNever,
 	epochMs,
 	nowEpochMs,
+	parseUserPreferenceValue,
+	UserPreferenceKeySchema,
+	UserPreferenceValueSchema,
 	type AdminMfaRecoveryListQuery,
 	type AdminMfaRecoveryListSortField,
 	type AdminMfaRecoveryRequest,
@@ -20,6 +23,8 @@ import {
 	type SessionListQuery,
 	type SessionListSortField,
 	sessionListQuery,
+	type UserPreference,
+	type UserPreferences,
 } from "@workspace/shared";
 
 import { PublicUrlResolver } from "../../../../config/public-url.resolver";
@@ -250,6 +255,20 @@ export class PrismaIdentityReadRepository implements IdentityReadPort {
 
 	public findOwnProfile(actor: ActorContext, userId: string): Promise<OwnProfile | null> {
 		return this.asActor(actor, (db) => readOwnProfile(db, userId, this.publicUrls.resolve));
+	}
+
+	public listOwnPreferences(actor: ActorContext, userId: string): Promise<UserPreferences> {
+		return this.asActor(actor, async (db): Promise<UserPreferences> => {
+			const rows = await db.userPreference.findMany({ where: { userId, isDeleted: false }, orderBy: [{ key: "asc" }], select: { key: true, value: true, version: true } });
+			return {
+				preferences: rows.flatMap((row): UserPreference[] => {
+					const key = UserPreferenceKeySchema.safeParse(row.key);
+					const value = UserPreferenceValueSchema.safeParse(row.value);
+					const accepted = key.success && value.success ? parseUserPreferenceValue(key.data, value.data) : null;
+					return key.success && accepted !== null ? [{ key: key.data, value: accepted, version: row.version }] : [];
+				}),
+			};
+		});
 	}
 
 	public listActiveSessions(actor: ActorContext, userId: string, currentSessionId: string | null, query: SessionListQuery): Promise<PaginatedServiceResult<Session>> {

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { DetailList, type DetailItem } from "../detail-list";
 
@@ -27,7 +27,7 @@ describe("DetailList", () => {
 	});
 
 	it("forwards its ref and merges the caller's className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<DetailList ref={ref} items={ITEMS} className="mt-2 gap-4" testID="details" />);
 
 		expect(ref.current).not.toBeNull();

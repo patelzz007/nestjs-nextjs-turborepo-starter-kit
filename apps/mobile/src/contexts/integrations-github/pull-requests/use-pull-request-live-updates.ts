@@ -38,7 +38,7 @@ export interface PullRequestLiveUpdates {
 const streamingFetch: StreamingFetch = (url, init) => expoFetch(url, { headers: init.headers, signal: init.signal });
 
 /** In the foreground — anything but backgrounded or inactive (the OS may report `unknown` before its first change). */
-function isForeground(state: AppStateStatus | null): boolean {
+function isForeground(state: string | null | undefined): boolean {
 	return state !== "background" && state !== "inactive";
 }
 

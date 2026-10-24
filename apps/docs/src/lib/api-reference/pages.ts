@@ -115,6 +115,14 @@ export const REFERENCE_PAGES: readonly ReferencePage[] = [
 		tags: ["Product", "SampleCategory", "Sample Category"],
 	},
 	{
+		slug: "kanban",
+		title: "Kanban boards",
+		description:
+			"The platform staff's two linked boards: the epic → feature → story → task → subtask hierarchy with item keys, moves under the board lock (optimistic locking), Move to… (a new parent), ranked item search, WIP limits, checklists, links, watchers, history, comments with files, CSV import and attachments.",
+		guide: { label: "Kanban boards guide", href: "../kanban.md" },
+		tags: ["Kanban"],
+	},
+	{
 		slug: "system",
 		title: "System: health and version",
 		description: "Liveness, readiness and deep health probes and the API version manifest.",

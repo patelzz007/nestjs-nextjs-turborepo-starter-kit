@@ -5,7 +5,7 @@
 
 import { cva } from "class-variance-authority";
 import * as React from "react";
-import { View, type ViewStyle } from "react-native";
+import { View, type ViewInstance, type ViewStyle } from "react-native";
 
 import { cn } from "../lib/cn";
 
@@ -21,7 +21,7 @@ export interface AspectRatioProps {
 }
 
 export const AspectRatio = React.memo(
-	React.forwardRef<View, AspectRatioProps>(function AspectRatio({ ratio, children, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, AspectRatioProps>(function AspectRatio({ ratio, children, className, testID }, ref): React.JSX.Element {
 		// The ratio is a caller's number, not a token, so it is the one value set as a style; one object per ratio.
 		const ratioStyle = React.useMemo((): ViewStyle => ({ aspectRatio: ratio }), [ratio]);
 		return (

@@ -100,6 +100,24 @@ export interface GithubPullRequestScope extends ScopeFields {
 	readonly number: number;
 }
 
+/** The cache root of every kanban query (`["kanban", …]`): invalidate it after a board change. */
+export const KANBAN_QUERY_ROOT = "kanban";
+
+/** The fields a kanban board query's cache scope reads: which of the two boards. */
+export interface KanbanBoardScope extends ScopeFields {
+	readonly board: string;
+}
+
+/** The fields a kanban task query's cache scope reads. */
+export interface KanbanTaskScope extends ScopeFields {
+	readonly taskId: string;
+}
+
+/** The fields a kanban attachment query's cache scope reads. */
+export interface KanbanAttachmentScope extends KanbanTaskScope {
+	readonly attachmentId: string;
+}
+
 /** First element of every pull-request query key: invalidating it reloads every pull-request view (after linking or unlinking). */
 export const GITHUB_PULL_REQUESTS_QUERY_ROOT = "github-pull-requests";
 
@@ -503,6 +521,11 @@ export const apiRouter = {
 		profile: defineQuery(apiContract.auth.profile, { scope: (): ApiQueryKey => ["auth", "profile"] }),
 		/** Edits the own profile — refresh `profile` and `me` after it (see `useUpdateOwnProfile`). */
 		updateProfile: defineMutation(apiContract.auth.updateProfile),
+		/** The signed-in user's remembered choices (board grouping, Show subtasks). */
+		preferences: defineQuery(apiContract.auth.preferences, { scope: (): ApiQueryKey => ["auth", "preferences"] }),
+		setPreference: defineMutation(apiContract.auth.setPreference),
+		/** "Reset to default" — answers the preferences left. */
+		resetPreference: defineMutation(apiContract.auth.resetPreference),
 		/** Session roles + permissions — refetch after RBAC mutations. */
 		permissions: defineQuery(apiContract.auth.permissions, { scope: (): ApiQueryKey => ["auth", "permissions"] }),
 		/** Very basic protected endpoint — proves the access token is valid and answers "who am I + when does my token expire" with no DB work. */
@@ -853,6 +876,45 @@ export const apiRouter = {
 		update: defineMutation(apiContract.sampleCategory.update),
 		delete: defineMutation(apiContract.sampleCategory.delete),
 		restore: defineMutation(apiContract.sampleCategory.restore),
+	},
+	kanban: {
+		/** One whole board — moves answer it too: set it with `queryClient.setQueryData`. */
+		board: defineQuery(apiContract.kanban.board, { scope: ({ board }: KanbanBoardScope): ApiQueryKey => [KANBAN_QUERY_ROOT, "board", board] }),
+		/** Everyone an item can be assigned to. */
+		people: defineQuery(apiContract.kanban.people, { scope: (): ApiQueryKey => [KANBAN_QUERY_ROOT, "people"] }),
+		/** Live items of either board for a parent or link picker. */
+		items: defineQuery(apiContract.kanban.items, { scope: (): ApiQueryKey => [KANBAN_QUERY_ROOT, "items"] }),
+		/** Items ranked by key, then title — the command palette and the Move to… picker. */
+		search: defineQuery(apiContract.kanban.search, { scope: (): ApiQueryKey => [KANBAN_QUERY_ROOT, "search"] }),
+		createTask: defineMutation(apiContract.kanban.createTask),
+		/** Several items at once (CSV import); answers their board. */
+		importTasks: defineMutation(apiContract.kanban.importTasks),
+		task: defineQuery(apiContract.kanban.task, { scope: ({ taskId }: KanbanTaskScope): ApiQueryKey => [KANBAN_QUERY_ROOT, "task", taskId] }),
+		updateTask: defineMutation(apiContract.kanban.updateTask),
+		deleteTask: defineMutation(apiContract.kanban.deleteTask),
+		moveTask: defineMutation(apiContract.kanban.moveTask),
+		/** Move to…: a new parent one level up; answers the item's detail (undo is the same call back). */
+		moveToParent: defineMutation(apiContract.kanban.moveToParent),
+		moveColumn: defineMutation(apiContract.kanban.moveColumn),
+		/** A column's WIP limit; answers its board. */
+		updateColumn: defineMutation(apiContract.kanban.updateColumn),
+		/** One page per cursor, under the task's scope (invalidating the task refreshes its comments). */
+		comments: defineQuery(apiContract.kanban.comments, { scope: ({ taskId }: KanbanTaskScope): ApiQueryKey => [KANBAN_QUERY_ROOT, "task", taskId, "comments"] }),
+		addComment: defineMutation(apiContract.kanban.addComment),
+		/** One page of history per cursor, under the item's scope (invalidating the item refreshes it). */
+		activity: defineQuery(apiContract.kanban.activity, { scope: ({ taskId }: KanbanTaskScope): ApiQueryKey => [KANBAN_QUERY_ROOT, "task", taskId, "activity"] }),
+		/** Link, unlink, tick a checklist row, watch or unwatch: each answers the item's detail. */
+		addLink: defineMutation(apiContract.kanban.addLink),
+		removeLink: defineMutation(apiContract.kanban.removeLink),
+		setChecklistItem: defineMutation(apiContract.kanban.setChecklistItem),
+		watch: defineMutation(apiContract.kanban.watch),
+		unwatch: defineMutation(apiContract.kanban.unwatch),
+		attachFile: defineMutation(apiContract.kanban.attachFile),
+		removeAttachment: defineMutation(apiContract.kanban.removeAttachment),
+		/** A short-lived signed link: fetch it on demand (`fetchOrThrow`), never cache it. */
+		attachmentDownload: defineQuery(apiContract.kanban.attachmentDownload, {
+			scope: ({ taskId, attachmentId }: KanbanAttachmentScope): ApiQueryKey => [KANBAN_QUERY_ROOT, "task", taskId, "attachment", attachmentId],
+		}),
 	},
 	product: {
 		list: defineQuery(apiContract.product.list, { scope: (): ApiQueryKey => ["product", "list"] }),

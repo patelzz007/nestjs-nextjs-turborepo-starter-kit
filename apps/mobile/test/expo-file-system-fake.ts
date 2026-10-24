@@ -61,7 +61,7 @@ class FakeFileHandle {
 		this._bytes = bytes;
 	}
 
-	public readBytes(length: number): Uint8Array {
+	public readBytesSync(length: number): Uint8Array {
 		if (this._closed) {
 			throw new Error("The file handle is closed.");
 		}
@@ -93,7 +93,7 @@ export class File {
 		stored.set(this.uri, new Uint8Array());
 	}
 
-	public write(content: string | Uint8Array): void {
+	public writeSync(content: string | Uint8Array): void {
 		stored.set(this.uri, isStringPrimitive(content) ? new TextEncoder().encode(content) : content);
 	}
 

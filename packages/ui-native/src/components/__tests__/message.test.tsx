@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { Text, type View } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 
 import { Bubble } from "../bubble";
 import { Message } from "../message";
@@ -68,7 +68,7 @@ describe("Message", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(
 			<Message ref={ref}>
 				<Bubble text="Ref" />

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { Text, type View } from "react-native";
+import { Text, type ViewInstance } from "react-native";
 
 import { Carousel, clampCarouselIndex, defaultCarouselSlideLabel } from "../carousel";
 
@@ -158,7 +158,7 @@ describe("Carousel", () => {
 	});
 
 	it("forwards its ref", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(
 			<Carousel ref={ref} index={0} onChange={jest.fn()}>
 				{slides()}

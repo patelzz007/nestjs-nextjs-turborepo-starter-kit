@@ -12,7 +12,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import ChevronDownIcon from "lucide-react-native/icons/chevron-down";
 import ChevronUpIcon from "lucide-react-native/icons/chevron-up";
 import * as React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, type ViewInstance } from "react-native";
 import Animated, { FadeIn, FadeOut, ReduceMotion } from "react-native-reanimated";
 import { withUniwind } from "uniwind";
 
@@ -102,7 +102,7 @@ export interface CollapsibleProps {
 }
 
 export const Collapsible = React.memo(
-	React.forwardRef<View, CollapsibleProps>(function Collapsible(
+	React.forwardRef<ViewInstance, CollapsibleProps>(function Collapsible(
 		{ open, onOpenChange, children, variant = "plain", size = "md", disabled = false, invalid = false, animated = true, className, testID },
 		ref,
 	): React.JSX.Element {
@@ -138,7 +138,7 @@ export interface CollapsibleTriggerProps {
 }
 
 export const CollapsibleTrigger = React.memo(
-	React.forwardRef<View, CollapsibleTriggerProps>(function CollapsibleTrigger({ label, icon, accessibilityHint, className, testID }, ref): React.JSX.Element {
+	React.forwardRef<ViewInstance, CollapsibleTriggerProps>(function CollapsibleTrigger({ label, icon, accessibilityHint, className, testID }, ref): React.JSX.Element {
 		const { open, toggle, disabled, variant, size } = useCollapsibleContext("CollapsibleTrigger");
 		const accessibilityState = React.useMemo(() => ({ expanded: open, disabled }), [disabled, open]);
 		return (
@@ -169,7 +169,7 @@ export interface CollapsibleContentProps {
 
 /** Rendered only while open: closed content is not laid out, read or focused. */
 export const CollapsibleContent = React.memo(
-	React.forwardRef<View, CollapsibleContentProps>(function CollapsibleContent({ children, className, testID }, ref): React.JSX.Element | null {
+	React.forwardRef<ViewInstance, CollapsibleContentProps>(function CollapsibleContent({ children, className, testID }, ref): React.JSX.Element | null {
 		const { open, animated, variant } = useCollapsibleContext("CollapsibleContent");
 		if (!open) {
 			return null;

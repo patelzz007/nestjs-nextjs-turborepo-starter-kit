@@ -2,53 +2,81 @@
 	"$schema": "https://unpkg.com/syncpack@15.3.3/dist/schema.json",
 	"versionGroups": [
 		{
-			"label": "apps/mobile + packages/ui-native: React is what Expo SDK 57 pins (19.2), not the web's 19.3. Change only with `npx expo install expo@<next> --fix` (docs/technical/mobile/mobile-app.md §14.3)",
-			"dependencies": ["react"],
-			"packages": ["@workspace/mobile", "@workspace/ui-native"],
-			"pinVersion": "19.2.3"
+			"label": "apps/mobile + packages/ui-native: React Native and its @react-native/* tooling are the version Expo SDK 58 pins (0.88)",
+			"dependencies": [
+				"react-native",
+				"@react-native/**"
+			],
+			"packages": [
+				"@workspace/mobile",
+				"@workspace/ui-native"
+			],
+			"pinVersion": "0.88.0"
 		},
 		{
-			"label": "apps/mobile + packages/ui-native: React's types follow the SDK's React (expo install)",
-			"dependencies": ["@types/react"],
-			"packages": ["@workspace/mobile", "@workspace/ui-native"],
-			"pinVersion": "~19.2.18"
+			"label": "apps/mobile + packages/ui-native: Metro is the version @expo/metro bundles for SDK 58, so Uniwind's Metro peers resolve to the bundler Expo runs",
+			"dependencies": [
+				"metro",
+				"metro-cache",
+				"metro-transform-worker"
+			],
+			"packages": [
+				"@workspace/mobile",
+				"@workspace/ui-native"
+			],
+			"pinVersion": "0.87.1"
 		},
 		{
-			"label": "apps/mobile + packages/ui-native: React Native and its @react-native/* tooling are the version Expo SDK 57 pins (0.86)",
-			"dependencies": ["react-native", "@react-native/**"],
-			"packages": ["@workspace/mobile", "@workspace/ui-native"],
-			"pinVersion": "0.86.3"
+			"label": "apps/mobile + packages/ui-native: jest-expo 58 runs on Jest 30 (ADR 031)",
+			"dependencies": [
+				"jest"
+			],
+			"packages": [
+				"@workspace/mobile",
+				"@workspace/ui-native"
+			],
+			"pinVersion": "^30.5.2"
 		},
 		{
-			"label": "apps/mobile + packages/ui-native: Metro is the version @expo/metro bundles for SDK 57, so Uniwind's Metro peers resolve to the bundler Expo runs",
-			"dependencies": ["metro", "metro-cache", "metro-transform-worker"],
-			"packages": ["@workspace/mobile", "@workspace/ui-native"],
-			"pinVersion": "0.84.5"
-		},
-		{
-			"label": "apps/mobile + packages/ui-native: jest-expo 57 runs on Jest 29 (ADR 031)",
-			"dependencies": ["jest"],
-			"packages": ["@workspace/mobile", "@workspace/ui-native"],
-			"pinVersion": "^29.7.0"
-		},
-		{
-			"label": "apps/mobile + packages/ui-native: Jest's types follow the Jest that jest-expo 57 runs",
-			"dependencies": ["@types/jest"],
-			"packages": ["@workspace/mobile", "@workspace/ui-native"],
-			"pinVersion": "^29.5.14"
+			"label": "apps/mobile + packages/ui-native: Jest's types follow the Jest that jest-expo 58 runs",
+			"dependencies": [
+				"@types/jest"
+			],
+			"packages": [
+				"@workspace/mobile",
+				"@workspace/ui-native"
+			],
+			"pinVersion": "^30.0.0"
 		},
 		{
 			"label": "Shared deps must be the same version across all workspaces",
-			"dependencies": ["react", "react-dom", "zod", "typescript", "next"],
-			"packages": ["**", "!@workspace/eslint-config"],
+			"dependencies": [
+				"react",
+				"react-dom",
+				"zod",
+				"typescript",
+				"next"
+			],
+			"packages": [
+				"**",
+				"!@workspace/eslint-config"
+			],
 			"policy": "sameRange"
 		}
 	],
 	"semverGroups": [
 		{
 			"label": "Shared deps are pinned to exact versions (no ^ or ~)",
-			"dependencies": ["react", "react-dom", "zod", "typescript"],
-			"packages": ["**", "!@workspace/eslint-config"],
+			"dependencies": [
+				"react",
+				"react-dom",
+				"zod",
+				"typescript"
+			],
+			"packages": [
+				"**",
+				"!@workspace/eslint-config"
+			],
 			"range": ""
 		}
 	]

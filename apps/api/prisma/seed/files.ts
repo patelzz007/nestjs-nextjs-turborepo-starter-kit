@@ -44,8 +44,8 @@ export const FILE_SEED_IDS = Object.freeze({
 });
 
 /** Smallest well-formed documents whose magic bytes match their declared type. */
-const PDF_BYTES: Buffer = Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n", "latin1");
-const PNG_BYTES: Buffer = Buffer.from(
+export const PDF_BYTES: Buffer = Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n", "latin1");
+export const PNG_BYTES: Buffer = Buffer.from(
 	"89504e470d0a1a0a0000000d4948445200000001000000010806000000" + "1f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082",
 	"hex",
 );

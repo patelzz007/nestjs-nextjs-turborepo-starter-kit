@@ -143,8 +143,6 @@ export async function renderInApp(runtime: ReadyAppRuntime, screens: Readonly<Re
 			</AppProviders>
 		);
 	}
-	// renderRouter returns the (async) render with the router helpers attached to it.
-	const view = renderRouter({ _layout: TestRootLayout, ...screens }, { initialUrl });
-	await view;
+	const view = await renderRouter({ _layout: TestRootLayout, ...screens }, { initialUrl });
 	return { pathname: (): string => view.getPathname(), pathnameWithParams: (): string => view.getPathnameWithParams() };
 }

@@ -135,7 +135,7 @@ describe("A GitHub commit", () => {
 	});
 
 	it("opens the commit on GitHub, and explains when it cannot", async () => {
-		const openUrl = jest.spyOn(Linking, "openURL").mockRejectedValueOnce(new Error("no browser")).mockResolvedValueOnce(true);
+		const openUrl = jest.spyOn(Linking, "openURL").mockRejectedValueOnce(new Error("no browser")).mockResolvedValueOnce(undefined);
 		stubApi({ [COMMIT]: ok(githubCommitDetailJson(1)) });
 		await renderSignedIn(COMMIT_URL);
 

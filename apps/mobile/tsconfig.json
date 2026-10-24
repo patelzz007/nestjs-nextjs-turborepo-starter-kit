@@ -17,6 +17,10 @@
     "declaration": false,
     "declarationMap": false,
     "allowJs": false,
+    "moduleSuffixes": [
+      ".native",
+      ""
+    ],
     "customConditions": [
       "react-native",
       "development"

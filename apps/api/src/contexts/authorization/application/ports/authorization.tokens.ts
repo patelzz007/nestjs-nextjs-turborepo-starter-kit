@@ -7,6 +7,8 @@ export const RBAC_MUTATE_OPERATION: SystemOperationName = "authorization.rbac.mu
 export const RBAC_INSPECT_OPERATION: SystemOperationName = "authorization.rbac.inspect";
 /** Role and permission catalog lists. */
 export const RBAC_CATALOG_READ_OPERATION: SystemOperationName = "authorization.rbac.catalog.read";
+/** Who holds a permission, asked by another context (kanban assignees). */
+export const PERMISSION_HOLDERS_READ_OPERATION: SystemOperationName = "authorization.permission_holders.read";
 /** The admin capability catalog. */
 export const CAPABILITY_CATALOG_READ_OPERATION: SystemOperationName = "authorization.capability_catalog.read";
 
@@ -60,6 +62,7 @@ export const SUPER_ADMIN_BYPASS_AUDIT = Symbol("SUPER_ADMIN_BYPASS_AUDIT");
 export const REQUEST_TENANT_RESOLVER = Symbol("REQUEST_TENANT_RESOLVER");
 export const AUTHORIZATION_CACHE_INVALIDATION = Symbol("AUTHORIZATION_CACHE_INVALIDATION");
 export const SUBJECT_AUTHORIZATION_READ = Symbol("SUBJECT_AUTHORIZATION_READ");
+export const PERMISSION_HOLDERS_READ = Symbol("PERMISSION_HOLDERS_READ");
 export const CEDAR_POLICY_EVALUATOR = Symbol("CEDAR_POLICY_EVALUATOR");
 export const ACCOUNT_DEFAULT_ROLE = Symbol("ACCOUNT_DEFAULT_ROLE");
 export const AUTHORIZATION_HEALTH_INDICATOR = Symbol("AUTHORIZATION_HEALTH_INDICATOR");

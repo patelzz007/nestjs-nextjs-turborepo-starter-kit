@@ -396,7 +396,7 @@ describe("Profile — GitHub contributions", () => {
 	});
 
 	it("opens a contributor's profile on GitHub", async () => {
-		const openUrl = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+		const openUrl = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
 		stubApi(helloWorldRoutes());
 		await renderSignedIn({ profile: ProfileScreen }, "/profile");
 

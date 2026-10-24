@@ -12,70 +12,72 @@ order: 2
 
 ## Classification legend
 
-| Class | Meaning | RLS / access |
-| --- | --- | --- |
-| **GLOBAL** | Platform-wide; not tenant-scoped | Bypass or public read catalog |
-| **TENANT** | Owned by one tenant | `tenantId` + membership policies |
-| **MEMBERSHIP** | Junction between user and tenant | Membership-scoped |
-| **USER** | Owned by individual user (consumer) | `app_owns(user_id)` |
-| **OPERATIONAL** | Infrastructure; no tenant business data | System operations only |
+| Class           | Meaning                                 | RLS / access                     |
+| --------------- | --------------------------------------- | -------------------------------- |
+| **GLOBAL**      | Platform-wide; not tenant-scoped        | Bypass or public read catalog    |
+| **TENANT**      | Owned by one tenant                     | `tenantId` + membership policies |
+| **MEMBERSHIP**  | Junction between user and tenant        | Membership-scoped                |
+| **USER**        | Owned by individual user (consumer)     | `app_owns(user_id)`              |
+| **OPERATIONAL** | Infrastructure; no tenant business data | System operations only           |
 
 ## Prisma models
 
-| Model | Class | Tenant key | Notes |
-| --- | --- | --- | --- |
-| User | GLOBAL | — | Identity; own-row RLS for profile |
-| Role, Permission, RolePermission | GLOBAL | — | Platform RBAC catalog |
-| CapabilityDefinition, MerchantRoleCapability | GLOBAL | — | Capability catalog |
-| UserRole, UserPermission | GLOBAL | — | Platform role assignments |
-| PermissionAuditLog | OPERATIONAL | — | Platform RBAC audit |
-| RefreshToken, PasswordResetToken, PasswordHistory | USER | user_id | Auth artifacts |
-| BackupCode, TwoFactorPendingSetup, TwoFactorLoginChallenge | USER | user_id | MFA |
-| MfaRecoveryRequest | USER | user_id | MFA recovery |
-| ImpersonationAuditLog | OPERATIONAL | — | Legacy; superseded by SupportAccessGrant audit |
-| EmailLog | OPERATIONAL | — | Redacted operational logs |
-| Region, Subregion, Country, State, City | GLOBAL | — | Geo reference |
-| Product, SampleCategory, ProductImage | GLOBAL | — | Platform catalog |
-| Tenant | TENANT | id | Canonical tenant root |
-| TenantSlugHistory | TENANT | tenant_id | Slug alias history |
-| TenantLocation | TENANT | tenant_id | Store/site |
-| TenantMembership | MEMBERSHIP | tenant_id | User ↔ org |
-| TenantMembershipLocationScope | MEMBERSHIP | tenant_id | Location grants |
-| TenantMerchantProfile | TENANT | tenant_id | KYB/branding |
-| TenantInvitation, TenantAccessRequest | TENANT | tenant_id | Join flows |
-| TenantLifecycleEvent | OPERATIONAL | tenant_id | State transitions audit |
-| TenantPlacement | TENANT | tenant_id | Future shard/dedicated routing |
-| AuthorizationPolicyDraft/Version/Simulation | TENANT + GLOBAL | tenant_id nullable | Platform guardrails have null org |
-| SupportAccessGrant | OPERATIONAL | tenant_id | JIT support |
-| TenantEncryptionKey | TENANT | tenant_id | Envelope key metadata |
-| TenantAuditLog | TENANT | tenant_id | Security + mutation audit |
-| MerchantOrg | TENANT | tenant_id | Legacy; links to Tenant |
-| MerchantMember | MEMBERSHIP | tenant_id via org | Migrating to TenantMembership |
-| MerchantApiKey, MerchantTerminal, MerchantInvite | TENANT | tenant_id | |
-| Reward, RewardRedemption, RewardAuditLog | TENANT | tenant_id | |
-| MerchantKybDocument, MerchantKybFile, MerchantAsset | TENANT | tenant_id | |
-| StoredFile | TENANT or USER | tenant_id optional | User avatar vs org files |
-| FileVariant | TENANT or USER | via parent file | |
-| RewardClaim, RewardReferral, RewardOtpChallenge | USER | user_id | Consumer-owned |
-| RewardLegalAcceptance, RewardNotification | USER | user_id | |
-| OutboxEvent, AnalyticsEvent | OPERATIONAL | optional org tag | Metadata tagging |
-| AuditLog | CONFIDENTIAL (redacted request/response payloads, IP, User-Agent) | masked PII, secrets redacted | append-only, retention is a per-product compliance decision (ADR 025) |
-| PlatformResourceIdempotencyRecord | OPERATIONAL | — | |
-| UserAvatar | USER | user_id | |
+| Model                                                                                                                                                                                                                                           | Class                                                             | Tenant key                   | Notes                                                                                |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------ |
+| User                                                                                                                                                                                                                                            | GLOBAL                                                            | —                            | Identity; own-row RLS for profile                                                    |
+| Role, Permission, RolePermission                                                                                                                                                                                                                | GLOBAL                                                            | —                            | Platform RBAC catalog                                                                |
+| CapabilityDefinition, MerchantRoleCapability                                                                                                                                                                                                    | GLOBAL                                                            | —                            | Capability catalog                                                                   |
+| UserRole, UserPermission                                                                                                                                                                                                                        | GLOBAL                                                            | —                            | Platform role assignments                                                            |
+| PermissionAuditLog                                                                                                                                                                                                                              | OPERATIONAL                                                       | —                            | Platform RBAC audit                                                                  |
+| RefreshToken, PasswordResetToken, PasswordHistory                                                                                                                                                                                               | USER                                                              | user_id                      | Auth artifacts                                                                       |
+| BackupCode, TwoFactorPendingSetup, TwoFactorLoginChallenge                                                                                                                                                                                      | USER                                                              | user_id                      | MFA                                                                                  |
+| MfaRecoveryRequest                                                                                                                                                                                                                              | USER                                                              | user_id                      | MFA recovery                                                                         |
+| ImpersonationAuditLog                                                                                                                                                                                                                           | OPERATIONAL                                                       | —                            | Legacy; superseded by SupportAccessGrant audit                                       |
+| EmailLog                                                                                                                                                                                                                                        | OPERATIONAL                                                       | —                            | Redacted operational logs                                                            |
+| Region, Subregion, Country, State, City                                                                                                                                                                                                         | GLOBAL                                                            | —                            | Geo reference                                                                        |
+| Product, SampleCategory, ProductImage                                                                                                                                                                                                           | GLOBAL                                                            | —                            | Platform catalog                                                                     |
+| KanbanColumn (retired), KanbanPlanningColumn, KanbanExecutionColumn, KanbanLevelCounter, KanbanConversionStage, KanbanTask, KanbanTaskComment, KanbanTaskAttachment, KanbanChecklistItem, KanbanTaskWatcher, KanbanTaskLink, KanbanTaskActivity | GLOBAL                                                            | —                            | Platform staff's kanban boards (internal work notes; no customer data)               |
+| Tenant                                                                                                                                                                                                                                          | TENANT                                                            | id                           | Canonical tenant root                                                                |
+| TenantSlugHistory                                                                                                                                                                                                                               | TENANT                                                            | tenant_id                    | Slug alias history                                                                   |
+| TenantLocation                                                                                                                                                                                                                                  | TENANT                                                            | tenant_id                    | Store/site                                                                           |
+| TenantMembership                                                                                                                                                                                                                                | MEMBERSHIP                                                        | tenant_id                    | User ↔ org                                                                           |
+| TenantMembershipLocationScope                                                                                                                                                                                                                   | MEMBERSHIP                                                        | tenant_id                    | Location grants                                                                      |
+| TenantMerchantProfile                                                                                                                                                                                                                           | TENANT                                                            | tenant_id                    | KYB/branding                                                                         |
+| TenantInvitation, TenantAccessRequest                                                                                                                                                                                                           | TENANT                                                            | tenant_id                    | Join flows                                                                           |
+| TenantLifecycleEvent                                                                                                                                                                                                                            | OPERATIONAL                                                       | tenant_id                    | State transitions audit                                                              |
+| TenantPlacement                                                                                                                                                                                                                                 | TENANT                                                            | tenant_id                    | Future shard/dedicated routing                                                       |
+| AuthorizationPolicyDraft/Version/Simulation                                                                                                                                                                                                     | TENANT + GLOBAL                                                   | tenant_id nullable           | Platform guardrails have null org                                                    |
+| SupportAccessGrant                                                                                                                                                                                                                              | OPERATIONAL                                                       | tenant_id                    | JIT support                                                                          |
+| TenantEncryptionKey                                                                                                                                                                                                                             | TENANT                                                            | tenant_id                    | Envelope key metadata                                                                |
+| TenantAuditLog                                                                                                                                                                                                                                  | TENANT                                                            | tenant_id                    | Security + mutation audit                                                            |
+| MerchantOrg                                                                                                                                                                                                                                     | TENANT                                                            | tenant_id                    | Legacy; links to Tenant                                                              |
+| MerchantMember                                                                                                                                                                                                                                  | MEMBERSHIP                                                        | tenant_id via org            | Migrating to TenantMembership                                                        |
+| MerchantApiKey, MerchantTerminal, MerchantInvite                                                                                                                                                                                                | TENANT                                                            | tenant_id                    |                                                                                      |
+| Reward, RewardRedemption, RewardAuditLog                                                                                                                                                                                                        | TENANT                                                            | tenant_id                    |                                                                                      |
+| MerchantKybDocument, MerchantKybFile, MerchantAsset                                                                                                                                                                                             | TENANT                                                            | tenant_id                    |                                                                                      |
+| StoredFile                                                                                                                                                                                                                                      | TENANT or USER                                                    | tenant_id optional           | User avatar vs org files                                                             |
+| FileVariant                                                                                                                                                                                                                                     | TENANT or USER                                                    | via parent file              |                                                                                      |
+| RewardClaim, RewardReferral, RewardOtpChallenge                                                                                                                                                                                                 | USER                                                              | user_id                      | Consumer-owned                                                                       |
+| RewardLegalAcceptance, RewardNotification                                                                                                                                                                                                       | USER                                                              | user_id                      |                                                                                      |
+| OutboxEvent, AnalyticsEvent                                                                                                                                                                                                                     | OPERATIONAL                                                       | optional org tag             | Metadata tagging                                                                     |
+| AuditLog                                                                                                                                                                                                                                        | CONFIDENTIAL (redacted request/response payloads, IP, User-Agent) | masked PII, secrets redacted | append-only, retention is a per-product compliance decision (ADR 025)                |
+| PlatformResourceIdempotencyRecord                                                                                                                                                                                                               | OPERATIONAL                                                       | —                            |                                                                                      |
+| UserAvatar                                                                                                                                                                                                                                      | USER                                                              | user_id                      |                                                                                      |
+| UserPreference                                                                                                                                                                                                                                  | USER                                                              | user_id                      | A person's remembered UI choices (board grouping); no personal data beyond the owner |
 
 ## Non-database surfaces
 
-| Surface | Class | Isolation control |
-| --- | --- | --- |
-| Redis auth cache | OPERATIONAL | Key: `auth:{userId}` — not tenant data |
-| Redis authorization cache | OPERATIONAL | Include `policyVersion` |
-| Merchant React Query cache | TENANT | Key must include `tenantId` |
-| BullMQ job payloads | TENANT | Signed `TenantJobContext` |
-| S3 object paths | TENANT | `orgs/{tenantId}/...` prefix |
-| Kafka platform events | OPERATIONAL | Tenant id in envelope only. No email addresses: `email.log.updated` carries no recipient and is not keyed by it (the address stays in `EmailLog`) |
-| Analytics warehouse rows | OPERATIONAL | `tenantId` tag + row policies |
-| Webhook secrets | TENANT | Envelope-encrypted per tenant |
-| Cedar policy bundle cache | OPERATIONAL | Versioned; org-scoped tenant policies |
+| Surface                    | Class       | Isolation control                                                                                                                                 |
+| -------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Redis auth cache           | OPERATIONAL | Key: `auth:{userId}` — not tenant data                                                                                                            |
+| Redis authorization cache  | OPERATIONAL | Include `policyVersion`                                                                                                                           |
+| Merchant React Query cache | TENANT      | Key must include `tenantId`                                                                                                                       |
+| BullMQ job payloads        | TENANT      | Signed `TenantJobContext`                                                                                                                         |
+| S3 object paths            | TENANT      | `orgs/{tenantId}/...` prefix                                                                                                                      |
+| Kafka platform events      | OPERATIONAL | Tenant id in envelope only. No email addresses: `email.log.updated` carries no recipient and is not keyed by it (the address stays in `EmailLog`) |
+| Analytics warehouse rows   | OPERATIONAL | `tenantId` tag + row policies                                                                                                                     |
+| Webhook secrets            | TENANT      | Envelope-encrypted per tenant                                                                                                                     |
+| Cedar policy bundle cache  | OPERATIONAL | Versioned; org-scoped tenant policies                                                                                                             |
 
 ## Schema test requirement
 

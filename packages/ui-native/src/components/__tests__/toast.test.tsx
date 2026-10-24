@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { AccessibilityInfo, type View } from "react-native";
+import { AccessibilityInfo, type ViewInstance } from "react-native";
 import { getAnimatedStyle } from "react-native-reanimated";
 import { z } from "zod";
 
@@ -121,7 +121,7 @@ describe("Toast", () => {
 	});
 
 	it("forwards its ref to the card", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<Toast ref={ref} tone="info" message="Saved." durationMs={DURATION_MS} offscreenOffset={0} leaving={false} onDismiss={jest.fn()} onLeft={jest.fn()} />);
 		expect(ref.current).not.toBeNull();
 	});

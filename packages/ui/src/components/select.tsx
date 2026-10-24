@@ -140,7 +140,7 @@ function Select<Value, Multiple extends boolean | undefined = false>({
 	);
 
 	const handleOpenChange = useCallback(
-		(open: boolean, details: SelectPrimitive.Root.ChangeEventDetails): void => {
+		(open: boolean, details: SelectPrimitive.Root.OpenChangeEventDetails): void => {
 			if (!isOpenControlled) {
 				setOpenState(open);
 			}

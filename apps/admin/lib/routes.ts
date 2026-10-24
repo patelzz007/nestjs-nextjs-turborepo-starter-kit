@@ -116,6 +116,18 @@ export interface ComponentsRoutes {
 	readonly component: RouteBuilder;
 }
 
+export interface KanbanRoutes {
+	/**
+	 * The staff boards (in the Components section); `?board=planning|execution` picks the board and
+	 * `?view=` / `?lanes=` / `?search=` / `?priority=` / `?team=` / `?type=` / `?sort=` the view (KANBAN_BOARD_URL_STATE).
+	 */
+	readonly board: string;
+	/** One task, read-only: its details, attachments and comments. */
+	readonly task: RouteBuilder;
+	/** One task's editor. */
+	readonly editTask: RouteBuilder;
+}
+
 export interface AccountRoutes {
 	/** Section prefix — where restricted sessions land; redirects to `security`. */
 	readonly index: string;
@@ -139,6 +151,7 @@ export interface AdminRoutes {
 	readonly catalog: CatalogRoutes;
 	readonly settings: SettingsRoutes;
 	readonly components: ComponentsRoutes;
+	readonly kanban: KanbanRoutes;
 	readonly account: AccountRoutes;
 }
 
@@ -199,6 +212,9 @@ const CATALOG = "/catalog";
 const SETTINGS = "/settings";
 const ACCOUNT = "/account";
 const COMPONENTS = "/components";
+/** The board sits in the Components section (sidebar), beside the gallery, so its URL nests under it. */
+const KANBAN = `${COMPONENTS}/kanban-board`;
+const KANBAN_TASKS = `${KANBAN}/tasks`;
 
 export const ROUTES: AdminRoutes = {
 	home: APP_LINKS.admin.home,
@@ -257,6 +273,11 @@ export const ROUTES: AdminRoutes = {
 		index: COMPONENTS,
 		component: (slug: string): string => childPath(COMPONENTS, slug),
 	},
+	kanban: {
+		board: KANBAN,
+		task: (id: string): string => childPath(KANBAN_TASKS, id),
+		editTask: (id: string): string => `${childPath(KANBAN_TASKS, id)}/${EDIT_SEGMENT}`,
+	},
 	account: {
 		index: ACCOUNT,
 		profile: `${ACCOUNT}/profile`,
@@ -280,6 +301,7 @@ export interface AdminRoutePatterns {
 		readonly products: CrudRoutePatterns;
 		readonly categories: CrudRoutePatterns;
 	};
+	readonly kanban: { readonly task: string; readonly editTask: string };
 }
 
 /** Name of the dynamic segment in every admin detail page (`app/(panel)/x/[id]`). */
@@ -304,6 +326,7 @@ export const ROUTE_PATTERNS: AdminRoutePatterns = {
 		products: crudRoutePatterns(ROUTES.catalog.products.list),
 		categories: crudRoutePatterns(ROUTES.catalog.categories.list),
 	},
+	kanban: { task: `${KANBAN_TASKS}/${routeParam(ID_PARAM)}`, editTask: `${KANBAN_TASKS}/${routeParam(ID_PARAM)}/${EDIT_SEGMENT}` },
 };
 
 /**

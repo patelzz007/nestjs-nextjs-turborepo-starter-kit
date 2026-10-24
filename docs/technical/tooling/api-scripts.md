@@ -35,6 +35,12 @@ because the seed and the e2e scratch databases import it too.
 | `db:check-drift`                      | `check-drift`                      | Fails when `prisma/migrations` does not reproduce `prisma/schema.prisma` (needs `SHADOW_DATABASE_URL`). |
 | `db:check-seed-coverage`              | `check-seed-coverage`              | Fails when a table or nullable column of the seeded database is empty.                                  |
 
+`db:generate` runs `schema` before `prisma generate`, so `scripts/db.ts` loads without a generated
+Prisma client: only `generate-system-operation-scopes` and `check-seed-coverage` import it, inside
+the command (`scripts/__tests__/db-cli-imports.spec.ts` keeps it that way). After an install that
+re-creates `@prisma/client` (a new peer version gives it a new store folder), `pnpm db:generate` is
+all it takes to bring the client back.
+
 ## `scripts/dev.ts`
 
 Development only. `tunnel` and `github-webhook` refuse to run when `NODE_ENV=production`.

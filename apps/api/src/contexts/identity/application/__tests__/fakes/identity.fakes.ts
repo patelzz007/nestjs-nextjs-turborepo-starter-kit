@@ -10,6 +10,9 @@ import {
 	type RefreshTokenPayload,
 	type AccessTokenPayload,
 	type UserPermissions,
+	type UserPreference,
+	type UserPreferenceKey,
+	type UserPreferenceValue,
 } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../../platform/application/actor-context";
@@ -35,6 +38,7 @@ import type { MfaRecoveryRequestRepository } from "../../../domain/repositories/
 import type { PasswordResetTokenRepository } from "../../../domain/repositories/password-reset-token.repository";
 import type { FailedChallengeAttempt, TwoFactorEnrollmentRepository, TwoFactorLoginChallengeRepository } from "../../../domain/repositories/two-factor.repository";
 import type { UserAccountRepository } from "../../../domain/repositories/user-account.repository";
+import type { UserPreferenceRepository } from "../../../domain/repositories/user-preference.repository";
 import type { UserProfileRepository } from "../../../domain/repositories/user-profile.repository";
 import type { EmailAddress } from "../../../domain/value-objects/email-address.value-object";
 import { LockoutState, type FailedSignInOutcome } from "../../../domain/value-objects/lockout-state.value-object";
@@ -581,6 +585,41 @@ export class InMemoryIdentityUnitOfWork implements UnitOfWork<IdentityScope> {
 	}
 }
 
+/** One stored preference row. */
+export interface PreferenceRow {
+	readonly id: string;
+	readonly userId: string;
+	readonly key: UserPreferenceKey;
+	value: UserPreferenceValue;
+	version: number;
+	isDeleted: boolean;
+	deletedBy: string | null;
+}
+
+/** Preferences as rows: one live row per user and key, like the partial unique index. */
+export class InMemoryPreferences implements UserPreferenceRepository {
+	public readonly rows: PreferenceRow[] = [];
+
+	public set(id: string, userId: string, key: UserPreferenceKey, value: UserPreferenceValue): Promise<UserPreference> {
+		const live = this.rows.find((row) => row.userId === userId && row.key === key && !row.isDeleted);
+		if (live === undefined) {
+			this.rows.push({ id, userId, key, value, version: 0, isDeleted: false, deletedBy: null });
+			return Promise.resolve({ key, value, version: 0 });
+		}
+		live.value = value;
+		live.version += 1;
+		return Promise.resolve({ key, value, version: live.version });
+	}
+
+	public reset(userId: string, key: UserPreferenceKey, deletedBy: string): Promise<void> {
+		for (const row of this.rows.filter((candidate) => candidate.userId === userId && candidate.key === key && !candidate.isDeleted)) {
+			row.isDeleted = true;
+			row.deletedBy = deletedBy;
+		}
+		return Promise.resolve();
+	}
+}
+
 /** One identity transaction's worth of in-memory stores, shared across `run` calls like one database. */
 export class InMemoryIdentityStore {
 	public readonly accounts = new InMemoryUserAccounts();
@@ -591,6 +630,7 @@ export class InMemoryIdentityStore {
 	public readonly twoFactor = new InMemoryTwoFactor();
 	public readonly challenges = new InMemoryChallenges();
 	public readonly profiles = new InMemoryProfiles();
+	public readonly preferences = new InMemoryPreferences();
 	public readonly emails = new RecordingIdentityEmails();
 	public readonly requestAudit = new RecordingRequestAudit();
 	public readonly roles = new RecordingRoleAssignments();
@@ -605,6 +645,7 @@ export class InMemoryIdentityStore {
 		twoFactor: this.twoFactor,
 		challenges: this.challenges,
 		profiles: this.profiles,
+		preferences: this.preferences,
 		emails: this.emails,
 		requestAudit: this.requestAudit,
 		roles: this.roles,

@@ -8,6 +8,11 @@ const WORKSPACE_SOURCE_CONDITION = "development";
 
 const WORKSPACE_SCOPE = "@workspace/";
 
+const { createNativeRuntimeOptions } = require("./jest/native-runtime-resolver.cjs");
+
+/** Reanimated and Worklets run their JavaScript build under Jest (see native-runtime-resolver.cjs). */
+const nativeRuntimeOptions = createNativeRuntimeOptions(__dirname);
+
 /** Packages whose React Native build is ES modules only; tests load their CommonJS build. */
 const COMMONJS_UNDER_TEST_PACKAGES = ["lucide-react-native"];
 
@@ -18,7 +23,8 @@ function isCommonJsUnderTest(request) {
 	return COMMONJS_UNDER_TEST_PACKAGES.some((name) => request === name || request.startsWith(`${name}/`));
 }
 
-module.exports = (request, options) => {
+module.exports = (request, jestOptions) => {
+	const options = nativeRuntimeOptions(request, jestOptions);
 	if (request.startsWith(WORKSPACE_SCOPE)) {
 		return options.defaultResolver(request, { ...options, conditions: [...(options.conditions ?? []), WORKSPACE_SOURCE_CONDITION] });
 	}

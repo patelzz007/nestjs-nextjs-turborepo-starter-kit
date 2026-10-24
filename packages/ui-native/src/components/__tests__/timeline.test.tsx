@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 
 import { Timeline, describeTimelineItem, type TimelineItem } from "../timeline";
 
@@ -29,7 +29,7 @@ describe("Timeline", () => {
 	});
 
 	it("forwards its ref and merges className last", async () => {
-		const ref = React.createRef<View>();
+		const ref = React.createRef<ViewInstance>();
 		await render(<Timeline ref={ref} items={ITEMS} className="mt-2" testID="timeline" />);
 
 		expect(ref.current).not.toBeNull();

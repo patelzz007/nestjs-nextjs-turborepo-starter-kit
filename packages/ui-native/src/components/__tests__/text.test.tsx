@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import type { Text } from "react-native";
+import type { TextInstance } from "react-native";
 
 import { BodyText, CodeText, ErrorText, Heading, Label, MutedText, Subheading, textVariants, type TextVariant } from "../text";
 
@@ -58,7 +58,7 @@ describe("Text roles", () => {
 	});
 
 	it("passes Text props through and forwards its ref", async () => {
-		const ref = React.createRef<Text>();
+		const ref = React.createRef<TextInstance>();
 		await render(
 			<BodyText ref={ref} numberOfLines={2} testID="body">
 				Long text

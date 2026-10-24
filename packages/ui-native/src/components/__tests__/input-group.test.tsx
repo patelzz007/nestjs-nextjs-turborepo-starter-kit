@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import AtSignIcon from "lucide-react-native/icons/at-sign";
 import * as React from "react";
-import { Pressable, type Text, type TextInput } from "react-native";
+import { Pressable, type TextInputInstance, type TextInstance } from "react-native";
 
 import { InputGroup, InputGroupText } from "../input-group";
 
@@ -51,7 +51,7 @@ describe("InputGroup", () => {
 	});
 
 	it("forwards its ref to the TextInput and merges the caller's className last", async () => {
-		const ref = React.createRef<TextInput>();
+		const ref = React.createRef<TextInputInstance>();
 		await render(<InputGroup ref={ref} accessibilityLabel="Price" value="" onChange={jest.fn()} size="sm" className="rounded-full" />);
 
 		expect(ref.current).not.toBeNull();
@@ -62,7 +62,7 @@ describe("InputGroup", () => {
 	});
 
 	it("exports a text addon part that forwards its ref", async () => {
-		const ref = React.createRef<Text>();
+		const ref = React.createRef<TextInstance>();
 		await render(
 			<InputGroupText ref={ref} size="lg" className="text-foreground">
 				{UNIT}

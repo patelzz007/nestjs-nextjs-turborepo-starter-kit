@@ -208,7 +208,7 @@ function Combobox<Value, Multiple extends boolean | undefined = false>({
 	}, []);
 
 	const handleOpenChange = useCallback(
-		(open: boolean, details: ComboboxPrimitive.Root.ChangeEventDetails): void => {
+		(open: boolean, details: ComboboxPrimitive.Root.OpenChangeEventDetails): void => {
 			if (!isOpenControlled) {
 				setOpenState(open);
 			}
