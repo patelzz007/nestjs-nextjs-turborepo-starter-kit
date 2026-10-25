@@ -7,6 +7,12 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const BOARD_PATH = "/components/kanban-board";
+/**
+ * The execution board without swimlanes: by default it is split into one lane
+ * per feature, each with its own "To Do" … "Review" columns, and the two cards
+ * below sit in different features. The URL's choice outranks a saved preference.
+ */
+const FLAT_BOARD_PATH = `${BOARD_PATH}?lanes=none`;
 /** A seeded story near the top of the execution board's "To Do", so it is on screen without scrolling its column. */
 const CARD = "Download the tenant archive";
 /** The seeded story right above it. */
@@ -55,6 +61,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("a dragged card moves to another column and stays there after a reload", async ({ page }) => {
+	await page.goto(FLAT_BOARD_PATH);
+	await expect(page.getByRole("region", { name: "To Do" }).getByRole("link", { name: CARD, exact: true })).toBeVisible();
 	const review = await boxOf(page, "Review");
 	await dragCard(page, CARD, review.x + review.width / 2, review.y + 120);
 	await expect(page.getByRole("region", { name: "Review" }).getByRole("link", { name: CARD, exact: true })).toBeVisible();
