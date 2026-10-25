@@ -1,18 +1,16 @@
 // ============================================
 // indicators.ts - what the status pills say
 // ============================================
-// Pure: the connection and session states the AppStatusProvider derives, and
-// how each one reads in a pill — compact in the screens' top-right corner,
-// full in the app drawer. The same states and copy as the admin topbar's
-// NetworkStatusIndicator and SessionStatusBadge.
+// Pure: the connectivity and session states the AppStatusProvider derives, and
+// how the session reads in a pill — compact in the screens' top-right corner,
+// full in the app drawer. The same states and copy as the admin sidebar's
+// SessionStatusBadge. The connection's quality pill and sheet: network-indicators.ts.
 
 import { ApiError } from "@workspace/api-client";
 import type { SessionStatus } from "@workspace/shared";
 import ShieldIcon from "lucide-react-native/icons/shield";
 import ShieldCheckIcon from "lucide-react-native/icons/shield-check";
 import ShieldXIcon from "lucide-react-native/icons/shield-x";
-import WifiIcon from "lucide-react-native/icons/wifi";
-import WifiOffIcon from "lucide-react-native/icons/wifi-off";
 
 import type { LucideIcon } from "@workspace/ui-native/components/icon";
 import type { StatusBadgeTone } from "@workspace/ui-native/components/status-badge";
@@ -93,14 +91,7 @@ export interface StatusPillContent {
 }
 
 /** A pill with no highlight, no breathing and proportional digits — each state turns on what it needs. */
-const QUIET: Pick<StatusPillContent, "emphasized" | "pulsing" | "tabularLabel"> = { emphasized: false, pulsing: false, tabularLabel: false };
-
-export function networkPillContent(connectivity: Connectivity, compact: boolean): StatusPillContent {
-	if (connectivity === "online") {
-		return { ...QUIET, icon: WifiIcon, label: compact ? null : "Online", accessibilityLabel: "Online", tone: "success" };
-	}
-	return { ...QUIET, icon: WifiOffIcon, label: compact ? null : "Offline", accessibilityLabel: "Offline", tone: "destructive" };
-}
+export const QUIET_PILL: Pick<StatusPillContent, "emphasized" | "pulsing" | "tabularLabel"> = { emphasized: false, pulsing: false, tabularLabel: false };
 
 const FAILURE_LABELS: Readonly<Record<SessionCheckFailure, { readonly compact: string; readonly full: string; readonly spoken: string }>> = {
 	expired: { compact: "Expired", full: "Session expired", spoken: "Session expired, please sign in again" },
@@ -111,7 +102,7 @@ export function sessionPillContent(indicator: SessionIndicator, compact: boolean
 	switch (indicator.status) {
 		case "checking":
 			return {
-				...QUIET,
+				...QUIET_PILL,
 				icon: ShieldIcon,
 				label: compact ? "Checking…" : "Checking session…",
 				accessibilityLabel: "Session status: checking",
@@ -120,12 +111,12 @@ export function sessionPillContent(indicator: SessionIndicator, compact: boolean
 			};
 		case "failed": {
 			const labels = FAILURE_LABELS[indicator.failure];
-			return { ...QUIET, icon: ShieldXIcon, label: compact ? labels.compact : labels.full, accessibilityLabel: labels.spoken, tone: "destructive" };
+			return { ...QUIET_PILL, icon: ShieldXIcon, label: compact ? labels.compact : labels.full, accessibilityLabel: labels.spoken, tone: "destructive" };
 		}
 		case "verified": {
 			if (indicator.refreshed) {
 				return {
-					...QUIET,
+					...QUIET_PILL,
 					icon: ShieldCheckIcon,
 					label: compact ? "Refreshed" : "Token refreshed just now",
 					accessibilityLabel: "Session verified, token refreshed just now",
@@ -135,7 +126,7 @@ export function sessionPillContent(indicator: SessionIndicator, compact: boolean
 			}
 			if (indicator.secondsLeft === null) {
 				return {
-					...QUIET,
+					...QUIET_PILL,
 					icon: ShieldCheckIcon,
 					label: compact ? "Verified" : "Token expiry unknown",
 					accessibilityLabel: "Session verified, token expiry unknown",
@@ -144,7 +135,7 @@ export function sessionPillContent(indicator: SessionIndicator, compact: boolean
 			}
 			const timeLeft = formatTimeLeft(indicator.secondsLeft, compact);
 			return {
-				...QUIET,
+				...QUIET_PILL,
 				icon: ShieldCheckIcon,
 				label: compact ? timeLeft : `Token expires in ${timeLeft}`,
 				accessibilityLabel: `Session verified, token expires in ${timeLeft}`,

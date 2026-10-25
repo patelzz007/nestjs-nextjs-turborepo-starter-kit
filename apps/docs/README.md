@@ -47,7 +47,7 @@ are stale; `pnpm docs:api` re-renders them. Full description:
    order: 4                     # optional
    author: "Backend Team"
    lastUpdated: 1790812800000   # epoch ms, UTC midnight of the day you edited it
-   coverImage: "https://images.unsplash.com/…" # used for link previews (og:image)
+   coverImage: "https://images.unsplash.com/…" # the page's banner (PageCover.astro) and its link preview (og:image)
    tags: ["infrastructure", "messaging"]        # optional; "superseded" hides it from the sidebar
    ---
    ```
@@ -112,8 +112,8 @@ apps/docs/
   The tokens at the top of `global.css` are the only place to change any of it.
 - **Typography** — see [Typography](#typography) below.
 - **One reading column** — paragraphs, tables, code blocks and diagrams share one width
-  (`--type-measure`, ~70 characters of body copy), centred between the sidebar and the "On this
-  page" rail, so nothing juts out past the text. Content wider than the column scrolls inside its
+  (`--type-measure`, 52rem / 832px, ~85 characters of body copy — at 1440px it fills the space
+  between the sidebar and the "On this page" rail), centred between the two, so nothing juts out past the text. Content wider than the column scrolls inside its
   own frame; a table shows an edge shadow on the side that has more columns.
 - **Tables** — reference material, read across a row: no vertical rules, a tinted header, the first
   column as the row's key (text colour, medium weight), a row highlight under the pointer and
@@ -142,10 +142,21 @@ apps/docs/
   Sequence participants take the six hues in order; notes are neutral and dashed. A node the
   author styled (`classDef` / `style`) keeps the author's colours. A `;` inside sequence message
   text ends the statement — write `#59;` for a literal semicolon.
+- **Cover images** — a guide's `coverImage` (required) and a post's (optional) show as a 3:1
+  banner under the breadcrumbs (`src/components/PageCover.astro`) and as the page's link preview.
+- **Code block theme** — code has its own light / dark theme, independent of the site's: the
+  toggle in every code block's header cycles **Auto** (match the site) → **Light** → **Dark** and
+  applies to every block (`src/scripts/code-theme.ts`, stored as `docs:code-theme`, applied before
+  first paint by the bootstrap in `BaseLayout.astro`). It sets `data-code-theme` on `<html>`;
+  `global.css` re-declares the theme tokens inside `.code-block-island` and the `dark:` variant
+  follows that attribute inside code blocks only. The sidebar's active page is a solid slate pill
+  with white text (slate-900 light, slate-700 dark). The toggle renders all three states and CSS
+  shows the current one, so hydration never disagrees with the stored choice.
 - **Code blocks** — every fence renders the shared `CodeBlock` from `@workspace/ui` (the full
   ReUI port, `packages/ui/src/components/code-block.tsx`). `src/lib/markdown/code-block.ts`
   highlights each fence at build time with the component's own `highlightCode` (Shiki,
-  github-light + github-dark), renders it to HTML and embeds its props; `src/scripts/code-blocks.ts`
+  github-light + one-dark-pro, `src/lib/code-block/themes.ts`; dark code gets One Dark's own
+  charcoal `#282c34` and chrome, not the page's near-black), renders it to HTML and embeds its props; `src/scripts/code-blocks.ts`
   then hydrates it with React (only on pages that have code) so copy, wrap, folding and
   "Show more" work. Each block is its own React island with no app root above it, so
   `src/lib/code-block/element.ts` wraps it in the kit's `UiKitLabelsProvider` with the English
@@ -168,7 +179,7 @@ apps/docs/
 
 | Role             | Face                         | Size / line height / weight                         |
 | ---------------- | ---------------------------- | --------------------------------------------------- |
-| Body copy        | Atkinson Hyperlegible Next   | 16px / 1.65 / 400, at most `70ch` per line          |
+| Body copy        | Atkinson Hyperlegible Next   | 16px / 1.65 / 400, at most 52rem (~85ch) per line   |
 | Page title (h1)  | Atkinson Hyperlegible Next   | 36px (30px on phones) / 1.2 / 700, tracked −0.022em |
 | h2 · h3 · h4     | Atkinson Hyperlegible Next   | 24 · 20 · 18px / 1.2–1.35 / 600                     |
 | Card titles      | Atkinson Hyperlegible Next   | 20px / 1.35 / 600                                   |

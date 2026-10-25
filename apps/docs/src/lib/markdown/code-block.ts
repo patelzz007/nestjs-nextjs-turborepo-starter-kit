@@ -6,12 +6,13 @@ import { visit } from "unist-util-visit";
 
 import { presentationFor, type DocsCodeBlockProps } from "../code-block/props";
 import { renderCodeBlockIsland } from "../code-block/render";
+import { DOCS_CODE_BLOCK_THEMES } from "../code-block/themes";
 import { parseCodeTitle, parseHighlightLines } from "./fence-meta";
 
 /**
  * Code fences → the shared `CodeBlock` from `@workspace/ui` (the full ReUI
  * port). At build time each fence is highlighted with the component's own
- * engine (`highlightCode`: Shiki, github-light + github-dark), rendered to
+ * engine (`highlightCode`: Shiki, github-light + one-dark-pro), rendered to
  * HTML, and shipped with its props so the browser hydrates it into the live
  * component (copy, wrap, folding, expand). Fence meta:
  *
@@ -64,7 +65,7 @@ export function highlightingFailed(language: string, source: string, lines: read
 
 /** Everything the page needs to render and hydrate one fence. Throws rather than ship uncoloured code. */
 export async function codeBlockProps(source: string, language: string, meta: string): Promise<DocsCodeBlockProps> {
-	const lines = await highlightCode(source, { language, highlightedLines: [...parseHighlightLines(meta)] });
+	const lines = await highlightCode(source, { language, themes: DOCS_CODE_BLOCK_THEMES, highlightedLines: [...parseHighlightLines(meta)] });
 	if (highlightingFailed(language, source, lines)) {
 		throw new Error(`Code block (${language}) came back unhighlighted. Is preloadCodeBlockHighlighter() awaited in astro.config.ts?`);
 	}

@@ -10,8 +10,11 @@ const PALETTE_CSS = readFileSync(require.resolve("@workspace/tokens/palette.css"
 const THEME_CSS = readFileSync(new URL("../global.css", import.meta.url), "utf8");
 
 const PALETTE = readCustomProperties(PALETTE_CSS, ":root");
-const LIGHT = readCustomProperties(THEME_CSS, ":root", PALETTE);
-const DARK = readCustomProperties(THEME_CSS, '[data-theme="dark"]', LIGHT);
+/** The theme blocks' selectors: each theme also applies inside code blocks the reader set to it (src/scripts/code-theme.ts). */
+const LIGHT_SELECTOR = ':root,\n:root[data-code-theme="light"] .code-block-island';
+const DARK_SELECTOR = '[data-theme="dark"],\n:root[data-code-theme="dark"] .code-block-island';
+const LIGHT = readCustomProperties(THEME_CSS, LIGHT_SELECTOR, PALETTE);
+const DARK = readCustomProperties(THEME_CSS, DARK_SELECTOR, LIGHT);
 
 /** Every text colour the docs set, on every surface it is set on. */
 const TEXT_PAIRINGS: readonly (readonly [string, string])[] = [
@@ -22,7 +25,7 @@ const TEXT_PAIRINGS: readonly (readonly [string, string])[] = [
 	["--muted", "--surface-muted"],
 	["--brand-text", "--bg"],
 	["--brand-text", "--brand-soft"],
-	["--brand-text", "--nav-active-bg"],
+	["--nav-active-text", "--nav-active-bg"],
 	["--brand-text-hover", "--bg"],
 	["--on-brand-solid", "--brand-solid"],
 	["--on-brand-solid", "--brand-solid-hover"],
@@ -35,6 +38,15 @@ function violations(theme: ReadonlyMap<string, string>): readonly string[] {
 	});
 }
 
+/** Dark code blocks' chrome (One Dark Pro): its title, language label and line numbers on its charcoal. */
+const DARK_CODE = readCustomProperties(THEME_CSS, '[data-theme="dark"]:not([data-code-theme]) .code-block-island,\n:root[data-code-theme="dark"] .code-block-island', DARK);
+const DARK_CODE_PAIRINGS: readonly (readonly [string, string])[] = [
+	["--text", "--surface"],
+	["--muted", "--surface"],
+	["--text", "--surface-muted"],
+	["--muted", "--surface-muted"],
+];
+
 describe("docs theme contrast (WCAG AA 4.5:1 text)", () => {
 	it("meets the minimum for every text pair in the light theme", () => {
 		expect(violations(LIGHT)).toEqual([]);
@@ -42,6 +54,14 @@ describe("docs theme contrast (WCAG AA 4.5:1 text)", () => {
 
 	it("meets the minimum for every text pair in the dark theme", () => {
 		expect(violations(DARK)).toEqual([]);
+	});
+
+	it("meets the minimum for the dark code blocks' chrome (One Dark Pro)", () => {
+		const failing = DARK_CODE_PAIRINGS.flatMap(([foreground, background]): string[] => {
+			const ratio = contrastRatio(DARK_CODE.get(foreground) ?? "", DARK_CODE.get(background) ?? "");
+			return ratio >= MIN_TEXT_CONTRAST ? [] : [`${foreground} on ${background}: ${ratio.toFixed(2)}:1`];
+		});
+		expect(failing).toEqual([]);
 	});
 });
 

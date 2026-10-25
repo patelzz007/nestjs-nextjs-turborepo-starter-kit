@@ -221,11 +221,16 @@ function loadGithubDarkTheme(): Promise<ThemeInput> {
 	return import("shiki/themes/github-dark.mjs");
 }
 
+function loadOneDarkProTheme(): Promise<ThemeInput> {
+	return import("shiki/themes/one-dark-pro.mjs");
+}
+
 /* Theme names are the shiki names, so the loaders are named functions: the
    kit's naming convention rejects kebab-case object-literal methods. */
 export const codeBlockThemes: Record<string, () => Promise<ThemeInput>> = {
 	"github-light": loadGithubLightTheme,
 	"github-dark": loadGithubDarkTheme,
+	"one-dark-pro": loadOneDarkProTheme,
 	"css-variables": loadCssVariablesTheme,
 };
 

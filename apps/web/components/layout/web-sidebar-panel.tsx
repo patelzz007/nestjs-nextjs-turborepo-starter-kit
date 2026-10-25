@@ -4,6 +4,7 @@ import { useCanAccessWebPath } from "@/contexts/identity/components/route-access
 import { useWebSession } from "@/contexts/identity/components/web-authorization-provider";
 import { useWebBreadcrumb } from "@/components/breadcrumb-provider";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
+import { NetworkQualityStatus } from "@workspace/client/lib/features/network-quality/network-quality-status";
 import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import { WEB_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
 import { USER_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
@@ -129,7 +130,14 @@ export function WebSidebarPanel({ userName }: WebSidebarPanelProps): React.JSX.E
 					<ImpersonateUserPanel />
 				</div>
 				{displayName !== null ? (
-					<AppShellSidebarAccount name={displayName} email={user?.email} avatar={avatar} onLogout={handleLogout} menuItems={profileMenuItems} />
+					<AppShellSidebarAccount
+						name={displayName}
+						email={user?.email}
+						avatar={avatar}
+						onLogout={handleLogout}
+						menuItems={profileMenuItems}
+						status={<NetworkQualityStatus />}
+					/>
 				) : (
 					<div className="flex items-center justify-between gap-2 px-2 py-1">
 						<p className="text-xs text-muted-foreground">Browse as guest</p>

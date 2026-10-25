@@ -1,0 +1,543 @@
+# Continuous integration — the merge gate described in rules/13-ci-cd-and-quality-gates.md.
+# Job-by-job reference, local equivalents, and planned stages: docs/technical/operations/ci.md
+#
+# Independent jobs run in parallel. Turborepo task outputs are cached per job in
+# the GitHub Actions cache, so unchanged packages replay from cache.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Least privilege: every job only reads the repository.
+permissions:
+  contents: read
+
+# One run per PR (a new push cancels the stale run); pushes to main always finish.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  # Node.js LTS line used by CI. engines.node (>=22.12) is the floor; CI pins the
+  # line it is verified on. Bump deliberately, together with docs/getting-started.md.
+  NODE_VERSION: "24"
+  TURBO_TELEMETRY_DISABLED: "1"
+  TURBO_UI: "false"
+  # No Turborepo cache is carried between runs: every job runs its tasks for real,
+  # so a result from an earlier commit can never stand in for this one
+  # (docs/technical/operations/ci.md, "Caching").
+  DO_NOT_TRACK: "1"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Lint (zero errors, zero warnings)
+        run: pnpm turbo run lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Typecheck
+        run: pnpm turbo run typecheck
+
+  unit-test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      # One workspace's suite at a time, each using every core — as the root
+      # `test` script does (docs/technical/operations/ci.md, "Unit tests").
+      - name: Unit tests
+        run: pnpm turbo run test --concurrency=1
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The Next.js apps validate their public config (zod) at build/prerender
+      # time. These are NON-secret, browser-visible values; CI only proves the
+      # apps build, so the local-dev origins from the apps' .env.example files
+      # are used. Turborepo's Next.js framework inference hashes NEXT_PUBLIC_*.
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_WEB_URL: http://localhost:3000
+      NEXT_PUBLIC_ADMIN_URL: http://localhost:3001
+      NEXT_PUBLIC_MERCHANT_URL: http://localhost:3003
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Build every workspace
+        run: pnpm turbo run build
+      # Per-route first-load JS of the Next apps and the mobile Hermes bundles against
+      # bundle-budgets.json (baseline + 10%, decision #57). Raising a budget is a reviewed edit.
+      - name: Bundle budgets
+        run: pnpm bundle:check
+
+  rls-manifest:
+    name: RLS manifest drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Generates the Prisma client (the default): the check reads the system-operation registry,
+      # which imports `Prisma` from it.
+      - name: Set up workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      # The check's script imports @workspace/shared, which a fresh checkout has not built (its
+      # package entry is dist/). ci:local hides this: it runs the check after its full build.
+      - name: Build workspace dependencies of the API
+        run: pnpm turbo run build --filter=@workspace/api^...
+      - name: Check Prisma models ↔ RLS manifest ↔ RLS SQL
+        run: pnpm --filter @workspace/api db:check-rls-manifest
+
+  dependency-consistency:
+    name: Dependency consistency
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          generate-prisma-client: "false"
+      - name: Shared dependency versions are aligned (syncpack)
+        run: pnpm turbo run deps:check
+
+  migration-history:
+    name: Migration history (committed migrations are immutable)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository (full history, for the merge base)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up workspace
+        # The guard validates apps/api/prisma/migrations-baseline.json with zod.
+        uses: ./.github/actions/setup-workspace
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          generate-prisma-client: "false"
+      - name: Reject edited, deleted or back-dated migrations
+        # PRs compare with their target branch; pushes to main with the previous
+        # tip of main; manual runs with origin/main.
+        env:
+          BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || (github.event_name == 'push' && github.event.before) || 'origin/main' }}
+        run: node packages/tooling/scripts/check-migration-history.mjs --base "$BASE_REF"
+
+  dependency-audit:
+    name: Dependency audit (high + critical advisories)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Install Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - name: pnpm audit (fails on high or critical)
+        # Reads pnpm-lock.yaml only — no install. A finding is fixed by upgrading,
+        # or by a scoped override in pnpm-workspace.yaml with the advisory id and
+        # a removal condition in its comment (see the existing overrides).
+        run: pnpm audit --audit-level=high
+
+  # The two checks below are dependency-free Node scripts: no install needed.
+  secret-scan:
+    name: Secret scan (.env.example)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - name: Reject real secrets in tracked .env.example files
+        run: node packages/tooling/scripts/check-env-example-secrets.mjs
+
+  docs-links:
+    name: Docs link check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - name: Validate internal links in docs/
+        run: node apps/docs/scripts/check-links.mjs
+
+  e2e:
+    name: Database + API e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        # Keep in step with compose.yml (local dev) — same major, same patch.
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d app_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      # Throwaway service-container database; nothing here is a real credential.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_ci?schema=public
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Write throwaway apps/api/.env
+        uses: ./.github/actions/write-api-ci-env
+        with:
+          database-url: ${{ env.DATABASE_URL }}
+          # RewardHub runs multi-tenant: the full suite runs as it will in production (MT-70).
+          tenancy-mode: multi
+
+      - name: Build workspace dependencies of the API
+        run: pnpm turbo run build --filter=@workspace/api^...
+
+      - name: Apply migrations + RLS (prisma migrate deploy → db:apply-security)
+        run: pnpm db:deploy
+
+      - name: Schema drift (prisma/migrations must reproduce prisma/schema.prisma)
+        # `prisma migrate diff --from-migrations` replays the history into a
+        # separate throwaway shadow database (Prisma wipes it every run).
+        env:
+          PGPASSWORD: postgres
+          SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_ci_shadow?schema=public
+        run: |
+          psql --host localhost --username postgres --dbname app_ci --command "CREATE DATABASE app_ci_shadow"
+          pnpm --filter @workspace/api db:check-drift
+
+      - name: Seed the development scenario (proves seed.ts matches the schema)
+        run: pnpm db:seed -- --scenario development
+
+      - name: Seed coverage (every table has rows, every nullable column holds a value)
+        # Read-only audit of the freshly seeded database, before the e2e suite
+        # writes anything: schema.prisma (DMMF) is reconciled with the live
+        # catalog, then any empty table or always-NULL nullable column fails the
+        # job unless apps/api/prisma/seed/coverage-exemptions.ts lists it with a reason.
+        run: pnpm --filter @workspace/api db:check-seed-coverage
+
+      - name: Tenant integrity (no child row references another tenant's parent)
+        run: pnpm --filter @workspace/api db:check-tenant-integrity
+
+      - name: API e2e tests (multi-tenant)
+        run: pnpm --filter @workspace/api test:e2e
+
+      - name: Tenancy isolation suite (multi-tenant, plan §8)
+        run: pnpm --filter @workspace/api test:e2e:tenancy
+
+      - name: RLS runtime-role suite (DB-001…007)
+        run: pnpm --filter @workspace/api test:e2e:rls
+
+      - name: Seed the enterprise scenario (additive; proves the scenario still runs)
+        run: pnpm db:seed -- --scenario enterprise --seed 1
+
+  e2e-single-tenant:
+    name: Single-tenant e2e + RLS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        # Keep in step with compose.yml (local dev) — same major, same patch.
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d app_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      # Throwaway service-container database; nothing here is a real credential.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_ci?schema=public
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Write throwaway apps/api/.env
+        uses: ./.github/actions/write-api-ci-env
+        with:
+          database-url: ${{ env.DATABASE_URL }}
+          # The two-tenant fixture's Tenant A (test/support/two-tenant-fixture.ts) is the default tenant.
+          tenancy-mode: single
+          default-tenant-id: 019b76da-a810-7000-8000-0000000000a1
+
+      - name: Build workspace dependencies of the API
+        run: pnpm turbo run build --filter=@workspace/api^...
+
+      - name: Apply migrations + RLS (prisma migrate deploy → db:apply-security)
+        run: pnpm db:deploy
+
+      - name: Tenancy single-mode suite (ST-001…005)
+        run: pnpm --filter @workspace/api test:e2e:tenancy:single
+
+      - name: RLS runtime-role suite (DB-001…007)
+        run: pnpm --filter @workspace/api test:e2e:rls
+
+  browser-e2e:
+    name: Browser e2e (Playwright — web + admin)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        # Keep in step with compose.yml (local dev) — same major, same patch.
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d app_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      # Throwaway service-container database; nothing here is a real credential.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_ci?schema=public
+      # Public build-time config of the Next apps (same values as the Build job).
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_WEB_URL: http://localhost:3000
+      NEXT_PUBLIC_ADMIN_URL: http://localhost:3001
+      NEXT_PUBLIC_MERCHANT_URL: http://localhost:3003
+      # The suites' own config (apps/*/e2e/browser-env.e2e.ts). The admin login is
+      # the PUBLIC seed account (apps/api/prisma/seed/users.ts), not a secret.
+      WEB_E2E_BASE_URL: http://localhost:3000
+      ADMIN_E2E_BASE_URL: http://localhost:3001
+      ADMIN_E2E_EMAIL: superadmin@example.com
+      ADMIN_E2E_PASSWORD: SuperAdmin@123
+      # The admin suite drives the kanban board, which lives in the developer component gallery: a
+      # production build serves the gallery only when it is switched on (apps/admin/lib/feature-flags.ts).
+      ADMIN_COMPONENT_GALLERY: "true"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Write throwaway apps/api/.env
+        # Same env as the API e2e job (LOGIN_VERIFICATION_MODE=disabled).
+        uses: ./.github/actions/write-api-ci-env
+        with:
+          database-url: ${{ env.DATABASE_URL }}
+          # The browser suites drive the seeded single-tenant demo (the tenant `pnpm db:seed` creates).
+          tenancy-mode: single
+          default-tenant-id: 019b76da-a800-7a94-a198-23ad1b4cfdd9
+
+      - name: Build the API, web and admin
+        run: pnpm turbo run build --filter=@workspace/api --filter=@workspace/web --filter=@workspace/admin
+
+      - name: Apply migrations + RLS, seed the development scenario
+        run: |
+          pnpm db:deploy
+          pnpm db:seed -- --scenario development
+
+      - name: Start the API, web and admin (background, logs kept)
+        run: |
+          mkdir -p .ci-logs
+          nohup pnpm --filter @workspace/api start > .ci-logs/api.log 2>&1 &
+          nohup pnpm --filter @workspace/web exec next start --port 3000 > .ci-logs/web.log 2>&1 &
+          nohup pnpm --filter @workspace/admin exec next start --port 3001 > .ci-logs/admin.log 2>&1 &
+
+      - name: Install Chromium for Playwright
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Wait for readiness (API /health/ready, web, admin login)
+        run: node packages/tooling/scripts/wait-for-http.mjs --timeout-ms 120000 http://localhost:8080/health/ready http://localhost:3000/ http://localhost:3001/auth/login
+
+      - name: Web browser suite
+        run: pnpm --filter @workspace/web test:browser
+
+      - name: Admin browser suite
+        run: pnpm --filter @workspace/admin test:browser
+
+      - name: Upload Playwright traces, reports and server logs
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/web/test-results/
+            apps/web/playwright-report/
+            apps/admin/test-results/
+            apps/admin/playwright-report/
+            .ci-logs/
+          if-no-files-found: warn
+          retention-days: 14
+
+  analytics-consumer-e2e:
+    name: Analytics consumer e2e (Postgres + Kafka)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        # Keep in step with compose.yml (local dev) — same major, same patch.
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d app_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+      kafka:
+        # Keep in step with compose.yml — single-node KRaft broker, plaintext,
+        # advertised on 127.0.0.1:9092 for the runner (an IPv4 literal, like
+        # KAFKA_BROKERS — `localhost` may resolve to ::1 first).
+        image: apache/kafka:4.3.1
+        env:
+          KAFKA_NODE_ID: 1
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://127.0.0.1:9092
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+          KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+          # Clients never auto-create topics; the broker must not either.
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+        ports:
+          - 9092:9092
+        options: >-
+          --health-cmd "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server 127.0.0.1:9092"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 12
+          --health-start-period 30s
+    env:
+      # Throwaway service-container database; nothing here is a real credential.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_ci?schema=public
+      ANALYTICS_CONSUMER_DB_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/app_ci
+      KAFKA_BROKERS: 127.0.0.1:9092
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Generate the consumer's database login
+        # The e2e suite provisions this least-privilege login itself
+        # (db:provision-login); the password is random per run and masked.
+        run: |
+          password="$(openssl rand -hex 24)"
+          echo "::add-mask::${password}"
+          echo "ANALYTICS_CONSUMER_DATABASE_URL=postgresql://analytics_consumer_app:${password}@localhost:5432/app_ci" >> "$GITHUB_ENV"
+
+      - name: Build workspace dependencies of the consumer
+        run: pnpm turbo run build --filter=@workspace/analytics-consumer^...
+
+      - name: Apply migrations + RLS (creates the analytics_consumer role)
+        run: pnpm db:deploy
+
+      - name: Analytics consumer e2e tests
+        run: pnpm --filter @workspace/analytics-consumer test:e2e

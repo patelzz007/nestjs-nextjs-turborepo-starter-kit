@@ -498,6 +498,7 @@ export {
 	LivenessResponseSchema,
 	ModuleHealthDetailValueSchema,
 	ModuleHealthSchema,
+	PingResponseSchema,
 	ReadinessCheckSchema,
 	ReadinessResponseSchema,
 } from "./api/health.schema";
@@ -508,6 +509,7 @@ export type {
 	LivenessResponse,
 	ModuleHealth,
 	ModuleHealthDetailValue,
+	PingResponse,
 	ReadinessCheck,
 	ReadinessResponse,
 } from "./api/health.schema";

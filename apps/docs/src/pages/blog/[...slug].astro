@@ -5,6 +5,7 @@ import { render } from "astro:content";
 import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import Feedback from "@/components/Feedback.astro";
 import Icon from "@/components/Icon.astro";
+import PageCover from "@/components/PageCover.astro";
 import Pager from "@/components/Pager.astro";
 import TableOfContents from "@/components/TableOfContents.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
@@ -41,6 +42,7 @@ const editUrl = githubEditUrl("blog", `${post.id}.md`);
 	<main id="main-content" class="docs-main docs-main--centered">
 		<article class="docs-article">
 			<Breadcrumbs crumbs={[{ label: "Blog", href: "/blog" }, { label: post.data.category }, { label: post.data.title }]} />
+			<PageCover src={post.data.coverImage} />
 			<h1 class="page-title">{post.data.title}</h1>
 			<p class="page-description">{post.data.description}</p>
 			<div class="page-meta">

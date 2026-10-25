@@ -28,3 +28,4 @@ export { newRowId, ROW_ID_ENTROPY_BYTES, rowIdFrom, RowIdError } from "./lib/row
 export * from "./lib/qr/index";
 export * from "./lib/pdf/index";
 export * from "./lib/image-resize/index";
+export * from "./lib/network-quality/index";

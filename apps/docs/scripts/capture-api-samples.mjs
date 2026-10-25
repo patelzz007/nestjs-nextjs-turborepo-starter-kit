@@ -482,6 +482,7 @@ async function captureSystem() {
 	await capture("HealthController_getHello", anonymous, { method: "GET", path: "/" });
 	await capture("HealthController_getHealth", anonymous, { method: "GET", path: "/health" });
 	await capture("HealthController_getLiveness", anonymous, { method: "GET", path: "/health/live" });
+	await capture("HealthController_getPing", anonymous, { method: "GET", path: "/health/ping" });
 	await capture("HealthController_getReadiness", anonymous, { method: "GET", path: "/health/ready" });
 	await capture("HealthController_getDeepHealth", anonymous, { method: "GET", path: "/health/deep" });
 	await capture("VersionController_getVersion", anonymous, { method: "GET", path: "/version" });

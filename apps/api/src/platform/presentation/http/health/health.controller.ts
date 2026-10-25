@@ -1,14 +1,17 @@
-import { Controller, Get } from "@nestjs/common";
+import { Controller, Get, Header } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { SkipThrottle } from "@nestjs/throttler";
 import {
 	DeepHealthResponseSchema,
 	HealthResponseSchema,
 	LivenessResponseSchema,
+	PingResponseSchema,
 	ReadinessResponseSchema,
 	StringValueSchema,
 	type DeepHealthResponse,
 	type HealthResponse,
 	type LivenessResponse,
+	type PingResponse,
 	type ReadinessResponse,
 } from "@workspace/shared";
 
@@ -27,6 +30,7 @@ import { HealthService } from "./health.service";
  * | Route               | Use for                         | Touches DB | Fails with |
  * |---------------------|---------------------------------|------------|------------|
  * | `GET /health/live`  | liveness probe (restart policy) | no         | never (process down = no answer) |
+ * | `GET /health/ping`  | apps' connection-quality probe  | no         | never (process down = no answer) |
  * | `GET /health/ready` | readiness probe (LB rotation)   | yes        | 503 not started / draining / DB or critical dependency down |
  * | `GET /health`       | DEPRECATED alias for monitors   | yes        | 503 only while starting/draining |
  * | `GET /health/deep`  | human/ops diagnostics           | yes        | 503 only while starting/draining |
@@ -59,6 +63,24 @@ export class HealthController {
 	@ZodResponse(LivenessResponseSchema, { description: "The process is alive" })
 	public getLiveness(): LivenessResponse {
 		return this.healthService.liveness();
+	}
+
+	/**
+	 * Timed by every open app (web, merchant, admin, mobile) to show the connection's ping, jitter and loss
+	 * (packages/shared lib/network-quality): a test is five requests a minute per app. It skips the per-route
+	 * `strict` and per-principal `default` throttlers — users behind one office IP would otherwise use up the
+	 * credential limit of 30 a minute with a few open tabs, and the reading would turn red for a reason that
+	 * has nothing to do with their network. The per-IP `preAuth` flood limit still counts it. Never cached: a
+	 * cached answer would time the cache, not the round trip.
+	 */
+	@Public()
+	@SkipThrottle({ strict: true, default: true })
+	@Get(HEALTH_PROBE_PATHS.ping)
+	@Header("Cache-Control", "no-store")
+	@ApiOperation({ summary: "Connection-quality probe — the apps time this round trip (never touches the database)" })
+	@ZodResponse(PingResponseSchema, { description: "The API answered" })
+	public getPing(): PingResponse {
+		return this.healthService.ping();
 	}
 
 	@Public()

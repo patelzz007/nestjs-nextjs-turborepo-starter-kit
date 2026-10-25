@@ -46,6 +46,7 @@ import {
 	Server,
 	ShieldCheck,
 	Sun,
+	SunMoon,
 	ThumbsDown,
 	ThumbsUp,
 	Timer,
@@ -124,6 +125,7 @@ export const ICONS = {
 	server: Server,
 	shieldCheck: ShieldCheck,
 	sun: Sun,
+	sunMoon: SunMoon,
 	thumbsDown: ThumbsDown,
 	thumbsUp: ThumbsUp,
 	timer: Timer,
@@ -198,6 +200,7 @@ export const DOC_ICONS: Readonly<Record<string, IconName>> = {
 	"technical/tooling/dependencies": "package",
 	"technical/operations/ci": "timer",
 	"technical/operations/observability": "radar",
+	"technical/frontend/network-quality": "gauge",
 	"adr/README": "archive",
 };
 

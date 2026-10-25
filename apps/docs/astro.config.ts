@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { preloadCodeBlockHighlighter } from "@workspace/ui/components/code-block-highlight";
 import { defineConfig, fontProviders } from "astro/config";
 
+import { DOCS_CODE_BLOCK_THEMES } from "./src/lib/code-block/themes";
 import { rehypeCodeBlock } from "./src/lib/markdown/code-block";
 import { remarkContentLinks } from "./src/lib/markdown/links";
 import { remarkMediaEmbeds } from "./src/lib/markdown/media-embeds";
@@ -33,7 +34,7 @@ const SITE_URL: string = process.env["PUBLIC_SITE_URL"] ?? "http://localhost:300
  * first use, which would then fail and silently fall back to plain text — so
  * load all of it now, while imports still work.
  */
-await preloadCodeBlockHighlighter();
+await preloadCodeBlockHighlighter({ themes: DOCS_CODE_BLOCK_THEMES });
 
 /** Repository root — relative guide links resolve against it (see `src/lib/markdown/links.ts`). */
 const REPO_ROOT: string = fileURLToPath(new URL("../../", import.meta.url));

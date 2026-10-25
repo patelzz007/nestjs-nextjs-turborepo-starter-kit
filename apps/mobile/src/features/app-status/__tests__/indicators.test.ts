@@ -3,10 +3,8 @@ import { SessionStatusSchema, type SessionStatus } from "@workspace/shared";
 import ShieldIcon from "lucide-react-native/icons/shield";
 import ShieldCheckIcon from "lucide-react-native/icons/shield-check";
 import ShieldXIcon from "lucide-react-native/icons/shield-x";
-import WifiIcon from "lucide-react-native/icons/wifi";
-import WifiOffIcon from "lucide-react-native/icons/wifi-off";
 
-import { connectivityOf, networkPillContent, ROTATION_PULSE_MS, sessionCheckFailureOf, sessionIndicatorOf, sessionPillContent, type SessionIndicator } from "../indicators";
+import { connectivityOf, ROTATION_PULSE_MS, sessionCheckFailureOf, sessionIndicatorOf, sessionPillContent, type SessionIndicator } from "../indicators";
 
 const NOW_MS = 1_791_504_000_000;
 
@@ -79,18 +77,6 @@ describe("sessionIndicatorOf", () => {
 		const inputs = { session: session(NOW_MS + 900_000), error: null, rotatedAtMs: NOW_MS };
 		expect(sessionIndicatorOf({ ...inputs, nowMs: NOW_MS + ROTATION_PULSE_MS - 1 })).toMatchObject({ refreshed: true });
 		expect(sessionIndicatorOf({ ...inputs, nowMs: NOW_MS + ROTATION_PULSE_MS })).toMatchObject({ refreshed: false });
-	});
-});
-
-describe("networkPillContent", () => {
-	it("is a green wifi pill online — labelled in full, the icon alone when compact", () => {
-		expect(networkPillContent("online", false)).toMatchObject({ icon: WifiIcon, label: "Online", accessibilityLabel: "Online", tone: "success" });
-		expect(networkPillContent("online", true)).toMatchObject({ icon: WifiIcon, label: null, accessibilityLabel: "Online" });
-	});
-
-	it("is a red wifi-off pill offline", () => {
-		expect(networkPillContent("offline", false)).toMatchObject({ icon: WifiOffIcon, label: "Offline", accessibilityLabel: "Offline", tone: "destructive" });
-		expect(networkPillContent("offline", true)).toMatchObject({ label: null, accessibilityLabel: "Offline" });
 	});
 });
 

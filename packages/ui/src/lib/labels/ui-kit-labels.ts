@@ -29,6 +29,7 @@ import type { TimePickerLabels } from "../../components/time-picker";
 import type { TimeSeriesChartLabels } from "../../components/time-series-chart";
 import type { ToastLabels } from "../../components/toast";
 import type { AutocompleteLabels } from "../../components/autocomplete";
+import type { NetworkQualityLabels } from "../../components/network-quality-indicator";
 import type { NumberFieldLabels } from "../../components/number-field";
 import type { PdfViewerLabels } from "../../components/pdf-viewer";
 import type { PhoneInputLabels } from "../../components/phone-input";
@@ -110,6 +111,7 @@ export interface UiKitLabels {
 	readonly kpiDirection: KpiDirectionLabels;
 	readonly listPager: ListPagerLabels;
 	readonly lockoutCountdown: LockoutCountdownLabels;
+	readonly networkQuality: NetworkQualityLabels;
 	readonly pagination: PaginationLabels;
 	readonly panelSidebarNav: PanelSidebarNavLabels;
 	readonly passwordInput: PasswordInputLabels;

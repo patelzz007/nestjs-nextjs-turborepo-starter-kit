@@ -35,7 +35,7 @@ describe("isAuditedRoute / defaultSuccessStatus", () => {
 	});
 
 	it("exempts only the automated health probes", () => {
-		expect(["/health/live", "/health/ready", "/health"].map(isAuditedRoute)).toEqual([false, false, false]);
+		expect(["/health/live", "/health/ready", "/health/ping", "/health"].map(isAuditedRoute)).toEqual([false, false, false, false]);
 	});
 
 	it("mirrors Nest's default status (201 for POST, 200 otherwise)", () => {

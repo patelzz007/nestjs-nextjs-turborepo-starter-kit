@@ -11,6 +11,7 @@ import { UiKitLabelsProvider } from "@workspace/ui/components/ui-kit-labels-prov
 import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import { createElement, type ReactElement } from "react";
 
+import { codeThemeToggleElement } from "./code-theme-toggle";
 import type { DocsCodeBlockProps } from "./props";
 
 /**
@@ -21,7 +22,7 @@ export const CODE_BLOCK_TYPE_CLASS = "[--code-block-font-size:var(--type-code-bl
 
 /**
  * The docs' composition of the `@workspace/ui` CodeBlock (the ReUI port):
- * header with title · language · wrap · copy, line numbers, folding, and
+ * header with title · language · code theme · wrap · copy, line numbers, folding, and
  * "Show more" for long blocks. Used for BOTH the build-time render and the
  * browser hydration, so the two trees are identical by construction.
  *
@@ -36,7 +37,13 @@ export function docsCodeBlockElement(props: DocsCodeBlockProps): ReactElement {
 		null,
 		props.title === null ? null : createElement(CodeBlockTitle, null, props.title),
 		props.language.length === 0 ? null : createElement(CodeBlockLanguage, null, props.language),
-		createElement("div", { className: "ms-auto flex items-center gap-1" }, createElement(CodeBlockWrapToggle, null), createElement(CodeBlockCopyButton, null)),
+		createElement(
+			"div",
+			{ className: "ms-auto flex items-center gap-1" },
+			codeThemeToggleElement(),
+			createElement(CodeBlockWrapToggle, null),
+			createElement(CodeBlockCopyButton, null),
+		),
 	);
 	const block = createElement(
 		CodeBlock,

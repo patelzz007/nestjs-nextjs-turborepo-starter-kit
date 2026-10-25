@@ -8,6 +8,7 @@ import { applyEnrollmentNavLock } from "@/lib/navigation/apply-enrollment-nav-lo
 import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
 import { useMerchantSessionProfile } from "@/lib/session/profile";
 import type { ServerUser } from "@/contexts/identity/lib/server";
+import { NetworkQualityStatus } from "@workspace/client/lib/features/network-quality/network-quality-status";
 import { filterCompiledSidebarMenu } from "@workspace/client/lib/navigation/filter-sidebar-menu-by-capabilities";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveMerchantPinnedMenuItems } from "@/lib/navigation/pinned-items";
@@ -193,7 +194,14 @@ export function MerchantSidebarPanel({ memberships, hasMoreStores, tenantSlug, o
 				<div className={view.bottomItems.length > 0 ? "px-2 pt-2" : "px-2 pb-2"}>
 					<ImpersonateUserPanel />
 				</div>
-				<AppShellSidebarAccount name={profileName} email={profileEmail} avatar={avatar} onLogout={handleLogout} menuItems={profileMenuItems} />
+				<AppShellSidebarAccount
+					name={profileName}
+					email={profileEmail}
+					avatar={avatar}
+					onLogout={handleLogout}
+					menuItems={profileMenuItems}
+					status={<NetworkQualityStatus />}
+				/>
 			</SidebarFooter>
 
 			<PanelSidebarRouteAnnouncer pageLabel={breadcrumbPageLabel(breadcrumbStatus)} />

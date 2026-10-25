@@ -1,4 +1,5 @@
 import { initCodeBlocks } from "./code-blocks";
+import { initCodeTheme } from "./code-theme";
 import { initDrawer } from "./drawer";
 import { initFeedback } from "./feedback";
 import { initHeader } from "./header";
@@ -18,6 +19,7 @@ export function initSite(): void {
 	initSidebar();
 	initToc();
 	initCodeBlocks();
+	initCodeTheme();
 	initFeedback();
 	initSearch();
 	initDiagrams();

@@ -21,7 +21,12 @@
  * README.md for the scale and the reasoning behind it.
  */
 
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/*
+ * `dark:` follows the site theme, except inside code blocks, which follow their
+ * own when the reader picked one (`data-code-theme` on <html>, src/scripts/code-theme.ts):
+ * dark code in a light page, light code in a dark page.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"]:not([data-code-theme]) *, [data-theme="dark"] :not(.code-block-island, .code-block-island *), [data-code-theme="dark"] .code-block-island, [data-code-theme="dark"] .code-block-island *));
 
 /* Shared components from @workspace/ui rendered into the docs (Tailwind must scan their classes). */
 @source "../../../../packages/ui/src/components/code-block.tsx";
@@ -33,7 +38,9 @@
 @source "../../../../packages/ui/src/components/aspect-ratio.tsx";
 @source "../../../../packages/ui/src/components/image-resizer.tsx";
 
-:root {
+/* Light — also re-declared inside code blocks the reader set to light (src/scripts/code-theme.ts). */
+:root,
+:root[data-code-theme="light"] .code-block-island {
 	/* Accent */
 	--brand: var(--palette-brand-800);
 	--brand-hover: var(--palette-brand-900);
@@ -44,8 +51,10 @@
 	/* The sidebar panel: a half step lighter than the canvas (neutral-40, like the apps), with a hairline edge. */
 	--sidebar-bg: var(--palette-neutral-40);
 	--sidebar-edge: var(--palette-neutral-200);
-	--nav-active-bg: var(--palette-neutral-0);
-	--nav-active-ring: var(--palette-neutral-200);
+	/* The sidebar's active page: Tailwind slate-900 with white text. */
+	--nav-active-bg: oklch(0.208 0.042 265.755);
+	--nav-active-text: var(--palette-neutral-0);
+	--nav-active-ring: transparent;
 	--nav-active-shadow: var(--shadow-card);
 	--brand-glow: color-mix(in oklch, var(--palette-brand-500) 14%, transparent);
 	/* Brand as TEXT (links, active nav/TOC items) — >= 4.5:1 (WCAG AA) on --bg and on --brand-soft. */
@@ -157,10 +166,11 @@
 	/*
 	 * The reading column: ONE width for everything in an article — paragraphs,
 	 * tables, code blocks and diagrams share the same edges, so nothing juts out
-	 * past the text. ~70 characters of body copy; wider content scrolls inside
-	 * its own frame instead of widening the column.
+	 * past the text. 52rem (832px, ~85 characters of body copy): at 1440px it fills
+	 * the space between the sidebar and the "On this page" rail. Wider content
+	 * scrolls inside its own frame instead of widening the column.
 	 */
-	--type-measure: 70ch;
+	--type-measure: 52rem;
 	/* Inline code is relative to the text around it, so it scales inside headings. */
 	--type-code-size: 0.875em;
 	/* Fenced code blocks (the @workspace/ui CodeBlock, see src/lib/code-block/element.ts). */
@@ -174,16 +184,23 @@
 	color-scheme: light;
 }
 
-/* Dark — the apps' cool ink surface (packages/tokens palette `--palette-ink-*`). */
-[data-theme="dark"] {
+/* Dark — the apps' cool ink surface (packages/tokens palette `--palette-ink-*`); also inside code blocks set to dark. */
+[data-theme="dark"],
+:root[data-code-theme="dark"] .code-block-island {
+	/* The aliases the @workspace/ui components read, re-declared so a dark code block in a light page resolves them here. */
+	--primary: var(--brand);
+	--card: var(--surface);
+	--destructive: var(--error);
 	--brand: var(--palette-brand-300);
 	--brand-hover: var(--palette-brand-200);
 	--brand-soft: var(--palette-ink-750);
 	--brand-border: var(--palette-ink-650);
 	--sidebar-bg: var(--palette-ink-850);
 	--sidebar-edge: transparent;
-	--nav-active-bg: var(--brand-soft);
-	--nav-active-ring: var(--brand-border);
+	/* slate-700: slate-900 would sink into the ink sidebar; white text as in light mode. */
+	--nav-active-bg: oklch(0.372 0.044 257.287);
+	--nav-active-text: var(--palette-neutral-0);
+	--nav-active-ring: transparent;
 	--nav-active-shadow: none;
 	--brand-glow: color-mix(in oklch, var(--palette-brand-300) 10%, transparent);
 	--brand-text: var(--palette-brand-300);
@@ -224,6 +241,30 @@
 	--overlay: rgb(0 0 0 / 0.6);
 	--shadow-card: none;
 	--shadow-pop: 0 20px 24px -4px rgb(0 0 0 / 0.5);
+	color-scheme: dark;
+}
+
+/*
+ * Dark code (src/lib/code-block/themes.ts → One Dark Pro): the theme's own
+ * charcoal and chrome instead of the page's near-black ink, whether the reader
+ * got dark code from the site's dark theme or from the code-theme toggle. The
+ * aliases the @workspace/ui CodeBlock reads are re-declared so they resolve here.
+ * theme-contrast.test.ts holds the chrome's text to 4.5:1 on this surface.
+ */
+[data-theme="dark"]:not([data-code-theme]) .code-block-island,
+:root[data-code-theme="dark"] .code-block-island {
+	--surface: #282c34;
+	--surface-muted: #21252b;
+	--hover: #2c313c;
+	--brand-soft: #2c313c;
+	--text: #d7dae0;
+	--muted: #9da5b4;
+	--faint: #5c6370;
+	--border: #3e4452;
+	--border-strong: #3e4452;
+	--primary: var(--brand);
+	--card: var(--surface);
+	--destructive: var(--error);
 	color-scheme: dark;
 }
 
@@ -659,13 +700,13 @@
 		background: var(--hover);
 	}
 
-	/* The active page: a white pill lifted off the canvas in light mode; a soft wash plus a hairline in dark mode, like the apps' sidebar. */
+	/* The active page: a solid slate pill with white text (slate-900 light, slate-700 dark). */
 	.nav-node.is-active {
 		background: var(--nav-active-bg);
 		box-shadow:
 			inset 0 0 0 1px var(--nav-active-ring),
 			var(--nav-active-shadow);
-		color: var(--brand-text);
+		color: var(--nav-active-text);
 		font-weight: var(--type-weight-medium);
 	}
 
@@ -908,6 +949,23 @@
 		.page-title {
 			font-size: var(--type-size-4xl);
 		}
+	}
+
+	/* The cover banner (PageCover.astro): the page's social-preview art, 3:1, framed like the site's cards. */
+	.page-cover {
+		margin: 16px 0 28px;
+		overflow: hidden;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background: var(--surface-muted);
+		aspect-ratio: 3 / 1;
+	}
+
+	.page-cover img {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
 	}
 
 	/* The lead paragraph under the title. */
@@ -1264,6 +1322,19 @@
 
 	.prose .code-block-island {
 		margin: 0 0 16px;
+	}
+
+	/* The code-theme toggle (src/lib/code-block/code-theme-toggle.ts) shows the state <html> names. */
+	.code-theme-state {
+		display: none;
+		align-items: center;
+		gap: 6px;
+	}
+
+	:root:not([data-code-theme]) .code-theme-state[data-code-theme-state="site"],
+	:root[data-code-theme="light"] .code-theme-state[data-code-theme-state="light"],
+	:root[data-code-theme="dark"] .code-theme-state[data-code-theme-state="dark"] {
+		display: inline-flex;
 	}
 
 	/* Media islands: ```carousel / ```image-resize fences — the @workspace/ui ImageCarousel and ImageResizer, server-rendered then hydrated (src/lib/media/). */

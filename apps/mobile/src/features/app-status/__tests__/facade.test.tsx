@@ -7,20 +7,28 @@ import { AppProviders, createTestRuntime } from "../../../../test/app-harness";
 import { NOW_MS, sessionStatusJson } from "../../../../test/fixtures";
 import { testAccessToken } from "../../../../test/jwt";
 import { listenerCount, OFFLINE_STATE, ONLINE_STATE, setState } from "../../../../test/network-fake";
-import { AppStatusProvider, MissingAppStatusProviderError, useConnectivity, useSessionIndicator } from "../facade";
-import { ROTATION_PULSE_MS, type Connectivity, type SessionIndicator } from "../indicators";
+import { NETWORK_TEST_INTERVAL_MS, NETWORK_TEST_SAMPLES, type NetworkQualityReading } from "@workspace/shared";
+
+import { AppStatusProvider, MissingAppStatusProviderError, useNetworkStatus, useSessionIndicator } from "../facade";
+import { ROTATION_PULSE_MS, type SessionIndicator } from "../indicators";
 
 const TICK_MS = 1_000;
 const TOKEN_LIFETIME_MS = 900_000;
 const SESSION_ROUTE = "GET /session";
+const PING_ROUTE = "GET /health/ping";
+/** Requests per connection test: the warm-up and the timed samples. */
+const REQUESTS_PER_TEST = NETWORK_TEST_SAMPLES + 1;
 
 interface AppStatus {
-	readonly connectivity: Connectivity;
+	readonly network: NetworkQualityReading;
+	readonly testing: boolean;
+	readonly testAgain: () => void;
 	readonly session: SessionIndicator;
 }
 
 function useAppStatus(): AppStatus {
-	return { connectivity: useConnectivity(), session: useSessionIndicator() };
+	const { reading, testing, testAgain } = useNetworkStatus();
+	return { network: reading, testing, testAgain, session: useSessionIndicator() };
 }
 
 /** Answers `GET /session` with each expiry in turn, the last one from then on. */
@@ -28,7 +36,8 @@ function sessionAnswers(...expiries: readonly number[]): StubResponse[] {
 	return expiries.map((expiresAt: number): StubResponse => ok(sessionStatusJson(expiresAt)));
 }
 
-function stubSessionStatus(answers: readonly StubResponse[]): ApiStub {
+/** Answers `GET /session` with each answer in turn, and the connection test's `GET /health/ping` with `ping` (200 by default). */
+function stubSessionStatus(answers: readonly StubResponse[], ping: StubResponse = ok({ timestamp: NOW_MS })): ApiStub {
 	let served = 0;
 	return stubApi({
 		[SESSION_ROUTE]: dynamic((): StubResponse => {
@@ -36,6 +45,7 @@ function stubSessionStatus(answers: readonly StubResponse[]): ApiStub {
 			served += 1;
 			return answer;
 		}),
+		[PING_ROUTE]: ping,
 	});
 }
 
@@ -171,20 +181,83 @@ describe("AppStatusProvider", () => {
 		await waitFor(() => {
 			expect(result.current.session).toMatchObject({ status: "verified" });
 		});
-		expect(result.current.connectivity).toBe("online");
+		await waitFor(() => {
+			expect(result.current.network.status).toBe("measured");
+		});
 
 		await act((): void => {
 			setState(OFFLINE_STATE);
 		});
-		expect(result.current.connectivity).toBe("offline");
+		expect(result.current.network).toEqual({ status: "offline" });
 		expect(api.callsTo(SESSION_ROUTE)).toHaveLength(1);
 
 		await act((): void => {
 			setState(ONLINE_STATE);
 		});
-		expect(result.current.connectivity).toBe("online");
 		await waitFor(() => {
 			expect(api.callsTo(SESSION_ROUTE)).toHaveLength(2);
+		});
+		await waitFor(() => {
+			expect(result.current.network.status).toBe("measured");
+		});
+		expect(api.callsTo(PING_ROUTE)).toHaveLength(REQUESTS_PER_TEST * 2);
+	});
+
+	it("times the API's ping route and grades the connection", async () => {
+		const api = stubSessionStatus(sessionAnswers(NOW_MS + TOKEN_LIFETIME_MS));
+		const { result } = await renderAppStatus();
+		await waitFor(() => {
+			expect(result.current.network).toMatchObject({ status: "measured", quality: { kind: "measured", lossPercent: 0, strength: "strong" } });
+		});
+		expect(api.callsTo(PING_ROUTE)).toHaveLength(REQUESTS_PER_TEST);
+		expect(api.callsTo(PING_ROUTE).at(0)?.headers.authorization).toBeUndefined();
+	});
+
+	it("reads no response when the API does not answer the ping", async () => {
+		stubSessionStatus(sessionAnswers(NOW_MS + TOKEN_LIFETIME_MS), fail(503, "SERVICE_UNAVAILABLE", "Down"));
+		const { result } = await renderAppStatus();
+		await waitFor(() => {
+			expect(result.current.network.status).toBe("unreachable");
+		});
+	});
+
+	it("re-tests every minute in the foreground, never in the background, and on request", async () => {
+		const api = stubSessionStatus(sessionAnswers(NOW_MS + TOKEN_LIFETIME_MS));
+		const harness = await renderAppStatus();
+		await waitFor(() => {
+			expect(harness.result.current.network.status).toBe("measured");
+		});
+		await act(async (): Promise<void> => {
+			await jest.advanceTimersByTimeAsync(NETWORK_TEST_INTERVAL_MS);
+		});
+		await waitFor(() => {
+			expect(api.callsTo(PING_ROUTE)).toHaveLength(REQUESTS_PER_TEST * 2);
+		});
+
+		await act((): void => {
+			harness.emitAppState("background");
+		});
+		await act(async (): Promise<void> => {
+			await jest.advanceTimersByTimeAsync(NETWORK_TEST_INTERVAL_MS * 3);
+		});
+		expect(api.callsTo(PING_ROUTE)).toHaveLength(REQUESTS_PER_TEST * 2);
+
+		// Back in the foreground with a result older than a minute: test at once.
+		await act((): void => {
+			harness.emitAppState("active");
+		});
+		await waitFor(() => {
+			expect(api.callsTo(PING_ROUTE)).toHaveLength(REQUESTS_PER_TEST * 3);
+		});
+		await waitFor(() => {
+			expect(harness.result.current.testing).toBe(false);
+		});
+
+		await act((): void => {
+			harness.result.current.testAgain();
+		});
+		await waitFor(() => {
+			expect(api.callsTo(PING_ROUTE)).toHaveLength(REQUESTS_PER_TEST * 4);
 		});
 	});
 
@@ -210,7 +283,7 @@ describe("AppStatusProvider", () => {
 
 	it("refuses to be read outside its provider — a wiring bug", async () => {
 		jest.spyOn(console, "error").mockImplementation((): void => undefined);
-		await expect(renderHook(useConnectivity)).rejects.toThrow(MissingAppStatusProviderError);
+		await expect(renderHook(useNetworkStatus)).rejects.toThrow(MissingAppStatusProviderError);
 		await expect(renderHook(useSessionIndicator)).rejects.toThrow(MissingAppStatusProviderError);
 	});
 });

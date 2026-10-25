@@ -60,7 +60,7 @@ const imageUrl = image === undefined || Astro.site === undefined ? undefined : n
 		-->
 		<Font cssVariable="--font-atkinson-next" preload={[{ style: "normal" }]} />
 		<Font cssVariable="--font-atkinson-mono" />
-		<!-- Applies the saved / OS theme before first paint (keep the key in sync with src/scripts/theme.ts). -->
+		<!-- Applies the saved / OS theme and the code blocks' theme before first paint (keep the keys in sync with src/scripts/theme.ts and code-theme.ts). -->
 		<script is:inline>
 			(function () {
 				var theme = "light";
@@ -71,6 +71,15 @@ const imageUrl = image === undefined || Astro.site === undefined ? undefined : n
 					theme = "light";
 				}
 				document.documentElement.dataset.theme = theme;
+				// The code blocks' own theme (src/scripts/code-theme.ts): absent = match the site.
+				try {
+					var codeTheme = localStorage.getItem("docs:code-theme");
+					if (codeTheme === "light" || codeTheme === "dark") {
+						document.documentElement.dataset.codeTheme = codeTheme;
+					}
+				} catch (error) {
+					// No storage: code blocks match the site.
+				}
 				// Scripts will run: lets CSS show loading skeletons (e.g. unrendered diagrams) that would never resolve without JS.
 				document.documentElement.dataset.js = "true";
 			})();

@@ -125,7 +125,7 @@ export const REFERENCE_PAGES: readonly ReferencePage[] = [
 	{
 		slug: "system",
 		title: "System: health and version",
-		description: "Liveness, readiness and deep health probes and the API version manifest.",
+		description: "Liveness, readiness and deep health probes, the apps' connection-quality ping and the API version manifest.",
 		guide: { label: "Observability", href: "../operations/observability.md" },
 		tags: ["App", "System"],
 	},

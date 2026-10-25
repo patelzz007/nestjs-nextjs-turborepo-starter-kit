@@ -90059,6 +90059,103 @@
         ]
       }
     },
+    "/health/ping": {
+      "get": {
+        "operationId": "HealthController_getPing",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "timestamp": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "correlationId": {
+                          "description": "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+                          "example": "abc123-def456",
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "description": "Epoch milliseconds when the response was generated",
+                          "example": 1786300000000,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "correlationId",
+                        "timestamp"
+                      ],
+                      "type": "object"
+                    },
+                    "success": {
+                      "description": "Indicates the request was successful",
+                      "enum": [
+                        true
+                      ],
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The API answered"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Client error — the standard error envelope (docs/technical/api/errors.md); branch on `error.code`."
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponseDto"
+                }
+              }
+            },
+            "description": "Server error — the standard error envelope with a generic message; quote `meta.correlationId`."
+          }
+        },
+        "security": [
+          {},
+          {
+            "clientType": []
+          }
+        ],
+        "summary": "Connection-quality probe — the apps time this round trip (never touches the database)",
+        "tags": [
+          "App"
+        ]
+      }
+    },
     "/health/ready": {
       "get": {
         "operationId": "HealthController_getReadiness",

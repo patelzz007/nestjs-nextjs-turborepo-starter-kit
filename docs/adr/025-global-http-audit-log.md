@@ -65,7 +65,8 @@ left no record, and failed or guard-rejected attempts left none at all.
   or unmatched read (401, 403, 404, 429 …) gets a FAILED row. Two exemptions, both deliberate:
   the automated **health probes** (`/health/live`, `/health/ready`, legacy `/health` —
   `common/http/probe-routes.ts`), which load balancers and monitors call every few seconds with no
-  principal; and **SSE streams** (`@Sse()`), which have no single response — their failures are
+  principal (since 2026-10-26 also `/health/ping`, which every open app times once a minute for its
+  connection indicator); and **SSE streams** (`@Sse()`), which have no single response — their failures are
   still recorded. A handler that releases data in bulk (an export, the audit viewer) records a
   **summary** of what it released (`recordSensitiveRead`) and that summary *is* the request's row —
   the interceptor does not add the full response as a second one.

@@ -4,7 +4,7 @@ tags: ["api", "routes", "contracts", "type-safety", "shared"]
 description: "How every API endpoint path is defined once in api-routes.ts and consumed by contracts, controllers, and the client — with zero duplication."
 order: 13
 author: "Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1792972800000
 coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -143,7 +143,7 @@ pnpm --filter @workspace/shared test
 
 1. **Every API path must be defined in `api-routes.ts`.** No hardcoded path strings in
    contracts, controllers, or client code. The only exception is truly unversioned root
-   routes (`GET /`, `GET /health`, `GET /health/live`, `GET /health/ready`,
+   routes (`GET /`, `GET /health`, `GET /health/live`, `GET /health/ping`, `GET /health/ready`,
    `GET /health/deep`, `GET /version`, `POST /notifications/email-webhook`).
 
 2. **Every route is a plain path string.** Parameterized segments are `:paramName`
@@ -169,6 +169,7 @@ Unversioned, public (`@Public()`), served by `HealthController`
 | Route | Probe | Touches the DB | 200 when | Fails with |
 |---|---|---|---|---|
 | `GET /health/live` | **liveness** (restart policy) | never | the process answers | — (no answer = dead) |
+| `GET /health/ping` | the apps' **connection-quality** test ([details](../frontend/network-quality.md)); `no-store`, outside the `strict` / `default` throttlers | never | the process answers | — (no answer = lost request) |
 | `GET /health/ready` | **readiness** (load-balancer rotation) | `SELECT 1`, 2 s timeout | startup finished, not draining, DB up, every **critical** indicator up | 503 `SERVICE_UNAVAILABLE`, `error.details.checks` lists every probe |
 | `GET /health` | *deprecated alias* for existing uptime monitors | yes | started (reports `db: "connected" \| "disconnected"`) | 503 while starting/draining only |
 | `GET /health/deep` | human/ops diagnostics with module reports | yes | started | 503 while starting/draining only |

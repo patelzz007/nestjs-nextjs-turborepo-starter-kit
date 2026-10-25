@@ -3,7 +3,7 @@ title: "Mobile app: design and delivery plan"
 description: "The agreed design for adding an Expo (React Native + Uniwind + TypeScript) app to the monorepo: the shared token and API-client packages it needs, the API changes for a mobile client type and device sessions, every screen, the app lock, testing, CI, and the five-piece delivery order."
 order: 1
 author: "Platform Team"
-lastUpdated: 1792108800000
+lastUpdated: 1792972800000
 coverImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1200&h=630&fit=crop"
 tags: ["mobile", "expo", "react-native", "uniwind", "design", "sessions", "auth"]
 ---
@@ -1356,22 +1356,24 @@ are none in `EXPO_PUBLIC_*`, but the screen does not print values regardless).
 
 ### 10.16 Connection and session status
 
-The mobile counterpart of the admin topbar's online / offline indicator and session badge
-(`apps/admin/components/common/network-status-bar.tsx`, `session-status-badge.tsx`), shown in two
+The mobile counterpart of the web shells' connection indicator and the admin's session badge
+([Connection quality indicator](../frontend/network-quality.md), `session-status-badge.tsx`), shown in two
 places inside the `(app)` group:
 
 - **Page header**, compact, on the right (since 2026-10-12, [ADR 046](../../adr/046-mobile-app-shell-and-page-header.md)):
-  the connection as an icon (green wifi / red wifi-off) and the token countdown (`14m 32s`, `2h 05m`
-  past an hour, fixed-width digits), on every signed-in screen — the tab's first screen and deeper
-  in a stack alike. Rendered once by the app shell. Display only: touches pass through.
-- **App drawer**, in full, under the account header: "Online" / "Offline" and
+  the connection as signal bars and its ping (`26 ms`; green strong, yellow moderate, red weak or
+  offline) and the token countdown (`14m 32s`, `2h 05m` past an hour, fixed-width digits), on every
+  signed-in screen — the tab's first screen and deeper in a stack alike. Rendered once by the app
+  shell. Tapping the connection pill opens a sheet with ping, jitter, packet loss and **Test again**.
+- **App drawer**, in full, under the account header: "Strong, 26 ms" / "Offline" and
   "Token expires in 14m 32s".
 
 One `AppStatusProvider` (`src/features/app-status/facade.tsx`) derives both, once, for every pill:
 
 | Concern      | Behaviour                                                                                                                                                                                                                          |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Connectivity | `expo-network`'s state (`src/lib/use-network-reading.ts`). Offline only when the OS says so (`isConnected` or `isInternetReachable` false); before its first answer the app counts as online, as the admin does.                   |
+| Connectivity | `expo-network`'s state (`src/lib/use-network-reading.ts`). Offline only when the OS says so (`isConnected` or `isInternetReachable` false); before its first answer the app counts as online, as the web apps do.                |
+| Quality      | A `NetworkQualityMonitor` (`@workspace/shared`) timing `GET /health/ping`: at once, every minute in the foreground, on return to the foreground with an older result, on reconnecting and on **Test again** ([details](../frontend/network-quality.md)). |
 | Session      | `GET /session` through the api-client, so a 401 runs the single-flight refresh and retries. A silent refresh shows as `expiresAt` moving forward: the pill reads "Refreshed" with the tone's full border for 2 s.                  |
 | Countdown    | Computed on the device from `expiresAt`, re-read every second **only while the app is in the foreground** (`useAppActive`). A verified session stays verified when a later re-check fails (offline): the countdown is still right. |
 | Re-checks    | On return to the foreground, when the connection comes back, and once when the countdown reaches zero — the request that refreshes the expired token. No steady polling.                                                           |

@@ -5,6 +5,7 @@ import { render } from "astro:content";
 import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import Feedback from "@/components/Feedback.astro";
 import Icon from "@/components/Icon.astro";
+import PageCover from "@/components/PageCover.astro";
 import Pager from "@/components/Pager.astro";
 import DocsLayout from "@/layouts/DocsLayout.astro";
 import { getGuides, navSectionsFor } from "@/lib/content";
@@ -39,6 +40,7 @@ const visibleTags = guide.data.tags.filter((tag) => tag !== "superseded");
 	editUrl={editUrl}
 	image={guide.data.coverImage}>
 	<Breadcrumbs crumbs={[{ label: "Guides", href: "/docs" }, ...(section === null ? [] : [{ label: section.title }]), { label: guide.data.title }]} />
+	<PageCover src={guide.data.coverImage} />
 	<h1 class="page-title">{guide.data.title}</h1>
 	{guide.data.description !== undefined && <p class="page-description">{guide.data.description}</p>}
 	<div class="page-meta">

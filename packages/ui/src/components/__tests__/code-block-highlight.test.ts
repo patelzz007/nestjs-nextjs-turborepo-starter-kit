@@ -44,7 +44,7 @@ describe("module contract", () => {
 
 	it("registers lazy grammar and theme loaders by name", (): void => {
 		expect(Object.keys(codeBlockLanguages)).toEqual(expect.arrayContaining(["typescript", "tsx", "bash", "python", "json", "diff"]));
-		expect(Object.keys(codeBlockThemes)).toEqual(["github-light", "github-dark", "css-variables"]);
+		expect(Object.keys(codeBlockThemes)).toEqual(["github-light", "github-dark", "one-dark-pro", "css-variables"]);
 		expect(DEFAULT_CODE_BLOCK_THEMES).toEqual({ light: "github-light", dark: "github-dark" });
 	});
 });

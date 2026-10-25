@@ -1,6 +1,6 @@
 ---
 title: "API reference — System: health and version"
-description: "Liveness, readiness and deep health probes and the API version manifest."
+description: "Liveness, readiness and deep health probes, the apps' connection-quality ping and the API version manifest."
 order: 15
 author: "Generated from the OpenAPI export"
 lastUpdated: 1792540800000
@@ -12,7 +12,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference — System: health and version
 
-Liveness, readiness and deep health probes and the API version manifest.
+Liveness, readiness and deep health probes, the apps' connection-quality ping and the API version manifest.
 
 How these endpoints fit together: [Observability](../operations/observability.md). Conventions shared by every endpoint (envelope, auth, errors, pagination): [API reference overview](./README.md).
 
@@ -225,6 +225,29 @@ Response `200 OK` (application/json):
   }
 }
 ```
+
+### GET /health/ping
+
+Connection-quality probe — the apps time this round trip (never touches the database)
+
+- **Public** — no session required.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `HealthController_getPing` · [source](../../../apps/api/src/platform/presentation/http/health/health.controller.ts)
+
+**Response 200 OK** (`application/json`) — The API answered
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.timestamp` | integer | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
 
 ### GET /health/ready
 

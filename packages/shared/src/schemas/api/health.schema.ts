@@ -29,6 +29,16 @@ export const LivenessResponseSchema = z.object({
 
 export type LivenessResponse = z.output<typeof LivenessResponseSchema>;
 
+/**
+ * `GET /health/ping` — the connection-quality probe the apps time (lib/network-quality). As small as
+ * an answer can be: the apps measure how long it takes to arrive, not what it says.
+ */
+export const PingResponseSchema = z.object({
+	timestamp: EpochMsSchema,
+});
+
+export type PingResponse = z.output<typeof PingResponseSchema>;
+
 /** One scalar of a module health report (JSON-safe: a `bigint` counter is sent as a number). */
 export const ModuleHealthDetailValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 

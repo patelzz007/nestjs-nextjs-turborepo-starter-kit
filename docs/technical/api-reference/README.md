@@ -1,6 +1,6 @@
 ---
 title: "API reference"
-description: "Every endpoint of the API (318 operations), generated from the OpenAPI export with real seed-data samples."
+description: "Every endpoint of the API (319 operations), generated from the OpenAPI export with real seed-data samples."
 order: 1
 author: "Generated from the OpenAPI export"
 lastUpdated: 1792540800000
@@ -12,7 +12,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference
 
-Every endpoint of `apps/api` — 318 operations, 232 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+Every endpoint of `apps/api` — 319 operations, 232 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
 
 **Content type.** Every endpoint takes and returns `application/json` unless its *Content type* line names another (a file upload, a download, a live stream). Errors are always `application/json`.
 
@@ -36,7 +36,7 @@ Every endpoint of `apps/api` — 318 operations, 232 with a sample captured from
 | [GitHub pull requests](./github-pull-requests.md) | 25 | Admins link their own fine-grained GitHub token, then list and read pull requests — conversation, commits, files with diffs, line-comment threads and edit histories — as themselves. |
 | [Sample catalog (products and categories)](./catalog-samples.md) | 16 | The reference CRUD modules every new feature copies: list/detail/create/update/soft delete/restore/bulk. |
 | [Kanban boards](./kanban.md) | 24 | The platform staff's two linked boards: the epic → feature → story → task → subtask hierarchy with item keys, moves under the board lock (optimistic locking), Move to… (a new parent), ranked item search, WIP limits, checklists, links, watchers, history, comments with files, CSV import and attachments. |
-| [System: health and version](./system.md) | 6 | Liveness, readiness and deep health probes and the API version manifest. |
+| [System: health and version](./system.md) | 7 | Liveness, readiness and deep health probes, the apps' connection-quality ping and the API version manifest. |
 
 ## All endpoints
 
@@ -358,5 +358,6 @@ Every endpoint of `apps/api` — 318 operations, 232 with a sample captured from
 | GET | [`/health`](./system.md#get-health) | Health check (includes DB status) — deprecated alias, prefer /health/live and /health/ready |
 | GET | [`/health/deep`](./system.md#get-healthdeep) | Deep health check (DB + filesystem + external services) |
 | GET | [`/health/live`](./system.md#get-healthlive) | Liveness probe — process is up (never touches the database) |
+| GET | [`/health/ping`](./system.md#get-healthping) | Connection-quality probe — the apps time this round trip (never touches the database) |
 | GET | [`/health/ready`](./system.md#get-healthready) | Readiness probe — startup finished, database and critical dependencies reachable |
 | GET | [`/version`](./system.md#get-version) | API version manifest (current, supported, docs) |

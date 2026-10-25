@@ -10,6 +10,7 @@ vi.mock("../drawer", () => ({ initDrawer: (): void => void calls.push("drawer") 
 vi.mock("../sidebar", () => ({ initSidebar: (): void => void calls.push("sidebar") }));
 vi.mock("../toc", () => ({ initToc: (): void => void calls.push("toc") }));
 vi.mock("../code-blocks", () => ({ initCodeBlocks: (): void => void calls.push("code-blocks") }));
+vi.mock("../code-theme", () => ({ initCodeTheme: (): void => void calls.push("code-theme") }));
 vi.mock("../feedback", () => ({ initFeedback: (): void => void calls.push("feedback") }));
 vi.mock("../search", () => ({ initSearch: (): void => void calls.push("search") }));
 vi.mock("../diagrams", () => ({ initDiagrams: (): void => void calls.push("diagrams") }));
@@ -19,6 +20,6 @@ vi.mock("../media-islands", () => ({ initMediaIslands: (): void => void calls.pu
 describe("initSite", () => {
 	it("initialises every enhancement once, theme first", () => {
 		initSite();
-		expect(calls).toEqual(["theme", "header", "drawer", "sidebar", "toc", "code-blocks", "feedback", "search", "diagrams", "pdf-embeds", "media-islands"]);
+		expect(calls).toEqual(["theme", "header", "drawer", "sidebar", "toc", "code-blocks", "code-theme", "feedback", "search", "diagrams", "pdf-embeds", "media-islands"]);
 	});
 });

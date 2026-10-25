@@ -1,7 +1,7 @@
 import { HttpStatus } from "@nestjs/common";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test } from "@nestjs/testing";
-import { HealthResponseSchema, type HealthResponse, type ReadinessResponse } from "@workspace/shared";
+import { HealthResponseSchema, PingResponseSchema, type HealthResponse, type ReadinessResponse } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../../../../prisma/prisma.service";
@@ -27,6 +27,26 @@ async function getThroughRouter(service: HealthService, path: string): Promise<H
 	} finally {
 		await app.close();
 	}
+}
+
+/**
+ * The metadata key `@SkipThrottle({ name: true })` writes, per throttler (`THROTTLER:SKIP<name>`). `@nestjs/throttler`
+ * defines it as `THROTTLER_SKIP` but does not export it from its entry point.
+ */
+const THROTTLER_SKIP_KEY = "THROTTLER:SKIP";
+
+/** The decorated `getPing` handler (read off its property descriptor). */
+function pingHandler(): HealthController["getPing"] {
+	const descriptor: TypedPropertyDescriptor<HealthController["getPing"]> | undefined = Object.getOwnPropertyDescriptor(HealthController.prototype, "getPing");
+	const handler: HealthController["getPing"] | undefined = descriptor?.value;
+	if (handler === undefined) {
+		throw new Error("HealthController.getPing is not a method");
+	}
+	return handler;
+}
+
+function pingSkipsThrottler(name: string): boolean {
+	return Reflect.getMetadata(`${THROTTLER_SKIP_KEY}${name}`, pingHandler()) === true;
 }
 
 describe("HealthController", () => {
@@ -60,5 +80,27 @@ describe("HealthController", () => {
 
 		await expect(getThroughRouter(service, "health")).resolves.toMatchObject({ status: "ok", db: "connected" });
 		expect(health).toHaveBeenCalledTimes(1);
+	});
+
+	it("answers GET /health/ping with a timestamp the apps can time, never cached", async () => {
+		const moduleRef = await Test.createTestingModule({ controllers: [HealthController], providers: [{ provide: HealthService, useValue: service }] }).compile();
+		const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+		try {
+			await app.init();
+			await app.getHttpAdapter().getInstance().ready();
+			const response = await app.inject({ method: "GET", url: "/health/ping" });
+			expect(response.statusCode).toBe(HttpStatus.OK);
+			expect(response.headers["cache-control"]).toBe("no-store");
+			expect(PingResponseSchema.parse(response.json()).timestamp).toBeGreaterThan(0);
+		} finally {
+			await app.close();
+		}
+	});
+
+	it("leaves GET /health/ping out of the per-route and per-principal limits, so open tabs behind one IP never trip them", () => {
+		expect(pingSkipsThrottler("strict")).toBe(true);
+		expect(pingSkipsThrottler("default")).toBe(true);
+		// The per-IP flood limit still counts it.
+		expect(pingSkipsThrottler("preAuth")).toBe(false);
 	});
 });

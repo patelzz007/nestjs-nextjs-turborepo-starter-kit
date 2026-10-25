@@ -1,5 +1,6 @@
 "use client";
 
+import { NetworkQualityStatus } from "@workspace/client/lib/features/network-quality/network-quality-status";
 import { ShellBreadcrumb } from "@workspace/client/lib/features/navigation/shell-breadcrumb";
 import { breadcrumbPageLabel } from "@workspace/ui/components/breadcrumb-context";
 import { Button } from "@workspace/ui/components/button";
@@ -23,7 +24,6 @@ import AdminCommandPaletteClientOnly from "@/components/layout/command-palette.c
 import { AdminSidebarPanel } from "@/components/layout/sidebar/sidebar";
 import { StoreBoundAppPanelShell } from "@workspace/client/lib/features/sidebar/store-bound-panel-shell";
 import { AppShellHeader } from "@workspace/ui/components/app-shell-header";
-import { NetworkStatusIndicator } from "@/components/common/network-status-bar";
 import { SessionStatusBadge } from "@/components/common/session-status-badge";
 import { Profile01 } from "@/components/settings/profile-01";
 import { useCommandPaletteShortcut } from "@workspace/ui/components/app-shell-topbar";
@@ -182,7 +182,7 @@ export function DashboardLayout({
 							pageLabel={breadcrumbPageLabel(breadcrumbStatus)}
 							status={
 								<>
-									<NetworkStatusIndicator />
+									<NetworkQualityStatus />
 									<SessionStatusBadge compact />
 								</>
 							}

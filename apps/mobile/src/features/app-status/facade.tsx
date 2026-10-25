@@ -1,11 +1,17 @@
 // ============================================
 // facade.tsx - the app status: connection and session (the only module screens import)
 // ============================================
-// The mobile counterpart of the admin topbar's NetworkStatusIndicator and
-// SessionStatusBadge. One AppStatusProvider in the (app) layout derives both
-// once; the corner pills and the app drawer read them from here.
+// The mobile counterpart of the web shells' NetworkQualityIndicator and the
+// admin's SessionStatusBadge. One AppStatusProvider in the (app) layout derives
+// both once; the corner pills and the app drawer read them from here.
 //
 // - Connectivity: expo-network's reading (src/lib/use-network-reading.ts).
+// - Connection quality: a NetworkQualityMonitor (packages/shared
+//   lib/network-quality) timing the API's `GET /health/ping` — ping, jitter,
+//   packet loss and a strong / moderate / weak grade. It tests at once, every
+//   minute while the app is in the foreground, on returning to the foreground
+//   with an older result, when the connection comes back, and on "Test again";
+//   never in the background.
 // - Session: `GET /session` — the "very basic protected API". The request goes
 //   through the api-client's 401 → single-flight refresh → retry, so a silent
 //   refresh shows up as `expiresAt` jumping forward, which lights the pill for
@@ -16,6 +22,7 @@
 //
 // Two contexts, so the connection pill does not re-render on every tick.
 
+import { NetworkQualityMonitor, type NetworkQualityReading } from "@workspace/shared";
 import * as React from "react";
 
 import { useApi } from "../../lib/api-context";
@@ -23,14 +30,25 @@ import { useAppActive } from "../../lib/use-app-active";
 import { useNetworkReading } from "../../lib/use-network-reading";
 import { useNow } from "../../lib/use-now";
 import { useRisingEdge } from "../../lib/use-rising-edge";
-import { connectivityOf, sessionIndicatorOf, type Connectivity, type SessionIndicator } from "./indicators";
+import { useReadyRuntime } from "../../runtime/runtime-context";
+import { connectivityOf, sessionIndicatorOf, type SessionIndicator } from "./indicators";
+import { apiPingProbe } from "./network-probe";
 import { didTokenRotate } from "./session-countdown";
 
 /** The countdown's step. */
 const TICK_MS = 1_000;
 
-const ConnectivityContext = React.createContext<Connectivity | null>(null);
-ConnectivityContext.displayName = "ConnectivityContext";
+/** The connection pill and sheet's state. */
+export interface NetworkStatus {
+	readonly reading: NetworkQualityReading;
+	/** A test is running. */
+	readonly testing: boolean;
+	/** Starts a test now, unless one is running or the device is offline. */
+	readonly testAgain: () => void;
+}
+
+const NetworkStatusContext = React.createContext<NetworkStatus | null>(null);
+NetworkStatusContext.displayName = "NetworkStatusContext";
 
 const SessionIndicatorContext = React.createContext<SessionIndicator | null>(null);
 SessionIndicatorContext.displayName = "SessionIndicatorContext";
@@ -49,9 +67,10 @@ export interface AppStatusProviderProps {
 
 export function AppStatusProvider({ children }: AppStatusProviderProps): React.JSX.Element {
 	const api = useApi();
+	const runtime = useReadyRuntime();
 	const isActive = useAppActive();
-	const connectivity = connectivityOf(useNetworkReading());
-	const isOnline = connectivity === "online";
+	const isOnline = connectivityOf(useNetworkReading()) === "online";
+	const networkStatus = useNetworkStatusMonitor(runtime.env.apiBaseUrl, isOnline, isActive);
 
 	const sessionStatus = api.auth.sessionStatus.useQuery(undefined);
 	const session = sessionStatus.data?.data;
@@ -82,10 +101,39 @@ export function AppStatusProvider({ children }: AppStatusProviderProps): React.J
 	useRisingEdge(isExpired && isActive && isOnline, recheck);
 
 	return (
-		<ConnectivityContext.Provider value={connectivity}>
+		<NetworkStatusContext.Provider value={networkStatus}>
 			<SessionIndicatorContext.Provider value={sessionIndicator}>{children}</SessionIndicatorContext.Provider>
-		</ConnectivityContext.Provider>
+		</NetworkStatusContext.Provider>
 	);
+}
+
+/** The connection test's monitor for this provider's lifetime, fed the device's connectivity and foreground state. */
+function useNetworkStatusMonitor(apiBaseUrl: string, isOnline: boolean, isActive: boolean): NetworkStatus {
+	const [monitor] = React.useState<NetworkQualityMonitor>(
+		(): NetworkQualityMonitor =>
+			new NetworkQualityMonitor({
+				probe: apiPingProbe(apiBaseUrl),
+				now: (): number => performance.now(),
+				clock: (): number => Date.now(),
+				online: isOnline,
+				visible: isActive,
+			}),
+	);
+	React.useEffect((): (() => void) => {
+		monitor.start();
+		return (): void => {
+			monitor.stop();
+		};
+	}, [monitor]);
+	React.useEffect((): void => {
+		monitor.setOnline(isOnline);
+	}, [monitor, isOnline]);
+	React.useEffect((): void => {
+		monitor.setVisible(isActive);
+	}, [monitor, isActive]);
+
+	const snapshot = React.useSyncExternalStore(monitor.subscribe, monitor.getSnapshot);
+	return React.useMemo((): NetworkStatus => ({ reading: snapshot.reading, testing: snapshot.testing, testAgain: monitor.testNow }), [snapshot, monitor]);
 }
 
 /** Keeps the previous object while nothing in it changed, so the pills skip re-rendering. */
@@ -116,12 +164,12 @@ export class MissingAppStatusProviderError extends Error {
 	}
 }
 
-export function useConnectivity(): Connectivity {
-	const connectivity = React.use(ConnectivityContext);
-	if (connectivity === null) {
+export function useNetworkStatus(): NetworkStatus {
+	const status = React.use(NetworkStatusContext);
+	if (status === null) {
 		throw new MissingAppStatusProviderError();
 	}
-	return connectivity;
+	return status;
 }
 
 export function useSessionIndicator(): SessionIndicator {

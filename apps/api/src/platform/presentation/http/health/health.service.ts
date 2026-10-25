@@ -5,6 +5,7 @@ import {
 	isBigIntPrimitive,
 	LivenessResponseSchema,
 	nowEpochMs,
+	PingResponseSchema,
 	ReadinessResponseSchema,
 	type DeepHealthResponse,
 	type HealthResponse,
@@ -12,6 +13,7 @@ import {
 	type LivenessResponse,
 	type ModuleHealth,
 	type ModuleHealthDetailValue,
+	type PingResponse,
 	type ReadinessCheck,
 	type ReadinessResponse,
 } from "@workspace/shared";
@@ -129,6 +131,11 @@ export class HealthService {
 			uptimeSeconds: process.uptime(),
 			timestamp: nowEpochMs(),
 		});
+	}
+
+	/** The connection-quality probe's answer: the smallest the envelope allows, so the apps time the round trip, not a payload. */
+	public ping(): PingResponse {
+		return PingResponseSchema.parse({ timestamp: nowEpochMs() });
 	}
 
 	/**

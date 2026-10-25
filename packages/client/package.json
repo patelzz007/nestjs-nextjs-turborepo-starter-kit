@@ -50,6 +50,8 @@
 		"./lib/contexts/identity/impersonation/impersonate-user-panel-labels": "./src/lib/contexts/identity/impersonation/impersonate-user-panel-labels.ts",
 		"./lib/features/navigation/shell-breadcrumb": "./src/lib/features/navigation/shell-breadcrumb.tsx",
 		"./lib/features/navigation/shell-topbar": "./src/lib/features/navigation/shell-topbar.tsx",
+		"./lib/features/network-quality/network-quality-status": "./src/lib/features/network-quality/network-quality-status.tsx",
+		"./lib/features/network-quality/use-network-quality": "./src/lib/features/network-quality/use-network-quality.ts",
 		"./lib/features/notifications/notifications-dropdown": "./src/lib/features/notifications/notifications-dropdown.tsx",
 		"./lib/features/notifications/notifications-dropdown-labels": "./src/lib/features/notifications/notifications-dropdown-labels.ts",
 		"./lib/contexts/reporting/analytics-kpi-grid": "./src/lib/contexts/reporting/analytics-kpi-grid.tsx",

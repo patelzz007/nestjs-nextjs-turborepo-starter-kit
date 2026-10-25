@@ -33,4 +33,11 @@ describe("docsCodeBlockElement", () => {
 		expect(html).toContain(`aria-label="${UI_KIT_LABELS_EN.codeBlock.copy}"`);
 		expect(html).toContain(`>${UI_KIT_LABELS_EN.codeBlock.wrap}</button>`);
 	});
+
+	it("puts the code-theme toggle in the header, with all three states for CSS to pick from", () => {
+		const html = renderToStaticMarkup(docsCodeBlockElement(PROPS));
+		expect(html).toContain("code-theme-toggle");
+		expect([...html.matchAll(/data-code-theme-state="(?<state>[a-z]+)"/gu)].map((match) => match.groups?.state)).toEqual(["site", "light", "dark"]);
+		expect(html).toContain('<span class="sr-only">Code theme: </span>Auto');
+	});
 });

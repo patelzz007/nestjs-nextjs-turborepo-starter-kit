@@ -10,6 +10,9 @@ import HomeScreen from "../../../app/(app)/index";
 // The whole module: the router reads `unstable_settings` (Settings first in its stack) from it, as in the app.
 import * as SettingsLayoutModule from "../../../app/(app)/settings/_layout";
 
+/** The connection pill once the test has run: the test router's fake clock stands still, so every round trip is 0 ms. */
+const MEASURED_CONNECTION = "Connection: strong, 0 ms ping";
+
 /** The token the session check reports: 14 minutes 32 seconds left. */
 const EXPIRES_IN_MS = 872_000;
 
@@ -32,13 +35,14 @@ async function renderSignedIn(url: string): Promise<void> {
 	await renderInApp(runtime, SCREENS, url);
 }
 
-describe("app status: connection and session (the admin topbar's indicators)", () => {
+describe("app status: connection and session (the web shells' indicators)", () => {
 	beforeEach(() => {
 		// The test router runs on Jest's fake clock (renderRouter installs it), so the expiry is read off that clock when the check arrives.
 		stubApi({
 			"GET /auth/me": ok(userJson()),
 			"GET /auth/profile": ok(profileJson()),
 			"GET /session": dynamic((): StubResponse => ok(sessionStatusJson(Date.now() + EXPIRES_IN_MS))),
+			"GET /health/ping": ok({ timestamp: Date.now() }),
 		});
 	});
 
@@ -46,11 +50,12 @@ describe("app status: connection and session (the admin topbar's indicators)", (
 		await renderSignedIn("/");
 		const corner = within(screen.getByTestId("app-header"));
 
-		expect(corner.getByLabelText("Online")).toBeOnTheScreen();
+		expect(await corner.findByRole("button", { name: MEASURED_CONNECTION })).toBeOnTheScreen();
 		expect(await corner.findByText("14m 32s")).toBeOnTheScreen();
 		expect(corner.getByLabelText("Session verified, token expires in 14m 32s")).toBeOnTheScreen();
-		// Compact: the connection is an icon only.
-		expect(corner.queryByText("Online")).toBeNull();
+		// Compact: the connection is its bars and ping, without the strength's word.
+		expect(corner.getByText("0 ms")).toBeOnTheScreen();
+		expect(corner.queryByText("Strong, 0 ms")).toBeNull();
 	});
 
 	it("shows both in full in the app drawer", async () => {
@@ -58,7 +63,7 @@ describe("app status: connection and session (the admin topbar's indicators)", (
 		await fireEvent.press(await screen.findByRole("button", { name: "Open menu" }));
 		const status = within(screen.getByTestId("app-drawer-status"));
 
-		expect(status.getByText("Online")).toBeOnTheScreen();
+		expect(await status.findByText("Strong, 0 ms")).toBeOnTheScreen();
 		expect(await status.findByText("Token expires in 14m 32s")).toBeOnTheScreen();
 	});
 
@@ -71,7 +76,7 @@ describe("app status: connection and session (the admin topbar's indicators)", (
 			await Promise.resolve();
 		});
 
-		expect(within(screen.getByTestId("app-header")).getByLabelText("Offline")).toBeOnTheScreen();
+		expect(within(screen.getByTestId("app-header")).getByRole("button", { name: "Offline" })).toBeOnTheScreen();
 		expect(within(screen.getByTestId("app-drawer-status", { includeHiddenElements: true })).getByText("Offline", { includeHiddenElements: true })).toBeOnTheScreen();
 	});
 
@@ -96,7 +101,7 @@ describe("app status: connection and session (the admin topbar's indicators)", (
 		expect(await screen.findByText("security screen")).toBeOnTheScreen();
 
 		const header = within(screen.getByTestId("app-header"));
-		expect(header.getByLabelText("Online")).toBeOnTheScreen();
+		expect(header.getByRole("button", { name: MEASURED_CONNECTION })).toBeOnTheScreen();
 		expect(header.getByText("14m 32s")).toBeOnTheScreen();
 		expect(header.getByRole("button", { name: "Back" })).toBeOnTheScreen();
 	});
