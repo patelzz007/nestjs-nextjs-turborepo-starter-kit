@@ -66,5 +66,5 @@ export function useImageLoadingStatus(src: string | null | undefined, enabled = 
 	if (!hasSource) {
 		return "idle";
 	}
-	return settled !== null && settled.key === key ? settled.status : "loading";
+	return settled?.key === key ? settled.status : "loading";
 }

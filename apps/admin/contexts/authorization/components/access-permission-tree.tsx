@@ -28,7 +28,8 @@ export interface AccessPermissionTreeProps {
 }
 
 type PermissionTreeDisplay =
-	{ readonly kind: "flat"; readonly permissions: readonly PermissionTreeLeaf[] } | { readonly kind: "nested"; readonly resources: readonly PermissionTreeResourceNode[] };
+	| { readonly kind: "flat"; readonly permissions: readonly PermissionTreeLeaf[] }
+	| { readonly kind: "nested"; readonly resources: readonly PermissionTreeResourceNode[] };
 
 function resolveGroupDisplay(groupNode: PermissionTreeGroupNode): PermissionTreeDisplay {
 	if (groupNode.resources.length === 1) {

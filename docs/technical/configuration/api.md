@@ -34,9 +34,9 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 
 **Only `apps/api/src/config/api-config.ts` reads `process.env`**. It parses the
 whole environment once, through one zod schema, before Nest bootstraps; every
-other file injects `TypedConfigService`. ESLint enforces it
-(`no-restricted-properties` in `apps/api/eslint.config.js`), and a lint canary
-(`src/__tests__/eslint-boundaries.spec.ts`) fails if the ban is ever dropped.
+other file injects `TypedConfigService`. Oxlint enforces it
+(`no-restricted-properties` in `apps/api/oxlint.config.ts`), and a lint canary
+(`src/__tests__/lint-boundaries.spec.ts`) fails if the ban is ever dropped.
 
 ---
 
@@ -119,7 +119,7 @@ export class InviteService {
 // ✅ Module files that pick imports at load time (the config is already validated by main.ts)
 const redisUrl: string | undefined = getApiConfig().messaging.redisUrl;
 
-// ❌ Never — ESLint rejects it outside src/config/api-config.ts
+// ❌ Never — lint rejects it outside src/config/api-config.ts
 const url = process.env.MERCHANT_APP_URL ?? "http://localhost:3003";
 ```
 
@@ -268,7 +268,7 @@ whenever `NODE_ENV=test`; it is now only ever off when explicitly `disabled`.
 | `src/config/__tests__/api-config.spec.ts` | Value-free `EnvValidationError`; unrelated OS variables ignored; `getApiConfig()` parses once |
 | `src/config/__tests__/typed-config.service.spec.ts` | Group accessors, client-app URLs, key copies, broker/cache/storage switches |
 | `src/config/__tests__/env-example.spec.ts` | `.env.example` documents every schema variable, ships secrets empty, and boots once secrets are filled |
-| `src/__tests__/eslint-boundaries.spec.ts` | `process.env` ban and frontend-import ban actually fire |
+| `src/__tests__/lint-boundaries.spec.ts` | `process.env` ban and frontend-import ban actually fire |
 | `packages/shared/src/runtime/__tests__/app-env.test.ts` | Shared building blocks |
 
 Unit tests are hermetic: `test/setup-unit-env.ts` installs the TEST-ONLY
@@ -290,5 +290,5 @@ Build config for a test with `createTestApiConfig({ … })` /
 Nest app (Prisma CLI, `tsx`) and keep reading the few variables they need
 (`DATABASE_URL`, `REDIS_URL`, `BULLMQ_PREFIX`, `RESEND_WEBHOOK_SECRET`,
 `WEBHOOK_URL`) directly; `prisma.config.ts` already fails fast with a clear
-message when `DATABASE_URL` is missing. The ESLint `process.env` ban applies to
+message when `DATABASE_URL` is missing. The lint `process.env` ban applies to
 `src/**` only.

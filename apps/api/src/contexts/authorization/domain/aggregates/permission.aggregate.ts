@@ -42,7 +42,10 @@ export interface NewPermission {
 }
 
 export type PermissionChange =
-	{ readonly kind: "created" } | { readonly kind: "revised"; readonly revision: PermissionRevision } | { readonly kind: "removed" } | { readonly kind: "restored" };
+	| { readonly kind: "created" }
+	| { readonly kind: "revised"; readonly revision: PermissionRevision }
+	| { readonly kind: "removed" }
+	| { readonly kind: "restored" };
 
 /**
  * One catalog permission. System permissions (`isSystem`) are synced from the code registry

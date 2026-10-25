@@ -86,4 +86,9 @@ export class TenantLifecycleChanged extends DomainEvent {
 }
 
 export type TenantsDomainEvent =
-	MerchantVerificationStatusChanged | LocationStatusChanged | InvitationStatusChanged | AccessRequestReviewed | MembershipChanged | TenantLifecycleChanged;
+	| MerchantVerificationStatusChanged
+	| LocationStatusChanged
+	| InvitationStatusChanged
+	| AccessRequestReviewed
+	| MembershipChanged
+	| TenantLifecycleChanged;

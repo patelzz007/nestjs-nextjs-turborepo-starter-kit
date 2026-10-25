@@ -18,7 +18,7 @@ Run these from `apps/docs` (or with `pnpm --filter @workspace/docs <script>` fro
 | `pnpm build`         | Checks every internal link, then builds the static site into `dist/`  |
 | `pnpm preview`       | Serves the built `dist/` on port 3002                                 |
 | `pnpm test`          | Vitest: markdown plugins, navigation, search, and the browser scripts |
-| `pnpm lint`          | ESLint (shared monorepo config)                                       |
+| `pnpm lint`          | Oxfmt check + Oxlint (shared monorepo config)                         |
 | `pnpm typecheck`     | `astro check` — types **and** every guide's frontmatter               |
 | `pnpm check:links`   | Only the link checker (`scripts/check-links.mjs`)                     |
 | `pnpm docs:api`      | Re-render `docs/technical/api-reference/` from `docs/generated/` (vitest `--update`) |
@@ -69,7 +69,7 @@ with their order in `blog/meta.json`.
 | `[registry](../apps/api/src/…/registry.ts)`    | A link to that file on GitHub                             |
 | `> [!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!CAUTION]` | A coloured callout (emoji markers like `> ⚠️` work too) |
 | ```` ```ts title="app.ts" {2-4} ````           | A `CodeBlock` with a title, language, copy button, line numbers and lines 2–4 lit |
-| ```` ```mermaid ````                           | A diagram, rendered in the browser in the current theme   |
+| ```` ```mermaid ````                           | A diagram (Mermaid syntax), drawn by Pele in the browser, coloured by role; it must parse or the build fails |
 | ```` ```qr title="Pairing QR" ````            | A scannable QR code of the fence's text, drawn at build time as inline SVG by the shared encoder (`src/lib/markdown/qr-code.ts`) |
 | ```` ```pdf title="Statement.pdf" ````        | The PDF at the fence's URL (a site path or `https://`), framed under a header with open-in-new-tab and download, drawn by the browser's own PDF engine (`src/lib/markdown/pdf-embed.ts`). `/files/pdf-viewer-sample.pdf` is a sample written at build time |
 | ```` ```carousel ratio="16/9" ````             | The `@workspace/ui` `ImageCarousel` (Embla) of the fence's images, one `![alt](url)` per line: rendered at build time, hydrated in the browser (`src/lib/markdown/media-embeds.ts`, `src/lib/media/`) |
@@ -93,7 +93,7 @@ apps/docs/
     ├── lib/                   # pure, unit-tested logic (navigation, search, TOC, dates, markdown plugins)
     ├── components/ layouts/   # .astro markup — header, sidebar + mobile drawer (shared NavTree), TOC, cards, pager, search
     ├── pages/                 # routes: /, /docs, /docs/[...slug], /blog, /images/…, /search-index.json, /feed.xml
-    ├── scripts/               # progressive enhancement: theme, drawer, search, TOC scroll spy, copy, mermaid
+    ├── scripts/               # progressive enhancement: theme, drawer, search, TOC scroll spy, copy, diagrams
     └── styles/global.css      # every colour, size and weight is a token (light + dark); colours map onto the packages/tokens palette
 ```
 
@@ -111,6 +111,37 @@ apps/docs/
   to WCAG AA (≥ 4.5:1) in both themes. Callout and card-tile hues are docs-only and stay literal.
   The tokens at the top of `global.css` are the only place to change any of it.
 - **Typography** — see [Typography](#typography) below.
+- **One reading column** — paragraphs, tables, code blocks and diagrams share one width
+  (`--type-measure`, ~70 characters of body copy), centred between the sidebar and the "On this
+  page" rail, so nothing juts out past the text. Content wider than the column scrolls inside its
+  own frame; a table shows an edge shadow on the side that has more columns.
+- **Tables** — reference material, read across a row: no vertical rules, a tinted header, the first
+  column as the row's key (text colour, medium weight), a row highlight under the pointer and
+  tabular numerals. `rehypeTableWrapper` adds a `<wbr>` after each `.` and `/` of a code chip in a
+  cell, and after each `_` of an identifier longer than 22 characters, so a column of names wraps
+  at an identifier's joints instead of pushing the table past the column (copied text is
+  unchanged).
+- **Diagrams** — ```` ```mermaid ```` fences are drawn by [Pele](https://pele.run), a Mermaid-syntax
+  renderer that outputs plain SVG themed by CSS variables, so a theme switch recolours a diagram
+  without re-rendering it. Pele measures labels in the page's own font (no clipped labels) and
+  re-orients a flowchart that is too wide for the column instead of shrinking it.
+  `remarkDiagrams` parses every diagram at build time and fails the build on a syntax error, with
+  its line; `src/lib/markdown/__tests__/docs-diagrams.test.ts` reports the same in `pnpm test`.
+  Colour carries meaning, the same in every diagram (`src/scripts/diagrams.ts` tags the nodes,
+  `global.css` → "Diagrams" colours them):
+
+  | Role | Hue | What it is |
+  | --- | --- | --- |
+  | Entry point | blue | a flowchart node nothing points to |
+  | Step | slate | everything in between |
+  | Store | teal | a cylinder — a table, cache or queue |
+  | Decision | amber | a diamond |
+  | Outcome | violet | a node that points to nothing |
+  | Person | rose | a circle |
+
+  Sequence participants take the six hues in order; notes are neutral and dashed. A node the
+  author styled (`classDef` / `style`) keeps the author's colours. A `;` inside sequence message
+  text ends the statement — write `#59;` for a literal semicolon.
 - **Code blocks** — every fence renders the shared `CodeBlock` from `@workspace/ui` (the full
   ReUI port, `packages/ui/src/components/code-block.tsx`). `src/lib/markdown/code-block.ts`
   highlights each fence at build time with the component's own `highlightCode` (Shiki,
@@ -131,37 +162,41 @@ apps/docs/
 - **Theme** — light / dark follows the OS until the reader picks one (stored in
   `localStorage`); an inline script applies it before first paint to avoid a flash.
 - **No framework runtime** — pages ship as HTML; the only JavaScript is `src/scripts/*`
-  (~95 kB, mostly zod), plus mermaid, which is downloaded only on pages that contain a diagram.
+  (~95 kB, mostly zod), plus the diagram renderer, which is downloaded only on pages that contain a diagram.
 
 ## Typography
 
-| Role             | Face                  | Size / line height / weight                         |
-| ---------------- | --------------------- | --------------------------------------------------- |
-| Body copy        | Geist                 | 16px / 1.65 / 400, at most `70ch` per line          |
-| Page title (h1)  | Bricolage Grotesque   | 36px (30px on phones) / 1.2 / 700, tracked −0.022em |
-| h2 · h3 · h4     | Bricolage Grotesque   | 24 · 20 · 18px / 1.2–1.35 / 600                     |
-| Card titles      | Bricolage Grotesque   | 20px / 1.35 / 600                                   |
-| Chrome           | Geist                 | 14px / 1.5 — nav tree, TOC, metadata, tables, controls; 12px for tags and hints |
-| Code             | Geist Mono            | 0.875em inline (follows the text around it), 14px in code blocks, ligatures off |
+| Role             | Face                         | Size / line height / weight                         |
+| ---------------- | ---------------------------- | --------------------------------------------------- |
+| Body copy        | Atkinson Hyperlegible Next   | 16px / 1.65 / 400, at most `70ch` per line          |
+| Page title (h1)  | Atkinson Hyperlegible Next   | 36px (30px on phones) / 1.2 / 700, tracked −0.022em |
+| h2 · h3 · h4     | Atkinson Hyperlegible Next   | 24 · 20 · 18px / 1.2–1.35 / 600                     |
+| Card titles      | Atkinson Hyperlegible Next   | 20px / 1.35 / 600                                   |
+| Tables           | Atkinson Hyperlegible Next   | 15px / 1.5, tabular numerals                        |
+| Chrome           | Atkinson Hyperlegible Next   | 14px / 1.5 — nav tree, TOC, metadata, controls; 12px for tags and hints |
+| Code             | Atkinson Hyperlegible Mono   | 0.875em inline (follows the text around it), 14px in code blocks, ligatures off |
 
-- **Same faces as the apps** — the docs use the product's type system (`rules/07-ui-system.md`,
-  "Typography"): Bricolage Grotesque for headings (`--type-family-heading`), Geist for
-  everything else, Geist Mono for code.
-- **Why these faces** — Geist is a neutral UI/prose sans with a modern geometric tone; Geist Mono
-  matches it for code and IDs. The sizes follow the ui-ux-pro-max UX rules: 16px minimum body text, line height
-  1.5–1.75, 65–75 characters per line, one consistent scale (12 · 14 · 16 · 18 · 20 · 24 · 30 · 36px).
+- **One family** — headings, prose and UI are Atkinson Hyperlegible Next and code is Atkinson
+  Hyperlegible Mono (`--font-sans`, `--font-mono`; `--type-family-heading` is the sans).
+  Hierarchy comes from weight and size, not a second display face. The docs deliberately differ
+  from the apps (Bricolage Grotesque / Geist): they are a reading surface, not app UI.
+- **Why these faces** — designed by the Braille Institute so look-alike characters never blur
+  together: `0` / `O`, `1` / `l` / `I`, `rn` / `m`. Reference text full of identifiers, numbers and
+  environment variable names is where that matters most. The sizes follow the ui-ux-pro-max UX
+  rules: 16px minimum body text, line height 1.5–1.75, 65–75 characters per line, one consistent
+  scale (12 · 14 · 15 · 16 · 18 · 20 · 24 · 30 · 36px).
 - **Code ligatures are off** — readers copy what they see, so `!==`, `=>` and `>=` must look like
   the characters they type.
-- **Self-hosted** — the font files come from the `@fontsource-variable/bricolage-grotesque`,
-  `@fontsource-variable/geist` and `@fontsource-variable/geist-mono` packages and are served from this site (no Google Fonts
-  request, so no third-party tracking and no extra DNS/TLS handshake). The Astro Fonts API
-  (`fonts` in `astro.config.ts`, `<Font>` in `src/layouts/BaseLayout.astro`) emits the
-  `@font-face` rules with `font-display: swap`, preloads the upright Geist file, and
-  generates metric-matched fallback faces (Arial / Courier New with `size-adjust` and
-  ascent/descent overrides) so text does not jump when the web font arrives.
-- **Latin only, variable weights** — one variable file per style (≈29 kB upright, ≈30 kB italic
-  for Geist; ≈23 kB / ≈25 kB for Geist Mono) covers every weight. Characters outside the Latin
-  subset (box-drawing lines, most arrows, emoji) come from the fallback fonts.
+- **Self-hosted** — the font files come from the `@fontsource-variable/atkinson-hyperlegible-next`
+  and `@fontsource-variable/atkinson-hyperlegible-mono` packages and are served from this site (no
+  Google Fonts request, so no third-party tracking and no extra DNS/TLS handshake). The Astro
+  Fonts API (`fonts` in `astro.config.ts`, `<Font>` in `src/layouts/BaseLayout.astro`) emits the
+  `@font-face` rules with `font-display: swap`, preloads the upright sans file, and generates
+  metric-matched fallback faces (`size-adjust` and ascent/descent overrides) so text does not jump
+  when the web font arrives.
+- **Latin only, variable weights** — one variable file per style (≈34 kB upright, ≈38 kB italic
+  for the sans; ≈18 kB / ≈19 kB for the mono) covers every weight from 200 to 800. Characters
+  outside the Latin subset (box-drawing lines, most arrows, emoji) come from the fallback fonts.
 - **Tokens** — every size, weight, line height and letter spacing is a `--type-*` token at the top
   of `src/styles/global.css`. Use them; never write a raw `font-size` / `font-weight` in a rule.
   Fenced code blocks take their size from `--type-code-block-size` (passed to the shared

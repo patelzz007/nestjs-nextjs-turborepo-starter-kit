@@ -4,7 +4,7 @@ tags: ["typescript", "tooling", "config"]
 description: "How TypeScript is configured across the monorepo via the shared @workspace/typescript-config package."
 order: 5
 author: "Platform Team"
-lastUpdated: 1790812800000
+lastUpdated: 1792886400000
 coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -24,7 +24,7 @@ coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=f
 2. [The base configs](#2-the-base-configs)
 3. [How each workspace extends them](#3-how-each-workspace-extends-them)
 4. [Path aliases](#4-path-aliases)
-5. [Typechecking the repo](#5-typechecking-the-repo)
+5. [Typechecking and building with tsrs](#5-typechecking-and-building-with-tsrs)
 6. [Common tasks & gotchas](#6-common-tasks--gotchas)
 7. [Adding / changing configs](#7-adding--changing-configs)
 
@@ -158,7 +158,7 @@ Extends `base.json` with NestJS requirements:
   suffixes on value imports. Dev and prod both run the Rspack bundle
   (`dist/main.js`) under plain `node`. See `docs/architecture.md` for
   the full build story.
-- `sourceMap: true` + `removeComments: true` — good for `tsc`-based builds.
+- `sourceMap: true` + `removeComments: true` — good for compiler-emitted builds (tsrs).
 
 ---
 
@@ -168,7 +168,7 @@ Extends `base.json` with NestJS requirements:
 | ------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `apps/web`                | `@workspace/typescript-config/nextjs.json`        | `@/*` path alias only; `customConditions: ["development"]`; Next include globs                                        |
 | `apps/admin`              | `@workspace/typescript-config/nextjs.json`        | Same as web (also `apps/merchant`)                                                                                    |
-| `apps/api`                | `@workspace/typescript-config/nestjs.json`        | `outDir: ./dist`, `rootDir: ./src`, `incremental: true`, `customConditions: ["development"]`; excludes `src/**/*.spec.ts` |
+| `apps/api`                | `@workspace/typescript-config/nestjs.json`        | The full program (`noEmit`, specs, `test/`, `prisma/`, scripts); `tsconfig.typecheck.json` is the production program — see below |
 | `packages/client`         | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`, `customConditions: ["development"]`; hosts auth / API client code      |
 | `packages/ui`             | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`, `@workspace/ui/*` alias                                                |
 | `packages/shared`         | `@workspace/typescript-config/base.json`          | `module: ESNext`, `moduleResolution: bundler`, `noEmit: true`, `lib: ["es2022"]`                                      |
@@ -179,11 +179,11 @@ Extends `base.json` with NestJS requirements:
 > extensionless imports, so all source files are authored **extensionless** —
 > Turbopack cannot map a `.js` specifier back to a `.ts` file, so `.js`-suffixed
 > imports in source break web/admin (see the gotcha below).
-> `packages/shared` is built to ESM with plain **`tsc`** (`pnpm build` →
-> `tsc -p tsconfig.build.json`), then `tsc-alias --resolve-full-paths` rewrites
+> `packages/shared` is built to ESM with **tsrs** (`pnpm build` →
+> `tsrs -p tsconfig.build.json`), then `tsc-alias --resolve-full-paths` rewrites
 > `dist/` (`.js` and `.d.ts`) so every relative import gets its full `.js` path —
 > Node's ESM runtime requires them even though source stays extensionless.
-> `packages/messaging` is built the same way.
+> `packages/messaging` and `packages/api-client` are built the same way.
 >
 > **How `@workspace/shared` is resolved:** the package `exports` field exposes a
 > `development` condition pointing at the raw `src/index.ts`, and web/admin set
@@ -192,10 +192,9 @@ Extends `base.json` with NestJS requirements:
 > included — `packages/tooling/__tests__/tsconfig-conditions.test.mjs` fails on a
 > tsconfig without it, because types read from a built `dist/` pass on a laptop
 > with a stale build and fail in a clean CI checkout. Node still loads `dist/` at
-> runtime (rspack leaves workspace packages external). The API's type-aware ESLint
-> parses every file with ONE program (`tsconfig.check.json`): a second program over
-> the same source graph is what once exhausted Node's default heap — see
-> [`eslint.md` §8.7](./eslint.md#87-api-eslint-exits-134-javascript-heap-out-of-memory).
+> runtime (rspack leaves workspace packages external). Type-aware lint (oxlint-tsgolint)
+> checks each file against its **nearest `tsconfig.json`**, so that file must cover every
+> file the workspace lints — see [oxlint.md §8.1](./oxlint.md#81-a-type-aware-rule-reports-error-typed-values-everywhere).
 >
 > **Per-context entry points.** Besides the root barrel, `@workspace/shared/contexts/<context>`
 > (`./contexts/*` in `exports`, same `development` / `dist` conditions) exposes one bounded
@@ -206,32 +205,18 @@ Extends `base.json` with NestJS requirements:
 > `src/__tests__/context-entry-points.test.ts` keeps every context's entry present and its values
 > identical to the root's.
 
-### `apps/api/tsconfig.json` in detail
+### `apps/api` tsconfigs in detail
 
-```json title="tsconfig.json"
-{
-	"extends": "@workspace/typescript-config/nestjs.json",
-	"compilerOptions": {
-		"outDir": "./dist",
-		"rootDir": "./src",
-		"incremental": true,
-		"customConditions": ["development"]
-	},
-	"include": ["src/**/*"],
-	"exclude": ["node_modules", "dist", "src/**/*.spec.ts"]
-}
-```
+The API has three tsconfigs, each a different program:
 
-- `outDir: ./dist` — production bundle lands at `apps/api/dist/main.js`
-  (via `rspack build`).
-- `rootDir: ./src` — only `src/` is typechecked (`tsc --noEmit`); Rspack
-  bundle step ignores it.
-- `incremental: true` — kept for editor/typecheck ergonomics.
-- `customConditions: ["development"]` — `@workspace/*` types come from source,
-  never from a possibly stale `dist/` build.
-- `exclude: ["src/**/*.spec.ts"]` — tests are not part of the build. (ESLint
-  parses them, like every API file, with `tsconfig.check.json` — see
-  [`eslint.md` §8.7](./eslint.md#87-api-eslint-exits-134-javascript-heap-out-of-memory).)
+| File | Program | Used by |
+| --- | --- | --- |
+| `tsconfig.json` | **Everything**: `src/` (code and unit specs), `test/**`, `prisma/**`, `scripts/**`, the vitest and Prisma configs. `noEmit`, `rootDir: "."`, `types: ["node", "vitest/globals"]` | Editors, oxlint's type-aware rules (nearest tsconfig), the second `typecheck` pass |
+| `tsconfig.typecheck.json` | **Production**: `src/` without specs, `types: ["node"]`, so production code cannot lean on a test-only type | The first `typecheck` pass |
+| `tsconfig.build.json` | The production program with emit (`outDir: ./dist`) | Compiler-emitted builds only; the API itself bundles with Rspack + SWC, which reads no tsconfig |
+
+All three set `customConditions: ["development"]` (through `tsconfig.json`): `@workspace/*` types
+come from source, never from a possibly stale `dist/` build.
 
 ---
 
@@ -250,7 +235,7 @@ Workspace packages are **not** aliased. `@workspace/client`, `@workspace/ui` and
 same way Turbopack and Vitest resolve them, so an app can only import what a
 package deliberately exposes. A `paths` entry like
 `"@workspace/client/*": ["../../packages/client/src/*"]` would bypass that
-public surface and is not allowed (see [ESLint → Import boundaries](./eslint.md#31-import-boundaries)).
+public surface and is not allowed (see [Oxlint → Import boundaries](./oxlint.md#31-import-boundaries)).
 
 So in `apps/web` you can write:
 
@@ -275,33 +260,39 @@ App code imports **types** (`LoginInput`) for annotations and props. Import the
 
 ---
 
-## 5. Typechecking the repo
+## 5. Typechecking and building with tsrs
 
 Every workspace exposes a `typecheck` script, run by **[tsrs](https://github.com/oxc-project/tsrs)**
-— a Rust port of the TypeScript 7 compiler (`tsrs --noEmit`, the same flags and tsconfig as `tsc`):
+— a Rust port of the TypeScript 7 compiler (`tsrs --noEmit`, the same flags and tsconfig as `tsc`). tsrs also **builds** and **watches** the packages that emit a `dist/`:
 
 | Workspace                                       | `typecheck` command                                                            |
 | ----------------------------------------------- | ------------------------------------------------------------------------------ |
 | web, admin, merchant, mobile, analytics-consumer | `tsrs --noEmit`                                                                |
-| `@workspace/api`                                | `tsrs --noEmit -p tsconfig.typecheck.json && tsrs --noEmit -p tsconfig.check.json` |
+| `@workspace/api`                                | `tsrs --noEmit -p tsconfig.typecheck.json && tsrs --noEmit -p tsconfig.json` |
 | aws-infrastructure                              | `tsrs --noEmit -p tsconfig.json`                                               |
 | ui, ui-native, shared, api-client, messaging, tokens, client | `tsrs --noEmit`                                                   |
-| docs                                            | `astro check`                                                                  |
+| docs                                            | `astro check` (Volar, on TypeScript 6 — see below)                             |
 
 What tsrs does and does not replace:
 
-- **Type checking only.** `tsc` 6 still emits each package's `dist/` (`build`), and TypeScript 6
-  stays the library the editor, Next.js and typescript-eslint load (see
-  [Why the repo stays on TypeScript 6](#why-the-repo-stays-on-typescript-6-not-7)). tsrs checks
-  with TypeScript 7's rules, so a pass also means the code is ready for TS7.
-- **Verified before adoption (2026-10-24):** the same diagnostics as `tsc` 6 on every workspace
-  (zero errors each) and byte-identical messages on planted errors; the whole repo checks in
-  about 4 s (`apps/api` alone: 5,313 files in 1.5 s).
+- **Type checking, builds and watchers.** `typecheck` everywhere, plus `build` / `dev` in
+  `packages/shared`, `packages/api-client` and `packages/messaging` (`tsrs -p tsconfig.build.json`,
+  then `tsc-alias`; `dev` runs `tsrs … --watch --preserveWatchOutput` beside `tsc-alias --watch`
+  through the watch runner) and `apps/aws-infrastructure` (`build` / `watch`).
+- **Not the editor or Next.js.** Editors and `next build` (`experimental.useTypeScriptCli`, on by
+  default) use the workspace's TypeScript 7 package (`typescript@7.0.2`).
+- **Verified before adoption.** Type checking (2026-10-24): the same diagnostics as `tsc` on every
+  workspace and byte-identical messages on planted errors; the whole repo checks in about 4 s.
+  Emit (2026-10-25): against TypeScript 7.0.2's `tsc`, the same files, identical JavaScript, and
+  `.d.ts` differing only in the order of union members in inferred types (the same types); watch
+  mode re-emits on change; an up-to-date incremental build emits nothing (the dev watcher relies
+  on it, `packages/shared/tsconfig.build.json`).
 - **Pinned exactly** (`0.18.0-ts7.1.0-dev.20260929`, a pre-release that tracks TypeScript 7.1's
-  development line). Bump it deliberately and re-run `pnpm typecheck`.
+  development line). Bump it deliberately and re-run `pnpm typecheck` and `pnpm build`.
 - **Platforms:** prebuilt binaries for macOS on Apple silicon and Linux (x64 / arm64, glibc and
   musl) — which covers CI (`ubuntu-latest`). There is no Windows or Intel-Mac binary; on those,
-  run `pnpm exec tsc --noEmit` in the workspace instead.
+  run `pnpm exec tsc --noEmit` (or `pnpm exec tsc -p tsconfig.build.json`) in the workspace instead:
+  TypeScript 7's own `tsc` takes the same flags.
 
 Run them all from the repo root:
 
@@ -357,31 +348,31 @@ case: `import { TokenExpiredError } from "jsonwebtoken"` crashes at runtime, so
 destructures the class from it. If you add a new CJS dependency, prefer default
 imports and destructure from there.
 
-### Why the repo stays on TypeScript 6 (not 7)
+### TypeScript 7, and the two places TypeScript 6 remains
 
-TypeScript 7.0 (the Go-native compiler) ships **no JS compiler API** (no
-`ts.sys`, no `createProgram`), which breaks every JS-API consumer — above all
-typescript-eslint, whose 8.x line peers `typescript >=4.8.4 <6.1.0`. The whole
-workspace therefore runs the **last JS-based line, TypeScript 6.0.x** (currently
-`6.0.3`):
+The workspaces run **TypeScript 7.0.2** (the Go-native compiler, ADR 063). TypeScript 7 ships **no
+classic JS compiler API** (no `ts.sys`, no `createProgram`; only `typescript/unstable/*`), so
+anything that still executes that API gets TypeScript 6.0.3 instead:
 
-- Every workspace declares the same exact `"typescript": "6.0.3"` (syncpack
-  enforces one exact version — see `docs/technical/tooling/dependencies.md`).
-- `pnpm-workspace.yaml` `overrides.typescript` forces that version for the whole
-  tree, so no transitive dependency can pull TS7 in.
-- `pnpm-workspace.yaml` `packageExtensions` injects the same version into
-  `@darraghor/eslint-plugin-nestjs-typed`, which imports `typescript` without
-  declaring it.
+- **`apps/docs`** declares `"typescript": "6.0.3"`: `astro check` runs on Volar, and
+  `@astrojs/check` 0.9.12 peers `^5 || ^6`. A syncpack version group pins it (every other
+  workspace must declare the same exact TypeScript 7 version — see
+  `docs/technical/tooling/dependencies.md`).
+- **`@darraghor/eslint-plugin-nestjs-typed`** (an oxlint JS plugin) imports `typescript` without
+  declaring it and runs on `@typescript-eslint/utils` (peers `<6.1.0`). `pnpm-workspace.yaml`
+  `packageExtensions` gives it TypeScript 6.0.3 as a dependency, so it and the typescript-eslint
+  packages whose peer it satisfies resolve TypeScript 6 locally.
 
-The lockfile contains exactly **one** `typescript` version. Move to TS7 only once
-typescript-eslint supports it; the held-majors note in `pnpm-workspace.yaml`
-records the blocker.
+There is no global `typescript` override any more. `@nestjs/swagger`'s optional peer (`^5.5 || ^6`)
+is for its CLI plugin, which the repository does not use (`peerDependencyRules` in
+`pnpm-workspace.yaml`). The held-majors note there records when each holdout can go.
+
 After a `pnpm install`, re-run `pnpm db:generate` if Prisma's generated client
 types ever look missing (the reinstall can wipe `node_modules/.prisma`).
 
 If you see tooling crash with `Cannot read properties of undefined (reading
 'useCaseSensitiveFileNames')` or `ts.sys is undefined`, that's a JS-API consumer
-resolving TS7 — give it the TS6 shim the same way.
+resolving TypeScript 7 — give it TypeScript 6 the same way (a `packageExtensions` entry).
 
 ### `process` is not defined
 
@@ -409,7 +400,7 @@ this error, make sure the file is included in a tsconfig that has node types, or
 To verify:
 
 ```bash
-cd packages/ui && npx tsc --noEmit
+cd packages/ui && pnpm typecheck
 ```
 
 ---
@@ -533,4 +524,4 @@ blocks.
 
 ---
 
-_Last updated: August 20, 2026_
+_Last updated: October 25, 2026_

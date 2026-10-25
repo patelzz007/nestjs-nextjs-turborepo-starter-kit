@@ -35,10 +35,14 @@ allowBuilds:
 # once that date arrives (it never blocks a push).
 minimumReleaseAge: 1440
 
-# @darraghor/eslint-plugin-nestjs-typed does `import ts from "typescript"`
-# directly (undisclosed in its manifest), so Node resolves the hoisted TS 7
-# (which has no compiler API) and its rules crash. Inject the TS 6 API shim
-# as an explicit dep of the plugin so its require resolves locally.
+# @darraghor/eslint-plugin-nestjs-typed (an oxlint JS plugin, see
+# packages/oxlint-config) does `import ts from "typescript"` directly
+# (undisclosed in its manifest) and runs on @typescript-eslint/utils, which peers
+# `typescript <6.1.0`. Both need the TypeScript JS API, which TypeScript 7 no
+# longer ships, so Node would resolve the workspace's TS 7 and the rules would
+# crash. Give the plugin TS 6 as an explicit dependency so it, and the
+# @typescript-eslint packages whose peer it satisfies, resolve TS 6 locally.
+# Remove once the plugin and typescript-eslint support TypeScript 7.
 packageExtensions:
   "@darraghor/eslint-plugin-nestjs-typed":
     dependencies:
@@ -52,7 +56,6 @@ packageExtensions:
 # (e.g. the `connect` event overload added in 8.20.4 vs 8.20.3).
 overrides:
   "@types/pg": "8.23.1"
-  typescript: "6.0.3"
   # One fastify for the app and @nestjs/platform-fastify (the adapter's request/
   # reply types must be the same declarations the app imports). 5.12.5 is the
   # first release with the GHSA-4mh8-r7rc-xpvc fix (HTTP/2 trailer DoS).
@@ -80,11 +83,10 @@ overrides:
   "@expo/cli>zod": "4.6.7" # GHSA-mrhx-c7xc-m3w5: zod <4.6.6
 
 # ── Majors held back (re-checked 2026-10-06; re-check on every dependency sweep) ──
-# typescript 7: typescript-eslint@8.71 peers `typescript >=4.8.4 <6.1.0` (TS 7 has
-# no compiler API). Keep the whole workspace on TS 6.0.x until TS 7.1 +
-# typescript-eslint support land. See https://github.com/typescript-eslint/typescript-eslint/issues/10940
-# eslint / @eslint/js 10: eslint-plugin-react@7.37, eslint-plugin-import@2.32 and
-# eslint-plugin-jsx-a11y@6.10 peer `eslint` only up to ^9. Stay on 9.39.x until they support 10.
+# typescript (apps/docs only) 7: `astro check` runs on Volar, which needs the
+# TypeScript JS API that TypeScript 7 removed; @astrojs/check 0.9.12 (latest) peers
+# `^5 || ^6`. apps/docs stays on 6.0.3 (pinned in .syncpackrc.json) until it supports 7.
+# Every other workspace is on TypeScript 7 and type-checks with tsrs.
 # prisma 8: npm's `latest` tag points at a release candidate (8.0.0-rc.x) while
 # @prisma/client latest is 7.10.0. Stay on 7.10.x until 8.0.0 ships as a stable release.
 
@@ -95,6 +97,12 @@ peerDependencyRules:
   allowedVersions:
     "nestjs-zod>@nestjs/common": "12"
     "nestjs-zod>@nestjs/swagger": "12"
+    # @nestjs/swagger's optional `typescript` peer (^5.5 || ^6) is for its CLI
+    # compiler plugin only (`@nestjs/swagger/plugin`), which this repo does not use:
+    # the API builds with rspack + SWC and documents routes with nestjs-zod. Its
+    # runtime never loads TypeScript (checked: importing it leaves `typescript`
+    # out of the module cache). Remove once @nestjs/swagger peers TypeScript 7.
+    "@nestjs/swagger>typescript": "7"
 
 # ── Accepted audit advisories ─────────────────────────────────────────────
 # ONLY for an advisory with NO patched version, after checking it cannot be

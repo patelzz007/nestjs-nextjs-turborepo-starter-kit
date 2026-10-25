@@ -235,10 +235,10 @@ export function createBreadcrumbContext(defaultResolve: (pathname: string) => re
 		const routeStatus = React.useMemo<BreadcrumbStatus>(() => toReady(resolver(pathname), invalidTrailMessage), [resolver, pathname, invalidTrailMessage]);
 
 		const status = React.useMemo<BreadcrumbStatus>(() => {
-			if (override !== null && override.pathname === pathname) {
+			if (override?.pathname === pathname) {
 				return override.value;
 			}
-			if (tailLabel !== null && tailLabel.pathname === pathname && routeStatus.kind === "ready") {
+			if (tailLabel?.pathname === pathname && routeStatus.kind === "ready") {
 				return toReady(applyTailLabel(routeStatus.items, tailLabel.value), invalidTrailMessage);
 			}
 			return routeStatus;
@@ -284,14 +284,14 @@ export function createBreadcrumbContext(defaultResolve: (pathname: string) => re
 		// Clearing is scoped too: a page's cleanup that runs after another page
 		// set its own value never wipes that value.
 		const reset = React.useCallback((): void => {
-			setOverride((current) => (current !== null && current.pathname === pathname ? null : current));
+			setOverride((current) => (current?.pathname === pathname ? null : current));
 		}, [pathname]);
 
 		const setTailLabel = React.useCallback(
 			(label: string | null): void => {
 				const trimmed = label?.trim() ?? "";
 				if (trimmed.length === 0) {
-					setTailLabelState((current) => (current !== null && current.pathname === pathname ? null : current));
+					setTailLabelState((current) => (current?.pathname === pathname ? null : current));
 					return;
 				}
 				setTailLabelState({ pathname, value: trimmed });

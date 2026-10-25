@@ -72,7 +72,10 @@ export function describeExportFailure(error: ApiDownloadError): ExportFailureMes
 }
 
 type ExportStatus =
-	{ readonly kind: "idle" } | { readonly kind: "running"; readonly label: string } | { readonly kind: "saved"; readonly fileName: string } | { readonly kind: "failed" };
+	| { readonly kind: "idle" }
+	| { readonly kind: "running"; readonly label: string }
+	| { readonly kind: "saved"; readonly fileName: string }
+	| { readonly kind: "failed" };
 
 const IDLE: ExportStatus = { kind: "idle" };
 

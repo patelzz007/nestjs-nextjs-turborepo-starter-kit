@@ -138,7 +138,7 @@ A permission such as `ORDER:DELETE` is a **capability**, not a blank cheque. It 
 7. **Never write executable policies.** Conditions use the validated JSON rule language (spec §43).
 8. **List endpoints filter in the database** with `kernel.filter()`, never by loading everything and filtering in JavaScript (spec §32).
 9. **Only named, allowlisted system operations may bypass RLS.**
-10. **Follow the strict TypeScript rules**: no `any` / `unknown` / `never`, no casts, no `as const`, no `!`, no `eslint-disable` (spec §108).
+10. **Follow the strict TypeScript rules**: no `any` / `unknown` / `never`, no casts, no `as const`, no `!`, no `oxlint-disable` / `eslint-disable` (spec §108).
 
 ---
 

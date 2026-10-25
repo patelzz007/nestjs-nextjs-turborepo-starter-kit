@@ -73,9 +73,9 @@ Runtime environment (`packages/shared/src/lib/global-runtime.ts`):
 
 When the value is a real *shape* (an object with fields), do not chain guards — write the zod schema: `z.object({ orgSlug: z.string() }).safeParse(request.params)`.
 
-## Forbidden everywhere (ESLint, every TypeScript file)
+## Forbidden everywhere (lint, every TypeScript file)
 
-Enforced by `no-restricted-syntax` (`packages/eslint-config/restricted-syntax-rules.js`, wired in `packages/eslint-config/base.js`). There is **no** exemption — schema files, tests and environment probes included:
+Enforced by `workspace/restricted-syntax` (`packages/oxlint-config/restricted-syntax-rules.js`, wired in `packages/oxlint-config/base.js`). There is **no** exemption — schema files, tests and environment probes included:
 
 | Pattern | Why | Do instead |
 |---------|-----|------------|
@@ -142,9 +142,9 @@ if (typeof node === "string") return [node];
 if (isStringPrimitive(node)) return [node];
 ```
 
-## ESLint & rollout
+## Lint & rollout
 
-- Config: `packages/eslint-config/restricted-syntax-rules.js` → `restrictedSyntaxRules` in `packages/eslint-config/base.js` (section 9). Selector tests: `packages/eslint-config/__tests__/configs.test.js`.
+- Config: `packages/oxlint-config/restricted-syntax-rules.js` → `restrictedSyntaxRules` in `packages/oxlint-config/base.js`. Selector tests: `packages/oxlint-config/__tests__/configs.test.js`.
 - If lint points at your file: parse at the boundary with a zod schema, or use a shared guard for a union you already hold.
 
 ## Related docs

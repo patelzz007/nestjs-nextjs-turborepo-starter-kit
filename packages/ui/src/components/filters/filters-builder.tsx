@@ -245,7 +245,7 @@ export const FiltersBuilder = React.forwardRef<HTMLDivElement, FiltersBuilderPro
 	const actions = useFilterActions();
 	const sizes = filterControlSizes(actions);
 	const { draft, ruleCount } = useFilterState();
-	const open = draft !== null && draft.ruleId === null;
+	const open = draft?.ruleId === null;
 	const compact = ruleCount > 0;
 	const { openCreate, closeDraft } = actions;
 

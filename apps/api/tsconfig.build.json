@@ -1,7 +1,11 @@
 {
-	"extends": "./tsconfig.json",
+	// Emitting program for `nest build`-style tooling (the API itself builds with Rspack/SWC,
+	// which reads no tsconfig): the production program, writing to dist/.
+	"extends": "./tsconfig.typecheck.json",
 	"compilerOptions": {
-		"incremental": false
-	},
-	"exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.test.ts"]
+		"noEmit": false,
+		"outDir": "./dist",
+		"emitDecoratorMetadata": true,
+		"sourceMap": true
+	}
 }

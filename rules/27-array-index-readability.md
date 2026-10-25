@@ -6,7 +6,7 @@ Numeric literals in bracket access (`items[0]`, `match[1]`, `pair[1]`) hide mean
 
 ## Rule
 
-Never read or write a list position with a numeric literal in brackets: `[0]`, `[1]`, `?.[2]`, `row[0] = …`. ESLint enforces this in every TypeScript file (`no-restricted-syntax`, `packages/eslint-config/restricted-syntax-rules.js`).
+Never read or write a list position with a numeric literal in brackets: `[0]`, `[1]`, `?.[2]`, `row[0] = …`. Lint enforces this in every TypeScript file (`workspace/restricted-syntax`, `packages/oxlint-config/restricted-syntax-rules.js`).
 
 Pick the replacement that names the position best, in this order:
 

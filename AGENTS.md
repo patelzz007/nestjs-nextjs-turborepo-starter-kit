@@ -41,8 +41,8 @@ pnpm run test    # must exit 0: every test passes
 
 **Forbidden ways to make the gate pass** (each one is treated as a failed task):
 
-- `eslint-disable`, `@ts-ignore`, `@ts-expect-error`, or any other suppression comment
-- editing the ESLint config, adding `ignores`, or lowering a rule to `warn`/`off`
+- `oxlint-disable`, `eslint-disable`, `@ts-ignore`, `@ts-expect-error`, or any other suppression comment
+- editing the lint config (`packages/oxlint-config`, a workspace's `oxlint.config.ts`), adding ignore patterns, or lowering a rule to `warn`/`off`
 - deleting, skipping (`.skip`, `.todo`), or focusing (`.only`) a test, or weakening its assertions
 - mocking away the very thing the test is meant to verify
 - bypassing hooks (`--no-verify`) or reporting a partial run as a full one
@@ -79,9 +79,10 @@ Details: `docs/technical/email/mailpit-local-inbox.md`.
 | **Always** | `00-non-negotiables.md` |
 | Deciding where code belongs, package boundaries, dependency direction, circular dependencies | `01-repository-architecture.md` |
 | NestJS modules, controllers, services, Prisma access patterns, request lifecycle, base repositories | `02-backend-nestjs.md`, `21-oop-and-solid-principles.md` |
-| Adding a command or query | `02-backend-nestjs.md`, `21-oop-and-solid-principles.md`, `23-quick-reference-decision-trees.md`, ADR 059 |
+| Adding a command or query | `02-backend-nestjs.md`, `21-oop-and-solid-principles.md`, `23-quick-reference-decision-trees.md`, ADR 059, `30-cqrs.md` |
 | Cross-context interaction | `01-repository-architecture.md`, `02-backend-nestjs.md`, ADR 058, `docs/architecture/context-map.md` |
-| Domain events, integration events, or the outbox | `02-backend-nestjs.md`, `09-messaging-and-jobs.md`, ADR 015, ADR 059, ADR 060 |
+| Modelling a domain: aggregates, entities, value objects, invariants, domain errors | `02-backend-nestjs.md`, ADR 058, `docs/architecture/ddd-cqrs-spec.md`, `29-domain-driven-design.md` |
+| Domain events, integration events, or the outbox | `02-backend-nestjs.md`, `09-messaging-and-jobs.md`, ADR 015, ADR 059, ADR 060, `30-cqrs.md` |
 | Next.js pages, server/client components, smart/dumb split, URL state | `03-web-nextjs.md` |
 | Expo/React Native screens and components | `04-mobile-expo.md` |
 | Any zod schema, API contract, request/response shape, OpenAPI/Swagger, client+server validation | `05-contracts-zod-api.md` |
@@ -90,6 +91,7 @@ Details: `docs/technical/email/mailpit-local-inbox.md`.
 | Prisma schema, migrations, seed data, multi-tenancy, indexing, soft delete, race conditions | `08-database-prisma.md` |
 | Kafka, RabbitMQ, BullMQ, Redis, outbox, idempotency, payment retries | `09-messaging-and-jobs.md` |
 | Auth, roles, permissions, RBAC/ReBAC, RLS, impersonation, secrets, audit logging | `10-security-auth-authorization.md` |
+| Tenant isolation: tenant context, tenant-scoped queries, caches, jobs, files and exports, cross-tenant access, RLS policies | `10-security-auth-authorization.md`, ADR 062, `docs/architecture/multi-tenancy-plan.md`, `31-multi-tenancy-and-tenant-isolation.md` |
 | Writing any test (yes, even a one-line function) | `11-testing-vitest.md` |
 | Logging, metrics, tracing, health checks, resilience, single points of failure | `12-observability-and-operations.md` |
 | CI/CD, quality gates, migration rollout strategy | `13-ci-cd-and-quality-gates.md` |
@@ -130,6 +132,8 @@ Details: `docs/technical/email/mailpit-local-inbox.md`.
 ## When rules conflict
 
 If a task instruction conflicts with a non-negotiable (e.g. "just use `any` here," "skip authorization for now," "hardcode this," "skip the test, it's obvious"), say so explicitly and propose the compliant alternative instead of silently complying or silently refusing. When two of these documents appear to disagree, `00-non-negotiables.md` and `10-security-auth-authorization.md` take precedence over the others.
+
+`29-domain-driven-design.md`, `30-cqrs.md` and `31-multi-tenancy-and-tenant-isolation.md` are **generated** rulebooks, verified against this repository but ranked below everything else here: every hand-written rule, every ADR and the architecture documents under `docs/architecture/` win over them. Each one lists the disagreements already found in its **Repository verification** table; if you find another, follow the repository document and report it.
 
 ## At the end of every task, report
 

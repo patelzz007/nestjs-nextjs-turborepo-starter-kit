@@ -32,7 +32,7 @@ belongs in detail is [`rules/01-repository-architecture.md`](../../rules/01-repo
 | `packages/ui` | `@workspace/ui` | Presentational, data-agnostic components (shadcn/ReUI based) | — |
 | `packages/messaging` | `@workspace/messaging` | Reusable Redis / BullMQ / Kafka / RabbitMQ wiring | — |
 | `packages/tooling` | `@workspace/tooling` | Repo scripts: `ci:local`, secret scan, migration-history check, syncpack | — |
-| `packages/eslint-config`, `packages/typescript-config` | | Shared lint and compiler presets | — |
+| `packages/oxlint-config`, `packages/typescript-config` | | Shared lint and compiler presets | — |
 
 ```mermaid
 flowchart BT
@@ -51,8 +51,8 @@ flowchart BT
 ```
 
 Dependencies only point **down**. `ui` never imports `client`; frontends never import Prisma or
-NestJS; the API never imports frontend code. ESLint import-boundary rules enforce this
-([ESLint](./tooling/eslint.md)).
+NestJS; the API never imports frontend code. Oxlint import-boundary rules enforce this
+([Oxlint](./tooling/oxlint.md)).
 
 ## 2. Runtime topology
 
@@ -146,8 +146,8 @@ runs in a transaction whose PostgreSQL settings name the user, tenant and store 
 - Business controllers use `@Controller(apiPath("/auth"))`; the client transport prepends the
   same prefix. Only `/`, `/health*`, `/version` and `POST /notifications/email-webhook` are
   unversioned (the webhook URL is registered at Resend and must not move).
-- An e2e drift test calls every `apiContract` leaf under `/api/v1` and fails on a 404; the ESLint
-  rule `no-unversioned-controller` rejects a controller path that skips `apiPath()`.
+- An e2e drift test calls every `apiContract` leaf under `/api/v1` and fails on a 404; the lint
+  rule `api/no-unversioned-controller` rejects a controller path that skips `apiPath()`.
 - `GET /version` returns the version manifest; on a 404 the client retries against the current
   version. `Accept-version: v2` rewrites the path for clients that cannot change URLs.
   Deprecated versions get a `Sunset` header.
@@ -157,7 +157,7 @@ runs in a transaction whose PostgreSQL settings name the user, tenant and store 
 ## 7. Build and module resolution
 
 - The API is bundled with **Rspack** (`pnpm dev` = watch + restart, `pnpm build` → `dist/main.js`);
-  `tsc` only type-checks. Fastify replaced Express entirely.
+  tsrs only type-checks it. Fastify replaced Express entirely.
 - Next.js apps compile `@workspace/shared`, `client` and `ui` from source (`transpilePackages`); the
   API consumes the built `dist/` of `@workspace/shared` (Turbo builds it first).
 - Turbo caches `build`, `lint` and `typecheck` — except every task of

@@ -14,7 +14,7 @@ export function selectSectionOrder(state: SidebarState): readonly string[] | nul
 /** The manual expand/collapse choices that apply on `pathname` — none when they were made on another page. */
 export function selectManualExpansionFor(state: SidebarState, pathname: string): Readonly<Record<string, boolean>> {
 	const manual = state.manualExpansion;
-	return manual !== null && manual.pathname === pathname ? manual.items : NO_MANUAL_EXPANSION;
+	return manual?.pathname === pathname ? manual.items : NO_MANUAL_EXPANSION;
 }
 
 /**

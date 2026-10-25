@@ -110,7 +110,7 @@ export function KanbanRollupStrip({ rows, isOpen, onToggle, selectedFeatureId, o
 				)}
 			</div>
 			{isOpen ? (
-				<ul id={listId} className="grid max-h-56 gap-1 overflow-y-auto pt-1 pb-1 [scrollbar-width:thin] sm:grid-cols-2 xl:grid-cols-4">
+				<ul id={listId} className="grid max-h-56 [scrollbar-width:thin] gap-1 overflow-y-auto pt-1 pb-1 sm:grid-cols-2 xl:grid-cols-4">
 					{rows.map((row) => (
 						<RollupRow key={row.feature.id} row={row} isSelected={row.feature.id === selectedFeatureId} onSelect={handleSelect} />
 					))}

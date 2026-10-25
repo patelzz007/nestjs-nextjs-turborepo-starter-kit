@@ -97,7 +97,7 @@ export class LoginVerificationStore implements LoginVerificationStorePort {
 	}
 
 	private redisReady(redis: Redis | null): redis is Redis {
-		return redis !== null && redis.status === "ready";
+		return redis?.status === "ready";
 	}
 
 	private challengeKey(verificationId: string): string {

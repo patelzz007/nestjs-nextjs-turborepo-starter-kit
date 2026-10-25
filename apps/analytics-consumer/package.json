@@ -8,8 +8,8 @@
 		"start": "tsx src/main.ts",
 		"db:provision-login": "dotenv run -q -- tsx src/cli/provision-db-login.ts",
 		"kafka:provision-topics": "dotenv run -q -- tsx src/cli/provision-kafka-topics.ts",
-		"format": "prettier --write \"**/*.{ts,tsx}\" --ignore-path ../../.prettierignore",
-		"lint": "eslint",
+		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\"",
+		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
 		"typecheck": "tsrs --noEmit",
 		"test": "vitest run --config vitest.config.ts",
 		"test:e2e": "dotenv run -q -- vitest run --config vitest.config.e2e.ts"
@@ -23,14 +23,16 @@
 	},
 	"devDependencies": {
 		"@types/node": "^26.6.5",
-		"@types/pg": "^8.23.1",
-		"@workspace/eslint-config": "workspace:^",
+		"@types/pg": "8.23.1",
+		"@workspace/oxlint-config": "workspace:^",
 		"@workspace/typescript-config": "workspace:*",
 		"dotenv": "^18.0.9",
-		"eslint": "^9.39.5",
+		"oxfmt": "0.74.0",
+		"oxlint": "1.89.0",
+		"oxlint-tsgolint": "7.0.2005",
 		"tsrs": "0.18.0-ts7.1.0-dev.20260929",
 		"tsx": "^4.23.15",
-		"typescript": "6.0.3",
+		"typescript": "7.0.2",
 		"vitest": "^5.0.5"
 	}
 }

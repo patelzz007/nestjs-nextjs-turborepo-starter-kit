@@ -38,7 +38,7 @@ const editUrl = githubEditUrl("blog", `${post.id}.md`);
 ---
 
 <BaseLayout title={post.data.title} description={post.data.description} image={post.data.coverImage} type="article">
-	<main id="main-content" class="docs-main">
+	<main id="main-content" class="docs-main docs-main--centered">
 		<article class="docs-article">
 			<Breadcrumbs crumbs={[{ label: "Blog", href: "/blog" }, { label: post.data.category }, { label: post.data.title }]} />
 			<h1 class="page-title">{post.data.title}</h1>

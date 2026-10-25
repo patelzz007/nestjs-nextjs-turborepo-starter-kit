@@ -36,7 +36,7 @@ AI agents (and humans) also follow the rulebook: [`AGENTS.md`](../../AGENTS.md) 
 | Security | [Authentication, MFA, impersonation](./security/authentication.md) · [Token refresh](./security/token-refresh.md) · [Database security](./security/database-security.md) · [Encryption and KMS](./security/encryption-and-kms.md) · [Threat model](./security/threat-model.md) · [Data classification](./security/data-classification.md) |
 | Files and email | [Storage overview](./storage/overview.md) · [**AWS S3 setup**](./storage/aws-s3.md) · [**Firebase Storage setup**](./storage/firebase.md) · [**Resend setup**](./email/resend-setup.md) · [Email templates](./email/templates.md) |
 | Frontend | [Routing and URL conventions](./frontend/routing.md) · [Admin panel](./frontend/admin-panel.md) · [Analytics dashboards](./frontend/analytics-charts.md) · [Toasts](./frontend/toast.md) · [Date pickers](./frontend/date-pickers.md) · [QR codes](./frontend/qr-codes.md) · [PDF viewer](./frontend/pdf-viewer.md) · [Carousels](./frontend/carousel.md) · [Image resizer](./frontend/image-resizer.md) · [Streams (RxJS)](./frontend/streams.md) |
-| Tooling | [TypeScript](./tooling/typescript.md) · [ESLint](./tooling/eslint.md) · [Dependencies](./tooling/dependencies.md) |
+| Tooling | [TypeScript](./tooling/typescript.md) · [Oxlint & Oxfmt](./tooling/oxlint.md) · [Dependencies](./tooling/dependencies.md) |
 | Operations | [CI](./operations/ci.md) · [Local infrastructure](./operations/local-infrastructure.md) · [Observability](./operations/observability.md) · [Multi-tenancy runbook](./operations/multi-tenancy-runbook.md) · [Bootstrap the first SuperAdmin](./operations/superadmin-bootstrap.md) |
 | Decisions | [Architecture decision records](../adr/README.md) |
 

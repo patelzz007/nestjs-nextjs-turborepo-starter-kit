@@ -4,7 +4,7 @@
 // Validated once at boot through zod (building blocks shared with the API in
 // @workspace/shared runtime/app-env.ts and @workspace/messaging/kafka). An
 // invalid or missing variable stops the process with a message that names
-// every bad variable and never prints a value. ESLint
+// every bad variable and never prints a value. Oxlint
 // (`no-restricted-properties`) rejects process.env elsewhere.
 //
 // The consumer owns its configuration: it reads ONLY the variables declared

@@ -1,0 +1,31 @@
+{
+	"$schema": "./node_modules/oxfmt/configuration_schema.json",
+	"tabWidth": 2,
+	"useTabs": true,
+	"singleQuote": false,
+	"jsxSingleQuote": false,
+	"semi": true,
+	"bracketSpacing": true,
+	"trailingComma": "all",
+	"bracketSameLine": true,
+	"printWidth": 175,
+	"endOfLine": "lf",
+	"sortPackageJson": false,
+	"sortTailwindcss": {
+		"stylesheet": "packages/ui/src/styles/globals.css",
+		"functions": [
+			"cn",
+			"cva"
+		]
+	},
+	"ignorePatterns": [
+		"dist/",
+		"node_modules/",
+		".next/",
+		".turbo/",
+		"coverage/",
+		"pnpm-lock.yaml",
+		".pnpm-store/",
+		".expo/"
+	]
+}

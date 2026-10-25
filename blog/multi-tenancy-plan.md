@@ -217,7 +217,7 @@ sequenceDiagram
     M->>DB: ACTIVE membership(userId, tenantId) — users only
     M->>Z: TenantContext { tenantId }
     Z->>U: permission + location scope
-    U->>DB: BEGIN; set_config('app.current_tenant_id', tenantId, true); queries; COMMIT
+    U->>DB: BEGIN#59; set_config('app.current_tenant_id', tenantId, true)#59; queries#59; COMMIT
 ```
 
 ### 4.2 Request kinds

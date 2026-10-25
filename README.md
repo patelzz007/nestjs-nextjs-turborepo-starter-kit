@@ -82,7 +82,7 @@ packages/
 ├── shared/     Zod schemas + shared types (the API contract)
 ├── client/     Auth context, useApi hook, endpoint registry
 ├── ui/         shadcn/ui components (presentational only)
-├── eslint-config/
+├── oxlint-config/
 └── typescript-config/
 ```
 

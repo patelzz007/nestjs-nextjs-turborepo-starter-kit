@@ -4,9 +4,9 @@
 // Every page server-renders (decision #56). `next/dynamic(..., { ssr: false })`
 // is allowed only for a widget that cannot render without the browser, from a
 // `*.client-only.tsx` wrapper whose default export is named here (decision #58).
-// The `client-only-widgets/ssr-false-allowlist` lint rule
-// (packages/eslint-config/client-only-widgets.js) reads this list through each
-// workspace's eslint.config.js, so adding a wrapper means adding its name here,
+// The `workspace/ssr-false-allowlist` lint rule
+// (packages/oxlint-config/plugin/ssr-false-allowlist.js) reads this list through each
+// workspace's oxlint.config.ts, so adding a wrapper means adding its name here,
 // with the DOM API it needs. Each wrapper's `loading` fallback is the widget's
 // sized skeleton, which is also its server output.
 

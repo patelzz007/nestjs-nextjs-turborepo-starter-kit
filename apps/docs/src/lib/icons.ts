@@ -194,7 +194,7 @@ export const DOC_ICONS: Readonly<Record<string, IconName>> = {
 	"technical/email/templates": "mail",
 	"technical/frontend/toast": "bell",
 	"technical/tooling/typescript": "fileCode",
-	"technical/tooling/eslint": "shieldCheck",
+	"technical/tooling/oxlint": "shieldCheck",
 	"technical/tooling/dependencies": "package",
 	"technical/operations/ci": "timer",
 	"technical/operations/observability": "radar",

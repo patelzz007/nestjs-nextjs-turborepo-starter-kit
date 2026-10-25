@@ -142,7 +142,7 @@ const defaultValues = {
 
 ### Non-null assertion (`!`) — also a lint error
 
-`!` is rejected by `@typescript-eslint/no-non-null-assertion` (set to `error`), and because the completion gate requires `pnpm run lint` to pass with zero errors, it cannot ship. Narrow instead:
+`!` is rejected by `typescript/no-non-null-assertion` (set to `error`), and because the completion gate requires `pnpm run lint` to pass with zero errors, it cannot ship. Narrow instead:
 
 ```ts
 // ❌ DON'T — lies to the compiler; fails lint
@@ -200,7 +200,7 @@ The failure mode the "DON'T" example invites is subtle and easy to miss in revie
 
 ### No runtime `typeof` — zod does the type checking
 
-> **Full guide:** `rules/28-runtime-validation.md` (trust zones, parse-once-per-boundary, ESLint bans). The runtime `typeof` operator and `Array.isArray` are banned by ESLint in every TypeScript file — use zod at the boundary and `z.infer<>` inward.
+> **Full guide:** `rules/28-runtime-validation.md` (trust zones, parse-once-per-boundary, lint bans). The runtime `typeof` operator and `Array.isArray` are banned by lint in every TypeScript file — use zod at the boundary and `z.infer<>` inward.
 
 ```ts
 // ❌ DON'T — ad hoc, incomplete, and invisible to anyone reading the type
@@ -430,7 +430,7 @@ Do not create `BaseService`, `BaseController`, `UniversalManager`, or `GenericHe
 ## Also non-negotiable, carried from the AI agent contract
 
 - **No unused code.** Dead exports, unused imports, commented-out blocks left "just in case" — delete them. Git history is the place for old code, not a comment block.
-- **No lint suppression without a stated, reviewed reason.** `// eslint-disable-next-line` is not a way to make a warning go away quietly — if you genuinely need one, the comment explains why, and it gets called out explicitly in the PR, not buried.
+- **No lint suppression without a stated, reviewed reason.** `// oxlint-disable-next-line` (or `eslint-disable-next-line`, which oxlint also honours) is not a way to make a warning go away quietly — if you genuinely need one, the comment explains why, and it gets called out explicitly in the PR, not buried.
 - **No duplicated server state.** If a value came from the API, TanStack Query owns it — it does not also get copied into a Zustand store "for convenience." See `06-tanstack-state-forms-tables.md`.
 
 ## Severity levels — how to weigh a violation
@@ -447,15 +447,15 @@ If you're unsure which bucket something falls into, treat it as blocking. The co
 
 Relying on human reviewers to catch every instance of `any`/casts/missing return types does not scale and does not work reliably — people get tired, skim large diffs, and miss things. Every rule in this document that can be mechanically enforced, is:
 
-The authoritative ESLint configuration is in `13-ci-cd-and-quality-gates.md` ("Reference ESLint configuration"). Two details matter:
+The lint configuration is `packages/oxlint-config` (`13-ci-cd-and-quality-gates.md`, "The lint configuration"; `docs/technical/tooling/oxlint.md`). Two details matter:
 
-- `@typescript-eslint/consistent-type-assertions` does **not** flag `as const` (const assertions are always allowed by that rule), so `as const` / `<const>` and `z.any()` / `z.unknown()` / `z.never()` are banned through explicit `no-restricted-syntax` selectors in `packages/eslint-config/base.js` §9. The `unknown` and `never` **type keywords** are banned by lint too, through `no-restricted-syntax` selectors in the same block. They have these exemptions and no others:
+- `typescript/consistent-type-assertions` does **not** flag `as const` (const assertions are always allowed by that rule), so `as const` / `<const>` and `z.any()` / `z.unknown()` / `z.never()` are banned through explicit `workspace/restricted-syntax` selectors (`packages/oxlint-config/restricted-syntax-rules.js`). The `unknown` and `never` **type keywords** are banned by lint too, through selectors in the same list. They have these exemptions and no others:
   - `unknown` is allowed only as the type of a `catch (error: unknown)` clause parameter, or as the first (error) parameter of a `.catch((error: unknown) => …)` callback.
   - `never` is allowed only in the parameter and return type of an exhaustiveness helper declared as `function assertNever…(value: never): never`.
   - **Pending a human decision:** `never` is currently also exempt as the value type of a key guard, `Record<Exclude<keyof X, keyof Y>, never>`. This is the signature zod's `.pick()` requires, and `packages/shared/src/schemas/api/list-query.ts` uses it. Until the decision is made, treat this exemption as provisional: do not add new uses of it.
-- Every rule is `error`, never `warn` (`packages/eslint-config/rule-severity.js` raises plugin presets' warnings to errors), so anything a rule enforces fails lint. Lint runs without `--max-warnings`: a warning that still appears is reported, read and fixed when it matters, but it does not fail the gate.
+- Every rule is `error`, never `warn` (the shared configs set every rule to `error`, and `packages/oxlint-config/__tests__/configs.test.js` fails on a `warn`), so anything a rule enforces fails lint.
 
-A PR cannot merge with a lint error — this is enforced at the CI gate level (`13-ci-cd-and-quality-gates.md`), not as a suggestion a developer can dismiss locally. If you find yourself reaching for `// eslint-disable-next-line @typescript-eslint/no-explicit-any` to get past this, stop — that is the exact moment this document asks you to fix the underlying type instead, not silence the tool that's correctly telling you something is wrong.
+A PR cannot merge with a lint error — this is enforced at the CI gate level (`13-ci-cd-and-quality-gates.md`), not as a suggestion a developer can dismiss locally. If you find yourself reaching for `// oxlint-disable-next-line typescript/no-explicit-any` to get past this, stop — that is the exact moment this document asks you to fix the underlying type instead, not silence the tool that's correctly telling you something is wrong.
 
 ## Extended anti-pattern catalog
 
@@ -799,7 +799,7 @@ items.forEach(async (i) => { await process(i); });
 for (const i of items) { await process(i); }
 ```
 
-Every promise is awaited, returned, or deliberately handled. A floating promise is a silent failure. Enable `@typescript-eslint/no-floating-promises`.
+Every promise is awaited, returned, or deliberately handled. A floating promise is a silent failure. `typescript/no-floating-promises` is on (type-aware, through oxlint-tsgolint).
 
 ## Dates and time
 

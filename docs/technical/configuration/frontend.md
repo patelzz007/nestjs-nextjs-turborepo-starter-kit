@@ -36,8 +36,8 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 **Only the env modules read `process.env`**. They parse it once through a zod
 schema, and everything else imports the typed result. The env modules are
 `lib/env/env.client.ts`, `lib/env/env.server.ts` and `lib/env/env.runtime.ts`
-(which only checks Next's own `NEXT_RUNTIME`; see [§5](#5-how-validation-fails)). ESLint enforces this
-(`no-restricted-properties`, see [ESLint → 3.2](../tooling/eslint.md#32-env-boundary-processenv)).
+(which only checks Next's own `NEXT_RUNTIME`; see [§5](#5-how-validation-fails)). Oxlint enforces this
+(`no-restricted-properties`, see [Oxlint → 3.2](../tooling/oxlint.md#32-env-boundary-processenv)).
 
 ---
 
@@ -268,7 +268,7 @@ loaded outside development, so the credentials never reach a production bundle.
 | `apps/*/instrumentation.test.ts` | Real `register()` wiring with a stubbed env: Node.js + invalid `COOKIE_DOMAIN` → `process.exit(1)` and a message without the value. Valid env → no exit. Edge / unset runtime → rethrow, never `process.exit` |
 | `apps/*/lib/env/env.test.ts` | App schema: only `NEXT_PUBLIC_*` keys, defaults, missing origins named. `clientEnv` exposes only `NEXT_PUBLIC_*` keys. `serverEnv` has none |
 | `packages/client/src/lib/api/__tests__/config.test.ts` | Package env module: parsed values, trailing slash, missing/invalid → fail fast without echoing the value |
-| `apps/web/eslint-boundaries.test.ts`, `packages/client/src/__tests__/eslint-boundaries.test.ts` | The `process.env` ban and import boundaries actually fire |
+| `apps/web/__tests__/lint-boundaries.test.ts`, `packages/client/src/__tests__/lint-boundaries.test.ts` | The `process.env` ban and import boundaries actually fire |
 
 Vitest does not load `.env`. Each app's `vitest.config.ts` sets deterministic
 fixture values in `test.env`, and aliases `server-only` to Next's own empty
@@ -315,7 +315,7 @@ variables (docs/technical/mobile/mobile-app.md §9.3, §9.5):
   example value — never the configured value. `app.config.ts` validates `MOBILE_*` and stops
   `expo start` / `expo export` with the variable's name.
 - **The env boundary is lint-enforced** exactly like the web: `no-restricted-properties` on
-  `process.env` everywhere in `apps/mobile` except `src/lib/env.ts` (`apps/mobile/eslint.config.mjs`).
+  `process.env` everywhere in `apps/mobile` except `src/lib/env.ts` (`apps/mobile/oxlint.config.mts`).
   `app.config.ts` runs on the build machine and is not part of the bundle.
 - **Where to set them:** `apps/mobile/.env` (copy `.env.example`; Expo loads it on start) or the
   build environment. `turbo.json` lists them in the `build` task's `env`, so a changed value

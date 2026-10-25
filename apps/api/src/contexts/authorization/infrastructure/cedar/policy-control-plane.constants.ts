@@ -1,6 +1,5 @@
-import { MERCHANT_CAPABILITY, MembershipRoleSchema, type MerchantCapability, type MembershipRole } from "@workspace/shared";
+import { MERCHANT_CAPABILITY, MembershipRoleSchema, type MerchantCapability, type MembershipRole, MERCHANT_CAPABILITY_CEDAR_ACTIONS } from "@workspace/shared";
 
-import { MERCHANT_CAPABILITY_CEDAR_ACTIONS } from "@workspace/shared";
 import { CEDAR_CAPABILITY_ACTIONS } from "./cedar-model";
 
 /** Minutes → ms, for the bundle cache TTL below. */

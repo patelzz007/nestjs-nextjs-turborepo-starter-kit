@@ -6,7 +6,7 @@
 		},
 		"types": ["node"],
 		"customConditions": ["development"],
-		// The shared ESLint config enforces dot access (`dataset.theme`); the rest of the monorepo leaves this off too.
+		// The shared oxlint config enforces dot access (`dataset.theme`); the rest of the monorepo leaves this off too.
 		"noPropertyAccessFromIndexSignature": false
 	},
 	"include": [".astro/types.d.ts", "src/**/*", "astro.config.ts", "vitest.config.ts"],

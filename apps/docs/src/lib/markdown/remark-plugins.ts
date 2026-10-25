@@ -1,4 +1,5 @@
 import type { Blockquote, Code, Emphasis, Html, Image, ListItem, Paragraph, PhrasingContent, Root, Table, TableCell, TableRow, Text } from "mdast";
+import { PeleError, parse } from "pele";
 import { visit } from "unist-util-visit";
 import { z } from "zod";
 
@@ -15,7 +16,7 @@ import { escapeHtml } from "./html";
  * - glossary terms in prose      → `<abbr title="…">`
  * - relative image URLs          → `/images/…` (served from repo-root `docs/images/`)
  * - image-bearing tables         → a responsive screenshot gallery
- * - `mermaid` fences             → `<pre class="mermaid">` (rendered client-side)
+ * - `mermaid` fences             → `<figure class="diagram">` (validated here, drawn by Pele client-side)
  * - `[x]` / `[ ]` task markers   → ✓ / ☐ text
  * - the leading H1               → removed (the page title comes from frontmatter)
  */
@@ -319,16 +320,47 @@ export function remarkImageGallery(): (tree: Root) => void {
 	};
 }
 
-// ─── Mermaid ────────────────────────────────────────────────────────────────
+// ─── Diagrams ───────────────────────────────────────────────────────────────
 
-/** `mermaid` fences become `<pre class="mermaid">` for the client-side renderer (never syntax-highlighted). */
-export function remarkMermaid(): (tree: Root) => void {
+/** A diagram fence whose Mermaid source Pele cannot parse: the build stops instead of shipping a broken diagram. */
+export class DiagramSyntaxError extends Error {
+	public constructor(message: string, options: { readonly cause: Error }) {
+		super(message, options);
+		this.name = "DiagramSyntaxError";
+	}
+}
+
+/** Where in the markdown file a diagram error is, for the build error message. */
+function diagramErrorMessage(node: Code, error: Error): string {
+	const fenceLine = node.position?.start.line;
+	if (error instanceof PeleError && fenceLine !== undefined) {
+		// The fence is line `fenceLine`; Pele counts the source from 1, starting on the next line.
+		return `Diagram on line ${String(fenceLine + error.line)} does not parse: ${error.message}`;
+	}
+	return `Diagram${fenceLine === undefined ? "" : ` at line ${String(fenceLine)}`} does not parse: ${error.message}`;
+}
+
+/**
+ * `mermaid` fences become `<figure class="diagram"><pre class="diagram-source">`
+ * for the client-side Pele renderer (src/scripts/diagrams.ts), never
+ * syntax-highlighted. Every diagram is parsed here first, so a syntax error
+ * fails the build with its line instead of reaching a reader as a broken figure.
+ * The source stays in the page: readers without scripts, and screen readers,
+ * still get it.
+ */
+export function remarkDiagrams(): (tree: Root) => void {
 	return (tree: Root): void => {
 		visit(tree, "code", (node: Code, index, parent) => {
 			if (node.lang !== "mermaid" || parent === undefined || index === undefined) {
 				return;
 			}
-			const html: Html = { type: "html", value: `<div class="mermaid-diagram"><pre class="mermaid">${escapeHtml(node.value)}</pre></div>` };
+			try {
+				parse(node.value);
+			} catch (error) {
+				const cause = error instanceof Error ? error : new Error(String(error));
+				throw new DiagramSyntaxError(diagramErrorMessage(node, cause), { cause });
+			}
+			const html: Html = { type: "html", value: `<figure class="diagram"><pre class="diagram-source">${escapeHtml(node.value)}</pre></figure>` };
 			parent.children.splice(index, 1, html);
 		});
 	};

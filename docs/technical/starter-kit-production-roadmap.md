@@ -594,9 +594,9 @@ Improve docs and trim vertical permissions instead.
 
 Parse **once per boundary** (HTTP handler, queue consumer, storage read), then pass inferred types inward.
 
-### ESLint enforcement
+### Lint enforcement
 
-`packages/eslint-config/restricted-syntax-rules.js` — `runtimeValidationRestrictedSyntaxSelectors`.
+`packages/oxlint-config/restricted-syntax-rules.js` — `RUNTIME_VALIDATION_SELECTORS`, part of the exported `restrictedSyntaxRules`.
 
 Schema authoring paths exempt for `z.custom` predicates.
 
@@ -821,7 +821,7 @@ pnpm ci:local
 7. Compose profiles for **optional** Rabbit/Bull Board (Kafka stays default per your decision).
 8. Root package rename from `hello-world`.
 9. Certification timed exercise documented.
-10. ESLint tests for rule 28 selectors.
+10. Lint tests for rule 28 selectors.
 11. Fix junior guide `packages/contracts` → `packages/shared`.
 12. Mobile mention in AGENTS until app exists.
 

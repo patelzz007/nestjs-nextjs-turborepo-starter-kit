@@ -3,10 +3,9 @@ import { setTimeout as delay } from "node:timers/promises";
 import { EnvValidationError, KAFKA_TOPICS } from "@workspace/shared";
 
 import { loadConsumerEnv, type ConsumerEnv } from "./infrastructure/env";
-import { RetentionScheduler, createConsumerPool, PgInboxStore } from "@workspace/messaging/inbox";
+import { RetentionScheduler, createConsumerPool, PgInboxStore, ANALYTICS_CONSUMER_ID, type AbortableSleep, type MessageHandlerDeps } from "@workspace/messaging/inbox";
 import { assertTopicsExist, buildConsumerConfig, createKafkaClient } from "./infrastructure/kafka";
 import { createConsoleJsonLogger } from "./infrastructure/logger";
-import { ANALYTICS_CONSUMER_ID, type AbortableSleep, type MessageHandlerDeps } from "@workspace/messaging/inbox";
 import { projectPlatformEvent } from "./projections/platform-events/platform-events.projection";
 
 const SERVICE_NAME = "analytics-consumer";

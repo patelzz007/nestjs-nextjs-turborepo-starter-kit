@@ -27,7 +27,7 @@ sequenceDiagram
     Owner->>Till: type the pairing code
     Till->>API: POST /integration/terminals/pair { pairingCode }
     API-->>Till: API key (shown once) + terminal id + store
-    Note over Till: stores the key; sends it as X-API-Key from now on
+    Note over Till: stores the key#59; sends it as X-API-Key from now on
 ```
 
 - **POS terminals → Add terminal**, choose the store. A store-limited admin can only add tills to

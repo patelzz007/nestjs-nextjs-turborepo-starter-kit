@@ -14,10 +14,11 @@
  * the type scale stays coherent — change them here, never in components;
  * theme-contrast.test.ts holds the text pairs to WCAG AA in both themes.
  *
- * Typography: the apps' type system — Bricolage Grotesque (headings), Geist
- * (UI + prose) and Geist Mono (code), self-hosted through the Astro
- * Fonts API (astro.config.ts → `<Font>` in BaseLayout.astro). See
- * "Typography" in README.md for the scale and the reasoning behind it.
+ * Typography: Atkinson Hyperlegible Next (headings, UI and prose) and
+ * Atkinson Hyperlegible Mono (code) — one family whose letterforms keep
+ * look-alike characters apart — self-hosted through the Astro Fonts API
+ * (astro.config.ts → `<Font>` in BaseLayout.astro). See "Typography" in
+ * README.md for the scale and the reasoning behind it.
  */
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
@@ -74,7 +75,12 @@
 	/* Indentation guide of the navigation tree */
 	--tree-line: var(--palette-neutral-300);
 	/* Inline code */
-	--code-inline-bg: color-mix(in oklch, var(--palette-neutral-900) 4%, transparent);
+	/* Inline code chips carry no border, so their fill does the work. */
+	--code-inline-bg: color-mix(in oklch, var(--palette-neutral-900) 6%, transparent);
+	/* The edge shadow of a table that scrolls sideways. */
+	--table-scroll-shadow: color-mix(in oklch, var(--palette-neutral-900) 18%, transparent);
+	/* The row under the pointer in a table. */
+	--table-row-hover: color-mix(in oklch, var(--palette-brand-500) 4%, transparent);
 	/* Callouts (tip / success = green, the apidog "tip") */
 	--info: #2e90fa;
 	--info-bg: #f5faff;
@@ -88,6 +94,18 @@
 	--error: #f04438;
 	--error-bg: #fffbfa;
 	--error-border: #fee4e2;
+	/* Diagrams (see "Diagrams" below): one hue per role, mixed into the surface for fills and outlines. */
+	--diagram-entry: #2e90fa;
+	--diagram-step: #516480;
+	--diagram-store: #15b79e;
+	--diagram-decision: #f79009;
+	--diagram-outcome: #7a5af8;
+	--diagram-person: #f63d68;
+	--diagram-success: #17b26a;
+	--diagram-fill-mix: 12%;
+	--diagram-outline-mix: 62%;
+	--diagram-line: var(--palette-neutral-500);
+	--diagram-group: color-mix(in oklab, var(--palette-brand-500) 6%, var(--surface));
 	/* Card icon tiles */
 	--tile-1: #17b26a;
 	--tile-2: #516480;
@@ -117,7 +135,8 @@
 	 * table of contents, metadata, controls).
 	 */
 	--type-size-xs: 0.75rem; /* 12px — tags, keyboard hints, small labels */
-	--type-size-sm: 0.875rem; /* 14px — chrome, tables */
+	--type-size-sm: 0.875rem; /* 14px — chrome */
+	--type-size-table: 0.9375rem; /* 15px — tables: denser than prose, still a reading size */
 	--type-size-base: 1rem; /* 16px — body copy */
 	--type-size-lg: 1.125rem; /* 18px — h4, the page's lead paragraph */
 	--type-size-xl: 1.25rem; /* 20px — h3, card titles */
@@ -135,14 +154,19 @@
 	/* Large headings are tracked in slightly; text sizes keep the font's own spacing. */
 	--type-tracking-tight: -0.022em; /* 30px and up */
 	--type-tracking-snug: -0.012em; /* 20–24px */
-	/* Comfortable line length for running text (~65–75 characters). */
+	/*
+	 * The reading column: ONE width for everything in an article — paragraphs,
+	 * tables, code blocks and diagrams share the same edges, so nothing juts out
+	 * past the text. ~70 characters of body copy; wider content scrolls inside
+	 * its own frame instead of widening the column.
+	 */
 	--type-measure: 70ch;
 	/* Inline code is relative to the text around it, so it scales inside headings. */
 	--type-code-size: 0.875em;
 	/* Fenced code blocks (the @workspace/ui CodeBlock, see src/lib/code-block/element.ts). */
 	--type-code-block-size: 0.875rem;
-	/* Headings use the display face; falls back to the UI face if the `<Font>` tag is ever missing. */
-	--type-family-heading: var(--font-bricolage-grotesque, var(--font-geist-sans, system-ui, sans-serif));
+	/* Headings share the reading face: hierarchy comes from weight and size, not a second family. */
+	--type-family-heading: var(--font-sans);
 	/* QR codes (```qr fences): pure black on white in BOTH themes, like the apps' qr-foreground / qr-background
 	   tokens (packages/tokens semantic.ts) — a scanner needs maximum contrast. No dark override on purpose. */
 	--qr-background: var(--palette-neutral-0);
@@ -179,7 +203,9 @@
 	--border: var(--palette-ink-650);
 	--border-strong: var(--palette-ink-600);
 	--tree-line: var(--palette-ink-650);
-	--code-inline-bg: color-mix(in oklch, var(--palette-ink-50) 4%, transparent);
+	--code-inline-bg: color-mix(in oklch, var(--palette-ink-50) 8%, transparent);
+	--table-row-hover: color-mix(in oklch, var(--palette-ink-50) 4%, transparent);
+	--table-scroll-shadow: rgb(0 0 0 / 0.45);
 	--info-bg: #1f3245;
 	--info-border: #28415c;
 	--success-bg: #1f3530;
@@ -189,6 +215,12 @@
 	--error-bg: #3d2629;
 	--error-border: #552c31;
 	--mark: rgb(247 144 9 / 0.3);
+	/* Dark tints need more of the hue to read against the ink surface. */
+	--diagram-step: #8a9bb8;
+	--diagram-fill-mix: 22%;
+	--diagram-outline-mix: 72%;
+	--diagram-line: var(--palette-ink-300);
+	--diagram-group: color-mix(in oklab, var(--palette-ink-50) 5%, var(--surface));
 	--overlay: rgb(0 0 0 / 0.6);
 	--shadow-card: none;
 	--shadow-pop: 0 20px 24px -4px rgb(0 0 0 / 0.5);
@@ -233,8 +265,8 @@
 	--font-button: var(--font-sans);
 	--radius-lg: 12px;
 	/* Set by `<Font>` (BaseLayout.astro); the second value only applies if that tag is ever missing. */
-	--font-sans: var(--font-geist-sans, system-ui, sans-serif);
-	--font-mono: var(--font-geist-mono, ui-monospace, monospace);
+	--font-sans: var(--font-atkinson-next, system-ui, sans-serif);
+	--font-mono: var(--font-atkinson-mono, ui-monospace, monospace);
 }
 
 /*
@@ -560,12 +592,25 @@
 		}
 	}
 
+	/* The reading column, centred in the space between the sidebar and the "On this page" rail. */
 	.docs-article {
 		flex: 1 1 auto;
 		width: 100%;
-		/* Wide enough that the gap before the right rail stays small on large screens. */
-		max-width: 1120px;
+		max-width: var(--type-measure);
 		min-width: 0;
+		margin-inline: auto;
+	}
+
+	/*
+	 * Pages without a sidebar (blog posts): a spacer as wide as the "On this page"
+	 * rail mirrors it on the left, so the reading column sits in the middle of the
+	 * page rather than in the middle of what the rail leaves.
+	 */
+	@media (min-width: 1280px) {
+		.docs-main--centered::before {
+			content: "";
+			flex: 0 1 var(--toc-width);
+		}
 	}
 
 	.docs-article--wide {
@@ -929,19 +974,11 @@
 		overflow-wrap: break-word;
 	}
 
-	/*
-	 * Running text keeps a readable line length; tables, code blocks, diagrams
-	 * and galleries still use the full article width.
-	 */
-	.prose > :where(p, ul, ol, dl, blockquote, aside, h2, h3, h4) {
-		max-width: var(--type-measure);
-	}
-
 	.prose > :first-child {
 		margin-top: 0;
 	}
 
-	.prose :where(p, ul, ol, dl, blockquote, figure, .table-wrapper, .mermaid-diagram, .image-gallery, aside) {
+	.prose :where(p, ul, ol, dl, blockquote, figure, .table-wrapper, .diagram, .image-gallery, aside) {
 		margin: 0 0 16px;
 	}
 
@@ -1040,11 +1077,12 @@
 		border-radius: 8px;
 	}
 
+	/* Inline code: a tinted chip without a border — guides are dense with identifiers, and an outline on each one turns a paragraph into a grid. */
 	.prose :not(pre) > code {
-		margin: 0 2px;
-		padding: 0 6px;
-		border: 1px solid var(--border-strong);
-		border-radius: 6px;
+		margin: 0 1px;
+		padding: 1px 5px;
+		border: 0;
+		border-radius: 4px;
 		background: var(--code-inline-bg);
 		color: var(--text);
 		font-family: var(--font-mono);
@@ -1066,25 +1104,47 @@
 		color: var(--text-secondary);
 	}
 
-	/* Tables */
-
+	/*
+	 * Tables — reference material read across a row: no vertical rules (the
+	 * columns align on their own), a tinted header, the first column as the
+	 * row's key, a row highlight under the pointer to keep the eye on one line,
+	 * and quieter code chips (a table is often more code than text). Wider
+	 * than the column, a table scrolls inside its frame.
+	 */
+	/*
+	 * A shadow on the edge that has more columns to scroll to, and none when the
+	 * table fits: the covers (`local`) scroll with the content and hide the
+	 * shadows (`scroll`, fixed to the frame) at each end.
+	 */
 	.table-wrapper {
 		overflow-x: auto;
 		border: 1px solid var(--border);
-		border-radius: 8px;
+		border-radius: 10px;
+		background:
+			linear-gradient(to right, var(--surface) 40%, transparent) left center / 48px 100% no-repeat local,
+			linear-gradient(to left, var(--surface) 40%, transparent) right center / 48px 100% no-repeat local,
+			linear-gradient(to right, var(--table-scroll-shadow), transparent) left center / 16px 100% no-repeat scroll,
+			linear-gradient(to left, var(--table-scroll-shadow), transparent) right center / 16px 100% no-repeat scroll,
+			var(--surface);
+		scrollbar-width: thin;
 	}
 
-	/* Tables are reference material: the denser chrome size fits more columns before scrolling. */
 	.prose table {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: var(--type-size-sm);
+		font-size: var(--type-size-table);
 		line-height: var(--type-leading-normal);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.prose thead th {
+		background: var(--surface-muted);
+		color: var(--text-secondary);
+		font-weight: var(--type-weight-semibold);
+		white-space: nowrap;
 	}
 
 	.prose th {
-		color: var(--text);
-		font-weight: var(--type-weight-semibold);
 		text-align: left;
 	}
 
@@ -1093,17 +1153,30 @@
 	}
 
 	.prose :where(th, td) {
-		padding: 8px 16px;
+		padding: 10px 16px;
 		border-bottom: 1px solid var(--border);
 		vertical-align: top;
 	}
 
-	.prose :where(th, td) + :where(th, td) {
-		border-left: 1px solid var(--border);
+	.prose tbody td:first-child {
+		color: var(--text);
+		font-weight: var(--type-weight-medium);
 	}
 
-	.prose tr:last-child td {
+	.prose tbody tr:last-child td {
 		border-bottom: 0;
+	}
+
+	@media (hover: hover) {
+		.prose tbody tr:hover td {
+			background: var(--table-row-hover);
+		}
+	}
+
+	.prose :is(th, td) code {
+		margin: 0;
+		/* Break only where rehypeTableWrapper put a <wbr> (or at a space), never mid-name. */
+		overflow-wrap: normal;
 	}
 
 	/* Callouts */
@@ -1291,32 +1364,71 @@
 
 	/* Mermaid */
 
-	.mermaid-diagram {
-		overflow-x: auto;
-		padding: 20px;
+	/*
+	 * Diagrams — ```mermaid fences drawn by Pele (src/scripts/diagrams.ts) as
+	 * plain SVG coloured by the variables below, so both themes recolour without
+	 * a re-render. Colour carries meaning, the same in every diagram:
+	 *   entry points   --diagram-entry     (nothing points to them)
+	 *   steps          --diagram-step
+	 *   stores         --diagram-store     (cylinders: tables, caches, queues)
+	 *   decisions      --diagram-decision  (diamonds)
+	 *   outcomes       --diagram-outcome   (they point to nothing)
+	 *   people         --diagram-person    (circles)
+	 * Sequence participants take the six hues in order. Tints mix in oklab: an
+	 * oklch mix would interpolate the hue angle against the achromatic surface
+	 * (hue 0) and turn blue into pink. Each hue is a tint fill
+	 * with a stronger outline of the same hue; labels keep the body text colour,
+	 * so contrast never depends on the hue. A node the author styled keeps its
+	 * own colours.
+	 */
+	.diagram {
+		--pele-bg: var(--surface);
+		--pele-fg: var(--text);
+		--pele-muted: var(--muted);
+		--pele-line: var(--diagram-line);
+		--pele-surface: var(--surface-muted);
+		--pele-surface-alt: var(--diagram-group);
+		--pele-border: var(--border-strong);
+		--pele-accent: var(--brand);
+		--pele-font: var(--font-sans);
+		--pele-font-mono: var(--font-mono);
+		--pele-radius: 8px;
+		position: relative;
+		margin-inline: 0;
+		padding: 24px 20px;
 		border: 1px solid var(--border);
 		border-radius: 12px;
 		background: var(--surface);
-		text-align: center;
+		font-size: var(--type-size-sm);
 	}
 
-	.mermaid-diagram pre.mermaid {
+	.diagram-canvas {
+		display: flex;
+		justify-content: center;
+	}
+
+	/* The source: what readers without scripts get, and what a failed render falls back to. */
+	.diagram-source {
 		margin: 0;
-		background: none;
+		overflow-x: auto;
 		color: var(--muted);
 		font-family: var(--font-mono);
 		font-size: var(--type-size-xs);
-		text-align: left;
-		white-space: pre-wrap;
+		white-space: pre;
 	}
 
-	.mermaid-diagram pre.mermaid[data-processed="true"] {
-		text-align: center;
+	/* Drawn: the SVG speaks; the source stays in the page for assistive tech only. */
+	.diagram[data-rendered] .diagram-source {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
 	}
 
-	/* While a diagram renders (scripts on, mermaid not done), draw a skeleton instead of flashing its source. The
-	   source stays in the DOM for screen readers and becomes visible again if rendering fails (data-error). */
-	:root[data-js] .mermaid-diagram pre.mermaid:not([data-processed="true"], [data-error]) {
+	/* While a diagram renders, draw a skeleton instead of flashing its source. */
+	:root[data-js] .diagram[aria-busy="true"] .diagram-source {
 		min-height: 180px;
 		overflow: hidden;
 		border-radius: 8px;
@@ -1328,6 +1440,97 @@
 		background-repeat: no-repeat;
 		background-attachment: fixed;
 		animation: skeleton-sweep var(--skeleton-sweep-duration) ease-in-out infinite;
+	}
+
+	.diagram .pele {
+		/* Pele sizes the drawing to the column; this only guards against a rounding pixel. */
+		max-width: 100%;
+	}
+
+	.diagram :where(.pele-edge-label, .pele-cluster-label, .pele-frame-label) {
+		font-size: var(--type-size-xs);
+	}
+
+	/* Flowchart roles: fill the shape (not the open arc on top of a cylinder), outline it in the same hue. */
+	.diagram .pele-node[data-role] {
+		--node-hue: var(--diagram-step);
+	}
+
+	.diagram .pele-node[data-role="entry"] {
+		--node-hue: var(--diagram-entry);
+	}
+
+	.diagram .pele-node[data-role="store"] {
+		--node-hue: var(--diagram-store);
+	}
+
+	.diagram .pele-node[data-role="decision"] {
+		--node-hue: var(--diagram-decision);
+	}
+
+	.diagram .pele-node[data-role="outcome"] {
+		--node-hue: var(--diagram-outcome);
+	}
+
+	.diagram .pele-node[data-role="person"] {
+		--node-hue: var(--diagram-person);
+	}
+
+	.diagram :where(.pele-node[data-role], .pele-actor[data-hue]) > :where(rect, path, polygon, circle, ellipse) {
+		stroke: color-mix(in oklab, var(--node-hue) var(--diagram-outline-mix), var(--surface));
+		stroke-width: 1.25px;
+	}
+
+	.diagram :where(.pele-node[data-role], .pele-actor[data-hue]) > :where(rect, path, polygon, circle, ellipse):not([fill="none"]) {
+		fill: color-mix(in oklab, var(--node-hue) var(--diagram-fill-mix), var(--surface));
+	}
+
+	/* Sequence participants: one hue each, on the box and (quietly, dashed) on its lifeline. */
+	.diagram [data-hue="1"] {
+		--node-hue: var(--diagram-entry);
+	}
+
+	.diagram [data-hue="2"] {
+		--node-hue: var(--diagram-outcome);
+	}
+
+	.diagram [data-hue="3"] {
+		--node-hue: var(--diagram-store);
+	}
+
+	.diagram [data-hue="4"] {
+		--node-hue: var(--diagram-decision);
+	}
+
+	.diagram [data-hue="5"] {
+		--node-hue: var(--diagram-person);
+	}
+
+	.diagram [data-hue="6"] {
+		--node-hue: var(--diagram-success);
+	}
+
+	.diagram .pele-lifeline[data-hue] {
+		stroke: color-mix(in oklab, var(--node-hue) 45%, var(--surface));
+		stroke-dasharray: 4 4;
+	}
+
+	/* Notes are annotations, not participants: neutral and dashed, so they never borrow a participant's hue. */
+	.diagram .pele-notes {
+		fill: var(--surface-muted);
+		stroke: var(--border-strong);
+		stroke-dasharray: 4 3;
+	}
+
+	/* State diagrams: states as steps, the start dot in the accent. */
+	.diagram .pele-state > :where(rect, path) {
+		fill: color-mix(in oklab, var(--diagram-entry) var(--diagram-fill-mix), var(--surface));
+		stroke: color-mix(in oklab, var(--diagram-entry) var(--diagram-outline-mix), var(--surface));
+	}
+
+	.diagram .pele-state-start > :where(circle, ellipse) {
+		fill: var(--brand);
+		stroke: var(--brand);
 	}
 
 	/* Screenshot gallery */
@@ -1953,7 +2156,7 @@
 		}
 
 		.skeleton-bone,
-		:root[data-js] .mermaid-diagram pre.mermaid:not([data-processed="true"], [data-error]) {
+		:root[data-js] .diagram[aria-busy="true"] .diagram-source {
 			background-image: none;
 			animation: none;
 		}

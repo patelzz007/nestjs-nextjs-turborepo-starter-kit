@@ -4,8 +4,7 @@ import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { ANALYTICS_CONSUMER_ID, handlePlatformMessage, type KafkaRecord, type MessageHandlerDeps } from "@workspace/messaging/inbox";
-import { PgInboxStore } from "@workspace/messaging/inbox";
+import { ANALYTICS_CONSUMER_ID, handlePlatformMessage, type KafkaRecord, type MessageHandlerDeps, PgInboxStore } from "@workspace/messaging/inbox";
 import { closeE2eDatabase, openE2eDatabase, SILENT_LOGGER, type E2eDatabase } from "../../../test-support/e2e-database";
 
 /**

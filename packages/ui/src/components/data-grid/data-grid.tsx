@@ -305,7 +305,12 @@ export function getDataGridHeaderSpans<TData extends RowData>(table: DataGridCor
 
 /** The presence-only data attributes of a selectable cell. */
 type DataGridCellSelectionDataAttr =
-	"data-cell-selected" | "data-cell-focused" | "data-cell-edge-top" | "data-cell-edge-right" | "data-cell-edge-bottom" | "data-cell-edge-left";
+	| "data-cell-selected"
+	| "data-cell-focused"
+	| "data-cell-edge-top"
+	| "data-cell-edge-right"
+	| "data-cell-edge-bottom"
+	| "data-cell-edge-left";
 
 /** The `<td>` attributes a selectable cell carries, read inside a `cellSelection` subscription. */
 export type DataGridCellSelectionCellAttrs = Readonly<

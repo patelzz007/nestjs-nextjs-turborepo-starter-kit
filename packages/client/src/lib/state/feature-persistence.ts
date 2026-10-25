@@ -64,7 +64,9 @@ function storedEnvelopeSchema<TPersisted>(version: number, schema: z.ZodType<TPe
 }
 
 type StoredSnapshot<TPersisted> =
-	{ readonly kind: "none" } | { readonly kind: "current"; readonly snapshot: TPersisted } | { readonly kind: "migrated"; readonly snapshot: TPersisted };
+	| { readonly kind: "none" }
+	| { readonly kind: "current"; readonly snapshot: TPersisted }
+	| { readonly kind: "migrated"; readonly snapshot: TPersisted };
 
 function readStoredSnapshot<TState, TAction extends FeatureAction, TPersisted>(
 	storage: FeatureStorage,

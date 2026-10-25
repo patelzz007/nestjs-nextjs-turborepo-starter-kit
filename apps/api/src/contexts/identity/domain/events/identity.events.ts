@@ -8,7 +8,14 @@ import { DomainEvent } from "../../../../platform/domain/domain-event";
  * invalidation lands (and at the latest when the access-token state cache expires).
  */
 export type CredentialChangeReason =
-	"password_changed" | "password_reset" | "two_factor_enabled" | "two_factor_rotated" | "account_unlocked" | "mfa_recovery_completed" | "account_banned" | "account_unbanned";
+	| "password_changed"
+	| "password_reset"
+	| "two_factor_enabled"
+	| "two_factor_rotated"
+	| "account_unlocked"
+	| "mfa_recovery_completed"
+	| "account_banned"
+	| "account_unbanned";
 
 /** Why device sessions were revoked (drives the after-commit cross-instance invalidation). */
 export type SessionRevocationReason = "session_revoked" | "logout_all_devices" | "refresh_token_reuse" | "session_limit" | "rbac_mutation" | "account_banned";

@@ -81,7 +81,7 @@ export function AccordionShowcase({ faqItems, statusItems, reorderItems, variant
 				</CardHeader>
 				<CardContent className="space-y-4">
 					<div className="relative">
-						<SearchIcon className="inset-s-3 pointer-events-none absolute top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+						<SearchIcon className="pointer-events-none absolute inset-s-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
 						<Input className="ps-9" placeholder="Filter questions…" value={query} onChange={handleQueryChange} aria-label="Filter questions" />
 					</div>
 					<Accordion ref={accordionRef} value={openValues} onValueChange={handleValueChange} hashSync ariaLabel="Frequently asked questions">

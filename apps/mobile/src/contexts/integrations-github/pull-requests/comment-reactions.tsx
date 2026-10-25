@@ -70,7 +70,7 @@ export function CommentReactions({ reactions, subject, testID }: CommentReaction
 	const setReaction = api.githubPullRequests.setReaction.useMutation();
 	const [pending, setPending] = React.useState<PendingReactions | null>(null);
 	// A fresh read of the pull request replaces whatever was shown while a change was on its way.
-	const shown = pending !== null && pending.base === reactions ? pending.groups : reactions;
+	const shown = pending?.base === reactions ? pending.groups : reactions;
 
 	const toggle = React.useCallback(
 		(content: GithubReactionContent, reacted: boolean): void => {

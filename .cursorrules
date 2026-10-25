@@ -7,5 +7,6 @@ This file is a pointer. The rules live in `rules/` and the router is `AGENTS.md`
 3. A task is not done until, from the repository root, `pnpm run lint` and `pnpm run test`, `pnpm ci:local` both exit 0.
 4. Do not weaken a lint rule, skip a test, or add a suppression comment to make that gate pass.
 5. When two documents disagree, `rules/00-non-negotiables.md` and `rules/10-security-auth-authorization.md` win.
+6. `rules/29-*`, `rules/30-*` and `rules/31-*` are generated rulebooks (DDD, CQRS, tenant isolation). Every hand-written rule, ADR and `docs/architecture/` document wins over them; `.cursor/rules/` attaches them to the files they cover.
 
 Decision record: ADR 058. The pointer itself is decision #28 of the DDD migration plan.

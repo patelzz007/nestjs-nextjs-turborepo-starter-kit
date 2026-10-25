@@ -124,7 +124,7 @@ record; everything else is recorded here.
 | 26  | Revocation attribution  | `deletedBy` on sessions (user id or system marker)                                                                                                                                                                                                                     | [ADR 034](../../adr/034-immediate-per-session-revocation.md)   |
 | 27  | Location                | GeoIP port with a `none` implementation; provider is a pending decision                                                                                                                                                                                                | [ADR index](../../adr/README.md#pending-decisions)             |
 | 28  | Tests                   | jest-expo + `@testing-library/react-native` for `apps/mobile` only                                                                                                                                                                                                     | [ADR 031](../../adr/031-jest-expo-for-mobile-tests.md)         |
-| 29  | Lint                    | `packages/eslint-config/react-native.js`; `apps/mobile` in import boundaries                                                                                                                                                                                           | this page                                                      |
+| 29  | Lint                    | `packages/oxlint-config/react-native.js`; `apps/mobile` in import boundaries                                                                                                                                                                                           | this page                                                      |
 | 30  | CI                      | Lint, typecheck, tests, `expo install --check`, `expo export` bundle check                                                                                                                                                                                             | this page                                                      |
 | 31  | Mobile e2e              | Not in the starter; Maestro documented as next step                                                                                                                                                                                                                    | this page                                                      |
 | 32  | Delivery                | Five pieces in order: tokens → api-client → mobile client type → device sessions → mobile app                                                                                                                                                                          | this page                                                      |
@@ -170,7 +170,7 @@ packages/
   api-client/          NEW — platform-neutral API client (@workspace/api-client)
   client/              web-only wrappers (cookies, Next server helpers, auth UI) on top of api-client
   ui/                  web-only components; consumes generated token CSS
-  eslint-config/       gains react-native.js; import-boundaries knows apps/mobile
+  oxlint-config/       gains react-native.js; import-boundaries knows apps/mobile
 ```
 
 ### Dependency direction
@@ -519,7 +519,7 @@ See [section 19, piece 2](#piece-2-packagesapi-client).
   type is the shared `AuthClientTypeSchema` (`isBrowserClientType()` picks the transport), and the
   app version and its header are the shared `AppVersionSchema` / `APP_VERSION_HEADER`. (Piece 2 first
   declared local mirrors of these; they were replaced by the shared ones with piece 4.)
-- **Lint boundary.** `packages/eslint-config/import-boundaries.js` exports
+- **Lint boundary.** `packages/oxlint-config/import-boundaries.js` exports
   `apiClientBoundaryConfigs`: the core may not import `next`, `react`, `react-dom`,
   `@tanstack/react-query`, `server-only`, `@workspace/client`, `@workspace/ui` or a Node built-in,
   and shipped code may not touch DOM-only or Node globals (`window`, `document`, storage,
@@ -895,7 +895,7 @@ apps/mobile/
   global.css                @import "tailwindcss"; @import "uniwind"; + generated tokens
   metro.config.js           expo/metro-config wrapped by withUniwindConfig (outermost)
   jest.config.js            jest-expo preset
-  eslint.config.js          @workspace/eslint-config/react-native
+  oxlint.config.mts         @workspace/oxlint-config/react-native
   README.md                 how to run, Expo Go notes, next steps
   src/
     app/                    Expo Router routes (smart components)
@@ -1020,11 +1020,11 @@ with the default, never cast.
 
 ### 9.8 Lint and import boundaries
 
-- `packages/eslint-config/react-native.js`: React Native globals instead of `globals.browser`, the
+- `packages/oxlint-config/react-native.js`: React Native globals instead of `globals.browser`, the
   same strict TypeScript rules as everywhere (no `as`, no `typeof` runtime checks, explicit
   return types, explicit access modifiers), React and hooks rules, accessibility rules that apply
   to React Native.
-- `packages/eslint-config/import-boundaries.js`: add `apps/mobile` to `APP_WORKSPACES`; forbid
+- `packages/oxlint-config/import-boundaries.js`: add `apps/mobile` to `APP_WORKSPACES`; forbid
   `next`, `next/*`, `react-dom`, `@workspace/ui` and `@workspace/client` from `apps/mobile`;
   forbid `next`, `react-dom` and Node built-ins from `packages/api-client`.
 
@@ -1069,7 +1069,7 @@ See [section 19, piece 5](#piece-5-appsmobile).
   committed so `tsc` runs without Metro.
 - **Expo CLI owns two files.** It rewrites `tsconfig.json` (comments dropped) and deletes
   `expo-env.d.ts` when typed routes are off, so the `expo/types` reference lives in
-  `src/types/expo.d.ts`. The ESLint config is `eslint.config.mjs` because the package stays
+  `src/types/expo.d.ts`. The lint config is `oxlint.config.mts` because the package stays
   CommonJS (Metro and Jest configs).
 - **Structure as built.** `src/runtime/` holds what is built once per start (`app-runtime.ts`: env →
   app version → query client → session and preferences stores → Secure Store token provider → API
@@ -1145,6 +1145,12 @@ launch pnpm here, so `apps/mobile` and `packages/ui-native` took the versions in
   `@expo/metro` 58, React Native 0.88's CLI plugin and its Metro config all run 0.87.1. `metro` is
   pinned to 0.87.1 (one Metro for Expo and Uniwind) and left out of the check with
   `expo.install.exclude: ["metro"]` in `apps/mobile/package.json`. Re-check on each SDK patch.
+- **TypeScript 7 and `expo install --check`.** Expo's version API expects `typescript ~6.0.3` for
+  SDK 58; the repository runs TypeScript 7.0.2 (ADR 063). The only Expo code that loads TypeScript is
+  `@expo/require-utils` (it transpiles `app.config.ts`), which peers `^7` and uses TypeScript 7's
+  `typescript/unstable/sync` API when the classic one is absent — `expo config` loads the app config
+  on 7.0.2 (verified 2026-10-25). `typescript` is therefore left out of the check too
+  (`expo.install.exclude`). Remove the entry once Expo's version API lists TypeScript 7.
 - **Strict TypeScript API.** React Native 0.88 types its core components as functions, so a ref is
   typed with the exported instance type — `React.forwardRef<ViewInstance, …>`,
   `useRef<ScrollViewInstance>`, `createRef<TextInputInstance>()` — never `View` / `Text`. Both
@@ -1611,8 +1617,8 @@ is open, sign out everywhere from the phone while merchant web is open.
 
 | Turbo task  | Command                                             | Purpose                                                                                                            |
 | ----------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `lint`      | `eslint`                                            | the same lint gate as every workspace (fails on errors)                                                                          |
-| `typecheck` | `tsc --noEmit`                                      | strict flags from the shared TypeScript config                                                                     |
+| `lint`      | `oxfmt --check` + `oxlint`                          | the same lint gate as every workspace (fails on errors)                                                                          |
+| `typecheck` | `tsrs --noEmit`                                     | strict flags from the shared TypeScript config                                                                     |
 | `test`      | `jest` (jest-expo) + `npx expo install --check`     | tests and SDK version alignment                                                                                    |
 | `build`     | `npx expo export --platform ios --platform android` | bundle check: proves Metro resolves every workspace package in the pnpm workspace, without Xcode or Android Studio |
 

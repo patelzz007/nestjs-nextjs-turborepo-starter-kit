@@ -109,7 +109,7 @@ export function usePdfDocument(source: PdfSource | null, engine: PdfEngine | nul
 		};
 	}, [request]);
 	// Until the current request settles (a new source, a retry), the document is loading.
-	const loaded = settled !== null && settled.request === request ? settled.result : LOADING;
+	const loaded = settled?.request === request ? settled.result : LOADING;
 
 	const retry = React.useCallback((): void => {
 		setAttempt((count: number): number => count + 1);

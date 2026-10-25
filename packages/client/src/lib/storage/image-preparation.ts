@@ -143,7 +143,7 @@ export async function exportPreparedImage(image: ImageBitmap, area: CropArea, ru
 	const scale = size.width / area.width;
 	context.drawImage(image, -area.x * scale, -area.y * scale, image.width * scale, image.height * scale);
 	const webp = await encode(canvas, PREFERRED_MIME_TYPE);
-	const blob = webp !== null && webp.type === PREFERRED_MIME_TYPE ? webp : await encode(canvas, FALLBACK_MIME_TYPE);
+	const blob = webp?.type === PREFERRED_MIME_TYPE ? webp : await encode(canvas, FALLBACK_MIME_TYPE);
 	if (blob === null) {
 		throw new ImagePreparationError("The image could not be prepared. Try another photo.");
 	}

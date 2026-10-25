@@ -26,9 +26,7 @@ export const SIGNED_IN_STATE_PATH = "e2e/.auth/admin.json";
 const CODE_POLL_ATTEMPTS = 50;
 const CODE_POLL_INTERVAL_MS = 200;
 
-const SearchResponseSchema = z
-	.object({ messages: z.array(z.object({ ID: z.string(), Created: z.iso.datetime({ offset: true }) }).loose()) })
-	.loose();
+const SearchResponseSchema = z.object({ messages: z.array(z.object({ ID: z.string(), Created: z.iso.datetime({ offset: true }) }).loose()) }).loose();
 const MessageSchema = z.object({ Text: z.string() }).loose();
 const CODE_PATTERN = /\b(?<code>\d{6})\b/;
 

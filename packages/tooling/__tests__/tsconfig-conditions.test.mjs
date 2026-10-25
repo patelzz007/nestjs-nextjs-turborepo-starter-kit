@@ -6,12 +6,19 @@
  * fails in a clean CI checkout (lint reports every import as an unresolved
  * `error` type). This test resolves every tsconfig in the repo (following
  * `extends`) and fails when one is missing the condition.
+ *
+ * The resolution is TypeScript's own: `tsc --showConfig` prints the config with
+ * every `extends` applied. TypeScript 7 ships no stable JS API (only
+ * `typescript/unstable/*`), and tsrs, which type-checks the repo, does not
+ * implement `--showConfig`, so the TypeScript 7 CLI is the stable way to ask.
  */
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 
-import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import { workingTreeFiles } from "../scripts/lib/working-tree-files.mjs";
 
@@ -52,10 +59,22 @@ const tsconfigsNeedingCondition = trackedFiles("*tsconfig*.json")
 		return dependencies.some((name) => name.startsWith(WORKSPACE_SCOPE) && conditionalPackages.has(name));
 	});
 
+const TypeScriptManifestSchema = z.object({ bin: z.object({ tsc: z.string() }) });
+const typescriptManifestPath = createRequire(import.meta.url).resolve("typescript/package.json");
+const TSC_BIN = path.join(path.dirname(typescriptManifestPath), TypeScriptManifestSchema.parse(readJson(typescriptManifestPath)).bin.tsc);
+
+const ShownConfigSchema = z
+	.object({
+		compilerOptions: z
+			.object({ customConditions: z.array(z.string()).optional() })
+			.loose()
+			.optional(),
+	})
+	.loose();
+
 function resolvedCustomConditions(tsconfigFile) {
-	const absolutePath = path.join(REPO_ROOT, tsconfigFile);
-	const parsed = ts.getParsedCommandLineOfConfigFile(absolutePath, {}, { ...ts.sys, onUnRecoverableConfigFileDiagnostic: () => undefined });
-	return parsed?.options.customConditions ?? [];
+	const output = execFileSync(process.execPath, [TSC_BIN, "--showConfig", "-p", path.join(REPO_ROOT, tsconfigFile)], { cwd: REPO_ROOT, encoding: "utf8" });
+	return ShownConfigSchema.parse(JSON.parse(output)).compilerOptions?.customConditions ?? [];
 }
 
 describe("tsconfig resolution of @workspace packages", () => {

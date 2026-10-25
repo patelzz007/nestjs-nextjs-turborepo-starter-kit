@@ -19,7 +19,7 @@ coverImage: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=form
 > - Kit: `packages/ui/src/components/skeleton.tsx`, `skeleton-region.tsx`, `skeleton-patterns.tsx`; motion in `packages/ui/src/styles/components.css` (`skeleton-bone`, `skeleton-region`)
 > - App compositions: `apps/{web,admin,merchant}/components/loading/`
 > - Route boundaries: every page segment's `loading.tsx` in `apps/web`, `apps/admin`, `apps/merchant`
-> - Docs site (`apps/docs`, static Astro): search-result placeholders (`src/scripts/search.ts`) and the diagram placeholder (`global.css`, `:root[data-js] … pre.mermaid`)
+> - Docs site (`apps/docs`, static Astro): search-result placeholders (`src/scripts/search.ts`) and the diagram placeholder (`global.css`, `:root[data-js] .diagram[aria-busy="true"] .diagram-source`)
 
 ## The three layers
 

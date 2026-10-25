@@ -19,7 +19,7 @@ function epochOrNull(value: bigint | null): EpochMs | null {
 export function toTerminalSummary(row: TerminalSummaryRow, now: EpochMs): MerchantTerminalSummary {
 	const pairingCodeExpiresAt = epochOrNull(row.pairingCodeExpiresAt);
 	const status = terminalStatus(
-		{ pairingCodeHash: row.pairingCodeHash, pairingCodeExpiresAt, pairedAt: epochOrNull(row.pairedAt), hasLiveApiKey: row.apiKey !== null && row.apiKey.revokedAt === null },
+		{ pairingCodeHash: row.pairingCodeHash, pairingCodeExpiresAt, pairedAt: epochOrNull(row.pairedAt), hasLiveApiKey: row.apiKey?.revokedAt === null },
 		now,
 	);
 	return {

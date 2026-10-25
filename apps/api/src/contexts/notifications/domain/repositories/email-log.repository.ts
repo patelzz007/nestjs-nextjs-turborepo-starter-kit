@@ -21,7 +21,8 @@ export interface DeliveryEventRecord {
 
 /** What recording a delivery event did, or `duplicate` when this webhook id was already recorded. */
 export type DeliveryEventRecordResult =
-	{ readonly kind: "recorded"; readonly outcome: DeliveryEventOutcome; readonly emailLogId: string | null } | { readonly kind: "duplicate" };
+	| { readonly kind: "recorded"; readonly outcome: DeliveryEventOutcome; readonly emailLogId: string | null }
+	| { readonly kind: "duplicate" };
 
 /**
  * Persistence of email log rows, bound to ONE open transaction (a scope).

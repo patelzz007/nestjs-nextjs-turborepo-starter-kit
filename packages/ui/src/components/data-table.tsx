@@ -1132,7 +1132,7 @@ const TableCellView = memoGeneric(function TableCellView<TData extends RowData>(
 	const column = cell.column;
 	const isPinned = column.getIsPinned();
 	const cellId = column.id;
-	const isEditing = editingCell !== null && editingCell.rowIndex === rowIdx && editingCell.columnId === cellId;
+	const isEditing = editingCell?.rowIndex === rowIdx && editingCell.columnId === cellId;
 
 	const pinnedStyles = buildPinnedColumnStyles(isPinned, column.getStart(), column.getAfter(), 5);
 

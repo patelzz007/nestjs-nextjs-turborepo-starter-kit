@@ -173,7 +173,7 @@ it('calls onRowClick with the clicked order when a row is clicked', async () => 
 
 ## Where tests live — a `__tests__/` folder beside the code
 
-In every front-end app (`apps/web`, `apps/admin`, `apps/merchant`, `apps/docs`, `apps/mobile`), in `apps/aws-infrastructure`, and in **every package** under `packages/` (shared, ui, ui-native, client, api-client, tokens, messaging, tooling, eslint-config, …) a unit test sits in a `__tests__/` folder **next to** the code it tests, never in the same folder as it — and never in a differently named folder such as `tests/`:
+In every front-end app (`apps/web`, `apps/admin`, `apps/merchant`, `apps/docs`, `apps/mobile`), in `apps/aws-infrastructure`, and in **every package** under `packages/` (shared, ui, ui-native, client, api-client, tokens, messaging, tooling, oxlint-config, …) a unit test sits in a `__tests__/` folder **next to** the code it tests, never in the same folder as it — and never in a differently named folder such as `tests/`:
 
 ```text
 components/account/profile-form.tsx

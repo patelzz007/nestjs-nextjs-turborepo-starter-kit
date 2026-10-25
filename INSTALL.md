@@ -16,9 +16,9 @@ Your .claude/skills and .agents/skills folders are a different mechanism (invoka
 ## Make the completion gate real (do these once)
 
 1. Root package.json scripts: "lint": "turbo run lint", "test": "turbo run test".
-2. Every package: "lint": "eslint ." and "test": "vitest run".
-3. Put the ESLint config from rules/13-ci-cd-and-quality-gates.md ("Reference ESLint configuration") in your shared
-   eslint-config package. The canary test in the same file proves the config is actually catching violations.
+2. Every package: "lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint" and "test": "vitest run".
+3. Compose the shared config from packages/oxlint-config in each workspace's oxlint.config.ts (rules/13-ci-cd-and-quality-gates.md,
+   "The lint configuration"). The lint canaries described in the same file prove the config is actually catching violations.
 4. Add a pre-push hook running `pnpm run lint && pnpm run test`, and make the CI `verify` job a required check.
 5. Optional: a tool-level hook (e.g. Claude Code hooks) that blocks finishing until the gate passes. Check that
    tool's current docs for the configuration.

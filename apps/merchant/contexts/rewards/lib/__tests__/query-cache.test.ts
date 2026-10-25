@@ -1,7 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { RewardResponseSchema, type Envelope, type RewardResponse } from "@workspace/shared";
-import { epochMs } from "@workspace/shared";
+import { RewardResponseSchema, type Envelope, type RewardResponse, epochMs } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { applyMerchantRewardChange } from "@/contexts/rewards/lib/query-cache";

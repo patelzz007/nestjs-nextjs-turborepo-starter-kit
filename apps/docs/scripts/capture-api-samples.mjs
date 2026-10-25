@@ -49,6 +49,7 @@ import { createHash, createHmac, randomUUID } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { crc32, deflateSync } from "node:zlib";
 import { resolve } from "node:path";
+import { stripVTControlCharacters } from "node:util";
 
 import { neutralizeEmailAddresses } from "../src/lib/api-reference/sample-privacy.ts";
 
@@ -343,8 +344,8 @@ function readLog() {
 	if (API_LOG_FILE === undefined) {
 		throw new Error("API_LOG_FILE is required: the run reads emailed one-time tokens from the API's log-only output");
 	}
-	// eslint-disable-next-line no-control-regex -- strips ANSI colour codes from the Nest logger output
-	return readFileSync(API_LOG_FILE, "utf8").replace(/\u001b\[[0-9;]*m/g, "");
+	// The Nest logger colours its output; strip the ANSI codes before matching.
+	return stripVTControlCharacters(readFileSync(API_LOG_FILE, "utf8"));
 }
 
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));

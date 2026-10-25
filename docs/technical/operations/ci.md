@@ -33,8 +33,8 @@ them individually.
 
 | Job | What it proves | Reproduce locally |
 | --- | --- | --- |
-| **Lint** | `turbo run lint` — zero errors in every workspace | `pnpm lint` |
-| **Typecheck** | `turbo run typecheck` across every workspace (builds `^build` deps first). In `apps/api` this covers **all** TypeScript: `src/` (`tsconfig.typecheck.json`), specs, `test/**`, `prisma/**`, `scripts/**` and tool configs (`tsconfig.check.json`) — Vitest itself never type-checks | `pnpm typecheck` |
+| **Lint** | `turbo run lint` — in every workspace, `oxfmt --check` (formatting) then `oxlint` (rules, type-aware), zero errors | `pnpm lint` |
+| **Typecheck** | `turbo run typecheck` across every workspace (builds `^build` deps first). In `apps/api` this covers **all** TypeScript: `src/` (`tsconfig.typecheck.json`), specs, `test/**`, `prisma/**`, `scripts/**` and tool configs (`tsconfig.json`) — Vitest itself never type-checks | `pnpm typecheck` |
 | **Unit tests** | `turbo run test --concurrency=1` (the root `test` script) — every workspace's Vitest suite; `apps/mobile` runs its jest-expo suites ([ADR 031](../../adr/031-jest-expo-for-mobile-tests.md)) followed by `expo install --check` (Expo SDK version drift fails). **One workspace at a time**: each test runner already spreads its files over every core, so running several suites side by side only starves them — on a 4-vCPU runner, after a change to a shared package, 17 suites at once made screen tests 5× slower and tipped them past their timeouts. One suite at a time runs each under the same conditions as on its own | `pnpm test` |
 | **Build** | `turbo run build` — API bundle, all Next.js apps, docs site (which also link-checks), and the mobile app's bundle check (`expo export --platform ios --platform android` into `apps/mobile/dist`: proves Metro resolves every workspace package without Xcode or Android Studio) | `pnpm build` |
 | **RLS manifest drift** | Prisma models ↔ RLS manifest ↔ RLS SQL agree, and the RLS apply plan is valid | `pnpm db:check-rls-manifest` |
@@ -155,9 +155,8 @@ placeholder steps that always pass — a green check must always mean something 
 | Stage | Status / blocker |
 | --- | --- |
 | OpenAPI breaking-change diff | Planned. Today the e2e job only proves the committed `docs/generated/openapi.json` matches the code (`test/openapi-artifact.e2e-spec.ts`), and the docs unit tests prove the generated [API reference](../api-reference/README.md) matches that file. |
-| Architecture fitness (import boundaries, package cycles) | Planned — needs the boundary lint rules. |
+| Architecture fitness: package cycles | Planned. Import boundaries are already enforced by lint (`workspace/restricted-imports`, [Oxlint §3.1](../tooling/oxlint.md#31-import-boundaries)). |
 | Migration safety (destructive-change detection, expand/contract linting) | Planned. Today CI only proves migrations apply to an empty database. |
-| Formatting check (`prettier --check`) | Planned — there is no `format:check` script yet; `format` rewrites files. |
 | Full-history secret scanning (e.g. gitleaks) | Planned — today only `.env.example` files are scanned. |
 | npm dependency update automation (Dependabot/Renovate for `package.json`) | Planned — Dependabot currently only updates GitHub Actions pins. |
 | Preview deployments, coverage floors, artifact retention policy | Planned. No CI artifacts are uploaded yet. |

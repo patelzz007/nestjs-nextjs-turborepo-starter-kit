@@ -108,7 +108,8 @@ export interface PrismaModelDelegate<TRow, TWhere, TOrderBy, TCreateInput, TUpda
  */
 /** A root client or an interactive transaction. The `kind` tag is how a repository tells them apart. */
 export type RepositoryDb<TTransactionClient = Prisma.TransactionClient> =
-	{ readonly kind: "root"; readonly client: PrismaService } | { readonly kind: "transaction"; readonly client: TTransactionClient };
+	| { readonly kind: "root"; readonly client: PrismaService }
+	| { readonly kind: "transaction"; readonly client: TTransactionClient };
 
 export function rootRepositoryDb(client: PrismaService): RepositoryDb {
 	return { kind: "root", client };

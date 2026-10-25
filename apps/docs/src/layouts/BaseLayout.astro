@@ -58,9 +58,8 @@ const imageUrl = image === undefined || Astro.site === undefined ? undefined : n
 			Self-hosted fonts (configured in astro.config.ts). Only the upright body face is
 			preloaded: it paints nearly every glyph above the fold. Headings, italic and code load on use.
 		-->
-		<Font cssVariable="--font-bricolage-grotesque" />
-		<Font cssVariable="--font-geist-sans" preload={[{ style: "normal" }]} />
-		<Font cssVariable="--font-geist-mono" />
+		<Font cssVariable="--font-atkinson-next" preload={[{ style: "normal" }]} />
+		<Font cssVariable="--font-atkinson-mono" />
 		<!-- Applies the saved / OS theme before first paint (keep the key in sync with src/scripts/theme.ts). -->
 		<script is:inline>
 			(function () {

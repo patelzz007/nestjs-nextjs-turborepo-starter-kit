@@ -36,7 +36,7 @@ docs/
 │   ├── email/         Resend setup, templates and pipeline
 │   ├── configuration/ API and frontend environment variables
 │   ├── frontend/      routing, admin panel, toasts, streams (RxJS)
-│   ├── tooling/       TypeScript, ESLint, dependencies
+│   ├── tooling/       TypeScript, Oxlint & Oxfmt, dependencies
 │   └── operations/    CI, local infrastructure, observability, multi-tenancy runbook
 ├── adr/               architecture decision records (history — never deleted)
 ├── generated/         openapi.json and api-samples.json (inputs of the API reference)

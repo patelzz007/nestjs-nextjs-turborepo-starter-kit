@@ -9,7 +9,8 @@ import { z } from "zod";
 import { ROUTES } from "../../runtime/routes";
 
 export type PdfSource =
-	{ readonly kind: "remote"; readonly url: string; readonly fileName: string } | { readonly kind: "picked"; readonly uri: string; readonly fileName: string };
+	| { readonly kind: "remote"; readonly url: string; readonly fileName: string }
+	| { readonly kind: "picked"; readonly uri: string; readonly fileName: string };
 
 /** Longest name shown in the viewer's header and used for the downloaded file. */
 export const PDF_SOURCE_NAME_MAX_LENGTH = 200;

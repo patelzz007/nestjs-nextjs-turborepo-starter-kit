@@ -5,7 +5,7 @@
 // memoizes the result. `main.ts` calls it before anything else is imported,
 // so an invalid environment stops the process before Nest bootstraps, with
 // a message that names every bad variable and never prints a value.
-// ESLint (`no-restricted-properties`) rejects `process.env` everywhere else.
+// Oxlint (`no-restricted-properties`) rejects `process.env` everywhere else.
 //
 // Runtime `NODE_ENV` is authoritative: the whole `process.env` object is
 // handed to the schema, so the bundler's `process.env.NODE_ENV` inlining

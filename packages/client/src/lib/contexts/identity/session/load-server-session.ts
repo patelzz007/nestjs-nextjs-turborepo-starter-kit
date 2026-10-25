@@ -39,7 +39,9 @@ export type ServerSessionOutcome =
 	| { readonly kind: "unavailable"; readonly error: UnexpectedServerQueryError };
 
 type SettledAnswer<TData> =
-	{ readonly kind: "ok"; readonly data: TData } | { readonly kind: "signed-out" } | { readonly kind: "unavailable"; readonly error: UnexpectedServerQueryError };
+	| { readonly kind: "ok"; readonly data: TData }
+	| { readonly kind: "signed-out" }
+	| { readonly kind: "unavailable"; readonly error: UnexpectedServerQueryError };
 
 /** The cause recorded when a query rejected with something that is not an `Error`. */
 const NON_ERROR_REJECTION_MESSAGE = "the request rejected with a non-Error value";

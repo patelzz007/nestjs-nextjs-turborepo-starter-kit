@@ -17,7 +17,7 @@ export function Dialog6Example(): React.JSX.Element {
 						<DialogTitle>Full Screen Dialog</DialogTitle>
 						<DialogDescription>A fluid full-screen dialog with sticky header and footer.</DialogDescription>
 					</DialogHeader>
-					<div className="me-0.5 flex-1 overflow-auto px-6 [scrollbar-color:rgb(120_120_120/0.4)_transparent] [scrollbar-width:thin]">
+					<div className="me-0.5 flex-1 [scrollbar-width:thin] [scrollbar-color:rgb(120_120_120/0.4)_transparent] overflow-auto px-6">
 						<div className="space-y-4 text-sm">
 							{PARAGRAPH_IDS.map((placeholderId: string): React.JSX.Element => (
 								<p key={placeholderId} className="leading-normal text-muted-foreground">

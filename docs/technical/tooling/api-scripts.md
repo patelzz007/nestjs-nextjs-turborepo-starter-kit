@@ -63,4 +63,4 @@ Development only. `tunnel` and `github-webhook` refuse to run when `NODE_ENV=pro
    names a command the CLI does not define.
 
 Write output with `PROCESS_OUTPUT` from `lib/cli.ts`, not `console`. The scripts are linted and
-type-checked as part of `tsconfig.check.json`, under the same rules as `src/`.
+type-checked as part of `tsconfig.json` (the API's full program), under the same rules as `src/`.

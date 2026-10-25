@@ -58,3 +58,12 @@ ESLint config deliberately allowed it, and:
   (`apps/api/test/support/test-service-graph.ts`), never cast into shape.
 - The `unknown` / `never` **type keywords** remain review-enforced, because catch clauses need
   `unknown` and exhaustiveness checks need `never`.
+
+## Implementation notes (2026-10-25)
+
+Enforcement moved from ESLint to Oxlint ([ADR 063](./063-oxlint-oxfmt-typescript-7-and-tsrs.md)); the
+decision is unchanged. The `as const`, `<const>`, `z.any/unknown/never` and the `unknown` / `never`
+keyword bans are `workspace/restricted-syntax` selectors in
+`packages/oxlint-config/restricted-syntax-rules.js` (the keyword bans are lint-enforced now, with the
+catch-clause and `assertNever` exemptions). In `apps/api`, `tsconfig.check.json` was folded into
+`tsconfig.json` (the full program); `typecheck` runs `tsconfig.typecheck.json` and `tsconfig.json`.

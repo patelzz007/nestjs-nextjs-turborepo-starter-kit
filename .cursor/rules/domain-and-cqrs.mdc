@@ -1,0 +1,11 @@
+---
+description: DDD and CQRS rules for the API's bounded contexts (aggregates, commands, queries, events, outbox)
+globs: apps/api/src/contexts/**,apps/api/src/platform/**
+alwaysApply: false
+---
+
+You are editing the API's bounded contexts. Before changing code here:
+
+1. Follow `AGENTS.md` (the router) and `rules/00-non-negotiables.md`.
+2. Read `rules/29-domain-driven-design.md` for domain modelling and `rules/30-cqrs.md` for commands, queries, events and the outbox.
+3. Those two are generated rulebooks, verified against this repository. ADR 058, ADR 059, `docs/architecture/ddd-cqrs-spec.md` and `docs/architecture/context-map.md` win when they disagree; each rulebook's "Repository verification" table lists the known disagreements.

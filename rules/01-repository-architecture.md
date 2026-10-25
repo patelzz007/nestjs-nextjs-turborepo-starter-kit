@@ -24,7 +24,7 @@ packages/
   ui-native/            # React Native components
   tokens/               # design tokens
   messaging/            # Kafka and queue contracts
-  eslint-config/
+  oxlint-config/        # shared lint config + the repository's own lint rules
   typescript-config/
   tooling/              # repo scripts
 
@@ -53,7 +53,7 @@ The exact package list can evolve as the product grows, but ownership of each pa
 | A zod schema shared between api and web/mobile | `packages/shared` | Must be the same definition everywhere |
 | A pure, framework-agnostic function used by 2+ apps | `packages/shared` | No framework dependency, genuine reuse |
 | Prisma schema/migrations/seed | `apps/api/prisma` | Single source of DB truth; only the API touches the database |
-| Shared eslint/tsconfig | `packages/eslint-config`, `packages/typescript-config` | Config consistency across apps |
+| Shared lint/tsconfig | `packages/oxlint-config`, `packages/typescript-config` | Config consistency across apps |
 | An API endpoint's client leaf, request/response handling, session transport, or a TanStack Query hook over the router | `packages/api-client` (core in `src/`, hooks in `src/react/`) | One client for web and mobile; it must stay free of Next, DOM and Node code |
 | Web-only API glue (Next server prefetch, route proxy refresh, cookie names, auth forms) | `packages/client` | Depends on `next` / `react-dom` / `server-only`, which the mobile app must never pull in |
 | A design token (colour, radius, type size, z-index, easing) | `packages/tokens/src` — then `pnpm tokens:generate` | One source for web and mobile (ADR 030); generated CSS is never hand-edited |
@@ -126,15 +126,15 @@ class UserRepository {
 ## Package dependency graph
 
 ```text
-apps/api      → packages/shared, packages/messaging, packages/eslint-config + typescript-config (dev)
-apps/web      → packages/client, packages/shared, packages/ui, packages/tokens, packages/eslint-config + typescript-config (dev)
-apps/mobile   → packages/shared, packages/api-client (both entries), packages/ui-native, packages/tokens (generated mobile.css only), packages/eslint-config + typescript-config (dev)
+apps/api      → packages/shared, packages/messaging, packages/oxlint-config + typescript-config (dev)
+apps/web      → packages/client, packages/shared, packages/ui, packages/tokens, packages/oxlint-config + typescript-config (dev)
+apps/mobile   → packages/shared, packages/api-client (both entries), packages/ui-native, packages/tokens (generated mobile.css only), packages/oxlint-config + typescript-config (dev)
                NEVER packages/client, packages/ui, next, react-dom, server-only, Node built-ins or AsyncStorage (lint-enforced: mobileImportBoundaryConfig)
 packages/client     → packages/api-client, packages/shared, packages/ui
 packages/api-client → packages/shared (core "."); + react, @tanstack/react-query ("./react" entry only)
-packages/ui   → packages/shared, packages/tokens (generated web.css), packages/eslint-config + typescript-config (dev)
+packages/ui   → packages/shared, packages/tokens (generated web.css), packages/oxlint-config + typescript-config (dev)
 packages/ui-native → packages/shared, packages/tokens; react-native, Reanimated, Uniwind, Expo modules as PEER dependencies (the app's one copy)
-packages/shared → no workspace package at runtime (zod only); eslint-config + typescript-config (dev)
+packages/shared → no workspace package at runtime (zod only); oxlint-config + typescript-config (dev)
 packages/tokens → nothing (no runtime dependencies; zod is a dev-only dependency for its own validation)
 ```
 
@@ -155,7 +155,7 @@ cookies for the browser client types, body tokens (Bearer + refresh in the reque
 `mobile` ([ADR 029](../docs/adr/029-mobile-client-body-token-transport.md)). Its configuration
 (`baseUrl`, client type, transport, app version) is injected by each app and validated with zod; the
 package reads no environment. Because the mobile app runs it in React Native, lint
-(`apiClientBoundaryConfigs` in `packages/eslint-config/import-boundaries.js`) forbids its core from
+(`apiClientBoundaryConfigs` in `packages/oxlint-config/import-boundaries.js`) forbids its core from
 importing `next`, `react`, `react-dom`, `@tanstack/react-query`, `@workspace/client`, `@workspace/ui`
 or a Node built-in, and its shipped code from touching DOM-only or Node globals; only `src/react/`
 may add `react` and `@tanstack/react-query`. `packages/client` builds the web's cookie client on it
@@ -165,7 +165,7 @@ and re-exports it from its old `lib/api/*` paths; never the other way round.
 Next apps but on a different runtime (React Native / Hermes), so it reaches the API only through
 `@workspace/api-client` (token transport) and the contracts only through `@workspace/shared`. The web
 packages (`@workspace/client`, `@workspace/ui`) would drag `react-dom`, Next and the DOM into the
-native bundle; lint (`packages/eslint-config/react-native.js` → `mobileImportBoundaryConfig`) refuses
+native bundle; lint (`packages/oxlint-config/react-native.js` → `mobileImportBoundaryConfig`) refuses
 them, Node built-ins and AsyncStorage. Logic that both the web and the mobile app need belongs in
 `packages/shared` (platform-neutral, Vitest-tested) or `packages/api-client`, never copied into the app.
 Two Metro resolution rules (`apps/mobile/metro.config.js`, mirrored by `jest.resolver.cjs`) keep
@@ -381,9 +381,9 @@ If `packages/shared` changes its zod schema for `Order` in a way that's incompat
    updates on every page load.
 ```
 
-### Smell: business logic creeping into `packages/eslint-config` or `packages/typescript-config`
+### Smell: business logic creeping into `packages/oxlint-config` or `packages/typescript-config`
 
-`packages/eslint-config` and `packages/typescript-config` exist for build tooling configuration (eslint rules, tsconfig compiler options) — it should never contain a runtime value that affects application behavior (a feature flag default, a business rule threshold). If you find an actual business decision living in a config package, it belongs in `packages/shared` (if it's a shared constant/schema) or directly in the app that owns the decision.
+`packages/oxlint-config` and `packages/typescript-config` exist for build tooling configuration (lint rules, tsconfig compiler options) — it should never contain a runtime value that affects application behavior (a feature flag default, a business rule threshold). If you find an actual business decision living in a config package, it belongs in `packages/shared` (if it's a shared constant/schema) or directly in the app that owns the decision.
 
 ### Smell: a `tools/scripts` script that duplicates application logic instead of importing it
 
@@ -532,7 +532,7 @@ A concrete cautionary illustration, because "why does this matter so much" is ea
 Rules that only live in documents decay. Encode the structural ones as automated checks in CI:
 
 ```text
-- dependency-cruiser / eslint-plugin-boundaries: forbid apps → apps imports, packages → apps imports, and cycles
+- import boundaries (`workspace/restricted-imports` in `packages/oxlint-config/import-boundaries.js`): forbid apps → apps imports, packages → apps imports; a cycle check (e.g. dependency-cruiser) for cycles
 - a script asserting every apps/* and packages/* has a README and the standard turbo scripts
 - a check that packages/shared has no Node/DOM-only imports (build it for the Expo runtime in CI)
 - a check that migrations changed ⇒ seed.ts changed in the same PR (or an explicit override label)

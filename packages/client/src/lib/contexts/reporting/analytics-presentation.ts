@@ -158,7 +158,9 @@ export function bucketFormatters(interval: AnalyticsInterval, region: DisplayReg
 
 /** Where a dashboard's one query stands, as its charts need it. */
 export type AnalyticsDataStatus =
-	{ readonly status: "loading" } | { readonly status: "error"; readonly message: string; readonly onRetry: () => void } | { readonly status: "ready" };
+	| { readonly status: "loading" }
+	| { readonly status: "error"; readonly message: string; readonly onRetry: () => void }
+	| { readonly status: "ready" };
 
 /** The retry button's label in every chart error state. */
 export const ANALYTICS_RETRY_LABEL = "Try again";

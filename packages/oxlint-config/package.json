@@ -1,0 +1,66 @@
+{
+	"name": "@workspace/oxlint-config",
+	"version": "0.0.0",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
+		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\"",
+		"test": "vitest run"
+	},
+	"exports": {
+		"./base": {
+			"types": "./base.d.ts",
+			"default": "./base.js"
+		},
+		"./next-js": {
+			"types": "./next.d.ts",
+			"default": "./next.js"
+		},
+		"./react-internal": {
+			"types": "./react-internal.d.ts",
+			"default": "./react-internal.js"
+		},
+		"./nestjs": {
+			"types": "./nestjs.d.ts",
+			"default": "./nestjs.js"
+		},
+		"./import-boundaries": {
+			"types": "./import-boundaries.d.ts",
+			"default": "./import-boundaries.js"
+		},
+		"./react-native": {
+			"types": "./react-native.d.ts",
+			"default": "./react-native.js"
+		},
+		"./plugin": {
+			"types": "./plugin/index.d.ts",
+			"default": "./plugin/index.js"
+		},
+		"./compose": {
+			"types": "./compose.d.ts",
+			"default": "./compose.js"
+		},
+		"./testing": {
+			"types": "./testing.d.ts",
+			"default": "./testing.js"
+		}
+	},
+	"dependencies": {
+		"@darraghor/eslint-plugin-nestjs-typed": "^7.5.8",
+		"@next/eslint-plugin-next": "^16.4.3",
+		"eslint-plugin-jsx-a11y": "^6.10.2",
+		"eslint-plugin-react": "^7.37.5",
+		"eslint-plugin-react-hooks": "^7.1.1",
+		"eslint-plugin-react-native": "^5.0.0",
+		"eslint-plugin-turbo": "^2.11.10",
+		"oxlint": "1.89.0",
+		"zod": "4.6.7"
+	},
+	"devDependencies": {
+		"oxfmt": "0.74.0",
+		"oxlint-tsgolint": "7.0.2005",
+		"react": "19.3.0",
+		"vitest": "^5.0.5"
+	}
+}

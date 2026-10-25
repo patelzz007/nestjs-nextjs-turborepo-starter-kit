@@ -30,7 +30,8 @@ export interface VerifyEmailViewProps {
 
 /** What one verification run concluded. */
 export type VerifyEmailOutcome =
-	{ readonly kind: "verified"; readonly alreadyVerified: boolean; readonly session: EmailVerificationSyncResult } | { readonly kind: "failed"; readonly message: string };
+	| { readonly kind: "verified"; readonly alreadyVerified: boolean; readonly session: EmailVerificationSyncResult }
+	| { readonly kind: "failed"; readonly message: string };
 
 type ViewState =
 	| { readonly status: "verifying" }

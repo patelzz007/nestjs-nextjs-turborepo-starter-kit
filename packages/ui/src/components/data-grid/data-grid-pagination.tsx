@@ -36,7 +36,8 @@ export interface DataGridPaginationProps {
 
 /** One slot in the page row: a page button, or an ellipsis that jumps over the pages it stands for. */
 export type DataGridPaginationItem =
-	{ readonly type: "page"; readonly index: number } | { readonly type: "ellipsis"; readonly direction: "previous" | "next"; readonly target: number };
+	| { readonly type: "page"; readonly index: number }
+	| { readonly type: "ellipsis"; readonly direction: "previous" | "next"; readonly target: number };
 
 /** The smallest middle run: the current page and one neighbour each side. */
 const MIN_PAGE_RUN = 3;

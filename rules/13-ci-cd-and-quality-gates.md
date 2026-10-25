@@ -220,7 +220,7 @@ Note the two database steps: running `migrate deploy` then `db seed` on every PR
 
 ## The completion gate — how the commands are wired
 
-The gate is only as strong as what `pnpm run lint` actually checks, so the scripts and the ESLint config are part of the guardrails and are changed only with maintainer review.
+The gate is only as strong as what `pnpm run lint` actually checks, so the scripts, the shared lint config (`packages/oxlint-config`), each workspace's `oxlint.config.ts` and the formatter config (`.oxfmtrc.json`) are part of the guardrails and are changed only with maintainer review.
 
 ```json
 // root package.json
@@ -237,121 +237,54 @@ The gate is only as strong as what `pnpm run lint` actually checks, so the scrip
 // every apps/* and packages/* package.json — same script names everywhere (01-repository-architecture.md)
 {
   "scripts": {
-    "lint": "eslint .",
-    "test": "vitest run"
+    "lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
+    "format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\"",
+    "test": "vitest run",
+    "typecheck": "tsrs --noEmit"
   }
 }
 ```
 
-Lint fails on errors. Every rule is configured as `error` (`rule-severity.js` raises plugin presets' warnings), so anything the configuration enforces fails the command; there is no `--max-warnings` flag. A warning that still appears is output to read, not a gate.
+Lint fails on errors, and every rule is configured as `error`: the shared configs set no rule to `warn` (`packages/oxlint-config/__tests__/configs.test.js` fails if one does), so anything the configuration enforces fails the command. Formatting is checked by `oxfmt --check` before oxlint runs.
 
-## Reference ESLint configuration
+## The lint configuration
 
-Illustrative flat config (typescript-eslint v8 style). Adapt file names and versions to your setup, then **prove it works with the canary below** rather than trusting it.
+The real configuration is `packages/oxlint-config`; [docs/technical/tooling/oxlint.md](../docs/technical/tooling/oxlint.md) explains it and ADR 063 records why it replaced ESLint. In short:
 
-```js
-// packages/eslint-config/base.mjs
-import tseslint from 'typescript-eslint';
-import eslintComments from '@eslint-community/eslint-plugin-eslint-comments';
+- **Every category is off.** The rule set is the explicit lists in `packages/oxlint-config/rules/*.js`, so an oxlint upgrade never changes the gate on its own.
+- **Type-aware rules** (`no-unsafe-*`, `no-floating-promises`, `no-misused-promises`, `prefer-readonly`, …) run through oxlint-tsgolint against each file's nearest `tsconfig.json`.
+- **The non-negotiable bans** are `workspace/restricted-syntax` selectors (`packages/oxlint-config/restricted-syntax-rules.js`): `unknown` / `never` outside their allowed positions, `as` / `as const` / `<T>` casts, `z.any()` / `z.unknown()` / `z.never()`, the runtime `typeof`, `Array.isArray`, numeric-literal indices, hand-typed query keys, `organization*` identifiers.
+- `typescript/consistent-type-assertions` (`assertionStyle: "never"`), `typescript/no-non-null-assertion`, `typescript/explicit-function-return-type`, `typescript/explicit-member-accessibility`, `typescript/ban-ts-comment` and `typescript/no-explicit-any` are errors.
+- `options.reportUnusedDisableDirectives: "error"`; inline `oxlint-disable` / `eslint-disable` comments are forbidden by `00-non-negotiables.md` and caught in review.
+- Workspaces combine configs with `composeConfigs` (never oxlint's `extends`, which drops `env`, `globals`, `settings` and `ignorePatterns`).
 
-const FORBIDDEN_SYNTAX = [
-  { selector: 'TSUnknownKeyword', message: '`unknown` is forbidden. Parse the value with a zod schema at the boundary (00-non-negotiables.md).' },
-  { selector: 'TSNeverKeyword', message: '`never` is only allowed in the shared assertNever helper (00-non-negotiables.md).' },
-  { selector: "TSAsExpression[typeAnnotation.typeName.name='const']", message: '`as const` is forbidden. Use a typed tuple or z.enum([...]) (00-non-negotiables.md).' },
-  { selector: 'TSTypeAssertion', message: 'Angle-bracket type assertions are forbidden.' },
-  { selector: "CallExpression[callee.object.name='z'][callee.property.name=/^(any|unknown|never)$/]", message: 'z.any(), z.unknown(), z.never() are forbidden.' },
-  { selector: "CallExpression[callee.property.name=/^(delete|deleteMany)$/][callee.object.object.name=/^(prisma|tx)$/]", message: 'Hard delete is forbidden. Use soft delete (08-database-prisma.md).' },
-  { selector: "CallExpression[callee.property.name=/^(delete|deleteMany)$/][callee.object.object.property.name='prisma']", message: 'Hard delete is forbidden. Use soft delete (08-database-prisma.md).' },
-];
+Notes on what lint does and does not do:
 
-export default tseslint.config(
-  ...tseslint.configs.strictTypeChecked,
-  {
-    languageOptions: { parserOptions: { projectService: true } },
-    linterOptions: { reportUnusedDisableDirectives: 'error' },
-    plugins: { '@eslint-community/eslint-comments': eslintComments },
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unsafe-assignment': 'error',
-      '@typescript-eslint/no-unsafe-member-access': 'error',
-      '@typescript-eslint/no-unsafe-call': 'error',
-      '@typescript-eslint/no-unsafe-return': 'error',
-      '@typescript-eslint/no-unsafe-argument': 'error',
-      '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
-      '@typescript-eslint/no-non-null-assertion': 'error',
-      '@typescript-eslint/explicit-function-return-type': ['error', { allowExpressions: false, allowTypedFunctionExpressions: true }],
-      '@typescript-eslint/explicit-module-boundary-types': 'error',
-      '@typescript-eslint/explicit-member-accessibility': ['error', { accessibility: 'explicit' }],
-      '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': 'error',
-      '@typescript-eslint/switch-exhaustiveness-check': 'error',
-      '@typescript-eslint/prefer-readonly': 'error',
-      '@typescript-eslint/no-unused-vars': 'error',
-      '@typescript-eslint/ban-ts-comment': 'error',
-      '@typescript-eslint/no-magic-numbers': ['error', { ignore: [0, 1, -1], ignoreEnums: true, ignoreNumericLiteralTypes: true, ignoreReadonlyClassProperties: true, ignoreTypeIndexes: true }],
-      '@eslint-community/eslint-comments/no-use': ['error', { allow: [] }], // no eslint-disable comments at all
-      'no-restricted-syntax': ['error', ...FORBIDDEN_SYNTAX],
-    },
-  },
-  {
-    // the ONE place `never` is allowed
-    files: ['**/assert-never.ts'],
-    rules: { 'no-restricted-syntax': ['error', ...FORBIDDEN_SYNTAX.filter((rule) => rule.selector !== 'TSNeverKeyword')] },
-  },
-  {
-    // test literals are expectations, not configuration; everything else still applies
-    files: ['**/*.spec.ts', '**/*.spec.tsx', '**/*.test.ts', '**/*.test.tsx'],
-    rules: { '@typescript-eslint/no-magic-numbers': 'off' },
-  },
-);
-```
+- Lint cannot enforce everything. It does not catch a missing authorization guard, a missing test, a missing `seed.ts` update, a hard `delete`, or an unexplained magic number. Those remain review and CI checks (`01-repository-architecture.md`, "Architecture fitness checks").
+- Type-aware rules are the slow part. Keep them on; do not switch them off for speed.
+- Configuration changes, new ignore patterns and rule downgrades are maintainer-reviewed. An AI agent must not make them to get a task green.
 
-Notes on what this does and does not do:
+## Prove the gate works: lint canaries
 
-- `consistent-type-assertions` does not flag `as const`, which is why the explicit selector exists.
-- Type-aware rules (`projectService`) are slower. Keep lint fast with Turborepo caching and per-package runs; do not switch them off to gain speed.
-- Lint cannot enforce everything. It will not catch a missing authorization guard, a missing test, or a missing `seed.ts` update. Those remain review and CI checks (`01-repository-architecture.md`, "Architecture fitness checks").
-- The `delete` selectors are a heuristic and may miss unusual access paths. The retention-purge job is the only allowlisted exception, added per file with a reviewed override, never with an inline comment.
-- Configuration changes to this file, `ignores` additions, and rule downgrades are maintainer-reviewed. An AI agent must not make them to get a task green.
+A gate that silently stopped checking is worse than none, so the configuration is tested like code:
 
-## Prove the gate works: a lint canary
-
-A gate that silently stopped checking is worse than none. Keep a fixture of deliberate violations and a test asserting that lint reports every one.
+- **Boundary canaries** in the workspaces that own a boundary (`apps/web/__tests__/lint-boundaries.test.ts`, `packages/client/src/__tests__/lint-boundaries.test.ts`, `apps/api/src/__tests__/lint-boundaries.spec.ts`, `apps/analytics-consumer/src/__tests__/lint-boundaries.spec.ts`) lint deliberate violations against the workspace's **real** composed config and assert each rule fires.
+- **Rule and preset tests** in `packages/oxlint-config/__tests__/`: a `RuleTester` suite per repository rule, the selector bans, the presets (every rule an error, the one approved exception pinned) and the declarations.
 
 ```ts
-// packages/eslint-config/canary/violations.ts
-// Skipped by the package's normal lint script via the CLI flag ("lint": "eslint . --ignore-pattern canary/"),
-// NOT via `ignores` in the config, so the test below can still lint it. Include it in that package's tsconfig for type-aware rules.
-export const anyValue: any = 1;
-export const unknownValue: unknown = 1;
-export const constValue = ['a'] as const;
-export function noReturnType(value: number) { return value + 42; }
-export class NoModifier { method(): void {} }
-export async function hardDelete(prisma: { order: { delete(input: { where: { id: string } }): Promise<void> } }): Promise<void> {
-  await prisma.order.delete({ where: { id: 'x' } });
-}
-```
+// apps/web/__tests__/lint-boundaries.test.ts (shape)
+import { ruleIdsFor } from "@workspace/oxlint-config/testing";
+import config from "../oxlint.config";
 
-```ts
-// packages/eslint-config/canary.spec.ts
-import { ESLint } from 'eslint';
-import { describe, expect, it } from 'vitest';
-
-describe('lint canary', () => {
-  it('reports every forbidden construct', async (): Promise<void> => {
-    const eslint = new ESLint();
-    const [result] = await eslint.lintFiles(['canary/violations.ts']);
-    const ruleIds = result?.messages.map((message) => message.ruleId) ?? [];
-    expect(ruleIds).toContain('@typescript-eslint/no-explicit-any');
-    expect(ruleIds).toContain('@typescript-eslint/explicit-function-return-type');
-    expect(ruleIds).toContain('@typescript-eslint/explicit-member-accessibility');
-    expect(ruleIds).toContain('no-restricted-syntax'); // unknown, as const, hard delete
-    expect(ruleIds).toContain('@typescript-eslint/no-magic-numbers');
-  });
+it("rejects a Nest import in a component", () => {
+	const ruleIds = ruleIdsFor(config, 'import * as forbidden from "@nestjs/common";\nexport const probe = forbidden;\n', "components/probe.tsx");
+	expect(ruleIds).toContain("workspace/restricted-imports");
 });
 ```
 
-If the canary test fails, the gate is broken. Fix the config before doing anything else.
+`ruleIdsFor` / `lintAsIf` write the config and the snippet into a temporary directory (the snippet at the same relative path, so override globs match as in the workspace) and run the real `oxlint` binary there; the workspace is never touched.
+
+If a canary fails, the gate is broken. Fix the config before doing anything else.
 
 ## Enforcing the gate outside the AI tool
 

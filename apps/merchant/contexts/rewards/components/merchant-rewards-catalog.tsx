@@ -130,7 +130,7 @@ function CatalogToolbar({ tabs, end, selectedKey }: CatalogToolbarProps): React.
 		<div data-slot="rewards-toolbar" className="flex items-center gap-3 border-b border-border">
 			<div
 				ref={barRef}
-				className="-mb-px min-w-0 flex-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] max-sm:[mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] [&::-webkit-scrollbar]:hidden">
+				className="-mb-px min-w-0 flex-1 [scrollbar-width:none] overflow-x-auto overscroll-x-contain max-sm:[mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] [&::-webkit-scrollbar]:hidden">
 				{tabs}
 			</div>
 			<div className="shrink-0 pb-1.5">{end}</div>

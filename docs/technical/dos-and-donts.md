@@ -20,7 +20,7 @@ A one-page checklist. Each line links to the rule that explains *why*; the ruleb
 
 - ✅ Finish every task with `pnpm run lint` (zero errors **and** warnings) and `pnpm run test`, after
   your last edit. Add `pnpm run typecheck` when you touch `packages/shared` or the Prisma schema.
-- ❌ Never make it pass with `eslint-disable`, `@ts-ignore` / `@ts-expect-error`, config changes,
+- ❌ Never make it pass with `oxlint-disable` / `eslint-disable`, `@ts-ignore` / `@ts-expect-error`, config changes,
   `.skip` / `.only`, weakened assertions or `--no-verify`. If a rule seems wrong, raise it with a
   human ([`AGENTS.md`](../../AGENTS.md)).
 
@@ -31,8 +31,8 @@ A one-page checklist. Each line links to the rule that explains *why*; the ruleb
 | `any`, `unknown`, `never` (outside exhaustiveness checks) | Concrete or zod-inferred types, generics that carry real information |
 | `z.any()`, `z.unknown()`, `z.never()`, argument-less `z.custom()` | A precise schema |
 | `value as Type`, `as const`, `value!` | `safeParse`, type guards, `satisfies`, typed tuples, a `requireRow()`-style helper |
-| The runtime `typeof` operator / `Array.isArray` (banned by ESLint) | The shared zod schema, or a zod-backed guard (`isStringPrimitive`, `isArrayValue`, …) for a union you already hold |
-| `items[0]` / `match[1]` (banned by ESLint) | Destructuring, `LIST_SLOT_INDEX.first`, or a named capture group (`match.groups?.year`) |
+| The runtime `typeof` operator / `Array.isArray` (banned by lint) | The shared zod schema, or a zod-backed guard (`isStringPrimitive`, `isArrayValue`, …) for a union you already hold |
+| `items[0]` / `match[1]` (banned by lint) | Destructuring, `LIST_SLOT_INDEX.first`, or a named capture group (`match.groups?.year`) |
 | Magic numbers / unexplained constants | Named constants (`const MS_PER_DAY = …`) |
 | Missing return types or access modifiers | Explicit everywhere (lint-enforced) |
 

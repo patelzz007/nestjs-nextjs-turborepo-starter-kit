@@ -45,7 +45,7 @@ sequenceDiagram
     B->>S: upload bytes directly (staging/… key)
     B->>API: POST /files/{fileId}/complete {checksumSha256}
     API->>S: HEAD + stream: size, SHA-256, magic bytes vs declared type
-    API->>API: PENDING → SCANNING (once; a second complete gets 409)
+    API->>API: PENDING → SCANNING (once#59; a second complete gets 409)
     API->>Q: scan (inline when Redis is not configured)
     Q->>Q: malware scanner verdict
     Q->>S: copy staging/… → final key (kyb/, products/, users/, stores/)

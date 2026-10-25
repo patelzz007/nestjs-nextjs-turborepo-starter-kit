@@ -17,5 +17,5 @@ export default defineConfig({
 	// No resolve aliases: `@workspace/shared` resolves through its package.json
 	// `exports`, whose `development` condition (Vite's default outside
 	// production) points at src/ — the same path TypeScript and Next use
-	// (docs/technical/tooling/eslint.md §3.1), so tests never depend on a stale dist/ build.
+	// (docs/technical/tooling/oxlint.md), so tests never depend on a stale dist/ build.
 });

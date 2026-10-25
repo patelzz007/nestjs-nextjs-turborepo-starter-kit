@@ -273,7 +273,15 @@ const SETTINGS_DEFAULTS: DemoSettings = {
 
 /** The boolean settings, each driven by one switch. */
 type BooleanSettingKey =
-	"rowCheckboxes" | "summaryBars" | "zoomControl" | "offscreenIndicators" | "infiniteScroll" | "nowIndicator" | "offDays" | "dragCreate" | "displayScheduleHint";
+	| "rowCheckboxes"
+	| "summaryBars"
+	| "zoomControl"
+	| "offscreenIndicators"
+	| "infiniteScroll"
+	| "nowIndicator"
+	| "offDays"
+	| "dragCreate"
+	| "displayScheduleHint";
 
 /** The interaction flags, each driven by one switch. */
 type InteractionKey = keyof GanttInteractions;

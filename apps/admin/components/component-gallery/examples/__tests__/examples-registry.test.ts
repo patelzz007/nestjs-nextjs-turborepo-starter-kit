@@ -1,7 +1,8 @@
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 
-import { format, resolveConfig } from "prettier";
 import { describe, expect, it } from "vitest";
 
 import { GALLERY_EXAMPLE_SECTIONS } from "@/components/component-gallery/examples/examples-registry";
@@ -14,6 +15,15 @@ import { EXAMPLES_DIR, exampleCount, exampleFolders, manifestSource, pascalCaseO
 const ADMIN_ROOT = path.resolve(import.meta.dirname, "../../../..");
 const REGISTRY_FILE = path.join(ADMIN_ROOT, EXAMPLES_DIR, "examples-registry.tsx");
 const MANIFEST_FILE = path.join(ADMIN_ROOT, EXAMPLES_DIR, "examples-manifest.ts");
+
+/** The oxfmt CLI, run the way `pnpm lint` runs it so the repository's `.oxfmtrc.json` applies. */
+/** The oxfmt CLI (its `exports` do not expose `bin/`, so it is located through its package.json). */
+const OXFMT_BIN: string = path.join(path.dirname(createRequire(import.meta.url).resolve("oxfmt/package.json")), "bin", "oxfmt");
+
+/** `source` formatted as `filePath` would be by `oxfmt` (stdin mode discovers the same config as `oxfmt --check`). */
+function formatted(source: string, filePath: string): string {
+	return execFileSync(process.execPath, [OXFMT_BIN, `--stdin-filepath=${filePath}`], { cwd: ADMIN_ROOT, input: source, encoding: "utf8" });
+}
 
 /** examples/kbd/index.tsx lists six examples. */
 const KBD_EXAMPLE_COUNT = 6;
@@ -35,8 +45,8 @@ describe("gallery examples registry", () => {
 		expect(missing).toStrictEqual([]);
 	});
 
-	it("is up to date with the example folders — run `pnpm --filter @workspace/admin gallery:examples`", async () => {
-		const expected = await format(registrySource(exampleFolders(ADMIN_ROOT)), { ...(await resolveConfig(REGISTRY_FILE)), filepath: REGISTRY_FILE });
+	it("is up to date with the example folders — run `pnpm --filter @workspace/admin gallery:examples`", () => {
+		const expected = formatted(registrySource(exampleFolders(ADMIN_ROOT)), REGISTRY_FILE);
 		expect(readFileSync(REGISTRY_FILE, "utf8")).toBe(expected);
 	});
 
@@ -52,10 +62,10 @@ describe("gallery examples registry", () => {
 		expect([...GALLERY_EXAMPLE_COUNTS.keys()]).toStrictEqual([...GALLERY_EXAMPLE_SECTIONS.keys()]);
 	});
 
-	it("keeps the example manifest up to date — run `pnpm --filter @workspace/admin gallery:examples`", async () => {
+	it("keeps the example manifest up to date — run `pnpm --filter @workspace/admin gallery:examples`", () => {
 		const folders = exampleFolders(ADMIN_ROOT);
 		const source = manifestSource(folders.map((folder) => ({ folder, count: exampleCount(ADMIN_ROOT, folder) })));
-		const expected = await format(source, { ...(await resolveConfig(MANIFEST_FILE)), filepath: MANIFEST_FILE });
+		const expected = formatted(source, MANIFEST_FILE);
 		expect(readFileSync(MANIFEST_FILE, "utf8")).toBe(expected);
 	});
 });

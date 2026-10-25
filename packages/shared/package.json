@@ -4,10 +4,10 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json --resolve-full-paths",
-		"dev": "node ../tooling/src/watch-runner/cli.mjs \"tsc -p tsconfig.build.json --watch --preserveWatchOutput\" \"tsc-alias -p tsconfig.build.json --resolve-full-paths --watch\"",
-		"lint": "eslint",
-		"format": "prettier --write \"**/*.{ts,tsx}\" --ignore-path ../../.prettierignore",
+		"build": "tsrs -p tsconfig.build.json && tsc-alias -p tsconfig.build.json --resolve-full-paths",
+		"dev": "node ../tooling/src/watch-runner/cli.mjs \"tsrs -p tsconfig.build.json --watch --preserveWatchOutput\" \"tsc-alias -p tsconfig.build.json --resolve-full-paths --watch\"",
+		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
+		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\"",
 		"typecheck": "tsrs --noEmit",
 		"test": "vitest run",
 		"clean": "rm -rf dist"
@@ -38,12 +38,14 @@
 	},
 	"devDependencies": {
 		"@types/node": "^26.6.5",
-		"@workspace/eslint-config": "workspace:*",
+		"@workspace/oxlint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
-		"eslint": "^9.39.5",
+		"oxfmt": "0.74.0",
+		"oxlint": "1.89.0",
+		"oxlint-tsgolint": "7.0.2005",
 		"tsc-alias": "^1.9.9",
 		"tsrs": "0.18.0-ts7.1.0-dev.20260929",
-		"typescript": "6.0.3",
+		"typescript": "7.0.2",
 		"vitest": "^5.0.5"
 	}
 }

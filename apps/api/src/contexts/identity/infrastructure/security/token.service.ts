@@ -20,9 +20,10 @@ import {
 	type AccessTokenPayload,
 	type FlatUserResponse,
 	type RefreshTokenPayload,
+	CaughtValueSchema,
+	EMAIL_VERIFICATION_LINK_TTL_HOURS,
 } from "@workspace/shared";
 
-import { CaughtValueSchema, EMAIL_VERIFICATION_LINK_TTL_HOURS } from "@workspace/shared";
 import { parseExpiryToSeconds } from "../../../../platform/infrastructure/utils/expiry";
 import { TypedConfigService } from "../../../../config/typed-config.service";
 import { IMPERSONATION_TOKEN_TTL_SECONDS } from "../../domain/aggregates/impersonation-session.aggregate";

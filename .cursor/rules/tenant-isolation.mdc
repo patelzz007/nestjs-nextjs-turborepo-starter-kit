@@ -1,0 +1,11 @@
+---
+description: Tenant isolation rules (tenant context, tenant-scoped queries, RLS, cross-tenant access)
+globs: apps/api/src/**,apps/api/prisma/**,apps/api/test/tenancy/**,apps/api/test/rls/**
+alwaysApply: false
+---
+
+Tenant isolation is a security invariant here. Before changing code that reads or writes tenant-owned data:
+
+1. Follow `AGENTS.md` (the router), `rules/00-non-negotiables.md` and `rules/10-security-auth-authorization.md`.
+2. Read `rules/31-multi-tenancy-and-tenant-isolation.md`.
+3. It is a generated rulebook, verified against this repository. ADR 062 and `docs/architecture/multi-tenancy-plan.md` win when they disagree — notably, the tenant comes only from the `/tenants/:tenantSlug` route or a machine credential, and nothing bypasses row-level security outside an approved `SupportAccessGrant` or a named system operation.

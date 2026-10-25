@@ -91,7 +91,7 @@ export function PullRequestTimeline({ items, nowMs, pullRequestAuthor, onShowEdi
 
 /** Whether a comment's author opened the pull request (a deleted account never did). */
 function wroteThePullRequest(author: GithubActor | null, pullRequestAuthor: string | null): boolean {
-	return author !== null && author.login === pullRequestAuthor;
+	return author?.login === pullRequestAuthor;
 }
 
 /** Stable per entry: a node id, a commit SHA, or an event's kind and time. */

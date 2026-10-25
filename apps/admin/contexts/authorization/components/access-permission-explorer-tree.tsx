@@ -23,7 +23,8 @@ export interface AccessPermissionExplorerTreeProps {
 }
 
 type PermissionTreeDisplay =
-	{ readonly kind: "flat"; readonly permissions: readonly PermissionTreeLeaf[] } | { readonly kind: "nested"; readonly resources: readonly PermissionTreeResourceNode[] };
+	| { readonly kind: "flat"; readonly permissions: readonly PermissionTreeLeaf[] }
+	| { readonly kind: "nested"; readonly resources: readonly PermissionTreeResourceNode[] };
 
 interface SelectedPermissionState extends AccessPermissionDetailItem {
 	readonly relatedActions: readonly string[];

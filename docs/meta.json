@@ -90,7 +90,7 @@
 		"technical/frontend/image-resizer",
 		"technical/frontend/streams",
 		"technical/tooling/typescript",
-		"technical/tooling/eslint",
+		"technical/tooling/oxlint",
 		"technical/tooling/dependencies",
 		"--- Operations ---",
 		"technical/operations/ci",

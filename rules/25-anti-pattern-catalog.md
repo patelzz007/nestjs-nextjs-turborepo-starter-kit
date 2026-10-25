@@ -330,7 +330,7 @@ const onRow = useCallback(() => select(id), [id]);
 ❌ "temporary hack"                             ✅ do it properly or flag it explicitly in the PR
 ❌ ship the spike                               ✅ rewrite against this rule set
 ❌ finish without `pnpm run lint` + `pnpm run test`   ✅ run both after the last edit; fix root causes until both pass
-❌ eslint-disable / @ts-ignore / config edit / .skip to go green ✅ fix the cause, or stop and ask a human
+❌ oxlint-disable / eslint-disable / @ts-ignore / config edit / .skip to go green ✅ fix the cause, or stop and ask a human
 ❌ mix refactor + behavior change               ✅ separate commits / PRs
 ❌ approve with unresolved blocking comments    ✅ request changes
 ❌ "docs in a follow-up"                        ✅ docs in the same PR

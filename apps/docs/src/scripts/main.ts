@@ -3,7 +3,7 @@ import { initDrawer } from "./drawer";
 import { initFeedback } from "./feedback";
 import { initHeader } from "./header";
 import { initMediaIslands } from "./media-islands";
-import { initMermaid } from "./mermaid";
+import { initDiagrams } from "./diagrams";
 import { initPdfEmbeds } from "./pdf-embeds";
 import { initSearch } from "./search";
 import { initSidebar } from "./sidebar";
@@ -20,7 +20,7 @@ export function initSite(): void {
 	initCodeBlocks();
 	initFeedback();
 	initSearch();
-	initMermaid();
+	initDiagrams();
 	initPdfEmbeds();
 	initMediaIslands();
 }

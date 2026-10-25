@@ -17,7 +17,7 @@ import {
 	remarkGlossary,
 	remarkImageGallery,
 	remarkImageUrls,
-	remarkMermaid,
+	remarkDiagrams,
 	remarkStripFirstHeading,
 	remarkTaskMarkers,
 } from "./src/lib/markdown/remark-plugins";
@@ -47,9 +47,11 @@ const REPO_ROOT: string = fileURLToPath(new URL("../../", import.meta.url));
  * metric-matched fallback face (size-adjust / ascent / descent overrides) so the
  * swap does not shift the layout. `<Font>` in BaseLayout.astro renders them.
  *
- * Why these faces (see "Typography" in README.md): the product apps' type
- * system — Bricolage Grotesque for headings, Geist for UI and prose,
- * Geist Mono for code.
+ * Why these faces (see "Typography" in README.md): Atkinson Hyperlegible Next
+ * for headings and prose, Atkinson Hyperlegible Mono for code — one family,
+ * designed by the Braille Institute so similar characters (0 / O, 1 / l / I,
+ * rn / m) never blur together, which matters most in reference text full of
+ * identifiers.
  */
 const FONT_FILES = "@fontsource-variable";
 const SANS_FALLBACKS: string[] = ["system-ui", "-apple-system", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"];
@@ -70,45 +72,36 @@ export default defineConfig({
 	fonts: [
 		{
 			provider: fontProviders.local(),
-			name: "Bricolage Grotesque",
-			cssVariable: "--font-bricolage-grotesque",
-			fallbacks: SANS_FALLBACKS,
-			options: {
-				variants: [{ src: [`${FONT_FILES}/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2`], weight: "200 800", style: "normal" }],
-			},
-		},
-		{
-			provider: fontProviders.local(),
-			name: "Geist",
-			cssVariable: "--font-geist-sans",
+			name: "Atkinson Hyperlegible Next",
+			cssVariable: "--font-atkinson-next",
 			fallbacks: SANS_FALLBACKS,
 			options: {
 				variants: [
-					{ src: [`${FONT_FILES}/geist/files/geist-latin-wght-normal.woff2`], weight: "100 900", style: "normal" },
-					{ src: [`${FONT_FILES}/geist/files/geist-latin-wght-italic.woff2`], weight: "100 900", style: "italic" },
+					{ src: [`${FONT_FILES}/atkinson-hyperlegible-next/files/atkinson-hyperlegible-next-latin-wght-normal.woff2`], weight: "200 800", style: "normal" },
+					{ src: [`${FONT_FILES}/atkinson-hyperlegible-next/files/atkinson-hyperlegible-next-latin-wght-italic.woff2`], weight: "200 800", style: "italic" },
 				],
 			},
 		},
 		{
 			provider: fontProviders.local(),
-			name: "Geist Mono",
-			cssVariable: "--font-geist-mono",
+			name: "Atkinson Hyperlegible Mono",
+			cssVariable: "--font-atkinson-mono",
 			fallbacks: MONO_FALLBACKS,
 			options: {
 				variants: [
-					{ src: [`${FONT_FILES}/geist-mono/files/geist-mono-latin-wght-normal.woff2`], weight: "100 900", style: "normal" },
-					{ src: [`${FONT_FILES}/geist-mono/files/geist-mono-latin-wght-italic.woff2`], weight: "100 900", style: "italic" },
+					{ src: [`${FONT_FILES}/atkinson-hyperlegible-mono/files/atkinson-hyperlegible-mono-latin-wght-normal.woff2`], weight: "200 800", style: "normal" },
+					{ src: [`${FONT_FILES}/atkinson-hyperlegible-mono/files/atkinson-hyperlegible-mono-latin-wght-italic.woff2`], weight: "200 800", style: "italic" },
 				],
 			},
 		},
 	],
 	markdown: {
 		processor: unified({
-			// Order matters: links/images are rewritten before galleries and callouts; mermaid, qr, pdf and media fences leave before rehypeCodeBlock sees them.
+			// Order matters: links/images are rewritten before galleries and callouts; diagram, qr, pdf and media fences leave before rehypeCodeBlock sees them.
 			remarkPlugins: [
 				[remarkContentLinks, { repoRoot: REPO_ROOT, githubBlobBase: `${GITHUB_URL}/blob/${GITHUB_BRANCH}` }],
 				remarkStripFirstHeading,
-				remarkMermaid,
+				remarkDiagrams,
 				remarkQrCode,
 				remarkPdfEmbed,
 				remarkMediaEmbeds,
@@ -136,7 +129,7 @@ export default defineConfig({
 			include: [
 				"lucide",
 				"zod",
-				"mermaid",
+				"pele/lazy",
 				"react",
 				"react/jsx-runtime",
 				"react/jsx-dev-runtime",
@@ -151,9 +144,11 @@ export default defineConfig({
 			],
 		},
 		build: {
-			// Mermaid's core chunk is ~650 kB. It is dynamic-imported only on pages
-			// that contain a diagram (src/scripts/mermaid.ts), never on first load.
-			chunkSizeWarningLimit: 700,
+			// The largest chunk is Shiki's C++ grammar (~800 kB), loaded only for a
+			// page with a C++ code block. Anything bigger than it is new: warn. (The
+			// diagram renderer, Pele, is a ~40 kB core plus ~30–45 kB per diagram
+			// type, dynamic-imported only on pages that have a diagram.)
+			chunkSizeWarningLimit: 820,
 		},
 	},
 });

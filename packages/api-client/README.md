@@ -99,7 +99,7 @@ The web apps keep importing the moved code from `@workspace/client/lib/api/api-r
 
 - Never read the environment here; inject it ([`docs/technical/mobile/mobile-app.md` §6.3](../../docs/technical/mobile/mobile-app.md#63-configuration-is-injected-never-read-from-the-environment)).
 - Keep the core framework-free and runtime-neutral; lint enforces it
-  ([`docs/technical/tooling/eslint.md` §3.1](../../docs/technical/tooling/eslint.md#31-import-boundaries)).
+  ([`docs/technical/tooling/oxlint.md` §3.1](../../docs/technical/tooling/oxlint.md#31-import-boundaries)).
 - Contracts come from `@workspace/shared`; never re-declare a request or response shape
   ([`rules/05`](../../rules/05-contracts-zod-api.md), [ADR 022](../../docs/adr/022-response-contracts.md)).
 - Query keys come from the router defs (`def.queryKey(input)` / `def.scopeKey(scope)`), never a

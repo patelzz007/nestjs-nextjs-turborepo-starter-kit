@@ -642,7 +642,7 @@ export function KanbanBoardView({ initialBoard }: KanbanBoardViewProps): React.J
 		content = <KanbanTaskTable columns={columns} tasksByColumn={arranged} taskHref={taskHref} />;
 	} else if (laneType !== null) {
 		content = (
-			<div className="h-full overflow-auto px-4 pb-6 [scrollbar-color:var(--border)_transparent] [scrollbar-width:thin] lg:px-5">
+			<div className="h-full [scrollbar-width:thin] [scrollbar-color:var(--border)_transparent] overflow-auto px-4 pb-6 lg:px-5">
 				<div className="flex w-max min-w-full flex-col gap-3">
 					<div className={`${COLUMN_GRID} sticky top-0 z-10 bg-card pt-3 pb-1 lg:pt-5`}>
 						{columns.map((column) => (
@@ -688,7 +688,7 @@ export function KanbanBoardView({ initialBoard }: KanbanBoardViewProps): React.J
 		);
 	} else {
 		content = (
-			<div className="h-full overflow-x-auto overflow-y-hidden px-4 pt-3 pb-3 [scrollbar-color:var(--border)_transparent] [scrollbar-width:thin] lg:px-5 lg:pt-5">
+			<div className="h-full [scrollbar-width:thin] [scrollbar-color:var(--border)_transparent] overflow-x-auto overflow-y-hidden px-4 pt-3 pb-3 lg:px-5 lg:pt-5">
 				<KanbanBoardColumns
 					columns={columns}
 					value={shown}

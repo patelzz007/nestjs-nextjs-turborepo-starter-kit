@@ -33,7 +33,7 @@ function keepNewest(items: Readonly<Record<string, boolean>>, max: number): Read
  * item moves to the newest position, then the oldest beyond the cap drop off.
  */
 function withManualExpansion(current: SidebarManualExpansion | null, pathname: string, itemId: string, expanded: boolean): SidebarManualExpansion {
-	const samePage = current !== null && current.pathname === pathname ? current.items : {};
+	const samePage = current?.pathname === pathname ? current.items : {};
 	const others = Object.entries(samePage).filter(([key]) => key !== itemId);
 	return { pathname, items: keepNewest(Object.fromEntries([...others, [itemId, expanded]]), MAX_MANUAL_EXPANDED_ITEMS) };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { BanCustomerControl, MerchantCapabilityGate } from "@/contexts/tenancy";
+import { BanCustomerControl, MerchantCapabilityGate, prefetchForLocation, type LocationScopedPrefetch } from "@/contexts/tenancy";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import {
 	MERCHANT_REDEMPTIONS_LOADING_LABELS,
@@ -14,7 +14,6 @@ import { StatCard } from "@workspace/ui/components/stat-card";
 import { RedemptionsPager } from "@/contexts/pos/components/redemptions/redemptions-pager";
 import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal, readPaginatedTotalPages } from "@workspace/client/lib/api/envelope";
 import { useActiveLocationFilter } from "@/features/tenant-context/facade";
-import { prefetchForLocation, type LocationScopedPrefetch } from "@/contexts/tenancy";
 import type { DayWindow } from "@/contexts/pos/lib/redemptions/today-window";
 import { REDEMPTIONS_URL_STATE, toRedemptionsDayCountQuery, toRedemptionsQuery } from "@/contexts/pos/url-state/redemptions";
 import { useAuthorization } from "@workspace/client/lib/contexts/authorization";

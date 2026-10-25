@@ -17,7 +17,9 @@ export interface ResolvedCode extends PresentedClaim {
  * transaction committed, so the unknown backup codes they counted stay counted.
  */
 export type CodeResolution =
-	{ readonly kind: "resolved"; readonly codes: readonly ResolvedCode[] } | { readonly kind: "locked"; readonly lockedUntil: EpochMs } | { readonly kind: "not_found" };
+	| { readonly kind: "resolved"; readonly codes: readonly ResolvedCode[] }
+	| { readonly kind: "locked"; readonly lockedUntil: EpochMs }
+	| { readonly kind: "not_found" };
 
 function methodOf(code: RedemptionCode): RedemptionMethod {
 	return code.backupCode !== undefined ? "MANUAL" : "SCAN";

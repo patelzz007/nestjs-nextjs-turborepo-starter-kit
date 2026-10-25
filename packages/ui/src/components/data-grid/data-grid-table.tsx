@@ -498,7 +498,7 @@ function isDataGridTouchEvent(event: DataGridResizeStartEvent | DataGridResizeDo
 function findTouchClientX(list: DataGridTouchListLike, identifier: number): number | undefined {
 	for (let index = 0; index < list.length; index++) {
 		const touch = list.item(index);
-		if (touch !== null && touch.identifier === identifier) {
+		if (touch?.identifier === identifier) {
 			return touch.clientX;
 		}
 	}

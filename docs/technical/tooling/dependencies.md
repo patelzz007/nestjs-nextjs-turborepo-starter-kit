@@ -4,7 +4,7 @@ tags: ["dependencies", "syncpack", "tooling"]
 description: "How syncpack keeps shared dependencies on the exact same version across every workspace."
 order: 7
 author: "Platform Team"
-lastUpdated: 1785628800000
+lastUpdated: 1792886400000
 coverImage: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -30,7 +30,7 @@ coverImage: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=f
 
 This monorepo has **10 `package.json` files** (root, `apps/api`, `apps/web`,
 `apps/admin`, `packages/shared`, `packages/ui`, `packages/client`,
-`packages/tooling`, plus the `eslint-config` and `typescript-config` packages). If
+`packages/tooling`, plus the `oxlint-config` and `typescript-config` packages). If
 someone bumps `zod` to
 `4.5.0` in `apps/web` but leaves `^4.4.3` in `apps/admin`, the two apps ship
 **different Zod versions**. That causes confusing bugs:
@@ -68,7 +68,7 @@ The config lives at the **repo root** in `.syncpackrc.json`:
 		{
 			"label": "Shared deps must be the same version across all workspaces",
 			"dependencies": ["react", "react-dom", "zod", "typescript", "next"],
-			"packages": ["**", "!@workspace/eslint-config"],
+			"packages": ["**"],
 			"policy": "sameRange"
 		}
 	],
@@ -76,7 +76,7 @@ The config lives at the **repo root** in `.syncpackrc.json`:
 		{
 			"label": "Shared deps are pinned to exact versions (no ^ or ~)",
 			"dependencies": ["react", "react-dom", "zod", "typescript"],
-			"packages": ["**", "!@workspace/eslint-config"],
+			"packages": ["**"],
 			"range": ""
 		}
 	]
@@ -95,14 +95,25 @@ Two rules are configured:
 > [!NOTE] Why `range: ""`? An empty range means "no semver range allowed" — syncpack
 > rejects `^4.4.3` and accepts `4.4.3`.
 
-**Why is `@workspace/eslint-config` exempted?**
+**Peer ranges are not pinned.** A `peerDependencies` range says what a *consumer* may provide
+(`react: ">=19.0.0"`, `react: "*"`), so forcing it to equal the exact dev version would reject
+valid consumers. The first version group in `.syncpackrc.json` ignores the `peer` dependency
+type; instead `deps:check` runs **`pnpm peers check`**, which proves every peer range accepts the
+version the workspace actually installs. (An accepted mismatch is recorded, with its reason, in
+`peerDependencyRules` in `pnpm-workspace.yaml`.)
 
-The exclusion dates from when it pinned a different TypeScript (6.x) than the
-rest of the repo (7.x). Today it declares the same `typescript: 6.0.3` as every
-other workspace, so the exclusion currently has no effect. The whole repo
-stays on TypeScript 6.0.x because TypeScript 7 ships no JS compiler API for
-typescript-eslint. See `docs/technical/tooling/typescript.md` → "Why the repo
-stays on TypeScript 6 (not 7)".
+**One `@types/pg`.** `pnpm-workspace.yaml` overrides `@types/pg` to one exact version for the whole
+tree (the adapter's and the app's `Pool` must be the same declarations), and a pinned version
+group makes every workspace declare that same exact version. Bump the override and the pin
+together.
+
+**One TypeScript exception: `apps/docs`.**
+
+The real `.syncpackrc.json` has an earlier version group (shown in the file, omitted above) that
+pins `typescript` to `6.0.3` for `@workspace/docs` only: `astro check` runs on Volar, which needs
+the TypeScript JS API that TypeScript 7 removed. Every other workspace declares the same exact
+TypeScript 7 version. See `docs/technical/tooling/typescript.md` → "TypeScript 7, and the two
+places TypeScript 6 remains".
 
 ---
 
@@ -129,11 +140,14 @@ pnpm deps:check
 
 > [!NOTE] **`deps:check` / `deps:fix` / `deps:list` ARE turbo tasks.** turbo 2.x does not
 > execute scripts defined only in the **root** `package.json` (it would report
-> "0 tasks"), so the actual syncpack commands live in the **`packages/tooling`**
-> workspace. The root `pnpm deps:*` scripts simply delegate to turbo:
+> "0 tasks"), so the commands live in the **`packages/tooling`** workspace, and each one
+> starts with `cd ../..`: syncpack discovers the workspace and `.syncpackrc.json` from its
+> working directory, and run inside `packages/tooling` it saw only that one package (the check
+> passed while drift sat everywhere else). `__tests__/deps-check-coverage.test.mjs` in
+> `packages/tooling` proves it now sees every workspace manifest and the pnpm overrides.
 >
 > ```bash
-> pnpm deps:check          # → turbo run deps:check → syncpack lint (in packages/tooling)
+> pnpm deps:check          # → turbo run deps:check → cd ../.. && syncpack lint && pnpm peers check
 > pnpm turbo run deps:check   # same thing, invoked directly through the pipeline
 > ```
 
@@ -158,10 +172,11 @@ To bump a shared dependency (e.g. `zod`):
    ```
 4. If syncpack reports drift you didn't intend to keep, use `pnpm deps:fix`.
 
-> [!NOTE] **Non-shared dependencies** (e.g. `@nestjs/common`, `lucide-react`) are allowed
-> to use carets — only the 5 deps in `.syncpackrc.json` are pinned exact.
+> [!NOTE] **Non-shared dependencies** (e.g. `@nestjs/common`, `lucide-react`) may use carets —
+> only the 5 deps in `.syncpackrc.json` are pinned exact — but syncpack's default group still
+> requires every workspace that uses one to declare the **same** range.
 
 ---
 
-_Last updated: July 31, 2026_
+_Last updated: October 25, 2026_
 

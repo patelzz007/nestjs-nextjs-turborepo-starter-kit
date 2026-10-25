@@ -1,8 +1,7 @@
-import { MerchantApiKeySummarySchema, type MerchantApiKeySummary } from "@workspace/shared";
+import { MerchantApiKeySummarySchema, type MerchantApiKeySummary, MERCHANT_API_KEYS_PAGE_SIZE } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { API_KEY_COUNT_PAGE_SIZE, summarizeApiKeys, toApiKeyListQuery } from "@/contexts/pos/lib/api-keys/api-key-summary";
-import { MERCHANT_API_KEYS_PAGE_SIZE } from "@workspace/shared";
 
 const NOW = 1_790_812_800_000;
 const STORE_A = "0f0f0f0f-0000-4000-8000-00000000000a";

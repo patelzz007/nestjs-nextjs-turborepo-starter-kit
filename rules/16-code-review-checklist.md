@@ -5,7 +5,7 @@ Use this as a literal, item-by-item checklist on every PR — not a vague "does 
 ## Completion gate
 
 - [ ] Author confirms `pnpm run lint` (zero errors and warnings) and `pnpm run test` passed after the final commit; CI agrees
-- [ ] No new `eslint-disable`, `@ts-ignore`, `@ts-expect-error`, `.skip`, or `.only` anywhere in the diff; no ESLint config or ignore-list changes unless that is the PR's stated purpose
+- [ ] No new `oxlint-disable` / `eslint-disable`, `@ts-ignore`, `@ts-expect-error`, `.skip`, or `.only` anywhere in the diff; no lint config (`packages/oxlint-config`, `oxlint.config.ts`, `.oxfmtrc.json`) or ignore-list changes unless that is the PR's stated purpose
 
 ## Architecture
 

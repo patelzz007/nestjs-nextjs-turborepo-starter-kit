@@ -49,7 +49,8 @@ export type TotpVerification = { readonly valid: true; readonly timeStep: number
 
 /** The proof a rotation presents besides the password. */
 export type RotationSecondFactor =
-	{ readonly kind: "totp"; readonly verification: TotpVerification } | { readonly kind: "backup_code"; readonly matchedCodeId: string | null };
+	| { readonly kind: "totp"; readonly verification: TotpVerification }
+	| { readonly kind: "backup_code"; readonly matchedCodeId: string | null };
 
 export interface TwoFactorEnrollmentState {
 	readonly userId: string;
@@ -93,7 +94,7 @@ export class TwoFactorEnrollment extends AggregateRoot<IdentityEvent> {
 
 	/** Mapper-only. An enabled factor without a secret still loads (sign-in answers "not configured"); a pending setup without backup codes does not. */
 	public static rehydrate(state: TwoFactorEnrollmentState): TwoFactorEnrollment {
-		if (state.pendingSetup !== null && state.pendingSetup.backupCodeHashes.length === 0) {
+		if (state.pendingSetup?.backupCodeHashes.length === 0) {
 			throw new CorruptAggregateStateError("two_factor_enrollment", null, `pending setup of ${state.userId} has no backup codes`);
 		}
 		return new TwoFactorEnrollment(state);

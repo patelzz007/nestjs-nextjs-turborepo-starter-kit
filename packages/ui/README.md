@@ -296,7 +296,7 @@ Two decisions, made with a maintainer:
 - **`SignaturePad` focus:** as in reui, the drawing area is a focusable `role="application"` that
   owns the undo/redo shortcuts (⌘Z, ⌘⇧Z, ⌘Y). jsx-a11y classifies that role as non-interactive, so
   `signature-pad.tsx` is the repo's **one approved lint exception**
-  (`approvedRuleExceptions` in `packages/eslint-config/react-internal.js`, pinned by
+  (`approvedRuleExceptions` in `packages/oxlint-config/react-internal.js`, pinned by
   `tests/configs.test.js`). It relaxes only `no-noninteractive-element-interactions` and
   `no-noninteractive-tabindex`, for that file only. Do not copy the pattern elsewhere.
 - **Emoji data:** `EmojiPicker` uses the emoji data bundled with the app (`emojibase-data`, a

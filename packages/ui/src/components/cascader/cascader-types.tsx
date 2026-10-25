@@ -127,7 +127,8 @@ export interface CascaderFlatNode<TNode extends CascaderNodeBase = CascaderNodeB
 
 /** One segment of a rendered path, after collapsing. */
 export type CascaderPathSegment<TNode extends CascaderNodeBase = CascaderNodeBase> =
-	{ readonly type: "node"; readonly node: TNode } | { readonly type: "ellipsis"; readonly hidden: readonly TNode[] };
+	| { readonly type: "node"; readonly node: TNode }
+	| { readonly type: "ellipsis"; readonly hidden: readonly TNode[] };
 
 /**
  * Async load state for one node's children. Deliberately WITHOUT a `status`

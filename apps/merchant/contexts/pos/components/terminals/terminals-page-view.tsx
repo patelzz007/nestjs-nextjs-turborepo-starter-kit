@@ -2,7 +2,7 @@
 
 import { FLEET_STAT_CARDS, MerchantTerminalsPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantStatCardsSkeleton } from "@/components/loading/merchant-skeleton-parts";
-import { MerchantAccessDenied, MerchantCapabilityGate } from "@/contexts/tenancy";
+import { MerchantAccessDenied, MerchantCapabilityGate, prefetchForLocation, type LocationScopedPrefetch } from "@/contexts/tenancy";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { StatCard } from "@workspace/ui/components/stat-card";
@@ -14,7 +14,6 @@ import { TerminalPairingGuide } from "@/contexts/pos/components/terminals/termin
 import { TerminalSettingsCard } from "@/contexts/pos/components/terminals/terminal-settings-card";
 import { clientEnv } from "@/lib/env/env.client";
 import { useActiveLocationFilter, useMerchantLocation } from "@/features/tenant-context/facade";
-import { prefetchForLocation, type LocationScopedPrefetch } from "@/contexts/tenancy";
 import { toFormSubmissionError } from "@/lib/forms/api-field-errors";
 import { CREATE_TERMINAL_FIELD_ERRORS } from "@/contexts/pos/lib/terminals/create-terminal-form";
 import {

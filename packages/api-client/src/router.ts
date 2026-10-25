@@ -63,7 +63,7 @@ import { z, ZodType } from "zod";
 //   scope, so invalidating with it always reaches the cached queries.
 // Code outside this module never writes a key by hand: it invalidates with
 // `apiRouter.<…>.scopeKey(…)` (or `queryKey(input)` for one exact entry). The
-// lint config rejects array literals as cache keys (docs/technical/tooling/eslint.md).
+// lint config rejects array literals as cache keys (docs/technical/tooling/oxlint.md).
 
 /**
  * One TanStack Query cache key: a scope followed by the parsed input. Assignable

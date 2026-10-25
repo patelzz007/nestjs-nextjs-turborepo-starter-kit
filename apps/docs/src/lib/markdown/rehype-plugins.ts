@@ -49,13 +49,49 @@ export function rehypeExternalLinks(): (tree: Root) => void {
 	};
 }
 
-/** Wraps tables in a horizontally scrollable container so wide tables never break the layout. */
+/** Where a path may break across lines: after `.` and `/` (`src/config`, `api-config.ts`). */
+const PATH_BREAK = /(?<=[./])(?=[^./])/u;
+/** Where a long identifier may break: after `_` (`WEBHOOK_RATE_LIMIT_PER_MINUTE`). */
+const UNDERSCORE_BREAK = /(?<=_)(?=[^_])/u;
+/** Identifiers up to this many characters stay whole, so a column of short names never chops them up. */
+const UNBROKEN_IDENTIFIER_MAX = 22;
+
+/**
+ * Lets the code inside a table cell wrap at the joints of an identifier:
+ * a `<wbr>` after each `.` and `/`, and after each `_` of a long identifier. A table's columns are otherwise as
+ * wide as its longest identifier (`WEBHOOK_RATE_LIMIT_PER_MINUTE`), which
+ * pushes reference tables past the reading column. `<wbr>` only offers a
+ * break: nothing changes on one line, and copied text stays the same.
+ */
+function withIdentifierBreaks(code: Element): void {
+	code.children = code.children.flatMap((child): ElementContent[] => {
+		if (child.type !== "text") {
+			return [child];
+		}
+		const parts = child.value.split(PATH_BREAK).flatMap((part) => (part.length > UNBROKEN_IDENTIFIER_MAX ? part.split(UNDERSCORE_BREAK) : [part]));
+		return parts.flatMap((part, partIndex): ElementContent[] => {
+			const text: ElementContent = { type: "text", value: part };
+			return partIndex === 0 ? [text] : [{ type: "element", tagName: "wbr", properties: {}, children: [] }, text];
+		});
+	});
+}
+
+/**
+ * Wraps tables in a horizontally scrollable container so a table that is still
+ * wider than the reading column scrolls inside its frame instead of breaking
+ * the layout, and lets identifiers in its cells wrap (`withIdentifierBreaks`).
+ */
 export function rehypeTableWrapper(): (tree: Root) => void {
 	return (tree: Root): void => {
 		visit(tree, "element", (node: Element, index, parent) => {
 			if (node.tagName !== "table" || parent === undefined || index === undefined) {
 				return;
 			}
+			visit(node, "element", (cellChild: Element) => {
+				if (cellChild.tagName === "code") {
+					withIdentifierBreaks(cellChild);
+				}
+			});
 			const wrapper: Element = { type: "element", tagName: "div", properties: { className: ["table-wrapper"] }, children: [node] };
 			parent.children.splice(index, 1, wrapper);
 		});

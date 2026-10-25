@@ -3,7 +3,9 @@ import type { SignedOutReason } from "./state";
 
 /** What the app found on the device at start (after the environment and preferences loaded). */
 export type RestoredSession =
-	{ readonly status: "signedOut"; readonly reason: SignedOutReason } | { readonly status: "locked" } | { readonly status: "signedIn"; readonly session: SessionScopeInfo };
+	| { readonly status: "signedOut"; readonly reason: SignedOutReason }
+	| { readonly status: "locked" }
+	| { readonly status: "signedIn"; readonly session: SessionScopeInfo };
 
 /** Everything that can happen to the session. */
 export type SessionAction =

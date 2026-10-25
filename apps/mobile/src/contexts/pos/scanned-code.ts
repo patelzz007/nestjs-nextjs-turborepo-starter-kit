@@ -9,7 +9,9 @@ import { PosPairingQrPayloadSchema, RedemptionCodeSchema, type PosPairingCode, t
 export const TILL_CODE_LENGTH = 8;
 
 export type ScannedCode =
-	{ readonly kind: "redemption"; readonly code: RedemptionCode } | { readonly kind: "pairing"; readonly pairingCode: PosPairingCode } | { readonly kind: "unrecognised" };
+	| { readonly kind: "redemption"; readonly code: RedemptionCode }
+	| { readonly kind: "pairing"; readonly pairingCode: PosPairingCode }
+	| { readonly kind: "unrecognised" };
 
 export function classifyScannedCode(text: string): ScannedCode {
 	const pairing = PosPairingQrPayloadSchema.safeParse(text);

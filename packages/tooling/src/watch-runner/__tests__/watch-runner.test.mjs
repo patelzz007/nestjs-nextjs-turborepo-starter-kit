@@ -74,7 +74,7 @@ function setup({ exitsOnSignal = true } = {}) {
 	const stdout = sink();
 	const stderr = sink();
 	const timers = manualTimers();
-	const commands = [parseCommand("tsc -p tsconfig.build.json --watch --preserveWatchOutput"), parseCommand("tsc-alias -p tsconfig.build.json --watch")];
+	const commands = [parseCommand("tsrs -p tsconfig.build.json --watch --preserveWatchOutput"), parseCommand("tsc-alias -p tsconfig.build.json --watch")];
 	const done = runWatchers({
 		commands,
 		spawn: (file, args) => {
@@ -110,18 +110,18 @@ describe("runWatchers", () => {
 	it("spawns every command with its own arguments", () => {
 		const { spawned } = setup();
 		expect(spawned).toEqual([
-			{ file: "tsc", args: ["-p", "tsconfig.build.json", "--watch", "--preserveWatchOutput"] },
+			{ file: "tsrs", args: ["-p", "tsconfig.build.json", "--watch", "--preserveWatchOutput"] },
 			{ file: "tsc-alias", args: ["-p", "tsconfig.build.json", "--watch"] },
 		]);
 	});
 
 	it("prefixes each child's lines with its padded label, on the matching stream", async () => {
 		const { children, stdout, stderr } = setup();
-		const [tsc, alias] = children;
-		tsc.stdout.write("Found 0 errors. Watching for file changes.\n");
+		const [compiler, alias] = children;
+		compiler.stdout.write("Found 0 errors. Watching for file changes.\n");
 		alias.stderr.write("cannot read tsconfig\n");
 		await nextTick();
-		expect(stdout.lines).toEqual(["[tsc      ] Found 0 errors. Watching for file changes.\n"]);
+		expect(stdout.lines).toEqual(["[tsrs     ] Found 0 errors. Watching for file changes.\n"]);
 		expect(stderr.lines).toEqual(["[tsc-alias] cannot read tsconfig\n"]);
 	});
 
@@ -156,26 +156,26 @@ describe("runWatchers", () => {
 
 	it("stops the other watchers and returns the code when one exits by itself", async () => {
 		const { children, stderr, done } = setup();
-		const [tsc, alias] = children;
+		const [compiler, alias] = children;
 		alias.emit("exit", 2, null);
-		expect(tsc.signals).toEqual(["SIGTERM"]);
+		expect(compiler.signals).toEqual(["SIGTERM"]);
 		await expect(done).resolves.toBe(2);
 		expect(stderr.lines.join("")).toContain("[tsc-alias] exited (code 2); stopping the other watchers");
 	});
 
 	it("treats a watcher exiting cleanly on its own as a failure", async () => {
 		const { children, done } = setup();
-		const [tsc] = children;
-		tsc.emit("exit", 0, null);
+		const [compiler] = children;
+		compiler.emit("exit", 0, null);
 		await expect(done).resolves.toBe(WATCHER_FAILED_EXIT_CODE);
 	});
 
 	it("fails when a watcher cannot start, even if exit follows the error", async () => {
 		const { children, stderr, done } = setup();
-		const [tsc] = children;
-		tsc.emit("error", new Error("spawn tsc ENOENT"));
-		tsc.emit("exit", null, null);
+		const [compiler] = children;
+		compiler.emit("error", new Error("spawn tsrs ENOENT"));
+		compiler.emit("exit", null, null);
 		await expect(done).resolves.toBe(WATCHER_FAILED_EXIT_CODE);
-		expect(stderr.lines.join("")).toContain("failed to start: spawn tsc ENOENT");
+		expect(stderr.lines.join("")).toContain("failed to start: spawn tsrs ENOENT");
 	});
 });

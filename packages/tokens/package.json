@@ -6,8 +6,8 @@
 	"description": "The single source of the design tokens (ADR 030): TypeScript token data plus a generator that writes the committed web and mobile CSS. No runtime dependencies.",
 	"scripts": {
 		"generate": "tsx scripts/generate.ts",
-		"lint": "eslint",
-		"format": "prettier --write \"**/*.ts\" --ignore-path ../../.prettierignore",
+		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
+		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\"",
 		"typecheck": "tsrs --noEmit",
 		"test": "vitest run"
 	},
@@ -20,12 +20,14 @@
 	},
 	"devDependencies": {
 		"@types/node": "^26.6.5",
-		"@workspace/eslint-config": "workspace:*",
+		"@workspace/oxlint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
-		"eslint": "^9.39.5",
+		"oxfmt": "0.74.0",
+		"oxlint": "1.89.0",
+		"oxlint-tsgolint": "7.0.2005",
 		"tsrs": "0.18.0-ts7.1.0-dev.20260929",
 		"tsx": "^4.23.15",
-		"typescript": "6.0.3",
+		"typescript": "7.0.2",
 		"vitest": "^5.0.5",
 		"zod": "4.6.7"
 	}

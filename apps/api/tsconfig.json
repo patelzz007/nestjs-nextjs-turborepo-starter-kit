@@ -1,19 +1,35 @@
 {
+	// The API's FULL program: every TypeScript file in the workspace — src/ (production code
+	// AND unit specs), test/** (e2e specs + support), prisma/** (seed + RLS tooling), the
+	// tsx-run scripts and the tool configs — under the same strict flags.
+	//
+	// It is the program editors, oxlint's type-aware rules (oxlint-tsgolint reads the nearest
+	// tsconfig.json) and the second `typecheck` pass see. The production program — src/
+	// without specs and without the vitest globals — is tsconfig.typecheck.json.
 	"extends": "@workspace/typescript-config/nestjs.json",
 	"compilerOptions": {
-		"outDir": "./dist",
-		"rootDir": "./src",
-		"incremental": true,
+		"noEmit": true,
+		"incremental": false,
+		"rootDir": ".",
+		// Unit specs use vitest's bare describe/it/expect globals (vitest.config.unit.ts `globals: true`).
+		"types": ["node", "vitest/globals"],
 		// Resolve @workspace/* TYPES to their TypeScript source (the packages'
 		// `development` export condition), never to a dist/ build that may be
 		// missing or stale — packages/tooling/__tests__/tsconfig-conditions.test.mjs
 		// enforces this for every workspace tsconfig. Runtime still loads dist:
-		// rspack leaves workspace packages external. Type-aware ESLint parses
-		// the API with ONE program (tsconfig.check.json, see eslint.config.js);
-		// a second one over this tsconfig would double the source graph in
-		// memory.
+		// rspack leaves workspace packages external.
 		"customConditions": ["development"]
 	},
-	"include": ["src/**/*"],
-	"exclude": ["node_modules", "dist", "src/**/*.spec.ts"]
+	"include": [
+		// All of src/ (not just the specs) so ambient augmentations such as
+		// src/types/fastify.d.ts apply exactly as they do to the app.
+		"src/**/*.ts",
+		"test/**/*.ts",
+		"prisma/**/*.ts",
+		"scripts/**/*.ts",
+		"vitest.config.unit.ts",
+		"vitest.config.e2e.ts",
+		"prisma.config.ts"
+	],
+	"exclude": ["node_modules", "dist"]
 }

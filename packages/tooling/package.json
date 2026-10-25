@@ -5,22 +5,25 @@
 	"type": "module",
 	"description": "Repo-wide tooling scripts. Owns the syncpack dependency-hygiene commands so they can run as turbo tasks (turbo 2.x doesn't execute root package.json scripts).",
 	"scripts": {
-		"lint": "eslint",
+		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
 		"test": "vitest run",
-		"deps:check": "syncpack lint",
-		"deps:fix": "syncpack fix-mismatches",
-		"deps:list": "syncpack list",
-		"deps:review": "node scripts/check-dependency-exceptions.mjs"
+		"deps:check": "cd ../.. && syncpack lint && pnpm peers check",
+		"deps:fix": "cd ../.. && syncpack fix-mismatches",
+		"deps:list": "cd ../.. && syncpack list",
+		"deps:review": "node scripts/check-dependency-exceptions.mjs",
+		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\""
 	},
 	"dependencies": {
 		"zod": "4.6.7"
 	},
 	"devDependencies": {
-		"@workspace/eslint-config": "workspace:*",
-		"eslint": "^9.39.5",
+		"@workspace/oxlint-config": "workspace:*",
+		"oxfmt": "0.74.0",
+		"oxlint": "1.89.0",
+		"oxlint-tsgolint": "7.0.2005",
 		"pg": "^8.23.1",
 		"syncpack": "^15.3.3",
-		"typescript": "6.0.3",
+		"typescript": "7.0.2",
 		"vitest": "^5.0.5"
 	}
 }

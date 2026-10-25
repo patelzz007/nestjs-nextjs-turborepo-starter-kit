@@ -231,7 +231,7 @@ This entire rule set is written with real reasoning behind every rule — not as
 | Skip tests for "simple" helpers | Non-negotiable | Write them |
 | Invent a new util/base class | Speculative abstraction | Reuse or keep it local until 2 real callers |
 | Say "done" without running `pnpm run lint` and `pnpm run test` | Unverified; the completion gate exists for exactly this | Run both after the last edit; report results honestly |
-| Make lint pass with `eslint-disable`, `@ts-ignore`, config edits, or `.skip` | Hides the defect and defeats the gate | Fix the root cause; if the rule seems wrong, stop and ask a human |
+| Make lint pass with `oxlint-disable` / `eslint-disable`, `@ts-ignore`, config edits, or `.skip` | Hides the defect and defeats the gate | Fix the root cause; if the rule seems wrong, stop and ask a human |
 | Run lint once, then make more edits | The earlier green run no longer counts | Re-run lint and tests after the final edit |
 | Quietly leave a TODO/workaround | Hidden shortcut | Do it properly or flag it explicitly in the report |
 | Restyle UI while fixing logic | Violates layout preservation | Change only what was asked |

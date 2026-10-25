@@ -213,7 +213,7 @@ function KanbanBoardColumnSection({
 				value={column.id}
 				className={
 					showHeader
-						? "flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto px-2 pb-2 [scrollbar-color:var(--border)_transparent] [scrollbar-width:thin]"
+						? "flex min-h-24 flex-1 [scrollbar-width:thin] [scrollbar-color:var(--border)_transparent] flex-col gap-2 overflow-y-auto px-2 pb-2"
 						: "flex min-h-16 flex-1 flex-col gap-2 p-2"
 				}>
 				{tasks.map((task) => (

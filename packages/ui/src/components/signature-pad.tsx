@@ -21,7 +21,7 @@
 //   bubble to it, so one handler serves both; `api.focus()` focuses the area.
 //   jsx-a11y classifies `application` as non-interactive, so this file is the
 //   repo's one approved lint exception (`approvedRuleExceptions` in
-//   packages/eslint-config/react-internal.js) — do not copy the pattern.
+//   packages/oxlint-config/react-internal.js) — do not copy the pattern.
 //   A form error is spoken through `aria-invalid` and `aria-describedby`.
 //   The long-press callout is blocked in CSS (`touch-none`, `select-none`,
 //   `-webkit-touch-callout:none`), so no context-menu handler is needed.

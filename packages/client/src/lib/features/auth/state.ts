@@ -77,7 +77,8 @@ export type AuthSessionStatus =
  * a pending scope is treated as restricted (fail closed).
  */
 export type AuthSessionScope =
-	{ readonly sessionScope: SessionScope; readonly enrollmentReason: EnrollmentReason | null } | { readonly sessionScope: "pending"; readonly enrollmentReason: null };
+	| { readonly sessionScope: SessionScope; readonly enrollmentReason: EnrollmentReason | null }
+	| { readonly sessionScope: "pending"; readonly enrollmentReason: null };
 
 /**
  * - `no-session` — the check found no session (guest, or `/auth/me` answered

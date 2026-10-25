@@ -6,7 +6,7 @@
 		// ES + the fetch-family types (`fetch`, `Response`, `Headers`, `RequestInit`,
 		// `AbortSignal`, `URL`, `FormData`) that both browsers and React Native provide.
 		// The DOM-only globals (`window`, `document`, storage, `DOMException`, …) are
-		// banned by lint (packages/eslint-config/import-boundaries.js), and no Node
+		// banned by lint (packages/oxlint-config/import-boundaries.js), and no Node
 		// types are loaded (`types: []`), so a Node built-in does not even typecheck.
 		"lib": ["es2022", "DOM", "DOM.Iterable"],
 		"types": [],

@@ -1,15 +1,16 @@
-import type { Blockquote, Root, RootContent, Table } from "mdast";
+import type { Blockquote, Code, Root, RootContent, Table } from "mdast";
 import { describe, expect, it } from "vitest";
 
 import {
 	detectQuoteKind,
+	DiagramSyntaxError,
 	galleryHtml,
 	QUOTE_MARKER_KINDS,
 	remarkCallouts,
 	remarkGlossary,
 	remarkImageGallery,
 	remarkImageUrls,
-	remarkMermaid,
+	remarkDiagrams,
 	remarkStripFirstHeading,
 	remarkTaskMarkers,
 	replaceTaskMarker,
@@ -177,16 +178,35 @@ describe("image gallery", () => {
 	});
 });
 
-describe("mermaid", () => {
-	it("turns mermaid fences into escaped pre.mermaid blocks", () => {
-		const root = run(rootOf([{ type: "code", lang: "mermaid", value: "graph TD; A-->B<C>" }]), remarkMermaid);
+describe("diagrams", () => {
+	it("turns mermaid fences into an escaped figure for the client-side renderer", () => {
+		const root = run(rootOf([{ type: "code", lang: "mermaid", value: 'flowchart TD\n  A["<b>"] --> B' }]), remarkDiagrams);
 		const node = firstChild(root);
-		expect(node.type === "html" ? node.value : "").toBe('<div class="mermaid-diagram"><pre class="mermaid">graph TD; A--&gt;B&lt;C&gt;</pre></div>');
+		expect(node.type === "html" ? node.value : "").toBe(
+			'<figure class="diagram"><pre class="diagram-source">flowchart TD\n  A[&quot;&lt;b&gt;&quot;] --&gt; B</pre></figure>',
+		);
 	});
 
 	it("leaves other fences alone", () => {
-		const root = run(rootOf([{ type: "code", lang: "ts", value: "const a = 1;" }]), remarkMermaid);
+		const root = run(rootOf([{ type: "code", lang: "ts", value: "const a = 1;" }]), remarkDiagrams);
 		expect(firstChild(root).type).toBe("code");
+	});
+
+	it("fails the build on a diagram that does not parse, naming its line in the markdown file", () => {
+		// `;` ends a sequence statement, so the second half of the message is a syntax error (`#59;` is the escape).
+		const fence: Code = {
+			type: "code",
+			lang: "mermaid",
+			value: "sequenceDiagram\n  A->>B: first; second",
+			position: { start: { line: 10, column: 1 }, end: { line: 13, column: 4 } },
+		};
+		expect(() => run(rootOf([fence]), remarkDiagrams)).toThrow(DiagramSyntaxError);
+		expect(() => run(rootOf([fence]), remarkDiagrams)).toThrow(/^Diagram on line 12 does not parse/u);
+	});
+
+	it("accepts the #59; escape for a semicolon in message text", () => {
+		const root = run(rootOf([{ type: "code", lang: "mermaid", value: "sequenceDiagram\n  A->>B: first#59; second" }]), remarkDiagrams);
+		expect(firstChild(root).type).toBe("html");
 	});
 });
 

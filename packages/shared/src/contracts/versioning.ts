@@ -36,7 +36,7 @@ export const API_VERSION_PREFIX: string = apiVersionPrefix(API_VERSION);
 
 /**
  * Route prefixes that are allowed to stay UNVERSIONED. Every other controller
- * MUST use `apiPath()` — enforced by the `no-unversioned-controller` ESLint
+ * MUST use `apiPath()` — enforced by the `api/no-unversioned-controller` oxlint
  * rule in apps/api (a controller that forgets the helper silently serves a
  * path the client can't reach, exactly like the `/session` regression).
  */

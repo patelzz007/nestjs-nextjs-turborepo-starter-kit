@@ -8,7 +8,10 @@ import * as React from "react";
 import { forgetPairedTerminal, readPairedTerminal, savePairedTerminal, type PairedTerminal } from "./paired-terminal";
 
 export type PairedTerminalState =
-	{ readonly status: "loading" } | { readonly status: "unreadable" } | { readonly status: "unpaired" } | { readonly status: "paired"; readonly terminal: PairedTerminal };
+	| { readonly status: "loading" }
+	| { readonly status: "unreadable" }
+	| { readonly status: "unpaired" }
+	| { readonly status: "paired"; readonly terminal: PairedTerminal };
 
 export interface PairedTerminalControls {
 	readonly state: PairedTerminalState;

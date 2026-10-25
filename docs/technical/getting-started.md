@@ -130,6 +130,6 @@ then create named staff. Guarantees, audit rows and exit codes: [Bootstrap the f
 | Uploads fail with `NoSuchBucket` / CORS errors | Use `STORAGE_PROVIDER=local` offline, or follow [AWS S3](./storage/aws-s3.md#troubleshooting). |
 | `permission denied for schema public` (`42501` / `P2039`) | The security layer is missing after a bare `prisma migrate reset`: `pnpm db:apply-security`, or use `pnpm db:reset` ([Database security](./security/database-security.md#how-the-api-connects)). |
 | Prisma client does not know a new field | `pnpm db:generate` (or `pnpm db:migrate`, which regenerates), then restart the TypeScript server. |
-| `ESLint couldn't find an eslint.config.js file` | There is no root ESLint config: run `pnpm run lint` from the root, or `pnpm exec eslint .` inside a workspace ([ESLint](./tooling/eslint.md)). |
+| `oxlint` lints nothing / finds no config from the repo root | There is no root lint config: run `pnpm run lint` from the root, or `pnpm exec oxlint` inside a workspace ([Oxlint](./tooling/oxlint.md)). |
 | Signed in on web but "not authenticated" on admin, or a customer cannot sign in to admin | By design: each app has its own cookies, and the admin login only accepts staff with admin-panel access ([Authentication](./security/authentication.md#sessions)). |
 | Kafka shown unhealthy at boot | Expected until the producer connects; `KAFKA_BROKERS=127.0.0.1:9092` with `pnpm docker:up`. Unset it to run without Kafka. |

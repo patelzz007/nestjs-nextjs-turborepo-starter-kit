@@ -320,7 +320,8 @@ export interface SortTerm<TField extends string> {
 }
 
 export type SortParseResult<TField extends string> =
-	{ readonly success: true; readonly terms: readonly SortTerm<TField>[] } | { readonly success: false; readonly message: string };
+	| { readonly success: true; readonly terms: readonly SortTerm<TField>[] }
+	| { readonly success: false; readonly message: string };
 
 /**
  * Parses a `sort` parameter (`-createdAt,name`) against the whitelist.

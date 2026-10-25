@@ -1,7 +1,7 @@
 /**
  * Runs several long-lived watchers as one process (plan §19.2, decision #69):
  * the `dev` script of `packages/shared`, `packages/messaging` and
- * `packages/api-client` keeps `dist/` current with `tsc --watch` and
+ * `packages/api-client` keeps `dist/` current with `tsrs --watch` and
  * `tsc-alias --watch` side by side.
  *
  * Why a runner and not `a & b`: `&` in a package script is not portable and

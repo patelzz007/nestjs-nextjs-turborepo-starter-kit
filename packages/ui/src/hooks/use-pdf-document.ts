@@ -13,7 +13,8 @@ import * as React from "react";
  *   `%PDF-` header) and shown from a `blob:` URL; nothing is uploaded.
  */
 export type PdfViewerSource =
-	{ readonly kind: "url"; readonly url: string; readonly fileName: string; readonly downloadUrl?: string | undefined } | { readonly kind: "file"; readonly file: File };
+	| { readonly kind: "url"; readonly url: string; readonly fileName: string; readonly downloadUrl?: string | undefined }
+	| { readonly kind: "file"; readonly file: File };
 
 /** Where an opened document is: being checked, ready for the PDF engine, or rejected. */
 export type PdfDocumentState =
@@ -67,7 +68,7 @@ function usePickedPdf(file: File | null): PdfDocumentState | null {
 	if (file === null) {
 		return null;
 	}
-	return settled !== null && settled.file === file ? settled.state : { status: "checking", fileName: file.name };
+	return settled?.file === file ? settled.state : { status: "checking", fileName: file.name };
 }
 
 /** The picked file's state once checked: a `blob:` URL for a PDF, the reason otherwise. */

@@ -21,7 +21,8 @@ export type FieldErrorMap<TField extends string> = Readonly<Partial<Record<Merch
 
 /** A failed submit, as a form renders it: on one field, or for the whole form. */
 export type FormSubmissionError<TField extends string> =
-	{ readonly kind: "field"; readonly field: TField; readonly message: string } | { readonly kind: "form"; readonly message: string };
+	| { readonly kind: "field"; readonly field: TField; readonly message: string }
+	| { readonly kind: "form"; readonly message: string };
 
 /** The error a form shows for `error`, using its field map; anything unmapped becomes a user-safe form error. */
 export function toFormSubmissionError<TField extends string>(error: Error, fieldErrors: FieldErrorMap<TField>, fallbackMessage: string): FormSubmissionError<TField> {

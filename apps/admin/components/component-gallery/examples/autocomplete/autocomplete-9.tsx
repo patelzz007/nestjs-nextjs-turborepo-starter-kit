@@ -167,7 +167,7 @@ export function Autocomplete9Example(): React.JSX.Element {
 	}, [searchValue]);
 
 	// Only an answer to the current query counts; anything older means a search is in flight.
-	const settled = outcome !== null && outcome.query === searchValue ? outcome : null;
+	const settled = outcome?.query === searchValue ? outcome : null;
 	const developers = settled?.status === "found" ? settled.developers : NO_DEVELOPERS;
 
 	let status: React.ReactNode;

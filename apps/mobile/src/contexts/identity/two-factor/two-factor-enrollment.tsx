@@ -50,7 +50,9 @@ export const NO_AUTHENTICATOR_MESSAGE =
 	"No authenticator app on this phone opened the link. Install one (for example Microsoft Authenticator or Google Authenticator), or add the account by hand with the setup key below.";
 
 type EnrollmentStep =
-	{ readonly step: "start" } | { readonly step: "verify"; readonly setup: TwoFactorSetupResponse } | { readonly step: "backupCodes"; readonly codes: readonly string[] };
+	| { readonly step: "start" }
+	| { readonly step: "verify"; readonly setup: TwoFactorSetupResponse }
+	| { readonly step: "backupCodes"; readonly codes: readonly string[] };
 
 /** `setup` turns 2FA on; `rotate` replaces the secret and the backup codes of an enabled 2FA. */
 export const TwoFactorEnrollmentModeSchema = z.enum(["setup", "rotate"]);

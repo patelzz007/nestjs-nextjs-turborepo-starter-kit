@@ -2,6 +2,20 @@
 	"$schema": "https://unpkg.com/syncpack@15.3.3/dist/schema.json",
 	"versionGroups": [
 		{
+			"label": "Peer ranges declare what a consumer may provide, not what this repo installs, so they are not pinned like dependencies. `pnpm peers check` (run by deps:check) proves every peer range accepts the version the workspace actually installs.",
+			"dependencyTypes": [
+				"peer"
+			],
+			"isIgnored": true
+		},
+		{
+			"label": "One @types/pg for the whole tree: pnpm-workspace.yaml overrides it to this exact version (the adapter's and the app's `Pool` must be the same declarations), so every workspace declares that exact version too. Bump the override and these together.",
+			"dependencies": [
+				"@types/pg"
+			],
+			"pinVersion": "8.23.1"
+		},
+		{
 			"label": "apps/mobile + packages/ui-native: React Native and its @react-native/* tooling are the version Expo SDK 58 pins (0.88)",
 			"dependencies": [
 				"react-native",
@@ -49,6 +63,16 @@
 			"pinVersion": "^30.0.0"
 		},
 		{
+			"label": "apps/docs: `astro check` runs on Volar, which needs the TypeScript JS API that TypeScript 7 no longer ships (@astrojs/check 0.9.12 peers ^5 || ^6). Remove once an @astrojs/check release supports TypeScript 7.",
+			"dependencies": [
+				"typescript"
+			],
+			"packages": [
+				"@workspace/docs"
+			],
+			"pinVersion": "6.0.3"
+		},
+		{
 			"label": "Shared deps must be the same version across all workspaces",
 			"dependencies": [
 				"react",
@@ -58,8 +82,7 @@
 				"next"
 			],
 			"packages": [
-				"**",
-				"!@workspace/eslint-config"
+				"**"
 			],
 			"policy": "sameRange"
 		}
@@ -74,8 +97,7 @@
 				"typescript"
 			],
 			"packages": [
-				"**",
-				"!@workspace/eslint-config"
+				"**"
 			],
 			"range": ""
 		}
