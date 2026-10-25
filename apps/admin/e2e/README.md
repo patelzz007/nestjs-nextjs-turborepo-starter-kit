@@ -38,9 +38,11 @@ real login — pair with the API e2e in `apps/api/test/`).
 
 `e2e/*.browser.ts` run in real Chromium (`pnpm --filter @workspace/admin test:browser`)
 for what only a browser can prove — the URL-state layer's History API writes and
-Back/Forward restore. They need a running admin app and a seeded API whose
-`LOGIN_VERIFICATION_MODE=disabled` (non-production only, so the spec can sign in
-without the emailed code), and the env in `e2e/browser-env.e2e.ts`:
+Back/Forward restore. They need a running admin app and a seeded API, and the env in `e2e/browser-env.e2e.ts`.
+With `LOGIN_VERIFICATION_MODE=disabled` (non-production only — what CI uses) the
+sign-in never asks for a code and no inbox is needed; otherwise the helper reads
+the emailed code from Mailpit (`pnpm mailpit`), and only contacts it once the
+code prompt actually appears:
 
 ```bash
 ADMIN_E2E_BASE_URL=http://localhost:3001 \

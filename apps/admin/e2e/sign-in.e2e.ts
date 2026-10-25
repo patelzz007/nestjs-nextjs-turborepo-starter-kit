@@ -9,6 +9,9 @@
 // (AGENTS.md → "Reading emails while testing locally") and enters it, exactly
 // as a person would. It finds the email by its `login-verification` tag, not by
 // recipient: a developer's `EMAIL_TEST_TO` sends every email to their own inbox.
+// Mailpit is only asked once the page actually shows the code prompt: a run
+// against an API with `LOGIN_VERIFICATION_MODE=disabled` (CI) never needs an
+// inbox, so it must not depend on one being reachable.
 
 import { expect, type Page } from "@playwright/test";
 import { JsonValueSchema, type JsonValue } from "@workspace/shared";
@@ -23,7 +26,9 @@ export const SIGNED_IN_STATE_PATH = "e2e/.auth/admin.json";
 const CODE_POLL_ATTEMPTS = 50;
 const CODE_POLL_INTERVAL_MS = 200;
 
-const SearchResponseSchema = z.object({ messages: z.array(z.object({ ID: z.string() }).loose()) }).loose();
+const SearchResponseSchema = z
+	.object({ messages: z.array(z.object({ ID: z.string(), Created: z.iso.datetime({ offset: true }) }).loose()) })
+	.loose();
 const MessageSchema = z.object({ Text: z.string() }).loose();
 const CODE_PATTERN = /\b(?<code>\d{6})\b/;
 
@@ -38,20 +43,22 @@ async function getJson(path: string): Promise<JsonValue> {
 /** The Mailpit tag the API puts on a sign-in verification email. */
 const LOGIN_VERIFICATION_TAG = "login-verification";
 
-/** The id of the newest sign-in verification email in the inbox, or `null` when there is none. */
-async function newestCodeEmailId(): Promise<string | null> {
+/** The id of the newest sign-in verification email Mailpit received at or after `sinceMs`, or `null` when there is none yet. */
+async function newestCodeEmailIdSince(sinceMs: number): Promise<string | null> {
 	const query = new URLSearchParams({ query: `tag:${LOGIN_VERIFICATION_TAG}`, limit: "1" });
 	const [newest] = SearchResponseSchema.parse(await getJson(`/api/v1/search?${query.toString()}`)).messages;
-	return newest?.ID ?? null;
+	if (newest === undefined || Date.parse(newest.Created) < sinceMs) {
+		return null;
+	}
+	return newest.ID;
 }
 
-/** The six-digit code of the first sign-in verification email newer than `previousId` (a requested code invalidates older ones). */
-async function emailedCode(previousId: string | null): Promise<string> {
+/** The six-digit code of the first sign-in verification email received since `requestedAtMs` (a requested code invalidates older ones). */
+async function emailedCode(requestedAtMs: number): Promise<string> {
 	for (let attempt = 0; attempt < CODE_POLL_ATTEMPTS; attempt += 1) {
-		const newestId = await newestCodeEmailId();
-		if (newestId !== null && newestId !== previousId) {
-			const newest = { ID: newestId };
-			const message = MessageSchema.parse(await getJson(`/api/v1/message/${encodeURIComponent(newest.ID)}`));
+		const newestId = await newestCodeEmailIdSince(requestedAtMs);
+		if (newestId !== null) {
+			const message = MessageSchema.parse(await getJson(`/api/v1/message/${encodeURIComponent(newestId)}`));
 			const code = CODE_PATTERN.exec(message.Text)?.groups?.code;
 			if (code !== undefined) {
 				return code;
@@ -69,14 +76,14 @@ export async function signIn(page: Page, pathname: string): Promise<void> {
 	await page.goto(`/auth/login?redirect=${pathname}`);
 	await page.getByLabel("Email").fill(adminBrowserE2eEnv.ADMIN_E2E_EMAIL);
 	await page.getByLabel("Password", { exact: true }).fill(adminBrowserE2eEnv.ADMIN_E2E_PASSWORD);
-	const previousId = await newestCodeEmailId();
+	const requestedAtMs = Date.now();
 	await page.getByRole("button", { name: "Sign in" }).click();
 
 	const codeInput = page.getByRole("textbox", { name: "Verification code" });
 	const landed = page.waitForURL((url: URL) => url.pathname === pathname).then((): boolean => true);
 	const challenged = codeInput.waitFor().then((): boolean => false);
 	if (!(await Promise.race([landed, challenged]))) {
-		await codeInput.fill(await emailedCode(previousId));
+		await codeInput.fill(await emailedCode(requestedAtMs));
 		await page.getByRole("button", { name: "Verify sign-in" }).click();
 		await landed;
 	}

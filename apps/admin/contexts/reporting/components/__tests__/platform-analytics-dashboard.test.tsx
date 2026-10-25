@@ -4,7 +4,7 @@ import { apiDownloads, ApiDownloadError, type DownloadedFile } from "@workspace/
 import { LIST_SLOT_INDEX, createApiSuccessEnvelopeSchema, AdminAnalyticsDashboardSchema, type AdminAnalyticsDashboard, type Envelope } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/toast";
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PlatformAnalyticsDashboard } from "@/contexts/reporting/components/platform-analytics-dashboard";
 import { buildAdminDashboard } from "@/test/analytics-dashboard-fixtures";
@@ -81,6 +81,13 @@ async function chooseFilter(label: string, option: string): Promise<void> {
 	fireEvent.click(await screen.findByRole("menuitemradio", { name: option }));
 }
 
+// The range controls are a `next/dynamic` chunk. Its first load is Vite transforming that module tree on
+// demand, which takes far longer on a busy CI runner than on a warm laptop. Load it once up front so every
+// test's lazy import resolves from the module cache and no assertion depends on machine speed.
+beforeAll(async (): Promise<void> => {
+	await import("@workspace/client/lib/contexts/reporting/analytics-range-controls");
+});
+
 beforeEach((): void => {
 	window.history.replaceState(null, "", "/analytics");
 	vi.stubGlobal("matchMedia", (query: string): Pick<MediaQueryList, "matches" | "media" | "addEventListener" | "removeEventListener"> => ({
@@ -146,7 +153,7 @@ describe("PlatformAnalyticsDashboard", () => {
 		const refresh = renderDashboard();
 
 		expect(lastQueryInput()).toEqual({ from: Date.UTC(2026, 0, 1), to: Date.UTC(2026, 6, 1), interval: "month" });
-		expect(screen.getByRole("button", { name: /^Date range / }).textContent).toBe("Custom range");
+		expect((await screen.findByRole("button", { name: /^Date range / })).textContent).toBe("Custom range");
 
 		await chooseFilter("Group by", "Week");
 		refresh();
