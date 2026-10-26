@@ -5,6 +5,7 @@ import { defineListQuery, listFilter, ListSearchSchema } from "../../../schemas/
 import { JsonValueSchema } from "../../../schemas/runtime/json";
 import { DeviceTypeSchema } from "../../identity/schemas/identity-enums";
 import { IpAddressScopeSchema } from "./audit-enums";
+import { AuditErrorDetailSchema, AuditRequestHeadersSchema } from "./audit-request-facts";
 
 /**
  * Global HTTP audit trail — the admin viewer's contract (`GET /admin/audit-logs`,
@@ -131,6 +132,12 @@ export type HttpAuditLogSummary = z.output<typeof HttpAuditLogSummarySchema>;
 export const HttpAuditLogDetailSchema = HttpAuditLogSummarySchema.extend({
 	traceId: AuditIdSchema.nullable(),
 	impersonationSessionId: AuditIdSchema.nullable(),
+	/** The device session (sign-in) the credential belongs to — every request of one sign-in shares it. */
+	sessionId: AuditIdSchema.nullable(),
+	/** The tenant the client named in `X-Tenant-Id` (unverified — `tenant` is what the API verified). */
+	claimedTenantId: z.string().max(AUDIT_ID_MAX_LENGTH).nullable(),
+	/** The store the client named in `X-Location-Id` (unverified — `locationId` is what the API verified). */
+	claimedLocationId: z.string().max(AUDIT_ID_MAX_LENGTH).nullable(),
 	/** The approved support grant that stood in for a membership on this request. */
 	supportAccessGrantId: AuditIdSchema.nullable(),
 	httpVersion: z.string().max(AUDIT_HTTP_VERSION_MAX_LENGTH).nullable(),
@@ -142,6 +149,10 @@ export const HttpAuditLogDetailSchema = HttpAuditLogSummarySchema.extend({
 	/** Declared request size (`Content-Length`). */
 	requestBytes: z.number().int().nonnegative().nullable(),
 	idempotencyKey: z.string().max(AUDIT_IDEMPOTENCY_KEY_MAX_LENGTH).nullable(),
+	/** Every request header as sent, credentials redacted; `null` on records written before headers were kept. */
+	requestHeaders: AuditRequestHeadersSchema.nullable(),
+	/** The real cause of a failure (exception, cause chain, 5xx stack); `null` for a success. */
+	errorDetail: AuditErrorDetailSchema.nullable(),
 	/** Route params + query string (redacted). */
 	requestParams: JsonValueSchema.nullable(),
 	requestBody: JsonValueSchema.nullable(),

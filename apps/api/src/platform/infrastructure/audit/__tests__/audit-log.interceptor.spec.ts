@@ -12,6 +12,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi, t
 import { createAuditTrailDouble } from "../../../../../test/support/audit-trail-double";
 import { createHttpContext, testRequest } from "../../../../../test/support/http-execution-context";
 import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
+import { PrismaService } from "../../../../prisma/prisma.service";
 import { LogService } from "../../logging/logs.service";
 import { RequestContextService } from "../../context/request-context";
 import { HEALTH_PROBE_PATHS } from "../../http/probe-routes";
@@ -19,7 +20,7 @@ import { GlobalExceptionFilter } from "../../../presentation/http/errors/global-
 import { AuditLogInterceptor } from "../audit-log.interceptor";
 
 const requestContext = new RequestContextService();
-const { auditTrail, append } = createAuditTrailDouble(requestContext);
+const { auditTrail, append, appendInTransaction, recordTransaction } = createAuditTrailDouble(requestContext);
 
 class ProbeController {
 	public create(body: JsonValue): { created: JsonValue } {
@@ -40,6 +41,12 @@ class ProbeController {
 
 	public liveness(): { alive: boolean } {
 		return { alive: true };
+	}
+
+	/** A state change that appends its own audit row inside its transaction. */
+	public async transfer(): Promise<{ moved: boolean }> {
+		await auditTrail.recordInTransaction(new PrismaService(createTestTypedConfig()), { moved: true });
+		return { moved: true };
 	}
 
 	public async export(request: FastifyRequest): Promise<{ rows: number[] }> {
@@ -70,6 +77,9 @@ route("read", (d) => {
 });
 route("liveness", (d) => {
 	Get(HEALTH_PROBE_PATHS.liveness)(ProbeController.prototype, "liveness", d);
+});
+route("transfer", (d) => {
+	Post("transfer")(ProbeController.prototype, "transfer", d);
 });
 route("export", (d) => {
 	Get("export")(ProbeController.prototype, "export", d);
@@ -106,6 +116,8 @@ describe("AuditLogInterceptor + GlobalExceptionFilter (one row per request)", ()
 	beforeEach(() => {
 		append.mockClear();
 		append.mockResolvedValue();
+		appendInTransaction.mockClear();
+		recordTransaction.mockClear();
 		loggerError = vi.spyOn(Logger.prototype, "error").mockImplementation((): void => undefined);
 	});
 
@@ -174,6 +186,23 @@ describe("AuditLogInterceptor + GlobalExceptionFilter (one row per request)", ()
 		expect(response.statusCode).toBe(HttpStatus.OK);
 		expect(append).toHaveBeenCalledTimes(1);
 		expect(append).toHaveBeenCalledWith(expect.objectContaining({ method: "GET", responseBody: { released: { rows: 3 } } }));
+	});
+
+	it("hands every row to the transaction log: the success row, and a failure row", async () => {
+		await app.inject({ method: "POST", url: "/things", payload: { name: "a" } });
+		await app.inject({ method: "POST", url: "/fail" });
+
+		expect(recordTransaction.mock.calls.map(([entry]) => entry)).toEqual(append.mock.calls.map(([entry]) => entry));
+		expect(recordTransaction).toHaveBeenCalledTimes(2);
+	});
+
+	it("hands a row the handler appended in its own transaction to the transaction log once the request succeeded, exactly once", async () => {
+		const response = await app.inject({ method: "POST", url: "/transfer" });
+
+		expect(response.statusCode).toBe(HttpStatus.CREATED);
+		expect(append).not.toHaveBeenCalled();
+		expect(recordTransaction).toHaveBeenCalledTimes(1);
+		expect(recordTransaction.mock.calls).toEqual(appendInTransaction.mock.calls.map(([, entry]) => [entry]));
 	});
 
 	it("does not audit the automated health probes", async () => {

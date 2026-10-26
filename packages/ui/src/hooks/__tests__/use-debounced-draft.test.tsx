@@ -98,4 +98,43 @@ describe("useDebouncedDraft", () => {
 
 		expect(result.current.draft).toBe("flat");
 	});
+
+	it("takes the committed value again when the reset key changes, even an unchanged one, dropping typed text and a pending commit", () => {
+		const onCommit = vi.fn<(value: string) => void>();
+		const { result, rerender } = renderHook(
+			({ value, resetKey }: { readonly value: string; readonly resetKey: number }) => useDebouncedDraft({ value, onCommit, delayMs: DELAY_MS, resetKey }),
+			{ initialProps: { value: "", resetKey: 0 } },
+		);
+
+		act(() => {
+			result.current.setDraft("mocha");
+		});
+		act(() => {
+			vi.advanceTimersByTime(DELAY_MS);
+		});
+		expect(onCommit).toHaveBeenCalledWith("mocha");
+
+		rerender({ value: "", resetKey: 1 });
+		expect(result.current.draft).toBe("");
+
+		// The pending "mocha" commit was dropped, so its late echo is an outside change like any other.
+		rerender({ value: "mocha", resetKey: 1 });
+		expect(result.current.draft).toBe("mocha");
+		act(() => {
+			vi.advanceTimersByTime(DELAY_MS * 2);
+		});
+		expect(onCommit).toHaveBeenCalledTimes(1);
+	});
+
+	it("keeps the draft while the reset key stays the same", () => {
+		const onCommit = vi.fn<(value: string) => void>();
+		const { result, rerender } = renderHook(({ resetKey }: { readonly resetKey: number }) => useDebouncedDraft({ value: "", onCommit, delayMs: DELAY_MS, resetKey }), {
+			initialProps: { resetKey: 3 },
+		});
+		act(() => {
+			result.current.setDraft("tea");
+		});
+		rerender({ resetKey: 3 });
+		expect(result.current.draft).toBe("tea");
+	});
 });

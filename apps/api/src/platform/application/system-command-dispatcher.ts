@@ -58,6 +58,7 @@ export class SystemCommandDispatcher {
 						correlationId,
 						outcome: execution.ok ? "success" : "failure",
 						errorCode: execution.ok ? null : execution.error instanceof DomainError ? execution.error.code : ApiErrorCodes.INTERNAL_ERROR,
+						error: execution.ok ? null : execution.error,
 						durationMs: finishedAt - startedAt,
 						occurredAt: finishedAt,
 					}),

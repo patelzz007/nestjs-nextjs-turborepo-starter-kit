@@ -1,8 +1,9 @@
 /**
  * Headers the merchant console and POS clients send on every API call, naming the tenant and the
- * store (location) the caller is working in. They are information only for now: the API selects,
- * authorizes and scopes nothing from them (the tenant comes from the route or the API key, a
- * location from the route, the query or the body). What they should do is still to be decided.
+ * store (location) the caller is working in. The API selects, authorizes and scopes nothing from
+ * them (the tenant comes from the route or the API key, a location from the route, the query or the
+ * body); its audit trail records them as what the client claimed (`claimedTenantId`,
+ * `claimedLocationId`), next to what it verified. What else they should do is still to be decided.
  */
 export const TENANT_ID_HEADER = "X-Tenant-Id";
 

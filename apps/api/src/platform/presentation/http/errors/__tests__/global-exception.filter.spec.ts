@@ -111,14 +111,13 @@ describe("GlobalExceptionFilter (Fastify integration)", () => {
 	const warnLog = vi.spyOn(logService, "warn");
 	vi.spyOn(Logger.prototype, "error").mockImplementation((): void => undefined);
 	vi.spyOn(Logger.prototype, "warn").mockImplementation((): void => undefined);
+	const audit = createAuditTrailDouble();
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({ imports: [ProbeModule] }).compile();
 		app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter({ bodyLimit: 64 }));
 		await app.getHttpAdapter().getInstance().register(fastifyRateLimit, { global: false, errorResponseBuilder: rateLimitErrorResponseBuilder });
-		app.useGlobalFilters(
-			new GlobalExceptionFilter(app.get(HttpAdapterHost), logService, new RequestContextService(), createAuditTrailDouble().auditTrail, createTestTypedConfig()),
-		);
+		app.useGlobalFilters(new GlobalExceptionFilter(app.get(HttpAdapterHost), logService, new RequestContextService(), audit.auditTrail, createTestTypedConfig()));
 		await app.init();
 		await app.getHttpAdapter().getInstance().ready();
 	});
@@ -271,6 +270,25 @@ describe("GlobalExceptionFilter (Fastify integration)", () => {
 		expect(message).toContain("GET /probe/boom failed with 500 INTERNAL_ERROR");
 		expect(options?.metadata).toMatchObject({ correlationId: "corr-500", httpStatus: 500, errorCode: "INTERNAL_ERROR", errorName: "Error" });
 		expect(options?.trace).toContain("boom");
+	});
+
+	it("records the real reason behind INTERNAL_ERROR in the audit row, credentials redacted — never in the response", async () => {
+		audit.append.mockClear();
+		await app.inject({ method: "GET", url: "/probe/boom" });
+
+		const [row] = audit.append.mock.calls[LIST_SLOT_INDEX.first] ?? [];
+		expect(row?.errorCode).toBe("INTERNAL_ERROR");
+		expect(row?.errorDetail).toMatchObject({ type: "Error", message: "connection string postgres://[REDACTED]@db/app leaked", code: null, causes: [] });
+		expect(row?.errorDetail?.stack.length).toBeGreaterThan(0);
+		expect(JSON.stringify(row?.errorDetail)).not.toContain("secret");
+	});
+
+	it("records a refusal's own message without a stack: a 4xx is the caller's mistake, not a code path", async () => {
+		audit.append.mockClear();
+		await app.inject({ method: "GET", url: "/probe/app-error" });
+
+		const [row] = audit.append.mock.calls[LIST_SLOT_INDEX.first] ?? [];
+		expect(row?.errorDetail).toMatchObject({ message: "Email already in use", stack: [] });
 	});
 
 	it("turns @fastify/rate-limit rejections into 429 RATE_LIMITED with Retry-After", async () => {

@@ -1,7 +1,7 @@
 import { MerchantAnalyticsPageView } from "@/contexts/reporting/components/merchant-analytics-page-view";
 import { toLocationQueryInput } from "@/features/tenant-context/selectors";
 import { reportTimeZone } from "@/contexts/reporting/lib/merchant-analytics";
-import { loadMerchantServerContext } from "@/lib/merchant-server-api";
+import { loadTenantServerCaller } from "@/contexts/tenancy/lib/tenant/tenant-server-caller";
 import { guardTenantPage } from "@/contexts/tenancy/lib/tenant/tenant-page-guard";
 import { loadServerLocationScope } from "@/contexts/tenancy/lib/tenant/server-location-scope";
 import { prefetchedDataOrUndefined } from "@/lib/server/server-query-outcome";
@@ -36,7 +36,7 @@ export default async function MerchantAnalyticsPage({ params, searchParams }: Me
 	}
 	const urlState = ANALYTICS_URL_STATE.parse(await searchParams);
 	const nowMs = nowEpochMs();
-	const { server } = await loadMerchantServerContext();
+	const server = await loadTenantServerCaller(tenantSlug);
 	const scope = await loadServerLocationScope(tenantSlug);
 	// The same store filter the client's first render derives, so the data lands under its query key.
 	const locationId = toLocationQueryInput(scope.effectiveLocationId);

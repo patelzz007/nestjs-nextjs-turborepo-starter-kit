@@ -54,6 +54,11 @@ const RECORD: HttpAuditLogDetail = HttpAuditLogDetailSchema.parse({
 	traceId: "corr-1",
 	impersonationSessionId: null,
 	supportAccessGrantId: null,
+	sessionId: null,
+	claimedTenantId: null,
+	claimedLocationId: null,
+	requestHeaders: null,
+	errorDetail: null,
 	httpVersion: "1.1",
 	host: "api.example.com",
 	origin: null,
@@ -109,6 +114,76 @@ describe("AuditLogDetailView", () => {
 
 		expect(screen.getByText(/"password": "\[REDACTED\]"/)).toBeTruthy();
 		expect(screen.getByText("Nothing recorded.")).toBeTruthy();
+	});
+
+	it("says why a failed request failed — the server's reason, causes and stack — not only the code the caller saw", () => {
+		detailQuery.mockReturnValue({
+			data: {
+				data: {
+					...RECORD,
+					outcome: "FAILED",
+					responseStatus: 500,
+					errorCode: "INTERNAL_ERROR",
+					errorDetail: {
+						type: "PrismaClientKnownRequestError",
+						message: "Record to update not found.",
+						code: "P2025",
+						causes: [{ type: "Error", message: "connection reset", code: "ECONNRESET" }],
+						stack: ["at RewardsRepository.update (src/rewards.repository.ts:42:13)"],
+					},
+				},
+			},
+			isLoading: false,
+			isError: false,
+		});
+		render(<AuditLogDetailView id={RECORD_ID} />);
+
+		const reason = screen.getByRole("region", { name: "Why it failed" });
+		expect(reason.textContent).toContain("The caller was only told INTERNAL_ERROR");
+		expect(reason.textContent).toContain("PrismaClientKnownRequestError [P2025]");
+		expect(reason.textContent).toContain("Record to update not found.");
+		expect(reason.textContent).toContain("Caused by Error [ECONNRESET]");
+		expect(reason.textContent).toContain("at RewardsRepository.update (src/rewards.repository.ts:42:13)");
+	});
+
+	it("says when a failed request's reason was not recorded, and shows no reason for a success", () => {
+		render(<AuditLogDetailView id={RECORD_ID} />);
+		expect(screen.queryByRole("region", { name: "Why it failed" })).toBeNull();
+		cleanup();
+
+		detailQuery.mockReturnValue({ data: { data: { ...RECORD, outcome: "FAILED", responseStatus: 403, errorCode: "FORBIDDEN" } }, isLoading: false, isError: false });
+		render(<AuditLogDetailView id={RECORD_ID} />);
+		expect(screen.getByRole("region", { name: "Why it failed" }).textContent).toContain("Not recorded: this record was written before failure reasons were kept.");
+	});
+
+	it("shows the device session, the X-Tenant-Id the client claimed against the verified tenant, and every header sent", () => {
+		detailQuery.mockReturnValue({
+			data: {
+				data: {
+					...RECORD,
+					sessionId: "device-session-1",
+					claimedTenantId: "forged-tenant",
+					claimedLocationId: null,
+					requestHeaders: { accept: "application/json", cookie: "[REDACTED] (admin_access_token)", "x-tenant-id": "forged-tenant" },
+				},
+			},
+			isLoading: false,
+			isError: false,
+		});
+		render(<AuditLogDetailView id={RECORD_ID} />);
+
+		expect(screen.getByText("device-session-1")).toBeTruthy();
+		expect(screen.getAllByText("forged-tenant").length).toBeGreaterThan(0);
+		expect(screen.getByText("differs from the verified tenant")).toBeTruthy();
+		expect(screen.getByText("Not sent")).toBeTruthy();
+		expect(screen.getByText("[REDACTED] (admin_access_token)")).toBeTruthy();
+		expect(screen.getByText("x-tenant-id")).toBeTruthy();
+	});
+
+	it("says when a record kept no headers", () => {
+		render(<AuditLogDetailView id={RECORD_ID} />);
+
+		expect(screen.getByText("Not recorded: this record was written before headers were kept.")).toBeTruthy();
 	});
 
 	it("links the actor, tenant and correlation id back to the filtered table", () => {

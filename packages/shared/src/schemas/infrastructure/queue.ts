@@ -17,6 +17,7 @@ export const QueueNameSchema = z.enum([
 	"outbox.retention",
 	"rewards.referral-credit-notify",
 	"storage.cdn-invalidate",
+	"transaction-log.write",
 ]);
 
 /**
@@ -36,6 +37,7 @@ export const QUEUE_NAMES = {
 	outboxRetention: QueueNameSchema.enum["outbox.retention"],
 	rewardsReferralCreditNotify: QueueNameSchema.enum["rewards.referral-credit-notify"],
 	storageCdnInvalidate: QueueNameSchema.enum["storage.cdn-invalidate"],
+	transactionLogWrite: QueueNameSchema.enum["transaction-log.write"],
 } satisfies Readonly<Record<string, z.output<typeof QueueNameSchema>>>;
 
 /** All queue names, for infrastructure that registers or inspects every queue. */
@@ -101,3 +103,18 @@ export type StorageCdnInvalidationJob = z.output<typeof StorageCdnInvalidationJo
 export const StorageCleanupJobSchema = z.object({}).strict();
 
 export type StorageCleanupJob = z.output<typeof StorageCleanupJobSchema>;
+
+/**
+ * One transaction (an audit row) for the plain-text transaction log, already
+ * formatted by the API: the worker only appends `text` to the day file of
+ * `occurredAt` (UTC), so the payload carries nothing it would have to re-redact.
+ */
+export const TransactionLogWriteJobSchema = z
+	.object({
+		/** When the request arrived (epoch ms): picks the day file. */
+		occurredAt: z.number().int().nonnegative(),
+		text: z.string().min(1),
+	})
+	.strict();
+
+export type TransactionLogWriteJob = z.output<typeof TransactionLogWriteJobSchema>;

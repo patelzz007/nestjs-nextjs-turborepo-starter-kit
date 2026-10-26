@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { API_KEY_STATS_LOADING_LABELS, MerchantApiKeysPageView } from "@/contexts/pos/components/api-keys/merchant-api-keys-page-view";
 import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
@@ -157,6 +157,14 @@ function mutationState(mutate: (input: object) => void, error: Error | null = nu
 function renderAsAdmin(): void {
 	renderWithAuthorization(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(null) });
 }
+
+// The integration guide and the created-key notice are `next/dynamic` chunks. Their first load is Vite
+// transforming that module tree on demand, which takes far longer on a busy CI runner than on a warm
+// laptop. Load them once up front so every test's lazy import resolves from the module cache and no
+// assertion depends on machine speed.
+beforeAll(async (): Promise<void> => {
+	await Promise.all([import("../api-key-integration-guide"), import("../created-api-key-notice")]);
+});
 
 beforeEach((): void => {
 	window.history.replaceState(null, "", PATH);

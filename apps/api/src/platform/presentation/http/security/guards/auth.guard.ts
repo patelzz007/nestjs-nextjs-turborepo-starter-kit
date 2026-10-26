@@ -114,6 +114,8 @@ export class AuthGuard implements CanActivate {
 			impersonatorId: payload.isImpersonating === true ? payload.originalUserId : undefined,
 			impersonationSessionId: payload.isImpersonating === true ? payload.impersonationSessionId : undefined,
 			authMethod: bearer === undefined ? "SESSION_COOKIE" : "BEARER_TOKEN",
+			sessionId: payload.sid,
+			identity: { email: payload.email, fullName: payload.fullName },
 		});
 		return true;
 	}

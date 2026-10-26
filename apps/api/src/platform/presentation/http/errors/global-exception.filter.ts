@@ -84,7 +84,12 @@ export class GlobalExceptionFilter implements ExceptionFilter<CaughtValue> {
 		}
 
 		const envelope: ApiErrorResponse = GlobalExceptionFilter.buildEnvelope(mapped, correlationId);
-		await this.auditTrail.recordFailure(request, { status: mapped.httpStatus, errorCode: envelope.error.code, responseBody: GlobalExceptionFilter.toJsonValue(envelope) });
+		await this.auditTrail.recordFailure(request, {
+			status: mapped.httpStatus,
+			errorCode: envelope.error.code,
+			responseBody: GlobalExceptionFilter.toJsonValue(envelope),
+			cause: exception,
+		});
 
 		const httpAdapter = this.httpAdapterHost.httpAdapter;
 		if (httpAdapter.isHeadersSent(reply)) {

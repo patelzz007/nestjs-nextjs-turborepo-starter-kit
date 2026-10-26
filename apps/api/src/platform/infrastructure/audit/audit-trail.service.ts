@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import { Injectable, Logger } from "@nestjs/common";
-import { nowEpochMs, type JsonValue } from "@workspace/shared";
+import { nowEpochMs, type CaughtValue, type JsonValue } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
 import { RequestContextService, type RequestContext } from "../context/request-context";
@@ -13,6 +13,7 @@ import { readUserAgent } from "../http/user-agent-header";
 import { buildHttpAuditEntry, isAuditedRoute, type HttpAuditEntry, type HttpAuditOutcome } from "./http-audit-entry";
 import type { SystemCommandAuditEntry } from "../../application/ports/command-audit.port";
 import { systemCommandAuditEntry } from "./system-command-audit";
+import { TransactionLog } from "../transaction-log/transaction-log.port";
 
 /** The audited request the interceptor is currently running a handler for. */
 export interface AuditedRequestScope {
@@ -21,11 +22,23 @@ export interface AuditedRequestScope {
 	readonly successStatus: number;
 }
 
+/**
+ * The scope plus the rows the handler appended inside its own transaction
+ * ({@link AuditTrailService.recordInTransaction}): they reach the transaction
+ * log only once the request succeeded — by then that transaction committed.
+ */
+interface AuditedRequestState {
+	readonly scope: AuditedRequestScope;
+	readonly appendedInTransaction: HttpAuditEntry[];
+}
+
 /** What a failed request is recorded with — the global exception filter's mapped error. */
 export interface AuditFailure {
 	readonly status: number;
 	readonly errorCode: string;
 	readonly responseBody: JsonValue;
+	/** What was thrown — recorded as the row's `errorDetail` (the real reason behind `errorCode`). */
+	readonly cause: CaughtValue;
 }
 
 /**
@@ -73,25 +86,35 @@ function contextOrDetached(context: RequestContext | undefined, request: Fastify
  * - sensitive read → a handler releasing data in bulk (an export, the audit
  *   viewer) calls {@link recordSensitiveRead} with a summary of what it
  *   released; that summary replaces the full response body as the row.
+ *
+ * Every row written is also handed to the plain-text {@link TransactionLog}
+ * (docs/technical/operations/transaction-log.md), which returns at once — the
+ * file is written off the request path (BullMQ, or an asynchronous append).
+ * A failure row goes there even when the database write failed.
  */
 @Injectable()
 export class AuditTrailService {
 	private readonly logger: Logger = new Logger(AuditTrailService.name);
-	private readonly scopeStorage: AsyncLocalStorage<AuditedRequestScope> = new AsyncLocalStorage<AuditedRequestScope>();
+	private readonly scopeStorage: AsyncLocalStorage<AuditedRequestState> = new AsyncLocalStorage<AuditedRequestState>();
 
 	public constructor(
 		private readonly repository: AuditLogRepository,
 		private readonly requestContext: RequestContextService,
+		private readonly transactionLog: TransactionLog,
 	) {}
 
 	/** Run the handler of an audited request so {@link recordInTransaction} can find it. */
 	public runInScope<T>(scope: AuditedRequestScope, handler: () => T): T {
-		return this.scopeStorage.run(scope, handler);
+		return this.scopeStorage.run({ scope, appendedInTransaction: [] }, handler);
 	}
 
 	/** Success path (interceptor). Throws {@link AuditLogWriteError} when the row cannot be written. */
 	public async recordSuccess(request: FastifyRequest, status: number, responseBody: PreSerializationPayload): Promise<void> {
-		if (!isAuditedRoute(request.routeOptions.url) || this.requestContext.current()?.isAuditRecorded === true) {
+		if (!isAuditedRoute(request.routeOptions.url)) {
+			return;
+		}
+		if (this.requestContext.current()?.isAuditRecorded === true) {
+			this.logCommittedInTransaction();
 			return;
 		}
 		const entry: HttpAuditEntry = this.entryFor(request, { outcome: "SUCCEEDED", status, responseBody });
@@ -102,6 +125,7 @@ export class AuditTrailService {
 			this.logger.error({ event: "audit.write_failed", phase: "success", entry, error: cause.message });
 			throw new AuditLogWriteError(cause);
 		}
+		this.transactionLog.record(entry);
 	}
 
 	/**
@@ -122,6 +146,7 @@ export class AuditTrailService {
 			this.logger.error({ event: "audit.write_failed", phase: "sensitive_read", entry, error: cause.message });
 			throw new AuditLogWriteError(cause);
 		}
+		this.transactionLog.record(entry);
 		// This summary IS the request's audit row: the interceptor must not add the full response as a second one.
 		this.requestContext.markAuditRecorded();
 	}
@@ -139,6 +164,7 @@ export class AuditTrailService {
 			this.logger.error({ event: "audit.write_failed", phase: "system_command", entry, error: cause.message });
 			throw new AuditLogWriteError(cause);
 		}
+		this.transactionLog.record(row);
 	}
 
 	/** Failure path (exception filter). Never throws: the original failure must reach the client. */
@@ -152,6 +178,7 @@ export class AuditTrailService {
 		} catch (error) {
 			this.logger.error({ event: "audit.write_failed", phase: "failure", entry, error: error instanceof Error ? error.message : String(error) });
 		}
+		this.transactionLog.record(entry);
 	}
 
 	/**
@@ -163,12 +190,22 @@ export class AuditTrailService {
 	 * committed and the response did not go out.
 	 */
 	public async recordInTransaction(tx: AuditLogWriter, result: PreSerializationPayload): Promise<void> {
-		const scope: AuditedRequestScope | undefined = this.scopeStorage.getStore();
-		if (scope === undefined) {
+		const state: AuditedRequestState | undefined = this.scopeStorage.getStore();
+		if (state === undefined) {
 			throw new AuditContextMissingError();
 		}
-		await this.repository.appendInTransaction(tx, this.entryFor(scope.request, { outcome: "SUCCEEDED", status: scope.successStatus, responseBody: result }));
+		const entry: HttpAuditEntry = this.entryFor(state.scope.request, { outcome: "SUCCEEDED", status: state.scope.successStatus, responseBody: result });
+		await this.repository.appendInTransaction(tx, entry);
+		state.appendedInTransaction.push(entry);
 		this.requestContext.markAuditRecorded();
+	}
+
+	/** The request succeeded, so the rows its handler appended in its own transaction committed: log them now. */
+	private logCommittedInTransaction(): void {
+		const appended: HttpAuditEntry[] = this.scopeStorage.getStore()?.appendedInTransaction ?? [];
+		for (const entry of appended.splice(0)) {
+			this.transactionLog.record(entry);
+		}
 	}
 
 	private entryFor(request: FastifyRequest, outcome: HttpAuditOutcome): HttpAuditEntry {

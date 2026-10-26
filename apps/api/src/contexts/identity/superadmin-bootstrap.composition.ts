@@ -9,6 +9,7 @@ import { IntegrationEventMapperRegistry } from "../../platform/application/event
 import type { DomainEvent } from "../../platform/domain/domain-event";
 import { AuditLogRepository } from "../../platform/infrastructure/audit/audit-log.repository";
 import { AuditTrailService } from "../../platform/infrastructure/audit/audit-trail.service";
+import { standaloneTransactionLog } from "../../platform/infrastructure/transaction-log/direct-transaction-log";
 import { RequestContextService } from "../../platform/infrastructure/context/request-context";
 import { PlatformOutboxService } from "../../platform/infrastructure/outbox/platform-outbox.service";
 import { SystemClock } from "../../platform/infrastructure/system-clock";
@@ -79,7 +80,7 @@ export function createSuperAdminBootstrap(config: TypedConfigService, prisma: Pr
 	);
 	const scopes = new IdentityScopeFactory({
 		notifications: new NoBootstrapEmails(),
-		auditTrail: new AuditTrailService(new AuditLogRepository(transactions), requestContext),
+		auditTrail: new AuditTrailService(new AuditLogRepository(transactions), requestContext, standaloneTransactionLog(config.observability.transactionLog)),
 		config,
 		resolvePublicUrl: new PublicUrlResolver(config).resolve,
 	});

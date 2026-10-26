@@ -67,6 +67,12 @@ export interface ServerApiConfig {
 	readonly retryJitterMs: number;
 	readonly logger: (event: PrefetchLogEvent) => void;
 	readonly fetchImpl?: typeof fetch;
+	/**
+	 * Headers this caller adds to every request — the scope the page works in,
+	 * named the way the browser names it (the merchant console's `X-Tenant-Id` /
+	 * `X-Location-Id`). They cannot replace `Accept`, `X-Client-Type` or the cookie.
+	 */
+	readonly requestHeaders?: Readonly<Record<string, string>>;
 }
 
 /** Overrides accepted by `resolveConfig`; `clientType` is always required — there is no default cookie set. */
@@ -375,6 +381,7 @@ export async function fetchServerQuery<Input extends SerializableInput, Resp ext
 					headers: {
 						...def.baseOptions?.headers,
 						...readForwardedHeaders(await headers()),
+						...config.requestHeaders,
 						Accept: "application/json",
 						...clientTypeHeader(config.clientType),
 						// A public route fetched for a visitor with no session carries no cookie.

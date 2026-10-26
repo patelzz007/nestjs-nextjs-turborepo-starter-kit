@@ -2859,6 +2859,16 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "claimedLocationId": {
+                          "maxLength": 64,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "claimedTenantId": {
+                          "maxLength": 64,
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "clientType": {
                           "maxLength": 32,
                           "nullable": true,
@@ -2909,6 +2919,72 @@
                           "maxLength": 64,
                           "nullable": true,
                           "type": "string"
+                        },
+                        "errorDetail": {
+                          "nullable": true,
+                          "properties": {
+                            "causes": {
+                              "items": {
+                                "properties": {
+                                  "code": {
+                                    "maxLength": 64,
+                                    "minLength": 1,
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "message": {
+                                    "maxLength": 2048,
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "maxLength": 128,
+                                    "minLength": 1,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "message",
+                                  "code"
+                                ],
+                                "type": "object"
+                              },
+                              "maxItems": 5,
+                              "type": "array"
+                            },
+                            "code": {
+                              "maxLength": 64,
+                              "minLength": 1,
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "message": {
+                              "maxLength": 2048,
+                              "type": "string"
+                            },
+                            "stack": {
+                              "items": {
+                                "maxLength": 512,
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "maxItems": 12,
+                              "type": "array"
+                            },
+                            "type": {
+                              "maxLength": 128,
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "message",
+                            "code",
+                            "causes",
+                            "stack"
+                          ],
+                          "type": "object"
                         },
                         "geoCity": {
                           "maxLength": 128,
@@ -3084,6 +3160,14 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "requestHeaders": {
+                          "additionalProperties": {
+                            "maxLength": 1024,
+                            "type": "string"
+                          },
+                          "nullable": true,
+                          "type": "object"
+                        },
                         "requestParams": {
                           "allOf": [
                             {
@@ -3104,6 +3188,12 @@
                           "maximum": 599,
                           "minimum": 100,
                           "type": "integer"
+                        },
+                        "sessionId": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "nullable": true,
+                          "type": "string"
                         },
                         "supportAccessGrantId": {
                           "maxLength": 64,
@@ -3192,6 +3282,9 @@
                         "clientType",
                         "traceId",
                         "impersonationSessionId",
+                        "sessionId",
+                        "claimedTenantId",
+                        "claimedLocationId",
                         "supportAccessGrantId",
                         "httpVersion",
                         "host",
@@ -3201,6 +3294,8 @@
                         "requestContentType",
                         "requestBytes",
                         "idempotencyKey",
+                        "requestHeaders",
+                        "errorDetail",
                         "requestParams",
                         "requestBody",
                         "responseBody",

@@ -4,7 +4,7 @@ tags: ["api", "contracts", "pagination", "prisma", "data-table"]
 description: "The one list-query grammar every paginated endpoint speaks: how a resource declares it with defineListQuery, how the API parses and translates it to Prisma, and how tables build it on the client."
 order: 15
 author: "Platform Team"
-lastUpdated: 1790899200000
+lastUpdated: 1792972800000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -347,7 +347,7 @@ export function toUsersListQuery(state: UsersTableUrlState): TableListQueryInput
 | `listFilterKey(field, op?)` | `filter[field]` (eq shorthand) or `filter[field][op]` — the API's own key. |
 | `listStateToListQuery(spec, state)` | URL state → list input (whitelist, default order, cursor rule re-applied). |
 | `useUrlState(codec)` | `[state, update(patch, { history })]` from `useSearchParams()`. |
-| `useUrlDraft(...)` (admin: `useTableTextDraft`) | The search box's in-progress text: local, committed to the URL after a debounce, reset when the URL changes from outside. |
+| `useUrlDraft(...)` (admin: `useTableTextDraft`) | The search box's in-progress text: local, committed to the URL after a debounce, reset when the URL changes from outside and on every Back / Forward. |
 | `listPagePatch(state, page, nextCursor)` | The `{ page, cursor }` patch for a page move: a sequential "next" in the default order reuses `meta.nextCursor`, anything else pages by offset. |
 | `toPrefetchedQuery` / `prefetchedDataFor` (`lib/url-state/prefetched-query`) | Binds a server prefetch to the serialized URL state it was fetched for, and hands it back as `initialData` only for that state. |
 
@@ -448,8 +448,15 @@ list controls — the web wallet and activity pages, merchant rewards, team, loc
 analytics and verification — have nothing to move until they gain search, filters or paging.
 
 A search box that commits on **submit** (the web catalog) keeps its unsubmitted text in
-`useSubmittedUrlDraft` (`packages/client/src/lib/url-state`): local, and reset whenever the URL's value changes.
-A submitted search is a discrete change, so it **pushes**.
+`useSubmittedUrlDraft` (`packages/client/src/lib/url-state`): local, and reset whenever the URL's value changes
+and on every Back / Forward. A submitted search is a discrete change, so it **pushes**.
+
+**Why Back / Forward resets the box on its own.** A URL write reaches the Next.js router as a React
+transition. A Back pressed before React commits that transition is rendered together with it, so
+the written value is never committed: the committed value goes from `""` to `""`, and a reset
+keyed on that value never fires. The box would keep the submitted text while the URL and the
+results show the old search. `useHistoryTraversalCount` (the Navigation API's `traverse`
+navigations, `popstate` where there is none) turns every traversal into a reset of its own.
 
 In-page selection (`/merchants/verification?tenantId=`, `/emails/templates?key=`,
 `?requestId=` on the review queues) uses the same `defineUrlState` / `useUrlState`: the

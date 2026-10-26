@@ -516,6 +516,22 @@ export type {
 export { LogLevelSchema, LogServiceOptionsSchema, MetadataValueSchema } from "./domain/platform/logs";
 export type { LogLevel, LogServiceOptions } from "./domain/platform/logs";
 export {
+	AUDIT_ERROR_CAUSES_MAX_COUNT,
+	AUDIT_ERROR_DETAIL_CODE_MAX_LENGTH,
+	AUDIT_ERROR_MESSAGE_MAX_LENGTH,
+	AUDIT_ERROR_STACK_FRAME_MAX_LENGTH,
+	AUDIT_ERROR_STACK_MAX_FRAMES,
+	AUDIT_ERROR_TYPE_MAX_LENGTH,
+	AUDIT_REQUEST_HEADER_NAME_MAX_LENGTH,
+	AUDIT_REQUEST_HEADER_VALUE_MAX_LENGTH,
+	AUDIT_REQUEST_HEADERS_MAX_COUNT,
+	AUDIT_TRUNCATION_MARK,
+	AuditErrorDetailSchema,
+	AuditErrorLinkSchema,
+	AuditRequestHeadersSchema,
+} from "../contexts/audit/schemas/audit-request-facts";
+export type { AuditErrorDetail, AuditErrorLink, AuditRequestHeaders } from "../contexts/audit/schemas/audit-request-facts";
+export {
 	AuditAuthMethodSchema,
 	AuditHttpMethodSchema,
 	AuditLogTenantSchema,
@@ -1922,6 +1938,7 @@ export {
 	StorageCleanupJobSchema,
 	StorageDeleteJobSchema,
 	StorageScanJobSchema,
+	TransactionLogWriteJobSchema,
 } from "./infrastructure/queue";
 export type {
 	EmailJobPropValue,
@@ -1932,6 +1949,7 @@ export type {
 	StorageCleanupJob,
 	StorageDeleteJob,
 	StorageScanJob,
+	TransactionLogWriteJob,
 } from "./infrastructure/queue";
 export { QUEUE_JOB_OPTIONS } from "./infrastructure/queue-job-options";
 export {

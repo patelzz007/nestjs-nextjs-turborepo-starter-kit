@@ -46,6 +46,20 @@ export interface RequestPrincipal {
 	readonly impersonationSessionId: string | undefined;
 	/** Which credential authenticated the request. */
 	readonly authMethod: RequestPrincipalAuthMethod;
+	/** The device session (refresh-token row id) the credential belongs to; absent on impersonation and older access tokens. */
+	readonly sessionId: string | undefined;
+	/**
+	 * Who the token says the user is, when it was signed. Read only by the
+	 * plain-text transaction log, so a reader sees a person, not just an id; the
+	 * audit table stores the id alone and its viewer resolves the current name.
+	 */
+	readonly identity: RequestPrincipalIdentity;
+}
+
+/** The user's name and address as the credential carried them (a refresh token has no name). */
+export interface RequestPrincipalIdentity {
+	readonly email: string;
+	readonly fullName: string | undefined;
 }
 
 /**

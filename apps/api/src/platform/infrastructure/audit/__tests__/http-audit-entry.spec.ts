@@ -4,7 +4,7 @@ import { captureFastifyRequest } from "../../../../../test/support/fastify-reque
 import type { RequestContext, RequestPrincipal } from "../../context/request-context";
 import { REDACTED } from "../../nest-logging/redaction";
 import { AUDIT_PAYLOAD_MAX_BYTES, PII_MASK } from "../audit-data-policy";
-import { buildHttpAuditEntry, defaultSuccessStatus, isAuditedRoute, toAuditPayload, toWireJson, UNMATCHED_ENDPOINT } from "../http-audit-entry";
+import { auditRequestHeaders, buildHttpAuditEntry, defaultSuccessStatus, isAuditedRoute, toAuditPayload, toWireJson, UNMATCHED_ENDPOINT } from "../http-audit-entry";
 
 const RECEIVED_AT = 1_790_812_800_000;
 const COMPLETED_AT = RECEIVED_AT + 25;
@@ -16,7 +16,14 @@ function context(overrides: Partial<RequestContext> = {}): RequestContext {
 		ip: "203.0.113.9",
 		userAgent: "vitest-agent",
 		edgeLocation: undefined,
-		principal: { userId: "user-1", impersonatorId: "admin-9", impersonationSessionId: "imp-session-3", authMethod: "SESSION_COOKIE" },
+		principal: {
+			userId: "user-1",
+			impersonatorId: "admin-9",
+			impersonationSessionId: "imp-session-3",
+			authMethod: "SESSION_COOKIE",
+			sessionId: "device-session-7",
+			identity: { email: "user@example.com", fullName: "Test User" },
+		},
 		apiKey: undefined,
 		tenant: { tenantId: "org-1", locationId: "loc-1" },
 		systemOperations: ["geo.reference_data.write"],
@@ -132,11 +139,15 @@ describe("buildHttpAuditEntry", () => {
 			impersonatorUserId: "admin-9",
 			impersonationSessionId: "imp-session-3",
 			supportAccessGrantId: null,
+			sessionId: "device-session-7",
 			authMethod: "SESSION_COOKIE",
 			apiKeyId: null,
 			terminalId: null,
 			tenantId: "org-1",
 			locationId: "loc-1",
+			// The forged header is recorded as a claim; the verified tenant above is untouched by it.
+			claimedTenantId: "org-forged",
+			claimedLocationId: null,
 			ipAddress: "203.0.113.9",
 			userAgent: "vitest-agent",
 			browserName: null,
@@ -160,10 +171,24 @@ describe("buildHttpAuditEntry", () => {
 			requestContentType: "application/json",
 			requestBytes: Buffer.byteLength(payload, "utf8"),
 			idempotencyKey: "create-mug-0001",
+			requestHeaders: {
+				"accept-language": "en-GB,en;q=0.9",
+				"content-length": String(Buffer.byteLength(payload, "utf8")),
+				"content-type": "application/json",
+				host: "localhost:80",
+				"idempotency-key": "create-mug-0001",
+				origin: "https://admin.example.com",
+				referer: "https://admin.example.com/catalog/products/new",
+				"user-agent": "lightMyRequest",
+				"x-client-type": "admin",
+				"x-tenant-id": "org-forged",
+			},
 			requestParams: { params: {}, query: {} },
 			requestBody: { name: "Mug", password: REDACTED },
 			responseBody: { id: "p-1", token: REDACTED },
+			errorDetail: null,
 			systemOperations: ["geo.reference_data.write"],
+			actorIdentity: { email: "user@example.com", fullName: "Test User" },
 		});
 	});
 
@@ -177,7 +202,7 @@ describe("buildHttpAuditEntry", () => {
 				tenant: { tenantId: undefined, locationId: undefined },
 				apiKey: { apiKeyId: "key-1", tenantId: "org-pos", terminalId: "T-1", locationId: null },
 			}),
-			{ outcome: "FAILED", status: 409, errorCode: "CONFLICT", responseBody: { success: false } },
+			{ outcome: "FAILED", status: 409, errorCode: "CONFLICT", responseBody: { success: false }, cause: new Error("conflict") },
 			COMPLETED_AT,
 		);
 
@@ -210,7 +235,7 @@ describe("buildHttpAuditEntry", () => {
 		const entry = buildHttpAuditEntry(
 			request,
 			context({ principal: undefined }),
-			{ outcome: "FAILED", status: 401, errorCode: "UNAUTHORIZED", responseBody: null },
+			{ outcome: "FAILED", status: 401, errorCode: "UNAUTHORIZED", responseBody: null, cause: new Error("unauthorized") },
 			COMPLETED_AT,
 		);
 
@@ -230,7 +255,13 @@ describe("buildHttpAuditEntry", () => {
 
 	it("records the credential a user principal authenticated with", async () => {
 		const request = await captureFastifyRequest({ headers: {} });
-		const principal: Omit<RequestPrincipal, "authMethod"> = { userId: "user-1", impersonatorId: undefined, impersonationSessionId: undefined };
+		const principal: Omit<RequestPrincipal, "authMethod"> = {
+			userId: "user-1",
+			impersonatorId: undefined,
+			impersonationSessionId: undefined,
+			sessionId: undefined,
+			identity: { email: "user@example.com", fullName: "Test User" },
+		};
 
 		const bearer = buildHttpAuditEntry(
 			request,
@@ -302,5 +333,53 @@ describe("buildHttpAuditEntry", () => {
 
 		expect(entry.clientType).toHaveLength(32);
 		expect(entry.acceptLanguage).toHaveLength(256);
+	});
+});
+
+describe("auditRequestHeaders", () => {
+	it("keeps every header by lower-cased name, sorted, and joins repeated values", () => {
+		expect(auditRequestHeaders({ "x-tenant-id": "t-1", accept: "application/json", "x-forwarded-for": ["198.51.100.1", "10.0.0.2"] })).toEqual({
+			accept: "application/json",
+			"x-forwarded-for": "198.51.100.1, 10.0.0.2",
+			"x-tenant-id": "t-1",
+		});
+	});
+
+	it("never keeps a credential: Authorization and X-Api-Key are redacted, a cookie keeps its names only", () => {
+		expect(auditRequestHeaders({ authorization: "Bearer abc", "x-api-key": "sk_live", cookie: "admin_access_token=jwt; theme=dark" })).toEqual({
+			authorization: REDACTED,
+			cookie: `${REDACTED} (admin_access_token, theme)`,
+			"x-api-key": REDACTED,
+		});
+	});
+});
+
+describe("buildHttpAuditEntry — debugging detail", () => {
+	it("records the X-Tenant-Id / X-Location-Id the client claimed next to the tenant the API verified", async () => {
+		const request = await captureFastifyRequest({ headers: { "x-tenant-id": "org-1", "x-location-id": "loc-9" } });
+
+		const entry = buildHttpAuditEntry(request, context(), { outcome: "SUCCEEDED", status: 200, responseBody: undefined }, COMPLETED_AT);
+
+		expect(entry).toMatchObject({ tenantId: "org-1", claimedTenantId: "org-1", locationId: "loc-1", claimedLocationId: "loc-9" });
+	});
+
+	it("records the cause of a server fault with its stack, and of a refusal without one", async () => {
+		const request = await captureFastifyRequest({ headers: {} });
+		const fault = buildHttpAuditEntry(
+			request,
+			context(),
+			{ outcome: "FAILED", status: 500, errorCode: "INTERNAL_ERROR", responseBody: null, cause: new TypeError("x is undefined") },
+			COMPLETED_AT,
+		);
+		const refusal = buildHttpAuditEntry(
+			request,
+			context(),
+			{ outcome: "FAILED", status: 403, errorCode: "FORBIDDEN", responseBody: null, cause: new Error("Missing permission") },
+			COMPLETED_AT,
+		);
+
+		expect(fault.errorDetail).toMatchObject({ type: "TypeError", message: "x is undefined" });
+		expect(fault.errorDetail?.stack.length).toBeGreaterThan(0);
+		expect(refusal.errorDetail).toEqual({ type: "Error", message: "Missing permission", code: null, causes: [], stack: [] });
 	});
 });

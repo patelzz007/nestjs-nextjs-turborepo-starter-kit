@@ -127,7 +127,14 @@ function contextWith(overrides: Partial<RequestContext>): RequestContext {
 	};
 }
 
-const USER_1: RequestPrincipal = { userId: "user-1", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" };
+const USER_1: RequestPrincipal = {
+	userId: "user-1",
+	impersonatorId: undefined,
+	impersonationSessionId: undefined,
+	authMethod: "SESSION_COOKIE",
+	sessionId: undefined,
+	identity: { email: "user@example.com", fullName: "Test User" },
+};
 
 describe("buildIdempotencyScope", () => {
 	it("namespaces keys by principal, verified tenant, method and route template", () => {
@@ -136,7 +143,16 @@ describe("buildIdempotencyScope", () => {
 		expect(scope).toBe("http:user:user-1|org:org-a:loc:-|POST /api/v1/product");
 		expect(
 			buildIdempotencyScope(
-				contextWith({ principal: { userId: "user-2", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" } }),
+				contextWith({
+					principal: {
+						userId: "user-2",
+						impersonatorId: undefined,
+						impersonationSessionId: undefined,
+						authMethod: "SESSION_COOKIE",
+						sessionId: undefined,
+						identity: { email: "user@example.com", fullName: "Test User" },
+					},
+				}),
 				"POST",
 				"/api/v1/product",
 			),
@@ -153,7 +169,16 @@ describe("buildIdempotencyScope", () => {
 	it("separates an impersonated session from the user's own session", () => {
 		const own: string = buildIdempotencyScope(contextWith({ principal: USER_1 }), "POST", "/x");
 		const impersonated: string = buildIdempotencyScope(
-			contextWith({ principal: { userId: "user-1", impersonatorId: "admin-1", impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" } }),
+			contextWith({
+				principal: {
+					userId: "user-1",
+					impersonatorId: "admin-1",
+					impersonationSessionId: undefined,
+					authMethod: "SESSION_COOKIE",
+					sessionId: undefined,
+					identity: { email: "user@example.com", fullName: "Test User" },
+				},
+			}),
 			"POST",
 			"/x",
 		);

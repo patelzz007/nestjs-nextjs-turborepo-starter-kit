@@ -6,7 +6,7 @@ export interface QueueJobRetryOptions {
 	readonly removeOnFail: number;
 }
 
-type QueueJobFamily = "emailSend" | "maintenance" | "outboxPublish" | "storageDelete" | "storageScan" | "storageCdnInvalidate";
+type QueueJobFamily = "emailSend" | "maintenance" | "outboxPublish" | "storageDelete" | "storageScan" | "storageCdnInvalidate" | "transactionLogWrite";
 
 /** Default BullMQ retry settings per queue family. */
 export const QUEUE_JOB_OPTIONS: Readonly<Record<QueueJobFamily, QueueJobRetryOptions>> = {
@@ -47,5 +47,12 @@ export const QUEUE_JOB_OPTIONS: Readonly<Record<QueueJobFamily, QueueJobRetryOpt
 		backoff: { type: "exponential", delay: 5_000 },
 		removeOnComplete: 100,
 		removeOnFail: 500,
+	},
+	/** One append to the transaction log file: a full disk or a missing mount retries; a failed job stays in Bull Board to be replayed. */
+	transactionLogWrite: {
+		attempts: 5,
+		backoff: { type: "exponential", delay: 1_000 },
+		removeOnComplete: 100,
+		removeOnFail: 1_000,
 	},
 };

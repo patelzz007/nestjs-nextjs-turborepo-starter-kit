@@ -3,7 +3,7 @@ title: "ADR 025: One Global, Append-Only HTTP Audit Log"
 tags: ["adr", "security", "audit", "rls", "nestjs"]
 description: "Every HTTP request — reads included — produces exactly one complete, redacted, append-only audit row — written by a global interceptor (success) and the global exception filter (failure), or inside the handler's own transaction."
 author: "Backend Team"
-lastUpdated: 1791936000000
+lastUpdated: 1792972800000
 coverImage: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=1200&h=630&fit=crop"
 order: 25
 ---
@@ -60,6 +60,28 @@ left no record, and failed or guard-rejected attempts left none at all.
   `Idempotency-Key`. Header values are bounded to their columns and stored as sent: they describe
   what the client claimed, which is itself evidence. Rows written before these columns existed
   keep NULL there.
+- **Debugging detail (added 2026-10-26).** An error code alone (`INTERNAL_ERROR`) does not say
+  what went wrong, and a user id alone does not say which sign-in or tenant the caller was in.
+  Each row now also records:
+  - `errorDetail` (JSON, failures only): what was thrown, as the server saw it. The exception's
+    class, its own message, the machine code it carried (`P2025`, `ECONNREFUSED`), up to 5 `cause`
+    links and, for a 5xx or a system command, the first 12 stack frames (paths relative to the
+    working directory, Node internals dropped). URL credentials are redacted and e-mail addresses
+    masked. It is never sent to the caller. Built by `audit/audit-error-detail.ts` from the
+    exception the global filter caught, or the error a system command threw
+    (`SystemCommandAuditEntry.error`).
+  - `sessionId`: the device session (refresh-token row id, ADR 034) the credential belongs to, so
+    every request of one sign-in can be found (`(sessionId, occurredAt)` index).
+  - `claimedTenantId` / `claimedLocationId`: the `X-Tenant-Id` / `X-Location-Id` headers as sent.
+    They are claims, stored next to the verified `tenantId` / `locationId` the way `clientType`
+    is: they still select, authorize and scope nothing, and a mismatch is itself evidence.
+  - `requestHeaders` (JSON): every header, lower-cased and sorted, bounded (64 headers, 1 KiB a
+    value). `Authorization`, `X-Api-Key` and every other secret-named header read `[REDACTED]`; a
+    `Cookie` header keeps the cookie names only.
+
+  The viewer shows the reason above the record ("Why it failed"), the device session, each
+  claimed header against the verified value, and the full header list. Rows written before these
+  columns existed keep NULL there and say "not recorded".
 - **Auditing every request (added 2026-10-06).** Reads are audited exactly like writes: a GET
   gets one SUCCEEDED row with the (redacted, 16 KiB-capped) response it released, and a refused
   or unmatched read (401, 403, 404, 429 …) gets a FAILED row. Two exemptions, both deliberate:
@@ -119,6 +141,8 @@ left no record, and failed or guard-rejected attempts left none at all.
   rows, and `app_runtime` cannot. A product with a legal maximum retention period must record its
   own ADR and add an archival/purge job running as a dedicated system operation; until then the
   table grows with traffic — partition or archive it before it hurts.
+- **A plain-text copy.** Every row is also appended to a `.txt` file per UTC day, off the request
+  path ([ADR 064](./064-plain-text-transaction-log.md)). The table stays the record of truth.
 
 ## References
 

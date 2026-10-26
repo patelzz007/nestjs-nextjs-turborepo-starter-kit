@@ -136,6 +136,7 @@ describe("SystemCommandDispatcher", () => {
 			correlationId: CORRELATION_ID,
 			outcome: "success",
 			errorCode: null,
+			error: null,
 			durationMs: 250,
 			occurredAt: FINISHED_AT,
 			input: {
@@ -154,6 +155,7 @@ describe("SystemCommandDispatcher", () => {
 		expect(audit.entries).toHaveLength(1);
 		expect(audit.entries[LIST_SLOT_INDEX.first]?.outcome).toBe("failure");
 		expect(audit.entries[LIST_SLOT_INDEX.first]?.errorCode).toBe("PERMISSION_DENIED");
+		expect(audit.entries[LIST_SLOT_INDEX.first]?.error).toBe(denied);
 		expect(audit.entries[LIST_SLOT_INDEX.first]?.actorUserId).toBeNull();
 	});
 
@@ -164,6 +166,8 @@ describe("SystemCommandDispatcher", () => {
 		await expect(dispatcher.dispatch(new ResetPasswordCommand("s3cret", systemActor("outbox.enqueue", "cron", null, "Tick", null)), ORIGIN)).rejects.toBe(crash);
 
 		expect(audit.entries[LIST_SLOT_INDEX.first]?.errorCode).toBe("INTERNAL_ERROR");
+		// The code says only "internal error"; the thrown error itself goes to the audit adapter, which records why.
+		expect(audit.entries[LIST_SLOT_INDEX.first]?.error).toBe(crash);
 	});
 
 	it("returns a committed command's result and raises an alert when the audit write fails, so the queue does not retry it", async () => {

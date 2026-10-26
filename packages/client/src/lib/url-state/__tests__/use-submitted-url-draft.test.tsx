@@ -45,4 +45,18 @@ describe("useSubmittedUrlDraft", () => {
 		rerender({ value: undefined });
 		expect(result.current[LIST_SLOT_INDEX.first]).toBe("");
 	});
+
+	it("resets to the URL value on Back / Forward even when that value did not change (a Back before the submit was committed)", () => {
+		const { result, rerender } = setup(undefined);
+		act((): void => {
+			result.current[LIST_SLOT_INDEX.second]("coffee");
+		});
+
+		act((): void => {
+			window.dispatchEvent(new PopStateEvent("popstate"));
+		});
+		rerender({ value: undefined });
+
+		expect(result.current[LIST_SLOT_INDEX.first]).toBe("");
+	});
 });

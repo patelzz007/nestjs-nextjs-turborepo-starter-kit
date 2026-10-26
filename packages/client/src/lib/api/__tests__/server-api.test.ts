@@ -193,6 +193,20 @@ describe("createServerCallerForRouter", () => {
 		expect(headers["x-forwarded-for"]).toBe("203.0.113.7");
 	});
 
+	it("adds the caller's scope headers (the merchant console's X-Tenant-Id / X-Location-Id), which cannot replace the cookie or the client type", async () => {
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(OK_BODY));
+		const requestHeaders = { "X-Tenant-Id": "tenant-1", "X-Location-Id": "location-1", "X-Client-Type": "web", Cookie: "forged=1" };
+		const server = createServerCallerForRouter({ stats: endpoint }, createServerRequestContext(testConfig({ fetchImpl: fetchMock, requestHeaders })));
+
+		await server.stats.query({});
+
+		const headers = headersOf(fetchMock.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second] ?? {});
+		expect(headers["X-Tenant-Id"]).toBe("tenant-1");
+		expect(headers["X-Location-Id"]).toBe("location-1");
+		expect(headers["X-Client-Type"]).toBe("admin");
+		expect(headers.Cookie).toBe("adminAccessToken=access-token");
+	});
+
 	it("rejects a prefetched body that violates the response contract with a typed error", async () => {
 		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse({ ...OK_BODY, data: { ok: "no" } }));
 		const server = createServerCallerForRouter({ stats: endpoint }, createServerRequestContext(testConfig({ fetchImpl: fetchMock })));

@@ -11,6 +11,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
 import { AuditLogRepository } from "../../audit/audit-log.repository";
 import { AuditTrailService } from "../../audit/audit-trail.service";
+import { DisabledTransactionLog } from "../../transaction-log/transaction-log.port";
 import { RequestContextService } from "../../context/request-context";
 import { GlobalExceptionFilter } from "../../../presentation/http/errors/global-exception.filter";
 import { readFirstHeader } from "../../utils/http-headers";
@@ -339,7 +340,14 @@ class FakeAuthGuard implements CanActivate {
 			requestContext.bindApiKey({ apiKeyId, tenantId: tenantId ?? "org-pos", terminalId: "T-1", locationId: null });
 			return true;
 		}
-		requestContext.bindPrincipal({ userId: "user-1", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
+		requestContext.bindPrincipal({
+			userId: "user-1",
+			impersonatorId: undefined,
+			impersonationSessionId: undefined,
+			authMethod: "SESSION_COOKIE",
+			sessionId: undefined,
+			identity: { email: "user@example.com", fullName: "Test User" },
+		});
 		requestContext.bindTenant({ tenantId });
 		return true;
 	}
@@ -377,7 +385,11 @@ describe("@Idempotent() over HTTP (global interceptor)", () => {
 		const moduleRef = await Test.createTestingModule({ imports: [ThingsModule] }).compile();
 		app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
 		const config = createTestTypedConfig();
-		const auditTrail = new AuditTrailService(new AuditLogRepository(new TenantTransactionService(new PrismaService(config), requestContext)), requestContext);
+		const auditTrail = new AuditTrailService(
+			new AuditLogRepository(new TenantTransactionService(new PrismaService(config), requestContext)),
+			requestContext,
+			new DisabledTransactionLog(),
+		);
 		vi.spyOn(auditTrail, "recordFailure").mockResolvedValue();
 		app.useGlobalFilters(new GlobalExceptionFilter(app.get(HttpAdapterHost), new LogService(requestContext), requestContext, auditTrail, config));
 		app.useGlobalInterceptors(interceptor);

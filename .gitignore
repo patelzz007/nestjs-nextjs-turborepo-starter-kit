@@ -65,3 +65,8 @@ playwright-report/
 
 # Server logs written by the CI browser e2e job / pnpm ci:local
 .ci-logs/
+
+# The API's plain-text transaction log (TRANSACTION_LOG_DIR, default <repo>/logs/transactions)
+/logs/
+# Where it was written before 2026-10-26 (relative to apps/api)
+apps/api/logs/

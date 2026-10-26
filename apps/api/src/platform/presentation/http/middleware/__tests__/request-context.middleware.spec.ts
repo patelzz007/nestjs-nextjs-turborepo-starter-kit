@@ -23,7 +23,14 @@ class ContextProbeGuard implements CanActivate {
 	public async canActivate(): Promise<boolean> {
 		await Promise.resolve();
 		observed.guard = requestContext.current();
-		requestContext.bindPrincipal({ userId: "user-guard", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
+		requestContext.bindPrincipal({
+			userId: "user-guard",
+			impersonatorId: undefined,
+			impersonationSessionId: undefined,
+			authMethod: "SESSION_COOKIE",
+			sessionId: undefined,
+			identity: { email: "user@example.com", fullName: "Test User" },
+		});
 		return true;
 	}
 }
@@ -85,7 +92,14 @@ describe("RequestContextMiddleware (Fastify integration)", () => {
 		expect(response.json()).toEqual({ correlationId: "corr-mw-1" });
 		expect(response.headers["x-correlation-id"]).toBe("corr-mw-1");
 		expect(observed.guard).toMatchObject({ correlationId: "corr-mw-1", traceId: "corr-mw-1", userAgent: "probe-agent", principal: undefined });
-		expect(observed.handler?.principal).toEqual({ userId: "user-guard", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
+		expect(observed.handler?.principal).toEqual({
+			userId: "user-guard",
+			impersonatorId: undefined,
+			impersonationSessionId: undefined,
+			authMethod: "SESSION_COOKIE",
+			sessionId: undefined,
+			identity: { email: "user@example.com", fullName: "Test User" },
+		});
 	});
 
 	it("keeps the context across body parsing (POST with a JSON body)", async () => {

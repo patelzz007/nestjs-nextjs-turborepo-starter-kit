@@ -3,7 +3,7 @@ title: "ADR 023: Client State as NgRx-Style Zustand Feature Stores"
 tags: ["adr", "frontend", "state", "zustand", "tanstack-query", "nextjs"]
 description: "Shared browser state lives in per-feature Zustand stores built like NgRx — named actions, a pure reducer, effects, selectors and a facade — created per provider mount, never at module scope; server data stays in TanStack Query and shareable state in the URL."
 author: "Platform Team"
-lastUpdated: 1790899200000
+lastUpdated: 1792972800000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 order: 23
 ---
@@ -177,6 +177,11 @@ React.
     `browser-history-probe.ts`) proves in a real browser that writes are client-side
     `pushState`/`replaceState` and that Back/Forward restore the view without a reload
     ([List queries §7](../technical/api/list-queries.md#which-pages-keep-their-state-in-the-url)).
+    Both search drafts (`useSubmittedUrlDraft`, `useUrlDraft`) also reset on every Back /
+    Forward (`useHistoryTraversalCount`), not only when the URL value changes. A write reaches
+    the router as a transition, and a Back pressed before React commits it is rendered together
+    with it, so the written value is never committed and the committed value does not change:
+    the box kept the submitted text while the URL and the results showed the old search.
 
 ## Alternatives considered
 

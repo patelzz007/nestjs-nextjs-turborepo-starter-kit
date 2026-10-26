@@ -96,7 +96,15 @@ export class RefreshTokenGuard implements CanActivate {
 			});
 		}
 		request.user = payload;
-		this.requestContext.bindPrincipal({ userId: payload.sub, impersonatorId: undefined, impersonationSessionId: undefined, authMethod: refreshTokenAuthMethod(request) });
+		this.requestContext.bindPrincipal({
+			userId: payload.sub,
+			impersonatorId: undefined,
+			impersonationSessionId: undefined,
+			authMethod: refreshTokenAuthMethod(request),
+			// The refresh token's `jti` is its session (refresh-token row) id (ADR 034).
+			sessionId: payload.jti,
+			identity: { email: payload.email, fullName: undefined },
+		});
 		return true;
 	}
 }

@@ -42,6 +42,7 @@ export {
 	type SessionsConfig,
 	type StorageConfig,
 	type TenancyConfig,
+	type TransactionLogConfig,
 } from "./api-config/api-config.types";
 export { resolveApiDocsPolicy, resolveCacheBackend, resolveLogLevel, resolveRedisNamespace, resolveStorageProvider } from "./api-config/api-config.derivations";
 export { checkApiEnvRules, isLoopbackUrl } from "./api-config/api-env.rules";

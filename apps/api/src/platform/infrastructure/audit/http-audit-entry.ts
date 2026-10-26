@@ -8,13 +8,22 @@
 
 import { HttpStatus } from "@nestjs/common";
 import {
+	AUDIT_REQUEST_HEADER_NAME_MAX_LENGTH,
+	AUDIT_REQUEST_HEADER_VALUE_MAX_LENGTH,
+	AUDIT_REQUEST_HEADERS_MAX_COUNT,
+	AUDIT_TRUNCATION_MARK,
 	CLIENT_TYPE_HEADER,
 	IDEMPOTENCY_KEY_HEADER,
+	LOCATION_ID_HEADER,
+	TENANT_ID_HEADER,
 	isArrayValue,
 	isJsonPrimitive,
 	JsonValueSchema,
 	type AuditAuthMethod,
+	type AuditErrorDetail,
 	type AuditOutcome,
+	type AuditRequestHeaders,
+	type CaughtValue,
 	type DeviceType,
 	type IpAddressScope,
 	type JsonValue,
@@ -26,7 +35,8 @@ import type { RequestContext } from "../context/request-context";
 import { classifyIpAddress, type IpClassification, type IpVersion } from "../http/ip-classification";
 import { UNAUDITED_PROBE_ROUTES } from "../http/probe-routes";
 import { parseUserAgent, type ParsedUserAgent } from "../http/user-agent";
-import { redactSecrets, redactUrl } from "../nest-logging/redaction";
+import { isSensitiveFieldName, REDACTED, redactSecrets, redactUrl } from "../nest-logging/redaction";
+import { auditErrorDetail } from "./audit-error-detail";
 import { AUDIT_PAYLOAD_MAX_BYTES, isEmailField, isPersonalDataField, PII_MASK } from "./audit-data-policy";
 import { readFirstHeader } from "../utils/http-headers";
 import { parsePreSerializationValue, serializePreSerializationValue, type PreSerializationPayload } from "../utils/serialize-pre-serialization-value";
@@ -46,6 +56,13 @@ const AUDIT_HOST_MAX_LENGTH = 255;
 const AUDIT_ORIGIN_MAX_LENGTH = 512;
 const AUDIT_HEADER_MAX_LENGTH = 256;
 const AUDIT_IDEMPOTENCY_KEY_MAX_LENGTH = 255;
+const AUDIT_ID_MAX_LENGTH = 64;
+
+/** Lowest status of a server fault — the failures whose stack is kept. */
+const SERVER_ERROR_MIN_STATUS = 500;
+
+/** The one header whose value is replaced by the names it carries: which cookies came, never what they hold. */
+const COOKIE_HEADER = "cookie";
 
 /** Largest value of a PostgreSQL INTEGER column. */
 const POSTGRES_INTEGER_MAX = 2_147_483_647;
@@ -74,11 +91,17 @@ export interface HttpAuditEntry {
 	readonly impersonatorUserId: string | null;
 	readonly impersonationSessionId: string | null;
 	readonly supportAccessGrantId: string | null;
+	/** The device session (sign-in) the credential belongs to. */
+	readonly sessionId: string | null;
 	readonly authMethod: AuditAuthMethod | null;
 	readonly apiKeyId: string | null;
 	readonly terminalId: string | null;
 	readonly tenantId: string | null;
 	readonly locationId: string | null;
+	/** `X-Tenant-Id` as the client sent it (unverified; `tenantId` is the verified one). */
+	readonly claimedTenantId: string | null;
+	/** `X-Location-Id` as the client sent it (unverified; `locationId` is the verified one). */
+	readonly claimedLocationId: string | null;
 	readonly ipAddress: string | null;
 	readonly userAgent: string | null;
 	readonly browserName: string | null;
@@ -102,16 +125,31 @@ export interface HttpAuditEntry {
 	readonly requestContentType: string | null;
 	readonly requestBytes: number | null;
 	readonly idempotencyKey: string | null;
+	readonly requestHeaders: AuditRequestHeaders | null;
 	readonly requestParams: JsonValue | null;
 	readonly requestBody: JsonValue | null;
 	readonly responseBody: JsonValue | null;
+	/** Why it failed, as the server saw it; `null` for a success. */
+	readonly errorDetail: AuditErrorDetail | null;
 	readonly systemOperations: readonly string[];
+	/**
+	 * NOT a column: who the actor's credential said they were when the request
+	 * ran. The plain-text transaction log prints it so a reader sees a person;
+	 * the table keeps the id only, and its viewer resolves the current name.
+	 */
+	readonly actorIdentity: AuditActorIdentity | null;
+}
+
+/** The actor as their credential named them (no name on a refresh token). */
+export interface AuditActorIdentity {
+	readonly email: string;
+	readonly fullName: string | null;
 }
 
 /** How the request ended, as far as the audit row is concerned. */
 export type HttpAuditOutcome =
 	| { readonly outcome: "SUCCEEDED"; readonly status: number; readonly responseBody: PreSerializationPayload }
-	| { readonly outcome: "FAILED"; readonly status: number; readonly errorCode: string; readonly responseBody: JsonValue };
+	| { readonly outcome: "FAILED"; readonly status: number; readonly errorCode: string; readonly responseBody: JsonValue; readonly cause: CaughtValue };
 
 /**
  * True for every route whose requests must produce an audit row: ALL of them —
@@ -213,6 +251,49 @@ function header(request: FastifyRequest, name: string, maxLength: number): strin
 	return bounded(readFirstHeader(request.headers[name.toLowerCase()]), maxLength);
 }
 
+/** One header value or its repeats, as a list. */
+const HeaderValuesSchema = z.union([z.string().transform((value: string): string[] => [value]), z.array(z.string())]);
+
+/** `value` cut to `maxLength`, ending with the truncation mark when it was cut. */
+function cut(value: string, maxLength: number): string {
+	return value.length <= maxLength ? value : `${value.slice(0, maxLength - AUDIT_TRUNCATION_MARK.length)}${AUDIT_TRUNCATION_MARK}`;
+}
+
+/** `a=1; b=2` → `[REDACTED] (a, b)`: which cookies were sent, never their values. */
+function cookieNames(value: string): string {
+	const names: string[] = value
+		.split(";")
+		.map((pair: string): string => {
+			const [name = ""] = pair.split("=", 1);
+			return name.trim();
+		})
+		.filter((name: string): boolean => name.length > 0);
+	return names.length === 0 ? REDACTED : `${REDACTED} (${names.join(", ")})`;
+}
+
+/**
+ * Every request header, as sent: names lower-cased and sorted, repeated values
+ * joined with `, `, bounded to the shared contract. Credentials are
+ * `[REDACTED]` (`Authorization`, `X-Api-Key`, anything the secret-field list
+ * names); `Cookie` keeps the cookie names only.
+ */
+export function auditRequestHeaders(headers: FastifyRequest["headers"]): AuditRequestHeaders {
+	const names: string[] = Object.keys(headers)
+		.map((name: string): string => name.toLowerCase())
+		.toSorted((left: string, right: string): number => left.localeCompare(right))
+		.slice(0, AUDIT_REQUEST_HEADERS_MAX_COUNT);
+	const entries: [string, string][] = names.flatMap((name: string): [string, string][] => {
+		const raw = headers[name];
+		if (raw === undefined) {
+			return [];
+		}
+		const value: string = HeaderValuesSchema.parse(raw).join(", ");
+		const stored: string = name === COOKIE_HEADER ? cookieNames(value) : isSensitiveFieldName(name) ? REDACTED : value;
+		return [[cut(name, AUDIT_REQUEST_HEADER_NAME_MAX_LENGTH), cut(stored, AUDIT_REQUEST_HEADER_VALUE_MAX_LENGTH)]];
+	});
+	return Object.fromEntries(entries);
+}
+
 /** The declared body size, or `null` when the header is absent or not a valid byte count. */
 function requestBytes(request: FastifyRequest): number | null {
 	const parsed = ContentLengthSchema.safeParse(readFirstHeader(request.headers["content-length"]));
@@ -261,6 +342,12 @@ function refererOf(request: FastifyRequest): string | null {
 	return referer === undefined ? null : redactUrl(referer).slice(0, AUDIT_PATH_MAX_LENGTH);
 }
 
+/** The actor's identity as their credential carried it; `null` without a user principal. */
+function identityOf(context: RequestContext): AuditActorIdentity | null {
+	const identity = context.principal?.identity;
+	return identity === undefined ? null : { email: identity.email, fullName: identity.fullName ?? null };
+}
+
 /**
  * Build the complete audit row. Actor, impersonator, API key and tenant are
  * read from the request context, so they are exactly what authentication and
@@ -285,11 +372,14 @@ export function buildHttpAuditEntry(request: FastifyRequest, context: RequestCon
 		impersonatorUserId: context.principal?.impersonatorId ?? null,
 		impersonationSessionId: context.principal?.impersonationSessionId ?? null,
 		supportAccessGrantId: context.supportAccessGrantId ?? null,
+		sessionId: bounded(context.principal?.sessionId, AUDIT_ID_MAX_LENGTH),
 		authMethod: authMethodOf(context),
 		apiKeyId: context.apiKey?.apiKeyId ?? null,
 		terminalId: context.apiKey?.terminalId ?? null,
 		tenantId: context.tenant.tenantId ?? context.apiKey?.tenantId ?? null,
 		locationId: context.tenant.locationId ?? null,
+		claimedTenantId: header(request, TENANT_ID_HEADER, AUDIT_ID_MAX_LENGTH),
+		claimedLocationId: header(request, LOCATION_ID_HEADER, AUDIT_ID_MAX_LENGTH),
 		ipAddress,
 		userAgent,
 		...auditDeviceFields(userAgent),
@@ -304,9 +394,13 @@ export function buildHttpAuditEntry(request: FastifyRequest, context: RequestCon
 		requestContentType: header(request, "content-type", AUDIT_HEADER_MAX_LENGTH),
 		requestBytes: requestBytes(request),
 		idempotencyKey: header(request, IDEMPOTENCY_KEY_HEADER, AUDIT_IDEMPOTENCY_KEY_MAX_LENGTH),
+		requestHeaders: auditRequestHeaders(request.headers),
 		requestParams: requestParamsPayload(request),
 		requestBody: requestBodyPayload(request),
 		responseBody,
+		errorDetail:
+			outcome.outcome === "FAILED" ? auditErrorDetail(outcome.cause, { withStack: outcome.status >= SERVER_ERROR_MIN_STATUS, workingDirectory: process.cwd() }) : null,
 		systemOperations: [...context.systemOperations],
+		actorIdentity: identityOf(context),
 	};
 }

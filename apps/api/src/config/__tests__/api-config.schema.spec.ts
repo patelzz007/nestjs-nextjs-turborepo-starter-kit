@@ -77,6 +77,27 @@ describe("API env schema", () => {
 		expect(config.email.mode).toBe("noop");
 	});
 
+	describe("transaction log", () => {
+		it("is off under tests and on everywhere else, in logs/transactions for 30 days", () => {
+			expect(parse().observability.transactionLog).toBeNull();
+			expect(parse({ NODE_ENV: "development" }).observability.transactionLog).toEqual({ directory: "logs/transactions", retentionDays: 30 });
+			expect(parse(PRODUCTION).observability.transactionLog).toEqual({ directory: "logs/transactions", retentionDays: 30 });
+		});
+
+		it("follows TRANSACTION_LOG_ENABLED, TRANSACTION_LOG_DIR and TRANSACTION_LOG_RETENTION_DAYS when set", () => {
+			expect(parse({ TRANSACTION_LOG_ENABLED: "true", TRANSACTION_LOG_DIR: "/var/log/api", TRANSACTION_LOG_RETENTION_DAYS: "90" }).observability.transactionLog).toEqual({
+				directory: "/var/log/api",
+				retentionDays: 90,
+			});
+			expect(parse({ NODE_ENV: "development", TRANSACTION_LOG_ENABLED: "false" }).observability.transactionLog).toBeNull();
+		});
+
+		it("rejects a retention under one day, and reads a blank folder as unset", () => {
+			expect(captureEnvError({ TRANSACTION_LOG_RETENTION_DAYS: "0" }).variables).toEqual(["TRANSACTION_LOG_RETENTION_DAYS"]);
+			expect(parse({ TRANSACTION_LOG_ENABLED: "true", TRANSACTION_LOG_DIR: " " }).observability.transactionLog).toEqual({ directory: "logs/transactions", retentionDays: 30 });
+		});
+	});
+
 	it("applies the documented defaults for optional tuning variables", () => {
 		const config = parse();
 
@@ -88,6 +109,7 @@ describe("API env schema", () => {
 			logLevel: "warn",
 			memoryMonitoring: false,
 			memoryLeakDetection: { warmupMs: 300_000, windowMs: 1_800_000, growthThresholdMb: 64 },
+			transactionLog: null,
 			observe: null,
 		});
 		expect(config.tenancy).toEqual({ mode: "single", defaultTenantId: SINGLE_TENANT_SEED_TENANT_ID });

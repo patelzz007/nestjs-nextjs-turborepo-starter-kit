@@ -3,7 +3,7 @@ title: "Observability: logs, health and audit"
 description: "Correlation ids, the log level, structured logging, health probes (live, ready, deep), memory leak detection, NestJS Observe and the HTTP audit log."
 order: 52
 author: "Platform Team"
-lastUpdated: 1791244800000
+lastUpdated: 1792972800000
 coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=630&fit=crop"
 tags: ["operations", "logging", "health", "observability"]
 ---
@@ -116,6 +116,10 @@ Read it in the admin panel under **Platform → Audit log** (`/audit-logs`), or 
 (`READ:AUDIT_LOG`, payloads included). `GET /api/v1/admin/audit` is a different, narrower trail:
 the RBAC change log (`PermissionAuditLog`). To follow one request across both trails, the
 logs and the domain audit tables, filter by its correlation id.
+
+Every audit row is also appended, readable and redacted the same way, to a plain-text file per UTC
+day (`apps/api/logs/transactions/transactions-YYYY-MM-DD.txt`), written through BullMQ off the
+request path: see [Transaction log (.txt)](transaction-log.md).
 
 ## Queues
 

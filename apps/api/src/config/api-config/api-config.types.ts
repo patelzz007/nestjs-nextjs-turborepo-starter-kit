@@ -234,10 +234,20 @@ export interface MemoryLeakDetectionConfig {
 	readonly growthThresholdMb: number;
 }
 
+/** The plain-text transaction log (`TransactionLogModule`): one entry per audit row, in a file per UTC day. */
+export interface TransactionLogConfig {
+	/** Folder of the day files; a relative path is resolved against the API's working directory. */
+	readonly directory: string;
+	/** Day files older than this many days are deleted. */
+	readonly retentionDays: number;
+}
+
 export interface ObservabilityConfig {
 	readonly logLevel: LogLevel;
 	readonly memoryMonitoring: boolean;
 	readonly memoryLeakDetection: MemoryLeakDetectionConfig;
+	/** `null` when the transaction log is off. */
+	readonly transactionLog: TransactionLogConfig | null;
 	/** `null` when NestJS Observe is off. */
 	readonly observe: ObserveConfig | null;
 }

@@ -84,6 +84,8 @@ describe("AuthGuard → request context", () => {
 			impersonatorId: undefined,
 			impersonationSessionId: undefined,
 			authMethod: "BEARER_TOKEN",
+			sessionId: "session-1",
+			identity: { email: "user@example.com", fullName: "Test User" },
 		});
 	});
 
@@ -101,6 +103,8 @@ describe("AuthGuard → request context", () => {
 			impersonatorId: "admin-1",
 			impersonationSessionId: "session-1",
 			authMethod: "BEARER_TOKEN",
+			sessionId: "session-1",
+			identity: { email: "user@example.com", fullName: "Test User" },
 		});
 	});
 
@@ -113,6 +117,8 @@ describe("AuthGuard → request context", () => {
 			impersonatorId: undefined,
 			impersonationSessionId: undefined,
 			authMethod: "SESSION_COOKIE",
+			sessionId: "session-1",
+			identity: { email: "user@example.com", fullName: "Test User" },
 		});
 	});
 
@@ -125,6 +131,8 @@ describe("AuthGuard → request context", () => {
 			impersonatorId: undefined,
 			impersonationSessionId: undefined,
 			authMethod: "SESSION_COOKIE",
+			sessionId: "session-1",
+			identity: { email: "user@example.com", fullName: "Test User" },
 		});
 	});
 
@@ -137,6 +145,8 @@ describe("AuthGuard → request context", () => {
 			impersonatorId: undefined,
 			impersonationSessionId: undefined,
 			authMethod: "BEARER_TOKEN",
+			sessionId: "session-1",
+			identity: { email: "user@example.com", fullName: "Test User" },
 		});
 	});
 
@@ -233,6 +243,8 @@ describe("RefreshTokenGuard → request context", () => {
 			impersonatorId: undefined,
 			impersonationSessionId: undefined,
 			authMethod: "REFRESH_COOKIE",
+			sessionId: "jti-1",
+			identity: { email: "u@example.com", fullName: undefined },
 		});
 	});
 
@@ -245,6 +257,8 @@ describe("RefreshTokenGuard → request context", () => {
 			impersonatorId: undefined,
 			impersonationSessionId: undefined,
 			authMethod: "REFRESH_BODY",
+			sessionId: "jti-1",
+			identity: { email: "u@example.com", fullName: undefined },
 		});
 	});
 });

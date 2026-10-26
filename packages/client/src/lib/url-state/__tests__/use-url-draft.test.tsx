@@ -114,4 +114,27 @@ describe("useUrlDraft", () => {
 		rerender({ value: "bob" });
 		expect(result.current[LIST_SLOT_INDEX.first]).toBe("bob");
 	});
+
+	it("drops the draft and its pending commit on Back / Forward, even when the URL value did not change", () => {
+		const { result, onCommit, rerender } = setup("");
+		act((): void => {
+			result.current[LIST_SLOT_INDEX.second]("jane");
+		});
+		act((): void => {
+			vi.advanceTimersByTime(DELAY_MS);
+		});
+		expect(onCommit).toHaveBeenCalledWith("jane");
+
+		// Back lands before the router committed "jane": the value React shows is still "".
+		act((): void => {
+			window.dispatchEvent(new PopStateEvent("popstate"));
+		});
+		rerender({ value: "" });
+		expect(result.current[LIST_SLOT_INDEX.first]).toBe("");
+
+		act((): void => {
+			vi.advanceTimersByTime(DELAY_MS * 2);
+		});
+		expect(onCommit).toHaveBeenCalledTimes(1);
+	});
 });

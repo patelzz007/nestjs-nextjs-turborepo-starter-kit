@@ -4,7 +4,7 @@ tags: ["authorization", "multi-tenancy", "locations", "rls", "postgres", "prisma
 description: "Tenants, stores, locations and memberships; how client tenant ids are verified; how PostgreSQL RLS knows who is asking; system operations; the two Prisma clients; and applying RLS safely."
 order: 22
 author: "Platform Team"
-lastUpdated: 1790812800000
+lastUpdated: 1792972800000
 coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -65,7 +65,7 @@ reads the location (route, query or body) and asks `TenantMembershipService.veri
 
 ### `X-Tenant-Id` and `X-Location-Id`: information only
 
-The merchant console sends `X-Tenant-Id` (the open tenant) and `X-Location-Id` (the chosen store; absent for "All locations") on every call, and the mobile till sends its tenant and store with every POS call. **The API reads neither**: they select, narrow, authorize and audit nothing, so a forged value changes nothing (a key's call with another store's id answers exactly as without it). What they should do is still to be decided. Until then, a location filter is the `locationId` route, query or body field, verified as above. Both headers are allowed by CORS (`src/bootstrap/cors-options.ts`) so the browser does not refuse the merchant console's requests.
+The merchant console sends `X-Tenant-Id` (the open tenant) and `X-Location-Id` (the chosen store; absent for "All locations") on every call, from the browser and from its server-rendered pages alike (`loadTenantServerCaller`), and the mobile till sends its tenant and store with every POS call. **The API decides nothing from them**: they select, narrow and authorize nothing, so a forged value changes nothing (a key's call with another store's id answers exactly as without it). The audit trail records them as claims (`claimedTenantId`, `claimedLocationId`, next to the verified `tenantId` and `locationId`), so an investigator sees which tenant the client thought it was in and spots a mismatch. What else they should do is still to be decided. Until then, a location filter is the `locationId` route, query or body field, verified as above. Both headers are allowed by CORS (`src/bootstrap/cors-options.ts`) so the browser does not refuse the merchant console's requests.
 
 What happens next:
 

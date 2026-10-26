@@ -2588,6 +2588,8 @@ Includes the redacted request params, request body and response body.
 | `data.authMethod` | "BEARER_TOKEN" \| "SESSION_COOKIE" \| "REFRESH_COOKIE" \| "REFRESH_BODY" \| "API_KEY" \| null | yes |  |
 | `data.browserName` | string \| null | yes | at most 64 characters |
 | `data.browserVersion` | string \| null | yes | at most 32 characters |
+| `data.claimedLocationId` | string \| null | yes | at most 64 characters |
+| `data.claimedTenantId` | string \| null | yes | at most 64 characters |
 | `data.clientType` | string \| null | yes | at most 32 characters |
 | `data.completedAt` | integer | yes |  |
 | `data.correlationId` | string | yes | length 1–64 |
@@ -2597,6 +2599,15 @@ Includes the redacted request params, request body and response body.
 | `data.durationMs` | integer | yes |  |
 | `data.endpoint` | string | yes | length 1–512 |
 | `data.errorCode` | string \| null | yes | at most 64 characters |
+| `data.errorDetail` | object \| null | yes |  |
+| `data.errorDetail.causes` | object[] | yes | 0–5 items |
+| `data.errorDetail.causes[].code` | string \| null | yes | length 1–64 |
+| `data.errorDetail.causes[].message` | string | yes | at most 2048 characters |
+| `data.errorDetail.causes[].type` | string | yes | length 1–128 |
+| `data.errorDetail.code` | string \| null | yes | length 1–64 |
+| `data.errorDetail.message` | string | yes | at most 2048 characters |
+| `data.errorDetail.stack` | string[] | yes | 0–12 items |
+| `data.errorDetail.type` | string | yes | length 1–128 |
 | `data.geoCity` | string \| null | yes | at most 128 characters |
 | `data.geoCountry` | string \| null | yes | exactly 2 characters |
 | `data.geoRegion` | string \| null | yes | at most 64 characters |
@@ -2625,9 +2636,11 @@ Includes the redacted request params, request body and response body.
 | `data.requestBody` | any JSON \| null | yes |  |
 | `data.requestBytes` | integer \| null | yes |  |
 | `data.requestContentType` | string \| null | yes | at most 256 characters |
+| `data.requestHeaders` | object \| null | yes |  |
 | `data.requestParams` | any JSON \| null | yes |  |
 | `data.responseBody` | any JSON \| null | yes |  |
 | `data.responseStatus` | integer | yes | range 100–599 |
+| `data.sessionId` | string \| null | yes | length 1–64 |
 | `data.supportAccessGrantId` | string \| null | yes | length 1–64 |
 | `data.systemOperations` | string[] | yes |  |
 | `data.tenant` | object \| null | yes |  |

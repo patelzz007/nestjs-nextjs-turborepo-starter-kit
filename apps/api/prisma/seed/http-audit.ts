@@ -1,8 +1,24 @@
 import type { IdempotencyRecordStatus } from "@prisma/client";
-import { API_VERSION_PREFIX, apiRoutes } from "@workspace/shared";
+import {
+	API_VERSION_PREFIX,
+	apiRoutes,
+	CLIENT_TYPE_HEADER,
+	IDEMPOTENCY_KEY_HEADER,
+	LOCATION_ID_HEADER,
+	TENANT_ID_HEADER,
+	type AuditErrorDetail,
+	type AuditRequestHeaders,
+} from "@workspace/shared";
 
 import { toAuditLogCreateInput } from "../../src/platform/infrastructure/audit/audit-log.mapper";
-import { auditDeviceFields, auditNetworkFields, toAuditPayload, UNMATCHED_ENDPOINT, type HttpAuditEntry } from "../../src/platform/infrastructure/audit/http-audit-entry";
+import {
+	auditDeviceFields,
+	auditNetworkFields,
+	auditRequestHeaders,
+	toAuditPayload,
+	UNMATCHED_ENDPOINT,
+	type HttpAuditEntry,
+} from "../../src/platform/infrastructure/audit/http-audit-entry";
 import type { RequestContext } from "../../src/platform/infrastructure/context/request-context";
 import { buildIdempotencyScope, hashIdempotentRequest } from "../../src/platform/infrastructure/idempotency/idempotency-request";
 import { IDEMPOTENCY_RETENTION_MS } from "../../src/platform/infrastructure/idempotency/idempotency.constants";
@@ -121,7 +137,14 @@ async function ensureIdempotencyRecord(adminId: string, row: HttpAuditEntry, res
 		ip: undefined,
 		userAgent: undefined,
 		edgeLocation: undefined,
-		principal: { userId: adminId, impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" },
+		principal: {
+			userId: adminId,
+			impersonatorId: undefined,
+			impersonationSessionId: undefined,
+			authMethod: "SESSION_COOKIE",
+			sessionId: seedSessionId(adminId),
+			identity: { email: "admin@example.com", fullName: undefined },
+		},
 		apiKey: undefined,
 		tenant: { tenantId: undefined, locationId: undefined },
 		systemOperations: [],
@@ -187,6 +210,9 @@ type SeedRequestMetadata = Pick<
 	| "geoTimeZone"
 	| "impersonationSessionId"
 	| "supportAccessGrantId"
+	| "sessionId"
+	| "claimedTenantId"
+	| "claimedLocationId"
 	| "authMethod"
 	| "clientType"
 	| "httpVersion"
@@ -197,14 +223,63 @@ type SeedRequestMetadata = Pick<
 	| "requestContentType"
 	| "requestBytes"
 	| "idempotencyKey"
+	| "errorDetail"
 >;
 
 /** Columns the API derives from the User-Agent and the address — the seed derives them the same way. */
 type DerivedClientFields = "browserName" | "browserVersion" | "osName" | "osVersion" | "deviceType" | "deviceModel" | "ipVersion" | "ipScope";
 
 /** The fields each seeded row states itself (the rest come from the demo clock and client). */
-export type SeedAuditFields = Omit<HttpAuditEntry, "correlationId" | "traceId" | "occurredAt" | "completedAt" | DerivedClientFields | keyof SeedRequestMetadata> &
+export type SeedAuditFields = Omit<
+	HttpAuditEntry,
+	"correlationId" | "traceId" | "occurredAt" | "completedAt" | "requestHeaders" | "actorIdentity" | DerivedClientFields | keyof SeedRequestMetadata
+> &
 	Partial<SeedRequestMetadata>;
+
+/** The device session a demo actor's browser requests ran under (an id, like the API records: no foreign key). */
+function seedSessionId(actorUserId: string): string {
+	return deterministicUuid(`${HTTP_AUDIT_NAMESPACE}.session`, actorUserId);
+}
+
+/** The access-token cookie name the seeded browser sends (the value is never recorded). */
+const SEED_SESSION_COOKIE = "admin_access_token";
+
+/**
+ * The cause the API would have recorded for a demo failure: what was thrown
+ * (an `AppError` named by its code), without a stack — a 4xx is the caller's
+ * mistake, not a code path.
+ */
+function seedErrorDetail(fields: SeedAuditFields): AuditErrorDetail | null {
+	if (fields.outcome === "SUCCEEDED" || fields.errorCode === null) {
+		return null;
+	}
+	return { type: "AppError", message: `Request refused: ${fields.errorCode}`, code: fields.errorCode, causes: [], stack: [] };
+}
+
+/**
+ * The headers a demo request carried, built from its stated metadata and
+ * stored through the API's own redaction (`auditRequestHeaders`): the session
+ * cookie keeps its name only, an API key is `[REDACTED]`.
+ */
+function seedRequestHeaders(stated: SeedAuditFields & SeedRequestMetadata): AuditRequestHeaders {
+	const optional = (name: string, value: string | number | null): Record<string, string> => (value === null ? {} : { [name.toLowerCase()]: String(value) });
+	return auditRequestHeaders({
+		accept: "application/json",
+		...optional("host", stated.host),
+		...optional("user-agent", stated.userAgent),
+		...optional("accept-language", stated.acceptLanguage),
+		...optional("origin", stated.origin),
+		...optional("referer", stated.referer),
+		...optional("content-type", stated.requestContentType),
+		...optional("content-length", stated.requestBytes),
+		...optional(CLIENT_TYPE_HEADER, stated.clientType),
+		...optional(IDEMPOTENCY_KEY_HEADER, stated.idempotencyKey),
+		...optional(TENANT_ID_HEADER, stated.claimedTenantId),
+		...optional(LOCATION_ID_HEADER, stated.claimedLocationId),
+		...(stated.authMethod === "SESSION_COOKIE" ? { cookie: `${SEED_SESSION_COOKIE}=seed; theme=light` } : {}),
+		...(stated.apiKeyId === null ? {} : { "x-api-key": "seed-api-key" }),
+	});
+}
 
 /**
  * Defaults for the request-metadata columns: a user request is an admin-panel
@@ -220,6 +295,10 @@ function defaultRequestMetadata(fields: SeedAuditFields): SeedRequestMetadata {
 		...(isBrowser ? SEED_EDGE_LOCATION : NO_EDGE_LOCATION),
 		impersonationSessionId: null,
 		supportAccessGrantId: null,
+		sessionId: fields.actorUserId === null ? null : seedSessionId(fields.actorUserId),
+		// The merchant console and the POS till name their tenant and store on every call.
+		claimedTenantId: fields.tenantId,
+		claimedLocationId: fields.locationId,
 		authMethod: isBrowser ? "SESSION_COOKIE" : fields.apiKeyId === null ? null : "API_KEY",
 		clientType: isBrowser ? "admin" : null,
 		httpVersion: SEED_HTTP_VERSION,
@@ -230,6 +309,7 @@ function defaultRequestMetadata(fields: SeedAuditFields): SeedRequestMetadata {
 		requestContentType: body === null ? null : SEED_JSON_CONTENT_TYPE,
 		requestBytes: body === null ? null : Buffer.byteLength(body, "utf8"),
 		idempotencyKey: null,
+		errorDetail: seedErrorDetail(fields),
 	};
 }
 
@@ -250,6 +330,8 @@ export function entry(index: number, fields: SeedAuditFields): { readonly id: st
 		id: deterministicUuid(HTTP_AUDIT_NAMESPACE, String(index)),
 		row: {
 			...stated,
+			requestHeaders: seedRequestHeaders(stated),
+			actorIdentity: null,
 			...auditDeviceFields(stated.userAgent),
 			...auditNetworkFields(stated.ipAddress),
 			correlationId,

@@ -2226,11 +2226,14 @@ CREATE TABLE "AuditLog" (
     "impersonatorUserId" VARCHAR(64),
     "impersonationSessionId" VARCHAR(64),
     "supportAccessGrantId" VARCHAR(64),
+    "sessionId" VARCHAR(64),
     "authMethod" "AuditAuthMethod",
     "apiKeyId" VARCHAR(64),
     "terminalId" VARCHAR(64),
     "tenantId" VARCHAR(64),
     "locationId" VARCHAR(64),
+    "claimedTenantId" VARCHAR(64),
+    "claimedLocationId" VARCHAR(64),
     "ipAddress" VARCHAR(64),
     "userAgent" VARCHAR(512),
     "browserName" VARCHAR(64),
@@ -2254,9 +2257,11 @@ CREATE TABLE "AuditLog" (
     "requestContentType" VARCHAR(256),
     "requestBytes" INTEGER,
     "idempotencyKey" VARCHAR(255),
+    "requestHeaders" JSONB,
     "requestParams" JSONB,
     "requestBody" JSONB,
     "responseBody" JSONB,
+    "errorDetail" JSONB,
     "systemOperations" TEXT[],
 
     CONSTRAINT "AuditLog_pkey" PRIMARY KEY ("id")
@@ -3081,6 +3086,9 @@ CREATE INDEX "AuditLog_actorUserId_occurredAt_idx" ON "AuditLog"("actorUserId", 
 
 -- CreateIndex
 CREATE INDEX "AuditLog_impersonatorUserId_occurredAt_idx" ON "AuditLog"("impersonatorUserId", "occurredAt");
+
+-- CreateIndex
+CREATE INDEX "AuditLog_sessionId_occurredAt_idx" ON "AuditLog"("sessionId", "occurredAt");
 
 -- CreateIndex
 CREATE INDEX "AuditLog_outcome_occurredAt_idx" ON "AuditLog"("outcome", "occurredAt");

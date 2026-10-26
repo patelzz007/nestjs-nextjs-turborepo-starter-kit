@@ -3922,12 +3922,18 @@ model AuditLog {
   impersonationSessionId String?          @db.VarChar(64)
   /// The approved support grant that let a platform user act in this tenant without a membership.
   supportAccessGrantId   String?          @db.VarChar(64)
+  /// The device session (refresh-token row id) the credential belongs to: every request of one sign-in shares it.
+  sessionId              String?          @db.VarChar(64)
   /// How the caller authenticated; NULL for an anonymous request.
   authMethod             AuditAuthMethod?
   apiKeyId               String?          @db.VarChar(64)
   terminalId             String?          @db.VarChar(64)
   tenantId               String?          @db.VarChar(64)
   locationId             String?          @db.VarChar(64)
+  /// The tenant the client named in `X-Tenant-Id` (bounded, unverified — `tenantId` is the verified one).
+  claimedTenantId        String?          @db.VarChar(64)
+  /// The store the client named in `X-Location-Id` (bounded, unverified — `locationId` is the verified one).
+  claimedLocationId      String?          @db.VarChar(64)
   ipAddress              String?          @db.VarChar(64)
   /// The calling device (User-Agent, bounded).
   userAgent              String?          @db.VarChar(512)
@@ -3971,16 +3977,21 @@ model AuditLog {
   requestBytes           Int?
   /// `Idempotency-Key` header the request carried (joins the idempotency record).
   idempotencyKey         String?          @db.VarChar(255)
+  /// Every request header as sent (lower-cased names), credentials redacted, cookie values dropped.
+  requestHeaders         Json?
   /// Route params + query string (redacted).
   requestParams          Json?
   requestBody            Json?
   responseBody           Json?
+  /// The real cause of a failure — exception type, message, cause chain, 5xx stack frames. Never sent to the caller.
+  errorDetail            Json?
   /// Allowlisted system operations (RLS bypasses) the request ran, in first-use order.
   systemOperations       String[]
 
   @@index([tenantId, occurredAt])
   @@index([actorUserId, occurredAt])
   @@index([impersonatorUserId, occurredAt])
+  @@index([sessionId, occurredAt])
   @@index([outcome, occurredAt])
   @@index([deviceType, occurredAt])
   @@index([correlationId])

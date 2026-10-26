@@ -1,4 +1,4 @@
-import type { AuditLogUser, HttpAuditLogDetail } from "@workspace/shared";
+import type { AuditErrorDetail, AuditErrorLink, AuditLogUser, AuditRequestHeaders, HttpAuditLogDetail } from "@workspace/shared";
 import { cn } from "@workspace/ui/lib/core/utils";
 import Link from "next/link";
 import type * as React from "react";
@@ -35,6 +35,122 @@ function UserField({ label, user }: { readonly label: string; readonly user: Aud
 	);
 }
 
+/** What a claimed id says against the verified one: `matches`, `differs from the verified …`, or `not verified`. */
+export function describeClaim(claimed: string | null, verified: string | null, noun: string): string | null {
+	if (claimed === null) {
+		return null;
+	}
+	if (verified === null) {
+		return `not verified: the API resolved no ${noun}`;
+	}
+	return claimed === verified ? `matches the verified ${noun}` : `differs from the verified ${noun}`;
+}
+
+/** A header the client sent to name its scope, with how it compares to what the API verified. */
+function ClaimField({
+	label,
+	claimed,
+	verified,
+	noun,
+}: {
+	readonly label: string;
+	readonly claimed: string | null;
+	readonly verified: string | null;
+	readonly noun: string;
+}): React.JSX.Element {
+	const comparison: string | null = describeClaim(claimed, verified, noun);
+	return (
+		<RecordField label={label}>
+			{claimed === null ? (
+				"Not sent"
+			) : (
+				<span className="space-y-0.5">
+					<span className="block font-mono">{claimed}</span>
+					<span className={cn("block text-xs", claimed === verified ? "text-muted-foreground" : "text-destructive")}>{comparison}</span>
+				</span>
+			)}
+		</RecordField>
+	);
+}
+
+/** `PrismaClientKnownRequestError [P2025]` — an error's class and the code it carried. */
+function errorHeading(link: AuditErrorLink): string {
+	return link.code === null ? link.type : `${link.type} [${link.code}]`;
+}
+
+/**
+ * Why the request failed, as the server saw it: the exception behind the
+ * error code the caller was shown, its causes and — for a server fault —
+ * where it was thrown.
+ */
+function FailureReason({ errorCode, detail }: { readonly errorCode: string | null; readonly detail: AuditErrorDetail | null }): React.JSX.Element {
+	return (
+		<section aria-labelledby="audit-failure-reason" className="space-y-3 rounded-lg border border-destructive/40 bg-card p-4">
+			<div>
+				<h3 id="audit-failure-reason" className="text-sm font-semibold">
+					Why it failed
+				</h3>
+				<p className="text-xs text-muted-foreground">
+					What the server knew. The caller was only told {errorCode === null ? "that it failed" : <span className="font-mono">{errorCode}</span>}.
+				</p>
+			</div>
+			{detail === null ? (
+				<p className="text-sm text-muted-foreground">Not recorded: this record was written before failure reasons were kept.</p>
+			) : (
+				<div className="space-y-3">
+					<div className="space-y-1">
+						<p className="font-mono text-xs font-semibold break-all">{errorHeading(detail)}</p>
+						<p className="text-sm break-words whitespace-pre-wrap">{detail.message.length === 0 ? "No message." : detail.message}</p>
+					</div>
+					{detail.causes.length === 0 ? null : (
+						<ol className="space-y-2 border-l-2 pl-3">
+							{detail.causes.map((cause: AuditErrorLink, index: number) => (
+								<li key={`${String(index)}-${cause.type}`} className="space-y-0.5">
+									<p className="text-xs text-muted-foreground">
+										Caused by <span className="font-mono font-semibold text-foreground">{errorHeading(cause)}</span>
+									</p>
+									<p className="text-sm break-words whitespace-pre-wrap">{cause.message}</p>
+								</li>
+							))}
+						</ol>
+					)}
+					{detail.stack.length === 0 ? null : (
+						<div className="space-y-1">
+							<p className="text-xs font-medium text-muted-foreground">Where it was thrown</p>
+							<pre className="max-h-64 overflow-auto rounded-md bg-muted p-3 font-mono text-xs leading-relaxed">{detail.stack.join("\n")}</pre>
+						</div>
+					)}
+				</div>
+			)}
+		</section>
+	);
+}
+
+/** Every header the request carried, by name, credentials already redacted by the API. */
+function RequestHeaderList({ headers }: { readonly headers: AuditRequestHeaders | null }): React.JSX.Element {
+	const entries: [string, string][] = headers === null ? [] : Object.entries(headers);
+	return (
+		<section className="min-w-0 space-y-2 rounded-lg border bg-card p-4">
+			<div>
+				<h3 className="text-sm font-semibold">All request headers</h3>
+				<p className="text-xs text-muted-foreground">As sent. Credentials read [REDACTED]; a cookie header lists the cookie names only.</p>
+			</div>
+			{entries.length === 0 ? (
+				<p className="text-sm text-muted-foreground">{headers === null ? "Not recorded: this record was written before headers were kept." : "No headers."}</p>
+			) : (
+				<dl className="grid gap-x-4 gap-y-1 rounded-md bg-muted p-3 font-mono text-xs sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+					{entries.map(([name, value]) => (
+						<div key={name} className="contents">
+							<dt className="font-semibold break-all">{name}</dt>
+							<dd className="break-all">{value}</dd>
+						</div>
+					))}
+				</dl>
+			)}
+		</section>
+	);
+}
+
 /** `🇲🇾 Malaysia · Kuala Lumpur, Kuala Lumpur`, or the dash when the CDN gave nothing. */
 function describeLocation(record: Pick<HttpAuditLogDetail, "geoCountry" | "geoRegion" | "geoCity">): string {
 	const place: string = [record.geoCity, record.geoRegion].filter((part): part is string => part !== null).join(", ");
@@ -65,9 +181,17 @@ export function AuditLogRecord({ record, layout }: { readonly record: HttpAuditL
 				<AuditActorCell entry={record} />
 			</header>
 
-			<RecordSection title="Who" description="The verified principal — never what the client claimed." layout={layout}>
+			{record.outcome === "FAILED" ? <FailureReason errorCode={record.errorCode} detail={record.errorDetail} /> : null}
+
+			<RecordSection
+				title="Who"
+				description="The verified principal and tenant. The X-Tenant-Id and X-Location-Id headers are what the client claimed, shown against what the API verified."
+				layout={layout}>
 				<UserField label="Actor" user={record.actor} />
 				<UserField label="Impersonated by" user={record.impersonator} />
+				<RecordField label="Device session" mono>
+					{orDash(record.sessionId)}
+				</RecordField>
 				<RecordField label="Impersonation session" mono>
 					{orDash(record.impersonationSessionId)}
 				</RecordField>
@@ -95,6 +219,8 @@ export function AuditLogRecord({ record, layout }: { readonly record: HttpAuditL
 				<RecordField label="Location" mono>
 					{orDash(record.locationId)}
 				</RecordField>
+				<ClaimField label="X-Tenant-Id (claimed)" claimed={record.claimedTenantId} verified={record.tenant?.id ?? null} noun="tenant" />
+				<ClaimField label="X-Location-Id (claimed)" claimed={record.claimedLocationId} verified={record.locationId} noun="location" />
 			</RecordSection>
 
 			<RecordSection title="When" description="Server clock, shown in your time zone." layout={layout}>
@@ -156,6 +282,8 @@ export function AuditLogRecord({ record, layout }: { readonly record: HttpAuditL
 					{orDash(record.idempotencyKey)}
 				</RecordField>
 			</RecordSection>
+
+			<RequestHeaderList headers={record.requestHeaders} />
 
 			<RecordSection title="Tracing" description="How to find this request in logs, traces and the domain audit tables." layout={layout}>
 				<RecordField label="Correlation id" mono>

@@ -29,6 +29,8 @@ export const SystemCommandAuditEntrySchema = z.object({
 	correlationId: z.string().min(1),
 	outcome: SystemCommandOutcomeSchema,
 	errorCode: z.string().min(1).nullable(),
+	/** The error a failed command threw — the audit adapter records its real cause (type, message, cause chain, stack). */
+	error: z.instanceof(Error).nullable(),
 	durationMs: z.number().int().nonnegative(),
 	occurredAt: EpochMsSchema,
 });

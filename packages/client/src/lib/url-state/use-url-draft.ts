@@ -7,15 +7,19 @@
 // right now, and what the URL holds. Only the second is shareable state; the
 // first is a legitimately local, in-progress DRAFT. This hook keeps the draft
 // in `useState`, commits it to the URL after `delayMs` of inactivity, and
-// resets it whenever the URL value changes from the outside (back/forward, a
-// "clear filters" button, a shared link) — so the box always shows what the
-// URL says once the user stops typing.
+// resets it whenever the URL value changes from the outside (a "clear
+// filters" button, a shared link) and on every Back / Forward — even one that
+// lands on the value already shown, because a commit still on its way to the
+// router never committed (use-history-traversal.ts) — so the box always shows
+// what the URL says once the user stops typing.
 //
 // The commit is tracked as "pending" until the URL echoes it back, so the
 // render that happens between the commit and the router's update can never
 // throw away characters typed in the meantime.
 
 import { useDebouncedDraft } from "@workspace/ui/hooks/use-debounced-draft";
+
+import { useHistoryTraversalCount } from "./use-history-traversal";
 
 export interface UrlDraftOptions {
 	/** The committed value as the URL holds it (`""` when the param is absent). */
@@ -42,6 +46,7 @@ export function trimUrlDraft(draft: string): string {
 
 /** The shared debounced-draft behaviour (`useDebouncedDraft`) with the URL as the committed value's owner. */
 export function useUrlDraft(options: UrlDraftOptions): UrlDraft {
-	const { draft, setDraft } = useDebouncedDraft(options);
+	const traversals: number = useHistoryTraversalCount();
+	const { draft, setDraft } = useDebouncedDraft({ ...options, resetKey: traversals });
 	return [draft, setDraft];
 }

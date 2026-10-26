@@ -5,6 +5,7 @@
 export * from "./contract";
 export * from "./routes";
 export * from "./schemas/audit-enums";
+export * from "./schemas/audit-request-facts";
 export * from "./schemas/audit-trail";
 export * from "./schemas/data-change-log";
 export * from "./schemas/http-audit-log";

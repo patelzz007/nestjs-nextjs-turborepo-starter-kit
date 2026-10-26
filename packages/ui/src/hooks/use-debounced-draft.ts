@@ -27,6 +27,13 @@ export interface DebouncedDraftOptions {
 	 * when its normalized echo comes back. Keep it stable (module-level).
 	 */
 	readonly normalize?: (draft: string) => string;
+	/**
+	 * Changes when the committed value must be taken again even if it did not
+	 * change — the URL owner passes its history traversal count, because a Back
+	 * can land on the value already shown while a commit was still on its way
+	 * (`useUrlDraft`). A change drops the draft and any pending commit.
+	 */
+	readonly resetKey?: number;
 }
 
 export interface DebouncedDraft {
@@ -42,22 +49,31 @@ interface DraftSync {
 	readonly synced: string;
 	/** A committed value the owner has not echoed back yet. */
 	readonly pending: string | undefined;
+	/** The `resetKey` the draft last agreed with. */
+	readonly resetKey: number;
 }
+
+/** `resetKey` when the owner passes none: nothing but the value ever resets the draft. */
+const NO_RESET_KEY = 0;
 
 function identity(value: string): string {
 	return value;
 }
 
-export function useDebouncedDraft({ value, onCommit, delayMs, normalize = identity }: DebouncedDraftOptions): DebouncedDraft {
+export function useDebouncedDraft({ value, onCommit, delayMs, normalize = identity, resetKey = NO_RESET_KEY }: DebouncedDraftOptions): DebouncedDraft {
 	const [draft, setDraftState] = useState<string>(value);
-	const [sync, setSync] = useState<DraftSync>({ synced: value, pending: undefined });
+	const [sync, setSync] = useState<DraftSync>({ synced: value, pending: undefined, resetKey });
 
-	// The committed value changed since the last render. Our own commit coming
-	// back keeps the draft (the user may have typed more since); any other
-	// change replaces it.
-	if (value !== sync.synced) {
+	// The owner asked for a reset: take its value again, whatever was typed or pending.
+	if (resetKey !== sync.resetKey) {
+		setSync({ synced: value, pending: undefined, resetKey });
+		setDraftState(value);
+	} else if (value !== sync.synced) {
+		// The committed value changed since the last render. Our own commit coming
+		// back keeps the draft (the user may have typed more since); any other
+		// change replaces it.
 		const isOwnCommit: boolean = value === sync.pending;
-		setSync({ synced: value, pending: undefined });
+		setSync({ synced: value, pending: undefined, resetKey });
 		if (!isOwnCommit) {
 			setDraftState(value);
 		}
@@ -70,7 +86,7 @@ export function useDebouncedDraft({ value, onCommit, delayMs, normalize = identi
 			return undefined;
 		}
 		const timer = setTimeout((): void => {
-			setSync((current: DraftSync): DraftSync => ({ synced: current.synced, pending: next }));
+			setSync((current: DraftSync): DraftSync => ({ ...current, pending: next }));
 			onCommit(next);
 		}, delayMs);
 		return (): void => {
@@ -91,7 +107,7 @@ export function useDebouncedDraft({ value, onCommit, delayMs, normalize = identi
 			if (normalized === value) {
 				return;
 			}
-			setSync((current: DraftSync): DraftSync => ({ synced: current.synced, pending: normalized }));
+			setSync((current: DraftSync): DraftSync => ({ ...current, pending: normalized }));
 			onCommit(normalized);
 		},
 		[normalize, onCommit, value],

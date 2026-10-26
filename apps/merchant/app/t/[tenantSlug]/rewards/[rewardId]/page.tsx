@@ -1,5 +1,5 @@
 import { MerchantRewardDetailPageView } from "@/contexts/rewards/components/merchant-reward-detail-page-view";
-import { loadMerchantServerContext } from "@/lib/merchant-server-api";
+import { loadTenantServerCaller } from "@/contexts/tenancy/lib/tenant/tenant-server-caller";
 import { guardTenantPage } from "@/contexts/tenancy/lib/tenant/tenant-page-guard";
 import { prefetchedDataOrUndefined } from "@/lib/server/server-query-outcome";
 import * as React from "react";
@@ -16,7 +16,7 @@ export default async function MerchantRewardDetailPage({ params }: MerchantRewar
 	if (denied !== null) {
 		return denied;
 	}
-	const { server } = await loadMerchantServerContext();
+	const server = await loadTenantServerCaller(tenantSlug);
 
 	// An access answer leaves the data to the client query; an outage is logged and rethrown to `error.tsx`.
 	const [result] = await Promise.allSettled([server.tenants.rewards.get.query({ tenantSlug, rewardId })]);

@@ -100,6 +100,10 @@ export const DEFAULT_MEMORY_LEAK_WINDOW_MS = 30 * MS_PER_MINUTE;
 export const MIN_MEMORY_LEAK_WINDOW_MS = 5 * MS_PER_MINUTE;
 /** Rise of the post-GC heap floor from the earlier to the later half of the window that counts as a suspected leak. */
 export const DEFAULT_MEMORY_LEAK_GROWTH_THRESHOLD_MB = 64;
+/** Where the plain-text transaction log is written when TRANSACTION_LOG_DIR is unset (relative to the monorepo root: `<repo>/logs/transactions`). */
+export const DEFAULT_TRANSACTION_LOG_DIR = "logs/transactions";
+/** Days of transaction log files kept when TRANSACTION_LOG_RETENTION_DAYS is unset. */
+export const DEFAULT_TRANSACTION_LOG_RETENTION_DAYS = 30;
 /** Service id reported to Observe when OBSERVE_SERVICE_ID is unset. */
 export const DEFAULT_OBSERVE_SERVICE_ID = "api";
 /** Kafka client id and Redis connection name when MESSAGING_CLIENT_ID / MESSAGING_CONNECTION_NAME are unset. */

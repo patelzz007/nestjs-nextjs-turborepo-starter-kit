@@ -1,29 +1,10 @@
 "use client";
 
-import { LOCATION_ID_HEADER, TENANT_ID_HEADER } from "@workspace/shared";
 import * as React from "react";
 
-/**
- * The tenant and store the member is working in, as every API call names them: `X-Tenant-Id` and
- * `X-Location-Id`. Information only for now — the API selects, authorizes and scopes nothing from
- * these headers (the tenant comes from the `/tenants/:tenantSlug` path, a store from the query).
- */
-export interface RequestScope {
-	/** The open tenant's id; `undefined` outside a tenant or until its context has loaded. */
-	readonly tenantId: string | undefined;
-	/** The chosen store; `null` for "All locations" (or no tenant), so no single store is named. */
-	readonly locationId: string | null;
-}
+import { NO_REQUEST_SCOPE, type RequestScope } from "./request-scope-headers";
 
-export const NO_REQUEST_SCOPE: RequestScope = { tenantId: undefined, locationId: null };
-
-/** The headers one request carries for `scope`: each only when it names something. */
-export function requestScopeHeaders(scope: RequestScope): Readonly<Record<string, string>> {
-	return {
-		...(scope.tenantId === undefined ? {} : { [TENANT_ID_HEADER]: scope.tenantId }),
-		...(scope.locationId === null ? {} : { [LOCATION_ID_HEADER]: scope.locationId }),
-	};
-}
+export { NO_REQUEST_SCOPE, requestScopeHeaders, type RequestScope } from "./request-scope-headers";
 
 /**
  * Where the API client reads the scope as each request is sent. The tenant-context provider writes
@@ -57,7 +38,9 @@ export const RequestScopeProvider = RequestScopeContext.Provider;
 export function useRequestScope(scope: RequestScope): void {
 	const holder = React.useContext(RequestScopeContext);
 	const { tenantId, locationId } = scope;
-	React.useEffect((): (() => void) | undefined => {
+	// A layout effect: it runs before any passive effect, so the first queries the page's
+	// components start (TanStack Query subscribes in passive effects) already carry the scope.
+	React.useLayoutEffect((): (() => void) | undefined => {
 		if (holder === null) {
 			return undefined;
 		}

@@ -1,6 +1,6 @@
 import { MerchantRedemptionsPageView } from "@/contexts/pos/components/redemptions/merchant-redemptions-page-view";
 import { toLocationQueryInput } from "@/features/tenant-context/selectors";
-import { loadMerchantServerContext } from "@/lib/merchant-server-api";
+import { loadTenantServerCaller } from "@/contexts/tenancy/lib/tenant/tenant-server-caller";
 import type { LocationScopedPrefetch } from "@/contexts/tenancy/lib/tenant/location-prefetch";
 import { guardTenantPage } from "@/contexts/tenancy/lib/tenant/tenant-page-guard";
 import { loadServerLocationScope } from "@/contexts/tenancy/lib/tenant/server-location-scope";
@@ -30,7 +30,7 @@ export default async function MerchantRedemptionsPage({ params, searchParams }: 
 	if (denied !== null) {
 		return denied;
 	}
-	const { server } = await loadMerchantServerContext();
+	const server = await loadTenantServerCaller(tenantSlug);
 	// The same store filter the client's first render derives, so the data lands under its query key.
 	const locationId = toLocationQueryInput((await loadServerLocationScope(tenantSlug)).effectiveLocationId);
 	const urlState = REDEMPTIONS_URL_STATE.parse(await searchParams);

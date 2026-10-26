@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import type { CustomerAnalyticsDashboard, Envelope } from "@workspace/shared";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DashboardAnalyticsPageView, type DashboardAnalyticsPageViewProps } from "@/contexts/reporting/components/analytics-page-view";
 import { ROUTES } from "@/lib/routes";
@@ -87,6 +87,13 @@ async function chooseFilter(label: string, option: string): Promise<void> {
 	fireEvent.click(await screen.findByRole("button", { name: new RegExp(`^${label} `) }));
 	fireEvent.click(await screen.findByRole("menuitemradio", { name: option }));
 }
+
+// The range controls are a `next/dynamic` chunk. Its first load is Vite transforming that module tree on
+// demand, which takes far longer on a busy CI runner than on a warm laptop. Load it once up front so every
+// test's lazy import resolves from the module cache and no assertion depends on machine speed.
+beforeAll(async (): Promise<void> => {
+	await import("@workspace/client/lib/contexts/reporting/analytics-range-controls");
+});
 
 beforeEach((): void => {
 	window.history.replaceState(null, "", ROUTES.dashboard.activity);

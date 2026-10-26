@@ -100,11 +100,25 @@ describe("RequestContextService", () => {
 				await new Promise<void>((resolve): void => {
 					setTimeout(resolve, 2);
 				});
-				service.bindPrincipal({ userId: "user-a", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
+				service.bindPrincipal({
+					userId: "user-a",
+					impersonatorId: undefined,
+					impersonationSessionId: undefined,
+					authMethod: "SESSION_COOKIE",
+					sessionId: undefined,
+					identity: { email: "user@example.com", fullName: "Test User" },
+				});
 				return service.current();
 			}),
 			service.run({ ...SEED, correlationId: "corr-b" }, async () => {
-				service.bindPrincipal({ userId: "user-b", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
+				service.bindPrincipal({
+					userId: "user-b",
+					impersonatorId: undefined,
+					impersonationSessionId: undefined,
+					authMethod: "SESSION_COOKIE",
+					sessionId: undefined,
+					identity: { email: "user@example.com", fullName: "Test User" },
+				});
 				await Promise.resolve();
 				return service.current();
 			}),
@@ -117,20 +131,41 @@ describe("RequestContextService", () => {
 	it("publishes the principal and verified tenant to everything that runs afterwards in the request", () => {
 		const snapshots = service.run(SEED, () => {
 			const beforeAuth = service.current();
-			service.bindPrincipal({ userId: "user-1", impersonatorId: "admin-1", impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
+			service.bindPrincipal({
+				userId: "user-1",
+				impersonatorId: "admin-1",
+				impersonationSessionId: undefined,
+				authMethod: "SESSION_COOKIE",
+				sessionId: undefined,
+				identity: { email: "user@example.com", fullName: "Test User" },
+			});
 			service.bindTenant({ tenantId: "org-1", locationId: "loc-1" });
 			return { beforeAuth, afterTenancy: service.current(), log: service.logFields() };
 		});
 
 		// Snapshots are immutable: the pre-auth snapshot is unchanged.
 		expect(snapshots.beforeAuth?.principal).toBeUndefined();
-		expect(snapshots.afterTenancy?.principal).toEqual({ userId: "user-1", impersonatorId: "admin-1", impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
+		expect(snapshots.afterTenancy?.principal).toEqual({
+			userId: "user-1",
+			impersonatorId: "admin-1",
+			impersonationSessionId: undefined,
+			authMethod: "SESSION_COOKIE",
+			sessionId: undefined,
+			identity: { email: "user@example.com", fullName: "Test User" },
+		});
 		expect(snapshots.afterTenancy?.tenant).toEqual({ tenantId: "org-1", storeId: undefined, locationId: "loc-1" });
 		expect(snapshots.log).toEqual({ correlationId: "corr-ctx-1", userId: "user-1", impersonatorId: "admin-1", tenantId: "org-1" });
 	});
 
 	it("ignores enrichment outside a request instead of creating a context", () => {
-		service.bindPrincipal({ userId: "user-1", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
+		service.bindPrincipal({
+			userId: "user-1",
+			impersonatorId: undefined,
+			impersonationSessionId: undefined,
+			authMethod: "SESSION_COOKIE",
+			sessionId: undefined,
+			identity: { email: "user@example.com", fullName: "Test User" },
+		});
 		service.bindTenant({ tenantId: "org-1" });
 
 		expect(service.current()).toBeUndefined();

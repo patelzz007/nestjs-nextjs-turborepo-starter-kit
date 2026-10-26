@@ -200,6 +200,7 @@ export const DOC_ICONS: Readonly<Record<string, IconName>> = {
 	"technical/tooling/dependencies": "package",
 	"technical/operations/ci": "timer",
 	"technical/operations/observability": "radar",
+	"technical/operations/transaction-log": "scrollText",
 	"technical/frontend/network-quality": "gauge",
 	"adr/README": "archive",
 };

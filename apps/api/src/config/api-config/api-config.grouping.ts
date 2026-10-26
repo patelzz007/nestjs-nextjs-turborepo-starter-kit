@@ -171,6 +171,11 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
 				windowMs: env.MEMORY_LEAK_WINDOW_MS,
 				growthThresholdMb: env.MEMORY_LEAK_GROWTH_THRESHOLD_MB,
 			},
+			// On everywhere but under tests, which must not leave files behind; TRANSACTION_LOG_ENABLED decides when set.
+			transactionLog:
+				(env.TRANSACTION_LOG_ENABLED ?? nodeEnv !== NodeEnvSchema.enum.test)
+					? { directory: env.TRANSACTION_LOG_DIR, retentionDays: env.TRANSACTION_LOG_RETENTION_DAYS }
+					: null,
 			observe: resolveObserveConfig(env),
 		},
 		tenancy: resolveTenancy(env),

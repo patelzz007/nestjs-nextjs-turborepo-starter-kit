@@ -3,7 +3,7 @@ title: "Messaging Infrastructure"
 tags: ["infrastructure", "messaging", "kafka", "bullmq", "redis", "outbox", "inbox", "idempotency"]
 description: "Operational reference for Redis, BullMQ, Kafka, queues, the transactional outbox, and the consumer inbox."
 author: "Backend Team"
-lastUpdated: 1790841600000
+lastUpdated: 1792972800000
 coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -27,7 +27,7 @@ Operational reference. For the big picture, read [Architecture](./architecture.m
 | System | Role in this repo |
 |--------|-------------------|
 | **Redis** | Authorization cache pub/sub + BullMQ backend |
-| **BullMQ** | Internal jobs (`email.send`, rewards maintenance, outbox sweep, outbox retention, storage cleanup, idempotency retention) |
+| **BullMQ** | Internal jobs (`email.send`, rewards maintenance, outbox sweep, outbox retention, storage cleanup, idempotency retention, the [transaction log](operations/transaction-log.md) file writes) |
 | **Kafka** | Durable platform events (analytics / warehouse) |
 | **RabbitMQ** | Docker placeholder — see [ADR](../adr/rabbitmq-placeholder.md) |
 
@@ -247,6 +247,7 @@ SELECT consumer, COUNT(*), MIN(processed_at) AS oldest FROM inbox_processed_even
 | `outbox.retention` | Hourly purge of settled `OutboxEvent` rows (see [Retention](#retention)) |
 | `storage.scan` | Malware scan of uploaded objects |
 | `storage.cdn-invalidate` | CDN (CloudFront) cache purge after a public file is withdrawn, so the delete request never waits on the CDN (one job per file) |
+| `transaction-log.write` | One entry of the plain-text [transaction log](operations/transaction-log.md) appended to its day file; global concurrency 1, so the file stays in order |
 
 Job retry defaults: `packages/shared` → `QUEUE_JOB_OPTIONS` (mirrors `@workspace/messaging` presets).
 

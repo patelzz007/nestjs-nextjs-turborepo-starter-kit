@@ -26,6 +26,7 @@
 		"coverage/",
 		"pnpm-lock.yaml",
 		".pnpm-store/",
-		".expo/"
+		".expo/",
+		"**/uniwind-types.d.ts"
 	]
 }

@@ -110,7 +110,14 @@ describe("LogService", () => {
 			const spy = vi.spyOn(Logger.prototype, "warn");
 
 			requestContext.run({ correlationId: "corr-log-2", ip: undefined, userAgent: undefined, edgeLocation: undefined }, () => {
-				requestContext.bindPrincipal({ userId: "user-7", impersonatorId: "admin-1", impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
+				requestContext.bindPrincipal({
+					userId: "user-7",
+					impersonatorId: "admin-1",
+					impersonationSessionId: undefined,
+					authMethod: "SESSION_COOKIE",
+					sessionId: undefined,
+					identity: { email: "user@example.com", fullName: "Test User" },
+				});
 				requestContext.bindTenant({ tenantId: "org-9" });
 				logger.warn("quota near limit", { metadata: { remaining: 3 } });
 			});
@@ -126,7 +133,14 @@ describe("LogService", () => {
 			const spy = vi.spyOn(Logger.prototype, "log");
 
 			requestContext.run({ correlationId: "corr-log-3", ip: undefined, userAgent: undefined, edgeLocation: undefined }, () => {
-				requestContext.bindPrincipal({ userId: "user-7", impersonatorId: undefined, impersonationSessionId: undefined, authMethod: "SESSION_COOKIE" });
+				requestContext.bindPrincipal({
+					userId: "user-7",
+					impersonatorId: undefined,
+					impersonationSessionId: undefined,
+					authMethod: "SESSION_COOKIE",
+					sessionId: undefined,
+					identity: { email: "user@example.com", fullName: "Test User" },
+				});
 				logger.info("acting for", { userId: "user-8" });
 			});
 
