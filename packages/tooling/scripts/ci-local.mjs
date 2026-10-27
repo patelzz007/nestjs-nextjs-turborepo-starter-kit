@@ -15,6 +15,7 @@
  *   pnpm ci:local --e2e-only         only the database jobs (API, analytics consumer, browser)
  *   pnpm ci:local --only lint,test   only these non-database steps (the pre-push hook runs lint,typecheck,test)
  *   pnpm ci:local --no-cache         bypass the Turborepo cache (like a cold CI cache)
+ *   pnpm ci:local --errors-only      the same steps, printing only failing tasks' logs (the pre-push hook)
  *   pnpm ci:local --base origin/main ref for the migration-history check (default origin/main)
  */
 import { spawn, spawnSync } from "node:child_process";
@@ -57,6 +58,7 @@ function parseArgs(argv) {
 		skipE2e: argv.includes("--skip-e2e"),
 		e2eOnly: argv.includes("--e2e-only"),
 		noCache: argv.includes("--no-cache"),
+		errorsOnly: argv.includes("--errors-only"),
 	};
 }
 

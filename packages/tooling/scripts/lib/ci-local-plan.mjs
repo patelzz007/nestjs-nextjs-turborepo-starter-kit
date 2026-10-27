@@ -113,12 +113,14 @@ export function withoutQuery(url) {
 
 /**
  * The non-database steps, one per CI job (or job step), in workflow order.
+ * `errorsOnly` (`ci:local --errors-only`, the pre-push hook) keeps the same
+ * commands but shows only failing tasks' logs (`--output-logs=errors-only`).
  *
- * @param {{ base: string, noCache: boolean }} options
+ * @param {{ base: string, noCache: boolean, errorsOnly?: boolean }} options
  * @returns {Step[]}
  */
-export function staticSteps({ base, noCache }) {
-	const turbo = (task) => ["turbo", "run", task, ...(noCache ? ["--force"] : [])];
+export function staticSteps({ base, noCache, errorsOnly = false }) {
+	const turbo = (task) => ["turbo", "run", task, ...(noCache ? ["--force"] : []), ...(errorsOnly ? ["--output-logs=errors-only"] : [])];
 	return [
 		{ id: "lint", job: "Lint", command: "pnpm", args: turbo("lint") },
 		{ id: "typecheck", job: "Typecheck", command: "pnpm", args: turbo("typecheck") },

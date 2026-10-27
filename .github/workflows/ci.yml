@@ -25,9 +25,11 @@ defaults:
     shell: bash
 
 env:
-  # Node.js LTS line used by CI. engines.node (>=22.12) is the floor; CI pins the
-  # line it is verified on. Bump deliberately, together with docs/getting-started.md.
-  NODE_VERSION: "24"
+  # The exact Node.js release CI runs: the same as .nvmrc (developers' `nvm use`) and
+  # the floor in engines.node. 24.22.0+ carries the V8 garbage-collector fix the test
+  # suites need (docs/technical/operations/ci.md → "Toolchain versions"). Bump all
+  # three together; ci-local-plan.test.mjs fails while they disagree.
+  NODE_VERSION: "24.22.1"
   TURBO_TELEMETRY_DISABLED: "1"
   TURBO_UI: "false"
   # No Turborepo cache is carried between runs: every job runs its tasks for real,

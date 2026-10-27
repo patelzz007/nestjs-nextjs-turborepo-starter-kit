@@ -35,6 +35,12 @@ allowBuilds:
 # once that date arrives (it never blocks a push).
 minimumReleaseAge: 1440
 
+# `engines.node` in the root package.json (the release in .nvmrc and CI) is a
+# requirement, not advice: an install on an older Node stops here instead of
+# running test suites on a Node with the garbage-collector crash fixed in 24.22.0
+# (docs/technical/operations/ci.md → "Toolchain versions").
+engineStrict: true
+
 # @darraghor/eslint-plugin-nestjs-typed (an oxlint JS plugin, see
 # packages/oxlint-config) does `import ts from "typescript"` directly
 # (undisclosed in its manifest) and runs on @typescript-eslint/utils, which peers

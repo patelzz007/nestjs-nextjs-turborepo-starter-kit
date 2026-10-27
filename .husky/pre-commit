@@ -1,1 +1,1 @@
-pnpm exec lint-staged --config packages/tooling/lint-staged.config.mjs
+lint-staged --quiet --config packages/tooling/lint-staged.config.mjs

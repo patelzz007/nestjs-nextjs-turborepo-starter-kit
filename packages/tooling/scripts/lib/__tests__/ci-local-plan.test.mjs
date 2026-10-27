@@ -227,3 +227,36 @@ describe("selectSteps", () => {
 		expect(() => selectSteps(steps, [])).toThrow(/got: none/);
 	});
 });
+
+describe("staticSteps errorsOnly", () => {
+	it("runs the same turbo commands, showing only failing tasks' logs", () => {
+		const quiet = selectSteps(staticSteps({ base: "origin/main", noCache: false, errorsOnly: true }), ["lint", "typecheck", "test"]);
+
+		expect(quiet.map((step) => step.args.join(" "))).toStrictEqual([
+			"turbo run lint --output-logs=errors-only",
+			"turbo run typecheck --output-logs=errors-only",
+			"turbo run test --output-logs=errors-only --concurrency=1",
+		]);
+	});
+
+	it("leaves the default full logs, and non-turbo steps, untouched", () => {
+		const loud = staticSteps({ base: "origin/main", noCache: false });
+		const quiet = staticSteps({ base: "origin/main", noCache: false, errorsOnly: true });
+
+		expect(loud.some((step) => step.args.includes("--output-logs=errors-only"))).toBe(false);
+		expect(quiet.filter((step) => step.args.at(0) !== "turbo")).toStrictEqual(loud.filter((step) => step.args.at(0) !== "turbo"));
+	});
+});
+
+describe("the Node.js release", () => {
+	const repo = (file) => readFileSync(path.resolve(import.meta.dirname, "../../../../..", file), "utf8");
+	const nvmrc = repo(".nvmrc").trim();
+	const nodeVersionOf = (workflow) => /^\s*NODE_VERSION: "(?<version>[^"]+)"/mu.exec(workflow)?.groups?.version;
+
+	it("is the same in .nvmrc, CI, the dependency review and the engines floor", () => {
+		expect(nvmrc).toMatch(/^\d+\.\d+\.\d+$/u);
+		expect(nodeVersionOf(WORKFLOW)).toBe(nvmrc);
+		expect(nodeVersionOf(repo(".github/workflows/dependency-review.yml"))).toBe(nvmrc);
+		expect(JSON.parse(repo("package.json")).engines.node).toBe(`>=${nvmrc}`);
+	});
+});

@@ -14,7 +14,7 @@ tags: ["getting-started", "setup", "local-development"]
 
 | Tool | Version | Notes |
 | --- | --- | --- |
-| Node.js | ≥ 22.12 (CI uses the 24 LTS line) | `engines` in the root `package.json` |
+| Node.js | 24.22.1 (`nvm use` reads `.nvmrc`; CI runs the same release) | `.nvmrc`, `engines` in the root `package.json` (the floor, `>=24.22.1`) and `NODE_VERSION` in `ci.yml` |
 | pnpm | 12 (`packageManager: pnpm@12.9.1`) | `corepack enable` picks the pinned version |
 | PostgreSQL | 18 | Your own install (Homebrew, apt, Postgres.app …). The `postgres` service in `compose.yml` is commented out. |
 | Docker | any recent | For Redis, Kafka, RabbitMQ and Bull Board (`pnpm docker:up`) |
