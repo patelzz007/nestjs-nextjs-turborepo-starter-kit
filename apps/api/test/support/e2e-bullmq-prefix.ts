@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 
+import { z } from "zod";
+
 import { BullMqPrefixEnvSchema, RedisNamespaceEnvSchema } from "../../src/config/api-env.fields";
 
 /**
@@ -22,6 +24,18 @@ export const E2E_BULLMQ_PREFIX_NAMESPACE = "e2e";
  * BullMQ's `<prefix>:<queue>:…` keyspace whatever a queue is named.
  */
 const E2E_REDIS_NAMESPACE_SUFFIX = "-kv";
+
+/**
+ * Worker `poolId`'s own BullMQ prefix inside the run's (`<runPrefix>:w<poolId>`).
+ * Test files run in parallel, one worker each, with their own database copy
+ * (e2e-worker-databases.ts): a worker must only pick up its own jobs, and its
+ * throttler counters and caches must not see another worker's requests. The
+ * run's purge (`<runPrefix>:*`) still deletes every worker's keys.
+ */
+export function e2eWorkerBullMqPrefix(runPrefix: string, poolId: string | undefined): string {
+	const worker = z.coerce.number().int().positive().parse(poolId);
+	return resolveE2eBullMqPrefix(`${resolveE2eBullMqPrefix(runPrefix)}:w${String(worker)}`);
+}
 
 /** Keys deleted per SCAN page / DEL call while purging a finished run. */
 const PURGE_SCAN_COUNT = 500;

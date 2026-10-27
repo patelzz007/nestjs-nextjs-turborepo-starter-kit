@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { runInNewContext } from "node:vm";
 import { Controller, Get, HttpStatus, Module } from "@nestjs/common";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
+import type { OpenAPIObject } from "@nestjs/swagger";
 import { Test } from "@nestjs/testing";
 import { apiDocsPath } from "@workspace/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -46,13 +47,28 @@ const OpenApiHeadSchema = z.object({ openapi: z.string(), paths: z.record(z.stri
 
 describe("setupApiDocs (public Swagger)", () => {
 	let app: NestFastifyApplication;
+	/** How many times Swagger asked for the document. */
+	let builds = 0;
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({ imports: [DocsProbeModule] }).compile();
 		app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
 		await app.init();
-		setupApiDocs(app, buildOpenApiDocument(app));
+		setupApiDocs(app, (): OpenAPIObject => {
+			builds += 1;
+			return buildOpenApiDocument(app);
+		});
 		await app.getHttpAdapter().getInstance().ready();
+	});
+
+	it("builds the document on the first request for it, not when mounting, and only once", async () => {
+		expect(builds).toBe(0);
+
+		await app.inject({ method: "GET", url: `${apiDocsPath()}-json` });
+		await app.inject({ method: "GET", url: `${apiDocsPath()}/swagger-ui-init.js` });
+		await app.inject({ method: "GET", url: `${apiDocsPath()}-json` });
+
+		expect(builds).toBe(1);
 	});
 
 	afterAll(async () => {

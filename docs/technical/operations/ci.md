@@ -3,7 +3,7 @@ title: "CI Pipeline (GitHub Actions)"
 tags: ["operations", "ci", "quality-gates", "github-actions"]
 description: "What every CI job checks, how to reproduce each one locally, how caching works, and which stages are still planned."
 author: "Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1793059200000
 coverImage: "https://images.unsplash.com/photo-1518432031352-d6fc5c10da5a?w=1200&h=630&fit=crop"
 order: 2
 ---
@@ -35,7 +35,7 @@ them individually.
 | --- | --- | --- |
 | **Lint** | `turbo run lint` — in every workspace, `oxfmt --check` (formatting) then `oxlint` (rules, type-aware), zero errors | `pnpm lint` |
 | **Typecheck** | `turbo run typecheck` across every workspace (builds `^build` deps first). In `apps/api` this covers **all** TypeScript: `src/` (`tsconfig.typecheck.json`), specs, `test/**`, `prisma/**`, `scripts/**` and tool configs (`tsconfig.json`) — Vitest itself never type-checks | `pnpm typecheck` |
-| **Unit tests** | `turbo run test --concurrency=1` (the root `test` script) — every workspace's Vitest suite; `apps/mobile` runs its jest-expo suites ([ADR 031](../../adr/031-jest-expo-for-mobile-tests.md)) followed by `expo install --check` (Expo SDK version drift fails). **One workspace at a time**: each test runner already spreads its files over every core, so running several suites side by side only starves them — on a 4-vCPU runner, after a change to a shared package, 17 suites at once made screen tests 5× slower and tipped them past their timeouts. One suite at a time runs each under the same conditions as on its own | `pnpm test` |
+| **Unit tests** | `turbo run test --concurrency=1` (the root `test` script) — every workspace's Vitest suite; `apps/mobile` runs its jest-expo suites ([ADR 031](../../adr/031-jest-expo-for-mobile-tests.md)) followed by `expo install --check` (Expo SDK version drift fails). **One workspace at a time**: each test runner already spreads its files over every core, so running several suites side by side only starves them — on a 4-vCPU runner, after a change to a shared package, 17 suites at once made screen tests 5× slower and tipped them past their timeouts. One suite at a time runs each under the same conditions as on its own. Inside a suite, Vitest runs its files in parallel, one worker per core (the web, admin and merchant suites ran one file at a time until 2026-10-27: admin took 190 s instead of 46 s). A test must never depend on how fast the machine is: a component behind `next/dynamic` is preloaded in `beforeAll` (its first load is an on-demand Vite transform), never left to an async query's 1 s default wait | `pnpm test` |
 | **Build** | `turbo run build` — API bundle, all Next.js apps, docs site (which also link-checks), and the mobile app's bundle check (`expo export --platform ios --platform android` into `apps/mobile/dist`: proves Metro resolves every workspace package without Xcode or Android Studio) | `pnpm build` |
 | **RLS manifest drift** | Prisma models ↔ RLS manifest ↔ RLS SQL agree, and the RLS apply plan is valid | `pnpm db:check-rls-manifest` |
 | **Dependency consistency** | Shared dependencies (React, Zod, TypeScript, Next) use one version everywhere (syncpack); `apps/mobile` has its own groups for what Expo SDK 57 pins (React 19.2, React Native, Metro, Jest 29) | `pnpm deps:check` |
@@ -56,7 +56,7 @@ CI re-runs them independently because local environments drift.
 
 ### Run the whole pipeline locally
 
-`pnpm ci:local` runs the same commands in the same order (lint, typecheck, test, build, RLS manifest, dependency consistency, migration history, audit, secret scan, docs links) and then the database jobs against **throwaway databases** (`<name>_ci_local`, `<name>_ci_local_shadow`) that it creates next to the one in `apps/api/.env`, migrates and seeds from scratch, and drops afterwards. A fresh database is what CI has, so state left behind by earlier local runs can no longer make a suite pass locally and fail in CI. Flags: `--skip-e2e`, `--e2e-only`, `--no-cache` (bypass the Turborepo cache), `--base <ref>` (default `origin/main`). A run with `--skip-e2e` / `--e2e-only` reports the skipped part as FAIL: it is not a full CI run. The analytics-consumer suite additionally needs `pnpm docker:up` (Kafka) and `apps/analytics-consumer/.env`.
+`pnpm ci:local` runs the same commands in the same order (lint, typecheck, test, build, RLS manifest, dependency consistency, migration history, audit, secret scan, docs links) and then the database jobs against **throwaway databases** (`<name>_ci_local`, `<name>_ci_local_shadow`) that it creates next to the one in `apps/api/.env`, migrates and seeds from scratch, and drops afterwards. A fresh database is what CI has, so state left behind by earlier local runs can no longer make a suite pass locally and fail in CI. Flags: `--skip-e2e`, `--e2e-only`, `--only <ids>` (just these non-database steps, e.g. `--only lint,typecheck,test` — what the pre-push hook runs; an unknown id is an error), `--no-cache` (bypass the Turborepo cache), `--base <ref>` (default `origin/main`). A run with `--skip-e2e` / `--e2e-only` reports the skipped part as FAIL: it is not a full CI run. The summary lists every step with its duration, then the total, so the slow part of a run is visible at a glance. The analytics-consumer suite additionally needs `pnpm docker:up` (Kafka) and `apps/analytics-consumer/.env`.
 
 The plan lives in `packages/tooling/scripts/lib/ci-local-plan.mjs`; its test asserts every command appears in `ci.yml`, so the two cannot drift apart silently.
 
@@ -81,10 +81,22 @@ the local Docker stack in [Local infrastructure](./local-infrastructure.md)):
    nullable column is NULL in every row, unless `apps/api/prisma/seed/coverage-exemptions.ts` lists the
    gap with a written reason. Adding a table or column without seeding it fails here — see
    [Seed coverage](../database.md#seed-coverage--every-table-every-column).
-5. `pnpm test:e2e` — boots the real Nest app against that database. Seeded customers such as `alice.johnson@example.com` are deliberately unverified (they demo the verify-email flow): a suite that signs in as one must establish the verified state itself (`markSeedUserEmailVerified` in `test/e2e-helpers.ts`) and never depend on suite order. The sign-in restriction is never disabled.
+5. `pnpm test:e2e` — boots the real Nest app against that database. **Test files run in parallel**,
+   each worker on its own copy of the database: the e2e global setup (`test/global-setup-e2e.ts`)
+   copies it once per worker (`CREATE DATABASE … TEMPLATE … STRATEGY FILE_COPY`, about 0.25 s for the
+   seeded development scenario) and drops the copies when the run ends, and every worker gets its own
+   BullMQ prefix and Redis namespace inside the run's (`<prefix>:w<n>`), so no file sees another
+   file's rows, jobs, caches or rate-limit counters. The database the job seeded is only copied,
+   never written. Workers: half the cores, at most four (`E2E_MAX_WORKERS` overrides;
+   `--no-file-parallelism` runs one file at a time). Locally the 93 files went from 445 s (one at a
+   time) to about 115 s with four workers, peaking at 42 Postgres connections (the default limit is 100).
+   Postgres copies a database only while nothing else is connected to it, so the setup waits up to
+   15 s for the source to become idle and then fails naming what is still connected (usually a
+   running dev API). Seeded customers such as `alice.johnson@example.com` are deliberately unverified (they demo the verify-email flow): a suite that signs in as one must establish the verified state itself (`markSeedUserEmailVerified` in `test/e2e-helpers.ts`) and never depend on suite order. The sign-in restriction is never disabled.
 6. `pnpm db:seed -- --scenario enterprise --seed 1` — proves the large scenario still runs.
 
-To reproduce locally against the Docker Postgres (never against a shared database):
+To reproduce locally against the Docker Postgres (never against a shared database; the suite only
+copies `DATABASE_URL`'s database, but the copy needs it idle — stop `pnpm dev` first):
 
 ```bash
 pnpm docker:up                                   # Postgres + the rest of the local stack
@@ -143,7 +155,7 @@ The guard (`packages/tooling/scripts/check-migration-history.mjs`, rules in `scr
 
 | Tool | Where the version comes from |
 | --- | --- |
-| Node.js | `NODE_VERSION` in `ci.yml` (currently the `24` LTS line). `engines.node` (`>=22.12`) is only the floor. |
+| Node.js | `NODE_VERSION` in `ci.yml` (currently the `24` LTS line, i.e. its latest release). `engines.node` (`>=22.12`) is only the floor. Locally use `.nvmrc` (`nvm use`): **24.22.1 or later**. On 24.20.0 the garbage collector intermittently crashed Node (`SIGSEGV` in V8's `ClearStaleLeftTrimmedPointerVisitor`, reading a garbage pointer while walking a stack frame): one cold mobile Jest run in six lost a worker that way, and three more crash reports showed the same stack. 24.22.0 backports V8 `0b94a9fd23ba`, which fixes a builtin that left exactly such a value on the stack for the GC to find; on 24.22.1, 12 cold runs out of 12 passed with no crash. |
 | pnpm | `packageManager` in the root `package.json`, read by `pnpm/action-setup`. |
 | PostgreSQL | `postgres:18.6` — keep `ci.yml` and `compose.yml` on the same tag. |
 
@@ -160,6 +172,28 @@ placeholder steps that always pass — a green check must always mean something 
 | Full-history secret scanning (e.g. gitleaks) | Planned — today only `.env.example` files are scanned. |
 | npm dependency update automation (Dependabot/Renovate for `package.json`) | Planned — Dependabot currently only updates GitHub Actions pins. |
 | Preview deployments, coverage floors, artifact retention policy | Planned. No CI artifacts are uploaded yet. |
+
+## Git hooks (Husky)
+
+`pnpm install` installs two hooks (`prepare` → `husky`, hooks in `.husky/`). Neither runs the
+database or browser suites — those need Postgres, Redis and built apps and take minutes; CI and
+`pnpm ci:local` run them.
+
+| Hook | Runs | Typical time |
+| --- | --- | --- |
+| `pre-commit` | `lint-staged` (`packages/tooling/lint-staged.config.mjs`): the staged files only, grouped by the workspace that owns them, each group through **that workspace's** oxfmt (writes; the result is re-staged) and then oxlint — the same tools and config as its `pnpm run lint`. A staged file that workspace's config ignores (e.g. `apps/admin/vitest.config.ts`) is skipped, not failed (`--no-error-on-unmatched-pattern` on both tools). Unstaged edits in the same files are kept out of the check and left as they were. | seconds |
+| `pre-push` | `packages/tooling/scripts/pre-push.mjs` → `pnpm ci:local --only lint,typecheck,test`: the exact lint, typecheck and unit-test steps of `ci:local` (taken from its plan, so they cannot drift) — every frontend and backend suite. A failure blocks the push to any branch. Turborepo's cache skips every workspace whose inputs are unchanged since its last green run. A push that only deletes remote branches is not checked. | cold about 5 min; after a small change, the affected workspaces only |
+
+Every pre-commit command starts `node packages/tooling/scripts/run-in-workspace.mjs`, never `pnpm`:
+lint-staged starts commands without a shell, a shebang-less `pnpm` shim (nvm installs one) cannot
+be started that way (`ENOEXEC`), and lint-staged 17 then reports the task as failed **but exits 0** —
+the commit would go through unchecked. The runner always starts and turns any failure to start the
+tool into a failed check.
+
+Hooks are a fast local guard, not the gate: `git push --no-verify` / `HUSKY=0` skip them (agents
+must never do so — `AGENTS.md`), so the merge gate stays the required CI checks below. Git clients
+that run hooks outside your login shell (some GUI apps) need `node` on their `PATH`; Husky reads
+`~/.config/husky/init.sh` for that (for nvm: `export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"`).
 
 ## Branch protection (repository settings)
 

@@ -3,6 +3,7 @@
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {
+		"prepare": "husky",
 		"setup": "pnpm install && pnpm build:shared",
 		"setup:db": "pnpm build:shared && pnpm db:all",
 		"build": "turbo build",
@@ -62,6 +63,8 @@
 		"@types/node": "^26.6.5",
 		"@workspace/typescript-config": "workspace:*",
 		"concurrently": "^10.0.6",
+		"husky": "^9.1.7",
+		"lint-staged": "^17.6.0",
 		"syncpack": "^15.3.3",
 		"turbo": "^2.11.10",
 		"typescript": "7.0.2"

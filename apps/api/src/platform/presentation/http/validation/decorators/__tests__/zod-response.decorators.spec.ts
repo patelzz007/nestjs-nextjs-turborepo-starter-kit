@@ -174,6 +174,8 @@ describe("Zod response decorators", () => {
 			for (const status of ["4XX", "5XX"]) {
 				expect(jsonSchemaOfRef(successResponse(document, "/probe/account", "get", status))).toBe("#/components/schemas/ApiErrorResponseDto");
 			}
+			// The component is the envelope itself: Swagger read it from the DTO's metadata factory.
+			expect(document.components?.schemas?.ApiErrorResponseDto).toMatchObject({ properties: { success: {}, error: {}, meta: {} } });
 		});
 
 		it("never documents a response object as closed (additive fields must stay safe for clients)", () => {

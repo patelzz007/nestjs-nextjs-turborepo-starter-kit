@@ -1,9 +1,9 @@
 ---
 title: "ADR 064: Plain-text transaction log through BullMQ"
 tags: ["adr", "audit", "logging", "bullmq", "operations"]
-description: "Every audit row is also appended to a readable .txt file per UTC day, handed off without waiting (BullMQ when Redis is set, an asynchronous append otherwise), with the AuditLog table staying the record of truth."
+description: "Every audit row is also appended to a readable .txt file per day, handed off without waiting (BullMQ when Redis is set, an asynchronous append otherwise), with the AuditLog table staying the record of truth."
 author: "Platform Team"
-lastUpdated: 1792972800000
+lastUpdated: 1793059200000
 coverImage: "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?auto=format&fit=crop&w=1600&q=80"
 order: 64
 ---
@@ -44,7 +44,9 @@ deliberate. A second synchronous write would double it for no gain in safety.
    request header and the payloads, pretty-printed as `jq` prints them. Everything inside an
    entry is indented, so only the rule starts a line with `=`. An absent fact is stated
    (`not sent`, `none`), never dropped. The first version, one `key=value` line, proved hard to
-   read and hid what was missing. One file per UTC day: `transactions-YYYY-MM-DD.txt` under
+   read and hid what was missing. One file per day in the log's time zone (`TRANSACTION_LOG_TIME_ZONE`, by default the
+   server's own; times carry their UTC offset, `2026-10-27 00:30:00.079 +08:00`; UTC-only until
+   2026-10-27, which read 4 pm for a Kuala Lumpur midnight): `transactions-YYYY-MM-DD.txt` under
    `TRANSACTION_LOG_DIR` (default `logs/transactions`, taken from the repository root since
    2026-10-26; it was relative to the API's working directory, `apps/api`).
 4. **Retention per instance.** Day files past `TRANSACTION_LOG_RETENTION_DAYS` (default 30) are

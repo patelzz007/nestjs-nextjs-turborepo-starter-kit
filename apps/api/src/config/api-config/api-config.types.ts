@@ -234,12 +234,14 @@ export interface MemoryLeakDetectionConfig {
 	readonly growthThresholdMb: number;
 }
 
-/** The plain-text transaction log (`TransactionLogModule`): one entry per audit row, in a file per UTC day. */
+/** The plain-text transaction log (`TransactionLogModule`): one entry per audit row, in a file per day. */
 export interface TransactionLogConfig {
-	/** Folder of the day files; a relative path is resolved against the API's working directory. */
+	/** Folder of the day files; a relative path is resolved against the monorepo root (the working directory when there is none). */
 	readonly directory: string;
 	/** Day files older than this many days are deleted. */
 	readonly retentionDays: number;
+	/** IANA zone the entries' times are written in and the day files roll over in (TRANSACTION_LOG_TIME_ZONE, default: the server's own). */
+	readonly timeZone: string;
 }
 
 export interface ObservabilityConfig {

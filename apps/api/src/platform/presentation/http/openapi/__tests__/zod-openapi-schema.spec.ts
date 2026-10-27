@@ -5,6 +5,23 @@ import { z } from "zod";
 import { zodStandardSchemaConverter, zodToOpenApi } from "../zod-openapi-schema";
 
 describe("zodToOpenApi", () => {
+	it("hands every caller an equal, separate copy, so editing one can never change the next (each schema is converted once per direction)", () => {
+		const schema = z.object({ tenantSlug: z.string().min(1) });
+
+		const first = zodToOpenApi(schema);
+		const second = zodToOpenApi(schema);
+		expect(second).toEqual(first);
+		expect(second).not.toBe(first);
+		expect(second.schema).not.toBe(first.schema);
+
+		Object.assign(first.schema, { description: "edited by a caller" });
+		expect(zodToOpenApi(schema).schema).toEqual(second.schema);
+		// The direction is part of the key: a `.default()` field is optional to send, always there in a result.
+		const paged = z.object({ page: z.number().int().default(1) });
+		expect(zodToOpenApi(paged, "input").schema).not.toHaveProperty("required");
+		expect(zodToOpenApi(paged, "output").schema).toMatchObject({ required: ["page"] });
+	});
+
 	it("documents the INPUT shape: required keys, types, formats, bounds, enums and nullability", () => {
 		const schema = z
 			.object({

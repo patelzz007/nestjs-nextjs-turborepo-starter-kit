@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { API_VERSION_PREFIX } from "@workspace/shared";
 import { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { getApiConfig } from "../src/config/api-config";
 import {
@@ -15,6 +15,25 @@ import {
 	TERMINAL_PAIRING_LIMIT,
 } from "../src/platform/presentation/http/security/throttling/rate-limit-policy";
 import { createE2eApp, extractCookie, mutationHeaders, uniqueClientIp, type InjectResponse } from "./e2e-helpers";
+
+/**
+ * The limits this file's app runs with. The floods below send the `default` limit's worth of requests
+ * (five times as many for the pre-auth limit) one after another, each a full request with its audit
+ * row: at the configured value (300, or a developer's own `.env`) they took over half a minute. What is
+ * proven, a 429 exactly at limit + 1, does not depend on the number. The `default` throttler also counts
+ * every request to a route with a policy of its own, so it must stay above every such policy's limit
+ * (the largest is ONBOARDING_STATUS_LIMIT, 30), or it would answer the 429 first: the first test checks
+ * that. Set before the app's config is parsed (`vi.hoisted` runs ahead of the imports; every e2e file
+ * has its own module graph), and restored after the file so later files see the usual environment.
+ */
+vi.hoisted((): void => {
+	// Inside the hoisted callback: it runs before any module-level constant is initialised.
+	const throttleDefaultLimitForFloods = "40";
+	vi.stubEnv("THROTTLE_DEFAULT_LIMIT", throttleDefaultLimitForFloods);
+});
+afterAll((): void => {
+	vi.unstubAllEnvs();
+});
 
 /**
  * One limit + 1 → 429 proof per named rate-limit policy (LOGIN, WEBHOOK and the pre-auth flood are in
@@ -30,8 +49,6 @@ const PASSWORD = "Rate-limit-e2e-1A!";
 /** The limit header of the `strict` throttler; the `default` throttler's header has no suffix. */
 const STRICT_LIMIT_HEADER = "x-ratelimit-limit-strict";
 const DEFAULT_LIMIT_HEADER = "x-ratelimit-limit";
-/** The authenticated-mutation case sends `THROTTLE_DEFAULT_LIMIT + 1` requests. */
-const DEFAULT_POLICY_TIMEOUT_MS = 120_000;
 
 interface PolicyCase {
 	readonly name: string;
@@ -91,6 +108,18 @@ describe("Rate-limit policies (e2e)", () => {
 		const throttled = await policy.send(addressFor());
 		expect(throttled.statusCode, policy.name).toBe(TOO_MANY_REQUESTS);
 	}
+
+	it("runs with a default limit above every policy limit tested here, so each 429 below is the policy's own", () => {
+		const policyLimits: readonly number[] = [
+			CREDENTIAL_LOW_LIMIT,
+			SESSION_ISSUE_LIMIT,
+			SESSION_REFRESH_LIMIT,
+			TERMINAL_PAIRING_LIMIT,
+			ONBOARDING_STATUS_LIMIT,
+			ADMIN_SECURITY_MUTATION_LIMIT,
+		];
+		expect(getApiConfig().rateLimits.throttleDefaultLimit).toBeGreaterThan(Math.max(...policyLimits));
+	});
 
 	const ipKeyedPolicies: readonly PolicyCase[] = [
 		{
@@ -158,18 +187,14 @@ describe("Rate-limit policies (e2e)", () => {
 		});
 	});
 
-	it(
-		"answers 429 on AUTHENTICATED_MUTATION at limit + 1, per principal",
-		async () => {
-			const accessToken = await freshAccessToken();
-			await expectThrottledAfterLimit({
-				name: "AUTHENTICATED_MUTATION — role assignment preview",
-				principalKeyed: true,
-				limit: getApiConfig().rateLimits.throttleDefaultLimit,
-				limitHeader: DEFAULT_LIMIT_HEADER,
-				send: (ip) => post(`${API_VERSION_PREFIX}/admin/roles/preview`, ip, {}, { authorization: `Bearer ${accessToken}` }),
-			});
-		},
-		DEFAULT_POLICY_TIMEOUT_MS,
-	);
+	it("answers 429 on AUTHENTICATED_MUTATION at limit + 1, per principal", async () => {
+		const accessToken = await freshAccessToken();
+		await expectThrottledAfterLimit({
+			name: "AUTHENTICATED_MUTATION — role assignment preview",
+			principalKeyed: true,
+			limit: getApiConfig().rateLimits.throttleDefaultLimit,
+			limitHeader: DEFAULT_LIMIT_HEADER,
+			send: (ip) => post(`${API_VERSION_PREFIX}/admin/roles/preview`, ip, {}, { authorization: `Bearer ${accessToken}` }),
+		});
+	});
 });

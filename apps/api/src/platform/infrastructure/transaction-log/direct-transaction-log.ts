@@ -3,7 +3,6 @@ import { Logger } from "@nestjs/common";
 import type { HttpAuditEntry } from "../audit/http-audit-entry";
 import type { TransactionLogConfig } from "../../../config/api-config.schema";
 import { TransactionLogFileWriter } from "./transaction-log-file-writer";
-import { formatTransactionLogEntry } from "./transaction-log-format";
 import { DisabledTransactionLog, TransactionLog } from "./transaction-log.port";
 
 /**
@@ -19,7 +18,7 @@ export class DirectTransactionLog extends TransactionLog {
 	}
 
 	public record(entry: HttpAuditEntry): void {
-		void this.writer.append(entry.occurredAt, formatTransactionLogEntry(entry)).catch((error: unknown): void => {
+		void this.writer.append(entry.occurredAt, this.writer.format(entry)).catch((error: unknown): void => {
 			this.logger.error({ event: "transaction_log.write_failed", correlationId: entry.correlationId, error: error instanceof Error ? error.message : String(error) });
 		});
 	}

@@ -5,7 +5,6 @@ import type { Queue } from "bullmq";
 
 import type { HttpAuditEntry } from "../audit/http-audit-entry";
 import { TransactionLogFileWriter } from "./transaction-log-file-writer";
-import { formatTransactionLogEntry } from "./transaction-log-format";
 import { TRANSACTION_LOG_APPEND_JOB_NAME, TRANSACTION_LOG_GLOBAL_CONCURRENCY } from "./transaction-log.constants";
 import { TransactionLog } from "./transaction-log.port";
 
@@ -41,7 +40,7 @@ export class QueuedTransactionLog extends TransactionLog implements OnModuleInit
 	}
 
 	public record(entry: HttpAuditEntry): void {
-		const job: TransactionLogWriteJob = TransactionLogWriteJobSchema.parse({ occurredAt: entry.occurredAt, text: formatTransactionLogEntry(entry) });
+		const job: TransactionLogWriteJob = TransactionLogWriteJobSchema.parse({ occurredAt: entry.occurredAt, text: this.writer.format(entry) });
 		void this.queue.add(TRANSACTION_LOG_APPEND_JOB_NAME, job, QUEUE_JOB_OPTIONS.transactionLogWrite).catch((error: unknown): void => {
 			this.logger.warn({
 				event: "transaction_log.enqueue_failed",

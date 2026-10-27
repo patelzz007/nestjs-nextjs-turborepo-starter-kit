@@ -1,9 +1,16 @@
 import { cleanup, render, waitFor } from "@testing-library/react";
 import * as React from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import ChartContainerClientOnly from "../chart.client-only";
+
+// The chart container is a `next/dynamic` chunk. Its first load is Vite transforming that module tree on demand,
+// which takes far longer on a busy machine than the 1 s an async query waits. Load it once up front so
+// every render's lazy import resolves from the module cache and no assertion depends on machine speed.
+beforeAll(async (): Promise<void> => {
+	await import("@workspace/ui/components/chart");
+});
 
 const CONFIG = { claims: { label: "Claims", color: "var(--chart-1)" } };
 

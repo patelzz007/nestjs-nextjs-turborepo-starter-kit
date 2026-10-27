@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } fr
 
 import { TransactionLogFileWriter } from "../transaction-log-file-writer";
 import { TransactionLogRetentionScheduler } from "../transaction-log-retention.scheduler";
+import { transactionLogConfig } from "./transaction-log-fixtures";
 
 describe("TransactionLogRetentionScheduler", () => {
 	let log: MockInstance<Logger["log"]>;
@@ -23,7 +24,7 @@ describe("TransactionLogRetentionScheduler", () => {
 		readonly registry: SchedulerRegistry;
 		readonly purge: MockInstance<TransactionLogFileWriter["purgeExpired"]>;
 	} {
-		const writer = new TransactionLogFileWriter({ directory: "unused", retentionDays: 30 });
+		const writer = new TransactionLogFileWriter(transactionLogConfig("unused"));
 		const purge = vi.spyOn(writer, "purgeExpired").mockResolvedValue({ cutoffDay: "2026-09-26", deletedFiles: [] });
 		const registry = new SchedulerRegistry();
 		return { scheduler: new TransactionLogRetentionScheduler(registry, writer), registry, purge };

@@ -1,5 +1,5 @@
 import { LIST_SLOT_INDEX, EnvValidationError } from "@workspace/shared";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SINGLE_TENANT_SEED_TENANT_ID } from "../../../prisma/seed/tenant-seed-ids";
 import { TEST_API_ENV, type TestEnv } from "../../../test/support/test-api-env";
@@ -78,23 +78,38 @@ describe("API env schema", () => {
 	});
 
 	describe("transaction log", () => {
-		it("is off under tests and on everywhere else, in logs/transactions for 30 days", () => {
-			expect(parse().observability.transactionLog).toBeNull();
-			expect(parse({ NODE_ENV: "development" }).observability.transactionLog).toEqual({ directory: "logs/transactions", retentionDays: 30 });
-			expect(parse(PRODUCTION).observability.transactionLog).toEqual({ directory: "logs/transactions", retentionDays: 30 });
+		afterEach(() => {
+			vi.unstubAllEnvs();
 		});
 
-		it("follows TRANSACTION_LOG_ENABLED, TRANSACTION_LOG_DIR and TRANSACTION_LOG_RETENTION_DAYS when set", () => {
-			expect(parse({ TRANSACTION_LOG_ENABLED: "true", TRANSACTION_LOG_DIR: "/var/log/api", TRANSACTION_LOG_RETENTION_DAYS: "90" }).observability.transactionLog).toEqual({
-				directory: "/var/log/api",
-				retentionDays: 90,
-			});
+		it("is off under tests and on everywhere else, in logs/transactions for 30 days, in the server's time zone", () => {
+			vi.stubEnv("TZ", "Asia/Kuala_Lumpur");
+			expect(parse().observability.transactionLog).toBeNull();
+			expect(parse({ NODE_ENV: "development" }).observability.transactionLog).toEqual({ directory: "logs/transactions", retentionDays: 30, timeZone: "Asia/Kuala_Lumpur" });
+			expect(parse(PRODUCTION).observability.transactionLog).toEqual({ directory: "logs/transactions", retentionDays: 30, timeZone: "Asia/Kuala_Lumpur" });
+		});
+
+		it("follows TRANSACTION_LOG_ENABLED, TRANSACTION_LOG_DIR, TRANSACTION_LOG_RETENTION_DAYS and TRANSACTION_LOG_TIME_ZONE when set", () => {
+			expect(
+				parse({
+					TRANSACTION_LOG_ENABLED: "true",
+					TRANSACTION_LOG_DIR: "/var/log/api",
+					TRANSACTION_LOG_RETENTION_DAYS: "90",
+					TRANSACTION_LOG_TIME_ZONE: "America/New_York",
+				}).observability.transactionLog,
+			).toEqual({ directory: "/var/log/api", retentionDays: 90, timeZone: "America/New_York" });
 			expect(parse({ NODE_ENV: "development", TRANSACTION_LOG_ENABLED: "false" }).observability.transactionLog).toBeNull();
 		});
 
-		it("rejects a retention under one day, and reads a blank folder as unset", () => {
+		it("rejects a retention under one day and a time zone that is not an IANA zone, and reads a blank folder as unset", () => {
+			vi.stubEnv("TZ", "UTC");
 			expect(captureEnvError({ TRANSACTION_LOG_RETENTION_DAYS: "0" }).variables).toEqual(["TRANSACTION_LOG_RETENTION_DAYS"]);
-			expect(parse({ TRANSACTION_LOG_ENABLED: "true", TRANSACTION_LOG_DIR: " " }).observability.transactionLog).toEqual({ directory: "logs/transactions", retentionDays: 30 });
+			expect(captureEnvError({ TRANSACTION_LOG_TIME_ZONE: "Malaysia/Somewhere" }).variables).toEqual(["TRANSACTION_LOG_TIME_ZONE"]);
+			expect(parse({ TRANSACTION_LOG_ENABLED: "true", TRANSACTION_LOG_DIR: " " }).observability.transactionLog).toEqual({
+				directory: "logs/transactions",
+				retentionDays: 30,
+				timeZone: "UTC",
+			});
 		});
 	});
 

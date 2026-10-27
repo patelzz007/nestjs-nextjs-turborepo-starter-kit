@@ -13,6 +13,7 @@ import {
 	CI_BUILD_ENV,
 	databaseSteps,
 	MULTI_TENANT_E2E_ENV,
+	selectSteps,
 	SINGLE_TENANT_E2E_ENV,
 	BROWSER_TENANCY_ENV,
 	staticSteps,
@@ -211,5 +212,18 @@ describe("browser job mirrors .github/workflows/ci.yml → browser-e2e", () => {
 		for (const id of ["browser:deploy", "browser:seed", "browser:api"]) {
 			expect(all.find((step) => step.id === id)?.env?.DATABASE_URL).toBe("postgresql://u:p@h/db_ci_local_browser?schema=public");
 		}
+	});
+});
+
+describe("selectSteps", () => {
+	const steps = staticSteps({ base: "origin/main", noCache: false });
+
+	it("keeps only the listed steps, in plan order", () => {
+		expect(selectSteps(steps, ["test", "lint"]).map((step) => step.id)).toStrictEqual(["lint", "test"]);
+	});
+
+	it("refuses an unknown step id or an empty list instead of running nothing", () => {
+		expect(() => selectSteps(steps, ["lint", "unit"])).toThrow(/--only needs step ids from: lint, typecheck, test/);
+		expect(() => selectSteps(steps, [])).toThrow(/got: none/);
 	});
 });

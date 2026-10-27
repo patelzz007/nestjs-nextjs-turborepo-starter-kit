@@ -20,6 +20,8 @@ import { BooleanFlagEnvSchema } from "@workspace/shared";
 import { config as loadEnv } from "dotenv";
 import { inject } from "vitest";
 
+import { e2eRedisNamespaceFor, e2eWorkerBullMqPrefix } from "./support/e2e-bullmq-prefix";
+import { workerDatabaseUrl } from "./support/e2e-worker-databases";
 import { TEST_API_INFRASTRUCTURE, TEST_API_SECRETS, TEST_API_SWITCHES, TEST_E2E_PROXY, TEST_E2E_STORAGE } from "./support/test-api-env";
 
 const apiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -39,13 +41,18 @@ if (BooleanFlagEnvSchema.parse(process.env.TENANCY_ENABLED)) {
 for (const [name, value] of Object.entries({ ...TEST_API_SECRETS, ...TEST_API_SWITCHES, ...TEST_E2E_PROXY, ...TEST_E2E_STORAGE })) {
 	process.env[name] = value;
 }
-// This run's own BullMQ key prefix (test/global-setup-e2e.ts) — forced, so a
-// BULLMQ_PREFIX in apps/api/.env can never put e2e jobs on the dev API's queues.
-process.env.BULLMQ_PREFIX = inject("bullMqPrefix");
+// Test files run in parallel, one per worker. This worker's own copy of the
+// database (test/global-setup-e2e.ts): no file ever sees another file's rows,
+// and the database DATABASE_URL named is only copied, never written.
+process.env.DATABASE_URL = workerDatabaseUrl(inject("workerDatabaseUrls"), process.env.VITEST_POOL_ID);
+// This worker's own BullMQ key prefix inside the run's — forced, so a
+// BULLMQ_PREFIX in apps/api/.env can never put e2e jobs on the dev API's
+// queues, and a worker never runs another worker's jobs against its database.
+process.env.BULLMQ_PREFIX = e2eWorkerBullMqPrefix(inject("bullMqPrefix"), process.env.VITEST_POOL_ID);
 // …and its own REDIS_NAMESPACE (authz:invalidate channel, session cache,
-// throttler and login-verification keys): a dev API on the same Redis never
-// hears this run's invalidations, and the run never reads the dev API's keys.
-process.env.REDIS_NAMESPACE = inject("redisNamespace");
+// throttler and login-verification keys): neither a dev API on the same Redis
+// nor another worker hears its invalidations or counts its requests.
+process.env.REDIS_NAMESPACE = e2eRedisNamespaceFor(process.env.BULLMQ_PREFIX);
 
 // Tenancy suites share this loader (plan MT-26). `multi` must not keep a fallback tenant id.
 const tenancySuite = process.env.TENANCY_E2E_SUITE;

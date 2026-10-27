@@ -13,6 +13,7 @@
  *   pnpm ci:local                    everything
  *   pnpm ci:local --skip-e2e         everything except the database jobs
  *   pnpm ci:local --e2e-only         only the database jobs (API, analytics consumer, browser)
+ *   pnpm ci:local --only lint,test   only these non-database steps (the pre-push hook runs lint,typecheck,test)
  *   pnpm ci:local --no-cache         bypass the Turborepo cache (like a cold CI cache)
  *   pnpm ci:local --base origin/main ref for the migration-history check (default origin/main)
  */
@@ -26,6 +27,7 @@ import pg from "pg";
 import {
 	browserJob,
 	databaseSteps,
+	selectSteps,
 	staticSteps,
 	THROWAWAY_BROWSER_SUFFIX,
 	THROWAWAY_DATABASE_SUFFIX,
@@ -34,6 +36,7 @@ import {
 	withDatabaseName,
 	withoutQuery,
 } from "./lib/ci-local-plan.mjs";
+import { formatDuration } from "./lib/format-duration.mjs";
 import { describeOccupiedPorts, findOccupiedPorts } from "./lib/port-preflight.mjs";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");
@@ -47,23 +50,27 @@ function readEnvFile(filePath) {
 
 function parseArgs(argv) {
 	const baseIndex = argv.indexOf("--base");
+	const onlyIndex = argv.indexOf("--only");
 	return {
 		base: baseIndex === -1 ? DEFAULT_BASE : (argv[baseIndex + 1] ?? DEFAULT_BASE),
+		only: onlyIndex === -1 ? undefined : (argv[onlyIndex + 1] ?? "").split(",").filter((id) => id.length > 0),
 		skipE2e: argv.includes("--skip-e2e"),
 		e2eOnly: argv.includes("--e2e-only"),
 		noCache: argv.includes("--no-cache"),
 	};
 }
 
+/** Runs one step; `{ ok, ms }` — whether it passed and how long it took. */
 function runStep(step) {
 	console.log(`\n▶ [${step.job}] ${step.command} ${step.args.join(" ")}`);
+	const startedAt = performance.now();
 	// Through `sh` (argv passed verbatim, never re-parsed): package-manager shims such
 	// as nvm's `pnpm` can be shebang-less scripts that execve() rejects (ENOEXEC).
 	const result = spawnSync("sh", ["-c", 'exec "$0" "$@"', step.command, ...step.args], { cwd: REPO_ROOT, stdio: "inherit", env: { ...process.env, ...step.env } });
 	if (result.error !== undefined) {
 		console.error(`could not start ${step.command}: ${result.error.message}`);
 	}
-	return result.status === 0;
+	return { ok: result.status === 0, ms: performance.now() - startedAt };
 }
 
 /** Runs `sql` on the server's maintenance database (`postgres`). Database names are validated identifiers. */
@@ -98,8 +105,8 @@ async function runDatabaseJobs(results) {
 	await onMaintenanceDatabase(developerUrl, recreate);
 	try {
 		for (const step of databaseSteps({ databaseUrl: main.url, shadowDatabaseUrl: shadow.url, consumerLoginUrl, runId: String(Date.now()) })) {
-			const ok = runStep(step);
-			results.push({ job: step.job, id: step.id, ok });
+			const { ok, ms } = runStep(step);
+			results.push({ job: step.job, id: step.id, ok, ms });
 			if (!ok) {
 				break; // later steps depend on this one, exactly as in the CI job
 			}
@@ -165,16 +172,16 @@ async function runBrowserJob(results) {
 	const servers = [];
 	try {
 		for (const step of job.setup) {
-			const ok = runStep(step);
-			results.push({ job: step.job, id: step.id, ok });
+			const { ok, ms } = runStep(step);
+			results.push({ job: step.job, id: step.id, ok, ms });
 			if (!ok) {
 				return;
 			}
 		}
 		servers.push(...job.servers.map(startServer));
 		for (const step of job.suites) {
-			const ok = runStep(step);
-			results.push({ job: step.job, id: step.id, ok, ...(ok ? {} : { note: "server logs: .ci-logs/" }) });
+			const { ok, ms } = runStep(step);
+			results.push({ job: step.job, id: step.id, ok, ms, ...(ok ? {} : { note: "server logs: .ci-logs/" }) });
 			if (!ok && step.id === "browser:wait") {
 				return;
 			}
@@ -186,27 +193,37 @@ async function runBrowserJob(results) {
 }
 
 async function main() {
+	const startedAt = performance.now();
 	const options = parseArgs(process.argv.slice(2));
 	const results = [];
 
-	if (options.e2eOnly) {
+	if (options.only !== undefined) {
+		console.log(`ci:local --only ${options.only.join(",")}: a subset of CI, not a full run`);
+		for (const step of selectSteps(staticSteps(options), options.only)) {
+			results.push({ job: step.job, id: step.id, ...runStep(step) });
+		}
+	} else if (options.e2eOnly) {
 		results.push({ job: "Static jobs", id: "static", ok: false, note: "skipped (--e2e-only): this is NOT a full CI run" });
 	} else {
 		for (const step of staticSteps(options)) {
-			results.push({ job: step.job, id: step.id, ok: runStep(step) });
+			results.push({ job: step.job, id: step.id, ...runStep(step) });
 		}
 	}
-	if (options.skipE2e) {
-		results.push({ job: "Database jobs", id: "e2e", ok: false, note: "skipped (--skip-e2e): this is NOT a full CI run" });
-	} else {
-		await runDatabaseJobs(results);
-		await runBrowserJob(results);
+	if (options.only === undefined) {
+		if (options.skipE2e) {
+			results.push({ job: "Database jobs", id: "e2e", ok: false, note: "skipped (--skip-e2e): this is NOT a full CI run" });
+		} else {
+			await runDatabaseJobs(results);
+			await runBrowserJob(results);
+		}
 	}
 
 	console.log("\n── ci:local summary ──");
 	for (const result of results) {
-		console.log(`${result.ok ? "PASS" : "FAIL"}  ${result.job} (${result.id})${result.note === undefined ? "" : ` — ${result.note}`}`);
+		const duration = result.ms === undefined ? "" : `  ${formatDuration(result.ms)}`;
+		console.log(`${result.ok ? "PASS" : "FAIL"}  ${result.job} (${result.id})${duration}${result.note === undefined ? "" : ` — ${result.note}`}`);
 	}
+	console.log(`\nTotal ${formatDuration(performance.now() - startedAt)}`);
 	if (results.some((result) => !result.ok)) {
 		process.exitCode = 1;
 	}

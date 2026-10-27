@@ -104,6 +104,15 @@ export const DEFAULT_MEMORY_LEAK_GROWTH_THRESHOLD_MB = 64;
 export const DEFAULT_TRANSACTION_LOG_DIR = "logs/transactions";
 /** Days of transaction log files kept when TRANSACTION_LOG_RETENTION_DAYS is unset. */
 export const DEFAULT_TRANSACTION_LOG_RETENTION_DAYS = 30;
+
+/**
+ * The zone the transaction log reads its times in when TRANSACTION_LOG_TIME_ZONE
+ * is unset: the server's own (`TZ`, else the operating system's setting), so a
+ * developer in Kuala Lumpur reads Kuala Lumpur time. A container without `TZ` is UTC.
+ */
+export function hostTimeZone(): string {
+	return new Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
 /** Service id reported to Observe when OBSERVE_SERVICE_ID is unset. */
 export const DEFAULT_OBSERVE_SERVICE_ID = "api";
 /** Kafka client id and Redis connection name when MESSAGING_CLIENT_ID / MESSAGING_CONNECTION_NAME are unset. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { e2eRedisNamespaceFor, purgeBullMqPrefix, resolveE2eBullMqPrefix, type PurgeableRedis } from "./e2e-bullmq-prefix";
+import { e2eRedisNamespaceFor, e2eWorkerBullMqPrefix, purgeBullMqPrefix, resolveE2eBullMqPrefix, type PurgeableRedis } from "./e2e-bullmq-prefix";
 
 /**
  * In-memory SCAN/DEL over a key set, two keys per page so pagination is
@@ -55,6 +55,28 @@ describe("e2eRedisNamespaceFor", () => {
 
 		await expect(purgeBullMqPrefix(redis, e2eRedisNamespaceFor("e2e:a"))).resolves.toBe(2);
 		expect(remaining()).toEqual(["dev:auth:me:u1"]);
+	});
+});
+
+describe("e2eWorkerBullMqPrefix", () => {
+	it("gives each parallel worker its own prefix inside the run's", () => {
+		expect(e2eWorkerBullMqPrefix("e2e:0b1c", "1")).toBe("e2e:0b1c:w1");
+		expect(e2eWorkerBullMqPrefix("ci-local:1791005000000", "4")).toBe("ci-local:1791005000000:w4");
+		expect(e2eRedisNamespaceFor(e2eWorkerBullMqPrefix("e2e:0b1c", "2"))).toBe("e2e:0b1c:w2-kv");
+	});
+
+	it("refuses a missing worker id and a run prefix outside the e2e namespaces", () => {
+		expect(() => e2eWorkerBullMqPrefix("e2e:0b1c", undefined)).toThrow();
+		expect(() => e2eWorkerBullMqPrefix("e2e:0b1c", "0")).toThrow();
+		expect(() => e2eWorkerBullMqPrefix("bull", "1")).toThrow(/must start with/);
+	});
+
+	it("leaves every worker's BullMQ and API keys to the run's purge, and nothing else", async () => {
+		const worker = e2eWorkerBullMqPrefix("e2e:a", "3");
+		const { redis, remaining } = fakeRedis([`${worker}:email.send:1`, `${e2eRedisNamespaceFor(worker)}:throttle:x`, "e2e:b:w3:email.send:1", "bull:email.send:1"]);
+
+		await expect(purgeBullMqPrefix(redis, "e2e:a")).resolves.toBe(2);
+		expect(remaining()).toEqual(["bull:email.send:1", "e2e:b:w3:email.send:1"]);
 	});
 });
 

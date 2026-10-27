@@ -3,10 +3,12 @@
 // ============================================
 // Pure functions: an audit row (already redacted and size-capped by
 // http-audit-entry.ts) → a block of text a person can read top to bottom, and
-// an instant → its day file.
+// an instant → its day file. Times read in the log's time zone
+// (TRANSACTION_LOG_TIME_ZONE, by default the server's own) with its UTC offset,
+// so `00:30 +08:00` is both what the clock on the wall said and one exact instant.
 //
 //   ================================================================================
-//   2026-10-26 12:06:44.442 UTC  FAILED 403 FORBIDDEN  PATCH /api/v1/tenants/brew-bean-kl/rewards/r-1
+//   2026-10-26 20:06:44.442 +08:00  FAILED 403 FORBIDDEN  PATCH /api/v1/tenants/brew-bean-kl/rewards/r-1
 //   --------------------------------------------------------------------------------
 //     Result       FAILED: answered 403 FORBIDDEN after 12 ms
 //     Reason       ForbiddenException: Missing permission merchant:manage_rewards
@@ -35,7 +37,9 @@
 
 import { z } from "zod";
 
-import type { AuditErrorDetail, AuditErrorLink, JsonValue } from "@workspace/shared";
+import { localDateInTimeZone, wallClockDateInTimeZone, type AuditErrorDetail, type AuditErrorLink, type JsonValue } from "@workspace/shared";
+
+import { MS_PER_MINUTE, MS_PER_SECOND } from "../../../config/api-config/api-config.defaults";
 
 import type { HttpAuditEntry } from "../audit/http-audit-entry";
 import { systemCommandRowOrigin, type SystemCommandRowOrigin } from "../audit/system-command-audit";
@@ -59,18 +63,20 @@ const CONTINUATION_INDENT: string = " ".repeat(FACT_INDENT.length + LABEL_WIDTH)
 /** Indent of a section's body (headers, payloads). */
 const SECTION_BODY_INDENT = "    ";
 
-/** Day files are `transactions-YYYY-MM-DD.txt`, by the UTC day the request arrived. */
+/** Day files are `transactions-YYYY-MM-DD.txt`, by the day (in the log's time zone) the request arrived. */
 export const TRANSACTION_LOG_FILE_PREFIX = "transactions-";
 export const TRANSACTION_LOG_FILE_EXTENSION = ".txt";
 
 /** A day file's name, with the day as a named group (rules/27). */
 const DAY_FILE_PATTERN = /^transactions-(?<day>\d{4}-\d{2}-\d{2})\.txt$/;
 
-/** Length of `YYYY-MM-DD` at the start of an ISO timestamp. */
-const ISO_DAY_LENGTH = 10;
-
-/** `2026-10-26T12:06:44.442Z` → `2026-10-26 12:06:44.442` (+ ` UTC`). */
+/** A wall-clock reading written as ISO (`2026-10-26T20:06:44.442Z`), split into `2026-10-26` and `20:06:44.442`. */
 const ISO_TIME_PATTERN = /^(?<day>\d{4}-\d{2}-\d{2})T(?<time>[\d:.]+)Z$/;
+
+/** Minutes in an hour, for the `+08:00` offset. */
+const MINUTES_PER_HOUR = 60;
+/** Digits of each part of the offset (`08`, `00`). */
+const OFFSET_PART_DIGITS = 2;
 
 /** A system command's input names the system actor and why it ran (`actor.reason`). */
 const SystemReasonSchema = z.looseObject({ actor: z.looseObject({ reason: z.string().min(1) }) });
@@ -81,11 +87,24 @@ const TenantSlugParamsSchema = z.looseObject({ params: z.looseObject({ tenantSlu
 /** One labelled fact: its first line, then any continuation lines. */
 type Fact = readonly [label: string, lines: readonly string[]];
 
-/** `2026-10-26 12:06:44.442 UTC`. */
-function readableTime(epochMs: number): string {
-	const iso: string = new Date(epochMs).toISOString();
+/** `+08:00`, `-03:30`, `+00:00`: a UTC offset in minutes as ISO 8601 writes it. */
+function offsetText(offsetMinutes: number): string {
+	const sign: string = offsetMinutes < 0 ? "-" : "+";
+	const minutes: number = Math.abs(offsetMinutes);
+	const pad = (part: number): string => String(part).padStart(OFFSET_PART_DIGITS, "0");
+	return `${sign}${pad(Math.floor(minutes / MINUTES_PER_HOUR))}:${pad(minutes % MINUTES_PER_HOUR)}`;
+}
+
+/** `2026-10-26 20:06:44.442 +08:00`: the wall clock in `timeZone`, with that zone's offset at that instant (DST-aware). */
+export function readableTime(epochMs: number, timeZone: string): string {
+	const millisecond: number = epochMs % MS_PER_SECOND;
+	// The zone's wall clock to the second; the offset is how far it is from the instant's own second.
+	const wallClockMs: number = wallClockDateInTimeZone(epochMs, timeZone).getTime();
+	const offsetMinutes: number = Math.round((wallClockMs - (epochMs - millisecond)) / MS_PER_MINUTE);
+	const iso: string = new Date(wallClockMs + millisecond).toISOString();
 	const groups = ISO_TIME_PATTERN.exec(iso)?.groups;
-	return groups?.day === undefined || groups.time === undefined ? iso : `${groups.day} ${groups.time} UTC`;
+	const local: string = groups?.day === undefined || groups.time === undefined ? iso : `${groups.day} ${groups.time}`;
+	return `${local} ${offsetText(offsetMinutes)}`;
 }
 
 /** The set parts joined by `separator`, or `null` when none is set. */
@@ -263,18 +282,18 @@ function headerSection(entry: HttpAuditEntry): string[] {
 }
 
 /** The title under the rule: when, how it ended, and what was asked. */
-function title(entry: HttpAuditEntry, origin: SystemCommandRowOrigin | null): string {
+function title(entry: HttpAuditEntry, origin: SystemCommandRowOrigin | null, timeZone: string): string {
 	const status = `${entry.outcome} ${String(entry.responseStatus)}${entry.errorCode === null ? "" : ` ${entry.errorCode}`}`;
 	const target: string = origin === null ? `${entry.method} ${entry.path}` : `${entry.method} ${origin.name}`;
-	return `${readableTime(entry.occurredAt)}  ${status}  ${target}`;
+	return `${readableTime(entry.occurredAt, timeZone)}  ${status}  ${target}`;
 }
 
-/** One transaction as text, ending with the blank line that separates it from the next. */
-export function formatTransactionLogEntry(entry: HttpAuditEntry): string {
+/** One transaction as text, its time read in `timeZone`, ending with the blank line that separates it from the next. */
+export function formatTransactionLogEntry(entry: HttpAuditEntry, timeZone: string): string {
 	const origin: SystemCommandRowOrigin | null = systemCommandRowOrigin(entry);
 	const lines: string[] = [
 		TRANSACTION_LOG_ENTRY_RULE,
-		title(entry, origin),
+		title(entry, origin, timeZone),
 		TRANSACTION_LOG_TITLE_RULE,
 		...facts(entry, origin).flatMap(factLines),
 		...headerSection(entry),
@@ -285,17 +304,17 @@ export function formatTransactionLogEntry(entry: HttpAuditEntry): string {
 	return `${lines.join("\n")}\n\n`;
 }
 
-/** The UTC day of an instant: `2026-10-26`. */
-export function utcDayOf(epochMs: number): string {
-	return new Date(epochMs).toISOString().slice(0, ISO_DAY_LENGTH);
+/** The day an instant falls on in `timeZone`: `2026-10-26`. */
+export function localDayOf(epochMs: number, timeZone: string): string {
+	return localDateInTimeZone(epochMs, timeZone);
 }
 
-/** `transactions-2026-10-26.txt` for any instant on 26 October 2026 (UTC). */
-export function transactionLogFileName(epochMs: number): string {
-	return `${TRANSACTION_LOG_FILE_PREFIX}${utcDayOf(epochMs)}${TRANSACTION_LOG_FILE_EXTENSION}`;
+/** `transactions-2026-10-26.txt` for any instant on 26 October 2026 in `timeZone` (local midnight to midnight). */
+export function transactionLogFileName(epochMs: number, timeZone: string): string {
+	return `${TRANSACTION_LOG_FILE_PREFIX}${localDayOf(epochMs, timeZone)}${TRANSACTION_LOG_FILE_EXTENSION}`;
 }
 
-/** The UTC day (`YYYY-MM-DD`) of a day file, or `null` for any other file in the folder. */
+/** The day (`YYYY-MM-DD`) of a day file, or `null` for any other file in the folder. */
 export function transactionLogFileDay(fileName: string): string | null {
 	return DAY_FILE_PATTERN.exec(fileName)?.groups?.day ?? null;
 }

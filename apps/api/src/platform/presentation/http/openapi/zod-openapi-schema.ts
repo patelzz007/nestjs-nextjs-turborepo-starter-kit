@@ -144,12 +144,34 @@ const COMPONENT_HASH_LENGTH = 12;
 export type ZodSchemaDirection = "input" | "output";
 
 /**
+ * Conversions already made, per schema and direction. A zod schema is immutable
+ * (every method returns a new one), so its conversion never changes, and the
+ * document build asks for the same schema many times: one shared params schema
+ * (`{ tenantSlug }`) sits on every tenant route. Weakly held, so a schema that is
+ * no longer referenced takes its conversion with it.
+ */
+const conversions = new WeakMap<z.ZodType, Map<ZodSchemaDirection, ZodOpenApiConversion>>();
+
+/**
  * Convert a zod schema into an OpenAPI 3.0 schema — by default describing its
  * INPUT (the wire shape a client sends). Throws on a construct OpenAPI cannot
  * express (a self-referencing ROOT schema) so the mistake surfaces when the
  * document is built, not as a silently wrong document.
+ *
+ * Each schema is converted once per direction; every call gets its own deep
+ * copy, so a caller that edits the result (Swagger merges parameter schemas
+ * into its own objects) can never change what the next caller receives.
  */
 export function zodToOpenApi(schema: z.ZodType, io: ZodSchemaDirection = "input"): ZodOpenApiConversion {
+	const byDirection: Map<ZodSchemaDirection, ZodOpenApiConversion> = conversions.get(schema) ?? new Map<ZodSchemaDirection, ZodOpenApiConversion>();
+	conversions.set(schema, byDirection);
+	const converted: ZodOpenApiConversion = byDirection.get(io) ?? convert(schema, io);
+	byDirection.set(io, converted);
+	return structuredClone(converted);
+}
+
+/** The one conversion of `schema` in direction `io` (see {@link zodToOpenApi}). */
+function convert(schema: z.ZodType, io: ZodSchemaDirection): ZodOpenApiConversion {
 	const raw: JsonSchemaNode = JsonSchemaNodeSchema.parse(z.toJSONSchema(schema, { target: "openapi-3.0", io, unrepresentable: "any" }));
 	const definitions: Readonly<Record<string, JsonSchemaNode>> = { ...raw.definitions, ...raw.$defs };
 	const context: ConversionContext = { renames: componentRenames(definitions), openObjects: io === "output" };

@@ -135,6 +135,23 @@ export function staticSteps({ base, noCache }) {
 	];
 }
 
+/**
+ * `steps` narrowed to `ids` (`ci:local --only lint,typecheck,test`, the
+ * pre-push hook), in plan order. An unknown id is an error, never a silent no-op.
+ *
+ * @param {Step[]} steps
+ * @param {readonly string[]} ids
+ * @returns {Step[]}
+ */
+export function selectSteps(steps, ids) {
+	const known = new Set(steps.map((step) => step.id));
+	const unknown = ids.filter((id) => !known.has(id));
+	if (unknown.length > 0 || ids.length === 0) {
+		throw new Error(`--only needs step ids from: ${[...known].join(", ")} (got: ${ids.join(", ") || "none"})`);
+	}
+	return steps.filter((step) => ids.includes(step.id));
+}
+
 /** ci.yml → jobs.e2e: RewardHub's multi-tenant mode, no default tenant (multi-tenancy plan MT-70). */
 export const MULTI_TENANT_E2E_ENV = { TENANCY_ENABLED: "true" };
 

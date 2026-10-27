@@ -8,10 +8,10 @@ import { TransactionLogFileWriter } from "../transaction-log-file-writer";
 import { formatTransactionLogEntry } from "../transaction-log-format";
 import { TransactionLogWriteProcessor } from "../transaction-log-write.processor";
 import { DisabledTransactionLog } from "../transaction-log.port";
-import { auditEntry, OCCURRED_AT } from "./transaction-log-fixtures";
+import { auditEntry, OCCURRED_AT, TIME_ZONE, transactionLogConfig } from "./transaction-log-fixtures";
 
 function fakeWriter(): { readonly writer: TransactionLogFileWriter; readonly append: MockInstance<TransactionLogFileWriter["append"]> } {
-	const writer = new TransactionLogFileWriter({ directory: "unused", retentionDays: 30 });
+	const writer = new TransactionLogFileWriter(transactionLogConfig("unused"));
 	const append = vi.spyOn(writer, "append").mockResolvedValue();
 	return { writer, append };
 }
@@ -55,7 +55,7 @@ describe("transaction log sinks", () => {
 
 			new QueuedTransactionLog(queue, writer).record(entry);
 			await vi.waitFor(() => {
-				expect(add).toHaveBeenCalledWith("append", { occurredAt: OCCURRED_AT, text: formatTransactionLogEntry(entry) }, QUEUE_JOB_OPTIONS.transactionLogWrite);
+				expect(add).toHaveBeenCalledWith("append", { occurredAt: OCCURRED_AT, text: formatTransactionLogEntry(entry, TIME_ZONE) }, QUEUE_JOB_OPTIONS.transactionLogWrite);
 			});
 			expect(append).not.toHaveBeenCalled();
 		});
@@ -69,7 +69,7 @@ describe("transaction log sinks", () => {
 			new QueuedTransactionLog(queue, writer).record(entry);
 
 			await vi.waitFor(() => {
-				expect(append).toHaveBeenCalledWith(OCCURRED_AT, formatTransactionLogEntry(entry));
+				expect(append).toHaveBeenCalledWith(OCCURRED_AT, formatTransactionLogEntry(entry, TIME_ZONE));
 			});
 			expect(warn).toHaveBeenCalledWith(expect.objectContaining({ event: "transaction_log.enqueue_failed", correlationId: "corr-1", fallback: "direct_write" }));
 		});
@@ -82,7 +82,7 @@ describe("transaction log sinks", () => {
 
 			new DirectTransactionLog(writer).record(entry);
 
-			expect(append).toHaveBeenCalledWith(OCCURRED_AT, formatTransactionLogEntry(entry));
+			expect(append).toHaveBeenCalledWith(OCCURRED_AT, formatTransactionLogEntry(entry, TIME_ZONE));
 		});
 
 		it("logs a failed write instead of throwing", async () => {
@@ -100,7 +100,7 @@ describe("transaction log sinks", () => {
 
 	it("is off without a config (the CLI with TRANSACTION_LOG_ENABLED=false), and direct with one", () => {
 		expect(standaloneTransactionLog(null)).toBeInstanceOf(DisabledTransactionLog);
-		expect(standaloneTransactionLog({ directory: "logs/transactions", retentionDays: 30 })).toBeInstanceOf(DirectTransactionLog);
+		expect(standaloneTransactionLog(transactionLogConfig("logs/transactions"))).toBeInstanceOf(DirectTransactionLog);
 	});
 
 	describe("TransactionLogWriteProcessor", () => {

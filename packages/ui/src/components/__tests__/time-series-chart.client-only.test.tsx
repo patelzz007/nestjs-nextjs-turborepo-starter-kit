@@ -1,10 +1,17 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import type { TimeSeriesDefinition, TimeSeriesPoint } from "../time-series-chart";
 import TimeSeriesChartClientOnly from "../time-series-chart.client-only";
+
+// The time-series chart is a `next/dynamic` chunk. Its first load is Vite transforming that module tree on demand,
+// which takes far longer on a busy machine than the 1 s an async query waits. Load it once up front so
+// every render's lazy import resolves from the module cache and no assertion depends on machine speed.
+beforeAll(async (): Promise<void> => {
+	await import("@workspace/ui/components/time-series-chart");
+});
 
 type Key = "claims";
 

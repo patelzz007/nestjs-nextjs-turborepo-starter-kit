@@ -14,7 +14,6 @@ export default defineConfig({
 		setupFiles: ["./vitest.setup.ts"],
 		// Tests live in `__tests__/` folders beside the code they test (rules/11 → "Where tests live").
 		include: ["**/__tests__/**/*.test.{ts,tsx}"],
-		fileParallelism: false,
 		// Deterministic public config for the env modules (lib/env/*), which
 		// parse at import and fail fast when a required variable is missing.
 		// Vitest does not load `.env`, so tests never depend on a developer's

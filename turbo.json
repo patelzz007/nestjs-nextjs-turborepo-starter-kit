@@ -123,7 +123,8 @@
 		"test:e2e": {
 			"dependsOn": ["^build"],
 			"cache": false,
-			"env": ["E2E_BULLMQ_PREFIX"]
+			// E2E_MAX_WORKERS: how many test files run at once; VITEST_POOL_ID: which worker (and database copy) runs a file.
+			"env": ["E2E_BULLMQ_PREFIX", "E2E_MAX_WORKERS", "VITEST_POOL_ID"]
 		},
 		"test:browser": {
 			"dependsOn": ["^build"],

@@ -1,9 +1,9 @@
 ---
 title: "Transaction log (.txt)"
-description: "A plain-text copy of every audit row: one readable entry per request, failure and system command, in a .txt file per UTC day, written through BullMQ off the request path."
+description: "A plain-text copy of every audit row: one readable entry per request, failure and system command, in a .txt file per day (in the server's time zone), written through BullMQ off the request path."
 order: 53
 author: "Platform Team"
-lastUpdated: 1792972800000
+lastUpdated: 1793059200000
 coverImage: "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=1200&h=630&fit=crop"
 tags: ["operations", "logging", "audit", "bullmq"]
 ---
@@ -12,7 +12,7 @@ tags: ["operations", "logging", "audit", "bullmq"]
 
 Every transaction the API records in its audit log also lands in a plain-text file that you can
 read with `tail`, `less` or `grep`, with no database or admin panel in between. One file holds one
-UTC day:
+day, midnight to midnight in the log's time zone:
 
 ```text
 logs/transactions/transactions-2026-10-26.txt        (at the repository root)
@@ -44,7 +44,7 @@ headers and payloads. A failed background job:
 
 ```text
 ================================================================================
-2026-10-25 18:06:58.211 UTC  FAILED 500 INTERNAL_ERROR  JOB claims.expire-referrer
+2026-10-26 02:06:58.211 +08:00  FAILED 500 INTERNAL_ERROR  JOB claims.expire-referrer
 --------------------------------------------------------------------------------
   Result       FAILED: answered 500 INTERNAL_ERROR after 0 ms
   Reason       Error: Expiring referrer claims failed
@@ -70,7 +70,7 @@ A merchant request:
 
 ```text
 ================================================================================
-2026-10-26 08:48:16.172 UTC  SUCCEEDED 200  PATCH /api/v1/tenants/brew-bean-kl/locations/c2e1…
+2026-10-26 16:48:16.172 +08:00  SUCCEEDED 200  PATCH /api/v1/tenants/brew-bean-kl/locations/c2e1…
 --------------------------------------------------------------------------------
   Result       SUCCEEDED: answered 200 after 106 ms
   Endpoint     PATCH /api/v1/tenants/:tenantSlug/locations/:locationId
@@ -102,7 +102,7 @@ A merchant request:
 
 | Line | What it says |
 | --- | --- |
-| Title | When (UTC), how it ended (outcome, status, error code), and what was asked: the method and path, or the job, cron or script. |
+| Title | When, in the log's time zone with its UTC offset (`2026-10-27 00:30:00.079 +08:00`), how it ended (outcome, status, error code), and what was asked: the method and path, or the job, cron or script. |
 | **Result** | The outcome, the status and error code the caller got, and how long it took. |
 | **Reason** | Failures only. What the server knew, not just the code the caller saw: the exception's class, its own message, the machine code it carried (`P2025`, `ECONNREFUSED`), its `cause` chain and, for a 5xx or a job, the first stack frames. URL credentials are redacted and e-mail addresses masked. |
 | **Endpoint** / **Command** | The route template, or the command class and its origin. |
@@ -122,7 +122,7 @@ starts with the date.
 
 ```bash
 grep -c '^=\{80\}$' transactions-2026-10-26.txt                     # entries today
-grep -E '^[0-9-]+ [0-9:.]+ UTC  FAILED' transactions-2026-10-26.txt   # failures, one title each
+grep -E '^[0-9-]+ [0-9:.]+ [+-][0-9:]+  FAILED' transactions-2026-10-26.txt   # failures, one title each
 # One whole entry, by correlation id (or any text in it: a user id, an e-mail, a tenant id):
 awk '/^=+$/{if (e ~ /hkb1P6jg/) printf "%s", e; e=""} {e = e $0 "\n"} END{if (e ~ /hkb1P6jg/) printf "%s", e}' transactions-2026-10-26.txt
 ```
@@ -173,6 +173,7 @@ it up. On a shared folder, concurrent runs are harmless.
 | `TRANSACTION_LOG_ENABLED` | on (off under `NODE_ENV=test`) | `true` / `false`. |
 | `TRANSACTION_LOG_DIR` | `logs/transactions` | Folder of the day files. A relative path is taken from the repository root (the folder holding `pnpm-workspace.yaml`), so `<repo>/logs/transactions` whichever folder the API runs from (git-ignored). Without a repository around it, as in a deployed bundle, it is taken from the working directory. Before 2026-10-26 the default landed in `apps/api/logs/transactions`; older files there are not moved. |
 | `TRANSACTION_LOG_RETENTION_DAYS` | `30` | Day files older than this many days are deleted (min 1). |
+| `TRANSACTION_LOG_TIME_ZONE` | the server's own zone (`TZ`, else the operating system's) | An IANA zone such as `Asia/Kuala_Lumpur`. Every entry's time is the wall clock in this zone followed by its UTC offset, which also pins the exact instant (`00:30 +08:00` is `16:30 UTC` the day before), and a day file runs from midnight to midnight in it. On a laptop in Kuala Lumpur the default is Kuala Lumpur time. A container without `TZ` runs in UTC, so set this in production to the zone your operators read logs in: RewardHub sets `Asia/Kuala_Lumpur` (`apps/api/.env.example` ships it set). Write the name as the IANA database spells it (`Asia/Kuala_Lumpur`): Node also accepts other casings, but that is a convenience of its `Intl`, not something every tool reading the setting shares. Before 2026-10-27 times were always UTC and files rolled over at midnight UTC. |
 
 ## Running more than one instance
 

@@ -12,6 +12,7 @@ import type { IncomingMessage } from "node:http";
 import { type NestApplicationOptions } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
+import type { OpenAPIObject } from "@nestjs/swagger";
 import { LogController } from "fastify";
 import { apiDocsPath } from "@workspace/shared";
 
@@ -141,8 +142,8 @@ export async function bootstrapApp(config: ApiConfig): Promise<void> {
 		reply.header("Content-Type", "image/svg+xml").send(faviconSvg);
 	});
 
-	// Build Swagger before listen — Fastify won't allow route registration after.
-	// Set SWAGGER_ENABLED=0 to skip it (saves ~50ms + static UI mount on listen).
+	// Mount Swagger before listen — Fastify won't allow route registration after.
+	// Set SWAGGER_ENABLED=0 to skip it (saves the static UI mount on listen).
 	if (docsPolicy.enabled) {
 		if (docsPolicy.access === "platform_admin") {
 			// Registered before the docs routes: every docs URL requires a SuperAdmin session.
@@ -163,7 +164,8 @@ export async function bootstrapApp(config: ApiConfig): Promise<void> {
 				reply.redirect("/favicon.ico");
 			});
 		}
-		setupApiDocs(app, buildOpenApiDocument(app));
+		// The document itself is built on the first docs request (setupApiDocs), not here.
+		setupApiDocs(app, (): OpenAPIObject => buildOpenApiDocument(app));
 		markPhase("Swagger mounted");
 	}
 

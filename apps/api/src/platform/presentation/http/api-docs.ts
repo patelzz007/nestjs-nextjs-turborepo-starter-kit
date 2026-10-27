@@ -160,9 +160,18 @@ export function applyOperationSecurity(document: OpenAPIObject, publicOperationI
 	}
 }
 
-/** Mount Swagger at the version-derived docs path (`apiDocsPath()` → `/v1/docs`). */
-export function setupApiDocs(app: INestApplication, document: OpenAPIObject): void {
-	SwaggerModule.setup(apiDocsPath().replace(/^\//, ""), app, document, {
+/**
+ * Mount Swagger at the version-derived docs path (`apiDocsPath()` → `/v1/docs`).
+ *
+ * `buildDocument` runs on the FIRST request for the document (the UI's init
+ * script, `-json` or `-yaml`), and its result is kept for every later one
+ * (`SwaggerModule.setup` takes a document factory). Building it scans every
+ * route and converts every contract schema, a few hundred milliseconds that
+ * serving the API itself never needs, so the API is ready without it. The
+ * routes are still registered here, before `listen`, as Fastify requires.
+ */
+export function setupApiDocs(app: INestApplication, buildDocument: () => OpenAPIObject): void {
+	SwaggerModule.setup(apiDocsPath().replace(/^\//, ""), app, buildDocument, {
 		customSiteTitle: "REST API",
 		swaggerOptions: {
 			withCredentials: true,

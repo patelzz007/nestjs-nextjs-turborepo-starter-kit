@@ -5,9 +5,10 @@ import type { OnApplicationShutdown } from "@nestjs/common";
 
 import type { TransactionLogConfig } from "../../../config/api-config.schema";
 import { resolveFromWorkspaceRoot } from "../utils/workspace-root";
-import { transactionLogFileDay, transactionLogFileName, utcDayOf } from "./transaction-log-format";
+import type { HttpAuditEntry } from "../audit/http-audit-entry";
+import { formatTransactionLogEntry, localDayOf, transactionLogFileDay, transactionLogFileName } from "./transaction-log-format";
 
-/** Length of one UTC day. */
+/** 24 hours: the retention counts back this far per day, then takes the day it lands on in the log's zone. */
 const MS_PER_DAY: number = 24 * 60 * 60 * 1000;
 
 /** Node's error for a missing file or folder. */
@@ -19,7 +20,7 @@ function isNotFound(error: Error): boolean {
 
 /** What one retention run removed. */
 export interface TransactionLogPurgeResult {
-	/** Day files older than this UTC day were deleted. */
+	/** Day files older than this day (in the log's time zone) were deleted. */
 	readonly cutoffDay: string;
 	readonly deletedFiles: readonly string[];
 }
@@ -46,9 +47,15 @@ export class TransactionLogFileWriter implements OnApplicationShutdown {
 		this.directory = resolveFromWorkspaceRoot(config.directory, process.cwd());
 	}
 
-	/** Appends `text` to the day file of `occurredAt` (UTC). Rejects when the write failed; later appends still run. */
+	/** `entry` as the text of one log entry, its time read in the log's time zone (TRANSACTION_LOG_TIME_ZONE). */
+	public format(entry: HttpAuditEntry): string {
+		return formatTransactionLogEntry(entry, this.config.timeZone);
+	}
+
+	/** Appends `text` to the day file of `occurredAt` (its day in the log's time zone). Rejects when the write failed; later appends still run. */
 	public append(occurredAt: number, text: string): Promise<void> {
-		const write: Promise<void> = this.tail.then(async (): Promise<void> => this.write(join(this.directory, transactionLogFileName(occurredAt)), text));
+		const file: string = join(this.directory, transactionLogFileName(occurredAt, this.config.timeZone));
+		const write: Promise<void> = this.tail.then(async (): Promise<void> => this.write(file, text));
 		this.tail = write.catch((): void => undefined);
 		return write;
 	}
@@ -60,7 +67,7 @@ export class TransactionLogFileWriter implements OnApplicationShutdown {
 
 	/** Deletes the day files older than the retention allows, counted back from `nowEpochMs`. Other files in the folder are never touched. */
 	public async purgeExpired(nowEpochMs: number): Promise<TransactionLogPurgeResult> {
-		const cutoffDay: string = utcDayOf(nowEpochMs - this.config.retentionDays * MS_PER_DAY);
+		const cutoffDay: string = localDayOf(nowEpochMs - this.config.retentionDays * MS_PER_DAY, this.config.timeZone);
 		const names: string[] = await this.fileNames();
 		const expired: string[] = names.filter((name: string): boolean => {
 			const day: string | null = transactionLogFileDay(name);

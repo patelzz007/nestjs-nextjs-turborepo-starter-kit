@@ -6,11 +6,12 @@ import {
 	formatTransactionLogEntry,
 	TRANSACTION_LOG_ENTRY_RULE,
 	TRANSACTION_LOG_TITLE_RULE,
+	localDayOf,
+	readableTime,
 	transactionLogFileDay,
 	transactionLogFileName,
-	utcDayOf,
 } from "../transaction-log-format";
-import { auditEntry, OCCURRED_AT } from "./transaction-log-fixtures";
+import { auditEntry, OCCURRED_AT, TIME_ZONE } from "./transaction-log-fixtures";
 
 /** The entry's lines, without the blank line that ends it. */
 function linesOf(text: string): string[] {
@@ -19,9 +20,9 @@ function linesOf(text: string): string[] {
 
 describe("formatTransactionLogEntry — an HTTP request", () => {
 	it("opens with a rule and a readable title, then one labelled line per fact, every absent fact said out loud", () => {
-		expect(linesOf(formatTransactionLogEntry(auditEntry()))).toEqual([
+		expect(linesOf(formatTransactionLogEntry(auditEntry(), TIME_ZONE))).toEqual([
 			TRANSACTION_LOG_ENTRY_RULE,
-			"2026-10-26 01:44:26.123 UTC  SUCCEEDED 201  POST /api/v1/rewards",
+			"2026-10-26 09:44:26.123 +08:00  SUCCEEDED 201  POST /api/v1/rewards",
 			TRANSACTION_LOG_TITLE_RULE,
 			"  Result       SUCCEEDED: answered 201 after 42 ms",
 			"  Endpoint     POST /api/v1/rewards",
@@ -35,7 +36,7 @@ describe("formatTransactionLogEntry — an HTTP request", () => {
 	});
 
 	it("ends every entry with one blank line, and indents everything inside it, so only the opening rule starts a line with '='", () => {
-		const text = formatTransactionLogEntry(auditEntry({ requestBody: { note: "==== not a rule" } }));
+		const text = formatTransactionLogEntry(auditEntry({ requestBody: { note: "==== not a rule" } }), TIME_ZONE);
 
 		expect(text.endsWith("\n\n")).toBe(true);
 		expect(text.endsWith("\n\n\n")).toBe(false);
@@ -52,6 +53,7 @@ describe("formatTransactionLogEntry — an HTTP request", () => {
 				impersonatorUserId: "admin-1",
 				impersonationSessionId: "imp-1",
 			}),
+			TIME_ZONE,
 		);
 
 		expect(text).toContain(
@@ -64,16 +66,19 @@ describe("formatTransactionLogEntry — an HTTP request", () => {
 	});
 
 	it("says when a user's name was not recorded, and names an API-key caller by key and terminal", () => {
-		expect(formatTransactionLogEntry(auditEntry({ actorUserId: "u-1" }))).toContain(
+		expect(formatTransactionLogEntry(auditEntry({ actorUserId: "u-1" }), TIME_ZONE)).toContain(
 			"  Who          a signed-in user (name not recorded)\n               user u-1, no device session",
 		);
-		expect(formatTransactionLogEntry(auditEntry({ apiKeyId: "key-1", terminalId: "T-1" }))).toContain("  Who          API key key-1, POS terminal T-1");
+		expect(formatTransactionLogEntry(auditEntry({ apiKeyId: "key-1", terminalId: "T-1" }), TIME_ZONE)).toContain("  Who          API key key-1, POS terminal T-1");
 	});
 
 	it("shows the verified tenant with its slug, and the X-Tenant-Id the client sent against it", () => {
-		const matching = formatTransactionLogEntry(auditEntry({ tenantId: "t-1", claimedTenantId: "t-1", requestParams: { params: { tenantSlug: "brew-bean-kl" }, query: {} } }));
-		const forged = formatTransactionLogEntry(auditEntry({ tenantId: "t-1", claimedTenantId: "t-2", locationId: "loc-1", claimedLocationId: "loc-1" }));
-		const unverified = formatTransactionLogEntry(auditEntry({ claimedTenantId: "t-9" }));
+		const matching = formatTransactionLogEntry(
+			auditEntry({ tenantId: "t-1", claimedTenantId: "t-1", requestParams: { params: { tenantSlug: "brew-bean-kl" }, query: {} } }),
+			TIME_ZONE,
+		);
+		const forged = formatTransactionLogEntry(auditEntry({ tenantId: "t-1", claimedTenantId: "t-2", locationId: "loc-1", claimedLocationId: "loc-1" }), TIME_ZONE);
+		const unverified = formatTransactionLogEntry(auditEntry({ claimedTenantId: "t-9" }), TIME_ZONE);
 
 		expect(matching).toContain("  Tenant       t-1 (brew-bean-kl), verified by the API\n               X-Tenant-Id t-1 (matches), X-Location-Id not sent");
 		expect(forged).toContain(
@@ -98,6 +103,7 @@ describe("formatTransactionLogEntry — an HTTP request", () => {
 				origin: "https://merchant.example.com",
 				referer: "https://merchant.example.com/t/brew/rewards",
 			}),
+			TIME_ZONE,
 		);
 
 		expect(text).toContain(
@@ -124,10 +130,11 @@ describe("formatTransactionLogEntry — an HTTP request", () => {
 					stack: ["at RewardsRepository.update (src/rewards.repository.ts:42:13)"],
 				},
 			}),
+			TIME_ZONE,
 		);
 
 		expect(linesOf(text).slice(1, 9)).toEqual([
-			"2026-10-26 01:44:26.123 UTC  FAILED 500 INTERNAL_ERROR  POST /api/v1/rewards",
+			"2026-10-26 09:44:26.123 +08:00  FAILED 500 INTERNAL_ERROR  POST /api/v1/rewards",
 			TRANSACTION_LOG_TITLE_RULE,
 			"  Result       FAILED: answered 500 INTERNAL_ERROR after 42 ms",
 			"  Reason       PrismaClientKnownRequestError [P2025]: Invalid `update()` invocation:",
@@ -139,15 +146,15 @@ describe("formatTransactionLogEntry — an HTTP request", () => {
 	});
 
 	it("says so when a failure's reason was not recorded", () => {
-		expect(formatTransactionLogEntry(auditEntry({ outcome: "FAILED", responseStatus: 403, errorCode: "FORBIDDEN" }))).toContain(
+		expect(formatTransactionLogEntry(auditEntry({ outcome: "FAILED", responseStatus: 403, errorCode: "FORBIDDEN" }), TIME_ZONE)).toContain(
 			"  Reason       not recorded (a row written before error details were kept)",
 		);
 	});
 
 	it("lists the trace, the idempotency key and the system operations", () => {
-		expect(formatTransactionLogEntry(auditEntry({ traceId: "trace-9", idempotencyKey: "idem-1", systemOperations: ["auth.principal.lookup", "outbox.enqueue"] }))).toContain(
-			"  Trace        correlation corr-1, trace trace-9, idempotency key idem-1\n               system operations: auth.principal.lookup, outbox.enqueue",
-		);
+		expect(
+			formatTransactionLogEntry(auditEntry({ traceId: "trace-9", idempotencyKey: "idem-1", systemOperations: ["auth.principal.lookup", "outbox.enqueue"] }), TIME_ZONE),
+		).toContain("  Trace        correlation corr-1, trace trace-9, idempotency key idem-1\n               system operations: auth.principal.lookup, outbox.enqueue");
 	});
 
 	it("prints every request header, then the params and bodies the way jq does", () => {
@@ -158,6 +165,7 @@ describe("formatTransactionLogEntry — an HTTP request", () => {
 				requestBody: { name: "Coffee" },
 				responseBody: { id: "r-1" },
 			}),
+			TIME_ZONE,
 		);
 
 		const expected: string[] = [
@@ -210,9 +218,9 @@ describe("formatTransactionLogEntry — a system command", () => {
 			}),
 		);
 
-		expect(linesOf(formatTransactionLogEntry(row)).slice(0, 12)).toEqual([
+		expect(linesOf(formatTransactionLogEntry(row, TIME_ZONE)).slice(0, 12)).toEqual([
 			TRANSACTION_LOG_ENTRY_RULE,
-			"2026-10-25 18:06:58.211 UTC  FAILED 500 INTERNAL_ERROR  JOB claims.expire-referrer",
+			"2026-10-26 02:06:58.211 +08:00  FAILED 500 INTERNAL_ERROR  JOB claims.expire-referrer",
 			TRANSACTION_LOG_TITLE_RULE,
 			"  Result       FAILED: answered 500 INTERNAL_ERROR after 0 ms",
 			"  Reason       Error: Record to update not found.",
@@ -227,11 +235,29 @@ describe("formatTransactionLogEntry — a system command", () => {
 	});
 });
 
+describe("readableTime", () => {
+	it("reads the wall clock in the log's zone, with that zone's UTC offset, to the millisecond", () => {
+		// 16:30 UTC is already the next day in Kuala Lumpur: the time a person there saw on their clock.
+		expect(readableTime(Date.UTC(2026, 9, 26, 16, 30, 0, 79), TIME_ZONE)).toBe("2026-10-27 00:30:00.079 +08:00");
+		expect(readableTime(OCCURRED_AT, "UTC")).toBe("2026-10-26 01:44:26.123 +00:00");
+	});
+
+	it("writes half-hour and negative offsets, and follows daylight saving time", () => {
+		expect(readableTime(OCCURRED_AT, "Asia/Kolkata")).toBe("2026-10-26 07:14:26.123 +05:30");
+		expect(readableTime(Date.UTC(2026, 6, 1, 12, 0, 0, 0), "America/St_Johns")).toBe("2026-07-01 09:30:00.000 -02:30");
+		expect(readableTime(Date.UTC(2026, 0, 15, 12, 0, 0, 0), "America/New_York")).toBe("2026-01-15 07:00:00.000 -05:00");
+		expect(readableTime(Date.UTC(2026, 6, 15, 12, 0, 0, 0), "America/New_York")).toBe("2026-07-15 08:00:00.000 -04:00");
+	});
+});
+
 describe("day files", () => {
-	it("names the file after the UTC day the request arrived", () => {
-		expect(utcDayOf(OCCURRED_AT)).toBe("2026-10-26");
-		expect(transactionLogFileName(OCCURRED_AT)).toBe("transactions-2026-10-26.txt");
-		expect(transactionLogFileName(Date.UTC(2026, 9, 26, 23, 59, 59, 999))).toBe("transactions-2026-10-26.txt");
+	it("names the file after the day the request arrived in the log's zone, midnight to midnight there", () => {
+		expect(localDayOf(OCCURRED_AT, TIME_ZONE)).toBe("2026-10-26");
+		expect(transactionLogFileName(OCCURRED_AT, TIME_ZONE)).toBe("transactions-2026-10-26.txt");
+		// 23:59:59.999 in Kuala Lumpur, then 00:00 the next day.
+		expect(transactionLogFileName(Date.UTC(2026, 9, 26, 15, 59, 59, 999), TIME_ZONE)).toBe("transactions-2026-10-26.txt");
+		expect(transactionLogFileName(Date.UTC(2026, 9, 26, 16, 0, 0, 0), TIME_ZONE)).toBe("transactions-2026-10-27.txt");
+		expect(transactionLogFileName(Date.UTC(2026, 9, 26, 23, 59, 59, 999), "UTC")).toBe("transactions-2026-10-26.txt");
 	});
 
 	it("reads the day back from a day file, and nothing from any other file", () => {

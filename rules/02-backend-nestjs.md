@@ -594,16 +594,17 @@ export class HealthController {
 Building directly on `05-contracts-zod-api.md`'s "zod drives Swagger" rule, the actual bootstrap wiring:
 
 ```ts
-// apps/api/src/common/api-docs.ts → buildOpenApiDocument(app), called from bootstrap
+// apps/api/src/platform/presentation/http/api-docs.ts → buildOpenApiDocument(app), called from bootstrap
 const config = new DocumentBuilder()
   .setTitle('Orders API')
   .setVersion('1.0')
   .addBearerAuth()
   .build();
-const document = cleanupOpenApiDoc(
+return cleanupOpenApiDoc(
   SwaggerModule.createDocument(app, config, { standardSchemaConverter: zodStandardSchemaConverter }),
 ); // request inputs from @ZodBody/@ZodQuery/@ZodParams/@ZodParam, responses from @ZodResponse/@ZodPaginatedResponse (ADR 022) — no hand-written schema duplication
-SwaggerModule.setup('v1/docs', app, document);
+// The document is built on the FIRST docs request, not at boot (setupApiDocs passes a factory):
+SwaggerModule.setup('v1/docs', app, () => buildOpenApiDocument(app));
 ```
 
 Keep the Swagger UI disabled or authenticated in production if the API surface itself is not meant to be publicly browsable — treat the decision of "is our API documentation public" as a deliberate one, not a default left over from local development convenience.

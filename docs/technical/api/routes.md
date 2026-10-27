@@ -4,7 +4,7 @@ tags: ["api", "routes", "contracts", "type-safety", "shared"]
 description: "How every API endpoint path is defined once in api-routes.ts and consumed by contracts, controllers, and the client — with zero duplication."
 order: 13
 author: "Platform Team"
-lastUpdated: 1792972800000
+lastUpdated: 1793059200000
 coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -209,17 +209,26 @@ OpenAPI document at `/v1/docs-json` / `/v1/docs-yaml`. Exposure is decided by
 
 In production the docs are an attack-surface map, so they are off unless explicitly enabled,
 and then every docs URL (UI, `-json`/`-yaml`, assets, `/docs`) is gated by
-`ApiDocsAccessGate` (`apps/api/src/common/api-docs-access.gate.ts`): the caller needs a valid,
+`ApiDocsAccessGate` (`apps/api/src/platform/presentation/http/api-docs-access.gate.ts`): the caller needs a valid,
 non-revoked access token of a platform SuperAdmin — the admin panel's `adminAccessToken`
 cookie or `Authorization: Bearer …`. No token / an invalid token → `401 UNAUTHORIZED`; a
 non-SuperAdmin → `403 FORBIDDEN` (standard error envelope). Every endpoint still enforces its
 own authentication and authorization regardless of the docs.
 
+**The document is built on first use, not at boot.** The docs routes are registered before
+`listen` (Fastify requires it), but `buildOpenApiDocument()` runs on the first request for the
+document (the UI's init script, `-json` or `-yaml`) and is kept for every later one. Building it
+scans every route and converts every contract schema, a few hundred milliseconds that serving
+the API never needs, so the API is ready without it: the first docs page load after a restart
+takes about 0.3 s longer, later loads do not. Each zod schema is converted once per direction
+(`zodToOpenApi` caches it, handing every caller its own copy), and the error-envelope component
+(`ApiErrorResponseDto`, referenced twice by every route) is generated once.
+
 **Calling protected endpoints from Swagger UI — no token to paste.** `AuthGuard` accepts a
 `Bearer` token or a session cookie, and picks the cookie by `X-Client-Type`
 (`admin` → `adminAccessToken`, `merchant` → `merchantAccessToken`, otherwise `accessToken`).
 Swagger UI sends **`X-Client-Type: admin` by default** (`swaggerClientTypeInterceptor` in
-`apps/api/src/common/api-docs.ts`), so:
+`apps/api/src/platform/presentation/http/api-docs.ts`), so:
 
 1. Log in to the admin panel (or call `POST /auth/login` from Swagger — it then sets the
    admin cookies), and open the docs on the **same host as the cookie**:
@@ -272,7 +281,7 @@ public get(@ZodParams(ProductIdParamSchema) params: { id: string }) { … }
   Ajv, `400 { message: "Validation failed", errors: [{ path, message, code }] }` → the
   `VALIDATION_ERROR` envelope in [Errors](./errors.md)).
 - **Documentation is derived.** The schema is attached through Nest 12's native
-  `@Body({ schema, pipes })` option; `buildOpenApiDocument()` (`apps/api/src/common/api-docs.ts`)
+  `@Body({ schema, pipes })` option; `buildOpenApiDocument()` (`apps/api/src/platform/presentation/http/api-docs.ts`)
   converts it with `zodStandardSchemaConverter` (`common/openapi/zod-openapi-schema.ts`, zod's
   `z.toJSONSchema(..., { target: "openapi-3.0", io: "input" })`). Required keys, types, enums,
   formats, min/max, defaults, `nullable`, and `.describe()` / `.meta({ description, example })`

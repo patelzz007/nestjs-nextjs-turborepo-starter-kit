@@ -8,6 +8,7 @@ import { resolveApiPublicUrl } from "../api-public-url";
 import { toGithubRepositoryParams, type StorageProviderSetting } from "../api-env.fields";
 import {
 	DEFAULT_STORAGE_DOWNLOAD_TTL_SECONDS,
+	hostTimeZone,
 	LOCAL_PRIVATE_CONTAINER,
 	LOCAL_PUBLIC_CONTAINER,
 	NON_PRODUCTION_STORAGE_PHYSICAL_DELETE_DELAY_MS,
@@ -174,7 +175,7 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
 			// On everywhere but under tests, which must not leave files behind; TRANSACTION_LOG_ENABLED decides when set.
 			transactionLog:
 				(env.TRANSACTION_LOG_ENABLED ?? nodeEnv !== NodeEnvSchema.enum.test)
-					? { directory: env.TRANSACTION_LOG_DIR, retentionDays: env.TRANSACTION_LOG_RETENTION_DAYS }
+					? { directory: env.TRANSACTION_LOG_DIR, retentionDays: env.TRANSACTION_LOG_RETENTION_DAYS, timeZone: env.TRANSACTION_LOG_TIME_ZONE ?? hostTimeZone() }
 					: null,
 			observe: resolveObserveConfig(env),
 		},

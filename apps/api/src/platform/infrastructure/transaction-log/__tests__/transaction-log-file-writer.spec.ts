@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { TransactionLogFileWriter } from "../transaction-log-file-writer";
-import { OCCURRED_AT } from "./transaction-log-fixtures";
+import { auditEntry, OCCURRED_AT, transactionLogConfig } from "./transaction-log-fixtures";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -23,15 +23,15 @@ describe("TransactionLogFileWriter", () => {
 	});
 
 	it("creates the folder on the first write and appends entries in the order they were handed in", async () => {
-		const writer = new TransactionLogFileWriter({ directory, retentionDays: 30 });
+		const writer = new TransactionLogFileWriter(transactionLogConfig(directory));
 
 		await Promise.all(["one\n\n", "two\n\n", "three\n\n"].map(async (text: string): Promise<void> => writer.append(OCCURRED_AT, text)));
 
 		expect(await readFile(join(directory, "transactions-2026-10-26.txt"), "utf8")).toBe("one\n\ntwo\n\nthree\n\n");
 	});
 
-	it("starts a new file for each UTC day", async () => {
-		const writer = new TransactionLogFileWriter({ directory, retentionDays: 30 });
+	it("starts a new file for each day", async () => {
+		const writer = new TransactionLogFileWriter(transactionLogConfig(directory));
 
 		await writer.append(OCCURRED_AT, "today\n\n");
 		await writer.append(OCCURRED_AT + MS_PER_DAY, "tomorrow\n\n");
@@ -39,11 +39,28 @@ describe("TransactionLogFileWriter", () => {
 		expect((await readdir(directory)).toSorted()).toEqual(["transactions-2026-10-26.txt", "transactions-2026-10-27.txt"]);
 	});
 
+	it("rolls over at midnight in the log's time zone, not at midnight UTC", async () => {
+		const writer = new TransactionLogFileWriter(transactionLogConfig(directory));
+
+		// 16:30 UTC on the 26th is 00:30 on the 27th in Kuala Lumpur.
+		await writer.append(Date.UTC(2026, 9, 26, 15, 59, 59, 999), "before midnight\n\n");
+		await writer.append(Date.UTC(2026, 9, 26, 16, 30, 0, 0), "after midnight\n\n");
+
+		expect((await readdir(directory)).toSorted()).toEqual(["transactions-2026-10-26.txt", "transactions-2026-10-27.txt"]);
+		expect(await readFile(join(directory, "transactions-2026-10-27.txt"), "utf8")).toBe("after midnight\n\n");
+	});
+
+	it("formats an entry with its time read in the log's time zone", () => {
+		const writer = new TransactionLogFileWriter(transactionLogConfig(directory));
+
+		expect(writer.format(auditEntry())).toContain("2026-10-26 09:44:26.123 +08:00  SUCCEEDED 201  POST /api/v1/rewards");
+	});
+
 	it("keeps writing after a failed write", async () => {
 		// A file where the folder should be: every write fails until it is gone.
 		await mkdir(join(root, "logs"), { recursive: true });
 		await writeFile(directory, "not a folder");
-		const writer = new TransactionLogFileWriter({ directory, retentionDays: 30 });
+		const writer = new TransactionLogFileWriter(transactionLogConfig(directory));
 
 		await expect(writer.append(OCCURRED_AT, "lost\n\n")).rejects.toThrow();
 		await rm(directory);
@@ -53,7 +70,7 @@ describe("TransactionLogFileWriter", () => {
 	});
 
 	it("flush waits for every append handed in so far", async () => {
-		const writer = new TransactionLogFileWriter({ directory, retentionDays: 30 });
+		const writer = new TransactionLogFileWriter(transactionLogConfig(directory));
 
 		void writer.append(OCCURRED_AT, "pending\n\n");
 		await writer.flush();
@@ -65,7 +82,7 @@ describe("TransactionLogFileWriter", () => {
 		await mkdir(directory, { recursive: true });
 		const names = ["transactions-2026-09-25.txt", "transactions-2026-09-26.txt", "transactions-2026-10-26.txt", "notes.txt"];
 		await Promise.all(names.map(async (name: string): Promise<void> => writeFile(join(directory, name), "x")));
-		const writer = new TransactionLogFileWriter({ directory, retentionDays: 30 });
+		const writer = new TransactionLogFileWriter(transactionLogConfig(directory));
 
 		const result = await writer.purgeExpired(OCCURRED_AT);
 
@@ -74,7 +91,7 @@ describe("TransactionLogFileWriter", () => {
 	});
 
 	it("has nothing to purge before the first write", async () => {
-		const writer = new TransactionLogFileWriter({ directory, retentionDays: 30 });
+		const writer = new TransactionLogFileWriter(transactionLogConfig(directory));
 
 		await expect(writer.purgeExpired(OCCURRED_AT)).resolves.toEqual({ cutoffDay: "2026-09-26", deletedFiles: [] });
 	});

@@ -291,5 +291,5 @@ If a canary fails, the gate is broken. Fix the config before doing anything else
 Prompts and rule files ask an agent to run the gate; they cannot force it. Add enforcement that does not depend on which tool wrote the code:
 
 - **CI required check:** the `verify` job runs lint and test; branch protection blocks merge on failure. This is the real gate for every tool.
-- **Git hook:** a `pre-push` hook (husky) that runs `pnpm run lint && pnpm run test`, so a broken push fails before it leaves the machine. Keep `pre-commit` fast and narrow (staged files only).
+- **Git hooks (installed by `pnpm install`):** `pre-push` runs `pnpm ci:local --only lint,typecheck,test` — the same lint, typecheck and unit-test steps as `ci:local` and CI — so a broken push fails before it leaves the machine; `pre-commit` stays fast and narrow (lint-staged: the staged files through their workspace's oxfmt + oxlint). Details: `docs/technical/operations/ci.md` → "Git hooks".
 - **Tool-level hooks (optional):** some agent tools can run a command when the agent tries to finish and send failures back to it (Claude Code supports hooks in `.claude/settings.json`). Check the tool's current documentation for the exact configuration, and treat this as a bonus on top of CI, not a replacement.
