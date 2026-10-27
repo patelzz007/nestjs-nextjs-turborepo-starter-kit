@@ -467,6 +467,16 @@ export function KanbanBoardView({ initialBoard }: KanbanBoardViewProps): React.J
 		},
 		[updateUrlState],
 	);
+	// The other board is fetched when the pointer or keyboard focus reaches its tab, so switching shows it at once.
+	const prefetchBoard = api.kanban.board.usePrefetch();
+	const handleBoardWarm = React.useCallback(
+		(next: KanbanBoardParam): void => {
+			if (next !== urlState.board) {
+				prefetchBoard({ board: KANBAN_BOARD_OF_PARAM[next] });
+			}
+		},
+		[prefetchBoard, urlState.board],
+	);
 	const handleViewChange = React.useCallback(
 		(view: KanbanView): void => {
 			// The tree spans both boards, so it offers every type; back on one board, a type it never shows is dropped.
@@ -715,6 +725,7 @@ export function KanbanBoardView({ initialBoard }: KanbanBoardViewProps): React.J
 			<KanbanToolbar
 				board={urlState.board}
 				onBoardChange={handleBoardChange}
+				onBoardWarm={handleBoardWarm}
 				view={urlState.view}
 				onViewChange={handleViewChange}
 				lanes={laneType === null ? "none" : groupBy.value}

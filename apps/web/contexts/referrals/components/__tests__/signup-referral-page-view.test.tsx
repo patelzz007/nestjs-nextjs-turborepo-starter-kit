@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { REFEREES_LOADING_LABELS, REFERRAL_CODE_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { SignupReferralPageView } from "@/contexts/referrals/components/signup-referral-page-view";
 import { countSlots, expectSingleLoadingStatus } from "@/test-support/skeleton";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 
 const EXPIRES_AT = 1_800_000_000_000;
 const JOINED_AT = 1_799_000_000_000;
@@ -28,7 +28,6 @@ const { dashboardUseQuery, refereesUseQuery } = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
 	useRouter: (): { readonly push: () => void } => ({ push: () => undefined }),
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 }));
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
@@ -66,7 +65,7 @@ afterEach((): void => {
 describe("SignupReferralPageView code panel", () => {
 	it("offers the copy control only for an active code", () => {
 		showDashboard({ code: "AB23CD45", expiresAt: epochMs(EXPIRES_AT), shareable: true, codeState: "active" });
-		render(<SignupReferralPageView />);
+		render(<SignupReferralPageView />, { wrapper: ClientTestProviders });
 
 		expect(screen.getByText("AB23CD45")).toBeDefined();
 		expect(screen.getByRole("button", { name: /copy code/i })).toBeDefined();
@@ -75,7 +74,7 @@ describe("SignupReferralPageView code panel", () => {
 
 	it("labels an expired code and does not let it be copied", () => {
 		showDashboard({ code: "AB23CD45", expiresAt: epochMs(EXPIRES_AT), shareable: false, codeState: "expired" });
-		render(<SignupReferralPageView />);
+		render(<SignupReferralPageView />, { wrapper: ClientTestProviders });
 
 		expect(screen.getByText("AB23CD45")).toBeDefined();
 		expect(screen.getByText("Code expired")).toBeDefined();
@@ -85,7 +84,7 @@ describe("SignupReferralPageView code panel", () => {
 
 	it("labels a deactivated owner's code as unavailable, not expired", () => {
 		showDashboard({ code: "AB23CD45", expiresAt: epochMs(EXPIRES_AT), shareable: false, codeState: "unavailable" });
-		render(<SignupReferralPageView />);
+		render(<SignupReferralPageView />, { wrapper: ClientTestProviders });
 
 		expect(screen.getByText("Code unavailable")).toBeDefined();
 		expect(screen.queryByText("Code expired")).toBeNull();
@@ -94,7 +93,7 @@ describe("SignupReferralPageView code panel", () => {
 
 	it("explains a code that is not issued yet without inventing one", () => {
 		showDashboard({ code: null, expiresAt: null, shareable: false, codeState: "pending" });
-		render(<SignupReferralPageView />);
+		render(<SignupReferralPageView />, { wrapper: ClientTestProviders });
 
 		expect(screen.getByText("Your code is not ready yet.")).toBeDefined();
 		expect(screen.queryByRole("button", { name: /copy code/i })).toBeNull();
@@ -116,7 +115,7 @@ describe("SignupReferralPageView referee list", () => {
 				meta: meta(2),
 			},
 		});
-		render(<SignupReferralPageView />);
+		render(<SignupReferralPageView />, { wrapper: ClientTestProviders });
 
 		expect(screen.getByText("Carol Referee")).toBeDefined();
 		expect(screen.getByText("Not redeemed")).toBeDefined();
@@ -125,7 +124,7 @@ describe("SignupReferralPageView referee list", () => {
 	});
 
 	it("shows the empty state when no one has registered with the code", () => {
-		render(<SignupReferralPageView />);
+		render(<SignupReferralPageView />, { wrapper: ClientTestProviders });
 
 		expect(screen.getByText("No one has registered with your code yet.")).toBeDefined();
 	});
@@ -134,7 +133,7 @@ describe("SignupReferralPageView referee list", () => {
 describe("SignupReferralPageView loading", () => {
 	it("shows a code-shaped skeleton, announced once, until the code dashboard arrives", () => {
 		dashboardUseQuery.mockReturnValue({ data: undefined });
-		render(<SignupReferralPageView />, { wrapper: UiKitTestProviders });
+		render(<SignupReferralPageView />, { wrapper: ClientTestProviders });
 
 		expectSingleLoadingStatus(REFERRAL_CODE_LOADING_LABELS.loading);
 		expect(screen.queryByRole("button", { name: /copy code/i })).toBeNull();
@@ -143,7 +142,7 @@ describe("SignupReferralPageView loading", () => {
 	it("shows referee-row skeletons while the list loads, never the empty state", () => {
 		showDashboard({ code: "AB23CD45", expiresAt: epochMs(EXPIRES_AT), shareable: true, codeState: "active" });
 		refereesUseQuery.mockReturnValue({ data: undefined, isLoading: true });
-		const { container } = render(<SignupReferralPageView />, { wrapper: UiKitTestProviders });
+		const { container } = render(<SignupReferralPageView />, { wrapper: ClientTestProviders });
 
 		expectSingleLoadingStatus(REFEREES_LOADING_LABELS.loading);
 		expect(countSlots(container, "referee-row-skeleton")).toBeGreaterThan(0);

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
 import { PERMISSION, ProductSchema, type CapabilitySlug, type Product } from "@workspace/shared";
@@ -11,7 +12,7 @@ import { TABLE_TEXT_DEBOUNCE_MS } from "@/lib/data-table/use-table-text-draft";
 
 import ProductDetailView from "../product-detail-view";
 import ProductView from "../product-view";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 
 /** The mutation options the view passes — captured so a test can complete a delete. */
 interface DeleteMutationOptionsStub {
@@ -74,11 +75,8 @@ const { PRODUCT_INPUT, productListSpy, deleteOptions } = vi.hoisted(() => ({
 	},
 }));
 
-// The table reads its state from the address bar, as Next.js's
-// `useSearchParams` does once the History API integration has synced it.
 vi.mock("next/navigation", () => ({
 	useRouter: (): { readonly push: () => void } => ({ push: () => undefined }),
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 }));
 
 vi.mock("@workspace/client/lib/contexts/identity", () => {
@@ -115,7 +113,7 @@ function renderWith(capabilities: readonly CapabilitySlug[], node: React.ReactNo
 		<QueryClientProvider client={queryClient}>
 			<CapabilitiesProvider capabilities={capabilities}>{node}</CapabilitiesProvider>
 		</QueryClientProvider>,
-		{ wrapper: UiKitTestProviders },
+		{ wrapper: ClientTestProviders },
 	);
 }
 
@@ -204,7 +202,7 @@ describe("ProductView URL state", () => {
 		expect(screen.getByRole("textbox", { name: "Category Id" }).getAttribute("value")).toBe("1a2b");
 	});
 
-	it("commits a brand filter to the URL (replace, page 1) after the debounce", () => {
+	it("commits a brand filter to the URL (replace, page 1) after the debounce", async () => {
 		vi.useFakeTimers();
 		window.history.replaceState(null, "", `${PATH}?page=4`);
 		const replaceState = vi.spyOn(window.history, "replaceState");
@@ -215,6 +213,7 @@ describe("ProductView URL state", () => {
 			vi.advanceTimersByTime(TABLE_TEXT_DEBOUNCE_MS);
 		});
 
+		await flushUrlUpdates();
 		expect(replaceState).toHaveBeenCalledTimes(1);
 		expect(decodeURIComponent(window.location.search)).toBe("?filter[brand][contains]=Acme");
 	});

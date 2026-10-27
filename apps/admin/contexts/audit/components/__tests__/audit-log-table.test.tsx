@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import {
 	ApiPaginatedMetaSchema,
 	AuditTrailBackgroundEntrySchema,
@@ -10,15 +11,9 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AuditLogView from "../audit-log-table";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 
 const { listQuery, detailQuery, changeQuery, changesQuery } = vi.hoisted(() => ({ listQuery: vi.fn(), detailQuery: vi.fn(), changeQuery: vi.fn(), changesQuery: vi.fn() }));
-
-// The table reads its state from the address bar, as Next.js's
-// `useSearchParams` does once the History API integration has synced it.
-vi.mock("next/navigation", () => ({
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
-}));
 
 // The live stream is its own boundary (lib/notifications/audit-trail-live.test.ts): here it is connected.
 vi.mock("@/contexts/notifications/lib/audit-trail-live", () => ({
@@ -129,13 +124,13 @@ afterEach((): void => {
 
 describe("AuditLogView", () => {
 	it("says the log is live, so new activity needs no refresh", () => {
-		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+		render(<AuditLogView />, { wrapper: ClientTestProviders });
 
 		expect(screen.getByRole("status").textContent).toBe("Live");
 	});
 
 	it("renders who did what, when, from which device and where, and how it ended", () => {
-		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+		render(<AuditLogView />, { wrapper: ClientTestProviders });
 
 		expect(screen.getAllByText("/api/v1/auth/profile").length).toBeGreaterThan(0);
 		expect(screen.getAllByText("Mobile").length).toBeGreaterThan(0);
@@ -153,36 +148,38 @@ describe("AuditLogView", () => {
 
 	it("queries the URL's filters, sort and page with the audit log's page size", () => {
 		window.history.replaceState(null, "", `${PATH}?filter[outcome]=FAILED&filter[method]=PATCH&sort=occurredAt&page=2`);
-		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+		render(<AuditLogView />, { wrapper: ClientTestProviders });
 
 		expect(listQuery).toHaveBeenLastCalledWith({ page: 2, limit: 50, sort: "occurredAt", filter: { outcome: { eq: "FAILED" }, method: { eq: "PATCH" } } }, expect.anything());
 		expect(screen.getByRole("combobox", { name: "Outcome" }).textContent).toContain("Failed");
 	});
 
-	it("shows an id filter from a detail-page link as a chip, and removes it on request", () => {
+	it("shows an id filter from a detail-page link as a chip, and removes it on request", async () => {
 		window.history.replaceState(null, "", `${PATH}?filter[actorUserId]=${ACTOR_ID}`);
-		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+		render(<AuditLogView />, { wrapper: ClientTestProviders });
 
 		expect(listQuery).toHaveBeenLastCalledWith({ page: 1, limit: 50, filter: { actorUserId: { eq: ACTOR_ID } } }, expect.anything());
 
 		fireEvent.click(screen.getByRole("button", { name: "Remove the Actor filter" }));
 
+		await flushUrlUpdates();
 		expect(window.location.search).toBe("");
 	});
 
-	it("opens the clicked row's record in the drawer, through the URL (?record=)", () => {
-		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+	it("opens the clicked row's record in the drawer, through the URL (?record=)", async () => {
+		render(<AuditLogView />, { wrapper: ClientTestProviders });
 
 		const [firstProfileCell] = screen.getAllByText("/api/v1/auth/profile");
 		fireEvent.click(firstProfileCell ?? document.body);
 
-		// The mocked useSearchParams does not re-render on history changes; the next test covers the open drawer.
+		expect(screen.getByRole("dialog")).toBeTruthy();
+		await flushUrlUpdates();
 		expect(window.location.search).toBe(`?record=${RECORD_ID}`);
 	});
 
 	it("opens the drawer from a shared link, without touching the table's query", () => {
 		window.history.replaceState(null, "", `${PATH}?page=2&record=${RECORD_ID}`);
-		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+		render(<AuditLogView />, { wrapper: ClientTestProviders });
 
 		expect(detailQuery).toHaveBeenLastCalledWith({ id: RECORD_ID }, { enabled: true });
 		expect(listQuery).toHaveBeenLastCalledWith({ page: 2, limit: 50 }, expect.anything());
@@ -191,24 +188,25 @@ describe("AuditLogView", () => {
 
 	it("queries the device and address-class filters", () => {
 		window.history.replaceState(null, "", `${PATH}?filter[deviceType]=BOT&filter[ipScope]=PUBLIC`);
-		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+		render(<AuditLogView />, { wrapper: ClientTestProviders });
 
 		expect(listQuery).toHaveBeenLastCalledWith({ page: 1, limit: 50, filter: { deviceType: { eq: "BOT" }, ipScope: { eq: "PUBLIC" } } }, expect.anything());
 	});
 
-	it("pushes the next page to the URL", () => {
+	it("pushes the next page to the URL", async () => {
 		const pushState = vi.spyOn(window.history, "pushState");
-		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+		render(<AuditLogView />, { wrapper: ClientTestProviders });
 
 		fireEvent.click(screen.getByRole("button", { name: /next page/i }));
 
+		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(window.location.search).toBe("?page=2");
 	});
 
 	it("shows the page's table skeleton while the first page loads", () => {
 		listQuery.mockReturnValue({ data: undefined, isLoading: true, isFetching: true, error: null, refetch: (): Promise<void> => Promise.resolve() });
-		const { container } = render(<AuditLogView />, { wrapper: UiKitTestProviders });
+		const { container } = render(<AuditLogView />, { wrapper: ClientTestProviders });
 
 		const status = screen.getByRole("status");
 		expect(status.getAttribute("aria-busy")).toBe("true");
@@ -225,20 +223,21 @@ describe("AuditLogView", () => {
 			error: null,
 			refetch: (): Promise<void> => Promise.resolve(),
 		});
-		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+		render(<AuditLogView />, { wrapper: ClientTestProviders });
 
 		expect(screen.getAllByText("Database write · 3 rows").length).toBeGreaterThan(0);
 		expect(screen.getAllByText("queue.email.send").length).toBeGreaterThan(0);
 		expect(screen.getAllByText("email_jobs, outbox_targets").length).toBeGreaterThan(0);
 	});
 
-	it("opens a background write's row change in its own drawer (?change=)", () => {
+	it("opens a background write's row change in its own drawer (?change=)", async () => {
 		listQuery.mockReturnValue({ data: { data: [BACKGROUND], meta: META }, isLoading: false, isFetching: false, error: null, refetch: (): Promise<void> => Promise.resolve() });
-		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+		render(<AuditLogView />, { wrapper: ClientTestProviders });
 
 		const [cell] = screen.getAllByText("Database write · 3 rows");
 		fireEvent.click(cell ?? document.body);
 
+		await flushUrlUpdates();
 		expect(window.location.search).toBe(`?change=${CHANGE_ID}`);
 	});
 
@@ -251,7 +250,7 @@ describe("AuditLogView", () => {
 			error: null,
 			refetch: (): Promise<void> => Promise.resolve(),
 		});
-		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+		render(<AuditLogView />, { wrapper: ClientTestProviders });
 
 		expect(screen.getAllByText("Changed 2 rows in RefreshToken, User").length).toBeGreaterThan(0);
 		expect(screen.queryByText(/Changed 0 rows/)).toBeNull();
@@ -259,14 +258,14 @@ describe("AuditLogView", () => {
 
 	it("queries the source and attribution filters", () => {
 		window.history.replaceState(null, "", `${PATH}?filter[kind]=BACKGROUND&filter[actorKind]=UNATTRIBUTED`);
-		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+		render(<AuditLogView />, { wrapper: ClientTestProviders });
 
 		expect(listQuery).toHaveBeenLastCalledWith({ page: 1, limit: 50, filter: { kind: { eq: "BACKGROUND" }, actorKind: { eq: "UNATTRIBUTED" } } }, expect.anything());
 	});
 
 	it("explains a failed load instead of showing an empty table", () => {
 		listQuery.mockReturnValue({ data: undefined, isLoading: false, isFetching: false, error: new Error("403"), refetch: (): Promise<void> => Promise.resolve() });
-		render(<AuditLogView />, { wrapper: UiKitTestProviders });
+		render(<AuditLogView />, { wrapper: ClientTestProviders });
 
 		expect(screen.getByText(/Failed to load the audit log/)).toBeTruthy();
 	});

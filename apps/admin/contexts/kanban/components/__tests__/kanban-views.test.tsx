@@ -15,7 +15,7 @@ import {
 	type KanbanItemSummary,
 	type KanbanTaskDetail,
 } from "@workspace/shared";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -29,6 +29,8 @@ interface MutationStub {
 	readonly mutateAsync: () => Promise<void>;
 	readonly isPending: boolean;
 }
+
+const { prefetchBoard } = vi.hoisted(() => ({ prefetchBoard: vi.fn<(input: { readonly board: string }) => void>() }));
 
 const { BOARD, DETAIL, COMMENTS, ACTIVITY } = vi.hoisted(() => {
 	const owner = { id: "0199d0c0-0000-7000-8000-000000000001", name: "Carol White" };
@@ -152,7 +154,6 @@ const { BOARD, DETAIL, COMMENTS, ACTIVITY } = vi.hoisted(() => {
 
 vi.mock("next/navigation", () => ({
 	useRouter: (): { readonly push: () => void; readonly replace: () => void } => ({ push: () => undefined, replace: () => undefined }),
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 	usePathname: (): string => window.location.pathname,
 }));
 
@@ -180,6 +181,7 @@ vi.mock("@workspace/client/lib/contexts/identity", () => {
 					isError: false,
 					refetch: () => undefined,
 				}),
+				usePrefetch: (): typeof prefetchBoard => prefetchBoard,
 			},
 			task: { useQuery: (): { readonly data: { readonly data: KanbanTaskDetail }; readonly isError: boolean } => ({ data: { data: detail }, isError: false }) },
 			comments: { useQuery: (): ReturnType<typeof page<KanbanComment>> => page(comments) },
@@ -234,7 +236,7 @@ function renderWith(capabilities: readonly CapabilitySlug[], node: React.ReactNo
 				<CapabilitiesProvider capabilities={capabilities}>{node}</CapabilitiesProvider>
 			</AdminBreadcrumbProvider>
 		</QueryClientProvider>,
-		{ wrapper: UiKitTestProviders },
+		{ wrapper: ClientTestProviders },
 	);
 }
 
@@ -247,9 +249,19 @@ beforeEach(() => {
 
 afterEach(() => {
 	cleanup();
+	prefetchBoard.mockReset();
 });
 
 describe("KanbanBoardView", () => {
+	it("fetches the other board ahead when the pointer or keyboard focus reaches its tab, never the open one", () => {
+		renderWith(EVERYTHING, <KanbanBoardView />);
+
+		fireEvent.pointerEnter(screen.getByRole("tab", { name: /Planning/ }));
+		fireEvent.focus(screen.getByRole("tab", { name: /Execution/ }));
+
+		expect(prefetchBoard.mock.calls).toEqual([[{ board: "PLANNING" }]]);
+	});
+
 	it("draws each column with its count, its WIP against the limit, and its cards", () => {
 		window.history.replaceState(null, "", `${BOARD_PATH}?lanes=none`);
 		renderWith(EVERYTHING, <KanbanBoardView />);

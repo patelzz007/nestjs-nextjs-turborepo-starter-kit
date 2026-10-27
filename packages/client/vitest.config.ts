@@ -13,6 +13,9 @@ export default defineConfig({
 		env: {
 			NEXT_PUBLIC_API_URL: "http://api.test",
 		},
+		// nuqs's Next.js adapter imports `next/navigation`: run it through Vite so
+		// a test can stand in for the App Router (url-state-provider.test.tsx).
+		server: { deps: { inline: ["nuqs"] } },
 	},
 	// No resolve aliases: `@workspace/shared` resolves through its package.json
 	// `exports`, whose `development` condition (Vite's default outside

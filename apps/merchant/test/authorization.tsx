@@ -3,7 +3,7 @@ import { TenantContextProvider } from "@/features/tenant-context/facade";
 import { resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, type RenderResult } from "@testing-library/react";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 import type { Envelope, TenantContextResponse, MembershipRole, TenantRewardMembershipResponse } from "@workspace/shared";
 import * as React from "react";
 
@@ -38,7 +38,7 @@ const NO_TENANT_CONTEXT_SEED: TenantContextSeed = { initialLocationId: null };
 
 /**
  * Wraps `ui` like the app root and the tenant shell do: the UI kit's English
- * labels (the root layout's language provider), the merchant authorization providers with
+ * labels and the URL-state engine (`ClientTestProviders`), the merchant authorization providers with
  * the capabilities the role maps to, and the tenant context for `TEST_ORG_SLUG`
  * (location-aware views also need `api.tenants.context.useQuery` mocked —
  * see `test/tenant-context.ts`) inside a fresh TanStack Query client (for views
@@ -50,7 +50,7 @@ export function renderWithAuthorization(ui: React.ReactElement, { role, isLoadin
 	const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 	function AuthorizationWrapper({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
 		return (
-			<UiKitTestProviders>
+			<ClientTestProviders>
 				<QueryClientProvider client={queryClient}>
 					<MerchantAuthorizationStateProvider isLoading={isLoading} capabilities={resolveMerchantCapabilities(membership)}>
 						<TenantContextProvider tenantSlug={TEST_ORG_SLUG} initialLocationId={tenantContext.initialLocationId} initialTenantContext={tenantContext.initialTenantContext}>
@@ -58,7 +58,7 @@ export function renderWithAuthorization(ui: React.ReactElement, { role, isLoadin
 						</TenantContextProvider>
 					</MerchantAuthorizationStateProvider>
 				</QueryClientProvider>
-			</UiKitTestProviders>
+			</ClientTestProviders>
 		);
 	}
 	return render(ui, { wrapper: AuthorizationWrapper });

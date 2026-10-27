@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import { apiDownloads, ApiDownloadError, type DownloadedFile } from "@workspace/client/lib/api/download";
 import { LIST_SLOT_INDEX, createApiSuccessEnvelopeSchema, AdminAnalyticsDashboardSchema, type AdminAnalyticsDashboard, type Envelope } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/toast";
@@ -8,7 +9,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import { PlatformAnalyticsDashboard } from "@/contexts/reporting/components/platform-analytics-dashboard";
 import { buildAdminDashboard } from "@/test/analytics-dashboard-fixtures";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 
 /** Only the query fields the dashboard reads. */
 interface DashboardQueryStub {
@@ -35,10 +36,7 @@ vi.mock("@workspace/client/lib/api/download", async (importOriginal) => ({
 	saveDownloadedFile: mocks.saveDownloadedFile,
 }));
 
-// `useSearchParams` reads the address bar, as Next.js does once its History API integration has synced it.
-vi.mock("next/navigation", () => ({
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
-}));
+vi.mock("next/navigation", () => ({}));
 
 /** 5 Oct 2026 12:00 UTC — "last 30 days" is 6 Sep – 5 Oct. */
 const NOW_MS = Date.UTC(2026, 9, 5, 12);
@@ -60,12 +58,8 @@ function spaced(value: string | null): string {
 	return (value ?? "").replace(/\s/g, " ");
 }
 
-function renderDashboard(props: Partial<React.ComponentProps<typeof PlatformAnalyticsDashboard>> = {}): () => void {
-	const { rerender } = render(<PlatformAnalyticsDashboard nowMs={NOW_MS} {...props} />, { wrapper: UiKitTestProviders });
-	// The URL changed through the History API; re-render so `useSearchParams` reads it (Next does this itself).
-	return (): void => {
-		rerender(<PlatformAnalyticsDashboard nowMs={NOW_MS} {...props} />);
-	};
+function renderDashboard(props: Partial<React.ComponentProps<typeof PlatformAnalyticsDashboard>> = {}): void {
+	render(<PlatformAnalyticsDashboard nowMs={NOW_MS} {...props} />, { wrapper: ClientTestProviders });
 }
 
 function lastQueryInput(): object {
@@ -136,12 +130,12 @@ describe("PlatformAnalyticsDashboard", () => {
 	it("seeds the query with the server prefetch only for the exact range it answered", async (): Promise<void> => {
 		const prefetched = envelope(buildAdminDashboard());
 		mocks.dashboardQuery.mockReturnValue(queryResult({ data: prefetched }));
-		const refresh = renderDashboard({ initialDashboard: { stateKey: DEFAULT_KEY, data: prefetched } });
+		renderDashboard({ initialDashboard: { stateKey: DEFAULT_KEY, data: prefetched } });
 
 		expect(mocks.dashboardQuery.mock.lastCall?.[LIST_SLOT_INDEX.second]).toMatchObject({ initialData: prefetched });
 
 		await chooseFilter("Date range", "Last month");
-		refresh();
+		await flushUrlUpdates();
 
 		expect(lastQueryInput()).toEqual({ from: Date.UTC(2026, 8, 1), to: Date.UTC(2026, 9, 1), interval: "day" });
 		expect(mocks.dashboardQuery.mock.lastCall?.[LIST_SLOT_INDEX.second]).not.toHaveProperty("initialData");
@@ -150,13 +144,13 @@ describe("PlatformAnalyticsDashboard", () => {
 	it("reads and writes the range in the URL, so a shared link opens the same view", async (): Promise<void> => {
 		window.history.replaceState(null, "", "/analytics?range=custom&from=2026-01-01&to=2026-06-30&interval=month");
 		mocks.dashboardQuery.mockReturnValue(queryResult({ data: envelope(buildAdminDashboard()) }));
-		const refresh = renderDashboard();
+		renderDashboard();
 
 		expect(lastQueryInput()).toEqual({ from: Date.UTC(2026, 0, 1), to: Date.UTC(2026, 6, 1), interval: "month" });
 		expect((await screen.findByRole("button", { name: /^Date range / })).textContent).toBe("Custom range");
 
 		await chooseFilter("Group by", "Week");
-		refresh();
+		await flushUrlUpdates();
 
 		expect(decodeURIComponent(window.location.search)).toBe("?range=custom&from=2026-01-01&to=2026-06-30&interval=week");
 		expect(lastQueryInput()).toEqual({ from: Date.UTC(2026, 0, 1), to: Date.UTC(2026, 6, 1), interval: "week" });

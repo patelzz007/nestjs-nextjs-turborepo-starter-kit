@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type * as IdentityModule from "@workspace/client/lib/contexts/identity";
 import { UserAccessPanel } from "@/contexts/authorization/components/user-access-panel";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 
 interface MutationStub {
 	readonly mutate: () => void;
@@ -57,7 +57,6 @@ const { mutateMock, mutationOptions, listCalls } = vi.hoisted(() => {
 vi.mock("next/navigation", () => ({
 	useRouter: (): { readonly push: () => void; readonly replace: () => void } => ({ push: () => undefined, replace: () => undefined }),
 	usePathname: (): string => "/users/user-1",
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 }));
 
 vi.mock("@workspace/client/lib/contexts/identity", async (importOriginal) => {
@@ -149,7 +148,7 @@ function renderPanel(capabilities: readonly CapabilitySlug[], queryClient: Query
 				<UserAccessPanel userId={USER.id} user={USER} />
 			</CapabilitiesProvider>
 		</QueryClientProvider>,
-		{ wrapper: UiKitTestProviders },
+		{ wrapper: ClientTestProviders },
 	);
 }
 

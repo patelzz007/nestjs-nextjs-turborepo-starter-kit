@@ -28,6 +28,8 @@ export interface MerchantRewardsCatalogProps {
 	/** The open tab (URL state, owned by the page). */
 	readonly selectedGroupId: RewardStatusGroupId;
 	readonly onSelectGroup: (groupId: RewardStatusGroupId) => void;
+	/** Called when the pointer or keyboard focus reaches a tab, so the page can fetch it ahead of the click. */
+	readonly onWarmGroup?: ((groupId: RewardStatusGroupId) => void) | undefined;
 	/** The open tab's current page of rewards. */
 	readonly rewards: readonly RewardResponse[];
 	/** The catalog's figures are loading: the whole catalog draws its bones. */
@@ -289,14 +291,20 @@ function EmptyTab({ group, action }: EmptyTabProps): React.JSX.Element {
 
 interface RewardStatusTabProps {
 	readonly group: RewardStatusGroup;
+	readonly onWarm?: ((groupId: RewardStatusGroupId) => void) | undefined;
 }
 
 /** One tab: the group's tone dot, its title and how many rewards it holds. */
-function RewardStatusTab({ group }: RewardStatusTabProps): React.JSX.Element {
-	const { count } = group;
+function RewardStatusTab({ group, onWarm }: RewardStatusTabProps): React.JSX.Element {
+	const { count, id } = group;
+	const handleWarm = React.useCallback((): void => {
+		onWarm?.(id);
+	}, [id, onWarm]);
 	return (
 		<TabsTrigger
 			value={group.id}
+			onPointerEnter={handleWarm}
+			onFocus={handleWarm}
 			aria-label={tabAccessibleName(group)}
 			data-group={group.id}
 			className={cn(
@@ -383,6 +391,7 @@ export function MerchantRewardsCatalog({
 	groups,
 	selectedGroupId,
 	onSelectGroup: selectGroup,
+	onWarmGroup,
 	rewards,
 	isLoading,
 	isPageLoading,
@@ -456,7 +465,7 @@ export function MerchantRewardsCatalog({
 					tabs={
 						<TabsList variant="line" aria-label="Reward status" className="h-auto justify-start gap-1 p-0 group-data-horizontal/tabs:h-auto max-sm:pe-8 sm:gap-2">
 							{groups.map((group) => (
-								<RewardStatusTab key={group.id} group={group} />
+								<RewardStatusTab key={group.id} group={group} onWarm={onWarmGroup} />
 							))}
 						</TabsList>
 					}

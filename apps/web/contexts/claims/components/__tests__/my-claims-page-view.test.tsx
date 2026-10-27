@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 import type { apiRouter } from "@workspace/client/lib/api/endpoints";
 import type { Envelope, RewardClaimResponse } from "@workspace/shared";
@@ -9,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WALLET_CLAIMS_LOADING_LABELS } from "@/components/loading/loading-labels";
 import { MyClaimsPageView } from "@/contexts/claims/components/my-claims-page-view";
 import { expectSingleLoadingStatus } from "@/test-support/skeleton";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 import { WALLET_CLAIMS_PAGE_SIZE } from "@/contexts/claims/url-state/wallet-claims";
 import { buildRewardClaimResponse, claimsPageEnvelope } from "@/test-support/claim";
 
@@ -35,12 +36,6 @@ const { claimsListQuery, refetch } = vi.hoisted(() => ({
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({ api: { claims: { list: { useQuery: claimsListQuery } } } }),
 }));
-
-// The wallet reads its page from the address bar, as Next.js's `useSearchParams` does.
-vi.mock("next/navigation", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("next/navigation")>();
-	return { ...actual, useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search) };
-});
 
 const PATH = "/dashboard/wallet";
 const NEXT_CURSOR = "claims-after-page-1";
@@ -74,7 +69,7 @@ function statValue(label: string): string | null | undefined {
 
 function renderAt(query: string): void {
 	window.history.replaceState(null, "", `${PATH}${query}`);
-	render(<MyClaimsPageView initialPage={{ stateKey: "", data: PAGE_ONE }} initialReadyCount={READY_COUNT} />, { wrapper: UiKitTestProviders });
+	render(<MyClaimsPageView initialPage={{ stateKey: "", data: PAGE_ONE }} initialReadyCount={READY_COUNT} />, { wrapper: ClientTestProviders });
 }
 
 beforeEach((): void => {
@@ -112,11 +107,12 @@ describe("MyClaimsPageView", () => {
 		expect(secondPageCall?.[LIST_SLOT_INDEX.second]?.initialData).toBeUndefined();
 	});
 
-	it("pages forward with the response's keyset cursor", () => {
+	it("pages forward with the response's keyset cursor", async () => {
 		renderAt("");
 
 		fireEvent.click(screen.getByRole("button", { name: "Next" }));
 
+		await flushUrlUpdates();
 		expect(window.location.search).toBe(`?page=2&cursor=${NEXT_CURSOR}`);
 	});
 

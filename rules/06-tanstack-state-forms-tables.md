@@ -505,6 +505,22 @@ updateUrlState({ status: "locked", page: 1, cursor: undefined });               
 updateUrlState({ search: "jane", page: 1, cursor: undefined }, { history: "replace" }); // debounced typing → replaces it
 ```
 
+`keepPreviousData` keeps the last page on screen while paging or sorting one list. It must never
+carry one **view's** rows into another: when a tab (or any switch to a different dataset) shares
+one query, gate the rows with `useIsOtherViewPlaceholder` (`@workspace/client/lib/url-state/use-view-placeholder`).
+
+```tsx
+// ❌ DON'T — on a tab switch the old tab's rows show under the new tab until it answers
+const rewards = rewardsQuery.isSuccess ? rewardsQuery.data.data : [];
+
+// ✅ DO — the new tab shows its loading state; paging within a tab still keeps the previous page
+const isOtherTabsPage = useIsOtherViewPlaceholder(selectedTab, rewardsQuery);
+const rewards = rewardsQuery.isSuccess && !isOtherTabsPage ? rewardsQuery.data.data : [];
+```
+
+In tests, render URL-state views inside `ClientTestProviders` and `await flushUrlUpdates()` before
+asserting the address bar (the URL is written on the next tick).
+
 ```tsx
 // Manual (server-side) tables: tell the table the truth about who does the work
 const table = useReactTable({

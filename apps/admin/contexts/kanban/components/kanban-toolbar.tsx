@@ -69,6 +69,8 @@ const SORT_LABELS: Readonly<Record<KanbanSort, string>> = { manual: "Board order
 export interface KanbanToolbarProps {
 	readonly board: KanbanBoardParam;
 	readonly onBoardChange: (board: KanbanBoardParam) => void;
+	/** Called when the pointer or keyboard focus reaches a board tab, so the page can fetch that board ahead of the click. */
+	readonly onBoardWarm?: ((board: KanbanBoardParam) => void) | undefined;
 	readonly view: KanbanView;
 	readonly onViewChange: (view: KanbanView) => void;
 	readonly lanes: KanbanLanes;
@@ -122,6 +124,7 @@ function TemplateItem({ template, onSelect }: { readonly template: KanbanTaskTem
 export function KanbanToolbar({
 	board,
 	onBoardChange,
+	onBoardWarm,
 	view,
 	onViewChange,
 	lanes,
@@ -159,6 +162,15 @@ export function KanbanToolbar({
 			}
 		},
 		[onBoardChange],
+	);
+	const handleBoardWarm = React.useCallback(
+		(event: React.SyntheticEvent<HTMLElement>): void => {
+			const parsed = KanbanBoardParamSchema.safeParse(event.currentTarget.dataset.board);
+			if (parsed.success) {
+				onBoardWarm?.(parsed.data);
+			}
+		},
+		[onBoardWarm],
 	);
 	const handleLanesChange = React.useCallback(
 		(next: string): void => {
@@ -236,11 +248,23 @@ export function KanbanToolbar({
 				{isTree ? null : (
 					<Tabs value={board} onValueChange={handleBoardChange} className="min-w-0 shrink-0">
 						<TabsList aria-label="Board" className="w-full *:data-[slot=tabs-trigger]:flex-1 sm:w-fit sm:*:data-[slot=tabs-trigger]:flex-none">
-							<TabsTrigger value="planning" className="gap-2" title={KANBAN_BOARD_DISPLAY.PLANNING.description}>
+							<TabsTrigger
+								value="planning"
+								data-board="planning"
+								onPointerEnter={handleBoardWarm}
+								onFocus={handleBoardWarm}
+								className="gap-2"
+								title={KANBAN_BOARD_DISPLAY.PLANNING.description}>
 								<RoadmapIcon />
 								{KANBAN_BOARD_DISPLAY[KANBAN_BOARD_OF_PARAM.planning].label}
 							</TabsTrigger>
-							<TabsTrigger value="execution" className="gap-2" title={KANBAN_BOARD_DISPLAY.EXECUTION.description}>
+							<TabsTrigger
+								value="execution"
+								data-board="execution"
+								onPointerEnter={handleBoardWarm}
+								onFocus={handleBoardWarm}
+								className="gap-2"
+								title={KANBAN_BOARD_DISPLAY.EXECUTION.description}>
 								<SquareKanban />
 								{KANBAN_BOARD_DISPLAY[KANBAN_BOARD_OF_PARAM.execution].label}
 							</TabsTrigger>

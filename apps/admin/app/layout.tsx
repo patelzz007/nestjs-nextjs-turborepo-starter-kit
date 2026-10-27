@@ -2,6 +2,7 @@ import "@workspace/ui/globals.css";
 import "./admin-theme.css";
 
 import { QueryProvider } from "@workspace/client/lib/api/query-provider";
+import { UrlStateProvider } from "@workspace/client/lib/url-state/url-state-provider";
 import { Toaster } from "@workspace/ui/components/toast";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { Metadata } from "next";
@@ -40,14 +41,16 @@ export default async function RootLayout({
 			{/* Prevent Redux DevTools extension from serializing React Query / zustand state */}
 			<ReduxDevToolsGuard />
 			<UiKitLanguageProvider language={PLATFORM_UI_KIT_LANGUAGE}>
-				<QueryProvider>
-					<AdminClientAuthWrapper serverSession={serverSession}>
-						<ThemeProvider>
-							{children}
-							<Toaster />
-						</ThemeProvider>
-					</AdminClientAuthWrapper>
-				</QueryProvider>
+				<UrlStateProvider>
+					<QueryProvider>
+						<AdminClientAuthWrapper serverSession={serverSession}>
+							<ThemeProvider>
+								{children}
+								<Toaster />
+							</ThemeProvider>
+						</AdminClientAuthWrapper>
+					</QueryProvider>
+				</UrlStateProvider>
 			</UiKitLanguageProvider>
 		</AppDocumentShell>
 	);

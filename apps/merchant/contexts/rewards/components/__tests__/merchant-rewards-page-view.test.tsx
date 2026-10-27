@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,6 +15,7 @@ import { UiPreferencesStoreProvider } from "@workspace/client/lib/features/ui-pr
 import { MERCHANT_REWARDS_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
 import { busyRegionAnnouncements } from "@/test/skeleton";
 import { REWARD_CATALOG_PAGE_SIZE } from "@/contexts/rewards/url-state/rewards";
+import { rewardFixture } from "@/test/rewards";
 import { LIST_SLOT_INDEX } from "@workspace/shared";
 
 type RewardsListInput = Parameters<typeof apiRouter.tenants.rewards.list.queryKey>[0];
@@ -27,24 +28,30 @@ interface RewardsListOptions {
 
 type RewardsSummaryInput = Parameters<typeof apiRouter.tenants.rewards.summary.queryKey>[0];
 
-const { rewardsListQuery, rewardsSummaryQuery, contextQuery } = vi.hoisted(() => ({
+const { rewardsListQuery, prefetchRewards, rewardsSummaryQuery, contextQuery } = vi.hoisted(() => ({
 	rewardsListQuery: vi.fn<(input: RewardsListInput, options?: RewardsListOptions) => object>(),
+	prefetchRewards: vi.fn<(input: RewardsListInput) => void>(),
 	rewardsSummaryQuery: vi.fn<(input: RewardsSummaryInput, options?: RewardsListOptions) => object>(),
 	contextQuery: vi.fn<() => ContextQueryState>(),
 }));
 
-const NO_REWARDS = { countsByStatus: { DRAFT: 0, PENDING_REVIEW: 0, PUBLISHED: 0, EXPIRED: 0, DISABLED: 0 }, unitsRemaining: 0 };
-
-// The catalog's open tab is read from the address bar, as Next.js's
-// `useSearchParams` does once its History API integration has synced it.
+// A reward card links into the tenant, whose slug comes from the route.
 vi.mock("next/navigation", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("next/navigation")>();
-	return { ...actual, useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search) };
+	const { TEST_ORG_SLUG: tenantSlug } = await import("@/test/authorization");
+	return { ...actual, useParams: (): Record<string, string> => ({ tenantSlug }) };
 });
+
+const NO_REWARDS = { countsByStatus: { DRAFT: 0, PENDING_REVIEW: 0, PUBLISHED: 0, EXPIRED: 0, DISABLED: 0 }, unitsRemaining: 0 };
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
-		api: { tenants: { rewards: { list: { useQuery: rewardsListQuery }, summary: { useQuery: rewardsSummaryQuery } }, context: { useQuery: contextQuery } } },
+		api: {
+			tenants: {
+				rewards: { list: { useQuery: rewardsListQuery, usePrefetch: (): typeof prefetchRewards => prefetchRewards }, summary: { useQuery: rewardsSummaryQuery } },
+				context: { useQuery: contextQuery },
+			},
+		},
 	}),
 }));
 
@@ -66,6 +73,7 @@ beforeEach((): void => {
 afterEach((): void => {
 	cleanup();
 	rewardsListQuery.mockReset();
+	prefetchRewards.mockReset();
 	rewardsSummaryQuery.mockReset();
 	contextQuery.mockReset();
 });
@@ -214,5 +222,61 @@ describe("MerchantRewardsPageView caching and errors", () => {
 
 		expect(screen.getByText("Could not load rewards")).toBeTruthy();
 		expect(screen.queryByText(rawMessage)).toBeNull();
+	});
+});
+
+describe("MerchantRewardsPageView tab switches", () => {
+	const LIVE_REWARD = rewardFixture({ title: "Free yoga class" });
+
+	function showLiveAndDrafts(): void {
+		rewardsSummaryQuery.mockReturnValue({
+			isSuccess: true,
+			isPending: false,
+			isError: false,
+			error: null,
+			data: { data: { ...NO_REWARDS, countsByStatus: { ...NO_REWARDS.countsByStatus, PUBLISHED: 1, DRAFT: 1 } } },
+			refetch: vi.fn(),
+		});
+		window.history.replaceState(null, "", "/?status=live");
+	}
+
+	function listResult(isPlaceholderData: boolean): object {
+		return {
+			isSuccess: true,
+			isPending: false,
+			isFetching: isPlaceholderData,
+			isPlaceholderData,
+			isError: false,
+			error: null,
+			data: { data: [LIVE_REWARD] },
+			refetch: vi.fn(),
+		};
+	}
+
+	it("shows the new tab's loading state, never the previous tab's rewards, while the new tab loads", () => {
+		showLiveAndDrafts();
+		rewardsListQuery.mockReturnValue(listResult(false));
+		renderCatalogPage();
+		expect(screen.getByText(LIVE_REWARD.title)).toBeDefined();
+
+		// The drafts are not cached yet: the query keeps the live page as its placeholder.
+		rewardsListQuery.mockReturnValue(listResult(true));
+		fireEvent.click(screen.getByRole("tab", { name: /Drafts/ }));
+
+		expect(screen.queryByText(LIVE_REWARD.title)).toBeNull();
+		expect(busyRegionAnnouncements()).not.toHaveLength(0);
+	});
+
+	it("fetches a tab's first page ahead when the pointer or keyboard focus reaches it", () => {
+		showLiveAndDrafts();
+		rewardsListQuery.mockReturnValue(listResult(false));
+		renderCatalogPage();
+
+		fireEvent.pointerEnter(screen.getByRole("tab", { name: /Drafts/ }));
+		fireEvent.focus(screen.getByRole("tab", { name: /Live/ }));
+
+		// Only the tab that is not open, on its first page.
+		expect(prefetchRewards.mock.calls).toHaveLength(1);
+		expect(prefetchRewards.mock.calls.at(0)?.[LIST_SLOT_INDEX.first]).toMatchObject({ page: 1, filter: { status: { in: ["DRAFT"] } } });
 	});
 });

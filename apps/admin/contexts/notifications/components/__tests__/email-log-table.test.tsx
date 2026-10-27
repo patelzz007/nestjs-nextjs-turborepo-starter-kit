@@ -1,19 +1,14 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import { ApiPaginatedMetaSchema } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import EmailLogView from "../email-log-table";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 
 const { logQuery } = vi.hoisted(() => ({ logQuery: vi.fn() }));
-
-// The table reads its state from the address bar, as Next.js's
-// `useSearchParams` does once the History API integration has synced it.
-vi.mock("next/navigation", () => ({
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
-}));
 
 vi.mock("@/contexts/notifications/lib/email-log-live", () => ({
 	useEmailLogLive: (): string => "open",
@@ -71,18 +66,19 @@ afterEach((): void => {
 describe("EmailLogView URL state", () => {
 	it("queries the URL's status filter, sort and page with the log's page size", () => {
 		window.history.replaceState(null, "", `${PATH}?filter[status]=failed&sort=to&page=2`);
-		render(<EmailLogView />, { wrapper: UiKitTestProviders });
+		render(<EmailLogView />, { wrapper: ClientTestProviders });
 
 		expect(logQuery).toHaveBeenLastCalledWith({ page: 2, limit: 25, sort: "to", filter: { status: { eq: "failed" } } }, expect.anything());
 		expect(screen.getByRole("combobox", { name: "Status" }).textContent).toContain("Failed");
 	});
 
-	it("pushes the next page (offset — no cursor in the response) to the URL", () => {
+	it("pushes the next page (offset — no cursor in the response) to the URL", async () => {
 		const pushState = vi.spyOn(window.history, "pushState");
-		render(<EmailLogView />, { wrapper: UiKitTestProviders });
+		render(<EmailLogView />, { wrapper: ClientTestProviders });
 
 		fireEvent.click(screen.getByRole("button", { name: /next page/i }));
 
+		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(window.location.search).toBe("?page=2");
 	});
@@ -91,7 +87,7 @@ describe("EmailLogView URL state", () => {
 describe("EmailLogView loading", () => {
 	it("shows the page's table skeleton while the first page loads", () => {
 		logQuery.mockReturnValue({ data: undefined, isLoading: true, isFetching: true, error: null, refetch: (): Promise<void> => Promise.resolve() });
-		const { container } = render(<EmailLogView />, { wrapper: UiKitTestProviders });
+		const { container } = render(<EmailLogView />, { wrapper: ClientTestProviders });
 
 		const status = screen.getByRole("status");
 		expect(status.getAttribute("aria-busy")).toBe("true");

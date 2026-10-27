@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
 import { apiDownloads, ApiDownloadError, type DownloadedFile } from "@workspace/client/lib/api/download";
 import type { Envelope, MerchantAnalyticsDashboard } from "@workspace/shared";
@@ -44,10 +45,8 @@ vi.mock("@workspace/client/lib/api/download", async (importOriginal) => ({
 	saveDownloadedFile: mocks.saveDownloadedFile,
 }));
 
-// `useSearchParams` reads the address bar, as Next.js does once its History API integration has synced it.
 vi.mock("next/navigation", async (importOriginal) => ({
 	...(await importOriginal<typeof import("next/navigation")>()),
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 }));
 
 function ready(dashboard: MerchantAnalyticsDashboard = buildMerchantDashboard()): object {
@@ -58,12 +57,8 @@ function spaced(value: string | null | undefined): string {
 	return (value ?? "").replace(/\s/g, " ");
 }
 
-function renderView(props: Partial<MerchantAnalyticsPageViewProps> = {}, fixture: AuthorizationFixture = { role: "CASHIER" }): () => void {
-	const { rerender } = renderWithAuthorization(<MerchantAnalyticsPageView tenantSlug={TEST_ORG_SLUG} nowMs={NOW_MS} timeZone={KUALA_LUMPUR} {...props} />, fixture);
-	// The URL changed through the History API; re-render so `useSearchParams` reads it (Next does this itself).
-	return (): void => {
-		rerender(<MerchantAnalyticsPageView tenantSlug={TEST_ORG_SLUG} nowMs={NOW_MS} timeZone={KUALA_LUMPUR} {...props} />);
-	};
+function renderView(props: Partial<MerchantAnalyticsPageViewProps> = {}, fixture: AuthorizationFixture = { role: "CASHIER" }): void {
+	renderWithAuthorization(<MerchantAnalyticsPageView tenantSlug={TEST_ORG_SLUG} nowMs={NOW_MS} timeZone={KUALA_LUMPUR} {...props} />, fixture);
 }
 
 function lastCall(): readonly [input: object, options?: DashboardQueryOptions | undefined] {
@@ -189,10 +184,10 @@ describe("MerchantAnalyticsPageView data", () => {
 
 	it("keeps the range in the URL and requeries for a picked preset", async (): Promise<void> => {
 		mocks.dashboardQuery.mockReturnValue(ready());
-		const refresh = renderView();
+		renderView();
 
 		await chooseFilter(UI_KIT_LABELS_EN.analyticsRangePicker.range, "This month");
-		refresh();
+		await flushUrlUpdates();
 
 		expect(window.location.search).toBe("?range=thisMonth");
 		expect(lastInput()).toMatchObject({ from: Date.UTC(2026, 9, 1) - KL_OFFSET_MS, to: DEFAULT_TO, interval: "day" });

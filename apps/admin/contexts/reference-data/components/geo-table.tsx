@@ -33,8 +33,6 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import type { ColumnDef } from "@tanstack/react-table";
 import { keepPreviousData } from "@tanstack/react-query";
 import { Building2, Globe, Landmark, MapPin, TreePine } from "lucide-react";
-import { AnimatePresence, m } from "framer-motion";
-import { LazyMotionProvider } from "@workspace/ui/components/lazy-motion";
 import { useCallback, useMemo, type ReactNode } from "react";
 
 import { useAuth } from "@workspace/client/lib/contexts/identity";
@@ -129,10 +127,13 @@ const TAB_CONFIG: readonly { readonly key: GeoTab; readonly label: string; reado
 function SegmentedTabs({
 	activeTab,
 	onTabChange,
+	onTabWarm,
 	counts,
 }: {
 	readonly activeTab: GeoTab;
 	readonly onTabChange: (tab: GeoTab) => void;
+	/** Called when the pointer or keyboard focus reaches a tab, so its first page can be fetched ahead of the click. */
+	readonly onTabWarm: (tab: GeoTab) => void;
 	readonly counts: Readonly<Record<GeoTab, number | undefined>>;
 }): React.JSX.Element {
 	const handleTabClick = useCallback(
@@ -143,6 +144,15 @@ function SegmentedTabs({
 			}
 		},
 		[onTabChange],
+	);
+	const handleTabWarm = useCallback(
+		(event: React.SyntheticEvent<HTMLButtonElement>): void => {
+			const tab = GeoTabSchema.safeParse(event.currentTarget.dataset.tabKey);
+			if (tab.success) {
+				onTabWarm(tab.data);
+			}
+		},
+		[onTabWarm],
 	);
 
 	return (
@@ -158,6 +168,8 @@ function SegmentedTabs({
 						size="sm"
 						data-tab-key={key}
 						onClick={handleTabClick}
+						onPointerEnter={handleTabWarm}
+						onFocus={handleTabWarm}
 						className={cn(
 							"gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200",
 							isActive ? "bg-background text-foreground shadow-sm ring-1 ring-border/40" : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -332,6 +344,29 @@ export default function GeoView({ initialStats, initialPage }: GeoViewProps): Re
 		[updateUrlState],
 	);
 
+	// A tab opens on its defaults (`handleTabChange`): fetch that first page ahead, so the switch renders from the cache.
+	const prefetchCountries = api.geo.countries.usePrefetch();
+	const prefetchStates = api.geo.states.usePrefetch();
+	const prefetchCities = api.geo.cities.usePrefetch();
+	const handleTabWarm = useCallback(
+		(tab: GeoTab): void => {
+			if (tab === activeTab) return;
+			const firstPage = { ...GEO_URL_STATE.defaults, tab };
+			switch (tab) {
+				case "countries":
+					prefetchCountries(toCountriesListQuery(firstPage));
+					return;
+				case "states":
+					prefetchStates(toStatesListQuery(firstPage));
+					return;
+				case "cities":
+					prefetchCities(toCitiesListQuery(firstPage));
+					return;
+			}
+		},
+		[activeTab, prefetchCities, prefetchCountries, prefetchStates],
+	);
+
 	const tabCounts = useMemo(
 		() => ({
 			countries: stats?.countries,
@@ -422,34 +457,23 @@ export default function GeoView({ initialStats, initialPage }: GeoViewProps): Re
 			) : null}
 
 			<div className="space-y-4">
-				<SegmentedTabs activeTab={activeTab} onTabChange={handleTabChange} counts={tabCounts} />
+				<SegmentedTabs activeTab={activeTab} onTabChange={handleTabChange} onTabWarm={handleTabWarm} counts={tabCounts} />
 
-				<LazyMotionProvider>
-					<AnimatePresence mode="wait">
-						<m.div
-							key={activeTab}
-							initial={{ opacity: 0, y: 6 }}
-							animate={{ opacity: 1, y: 0 }}
-							exit={{ opacity: 0, y: -6 }}
-							transition={{ duration: 0.2, ease: "easeInOut" }}>
-							<DataTable
-								data={items}
-								columns={GEO_COLUMNS[activeTab]}
-								labels={GEO_LABELS[activeTab]}
-								checkbox={checkbox}
-								enableColumnVisibility
-								mobileCardRender={mobileCardRender}
-								pagination={pagination}
-								sorting={sorting}
-								pageSizeOptions={GEO_PAGE_SIZE_OPTIONS}
-								onManualSortingChange={handleSortingChange}
-								toolbarContent={toolbarContent}
-								error={tableError}
-								isLoading={activeQuery.isLoading}
-							/>
-						</m.div>
-					</AnimatePresence>
-				</LazyMotionProvider>
+				<DataTable
+					data={items}
+					columns={GEO_COLUMNS[activeTab]}
+					labels={GEO_LABELS[activeTab]}
+					checkbox={checkbox}
+					enableColumnVisibility
+					mobileCardRender={mobileCardRender}
+					pagination={pagination}
+					sorting={sorting}
+					pageSizeOptions={GEO_PAGE_SIZE_OPTIONS}
+					onManualSortingChange={handleSortingChange}
+					toolbarContent={toolbarContent}
+					error={tableError}
+					isLoading={activeQuery.isLoading}
+				/>
 			</div>
 		</div>
 	);

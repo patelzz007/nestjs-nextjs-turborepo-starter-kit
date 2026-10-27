@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import type { TenantRewardMembershipResponse } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,12 +10,6 @@ import { tenantRoutes } from "@/lib/routes";
 import { membershipFixture, renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
 
 const { membershipsQuery } = vi.hoisted(() => ({ membershipsQuery: vi.fn() }));
-
-// The page's search and page live in the URL: `useSearchParams` reads the address bar, as Next.js does.
-vi.mock("next/navigation", async (importOriginal) => ({
-	...(await importOriginal<typeof import("next/navigation")>()),
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
-}));
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({ api: { tenants: { membershipsBootstrap: { useQuery: membershipsQuery } } } }),
@@ -61,12 +56,13 @@ describe("TenantStoresPageView", () => {
 		expect(screen.queryByRole("navigation", { name: "Store pages" })).toBeNull();
 	});
 
-	it("pages through the URL when the member has more stores than one page", () => {
+	it("pages through the URL when the member has more stores than one page", async () => {
 		membershipsQuery.mockReturnValue(storesPage([OTHER_STORE], 2));
 		renderWithAuthorization(<TenantStoresPageView tenantSlug={TEST_ORG_SLUG} />, { role: "OWNER" });
 
 		fireEvent.click(within(screen.getByRole("navigation", { name: "Store pages" })).getByRole("button", { name: "Next" }));
 
+		await flushUrlUpdates();
 		expect(new URLSearchParams(window.location.search).get("page")).toBe("2");
 	});
 

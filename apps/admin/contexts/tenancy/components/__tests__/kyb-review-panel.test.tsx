@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
 import { LIST_SLOT_INDEX, KybDocumentScanStatusSchema, PERMISSION, type CapabilitySlug, type KybDocumentScanStatus } from "@workspace/shared";
@@ -10,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PENDING_KYB_MERCHANTS_QUERY } from "@/contexts/tenancy/lib/kyb-review";
 
 import KybReviewPanel from "../kyb-review-panel";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 
 /** Only the merchant-detail fields the panel renders. */
 interface MerchantDetailStub {
@@ -104,12 +105,6 @@ const { SELECTED_ORG_ID, OTHER_ORG_ID, getTenantQuery, updateKybOptions, updateK
 	getTenantQuery: vi.fn(),
 }));
 
-// The panel reads its selection from the address bar, as Next.js's
-// `useSearchParams` does once the History API integration has synced it.
-vi.mock("next/navigation", () => ({
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
-}));
-
 vi.mock("@workspace/client/lib/contexts/identity", () => {
 	const merchant: MerchantDetailStub = {
 		id: SELECTED_ORG_ID,
@@ -174,7 +169,7 @@ function panel(capabilities: readonly CapabilitySlug[], queryClient: QueryClient
 }
 
 function renderPanel(capabilities: readonly CapabilitySlug[]): ReturnType<typeof render> {
-	return render(panel(capabilities), { wrapper: UiKitTestProviders });
+	return render(panel(capabilities), { wrapper: ClientTestProviders });
 }
 
 beforeEach(() => {
@@ -242,10 +237,11 @@ describe("KybReviewPanel selection (URL is the only source)", () => {
 		expect(getTenantQuery).toHaveBeenLastCalledWith({ tenantId: "" }, expect.objectContaining({ enabled: false }));
 	});
 
-	it("pushes the picked merchant to the URL (a history entry back/forward can restore)", () => {
+	it("pushes the picked merchant to the URL (a history entry back/forward can restore)", async () => {
 		const pushState = vi.spyOn(window.history, "pushState");
 		renderPanel([PERMISSION.MERCHANT_ORG.LIST]);
 		fireEvent.click(screen.getByRole("button", { name: /Moonlight Bakery/ }));
+		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(window.location.search).toBe(`?tenantId=${OTHER_ORG_ID}`);
 	});
@@ -273,7 +269,7 @@ describe("KybReviewPanel KYB update invalidation", () => {
 		queryClient.setQueryData(apiRouter.rewardsAdmin.listTenants.queryKey(ALL_MERCHANTS_QUERY), null);
 		queryClient.setQueryData(apiRouter.rewardsAdmin.getTenant.queryKey({ tenantId: SELECTED_ORG_ID }), null);
 		queryClient.setQueryData(apiRouter.rewardsAdmin.getTenant.queryKey({ tenantId: OTHER_ORG_ID }), null);
-		render(panel([PERMISSION.MERCHANT_ORG.MANAGE], queryClient), { wrapper: UiKitTestProviders });
+		render(panel([PERMISSION.MERCHANT_ORG.MANAGE], queryClient), { wrapper: ClientTestProviders });
 
 		const options: UpdateKybOptionsStub | undefined = updateKybOptions.mock.lastCall?.at(0);
 		await options?.onSuccess?.(null, { tenantId: SELECTED_ORG_ID });

@@ -146,10 +146,25 @@ Search/filter/sort/pagination that should be shareable/bookmarkable belongs in U
 // or sharing the link loses it entirely
 const [status, setStatus] = useState<OrderStatus | null>(null);
 
-// ✅ DO — filter state lives in the URL, is shareable, and survives a refresh
-const searchParams = useSearchParams();
-const status = OrderStatusSchema.nullable().parse(searchParams.get('status'));
+// ✅ DO — filter state lives in the URL, is shareable, and survives a refresh.
+// One zod declaration, parsed by the server page and read/written by the client.
+export const ORDERS_URL_STATE = defineUrlState({ status: optionalUrlParam(OrderStatusSchema) });
+const [{ status }, updateUrlState] = useUrlState(ORDERS_URL_STATE);
 ```
+
+`useUrlState` runs on nuqs (`UrlStateProvider`, mounted once in each app's root layout): the state
+changes in the same render as the click, and the URL follows on the next tick. Don't read
+`useSearchParams()` for state the page writes back. It updates a router transition later, so a tab
+would show its old content for a frame. Don't import `nuqs` directly in app code either:
+`defineUrlState` is the one declaration, shared with the server page
+([ADR 066](../docs/adr/066-nuqs-url-state-engine.md)).
+
+Tabs must switch without flicker:
+
+- a tab's content swaps at once, with no exit or fade animation;
+- prefetch a tab's first page when the pointer or keyboard focus reaches it (`usePrefetch`);
+- a tabbed list on one query shows the new tab's loading state while
+  `useIsOtherViewPlaceholder` is `true`, never the previous tab's rows.
 
 For SSR-heavy tables, prefer server-driven querying: `URL → page/search/sort/filter → server request → API → database`. Never load 100,000 records into the browser to simulate server-side pagination client-side — that defeats the entire point of pagination.
 

@@ -66,8 +66,10 @@ test("a submitted search is pushed, and Back restores the previous search box te
 	await expect(search).toHaveValue("");
 });
 
-// A Back pressed before the router committed the submitted search: the router renders both
-// together, so "coffee" is never a committed value. The box must still follow the URL.
+// A Back pressed the moment the submitted search reaches the address bar, before React has
+// rendered from it: the URL engine (nuqs) writes the URL on the tick after the submit, in a
+// router transition, so this Back lands while that transition is still pending. The box must
+// still follow the URL (useHistoryTraversalCount).
 test("a Back pressed before the submitted search was committed still restores the search box text", async ({ page }) => {
 	await page.goto("/#rewards");
 	const history = new BrowserHistoryProbe(page);
@@ -75,10 +77,20 @@ test("a Back pressed before the submitted search was committed still restores th
 	const search = page.getByRole("textbox", { name: "Search rewards" });
 	await search.fill("coffee");
 
-	// Submit and go back in one task, so Back lands before React can commit the pushed URL.
-	await search.evaluate((input: HTMLInputElement): void => {
+	// Submit, then go back in the same task that sees the pushed URL — before React can commit it.
+	await search.evaluate(async (input: HTMLInputElement): Promise<void> => {
 		input.form?.requestSubmit();
-		window.history.back();
+		await new Promise<void>((resolve: () => void): void => {
+			const backOnceWritten = (): void => {
+				if (new URLSearchParams(window.location.search).get("search") === "coffee") {
+					window.history.back();
+					resolve();
+					return;
+				}
+				setTimeout(backOnceWritten, 0);
+			};
+			backOnceWritten();
+		});
 	});
 
 	await page.waitForFunction((): boolean => window.location.search === "");

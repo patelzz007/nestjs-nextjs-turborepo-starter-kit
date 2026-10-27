@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { keepPreviousData } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import { ApiPaginatedMetaSchema, type AdminUserDetail, type ApiPaginatedMeta, type Envelope } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,7 +10,7 @@ import { TABLE_TEXT_DEBOUNCE_MS } from "@/lib/data-table/use-table-text-draft";
 import { USERS_TABLE_URL_STATE } from "@/contexts/identity/url-state/users";
 
 import UsersAllTable from "../users-all-table";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 
 /** Only the user fields the table renders. */
 interface UserRowStub {
@@ -32,11 +33,8 @@ interface UsersQueryStub {
 
 const { usersQuery } = vi.hoisted(() => ({ usersQuery: vi.fn() }));
 
-// The table reads its state from the address bar, as Next.js's
-// `useSearchParams` does once the History API integration has synced it.
 vi.mock("next/navigation", () => ({
 	useRouter: (): { readonly push: () => void } => ({ push: () => undefined }),
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 }));
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
@@ -121,7 +119,7 @@ afterEach((): void => {
 describe("UsersAllTable URL state", () => {
 	it("queries exactly what the URL asks for and shows it in the controls", () => {
 		setUrl(`${PATH}?page=2&sort=-email&search=jane&filter[status]=locked`);
-		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+		render(<UsersAllTable />, { wrapper: ClientTestProviders });
 
 		expect(usersQuery).toHaveBeenLastCalledWith(
 			{ page: 2, limit: 20, sort: "-email", search: "jane", filter: { status: { eq: "locked" } } },
@@ -133,24 +131,26 @@ describe("UsersAllTable URL state", () => {
 
 	it("ignores invalid params instead of sending them", () => {
 		setUrl(`${PATH}?page=-1&sort=passwordHash&filter[status]=root&limit=7`);
-		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+		render(<UsersAllTable />, { wrapper: ClientTestProviders });
 
 		expect(usersQuery).toHaveBeenLastCalledWith({ page: 1, limit: 20 }, expect.anything());
 	});
 
-	it("commits the debounced search to the URL with replace and returns to page 1", () => {
+	it("commits the debounced search to the URL with replace and returns to page 1", async () => {
 		vi.useFakeTimers();
 		setUrl(`${PATH}?page=3`);
 		const replaceState = vi.spyOn(window.history, "replaceState");
 		const pushState = vi.spyOn(window.history, "pushState");
-		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+		render(<UsersAllTable />, { wrapper: ClientTestProviders });
 
 		fireEvent.change(screen.getByDisplayValue(""), { target: { value: "  bob " } });
+		await flushUrlUpdates();
 		expect(replaceState).not.toHaveBeenCalled();
 		act((): void => {
 			vi.advanceTimersByTime(TABLE_TEXT_DEBOUNCE_MS);
 		});
 
+		await flushUrlUpdates();
 		expect(replaceState).toHaveBeenCalledTimes(1);
 		expect(pushState).not.toHaveBeenCalled();
 		expect(currentQuery()).toBe("?search=bob");
@@ -158,7 +158,7 @@ describe("UsersAllTable URL state", () => {
 
 	it("restores search, sort and page from the URL on back/forward", () => {
 		setUrl(`${PATH}?search=jane`);
-		const view = render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+		const view = render(<UsersAllTable />, { wrapper: ClientTestProviders });
 		expect(screen.getByDisplayValue("jane")).toBeDefined();
 
 		setUrl(`${PATH}?page=4&search=bob&sort=fullName`);
@@ -171,7 +171,7 @@ describe("UsersAllTable URL state", () => {
 	it("pushes a status filter change and resets to page 1", async () => {
 		setUrl(`${PATH}?page=3`);
 		const pushState = vi.spyOn(window.history, "pushState");
-		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+		render(<UsersAllTable />, { wrapper: ClientTestProviders });
 
 		const trigger = screen.getByRole("combobox", { name: "Account status" });
 		fireEvent.pointerDown(trigger, { pointerType: "mouse", button: 0 });
@@ -184,43 +184,48 @@ describe("UsersAllTable URL state", () => {
 		fireEvent.mouseUp(option, { button: 0 });
 		fireEvent.click(option);
 
+		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(currentQuery()).toBe("?filter[status]=locked");
 	});
 
-	it("pushes a sort change and resets to page 1", () => {
+	it("pushes a sort change and resets to page 1", async () => {
 		setUrl(`${PATH}?page=3`);
 		const pushState = vi.spyOn(window.history, "pushState");
-		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+		render(<UsersAllTable />, { wrapper: ClientTestProviders });
 
 		fireEvent.click(screen.getByText("Name"));
 
+		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(currentQuery()).toBe("?sort=fullName");
 	});
 
-	it("pushes the next page with the response's keyset cursor (default order)", () => {
+	it("pushes the next page with the response's keyset cursor (default order)", async () => {
 		const pushState = vi.spyOn(window.history, "pushState");
-		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+		render(<UsersAllTable />, { wrapper: ClientTestProviders });
 
 		fireEvent.click(screen.getByRole("button", { name: /next page/i }));
 
+		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(currentQuery()).toBe(`?page=2&cursor=${NEXT_CURSOR}`);
 	});
 
-	it("pages by offset only when a custom sort is active", () => {
+	it("pages by offset only when a custom sort is active", async () => {
 		setUrl(`${PATH}?sort=email`);
-		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+		render(<UsersAllTable />, { wrapper: ClientTestProviders });
 
 		fireEvent.click(screen.getByRole("button", { name: /next page/i }));
 
-		expect(currentQuery()).toBe("?page=2&sort=email");
+		await flushUrlUpdates();
+		// The sort already in the URL keeps its place; the page is appended.
+		expect(currentQuery()).toBe("?sort=email&page=2");
 	});
 
 	it("queries the referral filters the URL asks for", () => {
 		setUrl(`${PATH}?filter[referrerId]=${PICKED_REFERRER_ID}&filter[referralStatus]=not_redeemed`);
-		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+		render(<UsersAllTable />, { wrapper: ClientTestProviders });
 
 		expect(usersQuery).toHaveBeenLastCalledWith(
 			{ page: 1, limit: 20, filter: { referrerId: { eq: PICKED_REFERRER_ID }, referralStatus: { eq: "not_redeemed" } } },
@@ -229,30 +234,32 @@ describe("UsersAllTable URL state", () => {
 		expect(screen.getByRole("combobox", { name: "Referral status" }).textContent).toContain("Not redeemed");
 	});
 
-	it("writes the referrer chosen in the Referred by picker to the URL and resets to page 1", () => {
+	it("writes the referrer chosen in the Referred by picker to the URL and resets to page 1", async () => {
 		setUrl(`${PATH}?page=3`);
 		const pushState = vi.spyOn(window.history, "pushState");
-		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+		render(<UsersAllTable />, { wrapper: ClientTestProviders });
 
 		fireEvent.click(screen.getByRole("button", { name: "Referred by" }));
 
+		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(currentQuery()).toBe(`?filter[referrerId]=${PICKED_REFERRER_ID}`);
 	});
 
-	it("drops the referrer filter when the picker is cleared", () => {
+	it("drops the referrer filter when the picker is cleared", async () => {
 		setUrl(`${PATH}?filter[referrerId]=${PICKED_REFERRER_ID}`);
-		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+		render(<UsersAllTable />, { wrapper: ClientTestProviders });
 
 		fireEvent.click(screen.getByRole("button", { name: "Referred by" }));
 
+		await flushUrlUpdates();
 		expect(currentQuery()).toBe("");
 	});
 
 	it("renders a referee's referrer as a profile link and the referral status label", () => {
 		const referee: UserRowStub = { ...USER, signupReferrer: { id: PICKED_REFERRER_ID, fullName: "Alice Referrer" }, signupReferralStatus: "redeemed" };
 		usersQuery.mockReturnValue({ data: { data: [referee], meta: pageMeta({}) }, isLoading: false, isError: false, isFetching: false });
-		render(<UsersAllTable />, { wrapper: UiKitTestProviders });
+		render(<UsersAllTable />, { wrapper: ClientTestProviders });
 
 		expect(screen.getAllByRole("link", { name: "Alice Referrer" }).at(0)?.getAttribute("href")).toBe(`/users/${PICKED_REFERRER_ID}`);
 		expect(screen.getAllByText("Redeemed").length).toBeGreaterThan(0);
@@ -262,7 +269,7 @@ describe("UsersAllTable URL state", () => {
 		setUrl(`${PATH}?page=2`);
 		const envelope: Envelope<AdminUserDetail[]> = { success: true, data: [], meta: pageMeta({ page: 2 }) };
 		const prefetchedFor = USERS_TABLE_URL_STATE.serialize(USERS_TABLE_URL_STATE.parse(new URLSearchParams("page=2")));
-		const view = render(<UsersAllTable initialPage={{ stateKey: prefetchedFor, data: envelope }} />, { wrapper: UiKitTestProviders });
+		const view = render(<UsersAllTable initialPage={{ stateKey: prefetchedFor, data: envelope }} />, { wrapper: ClientTestProviders });
 		expect(usersQuery).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ initialData: envelope }));
 
 		setUrl(`${PATH}?page=3`);

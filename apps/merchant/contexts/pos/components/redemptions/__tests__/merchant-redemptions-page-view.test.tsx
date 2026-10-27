@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -38,13 +39,6 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 		},
 	}),
 }));
-
-// The page is read from the address bar, as Next.js's `useSearchParams` does
-// once its History API integration has synced it.
-vi.mock("next/navigation", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("next/navigation")>();
-	return { ...actual, useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search) };
-});
 
 const PATH = `/t/${TEST_ORG_SLUG}/redemptions`;
 /** "Today" as the server decided it (2026-10-01 in the stores' zone). */
@@ -145,13 +139,14 @@ describe("MerchantRedemptionsPageView paging (URL state)", () => {
 		expect(lastInput()).toEqual({ tenantSlug: TEST_ORG_SLUG, page: 3, limit: MERCHANT_REDEMPTIONS_PAGE_SIZE, locationId: STORE_A.id });
 	});
 
-	it("pushes the next page with the response's keyset cursor, and the previous page by offset", () => {
+	it("pushes the next page with the response's keyset cursor, and the previous page by offset", async () => {
 		const pushState = vi.spyOn(window.history, "pushState");
 		redemptionsQuery.mockReturnValue({ data: envelope(1, 3), isLoading: false });
 		const view = renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
 
 		expect(screen.getByText("Page 1 of 3")).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: "Next" }));
+		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(window.location.search).toBe(`?page=2&cursor=${NEXT_CURSOR}`);
 
@@ -159,6 +154,7 @@ describe("MerchantRedemptionsPageView paging (URL state)", () => {
 		view.rerender(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />);
 		expect(lastInput()).toEqual({ tenantSlug: TEST_ORG_SLUG, page: 2, limit: MERCHANT_REDEMPTIONS_PAGE_SIZE, cursor: NEXT_CURSOR, locationId: undefined });
 		fireEvent.click(screen.getByRole("button", { name: "Previous" }));
+		await flushUrlUpdates();
 		expect(window.location.search).toBe("");
 	});
 
@@ -174,12 +170,13 @@ describe("MerchantRedemptionsPageView paging (URL state)", () => {
 		expect(lastInput()?.page).toBe(1);
 	});
 
-	it("offers a way back to the latest redemptions from a page past the end", () => {
+	it("offers a way back to the latest redemptions from a page past the end", async () => {
 		window.history.replaceState(null, "", `${PATH}?page=9`);
 		renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER" });
 
 		expect(screen.getByText("No redemptions on this page")).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: "Go to the latest redemptions" }));
+		await flushUrlUpdates();
 		expect(window.location.search).toBe("");
 	});
 

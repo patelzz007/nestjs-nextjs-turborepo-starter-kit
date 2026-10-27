@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { PERMISSION, type CapabilitySlug } from "@workspace/shared";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -68,12 +69,6 @@ const { FIRST_REQUEST_ID, SECOND_REQUEST_ID, reviewOptions, reviewMutate } = vi.
 	reviewOptions: vi.fn<(options: ReviewMutationOptionsStub) => void>(),
 }));
 
-// The panel reads its selection from the address bar, as Next.js's
-// `useSearchParams` does once the History API integration has synced it.
-vi.mock("next/navigation", () => ({
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
-}));
-
 vi.mock("@workspace/client/lib/contexts/identity", () => {
 	const request: LocationRequestStub = {
 		id: FIRST_REQUEST_ID,
@@ -124,7 +119,7 @@ function panel(capabilities: readonly CapabilitySlug[], queryClient: QueryClient
 }
 
 function renderPanel(capabilities: readonly CapabilitySlug[]): ReturnType<typeof render> {
-	return render(panel(capabilities), { wrapper: UiKitTestProviders });
+	return render(panel(capabilities), { wrapper: ClientTestProviders });
 }
 
 beforeEach(() => {
@@ -195,10 +190,11 @@ describe("LocationRequestsPanel selection (URL is the only source)", () => {
 		expect(screen.queryByText("1 Jalan Telawi")).toBeNull();
 	});
 
-	it("pushes a picked request to the URL and follows the URL back", () => {
+	it("pushes a picked request to the URL and follows the URL back", async () => {
 		const pushState = vi.spyOn(window.history, "pushState");
 		const view = renderPanel([PERMISSION.MERCHANT_ORG.LIST]);
 		fireEvent.click(screen.getByRole("button", { name: /Gurney outlet/ }));
+		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(window.location.search).toBe(`?requestId=${SECOND_REQUEST_ID}`);
 		view.rerender(panel([PERMISSION.MERCHANT_ORG.LIST]));
@@ -232,7 +228,7 @@ describe("LocationRequestsPanel review form", () => {
 	});
 
 	it("does not carry a draft reason over to another request", () => {
-		const view = render(panel([PERMISSION.MERCHANT_ORG.MANAGE]));
+		const view = render(panel([PERMISSION.MERCHANT_ORG.MANAGE]), { wrapper: ClientTestProviders });
 		window.history.replaceState(null, "", `${PATH}?requestId=${FIRST_REQUEST_ID}`);
 		view.rerender(panel([PERMISSION.MERCHANT_ORG.MANAGE]));
 		fireEvent.change(screen.getByLabelText("Rejection reason"), { target: { value: "Wrong address" } });
@@ -262,7 +258,7 @@ describe("LocationRequestsPanel review invalidation", () => {
 	it("invalidates the queue, the reviewed tenant and the merchant list — and nothing else", async () => {
 		const queryClient = new QueryClient();
 		seed(queryClient);
-		render(panel([PERMISSION.MERCHANT_ORG.MANAGE], queryClient));
+		render(panel([PERMISSION.MERCHANT_ORG.MANAGE], queryClient), { wrapper: ClientTestProviders });
 
 		const options: ReviewMutationOptionsStub | undefined = reviewOptions.mock.lastCall?.at(0);
 		await options?.onSuccess?.(null, { tenantId: REVIEWED_TENANT_ID, locationId: FIRST_REQUEST_ID, approve: true });

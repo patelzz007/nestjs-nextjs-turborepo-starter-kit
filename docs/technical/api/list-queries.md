@@ -346,7 +346,8 @@ export function toUsersListQuery(state: UsersTableUrlState): TableListQueryInput
 | `optionalUrlParam(schema)` / `urlParamWithDefault(schema, value)` / `optionalBooleanUrlParam()` | Filter values and selections (`?key=`, `?tenantId=`), validated by the domain schema. |
 | `listFilterKey(field, op?)` | `filter[field]` (eq shorthand) or `filter[field][op]` — the API's own key. |
 | `listStateToListQuery(spec, state)` | URL state → list input (whitelist, default order, cursor rule re-applied). |
-| `useUrlState(codec)` | `[state, update(patch, { history })]` from `useSearchParams()`. |
+| `useUrlState(codec)` | `[state, update(patch, { history })]` on nuqs (`UrlStateProvider` in each root layout): the state changes in the same render as the update, the URL on the next tick ([ADR 066](../../adr/066-nuqs-url-state-engine.md)). |
+| `useIsOtherViewPlaceholder(view, query)` | `true` while a `keepPreviousData` placeholder belongs to another view (tab) than the one selected: show that view's loading state, never the old view's rows. |
 | `useUrlDraft(...)` (admin: `useTableTextDraft`) | The search box's in-progress text: local, committed to the URL after a debounce, reset when the URL changes from outside and on every Back / Forward. |
 | `listPagePatch(state, page, nextCursor)` | The `{ page, cursor }` patch for a page move: a sequential "next" in the default order reuses `meta.nextCursor`, anything else pages by offset. |
 | `toPrefetchedQuery` / `prefetchedDataFor` (`lib/url-state/prefetched-query`) | Binds a server prefetch to the serialized URL state it was fetched for, and hands it back as `initialData` only for that state. |
@@ -385,6 +386,13 @@ api.geo.states.useQuery(toStatesListQuery(urlState), { enabled: activeTab === "s
 Switching tabs on the client fetches the new tab. Switching back, or pressing Back, to the state
 the server rendered reads TanStack Query's cache. Nothing is refetched while that page is fresh.
 
+A tab's first page is fetched when the pointer or keyboard focus reaches the tab (`usePrefetch`),
+so the click usually renders from the cache. Tab content swaps at once, with no exit animation.
+A tabbed list served by **one** query (the merchant rewards catalog's status tabs) keeps
+`keepPreviousData` for paging, but shows the new tab's loading state while
+`useIsOtherViewPlaceholder(tab, query)` is `true`. The previous tab's rows never appear under
+the new tab ([ADR 066](../../adr/066-nuqs-url-state-engine.md)).
+
 ### Client table: read the URL, write patches
 
 ```tsx
@@ -402,9 +410,10 @@ Rules:
   in-page selection — **pushes** a history entry, so Back undoes it. Continuous input — the
   debounced search box and free-text filters — **replaces** the current entry, so history
   is not flooded with one entry per keystroke.
-- **Writes use the History API** (`history.pushState` / `replaceState`), which Next.js
-  integrates with its router: `useSearchParams()` updates and back/forward restores the
-  entry, **without** a server round trip. `router.push` would re-render the page's server
+- **Writes are shallow History API updates** (`history.pushState` / `replaceState`, through
+  nuqs). Every `useUrlState` reading a key changes in the same render as the update; the
+  address bar follows on the next tick, and several updates in one tick become one history
+  entry. Back/forward restores the entry, **without** a server round trip. `router.push` would re-render the page's server
   components on every change (re-fetching the prefetched page, waiting for the RSC payload,
   showing `loading.tsx`). Use `router.push` only when the server must recompute something
   for the new URL — e.g. `/analytics/sales?weeks=`, whose period ends at request time.

@@ -8,7 +8,7 @@ import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import AccessControlPanel from "../access-control-panel";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 
 interface ListQueryStub {
 	readonly useQuery: () => {
@@ -46,7 +46,6 @@ interface AuthStub {
 vi.mock("next/navigation", () => ({
 	useRouter: (): { readonly push: () => void; readonly replace: () => void } => ({ push: () => undefined, replace: () => undefined }),
 	usePathname: (): string => "/settings/access",
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 }));
 
 const { checkMutate, checkOptions } = vi.hoisted(() => {
@@ -103,7 +102,7 @@ function renderPanel(capabilities: readonly CapabilitySlug[]): void {
 		<CapabilitiesProvider capabilities={capabilities}>
 			<AccessControlPanel />
 		</CapabilitiesProvider>,
-		{ wrapper: UiKitTestProviders },
+		{ wrapper: ClientTestProviders },
 	);
 }
 

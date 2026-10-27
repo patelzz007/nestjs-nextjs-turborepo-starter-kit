@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, within, type RenderResult } from "@testing-library/react";
 import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
 import { LIST_SLOT_INDEX, ApiPaginatedMetaSchema, PERMISSION, type ApiPaginatedMeta } from "@workspace/shared";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -51,7 +51,6 @@ const { pendingQuery, refetch } = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
 	useRouter: (): { readonly push: () => void; readonly replace: () => void } => ({ push: (): void => undefined, replace: (): void => undefined }),
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 	usePathname: (): string => window.location.pathname,
 }));
 
@@ -105,7 +104,7 @@ function renderPanel(): RenderResult {
 				<PendingRewardsPanel />
 			</CapabilitiesProvider>
 		</QueryClientProvider>,
-		{ wrapper: UiKitTestProviders },
+		{ wrapper: ClientTestProviders },
 	);
 }
 

@@ -14,6 +14,7 @@ import { defaultRewardStatusGroupId, groupStatusCounts, type RewardStatusGroupId
 import { REWARDS_URL_STATE, rewardsTabPatch, toRewardsQuery } from "@/contexts/rewards/url-state/rewards";
 import { useUrlListPager } from "@workspace/client/lib/url-state/use-url-list-pager";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
+import { useIsOtherViewPlaceholder } from "@workspace/client/lib/url-state/use-view-placeholder";
 import { MERCHANT_CAPABILITY, PLATFORM_DISPLAY_REGION, type RewardResponse } from "@workspace/shared";
 import { ListPager } from "@workspace/ui/components/list-pager";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
@@ -76,10 +77,22 @@ function MerchantRewardsPageContent({ tenantSlug }: MerchantRewardsPageViewProps
 		},
 		[updateUrlState],
 	);
+	// A tab the pointer or keyboard focus reaches is fetched ahead, so opening it shows its rewards at once.
+	const prefetchRewards = api.tenants.rewards.list.usePrefetch({ staleTime: REWARDS_STALE_TIME_MS });
+	const warmGroup = React.useCallback(
+		(groupId: RewardStatusGroupId): void => {
+			if (groupId !== selectedGroupId && tenantSlug.length > 0 && !isLocationLoading) {
+				prefetchRewards(toRewardsQuery(tenantSlug, locationId, { ...urlState, ...rewardsTabPatch(groupId) }, groupId));
+			}
+		},
+		[isLocationLoading, locationId, prefetchRewards, selectedGroupId, tenantSlug, urlState],
+	);
 
-	const rewards: readonly RewardResponse[] = rewardsQuery.isSuccess ? rewardsQuery.data.data : [];
+	// The previous page stays on screen while paging one tab, never under another tab.
+	const isOtherTabsPage = useIsOtherViewPlaceholder(selectedGroupId, rewardsQuery);
+	const rewards: readonly RewardResponse[] = rewardsQuery.isSuccess && !isOtherTabsPage ? rewardsQuery.data.data : [];
 	const isLoading = isLocationLoading || summaryQuery.isPending;
-	const isPageLoading = rewardsQuery.isPending || (rewardsQuery.isFetching && !rewardsQuery.isSuccess);
+	const isPageLoading = rewardsQuery.isPending || isOtherTabsPage || (rewardsQuery.isFetching && !rewardsQuery.isSuccess);
 	const loadError = summaryQuery.error ?? rewardsQuery.error;
 	const showError = loadError !== null;
 	const catalogSize = summary === undefined ? 0 : Object.values(summary.countsByStatus).reduce((sum, count) => sum + count, 0);
@@ -188,6 +201,7 @@ function MerchantRewardsPageContent({ tenantSlug }: MerchantRewardsPageViewProps
 					groups={groups}
 					selectedGroupId={selectedGroupId}
 					onSelectGroup={selectGroup}
+					onWarmGroup={warmGroup}
 					rewards={rewards}
 					isLoading={isLoading}
 					isPageLoading={isPageLoading}

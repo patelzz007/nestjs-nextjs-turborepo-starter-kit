@@ -144,6 +144,6 @@ encodings apply there and also cover colour-blind readers and grayscale print.
   `matchMedia`: stub it before rendering a `TimeSeriesChart`.
 - Range and presets: `packages/client/src/lib/contexts/reporting/__tests__/analytics-range.test.ts` (month, quarter,
   year and leap edges; local midnight in Kuala Lumpur vs UTC; invalid custom ranges).
-- Pages: each app's analytics view test mocks `useAuth().api` and `useSearchParams` (reading
-  `window.location`) and checks the data → screen mapping, the URL round trip, the prefetch key,
+- Pages: each app's analytics view test mocks `useAuth().api`, renders inside
+  `ClientTestProviders` (the URL-state engine on `window.location`) and checks the data → screen mapping, the URL round trip, the prefetch key,
   the export input and the error toasts.

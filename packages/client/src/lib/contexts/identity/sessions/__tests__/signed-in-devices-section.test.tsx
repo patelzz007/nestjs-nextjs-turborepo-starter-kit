@@ -3,9 +3,11 @@ import { QueryClient, QueryClientProvider, useMutation, type UseMutationResult }
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { epochMs, LIST_SLOT_INDEX, SESSION_LIST_PAGE_SIZE, type Envelope, type RevokeSessionInput, type RevokeSessionResponse, type Session } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/toast";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import type { JSX, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { ClientTestProviders } from "../../../../../testing/client-test-providers";
+import { flushUrlUpdates } from "../../../../../testing/flush-url-updates";
 
 import { envelopeFixture, META_FIXTURE } from "../../../../../test/auth-fixtures";
 import { apiRouter } from "../../../../api/endpoints";
@@ -21,11 +23,6 @@ interface SessionsQueryState {
 	readonly isPending: boolean;
 	readonly isError: boolean;
 }
-
-// `useSearchParams` reads the address bar, as Next.js does once the History API integration has synced it.
-vi.mock("next/navigation", () => ({
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
-}));
 
 const mocks = vi.hoisted(() => ({
 	sessionsState: vi.fn<() => SessionsQueryState>(),
@@ -123,7 +120,7 @@ let queryClient: QueryClient;
 function Providers({ children }: { readonly children: ReactNode }): JSX.Element {
 	return (
 		<QueryClientProvider client={queryClient}>
-			<UiKitTestProviders>{children}</UiKitTestProviders>
+			<ClientTestProviders>{children}</ClientTestProviders>
 		</QueryClientProvider>
 	);
 }
@@ -353,7 +350,7 @@ describe("SignedInDevicesSection — pages", () => {
 		expect(screen.queryByRole("navigation", { name: SIGNED_IN_DEVICES_LABELS.pagesLabel })).toBeNull();
 	});
 
-	it("pages forward with the response's cursor, writing the page into the URL", () => {
+	it("pages forward with the response's cursor, writing the page into the URL", async () => {
 		mocks.sessionsState.mockReturnValue(pageOf([THIS_BROWSER, PHONE], { page: 1, totalPages: 2, nextCursor: "cursor-2" }));
 		renderSection();
 
@@ -361,6 +358,7 @@ describe("SignedInDevicesSection — pages", () => {
 		expect(within(pager).getByText("Page 1 of 2")).toBeDefined();
 		fireEvent.click(within(pager).getByRole("button", { name: "Next" }));
 
+		await flushUrlUpdates();
 		expect(new URLSearchParams(window.location.search).get("devicesPage")).toBe("2");
 		expect(new URLSearchParams(window.location.search).get("devicesCursor")).toBe("cursor-2");
 	});
@@ -374,7 +372,7 @@ describe("SignedInDevicesSection — pages", () => {
 		expect(screen.getByRole("button", { name: "Next" }).hasAttribute("disabled")).toBe(true);
 	});
 
-	it("offers the first page when the page in the URL is past the end", () => {
+	it("offers the first page when the page in the URL is past the end", async () => {
 		window.history.replaceState(null, "", "/account/security?devicesPage=4");
 		mocks.sessionsState.mockReturnValue(pageOf([], { page: 4, totalPages: 3, nextCursor: null }));
 		renderSection();
@@ -382,6 +380,7 @@ describe("SignedInDevicesSection — pages", () => {
 		expect(screen.getByText(SIGNED_IN_DEVICES_LABELS.pastLastPage)).toBeDefined();
 		fireEvent.click(screen.getByRole("button", { name: SIGNED_IN_DEVICES_LABELS.firstPage }));
 
+		await flushUrlUpdates();
 		expect(new URLSearchParams(window.location.search).get("devicesPage")).toBeNull();
 	});
 });

@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import {
 	BACKUP_CODE_CHARSET,
 	BACKUP_CODE_COUNT,
@@ -20,6 +19,8 @@ import {
 import type { JSX, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ClientTestProviders } from "../../../../../testing/client-test-providers";
+
 import { envelopeFixture, META_FIXTURE, userFixture } from "../../../../../test/auth-fixtures";
 import { ApiError } from "../../../../api/use-api";
 import { SecuritySettingsPanel } from "../security-settings-panel";
@@ -37,11 +38,6 @@ const mocks = vi.hoisted(() => ({
 	refetchRemaining: vi.fn<() => Promise<void>>(),
 	noop: vi.fn<() => Promise<void>>(),
 	meData: vi.fn<() => Envelope<UserResponse> | undefined>(),
-}));
-
-// The signed-in devices section keeps its page in the URL: `useSearchParams` reads the address bar, as Next.js does.
-vi.mock("next/navigation", () => ({
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 }));
 
 /** The pagination of an empty first page of `GET /auth/sessions`. */
@@ -109,7 +105,7 @@ function setupResponseFixture(): TwoFactorSetupResponse {
 function Providers({ children }: { readonly children: ReactNode }): JSX.Element {
 	return (
 		<QueryClientProvider client={new QueryClient()}>
-			<UiKitTestProviders>{children}</UiKitTestProviders>
+			<ClientTestProviders>{children}</ClientTestProviders>
 		</QueryClientProvider>
 	);
 }

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import * as React from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -69,13 +70,6 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 		},
 	}),
 }));
-
-// The filter is read from the address bar, as Next.js's `useSearchParams` does
-// once its History API integration has synced it.
-vi.mock("next/navigation", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("next/navigation")>();
-	return { ...actual, useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search) };
-});
 
 const PATH = `/t/${TEST_ORG_SLUG}/api-keys`;
 const NOW = 1_790_812_800_000;
@@ -258,13 +252,14 @@ describe("MerchantApiKeysPageView totals and filters (server-side)", () => {
 		expect(screen.getByText("Showing the newest 1 of 2 keys.")).toBeTruthy();
 	});
 
-	it("opens on active keys and pushes revoked or all to the URL", () => {
+	it("opens on active keys and pushes revoked or all to the URL", async () => {
 		const pushState = vi.spyOn(window.history, "pushState");
 		const view = renderWithAuthorization(<MerchantApiKeysPageView tenantSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: twoStoreSeed(null) });
 		const list = (): HTMLElement => screen.getByRole("region", { name: "Terminal keys" });
 
 		expect(within(list()).queryByText("Old tablet")).toBeNull();
 		fireEvent.click(within(list()).getByRole("button", { name: "Revoked" }));
+		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(window.location.search).toBe("?status=revoked");
 
@@ -273,6 +268,7 @@ describe("MerchantApiKeysPageView totals and filters (server-side)", () => {
 		expect(within(list()).queryByText("Front counter")).toBeNull();
 
 		fireEvent.click(within(list()).getByRole("button", { name: "Active" }));
+		await flushUrlUpdates();
 		expect(window.location.search).toBe("");
 	});
 
@@ -359,6 +355,7 @@ describe("MerchantApiKeysPageView create", () => {
 		fireEvent.change(screen.getByLabelText("Terminal name"), { target: { value: "  Back office  " } });
 		fireEvent.click(screen.getByRole("button", { name: "Create API key" }));
 
+		await flushUrlUpdates();
 		expect(createMutate).toHaveBeenCalledWith(expect.objectContaining({ tenantSlug: TEST_ORG_SLUG, name: "Back office" }));
 		expect(replaceState).toHaveBeenCalledTimes(1);
 		expect(window.location.search).toBe("");

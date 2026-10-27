@@ -2,6 +2,7 @@ import "@workspace/ui/globals.css";
 import "./web-theme.css";
 
 import { QueryProvider } from "@workspace/client/lib/api/query-provider";
+import { UrlStateProvider } from "@workspace/client/lib/url-state/url-state-provider";
 import { UiPreferencesStoreProvider } from "@workspace/client/lib/features/ui-preferences/facade";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { Metadata } from "next";
@@ -46,20 +47,22 @@ export default async function RootLayout({
 		<AppDocumentShell htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable)} bodyClassName="web-app">
 			<ReduxDevToolsGuard />
 			<UiKitLanguageProvider language={PLATFORM_UI_KIT_LANGUAGE}>
-				<QueryProvider>
-					<WebClientAuthWrapper sessionActive={sessionActive} serverSession={serverSession}>
-						<WebAuthorizationProvider sessionActive={sessionActive} initialSessionPermissions={serverSession?.permissions}>
-							<ThemeProvider>
-								{/* Root, not the /dashboard shell: the public landing page renders the rewards catalog too. */}
-								<UiPreferencesStoreProvider storageKey={WEB_UI_PREFERENCES_STORAGE_KEY} devtoolsName={WEB_UI_PREFERENCES_DEVTOOLS_NAME}>
-									<WebBreadcrumbProvider>{children}</WebBreadcrumbProvider>
-								</UiPreferencesStoreProvider>
-								<Toaster position="top-right" />
-								<ScrollToTop />
-							</ThemeProvider>
-						</WebAuthorizationProvider>
-					</WebClientAuthWrapper>
-				</QueryProvider>
+				<UrlStateProvider>
+					<QueryProvider>
+						<WebClientAuthWrapper sessionActive={sessionActive} serverSession={serverSession}>
+							<WebAuthorizationProvider sessionActive={sessionActive} initialSessionPermissions={serverSession?.permissions}>
+								<ThemeProvider>
+									{/* Root, not the /dashboard shell: the public landing page renders the rewards catalog too. */}
+									<UiPreferencesStoreProvider storageKey={WEB_UI_PREFERENCES_STORAGE_KEY} devtoolsName={WEB_UI_PREFERENCES_DEVTOOLS_NAME}>
+										<WebBreadcrumbProvider>{children}</WebBreadcrumbProvider>
+									</UiPreferencesStoreProvider>
+									<Toaster position="top-right" />
+									<ScrollToTop />
+								</ThemeProvider>
+							</WebAuthorizationProvider>
+						</WebClientAuthWrapper>
+					</QueryProvider>
+				</UrlStateProvider>
 			</UiKitLanguageProvider>
 		</AppDocumentShell>
 	);

@@ -2,6 +2,7 @@ import "@workspace/ui/globals.css";
 import "./merchant-theme.css";
 
 import { QueryProvider } from "@workspace/client/lib/api/query-provider";
+import { UrlStateProvider } from "@workspace/client/lib/url-state/url-state-provider";
 import { serverRenderedSessionOf } from "@workspace/client/lib/contexts/identity/session/load-server-session";
 import { loadMerchantServerSession } from "@/lib/merchant-server-api";
 import { MerchantRootProvider } from "@/lib/session/root-provider";
@@ -35,14 +36,16 @@ export default async function RootLayout({ children }: { readonly children: Reac
 		<AppDocumentShell htmlClassName={cn("font-sans antialiased", geistSans.variable, bricolageGrotesque.variable, geistMono.variable)} bodyClassName="merchant-app">
 			<ReduxDevToolsGuard />
 			<UiKitLanguageProvider language={PLATFORM_UI_KIT_LANGUAGE}>
-				<QueryProvider>
-					<MerchantRootProvider serverSession={serverSession}>
-						<ThemeProvider>
-							{children}
-							<Toaster position="top-right" />
-						</ThemeProvider>
-					</MerchantRootProvider>
-				</QueryProvider>
+				<UrlStateProvider>
+					<QueryProvider>
+						<MerchantRootProvider serverSession={serverSession}>
+							<ThemeProvider>
+								{children}
+								<Toaster position="top-right" />
+							</ThemeProvider>
+						</MerchantRootProvider>
+					</QueryProvider>
+				</UrlStateProvider>
 			</UiKitLanguageProvider>
 		</AppDocumentShell>
 	);

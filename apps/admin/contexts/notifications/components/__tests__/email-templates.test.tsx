@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
 import {
 	EmailPreviewListResponseSchema,
@@ -61,12 +63,6 @@ const { LIST, PREVIEW, previewDetailQuery, prefetchDetail, loadedKey } = vi.hois
 	};
 });
 
-// The view reads `?key=` from the address bar, as Next.js's `useSearchParams`
-// does once the History API integration has synced it.
-vi.mock("next/navigation", () => ({
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
-}));
-
 vi.mock("@workspace/client/lib/contexts/identity", () => {
 	const list = EmailPreviewListResponseSchema.parse(LIST);
 	const preview = EmailPreviewSchema.parse(PREVIEW);
@@ -107,7 +103,7 @@ function view(capabilities: readonly CapabilitySlug[]): React.JSX.Element {
 }
 
 function renderView(capabilities: readonly CapabilitySlug[]): ReturnType<typeof render> {
-	return render(view(capabilities));
+	return render(view(capabilities), { wrapper: ClientTestProviders });
 }
 
 beforeEach(() => {
@@ -154,10 +150,11 @@ describe("Email templates selection (?key= is the only source)", () => {
 		expect(previewDetailQuery).toHaveBeenLastCalledWith({ key: "verification" });
 	});
 
-	it("writes the selection back to the URL as a history entry", () => {
+	it("writes the selection back to the URL as a history entry", async () => {
 		const pushState = vi.spyOn(window.history, "pushState");
 		const rendered = renderView([PERMISSION.EMAIL.READ]);
 		fireEvent.click(screen.getByRole("button", { name: /Welcome/ }));
+		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(window.location.search).toBe("?key=welcome");
 		rendered.rerender(view([PERMISSION.EMAIL.READ]));

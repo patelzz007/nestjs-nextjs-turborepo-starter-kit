@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 import type { CustomerAnalyticsDashboard, Envelope } from "@workspace/shared";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -23,10 +24,8 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({ api: { claims: { analyticsDashboard: { useQuery: mocks.dashboardQuery } } } }),
 }));
 
-// `useSearchParams` reads the address bar, as Next.js does once its History API integration has synced it.
 vi.mock("next/navigation", async (importOriginal) => ({
 	...(await importOriginal<typeof import("next/navigation")>()),
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 }));
 
 /** Recharts' ResponsiveContainer observes its size; jsdom has no ResizeObserver. */
@@ -55,12 +54,8 @@ function spaced(value: string | null | undefined): string {
 	return (value ?? "").replace(/\s/g, " ");
 }
 
-function renderView(props: Partial<DashboardAnalyticsPageViewProps> = {}): () => void {
-	const { rerender } = render(<DashboardAnalyticsPageView nowMs={NOW_MS} {...props} />, { wrapper: UiKitTestProviders });
-	// The URL changed through the History API; re-render so `useSearchParams` reads it (Next does this itself).
-	return (): void => {
-		rerender(<DashboardAnalyticsPageView nowMs={NOW_MS} {...props} />);
-	};
+function renderView(props: Partial<DashboardAnalyticsPageViewProps> = {}): void {
+	render(<DashboardAnalyticsPageView nowMs={NOW_MS} {...props} />, { wrapper: ClientTestProviders });
 }
 
 function lastCall(): readonly [input: object, options?: DashboardQueryOptions | undefined] {
@@ -154,10 +149,10 @@ describe("DashboardAnalyticsPageView", () => {
 
 	it("keeps the range in the URL and requeries when a preset is picked", async (): Promise<void> => {
 		mocks.dashboardQuery.mockReturnValue(ready());
-		const refresh = renderView();
+		renderView();
 
 		await chooseFilter(UI_KIT_LABELS_EN.analyticsRangePicker.range, "Last 7 days");
-		refresh();
+		await flushUrlUpdates();
 
 		expect(window.location.search).toBe("?range=last7Days");
 		expect(lastInput()).toEqual({ from: Date.UTC(2026, 8, 29), to: DEFAULT_TO, interval: "day" });

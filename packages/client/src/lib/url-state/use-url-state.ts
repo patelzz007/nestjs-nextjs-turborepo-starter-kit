@@ -4,32 +4,37 @@
 // lib/url-state/use-url-state.ts - read/write a URL state from a client component
 // ============================================
 // `useUrlState(codec)` returns `[state, update]`:
-//   - `state` is parsed from `useSearchParams()` with the codec, so it is
-//     correct during SSR of a dynamic page, after a reload, on a shared link
-//     and after browser back/forward — there is no copy to keep in sync.
+//   - `state` is the codec's zod parse of the URL, so it is correct during SSR
+//     of a dynamic page, after a reload, on a shared link and after browser
+//     back/forward — there is no copy to keep in sync.
 //   - `update(patch, { history })` merges `patch` into the CURRENT URL state
 //     and writes the result back to the address bar.
 //
-// Writing uses the native History API (`history.pushState` /
-// `history.replaceState`), which Next.js integrates with its router: it keeps
-// `useSearchParams()` / `usePathname()` in sync and back/forward restores the
-// entry — WITHOUT a server round trip. `router.push`/`router.replace` would
-// instead re-render the page's server components on every change (refetching
-// the server-prefetched page, waiting for the RSC payload before the URL and
-// the table update, and showing the route's `loading.tsx`). Table rows are
-// TanStack Query's job; the server page only renders the first request.
+// The engine is nuqs (`useQueryStates`, mounted by `UrlStateProvider`):
+//   - An update changes `state` in the SAME render as the click that caused
+//     it — every hook reading those keys re-renders at once — and the URL
+//     follows on the next tick (shallow `pushState` / `replaceState`, no server
+//     round trip, no `loading.tsx`). Reading `useSearchParams()` instead would
+//     lag a router transition behind the click: a tab switch would paint a
+//     frame of the old tab's state under the new tab.
+//   - Several updates in the same tick — e.g. a filter change followed by the
+//     table's own "back to page 1" — are applied on top of each other (the
+//     updater sees the queued values), then written as ONE history entry.
+//
+// The codec stays the single declaration of the state (zod per param, used by
+// the server page too); nuqs only carries each owned key's raw string.
 //
 // History policy (docs/technical/api/list-queries.md §7):
-//   - "push" (default) for discrete navigation — page, page size, sort,
+//   - "push" (default) for discrete navigation — a tab, page, page size, sort,
 //     filter selects, an in-page selection. Back undoes it.
 //   - "replace" for continuous input committed while the user types (the
 //     debounced search box, free-text filters — see `useUrlDraft`), so history
 //     is not flooded with one entry per keystroke.
 
-import { useSearchParams } from "next/navigation";
+import { parseAsString, useQueryStates } from "nuqs";
 import { useCallback, useMemo } from "react";
 
-import { isSameQuery, type UrlState, type UrlStateCodec, type UrlStateShape } from "./url-state";
+import type { UrlState, UrlStateCodec, UrlStateShape } from "./url-state";
 
 /** How an update is recorded in browser history. */
 export type UrlHistoryMode = "push" | "replace";
@@ -42,34 +47,49 @@ export interface UrlStateUpdateOptions {
 /** Merges `patch` into the current URL state and navigates; a patch that changes nothing is a no-op. */
 export type UrlStateUpdate<TState> = (patch: Partial<TState>, options?: UrlStateUpdateOptions) => void;
 
-/**
- * Applies `patch` to the URL the browser is on NOW (not the one this render
- * saw), so several updates in the same tick — e.g. a filter change followed by
- * the table's own "back to page 1" — compose instead of overwriting each other.
- */
-function writeUrlState<TShape extends UrlStateShape>(codec: UrlStateCodec<TShape>, patch: Partial<UrlState<TShape>>, options: UrlStateUpdateOptions | undefined): void {
-	const current = new URLSearchParams(window.location.search);
-	const query: string = codec.serialize({ ...codec.parse(current), ...patch }, current);
-	if (isSameQuery(query, current.toString())) {
-		return;
+/** Each URL key a codec owns → its raw value (`null` when absent). */
+export type RawUrlParams = Readonly<Record<string, string | null>>;
+
+/** The raw values as search params (absent keys left out), for `codec.parse`. */
+export function rawUrlParamsToSearch(raw: RawUrlParams): URLSearchParams {
+	const params = new URLSearchParams();
+	for (const [key, value] of Object.entries(raw)) {
+		if (value !== null) {
+			params.set(key, value);
+		}
 	}
-	const href = `${window.location.pathname}${query.length > 0 ? `?${query}` : ""}${window.location.hash}`;
-	if (options?.history === "replace") {
-		window.history.replaceState(null, "", href);
-		return;
-	}
-	window.history.pushState(null, "", href);
+	return params;
+}
+
+/** `state` as the raw value of each URL key the codec owns (`null` for a param serialized away as its default). */
+export function urlStateToRawParams<TShape extends UrlStateShape>(codec: UrlStateCodec<TShape>, state: UrlState<TShape>): RawUrlParams {
+	const params = new URLSearchParams(codec.serialize(state));
+	return Object.fromEntries(codec.urlKeys.map((key: string): [string, string | null] => [key, params.get(key)]));
+}
+
+/** The two raw value sets carry the same value for every key of `next`. */
+export function isSameRawUrlParams(current: RawUrlParams, next: RawUrlParams): boolean {
+	return Object.entries(next).every(([key, value]): boolean => (current[key] ?? null) === value);
 }
 
 /** `[state, update]` for one URL state declared with `defineUrlState`. */
 export function useUrlState<TShape extends UrlStateShape>(codec: UrlStateCodec<TShape>): readonly [UrlState<TShape>, UrlStateUpdate<UrlState<TShape>>] {
-	const searchParams = useSearchParams();
-	const state: UrlState<TShape> = useMemo((): UrlState<TShape> => codec.parse(searchParams), [codec, searchParams]);
+	// One raw string parser per owned key: the codec, not nuqs, decides what a value means.
+	const rawParsers = useMemo(() => Object.fromEntries(codec.urlKeys.map((key: string) => [key, parseAsString])), [codec]);
+	const [raw, setRaw] = useQueryStates(rawParsers);
+	const state: UrlState<TShape> = useMemo((): UrlState<TShape> => codec.parse(rawUrlParamsToSearch(raw)), [codec, raw]);
 	const update = useCallback(
 		(patch: Partial<UrlState<TShape>>, options?: UrlStateUpdateOptions): void => {
-			writeUrlState(codec, patch, options);
+			void setRaw(
+				(current: RawUrlParams): RawUrlParams => {
+					const next: RawUrlParams = urlStateToRawParams(codec, { ...codec.parse(rawUrlParamsToSearch(current)), ...patch });
+					// Nothing to write: no history entry either.
+					return isSameRawUrlParams(current, next) ? {} : next;
+				},
+				{ history: options?.history ?? "push" },
+			);
 		},
-		[codec],
+		[codec, setRaw],
 	);
 	return [state, update];
 }

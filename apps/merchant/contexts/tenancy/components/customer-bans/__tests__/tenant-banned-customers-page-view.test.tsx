@@ -35,11 +35,6 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	}),
 }));
 
-vi.mock("next/navigation", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("next/navigation")>();
-	return { ...actual, useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search) };
-});
-
 const BAN: TenantCustomerBanResponse = TenantCustomerBanResponseSchema.parse({
 	id: "0199a1b2-0000-7000-8000-0000000000b1",
 	reason: "Showed a screenshot of a used voucher",

@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, type RenderResult } from "@testing-library/react";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { testEnvelope } from "@/test-support/envelope";
 import type { PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
@@ -35,13 +37,6 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({ api: { rewards: { list: { useQuery: rewardsListQuery } } } }),
 }));
 
-// The catalog reads its state from the address bar, as Next.js's
-// `useSearchParams` does once its History API integration has synced it.
-vi.mock("next/navigation", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("next/navigation")>();
-	return { ...actual, useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search) };
-});
-
 const PATH = "/dashboard";
 const NEXT_CURSOR = "cursor-after-page-1";
 const FIXTURE_NOW = 1_790_812_800_000;
@@ -71,7 +66,7 @@ function view(initialPage?: PrefetchedQuery<Envelope<RewardResponse[]>>): React.
 
 function renderAt(query: string, initialPage?: PrefetchedQuery<Envelope<RewardResponse[]>>): RenderResult {
 	window.history.replaceState(null, "", `${PATH}${query}`);
-	return render(view(initialPage));
+	return render(view(initialPage), { wrapper: ClientTestProviders });
 }
 
 function lastQuery(): { readonly input: RewardsListInput | undefined; readonly options: RewardsListOptions | undefined } {
@@ -111,41 +106,48 @@ describe("DashboardBrowseView URL state", () => {
 		expect(screen.getByRole("button", { name: "Clear filters" })).toBeTruthy();
 	});
 
-	it("pushes a filter chip to the URL and returns to page 1", () => {
+	it("pushes a filter chip to the URL and returns to page 1", async () => {
 		const pushState = vi.spyOn(window.history, "pushState");
 		renderAt("?page=3&filter[category]=cafe");
 
 		fireEvent.click(screen.getByRole("button", { name: "Melaka" }));
 
+		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
-		expect(window.location.search).toBe("?filter[city]=MELAKA&filter[category]=cafe");
+		// Params already in the URL keep their place; a new one is appended.
+		await flushUrlUpdates();
+		expect(window.location.search).toBe("?filter[category]=cafe&filter[city]=MELAKA");
 	});
 
-	it("pushes a submitted search (trimmed) and keeps the other filters", () => {
+	it("pushes a submitted search (trimmed) and keeps the other filters", async () => {
 		const pushState = vi.spyOn(window.history, "pushState");
 		renderAt("?filter[city]=KUALA_LUMPUR&page=2");
 
 		fireEvent.change(screen.getByRole("textbox", { name: "Search rewards" }), { target: { value: "  flat white " } });
+		await flushUrlUpdates();
 		expect(pushState).not.toHaveBeenCalled();
 		fireEvent.click(screen.getByRole("button", { name: "Search" }));
 
+		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(new URLSearchParams(window.location.search).get("search")).toBe("flat white");
 		expect(new URLSearchParams(window.location.search).get("filter[city]")).toBe("KUALA_LUMPUR");
 		expect(new URLSearchParams(window.location.search).has("page")).toBe(false);
 	});
 
-	it("clears every filter in one history entry", () => {
+	it("clears every filter in one history entry", async () => {
 		renderAt("?search=latte&filter[city]=MELAKA&page=2");
 
 		fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
 
+		await flushUrlUpdates();
 		expect(window.location.search).toBe("");
 	});
 
-	it("pages forward with the response's keyset cursor and back by offset", () => {
+	it("pages forward with the response's keyset cursor and back by offset", async () => {
 		const view1 = renderAt("");
 		fireEvent.click(screen.getByRole("button", { name: "Next" }));
+		await flushUrlUpdates();
 		expect(window.location.search).toBe(`?page=2&cursor=${NEXT_CURSOR}`);
 
 		rewardsListQuery.mockReturnValue({ data: { data: [LATTE], meta: paginatedMeta(3, false) }, isLoading: false });
@@ -154,6 +156,7 @@ describe("DashboardBrowseView URL state", () => {
 		});
 		view1.rerender(view());
 		fireEvent.click(screen.getByRole("button", { name: "Previous" }));
+		await flushUrlUpdates();
 		expect(window.location.search).toBe("?page=2");
 	});
 
@@ -172,11 +175,12 @@ describe("DashboardBrowseView URL state", () => {
 });
 
 describe("DashboardBrowseView filters and states", () => {
-	it('models "All cities" as no filter: clicking it removes the city from the URL', () => {
+	it('models "All cities" as no filter: clicking it removes the city from the URL', async () => {
 		renderAt("?filter[city]=MELAKA&filter[category]=cafe");
 
 		fireEvent.click(screen.getByRole("button", { name: "All cities" }));
 
+		await flushUrlUpdates();
 		expect(window.location.search).toBe("?filter[category]=cafe");
 	});
 

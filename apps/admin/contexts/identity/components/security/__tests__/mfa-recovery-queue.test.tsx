@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import type { AdminMfaRecoveryRequest } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MfaRecoveryQueue } from "@/contexts/identity/components/security/mfa-recovery-queue";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 
 /** Only the request fields the queue renders. */
 interface RecoveryRowStub {
@@ -23,11 +24,8 @@ const { requestsQuery, FIRST_ID, SECOND_ID } = vi.hoisted(() => ({
 	SECOND_ID: "5a1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a02",
 }));
 
-// The queue reads its state from the address bar, as Next.js's
-// `useSearchParams` does once the History API integration has synced it.
 vi.mock("next/navigation", () => ({
 	useRouter: (): { readonly push: () => void } => ({ push: () => undefined }),
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 }));
 
 // The review panel has its own tests; here it only reports which request it shows.
@@ -58,7 +56,7 @@ afterEach((): void => {
 
 describe("MfaRecoveryQueue URL state", () => {
 	it("lists every status for a bare URL and reviews nothing until a request is chosen", () => {
-		render(<MfaRecoveryQueue />, { wrapper: UiKitTestProviders });
+		render(<MfaRecoveryQueue />, { wrapper: ClientTestProviders });
 
 		expect(requestsQuery).toHaveBeenLastCalledWith({ page: 1, limit: 20 }, expect.anything());
 		expect(screen.queryByText(/^Reviewing /)).toBeNull();
@@ -66,14 +64,14 @@ describe("MfaRecoveryQueue URL state", () => {
 
 	it("filters by the status the URL names", () => {
 		window.history.replaceState(null, "", `${PATH}?filter[status]=PENDING`);
-		render(<MfaRecoveryQueue />, { wrapper: UiKitTestProviders });
+		render(<MfaRecoveryQueue />, { wrapper: ClientTestProviders });
 
 		expect(requestsQuery).toHaveBeenLastCalledWith({ page: 1, limit: 20, filter: { status: { eq: "PENDING" } } }, expect.anything());
 	});
 
 	it("never substitutes another request when ?requestId= is not on this page", () => {
 		window.history.replaceState(null, "", `${PATH}?requestId=3f2a8c3e-7a53-4f5c-9d0a-0d6a6b8f2c99`);
-		render(<MfaRecoveryQueue />, { wrapper: UiKitTestProviders });
+		render(<MfaRecoveryQueue />, { wrapper: ClientTestProviders });
 
 		expect(screen.queryByText(/^Reviewing /)).toBeNull();
 		expect(screen.getByRole("status").textContent).toContain("The linked request is not in this view");
@@ -81,17 +79,18 @@ describe("MfaRecoveryQueue URL state", () => {
 
 	it("reviews the request named by ?requestId=", () => {
 		window.history.replaceState(null, "", `${PATH}?requestId=${SECOND_ID}`);
-		render(<MfaRecoveryQueue />, { wrapper: UiKitTestProviders });
+		render(<MfaRecoveryQueue />, { wrapper: ClientTestProviders });
 
 		expect(screen.getByText("Reviewing bob@example.com")).toBeDefined();
 	});
 
-	it("pushes a clicked row as the selection and follows it", () => {
+	it("pushes a clicked row as the selection and follows it", async () => {
 		const pushState = vi.spyOn(window.history, "pushState");
-		const view = render(<MfaRecoveryQueue />, { wrapper: UiKitTestProviders });
+		const view = render(<MfaRecoveryQueue />, { wrapper: ClientTestProviders });
 
 		fireEvent.click(screen.getByText("Bob Roe"));
 
+		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(window.location.search).toBe(`?requestId=${SECOND_ID}`);
 		view.rerender(<MfaRecoveryQueue />);

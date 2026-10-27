@@ -1,20 +1,16 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { UI_KIT_LABELS_EN } from "@workspace/ui/lib/labels/en";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import * as React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { ClientTestProviders } from "../../../../testing/client-test-providers";
+import { flushUrlUpdates } from "../../../../testing/flush-url-updates";
 import { useAnalyticsRange } from "../analytics-range-controller";
 import { AnalyticsRangeControls } from "../analytics-range-controls";
 
-// `useSearchParams` reads the address bar, as Next.js does once the History API integration has synced it.
-vi.mock("next/navigation", () => ({
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
-}));
-
 const PATH = "/analytics";
-/** The picker's chrome comes from the UI kit's English pack (`UiKitTestProviders`). */
+/** The picker's chrome comes from the UI kit's English pack (`ClientTestProviders`). */
 const PICKER_LABELS = UI_KIT_LABELS_EN.analyticsRangePicker;
 /** 5 Oct 2026 12:00 UTC. */
 const NOW = Date.UTC(2026, 9, 5, 12);
@@ -32,12 +28,8 @@ function Controls(): React.JSX.Element {
 	return <AnalyticsRangeControls controller={controller} />;
 }
 
-/** The URL changed through the History API; re-render so `useSearchParams` reads it (Next does this itself). */
-function renderControls(): () => void {
-	const { rerender } = render(<Controls />, { wrapper: UiKitTestProviders });
-	return (): void => {
-		rerender(<Controls />);
-	};
+function renderControls(): void {
+	render(<Controls />, { wrapper: ClientTestProviders });
 }
 
 beforeEach((): void => {
@@ -52,34 +44,38 @@ describe("useAnalyticsRange", () => {
 	it("resolves a shared link's range against the request time", (): void => {
 		setUrl(`${PATH}?range=lastMonth&interval=week`);
 
-		const { result } = renderHook(() => useAnalyticsRange(NOW, "UTC"));
+		const { result } = renderHook(() => useAnalyticsRange(NOW, "UTC"), { wrapper: ClientTestProviders });
 
 		expect(result.current.range.days).toEqual({ fromDate: "2026-09-01", toDate: "2026-09-30" });
 		expect(result.current.range.interval).toBe("week");
 	});
 
-	it("writes a preset, a custom range and an interval to the URL", (): void => {
-		const { result } = renderHook(() => useAnalyticsRange(NOW, "UTC"));
+	it("writes a preset, a custom range and an interval to the URL", async (): Promise<void> => {
+		const { result } = renderHook(() => useAnalyticsRange(NOW, "UTC"), { wrapper: ClientTestProviders });
 
 		act((): void => {
 			result.current.selectPreset("last7Days");
 		});
+		await flushUrlUpdates();
 		expect(currentQuery()).toBe("?range=last7Days");
 
 		act((): void => {
 			result.current.selectInterval("week");
 		});
+		await flushUrlUpdates();
 		expect(currentQuery()).toBe("?range=last7Days&interval=week");
 
 		act((): void => {
 			result.current.applyCustomRange({ fromDate: "2026-01-01", toDate: "2026-03-31" });
 		});
+		await flushUrlUpdates();
 		// A new range drops the chosen interval: the length's default applies again.
 		expect(currentQuery()).toBe("?range=custom&from=2026-01-01&to=2026-03-31");
 
 		act((): void => {
 			result.current.selectPreset("last30Days");
 		});
+		await flushUrlUpdates();
 		expect(currentQuery()).toBe("");
 	});
 });
@@ -104,10 +100,10 @@ describe("AnalyticsRangeControls", () => {
 	});
 
 	it("puts a picked preset in the URL", async (): Promise<void> => {
-		const refresh = renderControls();
+		renderControls();
 
 		await choose(PICKER_LABELS.range, "Year to date");
-		refresh();
+		await flushUrlUpdates();
 
 		expect(currentQuery()).toBe("?range=yearToDate");
 		expect(menuTrigger(PICKER_LABELS.interval).textContent).toBe("Month");
@@ -116,7 +112,7 @@ describe("AnalyticsRangeControls", () => {
 	it("keeps a custom range out of the URL until Apply commits the days already in effect", async (): Promise<void> => {
 		// Incomplete picks and disabled days are covered by the picker and checkCustomRange tests.
 		// This test only checks that Apply is what writes the URL.
-		const refresh = renderControls();
+		renderControls();
 
 		await choose(PICKER_LABELS.range, "Custom range");
 		// Choosing custom only opens a draft. The URL changes on Apply.
@@ -124,7 +120,7 @@ describe("AnalyticsRangeControls", () => {
 		expect(screen.getByRole("button", { name: new RegExp(`^${PICKER_LABELS.customDays} `) }).textContent.replace(/\s/g, " ")).toBe("6 Sept – 5 Oct 2026");
 
 		fireEvent.click(screen.getByRole("button", { name: PICKER_LABELS.apply }));
-		refresh();
+		await flushUrlUpdates();
 
 		expect(currentQuery()).toBe("?range=custom&from=2026-09-06&to=2026-10-05");
 		expect(menuTrigger(PICKER_LABELS.range).textContent).toBe("Custom range");
@@ -138,6 +134,7 @@ describe("AnalyticsRangeControls", () => {
 		fireEvent.keyDown(trigger, { key: "ArrowDown" });
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: "Week" }));
 
+		await flushUrlUpdates();
 		expect(currentQuery()).toBe("?interval=week");
 	});
 });

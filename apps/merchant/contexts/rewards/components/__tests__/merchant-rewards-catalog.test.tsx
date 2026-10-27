@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import { UI_PREFERENCES_VERSION, UiPreferencesStoreProvider } from "@workspace/client/lib/features/ui-preferences/facade";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 import * as React from "react";
 import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { MerchantRewardSummarySchema, RewardStatusSchema, type RewardResponse, type RewardStatus } from "@workspace/shared";
@@ -19,14 +20,11 @@ const ORG_SLUG = "jonker-street-kitchen";
 const REWARDS_PATH = resolveTenantHref(ORG_SLUG, TENANT_ROUTES.rewards.list);
 const CREATE_REWARD_HREF = resolveTenantHref(ORG_SLUG, TENANT_ROUTES.rewards.new);
 
-// The open tab is read from the address bar, as Next.js's `useSearchParams`
-// does once its History API integration has synced it.
 vi.mock("next/navigation", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("next/navigation")>();
 	return {
 		...actual,
 		useParams: (): Record<string, string> => ({ tenantSlug: ORG_SLUG }),
-		useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 	};
 });
 
@@ -80,11 +78,11 @@ function CatalogHarness({ rewards, isLoading = false, canManageRewards = true, p
 
 function catalogElement(rewards: readonly RewardResponse[], options: RenderCatalogOptions): React.JSX.Element {
 	return (
-		<UiKitTestProviders>
+		<ClientTestProviders>
 			<UiPreferencesStoreProvider storageKey={MERCHANT_UI_PREFERENCES_STORAGE_KEY} devtoolsName={MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME}>
 				<CatalogHarness rewards={rewards} {...options} />
 			</UiPreferencesStoreProvider>
-		</UiKitTestProviders>
+		</ClientTestProviders>
 	);
 }
 
@@ -251,7 +249,7 @@ describe("MerchantRewardsCatalog status tabs", () => {
 		expect(within(panel()).getByText("Nyonya kuih sampler")).toBeDefined();
 	});
 
-	it("pushes the chosen tab to the URL, so Back returns to the previous one", () => {
+	it("pushes the chosen tab to the URL, so Back returns to the previous one", async () => {
 		const pushState = vi.spyOn(window.history, "pushState");
 		const view = renderCatalog(false, REWARDS);
 
@@ -260,13 +258,14 @@ describe("MerchantRewardsCatalog status tabs", () => {
 		});
 		view.rerender();
 
+		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(window.location.search).toBe("?status=drafts");
 		expect(selectedTab()).toBe("Drafts, 1 reward");
 		expect(within(panel()).getByText("Lunch set draft")).toBeDefined();
 	});
 
-	it("explains an empty tab and offers the next step", () => {
+	it("explains an empty tab and offers the next step", async () => {
 		window.history.replaceState(null, "", `${REWARDS_PATH}?status=review`);
 		const view = renderCatalog(false, REWARDS);
 
@@ -276,6 +275,7 @@ describe("MerchantRewardsCatalog status tabs", () => {
 		});
 		view.rerender();
 
+		await flushUrlUpdates();
 		expect(window.location.search).toBe("?status=drafts");
 		expect(selectedTab()).toBe("Drafts, 1 reward");
 	});
@@ -357,6 +357,7 @@ describe("MerchantRewardsCatalog status tabs", () => {
 		await waitFor((): void => {
 			expect(document.activeElement?.getAttribute("aria-label")).toBe("In review, 0 rewards");
 		});
+		await flushUrlUpdates();
 		expect(selectedTab()).toBe("Live, 1 reward");
 		expect(window.location.search).toBe("");
 	});
@@ -373,7 +374,7 @@ describe("MerchantRewardsCatalog pages", () => {
 
 	it("says when the page is past the end of a tab that has rewards, and offers the first page", () => {
 		const view = render(
-			<UiKitTestProviders>
+			<ClientTestProviders>
 				<UiPreferencesStoreProvider storageKey={MERCHANT_UI_PREFERENCES_STORAGE_KEY} devtoolsName={MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME}>
 					<MerchantRewardsCatalog
 						groups={groupStatusCounts({ PUBLISHED: 3, PENDING_REVIEW: 0, DRAFT: 0, EXPIRED: 0, DISABLED: 0 })}
@@ -388,7 +389,7 @@ describe("MerchantRewardsCatalog pages", () => {
 						createRewardHref={CREATE_REWARD_HREF}
 					/>
 				</UiPreferencesStoreProvider>
-			</UiKitTestProviders>,
+			</ClientTestProviders>,
 		);
 
 		expect(within(view.container).getByRole("heading", { name: "No rewards on this page" })).toBeDefined();

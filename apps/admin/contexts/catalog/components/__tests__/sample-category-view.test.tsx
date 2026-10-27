@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider, type QueryKey } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
 import { PERMISSION, SampleCategorySchema, type CapabilitySlug, type SampleCategory } from "@workspace/shared";
@@ -9,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import SampleCategoryDetailView from "../sample-category-detail-view";
 import SampleCategoryView from "../sample-category-view";
-import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
+import { ClientTestProviders } from "@workspace/client/testing/client-test-providers";
 
 /** The mutation options the view passes — captured so a test can complete a delete. */
 interface DeleteMutationOptionsStub {
@@ -63,11 +64,8 @@ const { CATEGORY_INPUT, categoryListSpy, deleteOptions } = vi.hoisted(() => ({
 	},
 }));
 
-// The table reads its state from the address bar, as Next.js's
-// `useSearchParams` does once the History API integration has synced it.
 vi.mock("next/navigation", () => ({
 	useRouter: (): { readonly push: () => void } => ({ push: () => undefined }),
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 }));
 
 vi.mock("@workspace/client/lib/contexts/identity", () => {
@@ -104,7 +102,7 @@ function renderWith(capabilities: readonly CapabilitySlug[], node: React.ReactNo
 		<QueryClientProvider client={queryClient}>
 			<CapabilitiesProvider capabilities={capabilities}>{node}</CapabilitiesProvider>
 		</QueryClientProvider>,
-		{ wrapper: UiKitTestProviders },
+		{ wrapper: ClientTestProviders },
 	);
 }
 
@@ -168,13 +166,14 @@ describe("SampleCategoryView URL state", () => {
 		expect(screen.getByDisplayValue("bev")).toBeDefined();
 	});
 
-	it("pushes a sort change from the column header and returns to page 1", () => {
+	it("pushes a sort change from the column header and returns to page 1", async () => {
 		window.history.replaceState(null, "", `${PATH}?page=2`);
 		const pushState = vi.spyOn(window.history, "pushState");
 		renderWith([PERMISSION.SAMPLE_CATEGORY.LIST], <SampleCategoryView />);
 
 		fireEvent.click(screen.getByText("Name"));
 
+		await flushUrlUpdates();
 		expect(pushState).toHaveBeenCalledTimes(1);
 		expect(window.location.search).toBe("?sort=name");
 	});

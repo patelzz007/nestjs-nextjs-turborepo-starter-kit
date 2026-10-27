@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { flushUrlUpdates } from "@workspace/client/testing/flush-url-updates";
 import type { MembershipRole } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,12 +18,6 @@ const { contextQuery, listMembersQuery, listInvitesQuery, tenantMutation } = vi.
 	listMembersQuery: vi.fn(),
 	listInvitesQuery: vi.fn(),
 	tenantMutation: vi.fn(),
-}));
-
-// The Team page's lists keep their pages in the URL: `useSearchParams` reads the address bar, as Next.js does.
-vi.mock("next/navigation", async (importOriginal) => ({
-	...(await importOriginal<typeof import("next/navigation")>()),
-	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 }));
 
 vi.mock("@workspace/client/lib/contexts/identity", () => ({
@@ -187,7 +182,7 @@ describe("TenantDashboardPageView authorization", () => {
 describe("TenantTeamPageView pages", () => {
 	const META = { correlationId: "corr-1", timestamp: 1_792_368_000_000 };
 
-	it("counts every member from meta, pages the roster through the URL, and leaves the invitations' page alone", () => {
+	it("counts every member from meta, pages the roster through the URL, and leaves the invitations' page alone", async () => {
 		const member = {
 			id: "m-1",
 			tenantId: "o-1",
@@ -215,6 +210,7 @@ describe("TenantTeamPageView pages", () => {
 		expect(within(pager).getByText("Page 1 of 3")).toBeDefined();
 		fireEvent.click(within(pager).getByRole("button", { name: "Next" }));
 
+		await flushUrlUpdates();
 		const url = new URLSearchParams(window.location.search);
 		expect([url.get("membersPage"), url.get("membersCursor"), url.get("invitesPage")]).toEqual(["2", "cursor-2", null]);
 		expect(screen.queryByRole("navigation", { name: "Invitation pages" })).toBeNull();
