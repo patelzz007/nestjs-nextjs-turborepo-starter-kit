@@ -13,8 +13,8 @@ import { AccessTokenValueSchema, PosTerminalIdSchema, RefreshTokenValueSchema } 
 import * as SecureStore from "expo-secure-store";
 import { z } from "zod";
 
-/** The appearance the user chose: follow the OS, or force one theme. */
-export const ThemePreferenceSchema = z.enum(["system", "light", "dark"]);
+/** The appearance the user chose: follow the OS, or force one theme (light, dark, or Nord — packages/tokens). */
+export const ThemePreferenceSchema = z.enum(["system", "light", "dark", "nord"]);
 
 export type ThemePreference = z.output<typeof ThemePreferenceSchema>;
 

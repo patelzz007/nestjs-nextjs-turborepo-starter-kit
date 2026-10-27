@@ -24,7 +24,7 @@ describe("theme", () => {
 		vi.restoreAllMocks();
 	});
 
-	it("toggles, persists and announces the theme", () => {
+	it("moves light → dark → Nord → light, persisting and announcing each theme", () => {
 		const listener = vi.fn();
 		document.addEventListener(THEME_CHANGE_EVENT, listener);
 		initTheme();
@@ -33,8 +33,22 @@ describe("theme", () => {
 		expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
 		expect(listener).toHaveBeenCalledTimes(1);
 		document.querySelector("button")?.click();
+		expect(currentTheme()).toBe("nord");
+		expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("nord");
+		document.querySelector("button")?.click();
 		expect(currentTheme()).toBe("light");
 		document.removeEventListener(THEME_CHANGE_EVENT, listener);
+	});
+
+	it("keeps a stored Nord choice when the OS setting changes, and reads an unknown attribute as light", () => {
+		window.localStorage.setItem(THEME_STORAGE_KEY, "nord");
+		applyTheme("nord");
+		initTheme();
+		media.dispatchEvent(Object.assign(new Event("change"), { matches: false }));
+		expect(currentTheme()).toBe("nord");
+
+		document.documentElement.dataset.theme = "sepia";
+		expect(currentTheme()).toBe("light");
 	});
 
 	it("follows the OS setting until the reader chooses", () => {

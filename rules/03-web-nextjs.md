@@ -195,7 +195,7 @@ Semantic HTML first. Keyboard behavior must work — every interactive element r
 
 ## Theming
 
-All UI works in light and dark mode via design tokens — never hardcoded colors in reusable components. Full detail: `07-ui-system.md`.
+All UI works in every theme (light, dark and Nord) via design tokens — never hardcoded colors in reusable components. Full detail: `07-ui-system.md`.
 
 ## Layout preservation
 

@@ -59,6 +59,10 @@ export const InkStepSchema = z.enum(["50", "100", "200", "300", "400", "500", "6
 /** The accent scales (brand, blue, green): a 50–950 ramp plus the 960 / 975 deep sidebar tones of the dark theme. */
 export const AccentStepSchema = z.enum(["50", "100", "200", "300", "400", "500", "600", "700", "800", "900", "950", "960", "975"]);
 export const WarmStepSchema = z.enum(["300", "500", "700"]);
+/** Nord (nordtheme.com): its sixteen named colours, `nord0`–`nord15` — Polar Night 0–3, Snow Storm 4–6, Frost 7–10, Aurora 11–15. */
+export const NordStepSchema = z.enum(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]);
+/** The Nord accents the `nord` theme fills with, boosted (`vivid`): numbered after the Nord colour each one comes from. */
+export const VividStepSchema = z.enum(["8", "9", "14"]);
 
 /** The step names each palette scale defines, in scale order. */
 export const PALETTE_STEP_SCHEMAS = {
@@ -68,6 +72,8 @@ export const PALETTE_STEP_SCHEMAS = {
 	warm: WarmStepSchema,
 	blue: AccentStepSchema,
 	green: AccentStepSchema,
+	nord: NordStepSchema,
+	vivid: VividStepSchema,
 };
 
 export const PaletteSchema = z.strictObject({
@@ -77,6 +83,8 @@ export const PaletteSchema = z.strictObject({
 	warm: z.record(PALETTE_STEP_SCHEMAS.warm, PrimitiveColorSchema),
 	blue: z.record(PALETTE_STEP_SCHEMAS.blue, PrimitiveColorSchema),
 	green: z.record(PALETTE_STEP_SCHEMAS.green, PrimitiveColorSchema),
+	nord: z.record(PALETTE_STEP_SCHEMAS.nord, PrimitiveColorSchema),
+	vivid: z.record(PALETTE_STEP_SCHEMAS.vivid, PrimitiveColorSchema),
 });
 export type Palette = z.infer<typeof PaletteSchema>;
 
@@ -85,7 +93,7 @@ export const PaletteScaleSchema = PaletteSchema.keyof();
 export type PaletteScale = z.infer<typeof PaletteScaleSchema>;
 
 /** Every step name any scale defines. */
-export const PaletteStepNameSchema = z.union([NeutralStepSchema, InkStepSchema, AccentStepSchema, WarmStepSchema]);
+export const PaletteStepNameSchema = z.union([NeutralStepSchema, InkStepSchema, AccentStepSchema, WarmStepSchema, NordStepSchema]);
 export type PaletteStepName = z.infer<typeof PaletteStepNameSchema>;
 
 /** The steps one scale defines (`PaletteStep<"warm">` is `"300" | "500" | "700"`). */
@@ -103,7 +111,8 @@ export type PaletteReference = z.infer<typeof PaletteReferenceSchema>;
 
 // ─── Semantic colours ─────────────────────────────────────────────────────
 
-export const ThemeNameSchema = z.enum(["light", "dark"]);
+/** `nord` is a dark theme (Nord's Polar Night surfaces): the web applies it as its own class, and the `dark:` variant covers it too. */
+export const ThemeNameSchema = z.enum(["light", "dark", "nord"]);
 export type ThemeName = z.infer<typeof ThemeNameSchema>;
 
 /** Every colour role that changes with the theme. Both themes are typed from this ONE list. */
@@ -184,16 +193,19 @@ export const ThemeRoleSchema = z.enum([
 	"shadow-ambient",
 	"shadow-key",
 	"edge-highlight",
+	/* The auth screens' brand panel (its text, `auth-panel-foreground`, is shared). Themed so Nord can give it Polar Night. */
+	"auth-panel",
+	"auth-panel-muted",
+	"auth-brand-from",
+	"auth-brand-to",
+	/* Link text (an inline link, a ghost button's label) — its own role so an app can fill buttons with one colour and colour links with another. */
+	"link",
 ]);
 export type ThemeRole = z.infer<typeof ThemeRoleSchema>;
 
 /** Colour tokens declared once for every theme (they may still alias a themed role, e.g. `invert` → `foreground`). */
 export const SharedColorNameSchema = z.enum([
-	"auth-panel",
-	"auth-panel-muted",
 	"auth-panel-foreground",
-	"auth-brand-from",
-	"auth-brand-to",
 	"splash",
 	"splash-foreground",
 	"print-foreground",
@@ -412,6 +424,43 @@ export type TailwindTheme = z.infer<typeof TailwindThemeSchema>;
 
 // ─── The whole source ─────────────────────────────────────────────────────
 
+/**
+ * The roles an app may re-map to carry its own brand — the same list as packages/ui `APP_BRAND_TOKENS`
+ * (actions, focus, the active nav item, the sidebar, charts, the search highlight, the auth panel).
+ * Page and card surfaces, borders and text are shared by every app and never re-mapped.
+ */
+export const AppBrandRoleSchema = z.enum([
+	"primary",
+	"primary-foreground",
+	"ring",
+	"sidebar",
+	"sidebar-accent",
+	"sidebar-border",
+	"sidebar-primary",
+	"sidebar-primary-foreground",
+	"sidebar-ring",
+	"sidebar-active",
+	"sidebar-active-foreground",
+	"sidebar-active-border",
+	"search-mark-bg",
+	"search-mark-fg",
+	"chart-1",
+	"chart-2",
+	"chart-3",
+	"chart-4",
+	"chart-5",
+	"auth-panel",
+	"auth-panel-muted",
+	"auth-brand-from",
+	"auth-brand-to",
+	"link",
+]);
+export type AppBrandRole = z.infer<typeof AppBrandRoleSchema>;
+
+/** Per theme, an app's re-maps of its brand roles (any theme, any subset of the roles). */
+export const AppThemeOverridesSchema = z.partialRecord(ThemeNameSchema, z.partialRecord(AppBrandRoleSchema, ColorValueSchema));
+export type AppThemeOverrides = z.infer<typeof AppThemeOverridesSchema>;
+
 export const TokenSourceSchema = z.strictObject({
 	palette: PaletteSchema,
 	themes: ThemesSchema,
@@ -421,6 +470,8 @@ export const TokenSourceSchema = z.strictObject({
 	layout: LayoutSchema,
 	motion: MotionSchema,
 	tailwindTheme: TailwindThemeSchema,
+	/** The Expo app's brand re-maps, applied to mobile.css only (the web apps keep theirs in `app/<name>-theme.css`). */
+	mobileThemeOverrides: AppThemeOverridesSchema,
 });
 export type TokenSource = z.infer<typeof TokenSourceSchema>;
 

@@ -362,6 +362,40 @@ screen needs emphasis, use weight, size and the display face, not another typefa
 - Never mark a card with a coloured edge stripe (`border-l-4 …`): emphasis comes from the content — a
   toned status badge, the primary action.
 
+## Themes — light, dark and Nord
+
+Every surface ships three themes, all from `packages/tokens` (`THEMES`, `THEME_NAMES`): **light**,
+**dark** (cool ink) and **Nord** ([nordtheme.com](https://www.nordtheme.com): Polar Night surfaces,
+Snow Storm text, Frost accents, Aurora status colours). Nord is a *dark* theme
+(`DARK_THEME_NAMES`, `isDarkTheme`):
+
+- **Web:** `next-themes` puts one class on `<html>` per theme, so Nord is `.nord`, not `.dark`. The
+  `dark:` variant covers both (`packages/ui` globals.css), as does `color-scheme`. Write `dark:`
+  utilities as before and they apply under Nord too.
+- **App themes:** brand re-maps go in `.dark .<app>-app` and `.nord .<app>-app`. Light re-maps use
+  `:root:not(.dark):not(.nord) .<app>-app`, never `:root:not(.dark)`, which would leak light values
+  into Nord. Each app's theme test proves WCAG AA in all three themes.
+- **Code that needs to know dark from light** (a native colour scheme, a navigation base theme)
+  calls `isDarkTheme(theme)` and never compares with `"dark"`.
+- **Nord's accent fills are vivid:** buttons, the active nav pill, focus rings and the lead chart
+  series use the `vivid` palette (Nord's own hues at about 1.9× the colour), because the published
+  pastels read as disabled. Surfaces, text and status colours stay exact Nord. The Expo app fills
+  them with Snow Storm (nord6) instead.
+- **The Expo app's own brand re-maps** live in `packages/tokens/src/mobile-theme.ts`
+  (`MOBILE_THEME_OVERRIDES`: brand roles only, per theme, applied to the generated mobile.css),
+  never in `apps/mobile/global.css`. `tokens-contrast.test.ts` checks mobile.css in every theme.
+- **Link text uses `text-link`**, never `text-primary`: the `link` role is the accent as text in
+  light and dark, and Frost (`#94c6d4`) under Nord, so links stay coloured even where an app
+  fills its buttons with near-white.
+- **Nord's text colours:** some Nord accents are not legible as text on its own surfaces (Aurora
+  red is 3:1). Where a token is text, the Nord hue is lightened toward nord6 by the least amount
+  that reaches AA; fills, charts and status marks keep the published colours.
+
+Switching: the shell's theme menu (`ShellThemeToggle`: Light / Dark / Nord / System), the `D`
+hotkey and the command palettes' "Toggle theme" (light → dark → Nord) all go through
+`useThemeToggle`. The docs header button cycles the same three themes, and the mobile app offers
+Nord in Settings → Appearance.
+
 ## Dark mode toggle implementation
 
 ```tsx

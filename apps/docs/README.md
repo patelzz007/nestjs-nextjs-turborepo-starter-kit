@@ -108,7 +108,7 @@ apps/docs/
   slate accent (`brand-800`; `brand-300` in dark mode) for links, the active state, bars and fills,
   plus a soft glow at the top of the page. Dark: the apps' cool ink surface (`ink-900`). Text in
   the accent colour uses `--brand-text`; `src/styles/theme-contrast.test.ts` holds every text pair
-  to WCAG AA (≥ 4.5:1) in both themes. Callout and card-tile hues are docs-only and stay literal.
+  to WCAG AA (≥ 4.5:1) in every theme (light, dark and Nord). Callout and card-tile hues are docs-only and stay literal.
   The tokens at the top of `global.css` are the only place to change any of it.
 - **Typography** — see [Typography](#typography) below.
 - **One reading column** — paragraphs, tables, code blocks and diagrams share one width

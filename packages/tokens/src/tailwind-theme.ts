@@ -72,6 +72,7 @@ export const TAILWIND_THEME: TailwindTheme = {
 		"popover-foreground",
 		"primary",
 		"primary-foreground",
+		"link",
 		"secondary",
 		"secondary-foreground",
 		"muted",

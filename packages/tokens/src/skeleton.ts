@@ -51,5 +51,6 @@ export const SKELETON_MOTION: SkeletonMotion = {
 	sheen: {
 		light: { role: "card", opacity: 0.85 },
 		dark: { role: "foreground", opacity: 0.07 },
+		nord: { role: "foreground", opacity: 0.07 },
 	},
 };

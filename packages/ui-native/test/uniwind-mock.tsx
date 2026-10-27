@@ -15,7 +15,7 @@ export const Uniwind = {
 };
 
 /** The resolved theme: light under Jest unless a suite overrides it. */
-export function useUniwind(): { readonly theme: "light" | "dark"; readonly hasAdaptiveThemes: boolean } {
+export function useUniwind(): { readonly theme: "light" | "dark" | "nord"; readonly hasAdaptiveThemes: boolean } {
 	return { theme: "light", hasAdaptiveThemes: true };
 }
 

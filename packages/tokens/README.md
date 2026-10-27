@@ -15,7 +15,9 @@ src/
   schema.ts           zod schemas for every token type; all types are inferred from them
   value.ts            typed constructors used by the data files (oklch(), paletteColor(), rem(), …)
   palette.ts          primitive scales → --palette-<scale>-<step>
-  semantic.ts         LIGHT_THEME / DARK_THEME (one role list, exhaustive) + SHARED_COLORS
+  semantic.ts         LIGHT_THEME / DARK_THEME / NORD_THEME (one role list, exhaustive) + SHARED_COLORS
+  theme-names.ts      THEME_NAMES, DARK_THEME_NAMES, isDarkTheme, nextThemeName (plain data for the pickers)
+  mobile-theme.ts     MOBILE_THEME_OVERRIDES — the Expo app's brand re-maps per theme (mobile.css only)
   radius.ts           --radius and the rounded-* scale factors
   typography.ts       font roles and app-shell type sizes
   layout.ts           z-index layers and web-chrome sizes

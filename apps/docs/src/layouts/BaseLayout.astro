@@ -66,7 +66,7 @@ const imageUrl = image === undefined || Astro.site === undefined ? undefined : n
 				var theme = "light";
 				try {
 					var saved = localStorage.getItem("docs:theme");
-					theme = saved === "dark" || saved === "light" ? saved : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+					theme = saved === "dark" || saved === "light" || saved === "nord" ? saved : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 				} catch (error) {
 					theme = "light";
 				}

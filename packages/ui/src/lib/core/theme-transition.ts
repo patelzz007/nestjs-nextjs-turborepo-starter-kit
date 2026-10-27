@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * The light ↔ dark switch animation, shared by the apps (via `useThemeToggle`) and the
+ * The theme switch animation (light, dark, Nord), shared by the apps (via `useThemeToggle`) and the
  * docs site. The new theme grows as a circle from the control that switched it, out to
  * the farthest viewport corner, using the View Transitions API. The browser snapshots
  * the old page, `applyTheme` repaints the new one, and only the reveal animates.

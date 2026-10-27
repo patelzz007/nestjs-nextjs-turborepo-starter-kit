@@ -60,8 +60,11 @@ describe("skeleton sweep CSS matches SKELETON_MOTION", () => {
 	});
 
 	it("tints the sheen per theme from the token role and opacity", () => {
-		const { light, dark } = SKELETON_MOTION.sheen;
-		expect(CSS).toContain(`--skeleton-sheen: color-mix(in oklch, var(--${light.role}) ${percent(light.opacity)}, transparent);`);
-		expect(CSS).toContain(`--skeleton-sheen: color-mix(in oklch, var(--${dark.role}) ${percent(dark.opacity)}, transparent);`);
+		const sheenRule = (selector: string, role: string, opacity: number): RegExp =>
+			new RegExp(`${escapeRegExp(selector)} \\{\\s*${escapeRegExp(`--skeleton-sheen: color-mix(in oklch, var(--${role}) ${percent(opacity)}, transparent);`)}`);
+		const { light, dark, nord } = SKELETON_MOTION.sheen;
+		expect(CSS).toMatch(sheenRule(":root", light.role, light.opacity));
+		expect(CSS).toMatch(sheenRule(".dark", dark.role, dark.opacity));
+		expect(CSS).toMatch(sheenRule(".nord", nord.role, nord.opacity));
 	});
 });

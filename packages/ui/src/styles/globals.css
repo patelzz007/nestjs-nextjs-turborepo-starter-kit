@@ -4,7 +4,11 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/*
+ * `dark:` covers both dark themes: `.dark` and `.nord` (Nord, packages/tokens semantic.ts). next-themes sets
+ * one class per theme, so Nord cannot also carry `.dark`; every dark-mode utility applies under it instead.
+ */
+@custom-variant dark (&:is(.dark *, .nord *));
 @source "../../../../apps/**/*.{ts,tsx}";
 @source "../../../../components/**/*.{ts,tsx}";
 @source "../../../../packages/**/*.{ts,tsx}";
@@ -12,6 +16,19 @@
 
 @import "./base.css";
 @import "./components.css";
+
+/*
+ * The browser's own surfaces (form controls, scrollbars, autofill) follow the theme. Declared here rather
+ * than by next-themes, which only writes `color-scheme` for the themes named `light` and `dark`.
+ */
+:root {
+	color-scheme: light;
+}
+
+.dark,
+.nord {
+	color-scheme: dark;
+}
 
 :root {
 	--scrollbar-size: 0.5rem;

@@ -3,6 +3,7 @@
 // ============================================
 
 import { LAYOUT } from "./layout";
+import { MOBILE_THEME_OVERRIDES } from "./mobile-theme";
 import { MOTION } from "./motion";
 import { PALETTE } from "./palette";
 import { RADIUS } from "./radius";
@@ -20,4 +21,5 @@ export const TOKEN_SOURCE: TokenSource = {
 	layout: LAYOUT,
 	motion: MOTION,
 	tailwindTheme: TAILWIND_THEME,
+	mobileThemeOverrides: MOBILE_THEME_OVERRIDES,
 };

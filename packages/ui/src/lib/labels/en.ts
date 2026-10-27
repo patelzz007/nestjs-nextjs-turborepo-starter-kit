@@ -124,7 +124,7 @@ export const UI_KIT_LABELS_EN: UiKitLabels = {
 	},
 	authLayout: {
 		mobileBack: "Back",
-		toggleThemeAria: "Toggle theme",
+		toggleThemeAria: "Choose theme",
 		rightsReserved: "All rights reserved.",
 	},
 	breadcrumb: {
@@ -610,7 +610,11 @@ export const UI_KIT_LABELS_EN: UiKitLabels = {
 		close: "Close",
 	},
 	shellThemeToggle: {
-		toggle: "Toggle theme",
+		toggle: "Choose theme",
+		light: "Light",
+		dark: "Dark",
+		nord: "Nord",
+		system: "System",
 	},
 	sidebar: {
 		toggleSidebar: "Toggle sidebar",

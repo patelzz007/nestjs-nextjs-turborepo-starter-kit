@@ -14,9 +14,9 @@ import { isInactiveState, resolveControlState } from "../lib/control-state";
 
 export const textLinkVariants = cva("font-sans-semibold", {
 	variants: {
-		/** `primary`: the brand-coloured link. `muted`: a quieter one beside other secondary text. `destructive`: an in-place action that removes something. */
+		/** `primary`: the brand-coloured link (the `link` token). `muted`: a quieter one beside other secondary text. `destructive`: an in-place action that removes something. */
 		variant: {
-			primary: "text-primary",
+			primary: "text-link",
 			muted: "text-muted-foreground underline",
 			destructive: "text-destructive-foreground",
 		},

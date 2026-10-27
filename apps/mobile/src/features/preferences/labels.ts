@@ -13,9 +13,10 @@ export const THEME_OPTIONS: readonly RadioOption<ThemePreference>[] = [
 	{ value: "system", label: "System", description: "Follow the device's light or dark setting" },
 	{ value: "light", label: "Light" },
 	{ value: "dark", label: "Dark" },
+	{ value: "nord", label: "Nord", description: "A dark theme in Nord's arctic blues" },
 ];
 
-export const THEME_LABELS: Readonly<Record<ThemePreference, string>> = { system: "System", light: "Light", dark: "Dark" };
+export const THEME_LABELS: Readonly<Record<ThemePreference, string>> = { system: "System", light: "Light", dark: "Dark", nord: "Nord" };
 
 export const APP_LOCK_TIMEOUT_OPTIONS: readonly RadioOption<AppLockTimeoutMs>[] = [
 	{ value: APP_LOCK_TIMEOUT_IMMEDIATELY_MS, label: "Immediately" },

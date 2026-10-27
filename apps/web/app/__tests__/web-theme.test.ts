@@ -13,10 +13,12 @@ const THEME_CSS = readFileSync(new URL("../web-theme.css", import.meta.url), "ut
 const PALETTE = readCustomProperties(PALETTE_CSS, ":root");
 const BASE_LIGHT = readCustomProperties(BASE_CSS, ":root", PALETTE);
 const BASE_DARK = readCustomProperties(BASE_CSS, ".dark", BASE_LIGHT);
+const BASE_NORD = readCustomProperties(BASE_CSS, ".nord", BASE_LIGHT);
 
 /** The web theme's brand overrides layered on the shared tokens, as the cascade applies them. */
-const LIGHT = readCustomProperties(THEME_CSS, ":root:not(.dark) .web-app", BASE_LIGHT);
+const LIGHT = readCustomProperties(THEME_CSS, ":root:not(.dark):not(.nord) .web-app", BASE_LIGHT);
 const DARK = readCustomProperties(THEME_CSS, ".dark .web-app", BASE_DARK);
+const NORD = readCustomProperties(THEME_CSS, ".nord .web-app", BASE_NORD);
 
 /** Every custom property the stylesheet declares (`--name:`), as opposed to one it reads (`var(--name)`). */
 const DECLARED_TOKENS = [...THEME_CSS.matchAll(/^\s*(?<token>--[\w-]+)\s*:/gmu)].map((match) => match.groups?.token ?? "");
@@ -32,5 +34,13 @@ describe("web theme", () => {
 
 	it("meets every contrast minimum in the dark theme", () => {
 		expect(findContrastViolations(DARK)).toEqual([]);
+	});
+
+	it("meets every contrast minimum in the Nord theme", () => {
+		expect(findContrastViolations(NORD)).toEqual([]);
+	});
+
+	it("keeps its light overrides out of Nord (Nord is not `.dark`, so the light selector must exclude it)", () => {
+		expect(THEME_CSS).not.toMatch(/:root:not\(\.dark\) \./u);
 	});
 });

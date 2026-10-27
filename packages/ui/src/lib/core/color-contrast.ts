@@ -118,6 +118,7 @@ export const APP_BRAND_TOKENS: readonly string[] = [
 	"--auth-panel-muted",
 	"--auth-brand-from",
 	"--auth-brand-to",
+	"--link",
 ];
 
 /** Surfaces a focus ring or a chart can sit on. */
@@ -131,6 +132,8 @@ const SIDEBAR_TEXT_SURFACES: readonly string[] = ["--sidebar", "--shell-frame", 
 const TONES: readonly string[] = ["green", "blue", "yellow", "red", "orange", "teal", "violet"];
 /** Reward tiers: each `--tier-X` is text on its own `--tier-X-soft` fill (tier badges, membership cards). */
 const TIERS: readonly string[] = ["bronze", "silver", "gold", "platinum"];
+/** Surfaces a link (or a ghost button's label) sits on. */
+const LINK_SURFACES: readonly string[] = ["--background", "--card", "--popover", "--muted"];
 /** Body text on each surface it is set on. */
 const SURFACE_TEXT: readonly (readonly [string, string])[] = [
 	["--foreground", "--background"],
@@ -163,6 +166,7 @@ const THEME_PAIRINGS: readonly TokenPairing[] = [
 	...TIERS.map((tier): TokenPairing => ({ foreground: `--tier-${tier}`, background: `--tier-${tier}-soft`, minimum: MIN_TEXT_CONTRAST })),
 	{ foreground: "--reward", background: "--reward-soft", minimum: MIN_TEXT_CONTRAST },
 	{ foreground: "--reward-solid-foreground", background: "--reward-solid", minimum: MIN_TEXT_CONTRAST },
+	...LINK_SURFACES.map((background): TokenPairing => ({ foreground: "--link", background, minimum: MIN_TEXT_CONTRAST })),
 ];
 
 function themeToken(theme: ReadonlyMap<string, string>, name: string): string {

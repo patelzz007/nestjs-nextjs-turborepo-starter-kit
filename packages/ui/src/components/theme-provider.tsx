@@ -1,14 +1,20 @@
 "use client";
 
+import { THEME_NAMES } from "@workspace/tokens";
 import { useThemeToggle } from "@workspace/ui/hooks/use-theme-toggle";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import * as React from "react";
 
-/** Pressing this key (no modifiers, outside a text field) flips light/dark. */
+/** Pressing this key (no modifiers, outside a text field) moves to the next theme: light → dark → Nord. */
 const THEME_TOGGLE_HOTKEY = "d";
 
+/** The themes next-themes may put on `<html>` (one class each), plus `system` (it resolves to light or dark). */
+const THEMES: string[] = [...THEME_NAMES];
+
 /**
- * Shared theme provider for web, admin, and merchant.
+ * Shared theme provider for web, admin, and merchant: light, dark and Nord (packages/tokens), or
+ * following the system. Each theme is one class on `<html>`; the `dark:` variant covers `.nord` too
+ * (styles/globals.css), and so does `color-scheme`, which is set in CSS rather than by next-themes.
  *
  * `next-themes` injects a blocking inline `<script>` to prevent theme flash.
  * React 19 / Next 16 warn when that script re-renders on the client. We patch
@@ -17,7 +23,7 @@ const THEME_TOGGLE_HOTKEY = "d";
  */
 function ThemeProvider({ children, ...props }: React.ComponentProps<typeof NextThemesProvider>): React.JSX.Element {
 	return (
-		<NextThemesProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange {...props}>
+		<NextThemesProvider attribute="class" themes={THEMES} defaultTheme="system" enableSystem enableColorScheme={false} disableTransitionOnChange {...props}>
 			<ThemeHotkey />
 			{children}
 		</NextThemesProvider>

@@ -40,7 +40,7 @@ const COMPLIANT_TONES: readonly [string, string][] = ["green", "blue", "yellow",
 	[`--tone-${tone}-soft`, "#ffffff"],
 ]);
 
-/** Surface text, every reward tier and the reward pairs, all compliant (black on white) — so a test can break one on purpose. */
+/** Surface text, links, every reward tier and the reward pairs, all compliant (black on white) — so a test can break one on purpose. */
 const COMPLIANT_REWARDS_AND_SURFACES: readonly [string, string][] = [
 	...["bronze", "silver", "gold", "platinum"].flatMap((tier): [string, string][] => [
 		[`--tier-${tier}`, "#000000"],
@@ -56,6 +56,7 @@ const COMPLIANT_REWARDS_AND_SURFACES: readonly [string, string][] = [
 	["--shell-panel", "#ffffff"],
 	["--card-foreground", "#000000"],
 	["--popover-foreground", "#000000"],
+	["--link", "#000000"],
 ];
 
 describe("findContrastViolations", () => {
@@ -198,6 +199,43 @@ describe("findContrastViolations", () => {
 		expect(violations).toEqual([
 			expect.stringMatching(/^--tier-platinum on --tier-platinum-soft: /u),
 			expect.stringMatching(/^--reward-solid-foreground on --reward-solid: /u),
+		]);
+	});
+	it("holds link text to text contrast on every surface a link sits on", () => {
+		const theme = new Map<string, string>([
+			...COMPLIANT_TONES,
+			...COMPLIANT_REWARDS_AND_SURFACES,
+			["--link", "#eeeeee"],
+			["--background", "#ffffff"],
+			["--card", "#ffffff"],
+			["--popover", "#ffffff"],
+			["--muted", "#ffffff"],
+			["--sidebar", "#ffffff"],
+			["--sidebar-accent", "#ffffff"],
+			["--ring", "#000000"],
+			["--sidebar-ring", "#000000"],
+			["--chart-1", "#000000"],
+			["--chart-2", "#000000"],
+			["--chart-3", "#000000"],
+			["--chart-4", "#000000"],
+			["--chart-5", "#000000"],
+			["--search-mark-bg", "#000000"],
+			["--search-mark-fg", "#ffffff"],
+			["--muted-foreground", "#000000"],
+			["--sidebar-foreground", "#000000"],
+			["--sidebar-primary", "#000000"],
+			["--sidebar-primary-foreground", "#ffffff"],
+			["--sidebar-active", "#ffffff"],
+			["--sidebar-active-foreground", "#000000"],
+		]);
+
+		const violations = findContrastViolations(theme);
+
+		expect(violations).toEqual([
+			expect.stringMatching(/^--link on --background: /u),
+			expect.stringMatching(/^--link on --card: /u),
+			expect.stringMatching(/^--link on --popover: /u),
+			expect.stringMatching(/^--link on --muted: /u),
 		]);
 	});
 });

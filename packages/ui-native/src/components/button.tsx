@@ -39,7 +39,7 @@ export const buttonLabelVariants = cva("font-sans-semibold shrink", {
 			primary: "text-primary-foreground",
 			secondary: "text-foreground",
 			destructive: "text-status-foreground",
-			ghost: "text-primary",
+			ghost: "text-link",
 		},
 		size: { md: "text-base", sm: "text-sm" },
 	},

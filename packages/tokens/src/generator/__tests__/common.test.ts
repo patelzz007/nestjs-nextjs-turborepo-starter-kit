@@ -20,7 +20,7 @@ describe("paletteDeclarations", () => {
 		const names = paletteDeclarations(PALETTE).map(({ name }) => name);
 
 		expect(names.slice(0, 4)).toStrictEqual(["palette-neutral-0", "palette-neutral-25", "palette-neutral-40", "palette-neutral-50"]);
-		expect(names.at(-1)).toBe("palette-green-975");
+		expect(names.at(-1)).toBe("palette-vivid-14");
 		expect(names).toHaveLength(Object.values(PALETTE).flatMap((steps) => Object.keys(steps)).length);
 	});
 });

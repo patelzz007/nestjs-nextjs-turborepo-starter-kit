@@ -44,10 +44,10 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 			{
 				id: "toggle-theme",
 				title: "Toggle theme",
-				description: "Switch between light and dark mode",
+				description: "Switch to the next theme: light, dark or Nord",
 				icon: SunMoon,
 				color: "text-warning bg-warning-soft",
-				keywords: ["dark", "light", "mode", "theme"],
+				keywords: ["dark", "light", "nord", "mode", "theme"],
 				run: (): void => {
 					closePalette();
 					toggleTheme();

@@ -118,7 +118,7 @@ function ReactionPill<TKey extends string>({ reaction, choice, onToggle }: React
 			hitSlop={6}
 			className={`h-8 flex-row items-center gap-1.5 rounded-full border px-2.5 active:opacity-70 ${reaction.mine ? "border-primary bg-primary/10" : "border-border bg-card"}`}>
 			<Text className="text-sm">{choice.emoji}</Text>
-			<Text className={`font-sans-medium text-sm ${reaction.mine ? "text-primary" : "text-muted-foreground"}`}>{String(reaction.count)}</Text>
+			<Text className={`font-sans-medium text-sm ${reaction.mine ? "text-link" : "text-muted-foreground"}`}>{String(reaction.count)}</Text>
 		</Pressable>
 	);
 }

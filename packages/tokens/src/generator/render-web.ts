@@ -3,7 +3,7 @@
 // ============================================
 // What packages/ui's globals.css imports:
 //   :root          palette primitives, theme-independent tokens, the light theme
-//   .dark          the dark theme (every themed role, nothing else)
+//   .dark / .nord  the dark and Nord themes (every themed role, nothing else)
 //   @theme inline  the Tailwind mapping that turns tokens into utilities
 // References stay `var(--…)` so the browser resolves them per element, exactly
 // as the hand-written CSS this replaced did.
@@ -31,6 +31,7 @@ import { assertThemeParity } from "./parity";
 const WEB_THEME_SELECTORS: Readonly<Record<ThemeName, string>> = {
 	light: ":root",
 	dark: ".dark",
+	nord: ".nord",
 };
 
 /** The selector of the theme that is in effect when no theme class is set. */
@@ -90,7 +91,7 @@ export function renderWebStylesheet(source: TokenSource): string {
 	const header = generatedNotice([
 		"The web design tokens, imported by packages/ui src/styles/globals.css:",
 		":root holds the palette primitives, the theme-independent tokens and the light",
-		"theme; .dark holds the dark theme; @theme inline maps tokens to Tailwind utilities.",
+		"theme; .dark and .nord hold the dark and Nord themes; @theme inline maps tokens to Tailwind utilities.",
 	]);
 	return printStylesheet(header, [...themeRules, tailwindThemeRule(source)]);
 }

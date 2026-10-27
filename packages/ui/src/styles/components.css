@@ -104,6 +104,23 @@
 	--skeleton-sheen: color-mix(in oklch, var(--foreground) 7%, transparent);
 }
 
+.nord {
+	--skeleton-sheen: color-mix(in oklch, var(--foreground) 7%, transparent);
+}
+
+/*
+ * The primary button's coloured shadow (`buttonVariants` → `default`): how much of the element's own
+ * `--primary` it takes. None in light and dark; under Nord a soft glow of the app's vivid accent lifts the
+ * button off the Polar Night surface.
+ */
+:root {
+	--primary-glow-mix: 0%;
+}
+
+.nord {
+	--primary-glow-mix: 70%;
+}
+
 @keyframes skeleton-sweep {
 	from {
 		background-position-x: -120vw;

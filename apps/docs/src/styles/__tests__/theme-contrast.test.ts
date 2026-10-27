@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 
-import { contrastRatio, MIN_TEXT_CONTRAST, readCustomProperties, relativeLuminance } from "@workspace/ui/lib/core/color-contrast";
+import { contrastRatio, MIN_NON_TEXT_CONTRAST, MIN_TEXT_CONTRAST, readCustomProperties, relativeLuminance } from "@workspace/ui/lib/core/color-contrast";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -15,6 +15,7 @@ const LIGHT_SELECTOR = ':root,\n:root[data-code-theme="light"] .code-block-islan
 const DARK_SELECTOR = '[data-theme="dark"],\n:root[data-code-theme="dark"] .code-block-island';
 const LIGHT = readCustomProperties(THEME_CSS, LIGHT_SELECTOR, PALETTE);
 const DARK = readCustomProperties(THEME_CSS, DARK_SELECTOR, LIGHT);
+const NORD = readCustomProperties(THEME_CSS, '[data-theme="nord"]', LIGHT);
 
 /** Every text colour the docs set, on every surface it is set on. */
 const TEXT_PAIRINGS: readonly (readonly [string, string])[] = [
@@ -39,7 +40,11 @@ function violations(theme: ReadonlyMap<string, string>): readonly string[] {
 }
 
 /** Dark code blocks' chrome (One Dark Pro): its title, language label and line numbers on its charcoal. */
-const DARK_CODE = readCustomProperties(THEME_CSS, '[data-theme="dark"]:not([data-code-theme]) .code-block-island,\n:root[data-code-theme="dark"] .code-block-island', DARK);
+const DARK_CODE = readCustomProperties(
+	THEME_CSS,
+	'[data-theme="dark"]:not([data-code-theme]) .code-block-island,\n[data-theme="nord"]:not([data-code-theme]) .code-block-island,\n:root[data-code-theme="dark"] .code-block-island',
+	DARK,
+);
 const DARK_CODE_PAIRINGS: readonly (readonly [string, string])[] = [
 	["--text", "--surface"],
 	["--muted", "--surface"],
@@ -56,7 +61,36 @@ describe("docs theme contrast (WCAG AA 4.5:1 text)", () => {
 		expect(violations(DARK)).toEqual([]);
 	});
 
-	it("meets the minimum for the dark code blocks' chrome (One Dark Pro)", () => {
+	it("meets the minimum for every text pair in the Nord theme", () => {
+		expect(violations(NORD)).toEqual([]);
+	});
+
+	it.each([
+		["light", LIGHT],
+		["dark", DARK],
+		["Nord", NORD],
+	])("keeps every callout title readable on its tint, and the badge glyph on the title's shade, in the %s theme", (_name, theme) => {
+		const failing = ["info", "success", "warning", "error"].flatMap((kind): string[] =>
+			[
+				[`--${kind}-text`, `--${kind}-bg`],
+				["--on-callout-accent", `--${kind}-text`],
+			].flatMap(([foreground = "", background = ""]): string[] => {
+				const ratio = contrastRatio(theme.get(foreground) ?? "", theme.get(background) ?? "");
+				return ratio >= MIN_TEXT_CONTRAST ? [] : [`${foreground} on ${background}: ${ratio.toFixed(2)}:1`];
+			}),
+		);
+		expect(failing).toEqual([]);
+	});
+
+	it("keeps Nord's card-tile icons at 3:1 on its pastel tiles (an icon, not text: WCAG 1.4.11)", () => {
+		const failing = ["1", "2", "3", "4", "5", "6"].flatMap((tile): string[] => {
+			const ratio = contrastRatio(NORD.get("--on-tile") ?? "", NORD.get(`--tile-${tile}`) ?? "");
+			return ratio >= MIN_NON_TEXT_CONTRAST ? [] : [`--on-tile on --tile-${tile}: ${ratio.toFixed(2)}:1`];
+		});
+		expect(failing).toEqual([]);
+	});
+
+	it("meets the minimum for the dark code blocks' chrome (One Dark Pro, under the dark and Nord themes)", () => {
 		const failing = DARK_CODE_PAIRINGS.flatMap(([foreground, background]): string[] => {
 			const ratio = contrastRatio(DARK_CODE.get(foreground) ?? "", DARK_CODE.get(background) ?? "");
 			return ratio >= MIN_TEXT_CONTRAST ? [] : [`${foreground} on ${background}: ${ratio.toFixed(2)}:1`];
@@ -168,5 +202,9 @@ describe("diagram label contrast (WCAG AA 4.5:1 text)", () => {
 
 	it("keeps every role tint readable in the dark theme", () => {
 		expect(diagramLabelViolations(DARK)).toEqual([]);
+	});
+
+	it("keeps every role tint readable in the Nord theme", () => {
+		expect(diagramLabelViolations(NORD)).toEqual([]);
 	});
 });

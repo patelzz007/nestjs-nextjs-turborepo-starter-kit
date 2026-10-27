@@ -14,7 +14,7 @@
 // (packages/ui src/styles/tokens-contrast.test.ts).
 
 import type { SharedColors, Theme, Themes } from "./schema";
-import { colorToken, oklch, paletteColor, TRANSPARENT } from "./value";
+import { colorToken, hex, oklch, paletteColor, TRANSPARENT } from "./value";
 
 /*
  * Light theme — layered: a cool #F1F4F9 canvas (`background`, neutral-50)
@@ -144,6 +144,13 @@ export const LIGHT_THEME: Theme = {
 	"shadow-ambient": oklch(0.24, 0.02, 258, 0.06),
 	"shadow-key": oklch(0.24, 0.02, 258, 0.1),
 	"edge-highlight": TRANSPARENT,
+	/* The auth screens' brand panel: deep slate with a slate gradient (web and merchant re-map the hue). */
+	"auth-panel": paletteColor("brand", "950"),
+	"auth-panel-muted": paletteColor("brand", "300"),
+	"auth-brand-from": paletteColor("brand", "600"),
+	"auth-brand-to": paletteColor("brand", "800"),
+	/* Links: the accent, as text (AA on every surface a link sits on). */
+	link: paletteColor("brand", "800"),
 };
 
 /*
@@ -237,22 +244,135 @@ export const DARK_THEME: Theme = {
 	"shadow-ambient": oklch(0, 0, 0, 0.25),
 	"shadow-key": oklch(0, 0, 0, 0.45),
 	"edge-highlight": oklch(1, 0, 0, 0.05),
+	/* The auth screens' brand panel: deep slate with a slate gradient (web and merchant re-map the hue). */
+	"auth-panel": paletteColor("brand", "950"),
+	"auth-panel-muted": paletteColor("brand", "300"),
+	"auth-brand-from": paletteColor("brand", "600"),
+	"auth-brand-to": paletteColor("brand", "800"),
+	link: paletteColor("brand", "100"),
+};
+
+/*
+ * Nord theme (nordtheme.com) — a third, dark theme. Surfaces are Nord's Polar
+ * Night with elevation by lightness: page, topbar and sidebar nord0, cards
+ * nord1, popovers nord2, an inset shell's frame a step below nord0. Text is Snow
+ * Storm (nord6 headings and body, a dimmed nord4 for secondary text). The
+ * accent is Frost blue, filled VIVID (palette `vivid-9`: nord9 with ~1.9× the
+ * colour — Nord's pastels read as disabled on a button); web re-maps it to
+ * vivid-8 (frost cyan) and merchant to vivid-14 (aurora green), in
+ * `.nord .<app>-app` in each app's theme.
+ * Status colours and charts are Aurora.
+ *
+ * Nord's own accents are not all legible as TEXT on its dark surfaces (Aurora
+ * red #bf616a is 3.05:1 on nord0). Wherever a token is text, the Nord hue is
+ * lightened toward nord6 by the least amount that reaches WCAG AA on its fill
+ * (`hex()` values below, each named after the Nord colour it comes from); fills,
+ * charts and status marks keep the published colours.
+ */
+export const NORD_THEME: Theme = {
+	background: paletteColor("nord", "0"),
+	foreground: paletteColor("nord", "6"),
+	card: paletteColor("nord", "1"),
+	"card-foreground": paletteColor("nord", "6"),
+	popover: paletteColor("nord", "2"),
+	"popover-foreground": paletteColor("nord", "6"),
+	topbar: paletteColor("nord", "0"),
+	/* nord0 darkened 15% toward black: the inset shell's frame sits below the page, as in the dark theme. */
+	"shell-frame": hex("#272c36"),
+	"shell-panel": paletteColor("nord", "0"),
+	primary: paletteColor("vivid", "9"),
+	"primary-foreground": paletteColor("nord", "0"),
+	secondary: paletteColor("nord", "2"),
+	"secondary-foreground": paletteColor("nord", "6"),
+	muted: paletteColor("nord", "2"),
+	/* nord4 dimmed toward nord3 until 4.7:1 on nord2 — quieter than body text, still AA on every surface. */
+	"muted-foreground": hex("#b9c0cd"),
+	accent: paletteColor("nord", "2"),
+	"accent-foreground": paletteColor("nord", "6"),
+	destructive: paletteColor("nord", "11"),
+	success: paletteColor("nord", "14"),
+	warning: paletteColor("nord", "13"),
+	info: paletteColor("nord", "10"),
+	focus: paletteColor("nord", "15"),
+	/* Soft fills: 20% of the Aurora / Frost colour over nord0. */
+	"destructive-soft": hex("#4b3d48"),
+	"success-soft": hex("#45504f"),
+	"warning-soft": hex("#54524f"),
+	"info-soft": hex("#384356"),
+	/* Tones: text (the Nord colour, lightened toward nord6 only as far as AA needs) on its 20% soft fill. */
+	"tone-green": hex("#b2c8a1"),
+	"tone-green-soft": hex("#45504f"),
+	"tone-blue": hex("#a8bdd3"),
+	"tone-blue-soft": hex("#3f4a5a"),
+	"tone-yellow": paletteColor("nord", "13"),
+	"tone-yellow-soft": hex("#54524f"),
+	"tone-red": hex("#d4a2a9"),
+	"tone-red-soft": hex("#4b3d48"),
+	"tone-orange": hex("#dbafa2"),
+	"tone-orange-soft": hex("#4e454a"),
+	"tone-teal": hex("#a3c7c8"),
+	"tone-teal-soft": hex("#414f59"),
+	"tone-violet": hex("#c8b1c7"),
+	"tone-violet-soft": hex("#494656"),
+	"tier-bronze": hex("#dbafa2"),
+	"tier-bronze-soft": hex("#4e454a"),
+	"tier-silver": paletteColor("nord", "4"),
+	"tier-silver-soft": hex("#505662"),
+	"tier-gold": paletteColor("nord", "13"),
+	"tier-gold-soft": hex("#54524f"),
+	"tier-platinum": hex("#c8b1c7"),
+	"tier-platinum-soft": hex("#494656"),
+	reward: colorToken("tier-gold"),
+	"reward-soft": colorToken("tier-gold-soft"),
+	"reward-solid": paletteColor("nord", "13"),
+	"reward-solid-foreground": paletteColor("nord", "0"),
+	border: paletteColor("nord", "3"),
+	/* nord3 lifted 10% toward nord4: inputs read a step firmer than borders. */
+	input: hex("#5a6477"),
+	ring: paletteColor("vivid", "9"),
+	/* Frost blue, Aurora orange (hue, not just lightness, apart), Frost teal, Aurora yellow, Aurora purple — all ≥ 3:1 on cards and popovers. */
+	"chart-1": paletteColor("vivid", "9"),
+	"chart-2": paletteColor("nord", "12"),
+	"chart-3": paletteColor("nord", "7"),
+	"chart-4": paletteColor("nord", "13"),
+	"chart-5": paletteColor("nord", "15"),
+	sidebar: paletteColor("nord", "0"),
+	"sidebar-foreground": paletteColor("nord", "4"),
+	"sidebar-primary": paletteColor("vivid", "9"),
+	"sidebar-primary-foreground": paletteColor("nord", "0"),
+	"sidebar-accent": paletteColor("nord", "1"),
+	"sidebar-accent-foreground": paletteColor("nord", "6"),
+	"sidebar-border": paletteColor("nord", "2"),
+	"sidebar-ring": paletteColor("vivid", "9"),
+	/* Active nav row: a solid vivid Frost pill with Polar Night text (web / merchant re-map the hue). */
+	"sidebar-active": paletteColor("vivid", "9"),
+	"sidebar-active-foreground": paletteColor("nord", "0"),
+	"sidebar-active-border": paletteColor("vivid", "9"),
+	"search-mark-bg": paletteColor("nord", "13"),
+	"search-mark-fg": paletteColor("nord", "0"),
+	"shadow-ambient": oklch(0, 0, 0, 0.25),
+	"shadow-key": oklch(0, 0, 0, 0.45),
+	"edge-highlight": oklch(1, 0, 0, 0.04),
+	/* The auth screens' brand panel: a Polar Night card, Snow Storm secondary text, a Frost gradient. */
+	"auth-panel": paletteColor("nord", "1"),
+	"auth-panel-muted": paletteColor("nord", "4"),
+	"auth-brand-from": paletteColor("vivid", "9"),
+	"auth-brand-to": paletteColor("nord", "10"),
+	/* Links: Frost cyan nord8 lightened 12% toward nord6 — AA on every Nord surface (4.64:1 on nord2 and up), and never the near-white of body text. */
+	link: hex("#94c6d4"),
 };
 
 /** Every theme. Adding a theme name to `ThemeNameSchema` makes this a compile error until the theme exists. */
 export const THEMES: Themes = {
 	light: LIGHT_THEME,
 	dark: DARK_THEME,
+	nord: NORD_THEME,
 };
 
 /** Colour tokens declared once for every theme (the web writes them in `:root` only). */
 export const SHARED_COLORS: SharedColors = {
-	/* Auth screens' brand panel. */
-	"auth-panel": paletteColor("brand", "950"),
-	"auth-panel-muted": paletteColor("brand", "300"),
+	/* Text on the auth screens' brand panel (the panel itself is themed). */
 	"auth-panel-foreground": paletteColor("neutral", "0"),
-	"auth-brand-from": paletteColor("brand", "600"),
-	"auth-brand-to": paletteColor("brand", "800"),
 	/* The app's launch screen (the Expo app's native splash and its in-app hand-off, the app icon): slate in every theme, so launching looks the same in light and dark. */
 	splash: paletteColor("brand", "800"),
 	"splash-foreground": paletteColor("neutral", "0"),

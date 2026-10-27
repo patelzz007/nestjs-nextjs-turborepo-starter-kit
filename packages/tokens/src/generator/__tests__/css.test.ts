@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { declaration, declaredNames, DuplicateCssDeclarationError, printComment, printStylesheet, rule } from "../css";
+import { declaration, declaredNames, DuplicateCssDeclarationError, printComment, printStylesheet, rule, statement } from "../css";
 
 describe("printStylesheet", () => {
 	it("prints the header, then each top-level rule separated by a blank line, with tab indentation and a trailing newline", () => {
@@ -8,6 +8,12 @@ describe("printStylesheet", () => {
 
 		expect(css).toBe(
 			["/*", " * Header line", " */", "", ":root {", "\t--card: white;", "}", "", "@layer theme {", "\t:root {", "\t\t--card: black;", "\t}", "}", ""].join("\n"),
+		);
+	});
+
+	it("prints a block-less statement on its own line, ended by a semicolon", () => {
+		expect(printStylesheet([], [statement("@custom-variant nord (&:where(.nord, .nord *))"), rule(":root", [declaration("card", "white")])])).toBe(
+			["/*", " */", "", "@custom-variant nord (&:where(.nord, .nord *));", "", ":root {", "\t--card: white;", "}", ""].join("\n"),
 		);
 	});
 

@@ -31,9 +31,10 @@ const tabs = HEADER_TABS.map((tab) => ({ ...tab, active: isTabActive(tab, pathna
 			<a class="icon-button" href={GITHUB_URL} target="_blank" rel="noopener noreferrer" aria-label="GitHub repository">
 				<Icon name="github" size={18} />
 			</a>
-			<button type="button" class="icon-button" data-theme-toggle aria-label="Toggle dark mode">
+			<button type="button" class="icon-button" data-theme-toggle aria-label="Switch theme: light, dark or Nord">
 				<Icon name="sun" size={18} class="theme-icon--light" />
 				<Icon name="moon" size={18} class="theme-icon--dark" />
+				<Icon name="snowflake" size={18} class="theme-icon--nord" />
 			</button>
 		</div>
 	</div>

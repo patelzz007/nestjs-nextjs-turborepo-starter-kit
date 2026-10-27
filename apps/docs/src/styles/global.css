@@ -22,11 +22,11 @@
  */
 
 /*
- * `dark:` follows the site theme, except inside code blocks, which follow their
+ * `dark:` follows the site theme (Nord counts as dark), except inside code blocks, which follow their
  * own when the reader picked one (`data-code-theme` on <html>, src/scripts/code-theme.ts):
  * dark code in a light page, light code in a dark page.
  */
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"]:not([data-code-theme]) *, [data-theme="dark"] :not(.code-block-island, .code-block-island *), [data-code-theme="dark"] .code-block-island, [data-code-theme="dark"] .code-block-island *));
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"]:not([data-code-theme]) *, [data-theme="dark"] :not(.code-block-island, .code-block-island *), [data-theme="nord"], [data-theme="nord"]:not([data-code-theme]) *, [data-theme="nord"] :not(.code-block-island, .code-block-island *), [data-code-theme="dark"] .code-block-island, [data-code-theme="dark"] .code-block-island *));
 
 /* Shared components from @workspace/ui rendered into the docs (Tailwind must scan their classes). */
 @source "../../../../packages/ui/src/components/code-block.tsx";
@@ -103,6 +103,14 @@
 	--error: #f04438;
 	--error-bg: #fffbfa;
 	--error-border: #fee4e2;
+	/*
+	 * Callout titles and badges: each hue's TEXT shade, >= 4.5:1 on its own tint and under its glyph.
+	 * The 500-step hues above stay for fills and components; as text they read at 2.3–3.7:1 on the tints.
+	 */
+	--info-text: #175cd3;
+	--success-text: #067647;
+	--warning-text: #b54708;
+	--error-text: #b42318;
 	/* Diagrams (see "Diagrams" below): one hue per role, mixed into the surface for fills and outlines. */
 	--diagram-entry: #2e90fa;
 	--diagram-step: #516480;
@@ -123,6 +131,9 @@
 	--tile-5: #f79009;
 	--tile-6: #15b79e;
 	--mark: #fef0c7;
+	/* The glyph on a callout's badge and on a card's icon tile (white on the saturated hues; dark and Nord re-map the callout glyph). */
+	--on-callout-accent: var(--palette-neutral-0);
+	--on-tile: var(--palette-neutral-0);
 	--overlay: color-mix(in oklch, var(--palette-neutral-900) 45%, transparent);
 	/* Ink-tinted, like the apps' light-theme shadows. */
 	--shadow-card: 0 2px 4px -2px oklch(0.24 0.02 258 / 0.06), 0 4px 8px -2px oklch(0.24 0.02 258 / 0.06);
@@ -231,6 +242,12 @@
 	--warning-border: #4d3f24;
 	--error-bg: #3d2629;
 	--error-border: #552c31;
+	/* Text shades for the dark tints (the 300 steps), with the glyph in ink: >= 4.5:1 both ways. */
+	--info-text: #84caff;
+	--success-text: #75e0a7;
+	--warning-text: #fec84b;
+	--error-text: #fda29b;
+	--on-callout-accent: var(--palette-ink-950);
 	--mark: rgb(247 144 9 / 0.3);
 	/* Dark tints need more of the hue to read against the ink surface. */
 	--diagram-step: #8a9bb8;
@@ -245,6 +262,94 @@
 }
 
 /*
+ * Nord (nordtheme.com; packages/tokens NORD_THEME, palette `--palette-nord-*`): Polar Night surfaces,
+ * Snow Storm text, Frost blue (nord9) as the accent, Aurora for callouts and diagrams. Nord's accents are
+ * pastels, so glyphs on them are Polar Night, not white. Code blocks keep their own theme (One Dark Pro
+ * for dark code, as under the dark theme — "Dark code" below), unless the reader picked light code.
+ */
+[data-theme="nord"] {
+	--primary: var(--brand);
+	--card: var(--surface);
+	--destructive: var(--error);
+	/* Accent fills are Nord's Frost blue made vivid (palette vivid-9, as in the apps): the pastel read as disabled. */
+	--brand: var(--palette-vivid-9);
+	--brand-hover: var(--palette-vivid-8);
+	--brand-soft: var(--palette-nord-1);
+	--brand-border: var(--palette-nord-2);
+	--sidebar-bg: var(--palette-nord-0);
+	--sidebar-edge: transparent;
+	/* The active page: a vivid Frost pill with Polar Night text. */
+	--nav-active-bg: var(--palette-vivid-9);
+	--nav-active-text: var(--palette-nord-0);
+	--nav-active-ring: transparent;
+	--nav-active-shadow: none;
+	--brand-glow: color-mix(in oklch, var(--palette-vivid-9) 14%, transparent);
+	--brand-text: var(--palette-nord-8);
+	--brand-text-hover: var(--palette-nord-7);
+	--brand-solid: var(--palette-vivid-9);
+	--brand-solid-hover: var(--palette-vivid-8);
+	--on-brand-solid: var(--palette-nord-0);
+	--bg: var(--palette-nord-0);
+	--surface: var(--palette-nord-0);
+	--surface-muted: var(--palette-nord-1);
+	--hover: var(--palette-nord-2);
+	--skeleton-sheen: color-mix(in oklch, var(--palette-nord-6) 7%, transparent);
+	--text: var(--palette-nord-6);
+	--text-secondary: var(--palette-nord-4);
+	/* nord4 dimmed toward nord3, as in the apps' Nord muted text: AA on every surface. */
+	--muted: #b9c0cd;
+	--faint: var(--palette-nord-3);
+	--border: var(--palette-nord-3);
+	--border-strong: #5a6477;
+	--tree-line: var(--palette-nord-3);
+	--code-inline-bg: color-mix(in oklch, var(--palette-nord-6) 8%, transparent);
+	--table-row-hover: color-mix(in oklch, var(--palette-nord-6) 4%, transparent);
+	--table-scroll-shadow: rgb(0 0 0 / 0.45);
+	/* Callouts: Nord's accents are already AA as text on their 14% tints, so each also serves as its text shade. */
+	--info: var(--palette-nord-8);
+	--info-bg: #3b4854;
+	--info-border: #495e6b;
+	--success: var(--palette-nord-14);
+	--success-bg: #3e474b;
+	--success-border: #515d57;
+	--warning: var(--palette-nord-13);
+	--warning-bg: #48494b;
+	--warning-border: #676157;
+	/* Aurora red nord11 lightened toward nord6 until its title reads at AA on the tint. */
+	--error: #d29da4;
+	--error-bg: #423a46;
+	--error-border: #5a424d;
+	--info-text: var(--info);
+	--success-text: var(--success);
+	--warning-text: var(--warning);
+	--error-text: var(--error);
+	--on-callout-accent: var(--palette-nord-0);
+	--diagram-entry: var(--palette-nord-10);
+	--diagram-step: var(--palette-nord-9);
+	--diagram-store: var(--palette-nord-7);
+	--diagram-decision: var(--palette-nord-12);
+	--diagram-outcome: var(--palette-nord-15);
+	--diagram-person: var(--palette-nord-11);
+	--diagram-success: var(--palette-nord-14);
+	--diagram-fill-mix: 22%;
+	--diagram-outline-mix: 72%;
+	--diagram-line: var(--palette-nord-4);
+	--diagram-group: color-mix(in oklab, var(--palette-nord-6) 5%, var(--surface));
+	--tile-1: var(--palette-nord-14);
+	--tile-2: var(--palette-nord-9);
+	--tile-3: var(--palette-nord-11);
+	--tile-4: var(--palette-nord-8);
+	--tile-5: var(--palette-nord-13);
+	--tile-6: var(--palette-nord-7);
+	--on-tile: var(--palette-nord-0);
+	--mark: color-mix(in oklch, var(--palette-nord-13) 30%, transparent);
+	--overlay: rgb(0 0 0 / 0.6);
+	--shadow-card: none;
+	--shadow-pop: 0 20px 24px -4px rgb(0 0 0 / 0.5);
+	color-scheme: dark;
+}
+
+/*
  * Dark code (src/lib/code-block/themes.ts → One Dark Pro): the theme's own
  * charcoal and chrome instead of the page's near-black ink, whether the reader
  * got dark code from the site's dark theme or from the code-theme toggle. The
@@ -252,6 +357,7 @@
  * theme-contrast.test.ts holds the chrome's text to 4.5:1 on this surface.
  */
 [data-theme="dark"]:not([data-code-theme]) .code-block-island,
+[data-theme="nord"]:not([data-code-theme]) .code-block-island,
 :root[data-code-theme="dark"] .code-block-island {
 	--surface: #282c34;
 	--surface-muted: #21252b;
@@ -532,11 +638,14 @@
 	}
 
 	.theme-icon--dark,
-	[data-theme="dark"] .theme-icon--light {
+	.theme-icon--nord,
+	[data-theme="dark"] .theme-icon--light,
+	[data-theme="nord"] .theme-icon--light {
 		display: none;
 	}
 
-	[data-theme="dark"] .theme-icon--dark {
+	[data-theme="dark"] .theme-icon--dark,
+	[data-theme="nord"] .theme-icon--nord {
 		display: block;
 	}
 
@@ -1240,7 +1349,8 @@
 	/* Callouts */
 
 	.callout {
-		--callout-accent: var(--info);
+		/* The title's colour and the badge's fill: the kind's text shade (AA on the tint, and under the glyph). */
+		--callout-accent: var(--info-text);
 		position: relative;
 		padding: 16px 20px 16px 52px;
 		border: 1px solid var(--info-border);
@@ -1266,7 +1376,7 @@
 		height: 20px;
 		border-radius: 999px;
 		background: var(--callout-accent);
-		color: #fff;
+		color: var(--on-callout-accent);
 		font-size: var(--type-size-xs);
 		font-weight: var(--type-weight-bold);
 		line-height: 1;
@@ -1274,7 +1384,7 @@
 
 	.callout[data-kind="tip"],
 	.callout[data-kind="success"] {
-		--callout-accent: var(--success);
+		--callout-accent: var(--success-text);
 		border-color: var(--success-border);
 		background: var(--success-bg);
 	}
@@ -1285,7 +1395,7 @@
 	}
 
 	.callout[data-kind="warning"] {
-		--callout-accent: var(--warning);
+		--callout-accent: var(--warning-text);
 		border-color: var(--warning-border);
 		background: var(--warning-bg);
 	}
@@ -1295,7 +1405,7 @@
 	}
 
 	.callout[data-kind="error"] {
-		--callout-accent: var(--error);
+		--callout-accent: var(--error-text);
 		border-color: var(--error-border);
 		background: var(--error-bg);
 	}
@@ -1824,7 +1934,7 @@
 		margin-bottom: 16px;
 		border-radius: 12px;
 		background: var(--tile-2);
-		color: #fff;
+		color: var(--on-tile);
 	}
 
 	.guide-card__tile[data-tone="1"] {

@@ -4,14 +4,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useThemeToggle } from "../use-theme-toggle";
 
-const theme = vi.hoisted(() => ({ resolvedTheme: "dark", setTheme: vi.fn<(theme: string) => void>() }));
+const theme = vi.hoisted(() => ({ theme: "system", resolvedTheme: "dark", setTheme: vi.fn<(theme: string) => void>() }));
 const transition = vi.hoisted(() => {
 	const origins: { readonly x: number; readonly y: number }[] = [];
 	return { origins };
 });
 
 vi.mock("next-themes", () => ({
-	useTheme: (): { readonly resolvedTheme: string; readonly setTheme: (next: string) => void } => ({ resolvedTheme: theme.resolvedTheme, setTheme: theme.setTheme }),
+	useTheme: (): { readonly theme: string; readonly resolvedTheme: string; readonly setTheme: (next: string) => void } => ({
+		theme: theme.theme,
+		resolvedTheme: theme.resolvedTheme,
+		setTheme: theme.setTheme,
+	}),
 }));
 
 vi.mock("@workspace/ui/lib/core/theme-transition", async (importOriginal) => {
@@ -30,6 +34,7 @@ afterEach((): void => {
 	document.body.innerHTML = "";
 	transition.origins.length = 0;
 	theme.setTheme.mockClear();
+	theme.resolvedTheme = "dark";
 });
 
 /** Puts a visible shell theme toggle on the page, centred at (110, 30). */
@@ -42,13 +47,30 @@ function mountShellToggle(): HTMLElement {
 }
 
 describe("useThemeToggle", () => {
-	it("flips the resolved theme through next-themes", () => {
-		const { result } = renderHook(() => useThemeToggle());
+	it("moves to the next theme through next-themes: light → dark → Nord → light", () => {
+		const { result, rerender } = renderHook(() => useThemeToggle());
+		expect(result.current.resolvedTheme).toBe("dark");
+		expect(result.current.theme).toBe("system");
 
 		result.current.toggleTheme();
+		theme.resolvedTheme = "nord";
+		rerender();
+		result.current.toggleTheme();
+		theme.resolvedTheme = "light";
+		rerender();
+		result.current.toggleTheme();
 
-		expect(theme.setTheme).toHaveBeenCalledWith("light");
-		expect(result.current.resolvedTheme).toBe("dark");
+		expect(theme.setTheme.mock.calls).toEqual([["nord"], ["light"], ["dark"]]);
+	});
+
+	it("switches to a chosen theme, `system` included, with the reveal", () => {
+		const { result } = renderHook(() => useThemeToggle());
+
+		result.current.chooseTheme("nord");
+		result.current.chooseTheme("system");
+
+		expect(theme.setTheme.mock.calls).toEqual([["nord"], ["system"]]);
+		expect(transition.origins).toHaveLength(2);
 	});
 
 	it("starts the reveal from the control that was used", () => {

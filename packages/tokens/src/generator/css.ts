@@ -23,6 +23,12 @@ export interface CssRule {
 
 export type CssNode = CssDeclaration | CssRule;
 
+/** `<text>;` — a top-level at-rule without a block (`@custom-variant nord (…)`). */
+export interface CssStatement {
+	readonly kind: "statement";
+	readonly text: string;
+}
+
 const INDENT = "\t";
 
 /** Thrown when one block would declare the same custom property twice (the later one would silently win). */
@@ -42,6 +48,10 @@ export function declaration(name: string, value: string): CssDeclaration {
 
 export function rule(selector: string, children: readonly CssNode[]): CssRule {
 	return { kind: "rule", selector, children };
+}
+
+export function statement(text: string): CssStatement {
+	return { kind: "statement", text };
 }
 
 /** The custom-property names declared directly in a rule (not in nested rules). */
@@ -77,8 +87,8 @@ export function printComment(lines: readonly string[]): string {
 	return ["/*", ...lines.map((line) => (line === "" ? " *" : ` * ${line}`)), " */"].join("\n");
 }
 
-/** The whole stylesheet: the header comment, then each top-level rule separated by a blank line, ending in a newline. */
-export function printStylesheet(header: readonly string[], rules: readonly CssRule[]): string {
-	const blocks = [printComment(header), ...rules.map((topLevel) => printNode(topLevel, 0).join("\n"))];
+/** The whole stylesheet: the header comment, then each top-level rule or statement separated by a blank line, ending in a newline. */
+export function printStylesheet(header: readonly string[], rules: readonly (CssRule | CssStatement)[]): string {
+	const blocks = [printComment(header), ...rules.map((topLevel) => (topLevel.kind === "statement" ? `${topLevel.text};` : printNode(topLevel, 0).join("\n")))];
 	return `${blocks.join("\n\n")}\n`;
 }

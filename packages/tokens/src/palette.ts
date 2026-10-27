@@ -23,6 +23,15 @@
 //   brand tokens onto its hue (each app's `app/<name>-theme.css`). 960/975 are
 //   that app's deep sidebar tones in dark mode.
 // - warm: kopi amber, the charts' warm counter-colour to the accent.
+// - nord: the Nord palette (nordtheme.com) exactly as published, by its own
+//   numbers — the `nord` theme's source. Polar Night 0–3 (surfaces), Snow Storm
+//   4–6 (text), Frost 7–10 (accents), Aurora 11–15 (status and charts).
+// - vivid: three Nord accents with about 1.9× their colour (OKLCH chroma) and a
+//   touch more lightness, same hue — the `nord` theme's accent FILLS (buttons,
+//   the active nav pill, focus rings, the lead chart series). Nord's own pastels
+//   read as disabled on a button; surfaces and text stay exact Nord. Numbered
+//   after their source: vivid-8 (frost cyan), vivid-9 (frost blue), vivid-14
+//   (aurora green).
 
 import type { Palette } from "./schema";
 import { hex, oklch } from "./value";
@@ -108,5 +117,28 @@ export const PALETTE: Palette = {
 		"950": oklch(0.25, 0.05, 162),
 		"960": oklch(0.22, 0.04, 163),
 		"975": oklch(0.195, 0.032, 165),
+	},
+	nord: {
+		"0": hex("#2e3440"),
+		"1": hex("#3b4252"),
+		"2": hex("#434c5e"),
+		"3": hex("#4c566a"),
+		"4": hex("#d8dee9"),
+		"5": hex("#e5e9f0"),
+		"6": hex("#eceff4"),
+		"7": hex("#8fbcbb"),
+		"8": hex("#88c0d0"),
+		"9": hex("#81a1c1"),
+		"10": hex("#5e81ac"),
+		"11": hex("#bf616a"),
+		"12": hex("#d08770"),
+		"13": hex("#ebcb8b"),
+		"14": hex("#a3be8c"),
+		"15": hex("#b48ead"),
+	},
+	vivid: {
+		"8": oklch(0.795, 0.118, 217.5),
+		"9": oklch(0.717, 0.112, 248.7),
+		"14": oklch(0.788, 0.142, 131.1),
 	},
 };

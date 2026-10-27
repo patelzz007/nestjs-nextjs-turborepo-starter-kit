@@ -29,9 +29,9 @@ export function DemoAccountButton({ account, disabled, onSelect }: DemoAccountBu
  */
 export function DemoInfoBox({ accounts }: { readonly accounts: readonly DemoAccount[] }): JSX.Element {
 	return (
-		<div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/20">
-			<p className="mb-2 text-center text-xs font-medium text-blue-700 dark:text-blue-400">Demo Information</p>
-			<div className="space-y-1 text-center text-xs text-blue-700 dark:text-blue-400">
+		<div className="mt-4 rounded-lg border border-tone-blue/25 bg-tone-blue-soft p-4">
+			<p className="mb-2 text-center text-xs font-medium text-tone-blue">Demo Information</p>
+			<div className="space-y-1 text-center text-xs text-tone-blue">
 				{accounts.map((account) => (
 					<div key={account.email} className="truncate">
 						🔑 <strong>{account.label}:</strong> {account.email} / {account.password}

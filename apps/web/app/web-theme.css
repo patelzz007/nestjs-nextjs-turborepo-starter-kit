@@ -4,10 +4,10 @@
  * Customer web app brand (sapphire) — only brand and sidebar tokens are re-mapped (onto the shared
  * `--palette-blue-*` scale; APP_BRAND_TOKENS in packages/ui color-contrast.ts); page and card
  * surfaces, borders and text stay shared (packages/tokens semantic.ts). Light: a solid blue active-nav
- * pill on the neutral canvas sidebar. Dark: the same neutral ink surface as the page,
+ * pill on the neutral canvas sidebar. Nord: the shared Polar Night surfaces with this app's Nord accent. Dark: the same neutral ink surface as the page,
  * with a solid blue active pill and blue kept for buttons, focus and charts.
  */
-:root:not(.dark) .web-app {
+:root:not(.dark):not(.nord) .web-app {
 	--primary: var(--palette-blue-600);
 	--primary-foreground: var(--palette-neutral-0);
 	--ring: var(--palette-blue-600);
@@ -50,4 +50,27 @@
 	--auth-panel-muted: var(--palette-blue-300);
 	--auth-brand-from: var(--palette-blue-500);
 	--auth-brand-to: var(--palette-blue-700);
+}
+
+/* Nord (packages/tokens NORD_THEME): Frost cyan as the accent, filled vivid (palette vivid-8), with Polar Night text on it. */
+.nord .web-app {
+	--primary: var(--palette-vivid-8);
+	--primary-foreground: var(--palette-nord-0);
+	--ring: var(--palette-vivid-8);
+	--sidebar-primary: var(--palette-vivid-8);
+	--sidebar-primary-foreground: var(--palette-nord-0);
+	--sidebar-ring: var(--palette-vivid-8);
+	--sidebar-active: var(--palette-vivid-8);
+	--sidebar-active-foreground: var(--palette-nord-0);
+	--sidebar-active-border: var(--palette-vivid-8);
+	--chart-1: var(--palette-vivid-8);
+	--chart-2: var(--palette-nord-12);
+	--chart-3: var(--palette-nord-9);
+	--chart-4: var(--palette-nord-13);
+	--chart-5: var(--palette-nord-15);
+	/* The auth screens' brand panel: a Polar Night card with Snow Storm text and the accent's gradient. */
+	--auth-panel: var(--palette-nord-1);
+	--auth-panel-muted: var(--palette-nord-4);
+	--auth-brand-from: var(--palette-vivid-8);
+	--auth-brand-to: var(--palette-nord-10);
 }

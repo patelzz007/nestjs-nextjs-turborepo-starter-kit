@@ -32,6 +32,13 @@ describe("useNavigationTheme", () => {
 		expect(result.current.colors).toStrictEqual({ background: "#1d1d1d", card: "#2b2b2b", text: "#f5f5f5", border: "#393939", primary: "#f1f4f9", notification: "#e5484d" });
 	});
 
+	it("uses the dark base under Nord, a dark theme", async () => {
+		mockTheme.current = "nord";
+		const { result } = await renderHook(() => useNavigationTheme());
+
+		expect(result.current.dark).toBe(true);
+	});
+
 	it("uses the light base in the light theme", async () => {
 		mockTheme.current = "light";
 		const { result } = await renderHook(() => useNavigationTheme());

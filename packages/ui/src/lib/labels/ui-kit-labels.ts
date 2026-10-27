@@ -76,8 +76,13 @@ export interface SheetLabels {
 }
 
 export interface ShellThemeToggleLabels {
-	/** Accessible name of the light/dark toggle. */
+	/** Accessible name of the theme menu button. */
 	readonly toggle: string;
+	/** The menu's choices. */
+	readonly light: string;
+	readonly dark: string;
+	readonly nord: string;
+	readonly system: string;
 }
 
 export interface ScrollToTopLabels {

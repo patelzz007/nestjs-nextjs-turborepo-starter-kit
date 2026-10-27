@@ -48,7 +48,7 @@ uncontrolled default: `AppCommandPalette` (`open`/`onOpenChange`, `searchText`/`
 `AppShellProfileDropdown` (`open`/`onOpenChange`), `ScrollToTop` (`visible`/`onVisibleChange`) and
 `SidebarProvider` (`openMobile`/`onOpenMobileChange`).
 
-Wrap the app with `ThemeProvider` from `@workspace/ui/components/theme-provider` for light/dark mode.
+Wrap the app with `ThemeProvider` from `@workspace/ui/components/theme-provider` for the light, dark and Nord themes (plus System); `ShellThemeToggle` is the theme menu and `useThemeToggle` switches with the reveal (rules/07 → "Themes").
 
 ## Copy and languages
 

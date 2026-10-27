@@ -48,7 +48,7 @@ which the kit's own React Native lint rules forbid.
    literals. An animated style from Reanimated (`style={animatedStyle}`) is the one exception.
    Fonts use the family utilities (`font-sans`, `font-sans-semibold`, …), never
    `font-medium` / `font-semibold` / `font-bold` (rules/04).
-7. **Light and dark themes for free.** Because only semantic tokens are used, both themes work
+7. **Light, dark and Nord themes for free.** Because only semantic tokens are used, every theme works
    with no `dark:` variants. Do not branch on the theme in a component.
 8. **Optimized by default.**
    - `React.memo` around every exported component.

@@ -29,7 +29,7 @@ describe("generateTokenStylesheets", () => {
 	it("does not depend on the order the data modules list their keys in", () => {
 		const { "edge-highlight": edgeHighlight, card, ...otherRoles } = DARK_THEME;
 		const reorderedDark: Theme = { "edge-highlight": edgeHighlight, card, ...otherRoles };
-		const reordered: TokenSource = { ...TOKEN_SOURCE, themes: { dark: reorderedDark, light: THEMES.light } };
+		const reordered: TokenSource = { ...TOKEN_SOURCE, themes: { dark: reorderedDark, nord: THEMES.nord, light: THEMES.light } };
 
 		expect(Object.keys(reorderedDark).slice(0, 2)).toStrictEqual(["edge-highlight", "card"]);
 		expect(Object.keys(reordered.themes).at(0)).toBe("dark");

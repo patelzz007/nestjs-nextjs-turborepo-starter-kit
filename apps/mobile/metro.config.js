@@ -78,4 +78,6 @@ config.transformer.getTransformOptions = async () => ({
 module.exports = withUniwindConfig(config, {
 	cssEntryFile: "./global.css",
 	dtsFile: "./uniwind-types.d.ts",
+	// The themes beyond light and dark (packages/tokens THEME_NAMES): mobile.css declares an `@variant` for each.
+	extraThemes: ["nord"],
 });

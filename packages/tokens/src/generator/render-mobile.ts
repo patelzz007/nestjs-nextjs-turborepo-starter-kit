@@ -3,7 +3,8 @@
 // ============================================
 // Uniwind's theming format (ADR 032), imported by apps/mobile's global.css:
 //
-//   @layer theme { :root { @variant light { … } @variant dark { … } } }
+//   @custom-variant nord (…);   one per theme beyond light and dark
+//   @layer theme { :root { @variant light { … } @variant dark { … } @variant nord { … } } }
 //   @theme inline { --color-card: var(--card); … --radius-lg: 0.625rem; … }
 //
 // Same variable names and the same values as the web. Each variant carries a
@@ -19,13 +20,31 @@ import { createColorLookups, resolveColorValue } from "../resolve";
 import { colorToken } from "../value";
 import { BASE_RADIUS, generatedNotice } from "./common";
 import type { CssDeclaration } from "./css";
-import { declaration, printStylesheet, rule } from "./css";
+import { declaration, printStylesheet, rule, statement } from "./css";
 import { formatColorLiteral, formatLength, formatVariableReference } from "./format";
 import { assertThemeParity } from "./parity";
 
-/** Every variable one Uniwind theme variant declares, each with a literal value. */
+/** The themes Uniwind defines variants for itself (it also matches them to the OS colour scheme). */
+const UNIWIND_BUILT_IN_THEMES: readonly ThemeName[] = ["light", "dark"];
+
+/**
+ * `@custom-variant <theme> (…)` for every other theme, exactly as Uniwind writes one into its own
+ * generated stylesheet for an `extraThemes` entry. Declared here as well because Uniwind compiles this
+ * file while it discovers the themes, before its own stylesheet knows the new one: without it, adding a
+ * theme fails on the first build ("Cannot use `@variant` with unknown variant").
+ */
+function customThemeVariants(): readonly string[] {
+	return ThemeNameSchema.options.filter((theme) => !UNIWIND_BUILT_IN_THEMES.includes(theme)).map((theme) => `@custom-variant ${theme} (&:where(.${theme}, .${theme} *))`);
+}
+
+/** `source` with the mobile app's brand re-maps for `theme` applied to that theme (MOBILE_THEME_OVERRIDES). */
+function withMobileOverrides(source: TokenSource, theme: ThemeName): TokenSource {
+	return { ...source, themes: { ...source.themes, [theme]: { ...source.themes[theme], ...source.mobileThemeOverrides[theme] } } };
+}
+
+/** Every variable one Uniwind theme variant declares, each with a literal value (the mobile app's re-maps applied). */
 function variantDeclarations(source: TokenSource, theme: ThemeName): readonly CssDeclaration[] {
-	const lookups = createColorLookups(source, theme);
+	const lookups = createColorLookups(withMobileOverrides(source, theme), theme);
 	const literal = (name: ColorTokenName): string => formatColorLiteral(resolveColorValue(colorToken(name), lookups));
 	return [
 		...ThemeRoleSchema.options.map((role) => declaration(role, literal(role))),
@@ -52,6 +71,7 @@ export function renderMobileStylesheet(source: TokenSource): string {
 		"@theme inline mapping that gives the web's utility names (bg-card, rounded-lg).",
 	]);
 	return printStylesheet(header, [
+		...customThemeVariants().map(statement),
 		rule("@layer theme", [
 			rule(
 				":root",

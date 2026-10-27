@@ -78,4 +78,23 @@
 	--palette-green-950: oklch(0.25 0.05 162);
 	--palette-green-960: oklch(0.22 0.04 163);
 	--palette-green-975: oklch(0.195 0.032 165);
+	--palette-nord-0: #2e3440;
+	--palette-nord-1: #3b4252;
+	--palette-nord-2: #434c5e;
+	--palette-nord-3: #4c566a;
+	--palette-nord-4: #d8dee9;
+	--palette-nord-5: #e5e9f0;
+	--palette-nord-6: #eceff4;
+	--palette-nord-7: #8fbcbb;
+	--palette-nord-8: #88c0d0;
+	--palette-nord-9: #81a1c1;
+	--palette-nord-10: #5e81ac;
+	--palette-nord-11: #bf616a;
+	--palette-nord-12: #d08770;
+	--palette-nord-13: #ebcb8b;
+	--palette-nord-14: #a3be8c;
+	--palette-nord-15: #b48ead;
+	--palette-vivid-8: oklch(0.795 0.118 217.5);
+	--palette-vivid-9: oklch(0.717 0.112 248.7);
+	--palette-vivid-14: oklch(0.788 0.142 131.1);
 }

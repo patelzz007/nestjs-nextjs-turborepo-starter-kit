@@ -8,6 +8,7 @@
 // paints the native root window the same, so nothing behind a moving screen is
 // ever a different colour from the page.
 
+import { isDarkTheme } from "@workspace/tokens";
 import * as SystemUI from "expo-system-ui";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router";
 import * as React from "react";
@@ -23,10 +24,10 @@ function colorOr(value: string | number | undefined, fallback: string): string {
 	return ColorSchema.safeParse(value).data ?? fallback;
 }
 
-/** The theme on screen, as React Navigation wants it: its own light or dark base, with the token colours. */
+/** The theme on screen, as React Navigation wants it: its own light or dark base (dark for Nord too), with the token colours. */
 export function useNavigationTheme(): NavigationTheme {
 	const { theme } = useUniwind();
-	const base = theme === "dark" ? DarkTheme : DefaultTheme;
+	const base = isDarkTheme(theme) ? DarkTheme : DefaultTheme;
 	const background = useCSSVariable("--background");
 	const card = useCSSVariable("--card");
 	const text = useCSSVariable("--foreground");
