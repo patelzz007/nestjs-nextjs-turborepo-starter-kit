@@ -11,6 +11,7 @@ import { ROUTES, type AppRoute } from "../../runtime/routes";
 import { DEVICES_COPY, TwoFactorEnrollmentModeSchema, twoFactorEnrollmentTitleOf } from "../../contexts/identity";
 import { PDF_VIEWER_TITLE } from "../pdf-viewer/labels";
 import { TILL_TITLE } from "../../contexts/pos";
+import { SERVER_TITLE, SERVERS_TITLE } from "../../contexts/operations";
 import { COMMITS_TITLE, commitScreenTitle, FILES_CHANGED_TITLE, GITHUB_ACCOUNT_TITLE, PULL_REQUESTS_TITLE, pullRequestScreenTitle } from "../../contexts/integrations-github";
 import { APP_TABS, type AppTab } from "./app-tabs";
 
@@ -64,6 +65,8 @@ const SUB_SCREEN_TITLES: ReadonlyMap<AppRoute, ScreenTitle> = new Map<AppRoute, 
 	[ROUTES.pullRequestCommits, fixed(COMMITS_TITLE)],
 	[ROUTES.pullRequestCommit, commitTitle],
 	[ROUTES.githubAccount, fixed(GITHUB_ACCOUNT_TITLE)],
+	[ROUTES.servers, fixed(SERVERS_TITLE)],
+	[ROUTES.server, fixed(SERVER_TITLE)],
 ]);
 
 const TITLES: ReadonlyMap<string, ScreenTitle> = new Map<string, ScreenTitle>([

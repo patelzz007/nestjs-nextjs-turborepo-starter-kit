@@ -16,7 +16,7 @@
 		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\""
 	},
 	"dependencies": {
-		"aws-cdk-lib": "^2.274.0",
+		"aws-cdk-lib": "^2.275.0",
 		"constructs": "^10.8.1"
 	},
 	"devDependencies": {
@@ -24,10 +24,10 @@
 		"@workspace/oxlint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
 		"aws-cdk": "^2.1146.1",
-		"oxfmt": "0.74.0",
-		"oxlint": "1.89.0",
+		"oxfmt": "0.75.0",
+		"oxlint": "1.90.0",
 		"oxlint-tsgolint": "7.0.2005",
-		"tsrs": "0.18.0-ts7.1.0-dev.20260929",
+		"tsrs": "0.20.0-ts7.1.0-beta",
 		"tsx": "^4.23.15",
 		"typescript": "7.0.2",
 		"vitest": "^5.0.5",

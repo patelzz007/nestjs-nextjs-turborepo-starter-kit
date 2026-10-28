@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import type { Readable } from "node:stream";
+import type { Readable, Writable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 
 import type { StorageObjectLocator } from "@workspace/shared";
 import { applicationDefault, getApps, initializeApp, type App } from "firebase-admin/app";
@@ -12,6 +13,8 @@ import type {
 	StorageBrowserUploadTicketResult,
 	StorageHeadObjectResult,
 	StorageSignedUrlInput,
+	StorageStreamUploadInput,
+	StorageStreamUploadResult,
 	StorageUploadInput,
 	StorageUploadResult,
 } from "../../domain/object-storage.port";
@@ -35,6 +38,7 @@ interface GcsBucketFile {
 	download(): Promise<[Buffer]>;
 	exists(): Promise<[boolean]>;
 	createReadStream(): Readable;
+	createWriteStream(options: { resumable: boolean; contentType: string; metadata: { metadata: Record<string, string> } }): Writable;
 	delete(options: { ignoreNotFound: boolean }): Promise<void>;
 	copyTo(destination: StorageObjectLocator): Promise<GcsBucketFile>;
 	getSignedUrl(config: {
@@ -87,6 +91,15 @@ export class FirebaseObjectStorageAdapter implements ObjectStorage, PublicDelive
 		const [metadata] = await file.getMetadata();
 		const revision = revisionFromMetadata(metadata);
 		return { locator: { ...input.locator, revision }, revision };
+	}
+
+	/** A resumable upload: Cloud Storage sends it in chunks and resumes from the last one acknowledged. */
+	public async uploadStream(input: StorageStreamUploadInput): Promise<StorageStreamUploadResult> {
+		const file = this.bucketFile(input.locator);
+		await pipeline(input.stream, file.createWriteStream({ resumable: true, contentType: input.contentType, metadata: { metadata: input.metadata ?? {} } }));
+		const [metadata] = await file.getMetadata();
+		const revision = revisionFromMetadata(metadata);
+		return { locator: { ...input.locator, revision }, revision, sizeBytes: Number(metadata.size ?? 0) };
 	}
 
 	public async getObject(locator: StorageObjectLocator): Promise<Buffer | null> {
@@ -217,6 +230,7 @@ function createBucketFileAdapter(app: App, locator: StorageObjectLocator): GcsBu
 		download: (): Promise<[Buffer]> => nativeFile.download(),
 		exists: (): Promise<[boolean]> => nativeFile.exists(),
 		createReadStream: (): Readable => nativeFile.createReadStream(),
+		createWriteStream: (options): Writable => nativeFile.createWriteStream(options),
 		delete: async (options): Promise<void> => {
 			await nativeFile.delete(options);
 		},

@@ -22,6 +22,7 @@ import { seedGithubWebhooks } from "../github-webhooks";
 import { seedOwnProfileHistory } from "../own-profile";
 import { seedAnalyticsIngest } from "../analytics-ingest";
 import { seedPlatformRecords } from "../platform-records";
+import { seedOperations } from "../operations";
 import { seedEmailDelivery } from "../email-delivery";
 import { seedInboxDeadLetters } from "../inbox-dead-letters";
 import { TENANT_SEED_IDS, TENANT_SEED_SLUGS, printTenantSeedCredentials } from "../tenants";
@@ -233,6 +234,16 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	seedLog("Seeding GitHub live updates (one repository on, one turned off, two deliveries)...");
 	const githubWebhooks = await seedGithubWebhooks({ adminId: adminUser.id, superAdminId: superAdminUser.id }, Date.now());
 	seedLog(`✅ ${String(githubWebhooks.subscriptions)} live-update subscriptions, ${String(githubWebhooks.deliveries)} webhook deliveries`);
+
+	seedLog("Seeding the operations console (servers, metric history, alerts, backups, load tests)...");
+	const developerUser = requireRow(
+		allUsers.find((user) => user.email === "developer@example.com"),
+		"developer@example.com",
+	);
+	const operations = await seedOperations({ superAdminId: superAdminUser.id, developerId: developerUser.id }, Date.now());
+	seedLog(
+		`✅ Operations: ${String(operations.servers)} servers, ${String(operations.samples)} history rows, ${String(operations.alerts)} alerts, ${String(operations.backups)} backups, ${String(operations.loadTests)} load tests`,
+	);
 
 	seedLog("Seeding platform records (outbox history, slug history, soft-deleted catalog rows)...");
 	const platformRecords = await seedPlatformRecords({ superAdminId: superAdminUser.id, adminId: adminUser.id, userId: customerUser.id });

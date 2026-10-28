@@ -18,6 +18,8 @@ export const QueueNameSchema = z.enum([
 	"rewards.referral-credit-notify",
 	"storage.cdn-invalidate",
 	"transaction-log.write",
+	"operations.backup",
+	"operations.load-test",
 ]);
 
 /**
@@ -38,6 +40,10 @@ export const QUEUE_NAMES = {
 	rewardsReferralCreditNotify: QueueNameSchema.enum["rewards.referral-credit-notify"],
 	storageCdnInvalidate: QueueNameSchema.enum["storage.cdn-invalidate"],
 	transactionLogWrite: QueueNameSchema.enum["transaction-log.write"],
+	/** Database backups (ADR 068): one `pg_dump` at a time. */
+	operationsBackup: QueueNameSchema.enum["operations.backup"],
+	/** Load tests (ADR 068): taken by the separate load runner, never by the API. */
+	operationsLoadTest: QueueNameSchema.enum["operations.load-test"],
 } satisfies Readonly<Record<string, z.output<typeof QueueNameSchema>>>;
 
 /** All queue names, for infrastructure that registers or inspects every queue. */

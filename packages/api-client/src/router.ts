@@ -103,6 +103,9 @@ export interface GithubPullRequestScope extends ScopeFields {
 /** The cache root of every kanban query (`["kanban", …]`): invalidate it after a board change. */
 export const KANBAN_QUERY_ROOT = "kanban";
 
+/** The cache root of every operations-console query (`["operations", …]`). */
+export const OPERATIONS_QUERY_ROOT = "operations";
+
 /** The fields a kanban board query's cache scope reads: which of the two boards. */
 export interface KanbanBoardScope extends ScopeFields {
 	readonly board: string;
@@ -950,6 +953,42 @@ export const apiRouter = {
 		attachmentDownload: defineQuery(apiContract.kanban.attachmentDownload, {
 			scope: ({ taskId, attachmentId }: KanbanAttachmentScope): ApiQueryKey => [KANBAN_QUERY_ROOT, "task", taskId, "attachment", attachmentId],
 		}),
+	},
+	/** The operations console (ADR 068). Every query sits under `["operations", …]`: invalidate the root after a change. */
+	operations: {
+		overview: defineQuery(apiContract.operations.overview, { scope: (): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "overview"] }),
+		servers: defineQuery(apiContract.operations.servers, { scope: (): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "servers"] }),
+		registerServer: defineMutation(apiContract.operations.registerServer),
+		server: defineQuery(apiContract.operations.server, { scope: ({ serverId }: { readonly serverId: string }): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "server", serverId] }),
+		serverHistory: defineQuery(apiContract.operations.serverHistory, {
+			scope: ({ serverId }: { readonly serverId: string }): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "server", serverId, "history"],
+		}),
+		rotateServerToken: defineMutation(apiContract.operations.rotateServerToken),
+		revokeServer: defineMutation(apiContract.operations.revokeServer),
+		instances: defineQuery(apiContract.operations.instances, { scope: (): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "instances"] }),
+		instanceHistory: defineQuery(apiContract.operations.instanceHistory, {
+			scope: ({ instanceId }: { readonly instanceId: string }): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "instance", instanceId, "history"],
+		}),
+		dependencies: defineQuery(apiContract.operations.dependencies, { scope: (): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "dependencies"] }),
+		dependencyHistory: defineQuery(apiContract.operations.dependencyHistory, {
+			scope: ({ dependency }: { readonly dependency: string }): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "dependency", dependency, "history"],
+		}),
+		alerts: defineQuery(apiContract.operations.alerts, { scope: (): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "alerts"] }),
+		alertSettings: defineQuery(apiContract.operations.alertSettings, { scope: (): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "alert-settings"] }),
+		updateAlertSettings: defineMutation(apiContract.operations.updateAlertSettings),
+		backups: defineQuery(apiContract.operations.backups, { scope: (): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "backups"] }),
+		createBackup: defineMutation(apiContract.operations.createBackup),
+		backupSchedule: defineMutation(apiContract.operations.backupSchedule),
+		pinBackup: defineMutation(apiContract.operations.pinBackup),
+		/** A one-time, five-minute link after a fresh second-factor proof: never cached. */
+		backupDownload: defineMutation(apiContract.operations.backupDownload),
+		deleteBackup: defineMutation(apiContract.operations.deleteBackup),
+		loadTests: defineQuery(apiContract.operations.loadTests, { scope: (): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "load-tests"] }),
+		startLoadTest: defineMutation(apiContract.operations.startLoadTest),
+		loadTest: defineQuery(apiContract.operations.loadTest, { scope: ({ runId }: { readonly runId: string }): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "load-test", runId] }),
+		abortLoadTest: defineMutation(apiContract.operations.abortLoadTest),
+		loadTestCaps: defineMutation(apiContract.operations.loadTestCaps),
+		purgeLoadTestData: defineMutation(apiContract.operations.purgeLoadTestData),
 	},
 	product: {
 		list: defineQuery(apiContract.product.list, { scope: (): ApiQueryKey => ["product", "list"] }),

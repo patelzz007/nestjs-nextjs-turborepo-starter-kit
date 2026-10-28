@@ -9,6 +9,23 @@ export interface StorageUploadInput {
 	readonly metadata?: Readonly<Record<string, string>>;
 }
 
+/**
+ * A large private object written from a stream (a database backup): never held in memory whole.
+ * Providers that support it upload in parts and retry only a failed part.
+ */
+export interface StorageStreamUploadInput {
+	readonly locator: StorageObjectLocator;
+	readonly stream: Readable;
+	/** Any media type: a stream upload is not a user document, so it is not limited to `DocumentMimeType`. */
+	readonly contentType: string;
+	readonly metadata?: Readonly<Record<string, string>>;
+}
+
+/** What a stream upload wrote. */
+export interface StorageStreamUploadResult extends StorageUploadResult {
+	readonly sizeBytes: number;
+}
+
 export interface StorageUploadResult {
 	readonly locator: StorageObjectLocator;
 	readonly revision: string | null;
@@ -49,6 +66,8 @@ export interface StorageHeadObjectResult {
 /** Provider-neutral private object storage port. */
 export interface ObjectStorage {
 	upload(input: StorageUploadInput): Promise<StorageUploadResult>;
+	/** Writes a large object from a stream, in parts where the provider supports it (only a failed part is retried). */
+	uploadStream(input: StorageStreamUploadInput): Promise<StorageStreamUploadResult>;
 	getObject(locator: StorageObjectLocator): Promise<Buffer | null>;
 	/**
 	 * Streams the object's bytes without buffering the whole object in memory.

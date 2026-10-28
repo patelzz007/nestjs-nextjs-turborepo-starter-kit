@@ -12,6 +12,7 @@ import GitPullRequestIcon from "lucide-react-native/icons/git-pull-request";
 import KeyRoundIcon from "lucide-react-native/icons/key-round";
 import LockKeyholeIcon from "lucide-react-native/icons/lock-keyhole";
 import PaletteIcon from "lucide-react-native/icons/palette";
+import ServerIcon from "lucide-react-native/icons/server";
 import ScanQrCodeIcon from "lucide-react-native/icons/scan-qr-code";
 import ShieldCheckIcon from "lucide-react-native/icons/shield-check";
 import SmartphoneIcon from "lucide-react-native/icons/smartphone";
@@ -22,6 +23,7 @@ import { ROUTES, type AppRoute } from "../../runtime/routes";
 import { GITHUB_ACCOUNT_TITLE, PULL_REQUESTS_TITLE } from "../../contexts/integrations-github";
 import { PDF_VIEWER_TITLE } from "../pdf-viewer/labels";
 import { TILL_TITLE } from "../../contexts/pos";
+import { SERVERS_TITLE } from "../../contexts/operations";
 import { APP_TABS, type AppTab } from "./app-tabs";
 
 export interface DrawerDestination {
@@ -95,12 +97,31 @@ export const GITHUB_DRAWER_GROUP: DrawerDestinationGroup = {
 	],
 };
 
+/** The platform's servers (ADR 068): shown only to people the API lets watch them. */
+export const OPERATIONS_DRAWER_GROUP: DrawerDestinationGroup = {
+	title: "Operations",
+	tone: "rose",
+	destinations: [{ label: SERVERS_TITLE, icon: ServerIcon, route: ROUTES.servers, isTab: false }],
+};
+
+/** Which access-gated sections the API opened to this person. */
+export interface DrawerAccess {
+	readonly github: boolean;
+	readonly operations: boolean;
+}
+
 /**
  * The drawer's sections: the fixed ones, the Developer section in a development build only (`__DEV__` is
- * `false` in a store build, where the gallery's route redirects too), and GitHub for people the API lets use it.
+ * `false` in a store build, where the gallery's route redirects too), then GitHub and Operations for people
+ * the API lets use them.
  */
-export function drawerGroups(githubAvailable: boolean): readonly DrawerDestinationGroup[] {
-	return [...DRAWER_GROUPS, ...(__DEV__ ? [DEVELOPER_DRAWER_GROUP] : []), ...(githubAvailable ? [GITHUB_DRAWER_GROUP] : [])];
+export function drawerGroups(access: DrawerAccess): readonly DrawerDestinationGroup[] {
+	return [
+		...DRAWER_GROUPS,
+		...(__DEV__ ? [DEVELOPER_DRAWER_GROUP] : []),
+		...(access.github ? [GITHUB_DRAWER_GROUP] : []),
+		...(access.operations ? [OPERATIONS_DRAWER_GROUP] : []),
+	];
 }
 
 const TAB_ROUTES: ReadonlySet<string> = new Set(APP_TABS.map((tab: AppTab): string => tab.route));

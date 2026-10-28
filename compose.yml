@@ -154,6 +154,23 @@ services:
 
   # The local email inbox: every email the API sends with EMAIL_PROVIDER=mailpit lands here (nothing
   # leaves the machine). Messages live in memory, so a restart empties the inbox.
+  # The load runner (ADR 068): takes load tests from the API's queue and drives them with k6 against
+  # your local API. `pnpm load-runner` starts it (k6 is inside the image: nothing to install).
+  load-runner:
+    profiles: ["load"]
+    build: { context: ., dockerfile: deploy/docker/Dockerfile, target: load-runner }
+    container_name: hello-world-load-runner
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+      BULLMQ_PREFIX: ${BULLMQ_PREFIX:-bull}
+      LOAD_TEST_TARGET_URL: ${LOAD_TEST_TARGET_URL:-http://host.docker.internal:8080}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [infra]
+
   mailpit:
     image: axllent/mailpit:v1.31.3
     container_name: hello-world-mailpit
@@ -185,7 +202,7 @@ services:
       REDIS_PASSWORD: ""
       REDIS_USE_TLS: "false"
       BULL_PREFIX: bull
-      QUEUE_NAMES: email.send,rewards.auto-publish,claims.expire-pending,claims.expire-referrer,outbox.publish,storage.cleanup,storage.delete,idempotency.retention,storage.scan,outbox.retention,rewards.referral-credit-notify,storage.cdn-invalidate,transaction-log.write
+      QUEUE_NAMES: email.send,rewards.auto-publish,claims.expire-pending,claims.expire-referrer,outbox.publish,storage.cleanup,storage.delete,idempotency.retention,storage.scan,outbox.retention,rewards.referral-credit-notify,storage.cdn-invalidate,transaction-log.write,operations.backup,operations.load-test
     networks:
       - infra
 

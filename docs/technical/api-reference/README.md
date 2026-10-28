@@ -1,6 +1,6 @@
 ---
 title: "API reference"
-description: "Every endpoint of the API (331 operations), generated from the OpenAPI export with real seed-data samples."
+description: "Every endpoint of the API (359 operations), generated from the OpenAPI export with real seed-data samples."
 order: 1
 author: "Generated from the OpenAPI export"
 lastUpdated: 1793145600000
@@ -12,7 +12,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference
 
-Every endpoint of `apps/api` — 331 operations, 229 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+Every endpoint of `apps/api` — 359 operations, 229 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
 
 **Content type.** Every endpoint takes and returns `application/json` unless its *Content type* line names another (a file upload, a download, a live stream). Errors are always `application/json`.
 
@@ -36,6 +36,7 @@ Every endpoint of `apps/api` — 331 operations, 229 with a sample captured from
 | [GitHub pull requests](./github-pull-requests.md) | 25 | Admins link their own fine-grained GitHub token, then list and read pull requests — conversation, commits, files with diffs, line-comment threads and edit histories — as themselves. |
 | [Sample catalog (products and categories)](./catalog-samples.md) | 16 | The reference CRUD modules every new feature copies: list/detail/create/update/soft delete/restore/bulk. |
 | [Kanban boards](./kanban.md) | 24 | The platform staff's two linked boards: the epic → feature → story → task → subtask hierarchy with item keys, moves under the board lock (optimistic locking), Move to… (a new parent), ranked item search, WIP limits, checklists, links, watchers, history, comments with files, CSV import and attachments. |
+| [Platform operations (servers, backups, load tests)](./platform-operations.md) | 28 | The admin panel's operations console (ADR 068): servers and their history, instances, dependencies, alerts, database backups and load tests — and the endpoint a server agent reports to. |
 | [System: health and version](./system.md) | 7 | Liveness, readiness and deep health probes, the apps' connection-quality ping and the API version manifest. |
 
 ## All endpoints
@@ -366,6 +367,34 @@ Every endpoint of `apps/api` — 331 operations, 229 with a sample captured from
 | PUT | [`/api/v1/admin/kanban/tasks/{taskId}/watch`](./kanban.md#put-apiv1adminkanbantaskstaskidwatch) | Watch the item as the signed-in staff member (idempotent); answers the item |
 | DELETE | [`/api/v1/admin/kanban/tasks/{taskId}/watch`](./kanban.md#delete-apiv1adminkanbantaskstaskidwatch) | Stop watching the item (idempotent); answers the item |
 | POST | [`/api/v1/admin/kanban/tasks/import`](./kanban.md#post-apiv1adminkanbantasksimport) | Create several items on one board at once (a CSV import), each at the bottom of its column; all or none. Answers that board |
+| GET | [`/api/v1/admin/operations/alert-settings`](./platform-operations.md#get-apiv1adminoperationsalert-settings) | The alert thresholds and the extra recipients |
+| PUT | [`/api/v1/admin/operations/alert-settings`](./platform-operations.md#put-apiv1adminoperationsalert-settings) | SuperAdmin: change the alert thresholds and the extra recipients (every SuperAdmin always gets alerts) |
+| GET | [`/api/v1/admin/operations/alerts`](./platform-operations.md#get-apiv1adminoperationsalerts) | Alerts: open (default), resolved, or all — newest first |
+| GET | [`/api/v1/admin/operations/backups`](./platform-operations.md#get-apiv1adminoperationsbackups) | SuperAdmin: the backups, the schedule and when the next one runs |
+| POST | [`/api/v1/admin/operations/backups`](./platform-operations.md#post-apiv1adminoperationsbackups) | SuperAdmin: back the database up now (one backup at a time) |
+| DELETE | [`/api/v1/admin/operations/backups/{backupId}`](./platform-operations.md#delete-apiv1adminoperationsbackupsbackupid) | SuperAdmin: delete a finished or failed backup and its file |
+| POST | [`/api/v1/admin/operations/backups/{backupId}/download`](./platform-operations.md#post-apiv1adminoperationsbackupsbackupiddownload) | SuperAdmin: a one-time, five-minute download link (needs a fresh second-factor proof) |
+| PUT | [`/api/v1/admin/operations/backups/{backupId}/pin`](./platform-operations.md#put-apiv1adminoperationsbackupsbackupidpin) | SuperAdmin: keep a backup past the retention (pinned), or let it go |
+| PUT | [`/api/v1/admin/operations/backups/schedule`](./platform-operations.md#put-apiv1adminoperationsbackupsschedule) | SuperAdmin: when the daily backup runs (platform time zone) and how long backups are kept |
+| GET | [`/api/v1/admin/operations/dependencies`](./platform-operations.md#get-apiv1adminoperationsdependencies) | The latest check of every dependency (PostgreSQL, Redis, queues, Kafka, RabbitMQ, public endpoints) |
+| GET | [`/api/v1/admin/operations/dependencies/{dependency}/history`](./platform-operations.md#get-apiv1adminoperationsdependenciesdependencyhistory) | One dependency's history over a range |
+| GET | [`/api/v1/admin/operations/instances`](./platform-operations.md#get-apiv1adminoperationsinstances) | Every instance's latest heartbeat (API and analytics-consumer processes) |
+| GET | [`/api/v1/admin/operations/instances/{instanceId}/history`](./platform-operations.md#get-apiv1adminoperationsinstancesinstanceidhistory) | One instance's history over a range |
+| GET | [`/api/v1/admin/operations/load-tests`](./platform-operations.md#get-apiv1adminoperationsload-tests) | Whether load tests can run here, the caps, the endpoints and the runs |
+| POST | [`/api/v1/admin/operations/load-tests`](./platform-operations.md#post-apiv1adminoperationsload-tests) | Start a load test (one at a time, within the caps, inside the Load Test tenant) |
+| GET | [`/api/v1/admin/operations/load-tests/{runId}`](./platform-operations.md#get-apiv1adminoperationsload-testsrunid) | One load test: its seconds, its steps and the servers' load over the same time |
+| POST | [`/api/v1/admin/operations/load-tests/{runId}/abort`](./platform-operations.md#post-apiv1adminoperationsload-testsrunidabort) | Abort a queued or running load test |
+| PUT | [`/api/v1/admin/operations/load-tests/caps`](./platform-operations.md#put-apiv1adminoperationsload-testscaps) | SuperAdmin: the load-test caps (virtual users, requests per second, minutes) |
+| DELETE | [`/api/v1/admin/operations/load-tests/data`](./platform-operations.md#delete-apiv1adminoperationsload-testsdata) | SuperAdmin: permanently delete what load tests created in the Load Test tenant (ADR 068, exception 2) |
+| GET | [`/api/v1/admin/operations/overview`](./platform-operations.md#get-apiv1adminoperationsoverview) | Every server, instance and dependency with its live numbers, and the open alerts |
+| GET | [`/api/v1/admin/operations/servers`](./platform-operations.md#get-apiv1adminoperationsservers) | Every registered server with its latest sample |
+| POST | [`/api/v1/admin/operations/servers`](./platform-operations.md#post-apiv1adminoperationsservers) | SuperAdmin: register a server and issue its agent token (shown once) |
+| GET | [`/api/v1/admin/operations/servers/{serverId}`](./platform-operations.md#get-apiv1adminoperationsserversserverid) | One server: its host facts, live sample and its cloud provider's view |
+| DELETE | [`/api/v1/admin/operations/servers/{serverId}`](./platform-operations.md#delete-apiv1adminoperationsserversserverid) | SuperAdmin: stop monitoring a server (its token stops working; its history stays until retention) |
+| GET | [`/api/v1/admin/operations/servers/{serverId}/history`](./platform-operations.md#get-apiv1adminoperationsserversserveridhistory) | One server's history over a range (minutes up to a day, hours beyond) |
+| POST | [`/api/v1/admin/operations/servers/{serverId}/token`](./platform-operations.md#post-apiv1adminoperationsserversserveridtoken) | SuperAdmin: a new agent token for a server; the old one stops working |
+| POST | [`/api/v1/operations/agent/report`](./platform-operations.md#post-apiv1operationsagentreport) | A server agent's report (bearer: the server's agent token) |
+| GET | [`/api/v1/operations/backups/{backupId}/file`](./platform-operations.md#get-apiv1operationsbackupsbackupidfile) | The backup file, for a one-time ticket from POST …/download |
 | GET | [`/`](./system.md#get) | Welcome message |
 | GET | [`/health`](./system.md#get-health) | Health check (includes DB status) — deprecated alias, prefer /health/live and /health/ready |
 | GET | [`/health/deep`](./system.md#get-healthdeep) | Deep health check (DB + filesystem + external services) |

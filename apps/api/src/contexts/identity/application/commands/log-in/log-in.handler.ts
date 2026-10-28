@@ -96,6 +96,7 @@ export class LogInHandler implements ICommandHandler<LogInCommand, LoginResult> 
 				ipAddress: input.device.ipAddress,
 				signInMethod: "PASSWORD",
 				device: input.device,
+				isLoadTestUser: account.isLoadTestUser,
 			});
 		}
 

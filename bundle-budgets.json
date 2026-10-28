@@ -48,7 +48,7 @@
 		"/components": 595968,
 		"/components/[slug]": 923648,
 		"/components/kanban-board": 661504,
-		"/components/kanban-board/tasks/[id]": 630784,
+		"/components/kanban-board/tasks/[id]": 634880,
 		"/components/kanban-board/tasks/[id]/edit": 640000,
 		"/emails": 581632,
 		"/emails/log": 656384,
@@ -67,7 +67,15 @@
 		"/users": 678912,
 		"/users/[id]": 674816,
 		"/users/support-access": 720896,
-		"/users/mfa-recovery": 652288
+		"/users/mfa-recovery": 652288,
+		"/operations": 522240,
+		"/operations/alerts": 586752,
+		"/operations/backups": 581632,
+		"/operations/load-tests": 583680,
+		"/operations/load-tests/[id]": 709632,
+		"/operations/load-tests/compare": 709632,
+		"/operations/servers": 721920,
+		"/operations/servers/[id]": 731136
 	},
 	"merchant": {
 		"/": 528384,

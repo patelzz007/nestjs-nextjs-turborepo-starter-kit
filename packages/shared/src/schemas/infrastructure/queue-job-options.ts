@@ -6,7 +6,16 @@ export interface QueueJobRetryOptions {
 	readonly removeOnFail: number;
 }
 
-type QueueJobFamily = "emailSend" | "maintenance" | "outboxPublish" | "storageDelete" | "storageScan" | "storageCdnInvalidate" | "transactionLogWrite";
+type QueueJobFamily =
+	| "emailSend"
+	| "maintenance"
+	| "outboxPublish"
+	| "storageDelete"
+	| "storageScan"
+	| "storageCdnInvalidate"
+	| "transactionLogWrite"
+	| "operationsBackup"
+	| "operationsLoadTest";
 
 /** Default BullMQ retry settings per queue family. */
 export const QUEUE_JOB_OPTIONS: Readonly<Record<QueueJobFamily, QueueJobRetryOptions>> = {
@@ -54,5 +63,19 @@ export const QUEUE_JOB_OPTIONS: Readonly<Record<QueueJobFamily, QueueJobRetryOpt
 		backoff: { type: "exponential", delay: 1_000 },
 		removeOnComplete: 100,
 		removeOnFail: 1_000,
+	},
+	/** One database backup (ADR 068): one retry for a blip; a failure is recorded on the backup row and shown. */
+	operationsBackup: {
+		attempts: 2,
+		backoff: { type: "exponential", delay: 30_000 },
+		removeOnComplete: 100,
+		removeOnFail: 100,
+	},
+	/** One load test (ADR 068): never retried — a second run would double the load on the platform without anyone asking. */
+	operationsLoadTest: {
+		attempts: 1,
+		backoff: { type: "exponential", delay: 1_000 },
+		removeOnComplete: 100,
+		removeOnFail: 100,
 	},
 };

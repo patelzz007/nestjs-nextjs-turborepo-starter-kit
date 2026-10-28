@@ -42,6 +42,10 @@ export const ADMIN_MENU_AUTHORIZATION: ReadonlyMap<string, SidebarAuthorization>
 	[ROUTES.catalog.products.list, { permissions: [PERMISSION.PRODUCT.LIST] }],
 	// GET /admin/kanban/board (LIST KANBAN_TASK)
 	[ROUTES.kanban.board, { permissions: [PERMISSION.KANBAN_TASK.LIST] }],
+	// GET /admin/operations/overview (the servers page) and /alerts (LIST SERVER_METRIC); GET /admin/operations/load-tests (LIST LOAD_TEST)
+	[ROUTES.operations.servers, { permissions: [PERMISSION.SERVER_METRIC.LIST] }],
+	[ROUTES.operations.alerts, { permissions: [PERMISSION.SERVER_METRIC.LIST] }],
+	[ROUTES.operations.loadTests, { permissions: [PERMISSION.LOAD_TEST.LIST] }],
 	// GET /github/account (READ GITHUB_PULL_REQUEST) · PUT + DELETE /github/account (UPDATE GITHUB_PULL_REQUEST)
 	[ROUTES.account.github, { permissions: [PERMISSION.GITHUB_PULL_REQUEST.READ, PERMISSION.GITHUB_PULL_REQUEST.UPDATE], mode: "all" }],
 ]);

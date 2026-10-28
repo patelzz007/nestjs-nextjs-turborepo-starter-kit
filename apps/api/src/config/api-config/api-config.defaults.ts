@@ -123,3 +123,9 @@ export const DEFAULT_BULLMQ_PREFIX = "bull";
 export const DEFAULT_KAFKA_DELIVERY_TIMEOUT_MS = 30 * MS_PER_SECOND;
 /** librdkafka's floor for `message.timeout.ms` (1 s). */
 export const MIN_KAFKA_DELIVERY_TIMEOUT_MS = MS_PER_SECOND;
+
+/** The image `pg_dump` runs from when the installed client is older than the server (ADR 068). Matches compose.yml's PostgreSQL. */
+export const DEFAULT_BACKUP_PG_DUMP_DOCKER_IMAGE = "postgres:18.6";
+
+/** The search path when the environment has none (a bare container). */
+export const DEFAULT_EXECUTABLE_SEARCH_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";

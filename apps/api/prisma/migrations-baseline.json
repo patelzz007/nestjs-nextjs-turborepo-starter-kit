@@ -1,5 +1,5 @@
 {
-	"baseline": "20261028124647_init",
+	"baseline": "20261028162942_init",
 	"reason": "Sixth pre-release reset: the owner regenerated the one init migration after ADR 067 Phase 4 (Cedar, the JSON policy engine, MANAGE and role inheritance removed). No shared or deployed database has run the previous baseline.",
 	"since": "2026-10-28"
 }

@@ -33,6 +33,10 @@ export const ROUTES = {
 	pullRequestCommit: "/profile/pull-request-commit",
 	/** Linking or removing the admin's own GitHub token. */
 	githubAccount: "/profile/github-account",
+	/** The platform's servers (ADR 068), opened from the drawer's Operations section. */
+	servers: "/settings/servers",
+	/** One server's history and spec (`?serverId=`). */
+	server: "/settings/server",
 	settings: "/settings",
 	security: "/settings/security",
 	devices: "/settings/devices",

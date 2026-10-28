@@ -1,11 +1,16 @@
 import { Readable } from "node:stream";
 
 import {
+	AbortMultipartUploadCommand,
+	CompleteMultipartUploadCommand,
 	CopyObjectCommand,
+	CreateMultipartUploadCommand,
+	UploadPartCommand,
 	DeleteObjectCommand,
 	GetObjectCommand,
 	HeadObjectCommand,
 	PutObjectCommand,
+	type CompletedPart,
 	type S3Client,
 	S3ServiceException,
 	type GetObjectCommandOutput,
@@ -20,6 +25,8 @@ import type {
 	StorageBrowserUploadTicketResult,
 	StorageHeadObjectResult,
 	StorageSignedUrlInput,
+	StorageStreamUploadInput,
+	StorageStreamUploadResult,
 	StorageUploadInput,
 	StorageUploadResult,
 } from "../../domain/object-storage.port";
@@ -34,6 +41,10 @@ import {
 import { sha256Base64ToHex, sha256HexToBase64 } from "../../utils/checksum.util";
 
 const HTTP_NOT_FOUND = 404;
+/** Multipart part size: S3's minimum is 5 MiB for every part but the last. */
+export const MULTIPART_PART_BYTES = 16 * 1_024 * 1_024;
+/** Attempts per part before the whole upload is aborted. */
+export const MULTIPART_PART_ATTEMPTS = 3;
 /** Server-side encryption applied to every object the API writes (SSE-S3). */
 const SERVER_SIDE_ENCRYPTION = "AES256";
 
@@ -96,6 +107,63 @@ export class S3ObjectStorageAdapter implements ObjectStorage, PublicDelivery {
 		);
 		const revision = revisionFromEtag(result.ETag);
 		return { locator: { ...input.locator, revision }, revision };
+	}
+
+	/**
+	 * Multipart upload: the stream is cut into {@link MULTIPART_PART_BYTES} parts, each sent (and, on
+	 * failure, retried up to {@link MULTIPART_PART_ATTEMPTS} times) on its own, so a network blip
+	 * re-sends one part, never the whole object. Any part that still fails aborts the upload, so no
+	 * half-written object or orphaned parts are left behind.
+	 */
+	public async uploadStream(input: StorageStreamUploadInput): Promise<StorageStreamUploadResult> {
+		const { locator } = input;
+		const created = await this.client.send(
+			new CreateMultipartUploadCommand({
+				Bucket: locator.container,
+				Key: locator.path,
+				ContentType: input.contentType,
+				ServerSideEncryption: SERVER_SIDE_ENCRYPTION,
+				Metadata: input.metadata ?? {},
+			}),
+		);
+		const uploadId: string | undefined = created.UploadId;
+		if (uploadId === undefined) {
+			throw new Error("S3 did not start the multipart upload");
+		}
+		try {
+			const parts: CompletedPart[] = [];
+			let sizeBytes = 0;
+			for await (const part of chunked(input.stream, MULTIPART_PART_BYTES)) {
+				const partNumber: number = parts.length + 1;
+				const etag: string = await this.uploadPartWithRetry(locator, uploadId, partNumber, part);
+				parts.push({ ETag: etag, PartNumber: partNumber });
+				sizeBytes += part.length;
+			}
+			const done = await this.client.send(
+				new CompleteMultipartUploadCommand({ Bucket: locator.container, Key: locator.path, UploadId: uploadId, MultipartUpload: { Parts: parts } }),
+			);
+			const revision = revisionFromEtag(done.ETag);
+			return { locator: { ...locator, revision }, revision, sizeBytes };
+		} catch (error) {
+			await this.client.send(new AbortMultipartUploadCommand({ Bucket: locator.container, Key: locator.path, UploadId: uploadId })).catch(() => undefined);
+			throw error;
+		}
+	}
+
+	private async uploadPartWithRetry(locator: StorageObjectLocator, uploadId: string, partNumber: number, body: Buffer): Promise<string> {
+		let lastError: Error = new Error(`Part ${String(partNumber)} was not uploaded`);
+		for (let attempt = 1; attempt <= MULTIPART_PART_ATTEMPTS; attempt += 1) {
+			try {
+				const result = await this.client.send(new UploadPartCommand({ Bucket: locator.container, Key: locator.path, UploadId: uploadId, PartNumber: partNumber, Body: body }));
+				if (result.ETag !== undefined) {
+					return result.ETag;
+				}
+				lastError = new Error(`S3 returned no ETag for part ${String(partNumber)}`);
+			} catch (error) {
+				lastError = error instanceof Error ? error : new Error(String(error));
+			}
+		}
+		throw lastError;
 	}
 
 	public async getObject(locator: StorageObjectLocator): Promise<Buffer | null> {
@@ -250,5 +318,26 @@ export class S3ObjectStorageAdapter implements ObjectStorage, PublicDelivery {
 			}),
 		);
 		return { cachedObjectKeys: [input.locator.path] };
+	}
+}
+
+/** Cuts a byte stream into buffers of `size` bytes (the last one shorter). */
+export async function* chunked(stream: Readable, size: number): AsyncGenerator<Buffer> {
+	let pending: Buffer[] = [];
+	let pendingBytes = 0;
+	for await (const chunk of stream) {
+		const bytes: Buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
+		pending.push(bytes);
+		pendingBytes += bytes.length;
+		while (pendingBytes >= size) {
+			const joined: Buffer = Buffer.concat(pending);
+			yield joined.subarray(0, size);
+			const rest: Buffer = joined.subarray(size);
+			pending = rest.length === 0 ? [] : [rest];
+			pendingBytes = rest.length;
+		}
+	}
+	if (pendingBytes > 0) {
+		yield Buffer.concat(pending);
 	}
 }

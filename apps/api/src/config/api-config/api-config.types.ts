@@ -1,7 +1,7 @@
 // config/api-config/api-config.types.ts — The grouped, typed configuration the API reads (`ApiConfig`).
 // Part of the API environment contract; `../api-config.schema.ts` is its public entry.
 
-import type { AppVersion, GithubRepositoryParams, NodeEnv } from "@workspace/shared";
+import type { AppVersion, GithubRepositoryParams, NodeEnv, OpsCloudProvider } from "@workspace/shared";
 import type { KafkaSecurityOptions } from "@workspace/messaging/kafka";
 
 import type {
@@ -262,6 +262,26 @@ export interface ObservabilityConfig {
 export type TenancyConfig = { readonly mode: "single"; readonly defaultTenantId: string } | { readonly mode: "multi" };
 
 /** The API's complete, validated configuration. Built once at startup. */
+/** The operations console (ADR 068): cloud facts, backups and load tests. */
+export interface OperationsConfig {
+	/** Each cloud's read-only API token; `null` hides that provider's view of its servers. */
+	readonly cloudTokens: Readonly<Record<OpsCloudProvider, string | null>>;
+	/** The backup's own login (`BACKUP_DATABASE_URL`); `null` = backups are not set up here. */
+	readonly backupDatabaseUrl: string | null;
+	/** The image `pg_dump` runs from when the installed client is older than the server. */
+	readonly pgDumpDockerImage: string;
+	/** Where `pg_dump` and `docker` are looked up (`PATH`). */
+	readonly executableSearchPath: string;
+	readonly loadTesting: {
+		/** `LOAD_TESTING_ENABLED`. */
+		readonly enabled: boolean;
+		/** `LOAD_TESTING_ALLOW_PRODUCTION`: the second switch production needs. */
+		readonly allowProduction: boolean;
+		/** `LOAD_TEST_TARGET_URL`, or `null` for the API's own public address. */
+		readonly targetUrl: string | null;
+	};
+}
+
 export interface ApiConfig {
 	readonly runtime: RuntimeConfig;
 	readonly http: HttpConfig;
@@ -280,4 +300,5 @@ export interface ApiConfig {
 	readonly storage: StorageConfig;
 	readonly observability: ObservabilityConfig;
 	readonly tenancy: TenancyConfig;
+	readonly operations: OperationsConfig;
 }

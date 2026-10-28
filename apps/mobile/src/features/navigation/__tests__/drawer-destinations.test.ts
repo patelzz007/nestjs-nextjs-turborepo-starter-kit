@@ -4,6 +4,7 @@ import {
 	DRAWER_TABS,
 	drawerGroups,
 	GITHUB_DRAWER_GROUP,
+	OPERATIONS_DRAWER_GROUP,
 	isTabRoot,
 	type DrawerDestination,
 	type DrawerDestinationGroup,
@@ -67,8 +68,8 @@ describe("drawerGroups", () => {
 	it("adds the UI kit gallery (Developer) in a development build, then GitHub for people allowed to use it", () => {
 		setDevelopmentBuild(true);
 
-		expect(drawerGroups(true)).toStrictEqual([...DRAWER_GROUPS, DEVELOPER_DRAWER_GROUP, GITHUB_DRAWER_GROUP]);
-		expect(drawerGroups(false)).toStrictEqual([...DRAWER_GROUPS, DEVELOPER_DRAWER_GROUP]);
+		expect(drawerGroups({ github: true, operations: false })).toStrictEqual([...DRAWER_GROUPS, DEVELOPER_DRAWER_GROUP, GITHUB_DRAWER_GROUP]);
+		expect(drawerGroups({ github: false, operations: false })).toStrictEqual([...DRAWER_GROUPS, DEVELOPER_DRAWER_GROUP]);
 		expect(DEVELOPER_DRAWER_GROUP.title).toBe("Developer");
 		expect(DEVELOPER_DRAWER_GROUP.tone).toBe("amber");
 		expect(routesOf(DEVELOPER_DRAWER_GROUP.destinations)).toStrictEqual(["/settings/components"]);
@@ -77,8 +78,17 @@ describe("drawerGroups", () => {
 	it("never lists the gallery in a store build", () => {
 		setDevelopmentBuild(false);
 
-		expect(drawerGroups(true)).toStrictEqual([...DRAWER_GROUPS, GITHUB_DRAWER_GROUP]);
-		expect(drawerGroups(false)).toStrictEqual(DRAWER_GROUPS);
+		expect(drawerGroups({ github: true, operations: false })).toStrictEqual([...DRAWER_GROUPS, GITHUB_DRAWER_GROUP]);
+		expect(drawerGroups({ github: false, operations: false })).toStrictEqual(DRAWER_GROUPS);
+	});
+
+	it("adds Operations (the platform's servers) for people the API lets watch them, after GitHub", () => {
+		setDevelopmentBuild(false);
+
+		expect(drawerGroups({ github: true, operations: true })).toStrictEqual([...DRAWER_GROUPS, GITHUB_DRAWER_GROUP, OPERATIONS_DRAWER_GROUP]);
+		expect(drawerGroups({ github: false, operations: true })).toStrictEqual([...DRAWER_GROUPS, OPERATIONS_DRAWER_GROUP]);
+		expect(OPERATIONS_DRAWER_GROUP.title).toBe("Operations");
+		expect(routesOf(OPERATIONS_DRAWER_GROUP.destinations)).toStrictEqual(["/settings/servers"]);
 	});
 });
 

@@ -8,6 +8,7 @@ import type { MembershipRepository, PersistedMembership } from "../../domain/rep
 import type { TenantsDb } from "./tenant-db";
 import { TenantRoleCopies } from "../../../authorization/public-api";
 import { withUniqueViolationAs } from "./unique-violation";
+import { LoadTestUserConfinedError } from "../../../../platform/domain/errors/load-test-user-confined.error";
 
 type MembershipRow = MembershipRecord & { readonly locationScopes: readonly Pick<MembershipLocationScope, "scopeType" | "locationId">[] };
 
@@ -38,6 +39,18 @@ export class PrismaMembershipRepository implements MembershipRepository {
 		return (await this.db.membership.findFirst({ where: { tenantId, userId, isDeleted: false }, select: { id: true } })) !== null;
 	}
 
+	/** A load-test user joins only the Load Test tenant (ADR 068). */
+	private async assertLoadTestConfinement(userId: string, tenantId: string): Promise<void> {
+		const user = await this.db.user.findFirst({ where: { id: userId }, select: { isLoadTestUser: true } });
+		if (user?.isLoadTestUser !== true) {
+			return;
+		}
+		const tenant = await this.db.tenant.findFirst({ where: { id: tenantId }, select: { isLoadTest: true } });
+		if (tenant?.isLoadTest !== true) {
+			throw new LoadTestUserConfinedError(userId);
+		}
+	}
+
 	public async getLiveForUpdate(tenantId: string, membershipId: string): Promise<Membership | null> {
 		await this.db.$queryRaw`SELECT id FROM "Membership" WHERE id = ${membershipId} AND "tenantId" = ${tenantId} AND "isDeleted" = false FOR UPDATE`;
 		return this.load({ id: membershipId, tenantId, isDeleted: false });
@@ -54,6 +67,7 @@ export class PrismaMembershipRepository implements MembershipRepository {
 	}
 
 	public async add(membership: Membership, duplicateMessage: string): Promise<void> {
+		await this.assertLoadTestConfinement(membership.userId, membership.tenantId);
 		// A member holds the tenant's own copy of their role's template (ADR 067).
 		const roleId = await new TenantRoleCopies(this.db).roleIdFor(membership.tenantId, membership.role);
 		await withUniqueViolationAs(

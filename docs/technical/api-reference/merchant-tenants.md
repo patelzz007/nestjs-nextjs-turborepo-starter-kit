@@ -4939,7 +4939,7 @@ A member's extra permissions still in force, newest first, with their end time
 | `data[].membershipId` | string (uuid) | yes |  |
 | `data[].permission` | object | yes |  |
 | `data[].permission.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data[].permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+| `data[].permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -4982,7 +4982,7 @@ Only a permission the caller's own role gives, within the caller's stores.
 | `locationId` | string (uuid) | no |  |
 | `permission` | object | yes |  |
 | `permission.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+| `permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
 
 **Response 201 Created** (`application/json`) — Permission granted
 
@@ -4997,7 +4997,7 @@ Only a permission the caller's own role gives, within the caller's stores.
 | `data.membershipId` | string (uuid) | yes |  |
 | `data.permission` | object | yes |  |
 | `data.permission.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data.permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+| `data.permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -5082,7 +5082,7 @@ The tenant's roles, with their permissions and how many members hold each
 | `data[].name` | string | yes |  |
 | `data[].permissions` | object[] | yes |  |
 | `data[].permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data[].permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+| `data[].permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
 | `data[].templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -5122,7 +5122,7 @@ Create a role from tenant permissions the caller's own role holds
 | `name` | string | yes | length 1–100 |
 | `permissions` | object[] | yes | 0–200 items |
 | `permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+| `permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
 
 **Response 201 Created** (`application/json`) — Role created
 
@@ -5133,7 +5133,7 @@ Create a role from tenant permissions the caller's own role holds
 | `data.name` | string | yes |  |
 | `data.permissions` | object[] | yes |  |
 | `data.permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
 | `data.templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -5174,7 +5174,7 @@ Rename a role or replace its permissions (never the Owner role)
 | `name` | string | no | length 1–100 |
 | `permissions` | object[] | no | 0–200 items |
 | `permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+| `permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
 
 **Response 200 OK** (`application/json`) — Role updated
 
@@ -5185,7 +5185,7 @@ Rename a role or replace its permissions (never the Owner role)
 | `data.name` | string | yes |  |
 | `data.permissions` | object[] | yes |  |
 | `data.permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
 | `data.templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -5357,7 +5357,7 @@ Make a role equal the template it was copied from again
 | `data.name` | string | yes |  |
 | `data.permissions` | object[] | yes |  |
 | `data.permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
 | `data.templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)

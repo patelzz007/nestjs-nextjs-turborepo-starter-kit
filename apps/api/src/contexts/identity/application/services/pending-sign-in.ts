@@ -34,4 +34,6 @@ export interface PendingLoginContext {
 	/** The request continuing the login: the device a session issued now is stored for. */
 	readonly device: SessionDeviceContext;
 	readonly mfaAssured?: boolean;
+	/** A load-test user (ADR 068): its `.invalid` address cannot receive a new-device code, so none is asked for. */
+	readonly isLoadTestUser?: boolean;
 }

@@ -37,6 +37,7 @@ export {
 	type MobileConfig,
 	type ObservabilityConfig,
 	type ObserveConfig,
+	type OperationsConfig,
 	type RateLimitConfig,
 	type RuntimeConfig,
 	type SessionsConfig,

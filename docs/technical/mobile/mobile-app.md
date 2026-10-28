@@ -883,7 +883,10 @@ tests in [ADR 031](../../adr/031-jest-expo-for-mobile-tests.md).
 | Tests          | jest-expo `~58.0.12` + `@react-native/jest-preset` 0.88.x + `@testing-library/react-native` | on Jest 30; see §9.11 for the Reanimated resolver                    |
 
 Expo-managed packages are always installed with `npx expo install <pkg>`, never `pnpm add`, so
-they match the SDK. `npx expo install --check` runs in tests and CI and fails on a mismatch.
+they match the SDK. `expo install --check` runs in tests and CI **offline** (`EXPO_OFFLINE=1`): it
+compares against the version table of the installed `expo` package and fails on a mismatch, but a
+newer Expo release never fails the gate (pnpm refuses releases younger than a day, so an online check
+failed for 24 hours after every Expo patch). `pnpm check:expo-latest` asks Expo's servers on demand.
 
 ### 9.2 Folder structure
 
@@ -1621,7 +1624,7 @@ is open, sign out everywhere from the phone while merchant web is open.
 | ----------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `lint`      | `oxfmt --check` + `oxlint`                          | the same lint gate as every workspace (fails on errors)                                                                          |
 | `typecheck` | `tsrs --noEmit`                                     | strict flags from the shared TypeScript config                                                                     |
-| `test`      | `jest` (jest-expo) + `npx expo install --check`     | tests and SDK version alignment                                                                                    |
+| `test`      | `jest` (jest-expo) + `expo install --check` offline | tests and alignment with the installed SDK (deterministic)                                                         |
 | `build`     | `npx expo export --platform ios --platform android` | bundle check: proves Metro resolves every workspace package in the pnpm workspace, without Xcode or Android Studio |
 
 CI's existing `pnpm turbo run lint|typecheck|test|build` jobs pick the new workspace up

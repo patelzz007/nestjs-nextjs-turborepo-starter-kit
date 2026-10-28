@@ -11,6 +11,8 @@ import type {
 	StorageBrowserUploadTicketResult,
 	StorageHeadObjectResult,
 	StorageSignedUrlInput,
+	StorageStreamUploadInput,
+	StorageStreamUploadResult,
 	StorageUploadInput,
 	StorageUploadResult,
 } from "../../src/platform/infrastructure/storage/domain/object-storage.port";
@@ -89,6 +91,17 @@ export class InMemoryObjectStorage implements ObjectStorage, PublicDelivery {
 	public upload(input: StorageUploadInput): Promise<StorageUploadResult> {
 		this.put(input.locator, input.buffer);
 		return Promise.resolve({ locator: { ...input.locator, revision: "rev" }, revision: "rev" });
+	}
+
+	/** Reads the whole stream into memory (a test fake: the objects are small). */
+	public async uploadStream(input: StorageStreamUploadInput): Promise<StorageStreamUploadResult> {
+		const chunks: Buffer[] = [];
+		for await (const chunk of input.stream) {
+			chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+		}
+		const bytes: Buffer = Buffer.concat(chunks);
+		this.put(input.locator, bytes);
+		return { locator: { ...input.locator, revision: "rev" }, revision: "rev", sizeBytes: bytes.length };
 	}
 
 	public getObject(locator: StorageObjectLocator): Promise<Buffer | null> {

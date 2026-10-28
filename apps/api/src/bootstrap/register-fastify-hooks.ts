@@ -7,6 +7,8 @@ import { redactUrl } from "../platform/infrastructure/nest-logging/redaction";
 import { readFirstHeader, readReplyHeader } from "../platform/infrastructure/utils/http-headers";
 import { parsePreSerializationValue, serializePreSerializationValue, type PreSerializationPayload } from "../platform/infrastructure/utils/serialize-pre-serialization-value";
 import { LogService } from "../platform/infrastructure/logging/logs.service";
+import { UNAUDITED_PROBE_ROUTES } from "../platform/infrastructure/http/probe-routes";
+import { RequestMetricsRecorder } from "../contexts/operations/public-api";
 import { VersionController } from "../platform/presentation/http/health/version.controller";
 import { apiVersionOfUrl } from "./fastify-api-version";
 
@@ -101,6 +103,12 @@ export function registerFastifyHooks(app: NestFastifyApplication): void {
 	});
 
 	server.addHook("onResponse", (request, reply, done): void => {
+		// This instance's request metrics (the operations console, ADR 068): by route template, never
+		// the raw URL, and without the health probes and the agent reports.
+		const route: string = request.routeOptions.url ?? "unmatched";
+		if (!UNAUDITED_PROBE_ROUTES.has(route)) {
+			app.get(RequestMetricsRecorder).record(`${request.method} ${route}`, reply.statusCode, reply.elapsedTime);
+		}
 		const logService: LogService = app.get(LogService);
 		const servedVersion: string | undefined = apiVersionOfUrl(request.url);
 		logService.info(

@@ -77,6 +77,8 @@ export const SECRET_LOOKING_COLUMN = /hash|secret|cipher|token|digest|passw|salt
 
 const AUDIT_TRAIL_REASON = "An append-only audit trail of its own: each row already IS the record of an action whose business rows are captured.";
 const LOG_REASON = "A log sink written as a side effect of other actions; the actions themselves are captured and the HTTP audit trail records each request.";
+const TELEMETRY_REASON =
+	"Machine-written metric history (ADR 068), one row per minute or second; the actions that change it (registering, starting, deleting) are captured on their own tables.";
 const MESSAGING_REASON = "Messaging plumbing (outbox / inbox bookkeeping) that mirrors domain writes already captured on their own tables.";
 
 /** Tables never captured, each with the reason. Everything else in `public` is. */
@@ -96,6 +98,11 @@ export const DATA_CHANGE_CAPTURE_EXEMPTIONS: Readonly<Record<string, string>> = 
 	OutboxEvent: MESSAGING_REASON,
 	InboxProcessedEvent: MESSAGING_REASON,
 	InboxDeadLetter: MESSAGING_REASON,
+	OpsServerSample: TELEMETRY_REASON,
+	OpsInstanceSample: TELEMETRY_REASON,
+	OpsDependencySample: TELEMETRY_REASON,
+	LoadTestPoint: TELEMETRY_REASON,
+	LoadTestStepStat: TELEMETRY_REASON,
 	PlatformResourceIdempotencyRecord: "Idempotency-Key replay cache (expired rows are taken over in place); the request it replays is in the HTTP audit trail.",
 };
 
@@ -108,6 +115,7 @@ export const DATA_CHANGE_SECRET_COLUMNS: Readonly<Record<string, readonly string
 	TwoFactorPendingSetup: ["secretCiphertext", "secretIv", "backupCodesHashes"],
 	RefreshToken: ["token", "previousTokenHash"],
 	TenantApiKey: ["keyHash"],
+	OpsServer: ["agentTokenHash"],
 	TenantInvitation: ["tokenHash"],
 	TenantTerminal: ["pairingCodeHash"],
 	RewardClaim: ["redemptionTokenHash", "backupCodeHash"],
@@ -121,6 +129,9 @@ const KEY_VERSION_REASON = "The version number of the key that encrypted a secre
 
 /** Columns whose name matches {@link SECRET_LOOKING_COLUMN} but whose value is not secret — kept in change records. */
 export const DATA_CHANGE_NON_SECRET_COLUMNS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+	OpsServer: {
+		agentTokenPrefix: "The first 16 characters of a 49-character agent token, shown so operators can tell tokens apart; the remaining 256 random bits stay secret.",
+	},
 	User: {
 		tokenVersion: "A counter bumped to revoke every issued token at once; a number, never a credential.",
 		twoFactorLastTotpStep: "The last accepted TOTP time step (the replay guard): a counter, not the TOTP secret or a code.",

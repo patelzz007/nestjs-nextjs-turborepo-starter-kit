@@ -162,4 +162,17 @@ export const SEED_COVERAGE_EXEMPTIONS: readonly SeedCoverageExemption[] = [
 		"SignupReferral",
 		"ADR 035: a signup referral is never withdrawn, swapped or cleared — there is no user, referrer or admin delete in this slice and the row is the permanent record of the account's origin — so no correct database holds a soft-deleted signup referral.",
 	),
+	// ── Operations console (ADR 068) ──
+	...["OpsServerSample", "OpsInstanceSample", "OpsDependencySample", "LoadTestPoint", "LoadTestStepStat"].map((table: string): SeedCoverageExemption =>
+		neverSoftDeleted(
+			table,
+			"Machine-written metric history: retention removes whole rows past their age (minutes after 7 days, hours after a year; a run's seconds with the run), and nothing soft-deletes one.",
+		),
+	),
+	neverSoftDeleted("OpsAlert", "An alert ends through resolvedAt and is kept as the incident record; nothing soft-deletes one."),
+	neverSoftDeleted("OpsSettings", "The one settings row is created on first use and updated in place for the platform's whole life; nothing soft-deletes it."),
+	neverSoftDeleted(
+		"LoadTestRun",
+		"A load test ends through its status and is kept as the run's record (the purge removes what it created, never the run); nothing soft-deletes one.",
+	),
 ];

@@ -104,9 +104,11 @@ export const EmailSendResultSchema = z.discriminatedUnion("ok", [
 		ok: z.literal(false),
 		/**
 		 * - `persistence` — the email log row could not be written, so nothing was sent;
-		 * - `queue`       — the send could not be handed to the email queue (the log row is marked failed).
+		 * - `queue`       — the send could not be handed to the email queue (the log row is marked failed);
+		 * - `undeliverable` — the recipient is at a reserved `.invalid` domain (RFC 2606) — every load-test
+		 *   user is (ADR 068) — so nothing is written or sent.
 		 */
-		reason: z.enum(["invalid-props", "config", "timeout", "rate-limited", "api-error", "persistence", "queue"]),
+		reason: z.enum(["invalid-props", "config", "timeout", "rate-limited", "api-error", "persistence", "queue", "undeliverable"]),
 		detail: z.string().optional(),
 	}),
 ]);
@@ -359,3 +361,11 @@ export const EmailWebhookReceivedResponseSchema = z.object({
 });
 
 export type EmailWebhookReceivedResponse = z.output<typeof EmailWebhookReceivedResponseSchema>;
+
+/** RFC 2606's reserved top-level domain: an address under it can never receive mail (load-test users live there). */
+export const UNDELIVERABLE_EMAIL_DOMAIN_SUFFIX = ".invalid";
+
+/** Whether an address is under {@link UNDELIVERABLE_EMAIL_DOMAIN_SUFFIX}. */
+export function isUndeliverableEmail(address: string): boolean {
+	return address.trim().toLowerCase().endsWith(UNDELIVERABLE_EMAIL_DOMAIN_SUFFIX);
+}

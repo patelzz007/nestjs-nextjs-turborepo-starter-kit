@@ -124,6 +124,14 @@ export const REFERENCE_PAGES: readonly ReferencePage[] = [
 		tags: ["Kanban"],
 	},
 	{
+		slug: "platform-operations",
+		title: "Platform operations (servers, backups, load tests)",
+		description:
+			"The admin panel's operations console (ADR 068): servers and their history, instances, dependencies, alerts, database backups and load tests — and the endpoint a server agent reports to.",
+		guide: { label: "Platform operations console", href: "../operations/platform-operations-console.md" },
+		tags: ["Operations"],
+	},
+	{
 		slug: "system",
 		title: "System: health and version",
 		description: "Liveness, readiness and deep health probes, the apps' connection-quality ping and the API version manifest.",

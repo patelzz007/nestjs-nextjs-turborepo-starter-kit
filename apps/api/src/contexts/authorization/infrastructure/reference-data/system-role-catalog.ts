@@ -1,7 +1,7 @@
 import type { MembershipRole, PermissionAction, PermissionResource, PermissionScope } from "@prisma/client";
 import { MembershipRoleSchema, TENANT_ROLE_TEMPLATE_NAMES, TENANT_ROLE_TEMPLATES } from "@workspace/shared";
 
-import { LOCATION_MANAGER_ROLE_NAME, LOCATION_STAFF_ROLE_NAME } from "../../domain/rbac-catalog";
+import { LOCATION_MANAGER_ROLE_NAME, LOCATION_STAFF_ROLE_NAME, PLATFORM_DEVELOPER_ROLE_NAME } from "../../domain/rbac-catalog";
 
 /** What identifies one permission in the catalog (`@@unique([action, resource, scope])`). */
 export interface PermissionKey {
@@ -37,7 +37,10 @@ export interface SystemRoleDefinition {
  *
  * - SuperAdmin: the full matrix (the `isSuperAdmin` flag on the user row still bypasses checks; the role is for assigned operators).
  * - Admin: the admin panel except DELETE:USER and banning merchants (SuperAdmin only), plus
- *   GitHub pull requests with their own linked token (ADR 052 — no other role gets them), plus the whole kanban board.
+ *   GitHub pull requests with their own linked token (ADR 052 — no other role gets them), plus the whole kanban board,
+ *   plus the operations console's metrics (ADR 068).
+ * - Platform Developer: the operations console (ADR 068) — servers, instances, dependencies, alerts and load tests
+ *   (not the purge) — and nothing else of the admin panel. Backups stay SuperAdmin only.
  * - User: customer app only, every grant OWN-scoped except READ:GITHUB (the configured repositories are shared,
  *   not owned — every signed-in person sees the same contributions), no ADMIN_DASHBOARD.
  * - Location Manager / Location Staff: per-store roles, no longer read by access decisions (ADR 067 — one role per
@@ -68,7 +71,14 @@ export const SYSTEM_ROLE_CATALOG: readonly SystemRoleDefinition[] = [
 			matches(p, "READ", "GITHUB") ||
 			matchesAny(p, "GITHUB_PULL_REQUEST", ["READ", "UPDATE"]) ||
 			matchesAny(p, "KANBAN_TASK", ["CREATE", "READ", "UPDATE", "DELETE", "LIST"]) ||
-			matches(p, "UPDATE", "KANBAN_BOARD"),
+			matches(p, "UPDATE", "KANBAN_BOARD") ||
+			matchesAny(p, "SERVER_METRIC", ["READ", "LIST"]),
+	},
+	{
+		name: PLATFORM_DEVELOPER_ROLE_NAME,
+		description: "Operations console — server, instance and dependency health, history and alerts, and load tests",
+		grants: (p: PermissionKey): boolean =>
+			matches(p, "READ", "ADMIN_DASHBOARD") || matchesAny(p, "SERVER_METRIC", ["READ", "LIST"]) || matchesAny(p, "LOAD_TEST", ["CREATE", "READ", "UPDATE", "LIST"]),
 	},
 	{
 		name: "User",

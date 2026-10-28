@@ -311,7 +311,7 @@ Send one email template (sample props)
 | `data.⟨shape 1⟩ ok` | true | yes |  |
 | `data.⟨shape 2⟩ detail` | string | no |  |
 | `data.⟨shape 2⟩ ok` | false | yes |  |
-| `data.⟨shape 2⟩ reason` | "invalid-props" \| "config" \| "timeout" \| "rate-limited" \| "api-error" \| "persistence" \| "queue" | yes |  |
+| `data.⟨shape 2⟩ reason` | "invalid-props" \| "config" \| "timeout" \| "rate-limited" \| "api-error" \| "persistence" \| "queue" \| "undeliverable" | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 

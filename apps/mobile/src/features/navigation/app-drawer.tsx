@@ -18,6 +18,7 @@ import { ROUTES, type AppRoute } from "../../runtime/routes";
 import { useReadyRuntime } from "../../runtime/runtime-context";
 import { useAppDrawerCommands, useAppDrawerOpen } from "../app-drawer/facade";
 import { accountRowValue, useGithubPullRequestAccess } from "../../contexts/integrations-github";
+import { useOperationsAccess } from "../../contexts/operations";
 import { NetworkStatusPill, SessionStatusPill } from "../app-status/status-pills";
 import { SignOutDialog, useSignOutConfirmation } from "../../contexts/identity";
 import { useAppLockEnabled, useThemePreference } from "../preferences/facade";
@@ -105,7 +106,8 @@ function AppDrawerPanel(): React.JSX.Element {
 		},
 		[appLockEnabled, githubAccountValue, theme],
 	);
-	const groups = drawerGroups(github.kind === "available");
+	const operations = useOperationsAccess();
+	const groups = drawerGroups({ github: github.kind === "available", operations: operations.kind === "available" });
 
 	const version = buildNumber === null ? `Version ${appVersion}` : `Version ${appVersion} (${buildNumber})`;
 

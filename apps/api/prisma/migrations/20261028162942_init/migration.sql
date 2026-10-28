@@ -26,7 +26,7 @@ CREATE TYPE "ImpersonationSessionEndReason" AS ENUM ('STOPPED');
 CREATE TYPE "PermissionAction" AS ENUM ('CREATE', 'READ', 'UPDATE', 'DELETE', 'LIST', 'PUBLISH', 'APPROVE', 'REJECT', 'SUSPEND', 'BAN', 'UNBAN', 'REACTIVATE', 'UNLOCK', 'REDEEM');
 
 -- CreateEnum
-CREATE TYPE "PermissionResource" AS ENUM ('USER', 'PROFILE', 'ROLE', 'PERMISSION', 'ADMIN_DASHBOARD', 'SYSTEM_SETTINGS', 'ANALYTICS', 'AUDIT_LOG', 'REPORT', 'EMAIL', 'GEO', 'REWARD', 'MERCHANT_ORG', 'REDEMPTION', 'SAMPLE_CATEGORY', 'PRODUCT', 'DEVTOOLS', 'ORDER', 'PAYMENT', 'INVENTORY', 'TENANT', 'LOCATION', 'GITHUB', 'GITHUB_PULL_REQUEST', 'KANBAN_TASK', 'KANBAN_BOARD', 'MEMBER', 'KYB', 'ACCESS_REQUEST', 'SUPPORT_ACCESS', 'API_KEY', 'INVITE', 'SESSION', 'CUSTOMER_BAN', 'SHARE', 'CLAIM', 'TERMINAL');
+CREATE TYPE "PermissionResource" AS ENUM ('USER', 'PROFILE', 'ROLE', 'PERMISSION', 'ADMIN_DASHBOARD', 'SYSTEM_SETTINGS', 'ANALYTICS', 'AUDIT_LOG', 'REPORT', 'EMAIL', 'GEO', 'REWARD', 'MERCHANT_ORG', 'REDEMPTION', 'SAMPLE_CATEGORY', 'PRODUCT', 'DEVTOOLS', 'ORDER', 'PAYMENT', 'INVENTORY', 'TENANT', 'LOCATION', 'GITHUB', 'GITHUB_PULL_REQUEST', 'KANBAN_TASK', 'KANBAN_BOARD', 'SERVER_METRIC', 'DATABASE_BACKUP', 'LOAD_TEST', 'MEMBER', 'KYB', 'ACCESS_REQUEST', 'SUPPORT_ACCESS', 'API_KEY', 'INVITE', 'SESSION', 'CUSTOMER_BAN', 'SHARE', 'CLAIM', 'TERMINAL');
 
 -- CreateEnum
 CREATE TYPE "PermissionScope" AS ENUM ('GLOBAL', 'TENANT', 'LOCATION', 'RESOURCE', 'OWN');
@@ -211,6 +211,36 @@ CREATE TYPE "DataChangeActorKind" AS ENUM ('USER', 'API_KEY', 'SYSTEM', 'UNATTRI
 -- CreateEnum
 CREATE TYPE "IdempotencyRecordStatus" AS ENUM ('IN_PROGRESS', 'COMPLETED');
 
+-- CreateEnum
+CREATE TYPE "OpsServerProvider" AS ENUM ('LOCAL', 'DIGITALOCEAN', 'LINODE', 'VULTR', 'HETZNER', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "OpsResolution" AS ENUM ('MINUTE', 'HOUR');
+
+-- CreateEnum
+CREATE TYPE "OpsDependency" AS ENUM ('POSTGRES', 'REDIS', 'QUEUES', 'KAFKA', 'RABBITMQ', 'ENDPOINTS');
+
+-- CreateEnum
+CREATE TYPE "OpsAlertSubjectKind" AS ENUM ('SERVER', 'INSTANCE', 'DEPENDENCY', 'ENDPOINT');
+
+-- CreateEnum
+CREATE TYPE "OpsAlertRule" AS ENUM ('CPU_HIGH', 'MEMORY_HIGH', 'DISK_HIGH', 'SILENT', 'DEPENDENCY_DOWN', 'ENDPOINT_DOWN', 'TLS_EXPIRING');
+
+-- CreateEnum
+CREATE TYPE "OpsBackupStatus" AS ENUM ('QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED');
+
+-- CreateEnum
+CREATE TYPE "OpsBackupTrigger" AS ENUM ('MANUAL', 'SCHEDULED');
+
+-- CreateEnum
+CREATE TYPE "LoadTestTarget" AS ENUM ('SCENARIO', 'MIX', 'ENDPOINT');
+
+-- CreateEnum
+CREATE TYPE "LoadTestShape" AS ENUM ('CONSTANT', 'RAMP', 'SPIKE', 'SOAK');
+
+-- CreateEnum
+CREATE TYPE "LoadTestStatus" AS ENUM ('QUEUED', 'RUNNING', 'PASSED', 'FAILED', 'ABORTED', 'ERROR');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
@@ -226,6 +256,7 @@ CREATE TABLE "User" (
     "passwordHash" TEXT NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "isSuperAdmin" BOOLEAN NOT NULL DEFAULT false,
+    "isLoadTestUser" BOOLEAN NOT NULL DEFAULT false,
     "bannedAt" BIGINT,
     "bannedByUserId" TEXT,
     "banReason" TEXT,
@@ -745,6 +776,7 @@ CREATE TABLE "Tenant" (
     "displayName" VARCHAR(200) NOT NULL,
     "lifecycleState" "TenantLifecycleState" NOT NULL DEFAULT 'PROVISIONING',
     "timeZone" VARCHAR(64) NOT NULL DEFAULT 'Asia/Kuala_Lumpur',
+    "isLoadTest" BOOLEAN NOT NULL DEFAULT false,
     "deletionGraceEndsAt" BIGINT,
 
     CONSTRAINT "Tenant_pkey" PRIMARY KEY ("id")
@@ -2225,6 +2257,289 @@ CREATE TABLE "PlatformResourceIdempotencyRecord" (
     CONSTRAINT "PlatformResourceIdempotencyRecord_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "OpsServer" (
+    "id" TEXT NOT NULL,
+    "createdAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "createdBy" VARCHAR(128),
+    "updatedAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "updatedBy" VARCHAR(128),
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" BIGINT,
+    "deletedBy" VARCHAR(128),
+    "name" VARCHAR(100) NOT NULL,
+    "provider" "OpsServerProvider" NOT NULL,
+    "providerServerId" VARCHAR(64),
+    "agentTokenHash" VARCHAR(64) NOT NULL,
+    "agentTokenPrefix" VARCHAR(16) NOT NULL,
+    "lastSeenAt" BIGINT,
+    "agentVersion" VARCHAR(40),
+    "hostname" VARCHAR(200),
+    "os" VARCHAR(200),
+    "kernel" VARCHAR(200),
+    "cpuModel" VARCHAR(200),
+    "cpuCores" INTEGER,
+    "memoryTotalBytes" BIGINT,
+    "uptimeSeconds" BIGINT,
+
+    CONSTRAINT "OpsServer_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "OpsServerSample" (
+    "id" TEXT NOT NULL,
+    "createdAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "createdBy" VARCHAR(128),
+    "updatedAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "updatedBy" VARCHAR(128),
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" BIGINT,
+    "deletedBy" VARCHAR(128),
+    "serverId" TEXT NOT NULL,
+    "resolution" "OpsResolution" NOT NULL,
+    "bucketStart" BIGINT NOT NULL,
+    "cpuPercentAvg" DOUBLE PRECISION NOT NULL,
+    "cpuPercentMax" DOUBLE PRECISION NOT NULL,
+    "stealPercentAvg" DOUBLE PRECISION,
+    "iowaitPercentAvg" DOUBLE PRECISION,
+    "load1Avg" DOUBLE PRECISION NOT NULL,
+    "memoryUsedBytes" BIGINT NOT NULL,
+    "memoryTotalBytes" BIGINT NOT NULL,
+    "memoryPercentMax" DOUBLE PRECISION NOT NULL,
+    "swapUsedBytes" BIGINT NOT NULL,
+    "diskUsedBytes" BIGINT NOT NULL,
+    "diskTotalBytes" BIGINT NOT NULL,
+    "diskPercentMax" DOUBLE PRECISION NOT NULL,
+    "inodesPercentMax" DOUBLE PRECISION,
+    "diskReadBytesPerSec" DOUBLE PRECISION NOT NULL,
+    "diskWriteBytesPerSec" DOUBLE PRECISION NOT NULL,
+    "netRxBytesPerSec" DOUBLE PRECISION NOT NULL,
+    "netTxBytesPerSec" DOUBLE PRECISION NOT NULL,
+    "tcpConnections" INTEGER NOT NULL,
+    "processCount" INTEGER NOT NULL,
+
+    CONSTRAINT "OpsServerSample_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "OpsInstanceSample" (
+    "id" TEXT NOT NULL,
+    "createdAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "createdBy" VARCHAR(128),
+    "updatedAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "updatedBy" VARCHAR(128),
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" BIGINT,
+    "deletedBy" VARCHAR(128),
+    "instanceId" VARCHAR(200) NOT NULL,
+    "service" VARCHAR(40) NOT NULL,
+    "hostname" VARCHAR(200) NOT NULL,
+    "version" VARCHAR(40) NOT NULL,
+    "resolution" "OpsResolution" NOT NULL,
+    "bucketStart" BIGINT NOT NULL,
+    "cpuPercentAvg" DOUBLE PRECISION NOT NULL,
+    "cpuPercentMax" DOUBLE PRECISION NOT NULL,
+    "rssBytes" BIGINT NOT NULL,
+    "heapUsedBytes" BIGINT NOT NULL,
+    "eventLoopLagP99Ms" DOUBLE PRECISION NOT NULL,
+    "gcPauseMs" DOUBLE PRECISION NOT NULL,
+    "requestCount" INTEGER NOT NULL,
+    "serverErrorCount" INTEGER NOT NULL,
+    "clientErrorCount" INTEGER NOT NULL,
+    "latencyP50Ms" DOUBLE PRECISION,
+    "latencyP95Ms" DOUBLE PRECISION,
+    "latencyP99Ms" DOUBLE PRECISION,
+
+    CONSTRAINT "OpsInstanceSample_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "OpsDependencySample" (
+    "id" TEXT NOT NULL,
+    "createdAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "createdBy" VARCHAR(128),
+    "updatedAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "updatedBy" VARCHAR(128),
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" BIGINT,
+    "deletedBy" VARCHAR(128),
+    "dependency" "OpsDependency" NOT NULL,
+    "resolution" "OpsResolution" NOT NULL,
+    "bucketStart" BIGINT NOT NULL,
+    "upPercent" DOUBLE PRECISION NOT NULL,
+    "latencyMsAvg" DOUBLE PRECISION,
+    "connectionsUsed" INTEGER,
+    "sizeBytes" BIGINT,
+    "memoryUsedBytes" BIGINT,
+    "backlog" INTEGER,
+    "failed" INTEGER,
+
+    CONSTRAINT "OpsDependencySample_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "OpsAlert" (
+    "id" TEXT NOT NULL,
+    "createdAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "createdBy" VARCHAR(128),
+    "updatedAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "updatedBy" VARCHAR(128),
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" BIGINT,
+    "deletedBy" VARCHAR(128),
+    "subjectKind" "OpsAlertSubjectKind" NOT NULL,
+    "subjectId" VARCHAR(200) NOT NULL,
+    "subjectName" VARCHAR(200) NOT NULL,
+    "rule" "OpsAlertRule" NOT NULL,
+    "openedAt" BIGINT NOT NULL,
+    "resolvedAt" BIGINT,
+    "thresholdValue" DOUBLE PRECISION,
+    "peakValue" DOUBLE PRECISION,
+    "lastValue" DOUBLE PRECISION,
+    "message" VARCHAR(500) NOT NULL,
+    "openNotifiedAt" BIGINT,
+    "resolveNotifiedAt" BIGINT,
+
+    CONSTRAINT "OpsAlert_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "OpsSettings" (
+    "id" TEXT NOT NULL,
+    "createdAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "createdBy" VARCHAR(128),
+    "updatedAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "updatedBy" VARCHAR(128),
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" BIGINT,
+    "deletedBy" VARCHAR(128),
+    "key" VARCHAR(20) NOT NULL,
+    "cpuPercent" INTEGER NOT NULL,
+    "cpuSustainMinutes" INTEGER NOT NULL,
+    "memoryPercent" INTEGER NOT NULL,
+    "diskPercent" INTEGER NOT NULL,
+    "silentAfterMinutes" INTEGER NOT NULL,
+    "tlsWarnDays" INTEGER NOT NULL,
+    "extraRecipients" VARCHAR(255)[],
+    "backupHour" INTEGER NOT NULL,
+    "backupRetentionDays" INTEGER NOT NULL,
+    "loadMaxVus" INTEGER NOT NULL,
+    "loadMaxRps" INTEGER NOT NULL,
+    "loadMaxMinutes" INTEGER NOT NULL,
+    "loadMaxSoakMinutes" INTEGER NOT NULL,
+
+    CONSTRAINT "OpsSettings_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "OpsBackup" (
+    "id" TEXT NOT NULL,
+    "createdAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "createdBy" VARCHAR(128),
+    "updatedAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "updatedBy" VARCHAR(128),
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" BIGINT,
+    "deletedBy" VARCHAR(128),
+    "status" "OpsBackupStatus" NOT NULL,
+    "trigger" "OpsBackupTrigger" NOT NULL,
+    "requestedById" TEXT,
+    "startedAt" BIGINT,
+    "finishedAt" BIGINT,
+    "sizeBytes" BIGINT,
+    "checksum" VARCHAR(64),
+    "storageContainer" VARCHAR(200),
+    "storagePath" VARCHAR(500),
+    "pgDumpVersion" VARCHAR(100),
+    "serverVersion" VARCHAR(100),
+    "pinned" BOOLEAN NOT NULL DEFAULT false,
+    "error" VARCHAR(1000),
+
+    CONSTRAINT "OpsBackup_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "LoadTestRun" (
+    "id" TEXT NOT NULL,
+    "createdAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "createdBy" VARCHAR(128),
+    "updatedAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "updatedBy" VARCHAR(128),
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" BIGINT,
+    "deletedBy" VARCHAR(128),
+    "name" VARCHAR(100) NOT NULL,
+    "target" "LoadTestTarget" NOT NULL,
+    "scenario" VARCHAR(60),
+    "endpoint" VARCHAR(300),
+    "mixWeights" JSONB,
+    "shape" "LoadTestShape" NOT NULL,
+    "virtualUsers" INTEGER NOT NULL,
+    "requestsPerSecond" INTEGER NOT NULL,
+    "durationSeconds" INTEGER NOT NULL,
+    "thresholdP95Ms" INTEGER NOT NULL,
+    "thresholdErrorPercent" DOUBLE PRECISION NOT NULL,
+    "status" "LoadTestStatus" NOT NULL,
+    "requestedById" TEXT NOT NULL,
+    "startedAt" BIGINT,
+    "finishedAt" BIGINT,
+    "abortReason" VARCHAR(300),
+    "abortRequestedAt" BIGINT,
+    "totalRequests" INTEGER,
+    "failedRequests" INTEGER,
+    "p50Ms" DOUBLE PRECISION,
+    "p95Ms" DOUBLE PRECISION,
+    "p99Ms" DOUBLE PRECISION,
+    "peakRps" DOUBLE PRECISION,
+    "error" VARCHAR(1000),
+
+    CONSTRAINT "LoadTestRun_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "LoadTestPoint" (
+    "id" TEXT NOT NULL,
+    "createdAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "createdBy" VARCHAR(128),
+    "updatedAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "updatedBy" VARCHAR(128),
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" BIGINT,
+    "deletedBy" VARCHAR(128),
+    "runId" TEXT NOT NULL,
+    "second" INTEGER NOT NULL,
+    "at" BIGINT NOT NULL,
+    "virtualUsers" INTEGER NOT NULL,
+    "requests" INTEGER NOT NULL,
+    "failures" INTEGER NOT NULL,
+    "p50Ms" DOUBLE PRECISION,
+    "p95Ms" DOUBLE PRECISION,
+    "p99Ms" DOUBLE PRECISION,
+
+    CONSTRAINT "LoadTestPoint_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "LoadTestStepStat" (
+    "id" TEXT NOT NULL,
+    "createdAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "createdBy" VARCHAR(128),
+    "updatedAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "updatedBy" VARCHAR(128),
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" BIGINT,
+    "deletedBy" VARCHAR(128),
+    "runId" TEXT NOT NULL,
+    "step" VARCHAR(100) NOT NULL,
+    "requests" INTEGER NOT NULL,
+    "failures" INTEGER NOT NULL,
+    "p50Ms" DOUBLE PRECISION,
+    "p95Ms" DOUBLE PRECISION,
+    "p99Ms" DOUBLE PRECISION,
+
+    CONSTRAINT "LoadTestStepStat_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -3032,6 +3347,57 @@ CREATE INDEX "PlatformResourceIdempotencyRecord_expiresAt_idx" ON "PlatformResou
 -- CreateIndex
 CREATE UNIQUE INDEX "PlatformResourceIdempotencyRecord_scope_idempotencyKey_key" ON "PlatformResourceIdempotencyRecord"("scope", "idempotencyKey");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "OpsServer_agentTokenHash_key" ON "OpsServer"("agentTokenHash");
+
+-- CreateIndex
+CREATE INDEX "OpsServer_isDeleted_name_idx" ON "OpsServer"("isDeleted", "name");
+
+-- CreateIndex
+CREATE INDEX "OpsServerSample_resolution_bucketStart_idx" ON "OpsServerSample"("resolution", "bucketStart");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "OpsServerSample_serverId_resolution_bucketStart_key" ON "OpsServerSample"("serverId", "resolution", "bucketStart");
+
+-- CreateIndex
+CREATE INDEX "OpsInstanceSample_resolution_bucketStart_idx" ON "OpsInstanceSample"("resolution", "bucketStart");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "OpsInstanceSample_instanceId_resolution_bucketStart_key" ON "OpsInstanceSample"("instanceId", "resolution", "bucketStart");
+
+-- CreateIndex
+CREATE INDEX "OpsDependencySample_resolution_bucketStart_idx" ON "OpsDependencySample"("resolution", "bucketStart");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "OpsDependencySample_dependency_resolution_bucketStart_key" ON "OpsDependencySample"("dependency", "resolution", "bucketStart");
+
+-- CreateIndex
+CREATE INDEX "OpsAlert_resolvedAt_openedAt_idx" ON "OpsAlert"("resolvedAt", "openedAt");
+
+-- CreateIndex
+CREATE INDEX "OpsAlert_subjectKind_subjectId_rule_resolvedAt_idx" ON "OpsAlert"("subjectKind", "subjectId", "rule", "resolvedAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "OpsSettings_key_key" ON "OpsSettings"("key");
+
+-- CreateIndex
+CREATE INDEX "OpsBackup_isDeleted_createdAt_idx" ON "OpsBackup"("isDeleted", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "OpsBackup_status_idx" ON "OpsBackup"("status");
+
+-- CreateIndex
+CREATE INDEX "LoadTestRun_isDeleted_createdAt_idx" ON "LoadTestRun"("isDeleted", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "LoadTestRun_status_idx" ON "LoadTestRun"("status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "LoadTestPoint_runId_second_key" ON "LoadTestPoint"("runId", "second");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "LoadTestStepStat_runId_step_key" ON "LoadTestStepStat"("runId", "step");
+
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_bannedByUserId_fkey" FOREIGN KEY ("bannedByUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -3457,3 +3823,12 @@ ALTER TABLE "GithubAccountLink" ADD CONSTRAINT "GithubAccountLink_userId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "GithubWebhookSubscription" ADD CONSTRAINT "GithubWebhookSubscription_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OpsServerSample" ADD CONSTRAINT "OpsServerSample_serverId_fkey" FOREIGN KEY ("serverId") REFERENCES "OpsServer"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LoadTestPoint" ADD CONSTRAINT "LoadTestPoint_runId_fkey" FOREIGN KEY ("runId") REFERENCES "LoadTestRun"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LoadTestStepStat" ADD CONSTRAINT "LoadTestStepStat_runId_fkey" FOREIGN KEY ("runId") REFERENCES "LoadTestRun"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
-import { createReadStream, type Stats } from "node:fs";
+import { createReadStream, createWriteStream, type Stats } from "node:fs";
 import { copyFile, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 
 import { apiPath, type StorageObjectLocator } from "@workspace/shared";
 
@@ -13,6 +14,8 @@ import type {
 	StorageBrowserUploadTicketResult,
 	StorageHeadObjectResult,
 	StorageSignedUrlInput,
+	StorageStreamUploadInput,
+	StorageStreamUploadResult,
 	StorageUploadInput,
 	StorageUploadResult,
 } from "../../domain/object-storage.port";
@@ -69,6 +72,16 @@ export class LocalObjectStorageAdapter implements ObjectStorage, PublicDelivery 
 		await writeFile(absolutePath, input.buffer);
 		const revision = createHash("sha256").update(input.buffer).digest("hex").slice(0, REVISION_HEX_LENGTH);
 		return { locator: { ...input.locator, revision }, revision };
+	}
+
+	/** Streams to the file on disk (no parts locally: there is no network to fail). */
+	public async uploadStream(input: StorageStreamUploadInput): Promise<StorageStreamUploadResult> {
+		const absolutePath = this.resolvePath(input.locator);
+		await mkdir(dirname(absolutePath), { recursive: true });
+		await pipeline(input.stream, createWriteStream(absolutePath));
+		const stats: Stats = await stat(absolutePath);
+		const revision = String(stats.mtimeMs);
+		return { locator: { ...input.locator, revision }, revision, sizeBytes: stats.size };
 	}
 
 	public async getObject(locator: StorageObjectLocator): Promise<Buffer | null> {

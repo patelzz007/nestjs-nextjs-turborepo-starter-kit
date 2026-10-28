@@ -182,6 +182,13 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
 			observe: resolveObserveConfig(env),
 		},
 		tenancy: resolveTenancy(env),
+		operations: {
+			cloudTokens: { DIGITALOCEAN: env.DIGITALOCEAN_TOKEN ?? null, LINODE: env.LINODE_TOKEN ?? null, VULTR: env.VULTR_API_KEY ?? null, HETZNER: env.HCLOUD_TOKEN ?? null },
+			backupDatabaseUrl: env.BACKUP_DATABASE_URL ?? null,
+			pgDumpDockerImage: env.BACKUP_PG_DUMP_DOCKER_IMAGE,
+			executableSearchPath: env.PATH,
+			loadTesting: { enabled: env.LOAD_TESTING_ENABLED, allowProduction: env.LOAD_TESTING_ALLOW_PRODUCTION, targetUrl: env.LOAD_TEST_TARGET_URL ?? null },
+		},
 	};
 }
 

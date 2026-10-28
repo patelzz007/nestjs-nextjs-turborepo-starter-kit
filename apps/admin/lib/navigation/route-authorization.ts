@@ -164,6 +164,13 @@ const EXPLICIT_ROUTE_RULES: readonly RouteAuthorizationRule[] = [
 		authorization: { permissions: [PERMISSION.KANBAN_TASK.READ, PERMISSION.KANBAN_TASK.UPDATE], mode: "all" },
 		featureFlag: COMPONENT_GALLERY_FEATURE,
 	},
+	// GET /admin/operations/backups — @SuperAdminOnly (ADR 068)
+	{ prefix: ROUTES.operations.backups, superAdminOnly: true },
+	// GET /admin/operations/servers/:serverId and its history (READ SERVER_METRIC)
+	{ prefix: ROUTE_PATTERNS.operations.server, authorization: { permissions: [PERMISSION.SERVER_METRIC.READ] } },
+	// GET /admin/operations/load-tests/:runId (READ LOAD_TEST); the comparison reads two runs
+	{ prefix: ROUTE_PATTERNS.operations.compare, authorization: { permissions: [PERMISSION.LOAD_TEST.READ] } },
+	{ prefix: ROUTE_PATTERNS.operations.loadTest, authorization: { permissions: [PERMISSION.LOAD_TEST.READ] } },
 	// GET + PATCH /sample-category/:id (READ + UPDATE)
 	{ prefix: ROUTE_PATTERNS.catalog.categories.edit, authorization: { permissions: [PERMISSION.SAMPLE_CATEGORY.READ, PERMISSION.SAMPLE_CATEGORY.UPDATE], mode: "all" } },
 ];

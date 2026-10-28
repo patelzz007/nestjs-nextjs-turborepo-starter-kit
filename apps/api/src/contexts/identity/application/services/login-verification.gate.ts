@@ -72,7 +72,7 @@ export class LoginVerificationGate {
 		actor: ActorContext,
 		context: PendingLoginContext,
 	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse> {
-		if (!(await this.needsVerification(context.userId, context.deviceInfo))) {
+		if (context.isLoadTestUser === true || !(await this.needsVerification(context.userId, context.deviceInfo))) {
 			return this.sessions.issue(
 				actor,
 				context.userId,

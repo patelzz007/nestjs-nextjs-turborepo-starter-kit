@@ -3,7 +3,10 @@ import { Prisma } from "@prisma/client";
 import type { AnalyticsInterval } from "@workspace/shared";
 import { z } from "zod";
 
+import { TypedConfigService } from "../../../../config/typed-config.service";
+import { ConcurrencyLimiter } from "../../../../platform/application/concurrency-limiter";
 import { DependencyUnavailableError } from "../../../../platform/application/errors/app-error";
+import { databasePoolBudget } from "../../../../prisma/prisma-client-setup";
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import type { AnalyticsScope, AnalyticsWindow } from "../../domain/value-objects/analytics-scope.value-object";
 import { PLATFORM_ANALYTICS_READ_OPERATION } from "../../application/ports/reporting.tokens";
@@ -105,9 +108,26 @@ export function averageSql(sum: Prisma.Sql, count: Prisma.Sql): Prisma.Sql {
  * A tenant or customer scope reuses the session already bound to the call.
  * A platform scope runs as `reporting.platform_analytics.read`.
  */
+/**
+ * How many analytics transactions one process holds at once: half its request pool. A dashboard
+ * fans out five to seven aggregates; unbounded, they could take every pooled connection, and any
+ * other transaction (a request, a scheduled job) would then wait past Prisma's `maxWait` and fail.
+ * Bounded, the extra aggregates queue in-process before they take a connection.
+ */
+export function analyticsConcurrencyLimit(requestPoolConnections: number): number {
+	return Math.max(1, Math.floor(requestPoolConnections / 2));
+}
+
 @Injectable()
 export class AnalyticsSqlRunner {
-	public constructor(private readonly transactions: TenantTransactionService) {}
+	private readonly limiter: ConcurrencyLimiter;
+
+	public constructor(
+		private readonly transactions: TenantTransactionService,
+		config: TypedConfigService,
+	) {
+		this.limiter = new ConcurrencyLimiter(analyticsConcurrencyLimit(databasePoolBudget(config.database.poolMax).request));
+	}
 
 	public rowsFor<TRow>(scope: AnalyticsScope, schema: z.ZodType<TRow>, sql: Prisma.Sql): Promise<TRow[]> {
 		return scope.kind === "platform" ? this.platformRows(schema, sql) : this.rows(schema, sql);
@@ -119,10 +139,12 @@ export class AnalyticsSqlRunner {
 
 	public async rows<TRow>(schema: z.ZodType<TRow>, sql: Prisma.Sql): Promise<TRow[]> {
 		try {
-			const rows = await this.transactions.withBoundSession("Analytics aggregate", async (tx) => {
-				await tx.$queryRaw`SELECT set_config('statement_timeout', ${String(ANALYTICS_STATEMENT_TIMEOUT_MS)}, true)`;
-				return tx.$queryRaw(sql);
-			});
+			const rows = await this.limiter.run(() =>
+				this.transactions.withBoundSession("Analytics aggregate", async (tx) => {
+					await tx.$queryRaw`SELECT set_config('statement_timeout', ${String(ANALYTICS_STATEMENT_TIMEOUT_MS)}, true)`;
+					return tx.$queryRaw(sql);
+				}),
+			);
 			return schema.array().parse(rows);
 		} catch (error) {
 			if (error instanceof Error && isStatementTimeout(error)) {
@@ -143,12 +165,11 @@ export class AnalyticsSqlRunner {
 
 	private async platformRows<TRow>(schema: z.ZodType<TRow>, sql: Prisma.Sql): Promise<TRow[]> {
 		try {
-			const rows = await this.transactions.withSystemOperation(
-				{ operation: PLATFORM_ANALYTICS_READ_OPERATION, reason: "Platform analytics aggregate", actorUserId: null },
-				async (tx) => {
+			const rows = await this.limiter.run(() =>
+				this.transactions.withSystemOperation({ operation: PLATFORM_ANALYTICS_READ_OPERATION, reason: "Platform analytics aggregate", actorUserId: null }, async (tx) => {
 					await tx.$queryRaw`SELECT set_config('statement_timeout', ${String(ANALYTICS_STATEMENT_TIMEOUT_MS)}, true)`;
 					return tx.$queryRaw(sql);
-				},
+				}),
 			);
 			return schema.array().parse(rows);
 		} catch (error) {

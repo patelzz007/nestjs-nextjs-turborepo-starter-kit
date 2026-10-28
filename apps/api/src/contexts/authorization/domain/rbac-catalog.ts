@@ -4,6 +4,8 @@
  */
 export const SUPER_ADMIN_ROLE_NAME = "SuperAdmin";
 export const ADMIN_ROLE_NAME = "Admin";
+/** The platform's developers: the operations console (ADR 068) — metrics and load tests. */
+export const PLATFORM_DEVELOPER_ROLE_NAME = "Platform Developer";
 
 /**
  * Location roles a membership's location scope can carry (`MembershipLocationScope.roleId`): their

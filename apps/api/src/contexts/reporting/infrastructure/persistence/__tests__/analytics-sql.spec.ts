@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
 import type { AnalyticsWindow } from "../../../domain/value-objects/analytics-scope.value-object";
-import { AnalyticsQueryTimeoutError, averageSql, bucketsCte, isStatementTimeout, localBucketOf } from "../analytics-sql";
+import { analyticsConcurrencyLimit, AnalyticsQueryTimeoutError, averageSql, bucketsCte, isStatementTimeout, localBucketOf } from "../analytics-sql";
 
 const WINDOW: AnalyticsWindow = { fromMs: 1_000, toMs: 2_000, timeZone: "Europe/London", interval: "month" };
 
@@ -38,5 +38,13 @@ describe("bucket SQL", () => {
 
 	it("averages in SQL with a zero guard", () => {
 		expect(averageSql(Prisma.sql`x`, Prisma.sql`n`).text).toBe("CASE WHEN n = 0 THEN 0 ELSE ROUND(x::numeric / n) END::bigint");
+	});
+});
+
+describe("analyticsConcurrencyLimit", () => {
+	it("keeps half the request pool for everything that is not analytics, and at least one slot", () => {
+		expect(analyticsConcurrencyLimit(8)).toBe(4);
+		expect(analyticsConcurrencyLimit(9)).toBe(4);
+		expect(analyticsConcurrencyLimit(1)).toBe(1);
 	});
 });

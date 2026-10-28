@@ -286,6 +286,7 @@ export const DDD_CONTEXTS = [
 	"audit",
 	"integrations-github",
 	"kanban",
+	"operations",
 ];
 
 const DOMAIN_PURITY_MESSAGE = "Domain is pure: no framework, no persistence, no outer layers (decision #6).";

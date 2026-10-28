@@ -29,6 +29,7 @@ function state(overrides: Partial<UserAccountState> = {}): UserAccountState {
 		passwordHash: "hash-1",
 		isActive: true,
 		isSuperAdmin: false,
+		isLoadTestUser: false,
 		isDeleted: false,
 		deletedAt: null,
 		emailVerifiedAt: NOW,

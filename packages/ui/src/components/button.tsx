@@ -74,4 +74,4 @@ const Button = React.forwardRef<HTMLElement, ButtonProps>(function Button(
 	);
 });
 
-export { Button, buttonVariants };
+export { Button, buttonVariants, type ButtonProps };

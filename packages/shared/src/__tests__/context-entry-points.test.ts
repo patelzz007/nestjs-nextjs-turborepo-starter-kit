@@ -12,6 +12,7 @@ import * as identityEntry from "../contexts/identity/index";
 import * as integrationsGithubEntry from "../contexts/integrations-github/index";
 import * as kanbanEntry from "../contexts/kanban/index";
 import * as notificationsEntry from "../contexts/notifications/index";
+import * as operationsEntry from "../contexts/operations/index";
 import * as tenancyEntry from "../contexts/tenancy/index";
 import * as posEntry from "../contexts/pos/index";
 import * as referenceDataEntry from "../contexts/reference-data/index";
@@ -38,6 +39,7 @@ const ENTRIES: Readonly<Record<string, Readonly<Record<string, ExportedValue>>>>
 	"integrations-github": integrationsGithubEntry,
 	kanban: kanbanEntry,
 	notifications: notificationsEntry,
+	operations: operationsEntry,
 	tenancy: tenancyEntry,
 	pos: posEntry,
 	"reference-data": referenceDataEntry,

@@ -115,6 +115,7 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	["/components", OPEN],
 	["/components/[slug]", OPEN],
 	["/emails", OPEN],
+	["/operations", OPEN],
 	["/rewards", OPEN],
 	["/settings", OPEN],
 	// @SuperAdminOnly API routes.
@@ -122,6 +123,7 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	["/users/[id]", SUPER_ADMIN],
 	["/users/mfa-recovery", SUPER_ADMIN],
 	["/users/support-access", SUPER_ADMIN],
+	["/operations/backups", SUPER_ADMIN],
 	// @RequirePermission API routes.
 	["/account/github", needsAll(PERMISSION.GITHUB_PULL_REQUEST.READ, PERMISSION.GITHUB_PULL_REQUEST.UPDATE)],
 	["/analytics", needs(PERMISSION.ANALYTICS.READ)],
@@ -147,6 +149,13 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	["/merchants/invites", needs(PERMISSION.MERCHANT_ORG.CREATE)],
 	["/merchants/verification", needs(PERMISSION.MERCHANT_ORG.LIST)],
 	["/merchants/store-requests", needs(PERMISSION.MERCHANT_ORG.LIST)],
+	// Platform operations (ADR 068).
+	["/operations/servers", needs(PERMISSION.SERVER_METRIC.LIST)],
+	["/operations/alerts", needs(PERMISSION.SERVER_METRIC.LIST)],
+	["/operations/servers/[id]", needs(PERMISSION.SERVER_METRIC.READ)],
+	["/operations/load-tests", needs(PERMISSION.LOAD_TEST.LIST)],
+	["/operations/load-tests/[id]", needs(PERMISSION.LOAD_TEST.READ)],
+	["/operations/load-tests/compare", needs(PERMISSION.LOAD_TEST.READ)],
 	["/rewards/review", needs(PERMISSION.REWARD.APPROVE)],
 	["/rewards/review/[id]", needs(PERMISSION.REWARD.APPROVE)],
 	["/settings/access", needs(PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ)],

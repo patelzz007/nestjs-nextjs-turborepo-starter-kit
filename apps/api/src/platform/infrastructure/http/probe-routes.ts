@@ -1,4 +1,4 @@
-import { HEALTH_PING_ROUTE } from "@workspace/shared";
+import { apiPath, HEALTH_PING_ROUTE } from "@workspace/shared";
 
 /**
  * Paths of the automated health probes (HealthController). Load balancers,
@@ -18,5 +18,15 @@ export const HEALTH_PROBE_PATHS = {
 	legacy: "health",
 } satisfies Record<string, string>;
 
-/** The probe routes as Fastify reports their templates (`request.routeOptions.url`). */
-export const UNAUDITED_PROBE_ROUTES: ReadonlySet<string> = new Set<string>(Object.values(HEALTH_PROBE_PATHS).map((path: string): string => `/${path}`));
+/**
+ * A server agent's report (ADR 068, exception 1): every server pushes one every 10 s, forever —
+ * auditing them would bury every human action as surely as the probes would. The server's last-seen
+ * time is recorded instead, and registering, re-keying and removing a server ARE audited.
+ */
+export const SERVER_AGENT_REPORT_ROUTE = `${apiPath("/operations")}/agent/report`;
+
+/** The routes left out of the audit trail, as Fastify reports their templates (`request.routeOptions.url`). */
+export const UNAUDITED_PROBE_ROUTES: ReadonlySet<string> = new Set<string>([
+	...Object.values(HEALTH_PROBE_PATHS).map((path: string): string => `/${path}`),
+	SERVER_AGENT_REPORT_ROUTE,
+]);

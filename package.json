@@ -28,8 +28,10 @@
 		"db:reset": "pnpm --filter @workspace/api db:reset",
 		"kill:all": "for PORT in 8080 3001 3000 3002 3003; do PIDS=$(lsof -ti :$PORT 2>/dev/null); if [ -n \"$PIDS\" ]; then kill -9 $PIDS; echo \"Freed port $PORT (killed $PIDS)\"; else echo \"Port $PORT is already free\"; fi; done",
 		"docker:up": "docker compose up -d",
-		"docker:down": "docker compose down",
+		"docker:down": "docker compose --profile \"*\" down",
 		"mailpit": "docker compose up -d mailpit",
+		"check:expo-latest": "pnpm --filter @workspace/mobile check:expo-latest",
+		"load-runner": "docker compose --profile load up -d --build load-runner",
 		"mail:latest": "pnpm --silent --filter @workspace/api mail:latest"
 	},
 	"devDependencies": {

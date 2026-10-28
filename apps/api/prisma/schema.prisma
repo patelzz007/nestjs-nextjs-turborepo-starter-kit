@@ -124,13 +124,16 @@ model User {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  fullName     String  @db.VarChar(100)
+  fullName       String  @db.VarChar(100)
   /// Case-insensitive (citext): `Alice@x.com` and `alice@x.com` are one account. The API stores the
   /// lower-cased canonical form (CanonicalEmailSchema, max 100 chars).
-  email        String  @unique @db.Citext
-  passwordHash String  @db.Text
-  isActive     Boolean @default(true)
-  isSuperAdmin Boolean @default(false)
+  email          String  @unique @db.Citext
+  passwordHash   String  @db.Text
+  isActive       Boolean @default(true)
+  isSuperAdmin   Boolean @default(false)
+  /// A load-test user (ADR 068): exists only inside the Load Test tenant, so scenarios can act as it. Never
+  /// holds a platform role or joins another tenant, has no 2FA and is never emailed.
+  isLoadTestUser Boolean @default(false)
 
   /// Platform ban (`POST /auth/admin/users/:userId/ban`): set together with `isActive = false`, so the
   /// account can neither sign in nor keep a session. Cleared by an unban. NULL = not banned.
@@ -693,6 +696,9 @@ enum PermissionResource {
   GITHUB_PULL_REQUEST
   KANBAN_TASK
   KANBAN_BOARD
+  SERVER_METRIC
+  DATABASE_BACKUP
+  LOAD_TEST
   MEMBER
   KYB
   ACCESS_REQUEST
@@ -1218,6 +1224,8 @@ model Tenant {
   /// at Monday 00:00 in this zone. Validated by `IanaTimeZoneSchema`; the default is
   /// `PLATFORM_DISPLAY_REGION.timeZone` (packages/shared) and must stay equal to it.
   timeZone            String               @default("Asia/Kuala_Lumpur") @db.VarChar(64)
+  /// The Load Test tenant (ADR 068): every load test acts inside it; its data is purged by hard delete.
+  isLoadTest          Boolean              @default(false)
   deletionGraceEndsAt BigInt?
 
   slugHistory              TenantSlugHistory[]
@@ -4031,4 +4039,453 @@ model PlatformResourceIdempotencyRecord {
 
   @@unique([scope, idempotencyKey])
   @@index([expiresAt])
+}
+
+// ============================================================================
+// Platform operations (ADR 068): servers, their history, instance and dependency history, alerts
+// ============================================================================
+// Bypass-only under RLS: every read and write runs under a named `operations.*` system operation. The
+// live numbers are in Redis; these tables hold the per-minute and hourly history (minute rows kept 7
+// days, hourly rows 1 year — `OPS_MINUTE_RETENTION_MS` / `OPS_HOUR_RETENTION_MS`). Terms: GLOSSARY.md.
+
+/// Where a server runs. LOCAL is a developer's laptop; the clouds have a facts adapter each.
+enum OpsServerProvider {
+  LOCAL
+  DIGITALOCEAN
+  LINODE
+  VULTR
+  HETZNER
+  OTHER
+}
+
+/// A history row's bucket: one minute, or one hour rolled up from its minutes.
+enum OpsResolution {
+  MINUTE
+  HOUR
+}
+
+/// The services the instances need but do not run (`OpsDependencySchema`).
+enum OpsDependency {
+  POSTGRES
+  REDIS
+  QUEUES
+  KAFKA
+  RABBITMQ
+  ENDPOINTS
+}
+
+enum OpsAlertSubjectKind {
+  SERVER
+  INSTANCE
+  DEPENDENCY
+  ENDPOINT
+}
+
+enum OpsAlertRule {
+  CPU_HIGH
+  MEMORY_HIGH
+  DISK_HIGH
+  SILENT
+  DEPENDENCY_DOWN
+  ENDPOINT_DOWN
+  TLS_EXPIRING
+}
+
+/// One machine the platform runs on, and the credentials of its server agent. The token itself is shown
+/// once at registration; only its SHA-256 digest is stored. Revoking a server soft-deletes it.
+/// @extends BaseModel
+model OpsServer {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  name             String            @db.VarChar(100)
+  provider         OpsServerProvider
+  /// The server's id at its cloud provider (a droplet, Linode, Vultr instance or Hetzner server id).
+  providerServerId String?           @db.VarChar(64)
+  agentTokenHash   String            @unique @db.VarChar(64)
+  /// The token's first characters, shown so an operator can tell tokens apart.
+  agentTokenPrefix String            @db.VarChar(16)
+  /// Epoch ms of the agent's latest report.
+  lastSeenAt       BigInt?
+  agentVersion     String?           @db.VarChar(40)
+  hostname         String?           @db.VarChar(200)
+  os               String?           @db.VarChar(200)
+  kernel           String?           @db.VarChar(200)
+  cpuModel         String?           @db.VarChar(200)
+  cpuCores         Int?
+  memoryTotalBytes BigInt?
+  uptimeSeconds    BigInt?
+
+  samples OpsServerSample[]
+
+  @@index([isDeleted, name])
+}
+
+/// One minute (or hour) of one server: the agent's averages and peaks.
+/// @extends BaseModel
+model OpsServerSample {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  serverId             String
+  server               OpsServer     @relation(fields: [serverId], references: [id])
+  resolution           OpsResolution
+  bucketStart          BigInt
+  cpuPercentAvg        Float
+  cpuPercentMax        Float
+  stealPercentAvg      Float?
+  iowaitPercentAvg     Float?
+  load1Avg             Float
+  memoryUsedBytes      BigInt
+  memoryTotalBytes     BigInt
+  memoryPercentMax     Float
+  swapUsedBytes        BigInt
+  diskUsedBytes        BigInt
+  diskTotalBytes       BigInt
+  diskPercentMax       Float
+  inodesPercentMax     Float?
+  diskReadBytesPerSec  Float
+  diskWriteBytesPerSec Float
+  netRxBytesPerSec     Float
+  netTxBytesPerSec     Float
+  tcpConnections       Int
+  processCount         Int
+
+  @@unique([serverId, resolution, bucketStart])
+  @@index([resolution, bucketStart])
+}
+
+/// One minute (or hour) of one instance (a running API or analytics-consumer process).
+/// @extends BaseModel
+model OpsInstanceSample {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// `<hostname>:<pid>:<startedAt>` — unique per process run.
+  instanceId        String        @db.VarChar(200)
+  /// `OpsInstanceServiceSchema`: "api" | "analytics-consumer".
+  service           String        @db.VarChar(40)
+  hostname          String        @db.VarChar(200)
+  version           String        @db.VarChar(40)
+  resolution        OpsResolution
+  bucketStart       BigInt
+  cpuPercentAvg     Float
+  cpuPercentMax     Float
+  rssBytes          BigInt
+  heapUsedBytes     BigInt
+  eventLoopLagP99Ms Float
+  gcPauseMs         Float
+  requestCount      Int
+  serverErrorCount  Int
+  clientErrorCount  Int
+  latencyP50Ms      Float?
+  latencyP95Ms      Float?
+  latencyP99Ms      Float?
+
+  @@unique([instanceId, resolution, bucketStart])
+  @@index([resolution, bucketStart])
+}
+
+/// One minute (or hour) of one dependency. The figure columns that do not apply to it are null.
+/// @extends BaseModel
+model OpsDependencySample {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  dependency      OpsDependency
+  resolution      OpsResolution
+  bucketStart     BigInt
+  /// Share of the bucket's checks that found it up.
+  upPercent       Float
+  latencyMsAvg    Float?
+  connectionsUsed Int?
+  sizeBytes       BigInt?
+  memoryUsedBytes BigInt?
+  backlog         Int?
+  failed          Int?
+
+  @@unique([dependency, resolution, bucketStart])
+  @@index([resolution, bucketStart])
+}
+
+/// One alert: an incident, open until its condition clears. At most one open alert per subject and rule
+/// (the evaluator is a single scheduled job and holds an advisory lock while it runs).
+/// @extends BaseModel
+model OpsAlert {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  subjectKind       OpsAlertSubjectKind
+  subjectId         String              @db.VarChar(200)
+  subjectName       String              @db.VarChar(200)
+  rule              OpsAlertRule
+  openedAt          BigInt
+  resolvedAt        BigInt?
+  thresholdValue    Float?
+  peakValue         Float?
+  lastValue         Float?
+  message           String              @db.VarChar(500)
+  /// Epoch ms the "opened" email was queued, and the "resolved" one.
+  openNotifiedAt    BigInt?
+  resolveNotifiedAt BigInt?
+
+  @@index([resolvedAt, openedAt])
+  @@index([subjectKind, subjectId, rule, resolvedAt])
+}
+
+/// The alert thresholds and the extra recipients (`OpsAlertSettingsSchema`). One row.
+/// @extends BaseModel
+model OpsSettings {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// Always "default": the table holds exactly one row.
+  key                 String   @unique @db.VarChar(20)
+  cpuPercent          Int
+  cpuSustainMinutes   Int
+  memoryPercent       Int
+  diskPercent         Int
+  silentAfterMinutes  Int
+  tlsWarnDays         Int
+  extraRecipients     String[] @db.VarChar(255)
+  /// Daily backup: the hour (0-23) in the platform time zone, and how many days backups are kept.
+  backupHour          Int
+  backupRetentionDays Int
+  /// Load-test caps (ADR 068), editable by SuperAdmin.
+  loadMaxVus          Int
+  loadMaxRps          Int
+  loadMaxMinutes      Int
+  loadMaxSoakMinutes  Int
+}
+
+// ── Database backups (ADR 068, phase 2) ─────────────────────────────────────
+
+enum OpsBackupStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum OpsBackupTrigger {
+  MANUAL
+  SCHEDULED
+}
+
+/// One backup: a `pg_dump --format=custom` of the whole database in private object storage. Deleting or
+/// pruning one soft-deletes the row and deletes the stored object.
+/// @extends BaseModel
+model OpsBackup {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  status           OpsBackupStatus
+  trigger          OpsBackupTrigger
+  /// The SuperAdmin who asked for it; null for the daily backup.
+  requestedById    String?
+  startedAt        BigInt?
+  finishedAt       BigInt?
+  sizeBytes        BigInt?
+  /// Hex SHA-256 of the stored file.
+  checksum         String?          @db.VarChar(64)
+  /// Where the file is stored (the storage provider's container and object path).
+  storageContainer String?          @db.VarChar(200)
+  storagePath      String?          @db.VarChar(500)
+  /// `pg_dump --version` of the binary that took it, and the server's version.
+  pgDumpVersion    String?          @db.VarChar(100)
+  serverVersion    String?          @db.VarChar(100)
+  /// A pinned backup is never pruned.
+  pinned           Boolean          @default(false)
+  error            String?          @db.VarChar(1000)
+
+  @@index([isDeleted, createdAt])
+  @@index([status])
+}
+
+// ── Load tests (ADR 068, phase 3) ───────────────────────────────────────────
+
+enum LoadTestTarget {
+  SCENARIO
+  MIX
+  ENDPOINT
+}
+
+enum LoadTestShape {
+  CONSTANT
+  RAMP
+  SPIKE
+  SOAK
+}
+
+enum LoadTestStatus {
+  QUEUED
+  RUNNING
+  PASSED
+  FAILED
+  ABORTED
+  ERROR
+}
+
+/// One load test: what it drove, how hard, for how long, and how it went. Its per-second points and
+/// per-step statistics hang off it.
+/// @extends BaseModel
+model LoadTestRun {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  name                  String         @db.VarChar(100)
+  target                LoadTestTarget
+  /// The scenario key (SCENARIO), or null.
+  scenario              String?        @db.VarChar(60)
+  /// The `GET` route template (ENDPOINT), or null.
+  endpoint              String?        @db.VarChar(300)
+  /// Scenario weights of a traffic mix, `{ scenarioKey: weight }` (`LoadTestMixWeightsSchema`).
+  mixWeights            Json?
+  shape                 LoadTestShape
+  virtualUsers          Int
+  requestsPerSecond     Int
+  durationSeconds       Int
+  /// Pass/fail thresholds.
+  thresholdP95Ms        Int
+  thresholdErrorPercent Float
+  status                LoadTestStatus
+  requestedById         String
+  startedAt             BigInt?
+  finishedAt            BigInt?
+  /// Why it stopped early, if it did (an operator's abort or an automatic one).
+  abortReason           String?        @db.VarChar(300)
+  abortRequestedAt      BigInt?
+  /// Totals once it ended.
+  totalRequests         Int?
+  failedRequests        Int?
+  p50Ms                 Float?
+  p95Ms                 Float?
+  p99Ms                 Float?
+  peakRps               Float?
+  error                 String?        @db.VarChar(1000)
+
+  points LoadTestPoint[]
+  steps  LoadTestStepStat[]
+
+  @@index([isDeleted, createdAt])
+  @@index([status])
+}
+
+/// One second of one load test.
+/// @extends BaseModel
+model LoadTestPoint {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  runId        String
+  run          LoadTestRun @relation(fields: [runId], references: [id])
+  /// Seconds since the run started.
+  second       Int
+  at           BigInt
+  virtualUsers Int
+  requests     Int
+  failures     Int
+  p50Ms        Float?
+  p95Ms        Float?
+  p99Ms        Float?
+
+  @@unique([runId, second])
+}
+
+/// One step of a scenario, over the whole run: which part of the journey is slow.
+/// @extends BaseModel
+model LoadTestStepStat {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  runId    String
+  run      LoadTestRun @relation(fields: [runId], references: [id])
+  step     String      @db.VarChar(100)
+  requests Int
+  failures Int
+  p50Ms    Float?
+  p95Ms    Float?
+  p99Ms    Float?
+
+  @@unique([runId, step])
 }

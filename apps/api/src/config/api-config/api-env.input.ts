@@ -57,6 +57,8 @@ import {
 	DEFAULT_EMAIL_ATTEMPTS,
 	DEFAULT_EMAIL_TIMEOUT_MS,
 	DEFAULT_GITHUB_CACHE_TTL_MS,
+	DEFAULT_BACKUP_PG_DUMP_DOCKER_IMAGE,
+	DEFAULT_EXECUTABLE_SEARCH_PATH,
 	DEFAULT_GITHUB_REQUEST_TIMEOUT_MS,
 	DEFAULT_HOST,
 	DEFAULT_JWT_ACCESS_EXPIRY,
@@ -173,6 +175,24 @@ export const ApiEnvInputSchema = z.object({
 		.string()
 		.min(GITHUB_WEBHOOK_SECRET_MIN_LENGTH, { error: `must be at least ${String(GITHUB_WEBHOOK_SECRET_MIN_LENGTH)} characters (openssl rand -hex 32)` })
 		.optional(),
+
+	// Operations console (docs/adr/068-platform-operations-console.md)
+	// Each cloud's read-only API token: the console shows that provider's view of its servers.
+	DIGITALOCEAN_TOKEN: NonEmptyEnvStringSchema.optional(),
+	LINODE_TOKEN: NonEmptyEnvStringSchema.optional(),
+	VULTR_API_KEY: NonEmptyEnvStringSchema.optional(),
+	HCLOUD_TOKEN: NonEmptyEnvStringSchema.optional(),
+	// The backup's own read-only login (BYPASSRLS; `pnpm --filter @workspace/api db:provision-backup-login`).
+	BACKUP_DATABASE_URL: PostgresUrlEnvSchema.optional(),
+	// The image `pg_dump` runs from when the installed one is older than the server.
+	BACKUP_PG_DUMP_DOCKER_IMAGE: NonEmptyEnvStringSchema.default(DEFAULT_BACKUP_PG_DUMP_DOCKER_IMAGE),
+	// Where the backup looks up `pg_dump` and `docker` (the process's own search path).
+	PATH: NonEmptyEnvStringSchema.default(DEFAULT_EXECUTABLE_SEARCH_PATH),
+	// Load tests are off unless enabled; in production they also need the explicit override.
+	LOAD_TESTING_ENABLED: BooleanFlagEnvSchema,
+	LOAD_TESTING_ALLOW_PRODUCTION: BooleanFlagEnvSchema,
+	// The address the load runner drives (default: API_PUBLIC_URL, else this API's own address).
+	LOAD_TEST_TARGET_URL: HttpUrlEnvSchema.optional(),
 
 	// Email
 	EMAIL_MODE: EmailModeSchema.default("send"),

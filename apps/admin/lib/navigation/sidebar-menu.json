@@ -112,6 +112,33 @@
 					"icon": "History"
 				},
 				{
+					"title": "Operations",
+					"url": "/operations",
+					"icon": "Gauge",
+					"children": [
+						{
+							"title": "Servers",
+							"url": "/operations/servers",
+							"icon": "Activity"
+						},
+						{
+							"title": "Alerts",
+							"url": "/operations/alerts",
+							"icon": "AlertCircle"
+						},
+						{
+							"title": "Backups",
+							"url": "/operations/backups",
+							"icon": "Database"
+						},
+						{
+							"title": "Load tests",
+							"url": "/operations/load-tests",
+							"icon": "Rocket"
+						}
+					]
+				},
+				{
 					"title": "Catalog",
 					"url": "/catalog",
 					"icon": "Layers",

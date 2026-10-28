@@ -1,6 +1,14 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
-import { CaughtValueSchema, type EmailRenderContext, type EmailSendResult, EmailSendResultSchema, EmailTemplateKeySchema, newRowId } from "@workspace/shared";
+import {
+	CaughtValueSchema,
+	type EmailRenderContext,
+	type EmailSendResult,
+	EmailSendResultSchema,
+	EmailTemplateKeySchema,
+	isUndeliverableEmail,
+	newRowId,
+} from "@workspace/shared";
 
 import { TypedConfigService } from "../../../../config/typed-config.service";
 import { CLOCK, type Clock } from "../../../../platform/application/clock.port";
@@ -54,6 +62,15 @@ class TransactionalEmailRequests implements EmailRequestTransactionalPort {
 			const issue = parsed.error.issues.at(0);
 			const detail = issue === undefined ? "props failed validation" : `${issue.path.join(".")}: ${issue.message}`;
 			return EmailSendResultSchema.parse({ ok: false, reason: "invalid-props", detail });
+		}
+		// 1b. A reserved `.invalid` address (every load-test user's, ADR 068) can never receive mail:
+		//     dropped before anything is written, and counted in the log.
+		if (isUndeliverableEmail(parsed.data.to)) {
+			this.deps.logService.info(`Dropped "${template.subject}" to an undeliverable address`, {
+				context: "EmailRequest",
+				metadata: { event: "email.dropped_undeliverable", templateKey: template.key },
+			});
+			return EmailSendResultSchema.parse({ ok: false, reason: "undeliverable" });
 		}
 		const effectiveTo = this.effectiveRecipient(template.subject, parsed.data.to);
 		const metadata = this.auditMetadata(options?.audit);

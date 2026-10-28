@@ -48,6 +48,15 @@ export async function createUsers(): Promise<User[]> {
 			isActive: true,
 			isSuperAdmin: false,
 		},
+		// The operations console's developer (ADR 068): Platform Developer role, nothing else of the admin panel.
+		{
+			email: "developer@example.com",
+			passwordHash: await hash("Developer@123"),
+			fullName: "Platform Developer",
+			isActive: true,
+			isSuperAdmin: false,
+			emailVerifiedAt: Date.now(),
+		},
 		{
 			email: "user@example.com",
 			passwordHash: await hash("User@123"),
@@ -176,6 +185,7 @@ export async function assignRolesToUsers(users: User[], roles: Role[]): Promise<
 		{ user: get("admin@example.com"), role: role("Admin") },
 		// The platform Manager role was retired (ADR 067): its holders are Admins.
 		{ user: get("manager@example.com"), role: role("Admin") },
+		{ user: get("developer@example.com"), role: role("Platform Developer") },
 		{ user: get("user@example.com"), role: role("User") },
 		{ user: get("bishenpatel123@gmail.com"), role: role("User") },
 		{ user: get("alice.johnson@example.com"), role: role("User") },

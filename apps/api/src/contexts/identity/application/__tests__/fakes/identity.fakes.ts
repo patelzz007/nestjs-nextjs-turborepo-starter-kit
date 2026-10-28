@@ -860,6 +860,7 @@ export function accountState(overrides: Partial<UserAccountState> & Pick<UserAcc
 		passwordHash: "hash:Correct-Horse-1",
 		isActive: true,
 		isSuperAdmin: false,
+		isLoadTestUser: false,
 		isDeleted: false,
 		deletedAt: null,
 		emailVerifiedAt: NOW,

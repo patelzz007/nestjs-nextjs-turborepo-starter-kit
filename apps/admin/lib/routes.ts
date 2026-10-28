@@ -128,6 +128,24 @@ export interface KanbanRoutes {
 	readonly editTask: RouteBuilder;
 }
 
+/** The operations console (ADR 068): servers, instances, dependencies, alerts, backups and load tests. */
+export interface OperationsRoutes {
+	/** Section index: redirects to the servers overview (the sidebar lists it as a toggle-only parent). */
+	readonly index: string;
+	/** The overview: every server, instance, dependency and open alert. */
+	readonly servers: string;
+	/** One server: its facts, live numbers and history. */
+	readonly server: RouteBuilder;
+	readonly alerts: string;
+	/** SuperAdmin only. */
+	readonly backups: string;
+	readonly loadTests: string;
+	/** One load test: its timeline, steps and the servers' load. */
+	readonly loadTest: RouteBuilder;
+	/** Two load tests side by side (`?a=&b=`). */
+	readonly compare: (left: string, right: string) => string;
+}
+
 export interface AccountRoutes {
 	/** Section prefix — where restricted sessions land; redirects to `security`. */
 	readonly index: string;
@@ -152,6 +170,7 @@ export interface AdminRoutes {
 	readonly settings: SettingsRoutes;
 	readonly components: ComponentsRoutes;
 	readonly kanban: KanbanRoutes;
+	readonly operations: OperationsRoutes;
 	readonly account: AccountRoutes;
 }
 
@@ -215,6 +234,11 @@ const COMPONENTS = "/components";
 /** The board sits in the Components section (sidebar), beside the gallery, so its URL nests under it. */
 const KANBAN = `${COMPONENTS}/kanban-board`;
 const KANBAN_TASKS = `${KANBAN}/tasks`;
+const OPERATIONS = "/operations";
+const OPERATIONS_SERVERS = `${OPERATIONS}/servers`;
+const OPERATIONS_LOAD_TESTS = `${OPERATIONS}/load-tests`;
+/** The two runs a comparison shows (`/operations/load-tests/compare?a=&b=`). */
+export const LOAD_TEST_COMPARE_PARAMS = { left: "a", right: "b" } satisfies Record<string, string>;
 
 export const ROUTES: AdminRoutes = {
 	home: APP_LINKS.admin.home,
@@ -278,6 +302,17 @@ export const ROUTES: AdminRoutes = {
 		task: (id: string): string => childPath(KANBAN_TASKS, id),
 		editTask: (id: string): string => `${childPath(KANBAN_TASKS, id)}/${EDIT_SEGMENT}`,
 	},
+	operations: {
+		index: OPERATIONS,
+		servers: OPERATIONS_SERVERS,
+		server: (id: string): string => childPath(OPERATIONS_SERVERS, id),
+		alerts: `${OPERATIONS}/alerts`,
+		backups: `${OPERATIONS}/backups`,
+		loadTests: OPERATIONS_LOAD_TESTS,
+		loadTest: (id: string): string => childPath(OPERATIONS_LOAD_TESTS, id),
+		compare: (left: string, right: string): string =>
+			`${OPERATIONS_LOAD_TESTS}/compare?${new URLSearchParams({ [LOAD_TEST_COMPARE_PARAMS.left]: left, [LOAD_TEST_COMPARE_PARAMS.right]: right }).toString()}`,
+	},
 	account: {
 		index: ACCOUNT,
 		profile: `${ACCOUNT}/profile`,
@@ -302,6 +337,7 @@ export interface AdminRoutePatterns {
 		readonly categories: CrudRoutePatterns;
 	};
 	readonly kanban: { readonly task: string; readonly editTask: string };
+	readonly operations: { readonly server: string; readonly loadTest: string; readonly compare: string };
 }
 
 /** Name of the dynamic segment in every admin detail page (`app/(panel)/x/[id]`). */
@@ -327,6 +363,11 @@ export const ROUTE_PATTERNS: AdminRoutePatterns = {
 		categories: crudRoutePatterns(ROUTES.catalog.categories.list),
 	},
 	kanban: { task: `${KANBAN_TASKS}/${routeParam(ID_PARAM)}`, editTask: `${KANBAN_TASKS}/${routeParam(ID_PARAM)}/${EDIT_SEGMENT}` },
+	operations: {
+		server: `${OPERATIONS_SERVERS}/${routeParam(ID_PARAM)}`,
+		loadTest: `${OPERATIONS_LOAD_TESTS}/${routeParam(ID_PARAM)}`,
+		compare: `${OPERATIONS_LOAD_TESTS}/compare`,
+	},
 };
 
 /**

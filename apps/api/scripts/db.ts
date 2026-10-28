@@ -7,6 +7,7 @@
 //   generate-system-operation-scopes    pnpm db:generate-system-operation-scopes — render the scopes SQL
 //   check-drift                         pnpm db:check-drift — prisma/migrations reproduce schema.prisma
 //   check-seed-coverage                 pnpm db:check-seed-coverage — every table and column seeded
+//   provision-backup-login              pnpm db:provision-backup-login — the backup's own login (BACKUP_DATABASE_URL)
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -33,6 +34,7 @@ import {
 import { buildSystemOperationScopesSql, SYSTEM_OPERATION_SCOPES_SQL_PATH } from "../prisma/rls/system-operation-scopes";
 import { findHandWrittenAppRuntimeRevokes, findUnknownWithheldPrivilegeTables, listWithheldPrivileges } from "../prisma/rls/withheld-privileges";
 import { SEED_COVERAGE_EXEMPTIONS } from "../prisma/seed/coverage-exemptions";
+import { BackupLoginEnvSchema, backupLoginSql } from "./lib/backup-login";
 import { EXIT_FAILED, EXIT_OK, PROCESS_OUTPUT, runCli, type CliCommand } from "./lib/cli";
 import {
 	buildMigrateDiffArgs,
@@ -271,6 +273,34 @@ async function checkSeedCoverage(): Promise<number> {
 	return EXIT_FAILED;
 }
 
+// ── provision-backup-login ────────────────────────────────────────────────
+
+/**
+ * Creates or updates the backup's LOGIN role named in BACKUP_DATABASE_URL, connecting as DATABASE_URL
+ * (a role allowed to create roles). Run after `db:apply-security`, which creates the `app_backup` group.
+ */
+async function provisionBackupLogin(): Promise<number> {
+	const env = BackupLoginEnvSchema.safeParse(process.env);
+	const admin = PostgresUrlEnvSchema.safeParse(process.env.DATABASE_URL);
+	if (!env.success || !admin.success) {
+		err(`Backup login: set DATABASE_URL and BACKUP_DATABASE_URL (${(env.error?.issues ?? admin.error?.issues ?? []).map((issue): string => issue.message).join("; ")})`);
+		return EXIT_FAILED;
+	}
+	const { login, password } = env.data.BACKUP_DATABASE_URL;
+	const pool = new Pool({ connectionString: admin.data, max: 1 });
+	const client = await pool.connect();
+	try {
+		for (const statement of backupLoginSql(login, client.escapeLiteral(password))) {
+			await client.query(statement);
+		}
+	} finally {
+		client.release();
+		await pool.end();
+	}
+	out(`Backup login ${login} is ready: a member of app_backup (read only) with BYPASSRLS.`);
+	return EXIT_OK;
+}
+
 // ── entry ─────────────────────────────────────────────────────────────────
 
 const DB_COMMANDS: ReadonlyMap<string, CliCommand> = new Map<string, CliCommand>([
@@ -280,6 +310,7 @@ const DB_COMMANDS: ReadonlyMap<string, CliCommand> = new Map<string, CliCommand>
 	["generate-system-operation-scopes", { summary: "Render prisma/rls/00-system-operation-scopes.sql from the registry", run: generateSystemOperationScopes }],
 	["check-drift", { summary: "Fail when prisma/migrations does not reproduce prisma/schema.prisma", run: checkDrift }],
 	["check-seed-coverage", { summary: "Fail when a table or nullable column of the seeded database is empty", run: checkSeedCoverage }],
+	["provision-backup-login", { summary: "Create or update the backup's own login (BACKUP_DATABASE_URL) in the app_backup group", run: provisionBackupLogin }],
 ]);
 
 process.exitCode = await runCli("db", DB_COMMANDS, process.argv.slice(2));

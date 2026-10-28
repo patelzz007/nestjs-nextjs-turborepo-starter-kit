@@ -33,6 +33,8 @@ export interface UserAccountState {
 	readonly passwordHash: string;
 	readonly isActive: boolean;
 	readonly isSuperAdmin: boolean;
+	/** A load-test user (ADR 068): only inside the Load Test tenant; never sent a new-device code. */
+	readonly isLoadTestUser: boolean;
 	readonly isDeleted: boolean;
 	readonly deletedAt: EpochMs | null;
 	readonly emailVerifiedAt: EpochMs | null;
@@ -107,6 +109,7 @@ export class UserAccount extends AggregateRoot<IdentityEvent> {
 			passwordHash: input.passwordHash,
 			isActive: true,
 			isSuperAdmin: input.isSuperAdmin,
+			isLoadTestUser: false,
 			isDeleted: false,
 			deletedAt: null,
 			emailVerifiedAt: input.emailVerifiedAt,
@@ -155,6 +158,11 @@ export class UserAccount extends AggregateRoot<IdentityEvent> {
 
 	public get isSuperAdmin(): boolean {
 		return this.state.isSuperAdmin;
+	}
+
+	/** A load-test user signs in without the new-device code: its address cannot receive one (ADR 068). */
+	public get isLoadTestUser(): boolean {
+		return this.state.isLoadTestUser;
 	}
 
 	public get isDeleted(): boolean {

@@ -3,6 +3,7 @@ import { nowEpochMs, type EpochMs } from "@workspace/shared";
 
 import { UserAuthorizationAggregate, type DirectPermissionGrant, type UserAuthorizationChange } from "../../domain/aggregates/user-authorization.aggregate";
 import type { UserAuthorizationRepository } from "../../domain/repositories/user-authorization.repository";
+import { LoadTestUserConfinedError } from "../../../../platform/domain/errors/load-test-user-confined.error";
 
 /**
  * `UserRole` and `UserPermission` on the RBAC transaction, written only inside the RBAC mutation scope
@@ -97,7 +98,16 @@ export class PrismaUserAuthorizationRepository implements UserAuthorizationRepos
 		return { isDeleted: true, deletedAt: now, updatedAt: now };
 	}
 
+	/** A load-test user never holds a platform role (ADR 068). */
+	private async assertNotLoadTestUser(userId: string): Promise<void> {
+		const user = await this.db.user.findFirst({ where: { id: userId }, select: { isLoadTestUser: true } });
+		if (user?.isLoadTestUser === true) {
+			throw new LoadTestUserConfinedError(userId);
+		}
+	}
+
 	private async assignRole(userId: string, roleId: string, assignedBy: string): Promise<void> {
+		await this.assertNotLoadTestUser(userId);
 		const now: number = nowEpochMs();
 		await this.db.userRole.upsert({
 			where: { userId_roleId: { userId, roleId } },
@@ -113,6 +123,7 @@ export class PrismaUserAuthorizationRepository implements UserAuthorizationRepos
 		if (roleIds.length === 0) {
 			return;
 		}
+		await this.assertNotLoadTestUser(userId);
 		await this.db.userRole.updateMany({
 			where: { userId, roleId: { in: [...roleIds] }, isDeleted: true },
 			data: { isDeleted: false, deletedAt: null, assignedBy, assignedAt: now, updatedAt: now },

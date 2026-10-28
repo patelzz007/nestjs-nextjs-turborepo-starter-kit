@@ -22,8 +22,8 @@ const throttlerRegistration: DynamicModule = ThrottlerModule.forRootAsync({
 
 /** Imported once from `AppModule`. The two scoped guards run as `APP_GUARD`s (`APP_GUARD_ORDER`). */
 @Module({
-	imports: [throttlerRegistration],
+	imports: [throttlerRegistration, ThrottlerStorageModule],
 	providers: [PreAuthThrottlerGuard, PrincipalThrottlerGuard],
-	exports: [throttlerRegistration, PreAuthThrottlerGuard, PrincipalThrottlerGuard],
+	exports: [throttlerRegistration, ThrottlerStorageModule, PreAuthThrottlerGuard, PrincipalThrottlerGuard],
 })
 export class ThrottlingModule {}

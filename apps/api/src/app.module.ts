@@ -44,6 +44,7 @@ import { RewardsAccessModule, RewardsModule } from "./contexts/rewards/public-ap
 import { ClaimsModule } from "./contexts/claims/claims.module";
 import { CatalogModule } from "./contexts/catalog/public-api";
 import { KanbanModule } from "./contexts/kanban/public-api";
+import { OperationsModule } from "./contexts/operations/public-api";
 import { ReportingModule } from "./contexts/reporting/public-api";
 
 import { PrismaModule } from "./prisma/prisma.module";
@@ -107,6 +108,7 @@ if (observeConfig !== null) {
 		CatalogModule,
 		KanbanModule,
 		ReportingModule,
+		OperationsModule,
 		// Conditionally include ObserveModule
 		...observeImports,
 	],

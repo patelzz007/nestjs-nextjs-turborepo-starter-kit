@@ -82,6 +82,7 @@ flowchart TD
 | 8 | [Analytics](./08-analytics.md) | Merchant, platform admin, customer |
 | 9 | [Platform administration](./09-platform-administration.md) | Platform admins |
 | 10 | [Account and security](./10-account-and-security.md) | Everyone |
+| 11 | [Operations console](./11-operations-console.md) | SuperAdmin, Platform Developer, Admin |
 
 ## Try it with the demo data
 
@@ -93,6 +94,7 @@ in production). The accounts used throughout this guide:
 | Account | Password | Who |
 | --- | --- | --- |
 | `superadmin@example.com` | `SuperAdmin@123` | Platform SuperAdmin (admin panel) |
+| `developer@example.com` | `Developer@123` | Platform Developer: servers, alerts and load tests (admin panel) |
 | `admin@example.com` | `Admin@123` | Platform admin (admin panel) |
 | `brew.owner@kl-rewards.demo` | `BrewOwner@123` | Owner of **Brew & Bean KL** (one store, Bukit Bintang) |
 | `jonker.owner@melaka-rewards.demo` | `JonkerOwner@123` | Owner of **Jonker Street Kitchen** (Bukit Katil, Bukit Beruang, Ayer Keroh pending) |

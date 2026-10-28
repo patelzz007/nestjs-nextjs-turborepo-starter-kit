@@ -413,6 +413,8 @@ export {
 	ResendWebhookHeadersSchema,
 	EmailWebhookInfoResponseSchema,
 	EmailWebhookReceivedResponseSchema,
+	UNDELIVERABLE_EMAIL_DOMAIN_SUFFIX,
+	isUndeliverableEmail,
 } from "../contexts/notifications/schemas/email";
 export {
 	AccountLockedEmailPropsSchema,
@@ -2152,3 +2154,9 @@ export type {
 
 // Tenant access administration (ADR 067): tenant roles, grants and shares.
 export * from "../contexts/authorization/schemas/tenant-access";
+
+// Platform operations (ADR 068): servers, instances, dependencies, alerts.
+export * from "../contexts/operations/schemas/operations";
+export * from "../contexts/operations/percentiles";
+export * from "../contexts/operations/load-test-plan";
+export * from "../contexts/operations/machine-usage";

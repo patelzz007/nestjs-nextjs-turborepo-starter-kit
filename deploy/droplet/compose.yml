@@ -1,0 +1,62 @@
+# ============================================================================
+# One droplet (or Linode, Vultr instance, Hetzner server) of the platform — ADR 068, phase 4.
+# PostgreSQL and Redis are the provider's managed services; this file runs the platform's own
+# processes. See docs/technical/operations/deploying-to-a-droplet.md.
+#
+#   docker compose -f deploy/droplet/compose.yml up -d --build                          # the platform
+#   docker compose -f deploy/droplet/compose.yml --profile agent up -d server-agent      # its server agent
+#   docker compose -f deploy/droplet/compose.yml --profile load up -d load-runner        # a load runner
+#
+# Every service reads deploy/droplet/.env (copy .env.example; never commit it).
+# ============================================================================
+
+x-app: &app
+  restart: unless-stopped
+  env_file: .env
+
+services:
+  api:
+    <<: *app
+    build: { context: ../.., dockerfile: deploy/docker/Dockerfile, target: api }
+    ports: ["127.0.0.1:8080:8080"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health/ready').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  web:
+    <<: *app
+    build: { context: ../.., dockerfile: deploy/docker/Dockerfile, target: web }
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on: [api]
+
+  admin:
+    <<: *app
+    build: { context: ../.., dockerfile: deploy/docker/Dockerfile, target: admin }
+    ports: ["127.0.0.1:3001:3001"]
+    depends_on: [api]
+
+  merchant:
+    <<: *app
+    build: { context: ../.., dockerfile: deploy/docker/Dockerfile, target: merchant }
+    ports: ["127.0.0.1:3003:3003"]
+    depends_on: [api]
+
+  # Reads THIS machine: the host's processes (pid: host) and network (network_mode: host).
+  server-agent:
+    <<: *app
+    profiles: ["agent"]
+    build: { context: ../.., dockerfile: deploy/docker/Dockerfile, target: server-agent }
+    pid: host
+    network_mode: host
+    environment:
+      OPS_API_URL: ${OPS_API_URL:?set OPS_API_URL to the API's public address}
+      OPS_AGENT_TOKEN: ${OPS_AGENT_TOKEN:?set OPS_AGENT_TOKEN to the token from the operations console}
+
+  # Takes load tests from the queue (only where LOAD_TESTING_ENABLED is on). Best on its own machine,
+  # so the load it generates is not measured as the platform's own.
+  load-runner:
+    <<: *app
+    profiles: ["load"]
+    build: { context: ../.., dockerfile: deploy/docker/Dockerfile, target: load-runner }

@@ -185,6 +185,18 @@ const PLATFORM_PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
 	{ action: "UPDATE", resource: "KANBAN_TASK", description: "Edit and move tasks, comment on them and attach files", group: "Kanban Board", isSystem: true },
 	{ action: "DELETE", resource: "KANBAN_TASK", description: "Delete tasks", group: "Kanban Board", isSystem: true },
 	{ action: "UPDATE", resource: "KANBAN_BOARD", description: "Rearrange the board's columns and set their WIP limits", group: "Kanban Board", isSystem: true },
+	{ action: "LIST", resource: "SERVER_METRIC", description: "See the servers, instances, dependencies and alerts of the platform", group: "Operations", isSystem: true },
+	{ action: "READ", resource: "SERVER_METRIC", description: "Open a server, instance or dependency and its history", group: "Operations", isSystem: true },
+	{ action: "LIST", resource: "DATABASE_BACKUP", description: "See the database backups", group: "Operations", isSystem: true },
+	{ action: "CREATE", resource: "DATABASE_BACKUP", description: "Back the database up now, and change the backup schedule", group: "Operations", isSystem: true },
+	{ action: "READ", resource: "DATABASE_BACKUP", description: "Download a database backup", group: "Operations", isSystem: true },
+	{ action: "UPDATE", resource: "DATABASE_BACKUP", description: "Pin or unpin a database backup", group: "Operations", isSystem: true },
+	{ action: "DELETE", resource: "DATABASE_BACKUP", description: "Delete a database backup", group: "Operations", isSystem: true },
+	{ action: "LIST", resource: "LOAD_TEST", description: "See the load tests and their results", group: "Operations", isSystem: true },
+	{ action: "READ", resource: "LOAD_TEST", description: "Open a load test, its live results and comparisons", group: "Operations", isSystem: true },
+	{ action: "CREATE", resource: "LOAD_TEST", description: "Start a load test", group: "Operations", isSystem: true },
+	{ action: "UPDATE", resource: "LOAD_TEST", description: "Abort a running load test", group: "Operations", isSystem: true },
+	{ action: "DELETE", resource: "LOAD_TEST", description: "Purge every row the load tests created", group: "Operations", isSystem: true },
 ];
 
 /**

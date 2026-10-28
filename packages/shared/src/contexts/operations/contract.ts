@@ -1,0 +1,132 @@
+// API contract leaves owned by the `operations` context (ADR 068). Composed into `apiContract`
+// (`src/contracts/index.ts`) with identical keys.
+
+import { z } from "zod";
+
+import { defineContract, defineFileContract } from "../../contracts/define-contract";
+import { fileResponse, singleResponse } from "../../contracts/response";
+import { DeleteSuccessDataSchema } from "../../schemas/api/api-response";
+import { operationsRoutes } from "./routes";
+import {
+	LoadTestCapsInputSchema,
+	OpsAlertSettingsInputSchema,
+	OpsBackupScheduleInputSchema,
+	OPS_BACKUP_FILE_CONTENT_TYPE,
+	OpsBackupFileInputSchema,
+	LoadTestCapsSchema,
+	LoadTestOverviewSchema,
+	LoadTestPurgeResultSchema,
+	LoadTestRunDetailSchema,
+	LoadTestRunPathSchema,
+	LoadTestRunSchema,
+	OpsAgentReportAckSchema,
+	OpsBackupDownloadSchema,
+	OpsBackupListSchema,
+	OpsBackupPathSchema,
+	OpsBackupScheduleSchema,
+	OpsBackupSchema,
+	PinOpsBackupSchema,
+	StartLoadTestSchema,
+	OpsAgentReportSchema,
+	OpsAlertListQuerySchema,
+	OpsAlertListSchema,
+	OpsAlertSettingsSchema,
+	OpsDependencyHistorySchema,
+	OpsDependencyListSchema,
+	OpsDependencyPathSchema,
+	OpsHistoryQuerySchema,
+	OpsInstanceHistorySchema,
+	OpsInstanceListSchema,
+	OpsInstancePathSchema,
+	OpsOverviewSchema,
+	OpsServerCredentialsSchema,
+	OpsServerDetailSchema,
+	OpsServerHistorySchema,
+	OpsServerListSchema,
+	OpsServerPathSchema,
+	RegisterOpsServerSchema,
+} from "./schemas/operations";
+
+/** Contract leaves composed into `apiContract.operations`. */
+export const operationsContract = {
+	overview: defineContract({ method: "GET", path: operationsRoutes.overview, input: z.undefined(), response: singleResponse(OpsOverviewSchema) }),
+	servers: defineContract({ method: "GET", path: operationsRoutes.servers, input: z.undefined(), response: singleResponse(OpsServerListSchema) }),
+	registerServer: defineContract({
+		method: "POST",
+		path: operationsRoutes.registerServer,
+		input: RegisterOpsServerSchema,
+		response: singleResponse(OpsServerCredentialsSchema),
+	}),
+	server: defineContract({ method: "GET", path: operationsRoutes.server, input: OpsServerPathSchema, response: singleResponse(OpsServerDetailSchema) }),
+	serverHistory: defineContract({
+		method: "GET",
+		path: operationsRoutes.serverHistory,
+		input: OpsServerPathSchema.extend(OpsHistoryQuerySchema.shape),
+		response: singleResponse(OpsServerHistorySchema),
+	}),
+	rotateServerToken: defineContract({
+		method: "POST",
+		path: operationsRoutes.rotateServerToken,
+		input: OpsServerPathSchema,
+		response: singleResponse(OpsServerCredentialsSchema),
+	}),
+	revokeServer: defineContract({ method: "DELETE", path: operationsRoutes.revokeServer, input: OpsServerPathSchema, response: singleResponse(DeleteSuccessDataSchema) }),
+	instances: defineContract({ method: "GET", path: operationsRoutes.instances, input: z.undefined(), response: singleResponse(OpsInstanceListSchema) }),
+	instanceHistory: defineContract({
+		method: "GET",
+		path: operationsRoutes.instanceHistory,
+		input: OpsInstancePathSchema.extend(OpsHistoryQuerySchema.shape),
+		response: singleResponse(OpsInstanceHistorySchema),
+	}),
+	dependencies: defineContract({ method: "GET", path: operationsRoutes.dependencies, input: z.undefined(), response: singleResponse(OpsDependencyListSchema) }),
+	dependencyHistory: defineContract({
+		method: "GET",
+		path: operationsRoutes.dependencyHistory,
+		input: OpsDependencyPathSchema.extend(OpsHistoryQuerySchema.shape),
+		response: singleResponse(OpsDependencyHistorySchema),
+	}),
+	alerts: defineContract({ method: "GET", path: operationsRoutes.alerts, input: OpsAlertListQuerySchema, response: singleResponse(OpsAlertListSchema) }),
+	alertSettings: defineContract({ method: "GET", path: operationsRoutes.alertSettings, input: z.undefined(), response: singleResponse(OpsAlertSettingsSchema) }),
+	updateAlertSettings: defineContract({
+		method: "PUT",
+		path: operationsRoutes.updateAlertSettings,
+		input: OpsAlertSettingsInputSchema,
+		response: singleResponse(OpsAlertSettingsSchema),
+	}),
+	backups: defineContract({ method: "GET", path: operationsRoutes.backups, input: z.undefined(), response: singleResponse(OpsBackupListSchema) }),
+	createBackup: defineContract({ method: "POST", path: operationsRoutes.createBackup, input: z.undefined(), response: singleResponse(OpsBackupSchema) }),
+	backupSchedule: defineContract({
+		method: "PUT",
+		path: operationsRoutes.backupSchedule,
+		input: OpsBackupScheduleInputSchema,
+		response: singleResponse(OpsBackupScheduleSchema),
+	}),
+	pinBackup: defineContract({
+		method: "PUT",
+		path: operationsRoutes.pinBackup,
+		input: OpsBackupPathSchema.extend(PinOpsBackupSchema.shape),
+		response: singleResponse(OpsBackupSchema),
+	}),
+	backupDownload: defineContract({ method: "POST", path: operationsRoutes.backupDownload, input: OpsBackupPathSchema, response: singleResponse(OpsBackupDownloadSchema) }),
+	backupFile: defineFileContract({
+		method: "GET",
+		path: operationsRoutes.backupFile,
+		input: OpsBackupFileInputSchema,
+		response: fileResponse([OPS_BACKUP_FILE_CONTENT_TYPE]),
+		access: "public",
+	}),
+	deleteBackup: defineContract({ method: "DELETE", path: operationsRoutes.deleteBackup, input: OpsBackupPathSchema, response: singleResponse(DeleteSuccessDataSchema) }),
+	loadTests: defineContract({ method: "GET", path: operationsRoutes.loadTests, input: z.undefined(), response: singleResponse(LoadTestOverviewSchema) }),
+	startLoadTest: defineContract({ method: "POST", path: operationsRoutes.startLoadTest, input: StartLoadTestSchema, response: singleResponse(LoadTestRunSchema) }),
+	loadTest: defineContract({ method: "GET", path: operationsRoutes.loadTest, input: LoadTestRunPathSchema, response: singleResponse(LoadTestRunDetailSchema) }),
+	abortLoadTest: defineContract({ method: "POST", path: operationsRoutes.abortLoadTest, input: LoadTestRunPathSchema, response: singleResponse(LoadTestRunSchema) }),
+	loadTestCaps: defineContract({ method: "PUT", path: operationsRoutes.loadTestCaps, input: LoadTestCapsInputSchema, response: singleResponse(LoadTestCapsSchema) }),
+	purgeLoadTestData: defineContract({ method: "DELETE", path: operationsRoutes.purgeLoadTestData, input: z.undefined(), response: singleResponse(LoadTestPurgeResultSchema) }),
+	agentReport: defineContract({
+		method: "POST",
+		path: operationsRoutes.agentReport,
+		input: OpsAgentReportSchema,
+		response: singleResponse(OpsAgentReportAckSchema),
+		access: "public",
+	}),
+};

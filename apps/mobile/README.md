@@ -102,7 +102,8 @@ dev machine's address: set `EXPO_PUBLIC_API_URL` to an address the phone can rea
 | `pnpm --filter @workspace/mobile dev`       | `expo start --clear` (same as `pnpm dev:mobile` from the root): Metro's cache is rebuilt on every start, so a change to `babel.config.js`, `metro.config.js` or an upgraded dependency never runs on stale transforms |
 | `pnpm --filter @workspace/mobile lint`      | Oxfmt check + Oxlint, zero errors                                                                                              |
 | `pnpm --filter @workspace/mobile typecheck` | `tsrs --noEmit` with the repo's strict flags                                                                          |
-| `pnpm --filter @workspace/mobile test`      | jest-expo suites, then `expo install --check` (SDK version drift fails)                                               |
+| `pnpm --filter @workspace/mobile test`      | jest-expo suites, then `expo install --check` **offline**: every Expo-managed package must match the installed SDK |
+| `pnpm check:expo-latest`                     | Asks Expo's servers whether newer SDK patches exist (on demand, never a gate)                                         |
 | `pnpm --filter @workspace/mobile build`     | `expo export --platform ios --platform android` into `dist/` — the CI bundle check (no Xcode / Android Studio needed) |
 
 ### Adding a dependency
@@ -110,6 +111,12 @@ dev machine's address: set `EXPO_PUBLIC_API_URL` to an address the phone can rea
 - **Expo-managed** (anything `npx expo install` knows — expo-_, react-native-_, React itself):
   `cd apps/mobile && npx expo install <package>`. Never `pnpm add` them: the SDK pins their versions
   and `expo install --check` fails on drift.
+- **Why the gate checks offline.** Online, `expo install --check` compares against the newest patch
+  Expo has published, while pnpm refuses any release younger than a day (`minimumReleaseAge`): every
+  Expo patch then failed `test` for 24 hours with no code change. Offline (`EXPO_OFFLINE=1`) it
+  compares against the version table inside the installed `expo` package, so the gate only changes
+  when this repository does. Run `pnpm check:expo-latest` to see whether Expo has shipped newer
+  patches, then bump `expo` once they are a day old.
 - **Everything else**: `pnpm --filter @workspace/mobile add <package>@<latest stable>`.
 - Only modules **Expo Go includes** may be used (no custom native code) while the app develops in
   Expo Go. AsyncStorage is banned outright (lint): persist through `src/lib/secure-store.ts`.

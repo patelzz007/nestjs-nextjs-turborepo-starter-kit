@@ -13,6 +13,7 @@ import type {
 	GithubConfig,
 	SessionsConfig,
 	ObservabilityConfig,
+	OperationsConfig,
 	RateLimitConfig,
 	RuntimeConfig,
 	StorageConfig,
@@ -105,6 +106,10 @@ export class TypedConfigService {
 	 */
 	public get storage(): StorageConfig {
 		return this.config.storage;
+	}
+
+	public get operations(): OperationsConfig {
+		return this.config.operations;
 	}
 
 	public get observability(): ObservabilityConfig {

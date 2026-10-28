@@ -1,0 +1,16 @@
+# Never sent to the Docker build: dependencies and build output are produced inside the image, and
+# secrets and local state stay on the machine.
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/coverage
+**/test-results
+**/playwright-report
+**/.storage
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.ci-logs
+apps/mobile

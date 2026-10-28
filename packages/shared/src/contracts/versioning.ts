@@ -105,6 +105,8 @@ export const VersionedRoutePrefixSchema = z.enum([
 	"/admin/location-requests",
 	"/admin/analytics",
 	"/admin/kanban",
+	"/admin/operations",
+	"/operations",
 	"/sample-category",
 	"/product",
 	"/capabilities/catalog",

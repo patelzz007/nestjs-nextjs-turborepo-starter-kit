@@ -165,6 +165,7 @@ In development each login page lists the seeded demo accounts as one-click butto
 | App | Email | Password |
 | --- | --- | --- |
 | Admin | `superadmin@example.com` | `SuperAdmin@123` |
+| Admin (Platform Developer) | `developer@example.com` | `Developer@123` |
 | Merchant | `brew.owner@kl-rewards.demo` | `BrewOwner@123` |
 
 Sign-in codes and verification links arrive in Mailpit, never in a real inbox. Read them from the

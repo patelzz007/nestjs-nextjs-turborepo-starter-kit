@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { createTestTypedConfig } from "../../../../../../../test/support/test-api-env";
+import { LoadTestTrafficKeys } from "../../../../../infrastructure/throttling/load-test-traffic-keys";
 import { RedisThrottlerStorage } from "../../../../../infrastructure/throttling/redis-throttler.storage";
 import { PRE_AUTH_LIMIT_MULTIPLIER, RATE_LIMIT_POLICY, type RateLimitPolicy } from "../rate-limit-policy";
 import { RateLimit } from "../rate-limit.decorator";
@@ -130,6 +131,8 @@ async function buildApp({ webhookLimit, trustedProxies = false }: ProbeOptions):
 		imports: [ThrottlerModule.forRoot(throttlerOptionsFactory(config, storage))],
 		controllers: [ProbeController],
 		providers: [
+			// The load-test traffic keys the guards let through (none issued here).
+			{ provide: LoadTestTrafficKeys, useValue: new LoadTestTrafficKeys(config, null) },
 			// The production order: pre-auth IP throttler, authentication, principal throttlers.
 			{ provide: APP_GUARD, useClass: PreAuthThrottlerGuard },
 			{ provide: APP_GUARD, useClass: ProbePrincipalGuard },

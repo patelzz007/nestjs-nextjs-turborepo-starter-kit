@@ -1,0 +1,34 @@
+{
+	"name": "@workspace/server-agent",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"description": "The server agent (ADR 068): reports one machine's health to the operations console every 10 seconds.",
+	"scripts": {
+		"dev": "cross-env OPS_AGENT_DEV=true tsx watch src/main.ts",
+		"start": "tsx src/main.ts",
+		"format": "oxfmt \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\"",
+		"lint": "oxfmt --check \"**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}\" && oxlint",
+		"typecheck": "tsrs --noEmit",
+		"test": "vitest run --config vitest.config.ts"
+	},
+	"dependencies": {
+		"@workspace/shared": "workspace:*",
+		"systeminformation": "^5.33.16",
+		"zod": "4.6.7"
+	},
+	"devDependencies": {
+		"@types/node": "^26.6.5",
+		"@workspace/oxlint-config": "workspace:^",
+		"@workspace/typescript-config": "workspace:*",
+		"cross-env": "^10.1.0",
+		"dotenv": "^18.0.9",
+		"oxfmt": "0.75.0",
+		"oxlint": "1.90.0",
+		"oxlint-tsgolint": "7.0.2005",
+		"tsrs": "0.20.0-ts7.1.0-beta",
+		"tsx": "^4.23.15",
+		"typescript": "7.0.2",
+		"vitest": "^5.0.5"
+	}
+}
