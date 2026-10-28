@@ -102,11 +102,26 @@ function userRow(id: string, email: string, fullName: string, isSuperAdmin: bool
 	};
 }
 
-/** Idempotent §8.1 rows. A second call writes the same columns. */
+/**
+ * Idempotent §8.1 rows. A second call writes the same columns.
+ *
+ * Written in four short transactions (people, memberships, rewards, till) rather than one: each is a
+ * few dozen round trips, so none comes near the interactive-transaction timeout even on a loaded
+ * machine, where one ~90-statement transaction did. Idempotence makes the split safe: a call that
+ * fails part-way is completed by the next one.
+ */
 export async function seedTwoTenantFixture(prisma: PrismaService): Promise<void> {
 	const ids = TWO_TENANT_FIXTURE;
 	const transactions = new TenantTransactionService(prisma, new RequestContextService());
-	await transactions.withSystemOperation({ operation: SEED_TEST_FIXTURE_OPERATION, reason: "Seed the two-tenant e2e fixture", actorUserId: null }, async (tx) => {
+	const write = (part: string, rows: (tx: Prisma.TransactionClient) => Promise<void>): Promise<void> =>
+		transactions.withSystemOperation({ operation: SEED_TEST_FIXTURE_OPERATION, reason: `Seed the two-tenant e2e fixture (${part})`, actorUserId: null }, rows);
+	const tenants = [
+		tenant(ids.tenantA, "fixture-tenant-a", "Tenant A", "ACTIVE"),
+		tenant(ids.tenantB, "fixture-tenant-b", "Tenant B", "ACTIVE"),
+		tenant(ids.tenantS, "fixture-tenant-s", "Tenant S", "SUSPENDED"),
+	];
+
+	await write("people", async (tx) => {
 		const users = [
 			userRow(ids.userAOwner, "fixture-a-owner@example.com", "A Owner", false),
 			userRow(ids.userAKlManager, "fixture-a-kl-manager@example.com", "A KL Manager", false),
@@ -121,11 +136,6 @@ export async function seedTwoTenantFixture(prisma: PrismaService): Promise<void>
 			await tx.user.upsert({ where: { id: row.id }, create: row, update: row });
 		}
 
-		const tenants = [
-			tenant(ids.tenantA, "fixture-tenant-a", "Tenant A", "ACTIVE"),
-			tenant(ids.tenantB, "fixture-tenant-b", "Tenant B", "ACTIVE"),
-			tenant(ids.tenantS, "fixture-tenant-s", "Tenant S", "SUSPENDED"),
-		];
 		for (const row of tenants) {
 			await tx.tenant.upsert({ where: { id: row.id }, create: row, update: row });
 		}
@@ -139,7 +149,9 @@ export async function seedTwoTenantFixture(prisma: PrismaService): Promise<void>
 		for (const row of locations) {
 			await tx.location.upsert({ where: { id: row.id }, create: row, update: row });
 		}
+	});
 
+	await write("memberships", async (tx) => {
 		// Every tenant's Owner / Manager / Cashier, copied from the templates as provisioning does (ADR 067).
 		const copies = new TenantRoleCopies(tx);
 		for (const row of tenants) {
@@ -169,7 +181,9 @@ export async function seedTwoTenantFixture(prisma: PrismaService): Promise<void>
 		for (const row of scopes) {
 			await tx.membershipLocationScope.upsert({ where: { id: row.id }, create: row, update: row });
 		}
+	});
 
+	await write("rewards", async (tx) => {
 		const rewards = [
 			// Reward A: customer C's PENDING claim holds one unit; A-Cashier's claim was redeemed.
 			reward(ids.rewardA, ids.tenantA, "Reward A", "SELECTED", "PUBLISHED", EPOCH + 86_400_000n, null, { reserved: 1, redeemed: 1 }),
@@ -199,7 +213,9 @@ export async function seedTwoTenantFixture(prisma: PrismaService): Promise<void>
 		for (const row of claims) {
 			await tx.rewardClaim.upsert({ where: { id: row.id }, create: row, update: row });
 		}
+	});
 
+	await write("till", async (tx) => {
 		const apiKey = apiKeyRow();
 		await tx.tenantApiKey.upsert({ where: { id: apiKey.id }, create: apiKey, update: apiKey });
 
