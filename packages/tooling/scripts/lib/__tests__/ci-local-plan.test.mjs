@@ -13,6 +13,7 @@ import {
 	CI_BUILD_ENV,
 	databaseSteps,
 	MULTI_TENANT_E2E_ENV,
+	NON_INTERACTIVE_ENV,
 	selectSteps,
 	SINGLE_TENANT_E2E_ENV,
 	BROWSER_TENANCY_ENV,
@@ -94,6 +95,10 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 		for (const [name, value] of Object.entries(CI_BUILD_ENV)) {
 			expect(WORKFLOW).toMatch(new RegExp(`${name}: "?${value}"?`));
 		}
+	});
+
+	it("runs every step with turbo's TUI off, so no task ever sees a terminal it could prompt on", () => {
+		expect(NON_INTERACTIVE_ENV).toEqual({ TURBO_UI: "false" });
 	});
 
 	it("passes --force to turbo only with --no-cache", () => {

@@ -28,6 +28,7 @@ import pg from "pg";
 import {
 	browserJob,
 	databaseSteps,
+	NON_INTERACTIVE_ENV,
 	selectSteps,
 	staticSteps,
 	THROWAWAY_BROWSER_SUFFIX,
@@ -68,7 +69,11 @@ function runStep(step) {
 	const startedAt = performance.now();
 	// Through `sh` (argv passed verbatim, never re-parsed): package-manager shims such
 	// as nvm's `pnpm` can be shebang-less scripts that execve() rejects (ENOEXEC).
-	const result = spawnSync("sh", ["-c", 'exec "$0" "$@"', step.command, ...step.args], { cwd: REPO_ROOT, stdio: "inherit", env: { ...process.env, ...step.env } });
+	const result = spawnSync("sh", ["-c", 'exec "$0" "$@"', step.command, ...step.args], {
+		cwd: REPO_ROOT,
+		stdio: "inherit",
+		env: { ...process.env, ...NON_INTERACTIVE_ENV, ...step.env },
+	});
 	if (result.error !== undefined) {
 		console.error(`could not start ${step.command}: ${result.error.message}`);
 	}
@@ -140,7 +145,7 @@ function startServer(step) {
 		cwd: REPO_ROOT,
 		stdio: ["ignore", log, log],
 		detached: true,
-		env: { ...process.env, ...step.env },
+		env: { ...process.env, ...NON_INTERACTIVE_ENV, ...step.env },
 	});
 }
 

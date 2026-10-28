@@ -112,10 +112,19 @@ export function withoutQuery(url) {
  */
 
 /**
+ * The environment every step runs with: the gate is never interactive, exactly as on CI.
+ * Under turbo's TUI (`turbo.json` "ui": "tui") each task gets a pseudo-terminal, so a
+ * tool that prompts on a TTY — `expo install --check` asks whether to fix outdated
+ * packages — waits forever in a hidden pane, and the pre-push hook hangs until GitHub
+ * drops the idle push connection. Set in the environment, not as a flag, so every step
+ * keeps the workflow's exact command.
+ */
+export const NON_INTERACTIVE_ENV = Object.freeze({ TURBO_UI: "false" });
+
+/**
  * The non-database steps, one per CI job (or job step), in workflow order.
  * `errorsOnly` (`ci:local --errors-only`, the pre-push hook) keeps the same
  * commands but shows only failing tasks' logs (`--output-logs=errors-only`).
- *
  * @param {{ base: string, noCache: boolean, errorsOnly?: boolean }} options
  * @returns {Step[]}
  */
