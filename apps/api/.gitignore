@@ -6,8 +6,9 @@
 # Build output
 dist/
 
-# Database backups (pg_dump output — never commit)
-backups/
+# Database backups (pg_dump output — never commit). Anchored to apps/api/backups/: unanchored, the
+# pattern also hid every source folder named `backups` (the operations context's backup commands).
+/backups/
 
 # Local storage driver objects (STORAGE_PROVIDER=local; development/test only)
 .object-storage/
