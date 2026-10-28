@@ -1,7 +1,7 @@
 import type { MembershipRole, Prisma } from "@prisma/client";
 import { Prisma as PrismaNamespace } from "@prisma/client";
 
-import { TenantRoleCopies } from "../../src/contexts/authorization/public-api";
+import { createReferenceDataSyncService, systemOperationRunner, TenantRoleCopies } from "../../src/contexts/authorization/public-api";
 import { RequestContextService } from "../../src/platform/infrastructure/context/request-context";
 import type { PrismaService } from "../../src/prisma/prisma.service";
 import { TenantTransactionService } from "../../src/prisma/tenant-transaction.service";
@@ -115,6 +115,10 @@ export async function seedTwoTenantFixture(prisma: PrismaService): Promise<void>
 	const transactions = new TenantTransactionService(prisma, new RequestContextService());
 	const write = (part: string, rows: (tx: Prisma.TransactionClient) => Promise<void>): Promise<void> =>
 		transactions.withSystemOperation({ operation: SEED_TEST_FIXTURE_OPERATION, reason: `Seed the two-tenant e2e fixture (${part})`, actorUserId: null }, rows);
+	// The tenants' roles are copied from the template roles, which are reference data: on a database
+	// that has only had its migrations (the single-tenant CI job), they exist only after this sync —
+	// the same loader the app's `db:sync-reference-data` and the seed use. Re-running writes nothing.
+	await createReferenceDataSyncService(systemOperationRunner(transactions)).sync();
 	const tenants = [
 		tenant(ids.tenantA, "fixture-tenant-a", "Tenant A", "ACTIVE"),
 		tenant(ids.tenantB, "fixture-tenant-b", "Tenant B", "ACTIVE"),

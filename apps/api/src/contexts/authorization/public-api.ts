@@ -50,3 +50,5 @@ export { AuthorizationModule } from "./authorization.module";
 export { StoreScope } from "./domain/access/store-scope";
 export type { AccessDecision, AccessRequest, AccessTarget, AllowPathName } from "./domain/access/access-request";
 export { TenantRoleCopies, TenantRoleMissingError, type TenantRoleCopiesDb } from "./infrastructure/access/tenant-role-copies";
+/** The platform reference data (permission catalog, system and template roles) — the same loader as `db:sync-reference-data`; test fixtures that build tenants without the app use it first. */
+export { createReferenceDataSyncService, systemOperationRunner } from "./infrastructure/reference-data/reference-data.composition";
