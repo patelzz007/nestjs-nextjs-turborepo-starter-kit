@@ -187,9 +187,9 @@ export default function LocationRequestsPanel({ initialPendingRequests }: Locati
 									<p className="font-mono text-xs text-muted-foreground">Code: {selectedRequest.code}</p>
 								</div>
 
-								{/* `PATCH /admin/merchants/:id/locations/:locationId/review` requires MANAGE on MERCHANT_ORG. */}
+								{/* `PATCH /admin/merchants/:id/locations/:locationId/review` requires APPROVE on MERCHANT_ORG. */}
 								<Can
-									permission={PERMISSION.MERCHANT_ORG.MANAGE}
+									permission={PERMISSION.MERCHANT_ORG.APPROVE}
 									fallback={<AccessRestrictedNotice description="Approving or rejecting store requests requires the merchant tenant manage permission." />}>
 									<StoreRequestReviewForm key={selectedRequest.id} isPending={reviewMutation.isPending} onReview={handleReview} />
 								</Can>

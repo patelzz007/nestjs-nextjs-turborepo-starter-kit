@@ -3,12 +3,12 @@ title: "API reference — Merchant tenants (portal API)"
 description: "Everything the merchant portal calls under /tenants/{tenantSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics."
 order: 5
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792540800000
+lastUpdated: 1793145600000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
 
-<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm docs:api -->
+<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm tools docs:api -->
 
 # API reference — Merchant tenants (portal API)
 
@@ -43,7 +43,7 @@ How these endpoints fit together: [Stores and team guide](../../user-guide/03-st
 | `city` | "KUALA_LUMPUR" \| "MELAKA" | yes |  |
 | `displayName` | string | yes | length 1–200 |
 | `email` | string (email) | yes | at most 100 characters |
-| `intendedRole` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | no | default `"OWNER"` |
+| `intendedRole` | "OWNER" \| "MANAGER" \| "CASHIER" | no | default `"OWNER"` |
 | `slug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 
 **Response 201 Created** (`application/json`) — Tenant invite created
@@ -87,12 +87,12 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "tenantId": "01a15e74-7901-7eb8-8ff3-a3da01059439",
-    "inviteToken": "755d9e34448b3291aede3af9af4cba263e90e8ead5027fd34f46c3f3784c2da7"
+    "tenantId": "01a18281-663c-7ca1-9844-2e01e638f1a0",
+    "inviteToken": "76a13692c247b8f5d510e3ab07be19ce0eb7a21a88b5ee3258f99c27ca91ce74"
   },
   "meta": {
-    "correlationId": "l6nay-HxUz8U_IKIe80tZ",
-    "timestamp": 1792586053966
+    "correlationId": "ydQgTD_LAw9WkSJFGVLyZ",
+    "timestamp": 1793190880886
   }
 }
 ```
@@ -157,16 +157,16 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a15e74-a029-7906-b082-ffd2694dd59f",
+    "id": "01a18281-86d6-7fed-92d7-5aa43dff74e3",
     "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-    "userId": "01a15e72-183c-7503-bab7-d8a484556fdb",
+    "userId": "01a1827f-436d-762c-9572-99777d235aed",
     "status": "PENDING",
     "message": "I run the Bangsar morning shift",
-    "createdAt": 1792586063908
+    "createdAt": 1793190889171
   },
   "meta": {
-    "correlationId": "qb4_OMm4E9LDGQRnsCqBg",
-    "timestamp": 1792586063920
+    "correlationId": "1CCHbCio8L-cJklQG4buy",
+    "timestamp": 1793190889181
   }
 }
 ```
@@ -194,7 +194,7 @@ Response `201 Created` (application/json):
 | `⟨shape 1⟩ approve` | true | yes |  |
 | `⟨shape 1⟩ locationIds` | string (uuid)[] | yes | 0–200 items |
 | `⟨shape 1⟩ locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
-| `⟨shape 1⟩ role` | "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
+| `⟨shape 1⟩ role` | "MANAGER" \| "CASHIER" | yes |  |
 | `⟨shape 2⟩ approve` | false | yes |  |
 
 **Response 201 Created** (`application/json`) — Tenant access request reviewed
@@ -214,7 +214,7 @@ Response `201 Created` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/tenants/brew-bean-kl/access-requests/01a15e74-a029-7906-b082-ffd2694dd59f/review
+POST /api/v1/tenants/brew-bean-kl/access-requests/01a18281-86d6-7fed-92d7-5aa43dff74e3/review
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -239,8 +239,8 @@ Response `201 Created` (application/json):
     "message": "Access request reviewed"
   },
   "meta": {
-    "correlationId": "ay4kNA_jjRr3_sf_DsOEj",
-    "timestamp": 1792586064071
+    "correlationId": "TMsYX0BOuNv2Gw81YtuYD",
+    "timestamp": 1793190889346
   }
 }
 ```
@@ -281,7 +281,7 @@ Response `201 Created` (application/json):
 | `data.membership.id` | string (uuid) | yes |  |
 | `data.membership.locationIds` | string (uuid)[] | yes |  |
 | `data.membership.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
-| `data.membership.role` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
+| `data.membership.role` | "OWNER" \| "MANAGER" \| "CASHIER" | yes |  |
 | `data.membership.status` | "ACTIVE" \| "SUSPENDED" \| "PENDING" | yes |  |
 | `data.membership.tenantId` | string (uuid) | yes |  |
 | `data.membership.updatedAt` | integer | yes |  |
@@ -294,7 +294,6 @@ Response `201 Created` (application/json):
 | `data.merchantProfile.kybStatus` | "PENDING" \| "APPROVED" \| "REJECTED" \| "ACTION_REQUIRED" | yes |  |
 | `data.merchantProfile.legalName` | string \| null | yes |  |
 | `data.merchantProfile.tenantId` | string (uuid) | yes |  |
-| `data.policyVersion` | integer | yes |  |
 | `data.tenant` | object | yes |  |
 | `data.tenant.createdAt` | integer | yes |  |
 | `data.tenant.displayName` | string | yes |  |
@@ -339,8 +338,8 @@ Response `200 OK` (application/json):
       "displayName": "Brew & Bean KL",
       "lifecycleState": "ACTIVE",
       "primaryLocationId": "019b76da-a800-701a-abbd-a9a411b6958b",
-      "createdAt": 1792585952905,
-      "updatedAt": 1792585952905,
+      "createdAt": 1793190786158,
+      "updatedAt": 1793190786158,
       "timeZone": "Asia/Kuala_Lumpur",
       "logo": null
     },
@@ -353,8 +352,8 @@ Response `200 OK` (application/json):
       "displayName": "Ahmad (Owner)",
       "locationScopeType": "ALL_LOCATIONS",
       "locationIds": [],
-      "createdAt": 1792585952998,
-      "updatedAt": 1792585952998
+      "createdAt": 1793190786251,
+      "updatedAt": 1793190786251
     },
     "locations": [
       {
@@ -368,8 +367,8 @@ Response `200 OK` (application/json):
         "status": "ACTIVE",
         "rejectionReason": null,
         "isPrimary": true,
-        "createdAt": 1792585952936,
-        "updatedAt": 1792585952936
+        "createdAt": 1793190786180,
+        "updatedAt": 1793190786180
       }
     ],
     "merchantProfile": {
@@ -380,12 +379,11 @@ Response `200 OK` (application/json):
       "kybStatus": "APPROVED",
       "contactEmail": "brew.owner@kl-rewards.demo",
       "contactPhone": "+60321456789"
-    },
-    "policyVersion": 1
+    }
   },
   "meta": {
-    "correlationId": "80PJiBOMtLtwm8UbEMYXD",
-    "timestamp": 1792586057426
+    "correlationId": "28_lmjWJQG-zu_2zBWULk",
+    "timestamp": 1793190883980
   }
 }
 ```
@@ -614,7 +612,7 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a15e74-9171-792c-bef6-26bdc06ad2e2",
+    "id": "01a18281-7b12-75fd-aa8e-86a3847fec12",
     "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "name": "Brew & Bean KL — Bangsar",
     "code": "brew-bean-kl-bangsar",
@@ -624,12 +622,12 @@ Response `201 Created` (application/json):
     "status": "PENDING_APPROVAL",
     "rejectionReason": null,
     "isPrimary": false,
-    "createdAt": 1792586060148,
-    "updatedAt": 1792586060148
+    "createdAt": 1793190886164,
+    "updatedAt": 1793190886164
   },
   "meta": {
-    "correlationId": "cRIJTVK6Cp1SnXq3QuJPv",
-    "timestamp": 1792586060159
+    "correlationId": "2fmWb3ipUUgqPr4C7am6M",
+    "timestamp": 1793190886171
   }
 }
 ```
@@ -686,7 +684,7 @@ Response `201 Created` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-PATCH /api/v1/tenants/brew-bean-kl/locations/01a15e74-9171-792c-bef6-26bdc06ad2e2
+PATCH /api/v1/tenants/brew-bean-kl/locations/01a18281-7b12-75fd-aa8e-86a3847fec12
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -705,7 +703,7 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a15e74-9171-792c-bef6-26bdc06ad2e2",
+    "id": "01a18281-7b12-75fd-aa8e-86a3847fec12",
     "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "name": "Brew & Bean KL — Bangsar",
     "code": "brew-bean-kl-bangsar",
@@ -715,12 +713,12 @@ Response `200 OK` (application/json):
     "status": "PENDING_APPROVAL",
     "rejectionReason": null,
     "isPrimary": false,
-    "createdAt": 1792586060148,
-    "updatedAt": 1792586060474
+    "createdAt": 1793190886164,
+    "updatedAt": 1793190886389
   },
   "meta": {
-    "correlationId": "9cSo2uCp53HBBvL9DRuFl",
-    "timestamp": 1792586060493
+    "correlationId": "3NnWxjRo4GL20tdvuPFp3",
+    "timestamp": 1793190886398
   }
 }
 ```
@@ -769,7 +767,7 @@ Response `200 OK` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/tenants/brew-bean-kl/locations/01a15e74-935d-755c-b349-058dcd18f9c3/close
+POST /api/v1/tenants/brew-bean-kl/locations/01a18281-7c4a-7d15-b5c7-444379944334/close
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -786,16 +784,16 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "locationId": "01a15e74-935d-755c-b349-058dcd18f9c3",
-    "closedAt": 1792586060865,
+    "locationId": "01a18281-7c4a-7d15-b5c7-444379944334",
+    "closedAt": 1793190886657,
     "reason": "Mall lease not renewed",
     "memberScopesRemoved": 0,
     "terminalsRemoved": 0,
     "apiKeysRevoked": 0
   },
   "meta": {
-    "correlationId": "ooLloH6X00QNl0g4QrCeG",
-    "timestamp": 1792586060909
+    "correlationId": "rpzWQWYKB9gb2wBDYkdlO",
+    "timestamp": 1793190886688
   }
 }
 ```
@@ -830,7 +828,8 @@ Response `201 Created` (application/json):
 | `data[].id` | string (uuid) | yes |  |
 | `data[].locationIds` | string (uuid)[] | yes |  |
 | `data[].locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
-| `data[].role` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
+| `data[].role` | "OWNER" \| "MANAGER" \| "CASHIER" | yes |  |
+| `data[].roleId` | string (uuid) | yes |  |
 | `data[].status` | "ACTIVE" \| "SUSPENDED" \| "PENDING" | yes |  |
 | `data[].tenantId` | string (uuid) | yes |  |
 | `data[].updatedAt` | integer | yes |  |
@@ -868,10 +867,11 @@ Response `200 OK` (application/json):
     {
       "id": "019b76da-a800-7546-81bf-a03bddee6096",
       "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-      "userId": "01a15e72-18e5-755d-b10c-9ddea580f059",
+      "userId": "01a1827f-43fb-702a-a7ac-eea5f8e2f406",
       "email": "user-02@example.com",
       "fullName": "Olivia Johnson",
       "role": "CASHIER",
+      "roleId": "01a1827f-f4fc-766d-99bb-ca55b0fda2c8",
       "status": "ACTIVE",
       "displayName": null,
       "locationScopeType": "SELECTED",
@@ -879,7 +879,7 @@ Response `200 OK` (application/json):
         "019b76da-a800-701a-abbd-a9a411b6958b"
       ],
       "createdAt": 1788753600000,
-      "updatedAt": 1792585985467
+      "updatedAt": 1793190818746
     },
     {
       "id": "019b76da-a800-7b1d-b660-30bdb341a50c",
@@ -888,12 +888,13 @@ Response `200 OK` (application/json):
       "email": "brew.owner@kl-rewards.demo",
       "fullName": "Ahmad Brew",
       "role": "OWNER",
+      "roleId": "01a1827f-f4e0-7092-89b1-a6dc003f94d7",
       "status": "ACTIVE",
       "displayName": "Ahmad (Owner)",
       "locationScopeType": "ALL_LOCATIONS",
       "locationIds": [],
-      "createdAt": 1792585952998,
-      "updatedAt": 1792585952998
+      "createdAt": 1793190786251,
+      "updatedAt": 1793190786251
     }
   ],
   "meta": {
@@ -904,8 +905,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "4OG1z63j-9gap7pfCjbOG",
-    "timestamp": 1792586057605
+    "correlationId": "BCz-4WuPE3aLHNb1g109V",
+    "timestamp": 1793190884108
   }
 }
 ```
@@ -972,12 +973,12 @@ Response `201 Created` (application/json):
   "data": {
     "membershipId": "019b76da-a800-7b0f-b2e9-e7ccd28b72af",
     "locationId": "019b76da-a800-7685-9734-84f5f07eb21f",
-    "removedAt": 1792586061663,
+    "removedAt": 1793190887269,
     "remainingLocationIds": []
   },
   "meta": {
-    "correlationId": "Ab4Fb-jdEAKgupr0G4ulT",
-    "timestamp": 1792586061681
+    "correlationId": "tX735HKesyA9taQ9xnOBj",
+    "timestamp": 1793190887277
   }
 }
 ```
@@ -1004,7 +1005,7 @@ Response `201 Created` (application/json):
 | `email` | string (email) | yes | at most 100 characters |
 | `locationIds` | string (uuid)[] | no | default `[]` |
 | `locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | no | default `"ALL_LOCATIONS"` |
-| `role` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
+| `role` | "OWNER" \| "MANAGER" \| "CASHIER" | yes |  |
 
 **Response 201 Created** (`application/json`) — Tenant team invitation sent
 
@@ -1046,12 +1047,12 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "inviteId": "01a15e74-950e-7cf8-9cbb-9c071ffbd14f",
+    "inviteId": "01a18281-7dff-7e90-9866-0ba298f5c8e9",
     "message": "Invitation sent"
   },
   "meta": {
-    "correlationId": "ypg6Wwo9Wi7jIPZBaX0qd",
-    "timestamp": 1792586061123
+    "correlationId": "DMfn_sADd9ke4Ikz0tY_D",
+    "timestamp": 1793190886947
   }
 }
 ```
@@ -1083,7 +1084,7 @@ Response `201 Created` (application/json):
 | `data[].email` | string (email) | yes |  |
 | `data[].expiresAt` | integer | yes |  |
 | `data[].id` | string (uuid) | yes |  |
-| `data[].intendedRole` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
+| `data[].intendedRole` | "OWNER" \| "MANAGER" \| "CASHIER" | yes |  |
 | `data[].invitedByName` | string | yes |  |
 | `data[].invitedByUserId` | string (uuid) | yes |  |
 | `data[].locationIds` | string (uuid)[] | yes |  |
@@ -1132,8 +1133,8 @@ Response `200 OK` (application/json):
       "status": "PENDING",
       "invitedByUserId": "019b76da-a800-763a-b64a-fd037629f93f",
       "invitedByName": "Ahmad Brew",
-      "expiresAt": 1793190753026,
-      "createdAt": 1792585953028
+      "expiresAt": 1793795586427,
+      "createdAt": 1793190786434
     }
   ],
   "meta": {
@@ -1144,8 +1145,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "ldBPDT_UdcTEtJEylmlrN",
-    "timestamp": 1792586057802
+    "correlationId": "lCHKBUZK8xBnsUKKmCCXL",
+    "timestamp": 1793190884244
   }
 }
 ```
@@ -1183,7 +1184,7 @@ Response `200 OK` (application/json):
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/tenants/brew-bean-kl/members/invites/01a15e74-950e-7cf8-9cbb-9c071ffbd14f/revoke
+POST /api/v1/tenants/brew-bean-kl/members/invites/01a18281-7dff-7e90-9866-0ba298f5c8e9/revoke
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1198,8 +1199,8 @@ Response `201 Created` (application/json):
     "message": "Invitation revoked"
   },
   "meta": {
-    "correlationId": "KRaw0Ag6MysDa0ZUv_iQV",
-    "timestamp": 1792586061415
+    "correlationId": "Yw7dY24cIdMNHZ_ZpJSnF",
+    "timestamp": 1793190887131
   }
 }
 ```
@@ -1234,7 +1235,7 @@ Response `201 Created` (application/json):
 | `data.id` | string (uuid) | yes |  |
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
-| `data.role` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
+| `data.role` | "OWNER" \| "MANAGER" \| "CASHIER" | yes |  |
 | `data.status` | "ACTIVE" \| "SUSPENDED" \| "PENDING" | yes |  |
 | `data.tenantId` | string (uuid) | yes |  |
 | `data.updatedAt` | integer | yes |  |
@@ -1276,12 +1277,12 @@ Response `200 OK` (application/json):
     "displayName": "Siti (Owner)",
     "locationScopeType": "ALL_LOCATIONS",
     "locationIds": [],
-    "createdAt": 1792585953009,
-    "updatedAt": 1792586061864
+    "createdAt": 1793190786339,
+    "updatedAt": 1793190887374
   },
   "meta": {
-    "correlationId": "_TSDnQztlWSs_IrNU69p6",
-    "timestamp": 1792586061875
+    "correlationId": "rI4DYDL-fLcI_ybQXHG3K",
+    "timestamp": 1793190887382
   }
 }
 ```
@@ -1373,8 +1374,8 @@ Response `201 Created` (application/json):
     "message": "Invitation accepted"
   },
   "meta": {
-    "correlationId": "MtG9tOBL_ZBrmCQFBvcmE",
-    "timestamp": 1792586062657
+    "correlationId": "ZlTBYRSc_tK9JLu2APfzz",
+    "timestamp": 1793190888010
   }
 }
 ```
@@ -1524,11 +1525,11 @@ Response `201 Created` (application/json):
     "enrollmentReason": "email_verification",
     "message": "Verify your email address to continue.",
     "user": {
-      "createdAt": 1792586063170,
-      "updatedAt": 1792586063170,
+      "createdAt": 1793190888489,
+      "updatedAt": 1793190888489,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15e74-9d4b-721c-9c40-94b995e3c1cb",
+      "id": "01a18281-8435-7c2c-b780-5c9f2b409b9a",
       "email": "barista.bangsar@kl-rewards.demo",
       "fullName": "Bangsar Barista",
       "isActive": true,
@@ -1539,7 +1540,7 @@ Response `201 Created` (application/json):
       "tokenVersion": 0,
       "roles": [
         {
-          "id": "01a15e72-12e1-759c-b594-26a0a071f259",
+          "id": "01a1827f-3e0a-715a-a7b4-c46bb0b36e4d",
           "name": "User",
           "description": "Customer app — own profile and own analytics (no admin panel)"
         }
@@ -1548,8 +1549,8 @@ Response `201 Created` (application/json):
     "tenantSlug": "brew-bean-kl"
   },
   "meta": {
-    "correlationId": "WoVYtDTPSiX8aqpAV7S3H",
-    "timestamp": 1792586063303
+    "correlationId": "wVk-a6PCoEYFqCfPfJnRF",
+    "timestamp": 1793190888632
   }
 }
 ```
@@ -1574,7 +1575,7 @@ Response `201 Created` (application/json):
 | `data.email` | string (email) | yes |  |
 | `data.expiresAt` | integer | yes |  |
 | `data.hasExistingAccount` | boolean | yes |  |
-| `data.intendedRole` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
+| `data.intendedRole` | "OWNER" \| "MANAGER" \| "CASHIER" | yes |  |
 | `data.locationIds` | string (uuid)[] | yes |  |
 | `data.locationLabels` | object[] | yes |  |
 | `data.locationLabels[].id` | string (uuid) | yes |  |
@@ -1623,12 +1624,12 @@ Response `201 Created` (application/json):
         "name": "Brew & Bean KL — Bukit Bintang"
       }
     ],
-    "expiresAt": 1793190753026,
+    "expiresAt": 1793795586427,
     "hasExistingAccount": true
   },
   "meta": {
-    "correlationId": "P93erE5BF5mOMjJCAA4qK",
-    "timestamp": 1792586062098
+    "correlationId": "d7sa-CqWhPoGznrtx4GV0",
+    "timestamp": 1793190887487
   }
 }
 ```
@@ -1659,11 +1660,12 @@ List the current user's tenant memberships
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data` | object[] | yes |  |
+| `data[].capabilities` | "merchant:view_dashboard" \| "merchant:view_rewards" \| "merchant:manage_rewards" \| "merchant:view_redemptions" \| "merchant:manage_api_keys" \| "merchant:view_analytics" \| "merchant:manage_team" \| "merchant:view_locations" \| "merchant:manage_locations" \| "merchant:manage_verification"[] | no |  |
 | `data[].createdAt` | integer | no |  |
 | `data[].displayName` | string | yes |  |
 | `data[].kybStatus` | "PENDING" \| "APPROVED" \| "REJECTED" \| "ACTION_REQUIRED" | yes |  |
 | `data[].lifecycleState` | "PROVISIONING" \| "ACTIVE" \| "RESTRICTED" \| "SUSPENDED" \| "BANNED" \| "PENDING_DELETION" \| "DELETED" | yes |  |
-| `data[].role` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
+| `data[].role` | "OWNER" \| "MANAGER" \| "CASHIER" | yes |  |
 | `data[].tenantId` | string (uuid) | yes |  |
 | `data[].tenantSlug` | string | yes | length 2–64; pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
@@ -1703,7 +1705,7 @@ Response `200 OK` (application/json):
       "role": "OWNER",
       "kybStatus": "APPROVED",
       "lifecycleState": "ACTIVE",
-      "createdAt": 1792585952998
+      "createdAt": 1793190786251
     }
   ],
   "meta": {
@@ -1714,8 +1716,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "SNWrZ2OZGI72IWE9uQYy4",
-    "timestamp": 1792586057212
+    "correlationId": "HE2aagtTrZa_pFFH7Omwg",
+    "timestamp": 1793190883820
   }
 }
 ```
@@ -1800,14 +1802,14 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "tenantId": "01a15e74-786a-73d0-813b-16de3ceeb271",
+    "tenantId": "01a18281-65dc-78d4-818d-688a106c1a31",
     "tenantSlug": "nyonya-house-melaka",
     "businessName": "Nyonya House Melaka",
     "role": "OWNER"
   },
   "meta": {
-    "correlationId": "ydlucECcT8Hkbxb3t14Y0",
-    "timestamp": 1792586054516
+    "correlationId": "iZeMSQ87Wexttc3qEfkEf",
+    "timestamp": 1793190881338
   }
 }
 ```
@@ -1858,8 +1860,8 @@ Content-Type: application/json
 {
   "token": "<redacted: one-time secret>",
   "fileIds": [
-    "01a15e74-7b9b-7151-9c3a-9a34a7106c5d",
-    "01a15e74-7c86-7eba-93b9-be673eeafdcb"
+    "01a18281-6861-7ea3-9d37-fa4f323f642c",
+    "01a18281-6908-7906-bcfa-379bd92fb8b9"
   ]
 }
 ```
@@ -1872,26 +1874,26 @@ Response `201 Created` (application/json):
   "data": {
     "documents": [
       {
-        "id": "01a15e74-7b9b-7151-9c3a-9a34a7106c5d",
+        "id": "01a18281-6861-7ea3-9d37-fa4f323f642c",
         "fileName": "sample.png",
         "mimeType": "image/png",
         "sizeBytes": 2004,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1792586054556
+        "uploadedAt": 1793190881378
       },
       {
-        "id": "01a15e74-7c86-7eba-93b9-be673eeafdcb",
+        "id": "01a18281-6908-7906-bcfa-379bd92fb8b9",
         "fileName": "sample.png",
         "mimeType": "image/png",
         "sizeBytes": 2004,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1792586054791
+        "uploadedAt": 1793190881545
       }
     ]
   },
   "meta": {
-    "correlationId": "9VsYUlyigAStBmOH2P8Mk",
-    "timestamp": 1792586056512
+    "correlationId": "JADkNO98nCDHVrbVXHS5q",
+    "timestamp": 1793190883201
   }
 }
 ```
@@ -1936,8 +1938,8 @@ Content-Type: application/json
 {
   "token": "<redacted: one-time secret>",
   "documentFileIds": [
-    "01a15e74-7b9b-7151-9c3a-9a34a7106c5d",
-    "01a15e74-7c86-7eba-93b9-be673eeafdcb"
+    "01a18281-6861-7ea3-9d37-fa4f323f642c",
+    "01a18281-6908-7906-bcfa-379bd92fb8b9"
   ]
 }
 ```
@@ -1951,8 +1953,8 @@ Response `201 Created` (application/json):
     "success": true
   },
   "meta": {
-    "correlationId": "stpAv2YkyOwkiMcFN7uFA",
-    "timestamp": 1792586056643
+    "correlationId": "7my3_pF0i-h0UdTDYaZkX",
+    "timestamp": 1793190883296
   }
 }
 ```
@@ -2007,7 +2009,7 @@ Content-Type: application/json
 
 {
   "token": "<redacted: one-time secret>",
-  "fileId": "01a15e74-7b9b-7151-9c3a-9a34a7106c5d",
+  "fileId": "01a18281-6861-7ea3-9d37-fa4f323f642c",
   "checksumSha256": "79dc184da4077faf9a1025d14d8cc30faceea511c4fee4ba4deb4de2d486a8a2"
 }
 ```
@@ -2019,7 +2021,7 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "file": {
-      "id": "01a15e74-7b9b-7151-9c3a-9a34a7106c5d",
+      "id": "01a18281-6861-7ea3-9d37-fa4f323f642c",
       "category": "MERCHANT_KYB",
       "visibility": "PRIVATE",
       "originalName": "sample.png",
@@ -2028,12 +2030,12 @@ Response `201 Created` (application/json):
       "status": "SCANNING",
       "scanStatus": "SCANNING",
       "publicUrl": null,
-      "uploadedAt": 1792586054556
+      "uploadedAt": 1793190881378
     }
   },
   "meta": {
-    "correlationId": "_c578_jFqQCsPK65bJaj1",
-    "timestamp": 1792586054751
+    "correlationId": "rBF3ZwYIBglu9yznXi7Lp",
+    "timestamp": 1793190881525
   }
 }
 ```
@@ -2081,7 +2083,7 @@ Content-Type: application/json
   "token": "<redacted: one-time secret>",
   "completions": [
     {
-      "fileId": "01a15e74-7c86-7eba-93b9-be673eeafdcb",
+      "fileId": "01a18281-6908-7906-bcfa-379bd92fb8b9",
       "checksumSha256": "79dc184da4077faf9a1025d14d8cc30faceea511c4fee4ba4deb4de2d486a8a2"
     }
   ]
@@ -2095,12 +2097,12 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "fileIds": [
-      "01a15e74-7c86-7eba-93b9-be673eeafdcb"
+      "01a18281-6908-7906-bcfa-379bd92fb8b9"
     ]
   },
   "meta": {
-    "correlationId": "pfY2xUtPjLKn42n884DHa",
-    "timestamp": 1792586054900
+    "correlationId": "qplnfHi3JOclY74sW_a_k",
+    "timestamp": 1793190881635
   }
 }
 ```
@@ -2166,19 +2168,19 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "fileId": "01a15e74-7b9b-7151-9c3a-9a34a7106c5d",
-    "objectPath": "staging/kyb/01a15e74-786a-73d0-813b-16de3ceeb271/01a15e74-7b9b-7151-9c3a-9a34a7106c5d-sample.png",
+    "fileId": "01a18281-6861-7ea3-9d37-fa4f323f642c",
+    "objectPath": "staging/kyb/01a18281-65dc-78d4-818d-688a106c1a31/01a18281-6861-7ea3-9d37-fa4f323f642c-sample.png",
     "expiresIn": 300,
     "method": "POST_MULTIPART",
-    "uploadUrl": "http://192.168.100.23:8097/api/v1/files/01a15e74-7b9b-7151-9c3a-9a34a7106c5d/local-upload",
+    "uploadUrl": "http://10.117.81.236:8097/api/v1/files/01a18281-6861-7ea3-9d37-fa4f323f642c/local-upload",
     "fields": {
-      "key": "staging/kyb/01a15e74-786a-73d0-813b-16de3ceeb271/01a15e74-7b9b-7151-9c3a-9a34a7106c5d-sample.png",
+      "key": "staging/kyb/01a18281-65dc-78d4-818d-688a106c1a31/01a18281-6861-7ea3-9d37-fa4f323f642c-sample.png",
       "token": "<redacted: one-time secret>"
     }
   },
   "meta": {
-    "correlationId": "KsPPa9AEiu0JjsVva9ls-",
-    "timestamp": 1792586054561
+    "correlationId": "ePKwIkaMPhGQ8zca2Bkbx",
+    "timestamp": 1793190881383
   }
 }
 ```
@@ -2252,21 +2254,21 @@ Response `201 Created` (application/json):
   "data": {
     "uploads": [
       {
-        "fileId": "01a15e74-7c86-7eba-93b9-be673eeafdcb",
-        "objectPath": "staging/kyb/01a15e74-786a-73d0-813b-16de3ceeb271/01a15e74-7c86-7eba-93b9-be673eeafdcb-sample.png",
+        "fileId": "01a18281-6908-7906-bcfa-379bd92fb8b9",
+        "objectPath": "staging/kyb/01a18281-65dc-78d4-818d-688a106c1a31/01a18281-6908-7906-bcfa-379bd92fb8b9-sample.png",
         "expiresIn": 300,
         "method": "POST_MULTIPART",
-        "uploadUrl": "http://192.168.100.23:8097/api/v1/files/01a15e74-7c86-7eba-93b9-be673eeafdcb/local-upload",
+        "uploadUrl": "http://10.117.81.236:8097/api/v1/files/01a18281-6908-7906-bcfa-379bd92fb8b9/local-upload",
         "fields": {
-          "key": "staging/kyb/01a15e74-786a-73d0-813b-16de3ceeb271/01a15e74-7c86-7eba-93b9-be673eeafdcb-sample.png",
+          "key": "staging/kyb/01a18281-65dc-78d4-818d-688a106c1a31/01a18281-6908-7906-bcfa-379bd92fb8b9-sample.png",
           "token": "<redacted: one-time secret>"
         }
       }
     ]
   },
   "meta": {
-    "correlationId": "R2nUzS1uSHhHCDBoRh0qy",
-    "timestamp": 1792586054795
+    "correlationId": "RsbfEqVRh5kprnbFmyt8M",
+    "timestamp": 1793190881548
   }
 }
 ```
@@ -2325,12 +2327,12 @@ Response `201 Created` (application/json):
     "email": "nyonya.house@melaka-rewards.demo",
     "businessName": "Nyonya House Melaka",
     "city": "MELAKA",
-    "expiresAt": 1793190853738,
+    "expiresAt": 1793795680732,
     "hasExistingAccount": false
   },
   "meta": {
-    "correlationId": "tFXoPvswH02Sw_aQDj3Gm",
-    "timestamp": 1792586054024
+    "correlationId": "QJUDQHcNcM6ePGpYKXbSS",
+    "timestamp": 1793190880912
   }
 }
 ```
@@ -2396,7 +2398,7 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "tenantId": "01a15e74-786a-73d0-813b-16de3ceeb271",
+    "tenantId": "01a18281-65dc-78d4-818d-688a106c1a31",
     "businessName": "Nyonya House Melaka",
     "legalName": "Nyonya House Melaka Sdn Bhd",
     "addressText": "88 Jalan Hang Jebat, 75200 Melaka",
@@ -2406,33 +2408,33 @@ Response `200 OK` (application/json):
     "kybStatus": "PENDING",
     "kybFields": {
       "taxId": "C2584563202",
-      "submittedAt": 1792586054456,
+      "submittedAt": 1793190881296,
       "documentType": "SSM",
       "registrationNo": "202601012345"
     },
     "documents": [
       {
-        "id": "01a15e74-7b9b-7151-9c3a-9a34a7106c5d",
+        "id": "01a18281-6861-7ea3-9d37-fa4f323f642c",
         "fileName": "sample.png",
         "mimeType": "image/png",
         "sizeBytes": 2004,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1792586054556
+        "uploadedAt": 1793190881378
       },
       {
-        "id": "01a15e74-7c86-7eba-93b9-be673eeafdcb",
+        "id": "01a18281-6908-7906-bcfa-379bd92fb8b9",
         "fileName": "sample.png",
         "mimeType": "image/png",
         "sizeBytes": 2004,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1792586054791
+        "uploadedAt": 1793190881545
       }
     ],
     "status": "ACTIVE"
   },
   "meta": {
-    "correlationId": "RUTigX53PafufqbN3Kqfx",
-    "timestamp": 1792586059586
+    "correlationId": "Lj8mqVAx93pXkGnE8rFEU",
+    "timestamp": 1793190885821
   }
 }
 ```
@@ -2515,8 +2517,8 @@ Content-Type: application/json
   "addressText": "88 Jalan Hang Jebat, 75200 Melaka",
   "contactPhone": "+60 6-282 1234",
   "documentFileIds": [
-    "01a15e74-7b9b-7151-9c3a-9a34a7106c5d",
-    "01a15e74-7c86-7eba-93b9-be673eeafdcb"
+    "01a18281-6861-7ea3-9d37-fa4f323f642c",
+    "01a18281-6908-7906-bcfa-379bd92fb8b9"
   ]
 }
 ```
@@ -2527,7 +2529,7 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "tenantId": "01a15e74-786a-73d0-813b-16de3ceeb271",
+    "tenantId": "01a18281-65dc-78d4-818d-688a106c1a31",
     "businessName": "Nyonya House Melaka",
     "legalName": "Nyonya House Melaka Sdn Bhd",
     "addressText": "88 Jalan Hang Jebat, 75200 Melaka",
@@ -2537,33 +2539,33 @@ Response `200 OK` (application/json):
     "kybStatus": "PENDING",
     "kybFields": {
       "taxId": "C2584563202",
-      "submittedAt": 1792586059805,
+      "submittedAt": 1793190885952,
       "documentType": "SSM",
       "registrationNo": "202601012345"
     },
     "documents": [
       {
-        "id": "01a15e74-7b9b-7151-9c3a-9a34a7106c5d",
+        "id": "01a18281-6861-7ea3-9d37-fa4f323f642c",
         "fileName": "sample.png",
         "mimeType": "image/png",
         "sizeBytes": 2004,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1792586054556
+        "uploadedAt": 1793190881378
       },
       {
-        "id": "01a15e74-7c86-7eba-93b9-be673eeafdcb",
+        "id": "01a18281-6908-7906-bcfa-379bd92fb8b9",
         "fileName": "sample.png",
         "mimeType": "image/png",
         "sizeBytes": 2004,
         "scanStatus": "SCANNING",
-        "uploadedAt": 1792586054791
+        "uploadedAt": 1793190881545
       }
     ],
     "status": "ACTIVE"
   },
   "meta": {
-    "correlationId": "B6hMoWkrO3sHqzpNdQaIM",
-    "timestamp": 1792586059858
+    "correlationId": "dK1sAMNen-_YsMmRoZ0CQ",
+    "timestamp": 1793190885978
   }
 }
 ```
@@ -2618,12 +2620,12 @@ Response `200 OK` (application/json):
   "data": {
     "documentId": "019b76da-a800-7159-b799-9b0589c815e1",
     "scanStatus": "SCANNING",
-    "downloadUrl": "http://192.168.100.23:8097/api/v1/files/local-download?token=<redacted>",
-    "expiresAt": 1792586358202
+    "downloadUrl": "http://10.117.81.236:8097/api/v1/files/local-download?token=<redacted>",
+    "expiresAt": 1793191184490
   },
   "meta": {
-    "correlationId": "cC27_vdarOnrtgxvGU00B",
-    "timestamp": 1792586058202
+    "correlationId": "3W1_2MJmM8tMioZhCnsPe",
+    "timestamp": 1793190884490
   }
 }
 ```
@@ -2732,8 +2734,8 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792585982799,
-      "updatedAt": 1792585982799,
+      "createdAt": 1793190816176,
+      "updatedAt": 1793190816176,
       "isDeleted": false,
       "deletedAt": null,
       "id": "019b76da-a800-75d7-95fa-18e695a7ff33",
@@ -2751,17 +2753,17 @@ Response `200 OK` (application/json):
       "images": [
         {
           "fileId": "019b76da-a800-7d08-8be5-bc0104035de1",
-          "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/UHD/local-public",
+          "url": "http://10.117.81.236:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/UHD/local-public",
           "width": 3840,
           "height": 2160,
           "sources": [
             {
               "width": 640,
-              "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/THUMBNAIL/local-public"
+              "url": "http://10.117.81.236:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/THUMBNAIL/local-public"
             },
             {
               "width": 1280,
-              "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/MEDIUM/local-public"
+              "url": "http://10.117.81.236:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/MEDIUM/local-public"
             }
           ]
         }
@@ -2770,7 +2772,7 @@ Response `200 OK` (application/json):
       "quantityRemaining": 500,
       "quantityReserved": 0,
       "startDate": null,
-      "expiryDate": 1795177952430,
+      "expiryDate": 1795782785684,
       "status": "DRAFT",
       "claimCount": 0,
       "redemptionCount": 0,
@@ -2783,11 +2785,11 @@ Response `200 OK` (application/json):
       "locationIds": []
     },
     {
-      "createdAt": 1792585982342,
-      "updatedAt": 1792585982785,
+      "createdAt": 1793190815822,
+      "updatedAt": 1793190816165,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15e73-6184-77e8-a5cf-a71d0c57f0ea",
+      "id": "01a18280-684d-770b-b881-29851babd38e",
       "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
       "tenantName": "Brew & Bean KL",
       "tenantLogoUrl": null,
@@ -2802,17 +2804,17 @@ Response `200 OK` (application/json):
       "images": [
         {
           "fileId": "019b76da-a800-7cce-a513-c34650bd2a0e",
-          "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7cce-a513-c34650bd2a0e/variants/UHD/local-public",
+          "url": "http://10.117.81.236:8097/api/v1/files/019b76da-a800-7cce-a513-c34650bd2a0e/variants/UHD/local-public",
           "width": 3840,
           "height": 2160,
           "sources": [
             {
               "width": 640,
-              "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7cce-a513-c34650bd2a0e/variants/THUMBNAIL/local-public"
+              "url": "http://10.117.81.236:8097/api/v1/files/019b76da-a800-7cce-a513-c34650bd2a0e/variants/THUMBNAIL/local-public"
             },
             {
               "width": 1280,
-              "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7cce-a513-c34650bd2a0e/variants/MEDIUM/local-public"
+              "url": "http://10.117.81.236:8097/api/v1/files/019b76da-a800-7cce-a513-c34650bd2a0e/variants/MEDIUM/local-public"
             }
           ]
         }
@@ -2821,7 +2823,7 @@ Response `200 OK` (application/json):
       "quantityRemaining": 20,
       "quantityReserved": 1,
       "startDate": null,
-      "expiryDate": 1796473982339,
+      "expiryDate": 1797078815821,
       "status": "PUBLISHED",
       "claimCount": 0,
       "redemptionCount": 0,
@@ -2842,8 +2844,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "3HfEU065vxuMFYJXpsFZn",
-    "timestamp": 1792586064441
+    "correlationId": "Kx_SeXLs3Sl0kDoYYNHRp",
+    "timestamp": 1793190889618
   }
 }
 ```
@@ -2958,7 +2960,7 @@ Content-Type: application/json
 
 {
   "imageFileIds": [
-    "01a15e74-a3b9-73f2-b9ce-90ff869877d1"
+    "01a18281-89e3-761c-9766-ef5c90059d9f"
   ],
   "title": "Free Kopi O with any breakfast set",
   "description": "One free Kopi O when you order any breakfast set at Brew & Bean KL.",
@@ -2966,8 +2968,8 @@ Content-Type: application/json
   "rewardType": "FREE_ITEM",
   "rewardValue": 6,
   "quantityTotal": 200,
-  "startDate": 1792586066463,
-  "expiryDate": 1797770066463,
+  "startDate": 1793190891590,
+  "expiryDate": 1798374891590,
   "locationScopeType": "ALL_LOCATIONS",
   "rules": {
     "maxUsePerUser": 1,
@@ -2986,11 +2988,11 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792586066689,
-    "updatedAt": 1792586066774,
+    "createdAt": 1793190891864,
+    "updatedAt": 1793190891911,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15e74-ab08-77b1-9a35-67e97fd0ad61",
+    "id": "01a18281-915c-71cb-a2a2-867c0e7b89e1",
     "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "tenantName": "Brew & Bean KL",
     "tenantLogoUrl": null,
@@ -3004,18 +3006,18 @@ Response `201 Created` (application/json):
     "category": "cafe",
     "images": [
       {
-        "fileId": "01a15e74-a3b9-73f2-b9ce-90ff869877d1",
-        "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/LARGE/local-public",
+        "fileId": "01a18281-89e3-761c-9766-ef5c90059d9f",
+        "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/LARGE/local-public",
         "width": 1920,
         "height": 1080,
         "sources": [
           {
             "width": 640,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/THUMBNAIL/local-public"
+            "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/THUMBNAIL/local-public"
           },
           {
             "width": 1280,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/MEDIUM/local-public"
+            "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/MEDIUM/local-public"
           }
         ]
       }
@@ -3023,15 +3025,15 @@ Response `201 Created` (application/json):
     "quantityTotal": 200,
     "quantityRemaining": 200,
     "quantityReserved": 0,
-    "startDate": 1792586066463,
-    "expiryDate": 1797770066463,
+    "startDate": 1793190891590,
+    "expiryDate": 1798374891590,
     "status": "DRAFT",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "01a15e74-ab08-7ebb-a3ea-a0f64db406d2",
+    "referrerRewardId": "01a18281-915c-7dcf-8d6e-77e86bf5df31",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -3040,8 +3042,8 @@ Response `201 Created` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "xnX1ZAETkzggKCeWIu5nb",
-    "timestamp": 1792586066899
+    "correlationId": "bZoTyUH2XhDG32OG4jkic",
+    "timestamp": 1793190892005
   }
 }
 ```
@@ -3134,8 +3136,8 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792585982799,
-    "updatedAt": 1792585982799,
+    "createdAt": 1793190816176,
+    "updatedAt": 1793190816176,
     "isDeleted": false,
     "deletedAt": null,
     "id": "019b76da-a800-75d7-95fa-18e695a7ff33",
@@ -3153,17 +3155,17 @@ Response `200 OK` (application/json):
     "images": [
       {
         "fileId": "019b76da-a800-7d08-8be5-bc0104035de1",
-        "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/UHD/local-public",
+        "url": "http://10.117.81.236:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/UHD/local-public",
         "width": 3840,
         "height": 2160,
         "sources": [
           {
             "width": 640,
-            "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/THUMBNAIL/local-public"
+            "url": "http://10.117.81.236:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/THUMBNAIL/local-public"
           },
           {
             "width": 1280,
-            "url": "http://192.168.100.23:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/MEDIUM/local-public"
+            "url": "http://10.117.81.236:8097/api/v1/files/019b76da-a800-7d08-8be5-bc0104035de1/variants/MEDIUM/local-public"
           }
         ]
       }
@@ -3172,7 +3174,7 @@ Response `200 OK` (application/json):
     "quantityRemaining": 500,
     "quantityReserved": 0,
     "startDate": null,
-    "expiryDate": 1795177952430,
+    "expiryDate": 1795782785684,
     "status": "DRAFT",
     "claimCount": 0,
     "redemptionCount": 0,
@@ -3185,8 +3187,8 @@ Response `200 OK` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "1BjVzU97nCOHuJ2AqnM_y",
-    "timestamp": 1792586064714
+    "correlationId": "5ulIZGmsLE6dcnCg-bfxP",
+    "timestamp": 1793190889873
   }
 }
 ```
@@ -3290,7 +3292,7 @@ Update a draft or pending reward
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-PATCH /api/v1/tenants/brew-bean-kl/rewards/01a15e74-ab08-77b1-9a35-67e97fd0ad61
+PATCH /api/v1/tenants/brew-bean-kl/rewards/01a18281-915c-71cb-a2a2-867c0e7b89e1
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -3307,11 +3309,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792586066689,
-    "updatedAt": 1792586067067,
+    "createdAt": 1793190891864,
+    "updatedAt": 1793190892149,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15e74-ab08-77b1-9a35-67e97fd0ad61",
+    "id": "01a18281-915c-71cb-a2a2-867c0e7b89e1",
     "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "tenantName": "Brew & Bean KL",
     "tenantLogoUrl": null,
@@ -3325,18 +3327,18 @@ Response `200 OK` (application/json):
     "category": "cafe",
     "images": [
       {
-        "fileId": "01a15e74-a3b9-73f2-b9ce-90ff869877d1",
-        "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/LARGE/local-public",
+        "fileId": "01a18281-89e3-761c-9766-ef5c90059d9f",
+        "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/LARGE/local-public",
         "width": 1920,
         "height": 1080,
         "sources": [
           {
             "width": 640,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/THUMBNAIL/local-public"
+            "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/THUMBNAIL/local-public"
           },
           {
             "width": 1280,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/MEDIUM/local-public"
+            "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/MEDIUM/local-public"
           }
         ]
       }
@@ -3344,15 +3346,15 @@ Response `200 OK` (application/json):
     "quantityTotal": 250,
     "quantityRemaining": 250,
     "quantityReserved": 0,
-    "startDate": 1792586066463,
-    "expiryDate": 1797770066463,
+    "startDate": 1793190891590,
+    "expiryDate": 1798374891590,
     "status": "DRAFT",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "01a15e74-ab08-7ebb-a3ea-a0f64db406d2",
+    "referrerRewardId": "01a18281-915c-7dcf-8d6e-77e86bf5df31",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -3361,8 +3363,8 @@ Response `200 OK` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "cmGDB3aVY7OMBhWCRpGzV",
-    "timestamp": 1792586067164
+    "correlationId": "rFe9BNW35Lo75sYpf8aKI",
+    "timestamp": 1793190892243
   }
 }
 ```
@@ -3450,7 +3452,7 @@ _No fields._
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/tenants/brew-bean-kl/rewards/01a15e74-ab08-77b1-9a35-67e97fd0ad61/publish
+POST /api/v1/tenants/brew-bean-kl/rewards/01a18281-915c-71cb-a2a2-867c0e7b89e1/publish
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -3465,11 +3467,11 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792586066689,
-    "updatedAt": 1792586067325,
+    "createdAt": 1793190891864,
+    "updatedAt": 1793190892395,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15e74-ab08-77b1-9a35-67e97fd0ad61",
+    "id": "01a18281-915c-71cb-a2a2-867c0e7b89e1",
     "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "tenantName": "Brew & Bean KL",
     "tenantLogoUrl": null,
@@ -3483,18 +3485,18 @@ Response `201 Created` (application/json):
     "category": "cafe",
     "images": [
       {
-        "fileId": "01a15e74-a3b9-73f2-b9ce-90ff869877d1",
-        "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/LARGE/local-public",
+        "fileId": "01a18281-89e3-761c-9766-ef5c90059d9f",
+        "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/LARGE/local-public",
         "width": 1920,
         "height": 1080,
         "sources": [
           {
             "width": 640,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/THUMBNAIL/local-public"
+            "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/THUMBNAIL/local-public"
           },
           {
             "width": 1280,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/MEDIUM/local-public"
+            "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/MEDIUM/local-public"
           }
         ]
       }
@@ -3502,15 +3504,15 @@ Response `201 Created` (application/json):
     "quantityTotal": 250,
     "quantityRemaining": 250,
     "quantityReserved": 0,
-    "startDate": 1792586066463,
-    "expiryDate": 1797770066463,
+    "startDate": 1793190891590,
+    "expiryDate": 1798374891590,
     "status": "PENDING_REVIEW",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "01a15e74-ab08-7ebb-a3ea-a0f64db406d2",
+    "referrerRewardId": "01a18281-915c-7dcf-8d6e-77e86bf5df31",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -3519,8 +3521,8 @@ Response `201 Created` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "SSKysTJxoGywVZQ9ek8rC",
-    "timestamp": 1792586067447
+    "correlationId": "dEw770NoN17mR3Nd0prE8",
+    "timestamp": 1793190892490
   }
 }
 ```
@@ -3631,8 +3633,8 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792585982775,
-      "updatedAt": 1792585988244,
+      "createdAt": 1793190816158,
+      "updatedAt": 1793190824255,
       "isDeleted": false,
       "deletedAt": null,
       "id": "019b76da-a800-7cb8-a368-3b87952401bc",
@@ -3642,21 +3644,21 @@ Response `200 OK` (application/json):
       "locationName": "Brew & Bean KL — Bukit Bintang",
       "status": "ACTIVE",
       "pairingCodeExpiresAt": null,
-      "pairedAt": 1792326812430,
+      "pairedAt": 1792931645684,
       "lastSeenAt": 1788253380000
     },
     {
-      "createdAt": 1792585982236,
-      "updatedAt": 1792585982236,
+      "createdAt": 1793190815733,
+      "updatedAt": 1793190815733,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15e73-611b-7572-9593-7e31eadd6b49",
+      "id": "01a18280-67f4-755f-b1d1-44c604b90203",
       "terminalId": "KL-REGISTER-02",
       "name": "Drive-through",
       "locationId": "019b76da-a800-701a-abbd-a9a411b6958b",
       "locationName": "Brew & Bean KL — Bukit Bintang",
       "status": "AWAITING_PAIRING",
-      "pairingCodeExpiresAt": 1792586852430,
+      "pairingCodeExpiresAt": 1793191685684,
       "pairedAt": null,
       "lastSeenAt": null
     }
@@ -3669,8 +3671,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "8ysQvB11cIKwo981qSklr",
-    "timestamp": 1792586069965
+    "correlationId": "2M3zJ9x-6snpUbzDD9agb",
+    "timestamp": 1793190894390
   }
 }
 ```
@@ -3752,26 +3754,26 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "terminal": {
-      "createdAt": 1792586070916,
-      "updatedAt": 1792586070916,
+      "createdAt": 1793190895036,
+      "updatedAt": 1793190895036,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15e74-bb88-7c6b-b44e-48984a89a16f",
+      "id": "01a18281-9dbd-7b21-8811-5b1ad4eb1bd7",
       "terminalId": "KL-BANGSAR-01",
       "name": "Bangsar front counter",
       "locationId": "019b76da-a800-701a-abbd-a9a411b6958b",
       "locationName": "Brew & Bean KL — Bukit Bintang",
       "status": "AWAITING_PAIRING",
-      "pairingCodeExpiresAt": 1792586970920,
+      "pairingCodeExpiresAt": 1793191795037,
       "pairedAt": null,
       "lastSeenAt": null
     },
-    "pairingCode": "97QU9YLA",
-    "pairingCodeExpiresAt": 1792586970920
+    "pairingCode": "5XNZAU6Z",
+    "pairingCodeExpiresAt": 1793191795037
   },
   "meta": {
-    "correlationId": "Sp6Vq56Y1HVfFd5q7RQtX",
-    "timestamp": 1792586070936
+    "correlationId": "iS8glguxx7D6OzPsBAQwx",
+    "timestamp": 1793190895047
   }
 }
 ```
@@ -3821,7 +3823,7 @@ Read one POS terminal (404 outside the caller's stores)
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-GET /api/v1/tenants/brew-bean-kl/terminals/01a15e74-bb88-7c6b-b44e-48984a89a16f
+GET /api/v1/tenants/brew-bean-kl/terminals/01a18281-9dbd-7b21-8811-5b1ad4eb1bd7
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -3832,23 +3834,23 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792586070916,
-    "updatedAt": 1792586070916,
+    "createdAt": 1793190895036,
+    "updatedAt": 1793190895036,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15e74-bb88-7c6b-b44e-48984a89a16f",
+    "id": "01a18281-9dbd-7b21-8811-5b1ad4eb1bd7",
     "terminalId": "KL-BANGSAR-01",
     "name": "Bangsar front counter",
     "locationId": "019b76da-a800-701a-abbd-a9a411b6958b",
     "locationName": "Brew & Bean KL — Bukit Bintang",
     "status": "AWAITING_PAIRING",
-    "pairingCodeExpiresAt": 1792586970920,
+    "pairingCodeExpiresAt": 1793191795037,
     "pairedAt": null,
     "lastSeenAt": null
   },
   "meta": {
-    "correlationId": "_GaLu4wIhNjhJFhKhlJag",
-    "timestamp": 1792586071091
+    "correlationId": "OFh-CjVoKX_KnUlnc3vHr",
+    "timestamp": 1793190895186
   }
 }
 ```
@@ -3888,7 +3890,7 @@ Remove a POS terminal and revoke its API key
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-DELETE /api/v1/tenants/brew-bean-kl/terminals/01a15e74-bb88-7c6b-b44e-48984a89a16f
+DELETE /api/v1/tenants/brew-bean-kl/terminals/01a18281-9dbd-7b21-8811-5b1ad4eb1bd7
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -3903,8 +3905,8 @@ Response `200 OK` (application/json):
     "ok": true
   },
   "meta": {
-    "correlationId": "VtFVB5kmwrialsRz_hEb3",
-    "timestamp": 1792586077221
+    "correlationId": "7C2iEYeXzpOYr79wcXdhq",
+    "timestamp": 1793190901024
   }
 }
 ```
@@ -3963,7 +3965,7 @@ _No fields._
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/tenants/brew-bean-kl/terminals/01a15e74-bb88-7c6b-b44e-48984a89a16f/pairing-code
+POST /api/v1/tenants/brew-bean-kl/terminals/01a18281-9dbd-7b21-8811-5b1ad4eb1bd7/pairing-code
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -3979,26 +3981,26 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "terminal": {
-      "createdAt": 1792586070916,
-      "updatedAt": 1792586071232,
+      "createdAt": 1793190895036,
+      "updatedAt": 1793190895343,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15e74-bb88-7c6b-b44e-48984a89a16f",
+      "id": "01a18281-9dbd-7b21-8811-5b1ad4eb1bd7",
       "terminalId": "KL-BANGSAR-01",
       "name": "Bangsar front counter",
       "locationId": "019b76da-a800-701a-abbd-a9a411b6958b",
       "locationName": "Brew & Bean KL — Bukit Bintang",
       "status": "AWAITING_PAIRING",
-      "pairingCodeExpiresAt": 1792586971232,
+      "pairingCodeExpiresAt": 1793191795343,
       "pairedAt": null,
       "lastSeenAt": null
     },
-    "pairingCode": "RTF7WGEP",
-    "pairingCodeExpiresAt": 1792586971232
+    "pairingCode": "5H3VY7P3",
+    "pairingCodeExpiresAt": 1793191795343
   },
   "meta": {
-    "correlationId": "0exWgfUOpILyCKtkBlxgD",
-    "timestamp": 1792586071247
+    "correlationId": "IDWz7cdPo0lOQOAbYB3TJ",
+    "timestamp": 1793190895354
   }
 }
 ```
@@ -4049,8 +4051,8 @@ Response `200 OK` (application/json):
     "requireRegisteredTerminals": false
   },
   "meta": {
-    "correlationId": "jFm8Tp2QCpMjIRPWj5smv",
-    "timestamp": 1792586070402
+    "correlationId": "9RPNmTDilpn1gX_JxHI6i",
+    "timestamp": 1793190894717
   }
 }
 ```
@@ -4115,8 +4117,8 @@ Response `200 OK` (application/json):
     "requireRegisteredTerminals": false
   },
   "meta": {
-    "correlationId": "plLAKtb9E7GomNF-XbLI5",
-    "timestamp": 1792586070663
+    "correlationId": "fDeqGujhXgdUGiB_3OOco",
+    "timestamp": 1793190894870
   }
 }
 ```
@@ -4179,8 +4181,8 @@ Response `200 OK` (application/json):
     "storesWithTerminals": 1
   },
   "meta": {
-    "correlationId": "IYOkC8JpPVg6ynHXUydvd",
-    "timestamp": 1792586070196
+    "correlationId": "7Spen3J8TBWioQFY3tS2V",
+    "timestamp": 1793190894552
   }
 }
 ```
@@ -4254,11 +4256,11 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792586071290,
-      "updatedAt": 1792586071290,
+      "createdAt": 1793190895383,
+      "updatedAt": 1793190895383,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15e74-bd12-7150-a4c0-304f30a82107",
+      "id": "01a18281-9f22-70f1-a1f1-c7c02cfce4ec",
       "name": "Bangsar front counter",
       "locationId": "019b76da-a800-701a-abbd-a9a411b6958b",
       "locationName": "Brew & Bean KL — Bukit Bintang",
@@ -4266,8 +4268,8 @@ Response `200 OK` (application/json):
       "revokedAt": null
     },
     {
-      "createdAt": 1792585982769,
-      "updatedAt": 1792585982769,
+      "createdAt": 1793190816152,
+      "updatedAt": 1793190816152,
       "isDeleted": false,
       "deletedAt": null,
       "id": "019b76da-a800-7bd5-a5dd-45b76d6c72dc",
@@ -4275,7 +4277,7 @@ Response `200 OK` (application/json):
       "locationId": "019b76da-a800-701a-abbd-a9a411b6958b",
       "locationName": "Brew & Bean KL — Bukit Bintang",
       "scope": "POS",
-      "revokedAt": 1790857952430
+      "revokedAt": 1791462785684
     }
   ],
   "meta": {
@@ -4283,11 +4285,11 @@ Response `200 OK` (application/json):
     "total": 5,
     "page": 1,
     "totalPages": 3,
-    "nextCursor": "eyJhdCI6MTc5MjU4NTk4Mjc2OSwiaWQiOiIwMTliNzZkYS1hODAwLTdiZDUtYTVkZC00NWI3NmQ2YzcyZGMifQ",
+    "nextCursor": "eyJhdCI6MTc5MzE5MDgxNjE1MiwiaWQiOiIwMTliNzZkYS1hODAwLTdiZDUtYTVkZC00NWI3NmQ2YzcyZGMifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "wddziVJh4Ye6V8diSL4qH",
-    "timestamp": 1792586073659
+    "correlationId": "AnTFQgqBoY5TdYEMhApT1",
+    "timestamp": 1793190897532
   }
 }
 ```
@@ -4356,15 +4358,15 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a15e74-c698-7d0c-9676-adde93bb2a9a",
+    "id": "01a18281-a818-79df-8fe2-e38e555c7548",
     "apiKey": "<redacted: one-time secret>",
     "name": "Back-office sync",
     "scope": "INTEGRATION",
     "locationId": null
   },
   "meta": {
-    "correlationId": "RSlIJ5Jcq68QALWBGQtYO",
-    "timestamp": 1792586073759
+    "correlationId": "7cO0t3gAriOYAj2dC9VP1",
+    "timestamp": 1793190897697
   }
 }
 ```
@@ -4408,7 +4410,7 @@ _No fields._
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/tenants/brew-bean-kl/api-keys/01a15e74-c698-7d0c-9676-adde93bb2a9a/revoke
+POST /api/v1/tenants/brew-bean-kl/api-keys/01a18281-a818-79df-8fe2-e38e555c7548/revoke
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -4426,8 +4428,8 @@ Response `201 Created` (application/json):
     "ok": true
   },
   "meta": {
-    "correlationId": "makogH4vsg0jC3idfmK_e",
-    "timestamp": 1792586077050
+    "correlationId": "s5k7zjQuiZWXYCcNr2yqB",
+    "timestamp": 1793190900851
   }
 }
 ```
@@ -4497,9 +4499,9 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "redemptionId": "01a15e74-be84-75ec-90a7-f6bb44b10234",
+      "redemptionId": "01a18281-9fdc-7158-8117-226b815c6e9b",
       "rewardTitle": "Free coffee — Grand Opening",
-      "redeemedAt": 1792586071567,
+      "redeemedAt": 1793190895511,
       "terminalId": "KL-REGISTER-01",
       "redemptionMethod": "MANUAL",
       "customerBanned": false
@@ -4507,7 +4509,7 @@ Response `200 OK` (application/json):
     {
       "redemptionId": "019b76da-a800-704e-9593-80d298dad1b4",
       "rewardTitle": "Free coffee — Grand Opening",
-      "redeemedAt": 1792585982381,
+      "redeemedAt": 1793190815855,
       "terminalId": "KL-REGISTER-01",
       "redemptionMethod": "SCAN",
       "customerBanned": false
@@ -4515,14 +4517,14 @@ Response `200 OK` (application/json):
   ],
   "meta": {
     "limit": 2,
-    "total": 918,
+    "total": 914,
     "page": 1,
-    "totalPages": 459,
-    "nextCursor": "eyJhdCI6MTc5MjU4NTk4MjM4MSwiaWQiOiIwMTliNzZkYS1hODAwLTcwNGUtOTU5My04MGQyOThkYWQxYjQifQ",
+    "totalPages": 457,
+    "nextCursor": "eyJhdCI6MTc5MzE5MDgxNTg1NSwiaWQiOiIwMTliNzZkYS1hODAwLTcwNGUtOTU5My04MGQyOThkYWQxYjQifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "ZSNlt1PVpGVenb7D_WvCY",
-    "timestamp": 1792586072007
+    "correlationId": "BlRgujIWFS1KsSbGG39ZA",
+    "timestamp": 1793190895989
   }
 }
 ```
@@ -4595,23 +4597,23 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "01a15e74-c076-7973-af97-d9de45c06f47",
+      "id": "01a18281-a1ec-7f84-897d-eb8d0e06d2f8",
       "reason": "Showed a screenshot of a voucher already redeemed.",
-      "bannedAt": 1792586072182,
+      "bannedAt": 1793190896108,
       "bannedBy": {
         "id": "019b76da-a800-763a-b64a-fd037629f93f",
         "fullName": "Ahmad Brew"
       },
       "source": {
-        "redemptionId": "01a15e74-be84-75ec-90a7-f6bb44b10234",
+        "redemptionId": "01a18281-9fdc-7158-8117-226b815c6e9b",
         "rewardTitle": "Free coffee — Grand Opening",
-        "redeemedAt": 1792586071567
+        "redeemedAt": 1793190895511
       }
     },
     {
       "id": "019b76da-a800-73e4-9126-129dae4f7e20",
       "reason": "Tried to redeem the same voucher twice by showing a screenshot to two cashiers.",
-      "bannedAt": 1792413185188,
+      "bannedAt": 1793018018442,
       "bannedBy": {
         "id": "019b76da-a800-763a-b64a-fd037629f93f",
         "fullName": "Ahmad Brew"
@@ -4619,7 +4621,7 @@ Response `200 OK` (application/json):
       "source": {
         "redemptionId": "019b76da-a800-7ddb-afb6-f82344454a64",
         "rewardTitle": "Morning brew club — free refill",
-        "redeemedAt": 1789369920000
+        "redeemedAt": 1789974720000
       }
     }
   ],
@@ -4631,8 +4633,8 @@ Response `200 OK` (application/json):
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "VTtCLRGHxcphT9fH3UFCU",
-    "timestamp": 1792586072452
+    "correlationId": "wjCawLxphEqenTI24PaQB",
+    "timestamp": 1793190896257
   }
 }
 ```
@@ -4698,7 +4700,7 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "redemptionId": "01a15e74-be84-75ec-90a7-f6bb44b10234",
+  "redemptionId": "01a18281-9fdc-7158-8117-226b815c6e9b",
   "reason": "Showed a screenshot of a voucher already redeemed."
 }
 ```
@@ -4709,22 +4711,22 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "id": "01a15e74-c076-7973-af97-d9de45c06f47",
+    "id": "01a18281-a1ec-7f84-897d-eb8d0e06d2f8",
     "reason": "Showed a screenshot of a voucher already redeemed.",
-    "bannedAt": 1792586072182,
+    "bannedAt": 1793190896108,
     "bannedBy": {
       "id": "019b76da-a800-763a-b64a-fd037629f93f",
       "fullName": "Ahmad Brew"
     },
     "source": {
-      "redemptionId": "01a15e74-be84-75ec-90a7-f6bb44b10234",
+      "redemptionId": "01a18281-9fdc-7158-8117-226b815c6e9b",
       "rewardTitle": "Free coffee — Grand Opening",
-      "redeemedAt": 1792586071567
+      "redeemedAt": 1793190895511
     }
   },
   "meta": {
-    "correlationId": "FjKdOXJkXn0fVzgBQMN_c",
-    "timestamp": 1792586072221
+    "correlationId": "21acIomu3H5BOP394Tsac",
+    "timestamp": 1793190896123
   }
 }
 ```
@@ -4764,7 +4766,7 @@ Lift a customer ban: the customer may claim and redeem again
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal).
 
 ```http
-POST /api/v1/tenants/brew-bean-kl/customer-bans/01a15e74-c076-7973-af97-d9de45c06f47/lift
+POST /api/v1/tenants/brew-bean-kl/customer-bans/01a18281-a1ec-7f84-897d-eb8d0e06d2f8/lift
 X-Client-Type: merchant
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -4782,11 +4784,726 @@ Response `201 Created` (application/json):
     "ok": true
   },
   "meta": {
-    "correlationId": "KEBpkFZ3sfClDxTribxba",
-    "timestamp": 1792586072657
+    "correlationId": "9Z_cpkC7sABpeEh9pmKkA",
+    "timestamp": 1793190896408
   }
 }
 ```
+
+## Tenant Access
+
+### DELETE /api/v1/tenants/{tenantSlug}/access/grants/{grantId}
+
+Take an extra permission back (its granter always may)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantAccessController_revokeGrant` · [source](../../../apps/api/src/contexts/authorization/presentation/http/tenant-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+| `grantId` | path | string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — Permission revoked
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.ok` | true | yes | The action was accepted |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | The caller's role does not allow this, or it would give more than their own role or stores |
+| 404 | — | No such tenant, role, member, grant or share in it |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/tenants/{tenantSlug}/access/members/{membershipId}
+
+One member's access: their role and stores
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantAccessController_member` · [source](../../../apps/api/src/contexts/authorization/presentation/http/tenant-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+| `membershipId` | path | string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — The member
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.email` | string (email) | yes |  |
+| `data.fullName` | string | yes |  |
+| `data.locationIds` | string (uuid)[] | yes |  |
+| `data.locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | yes |  |
+| `data.membershipId` | string (uuid) | yes |  |
+| `data.roleId` | string (uuid) | yes |  |
+| `data.roleName` | string | yes |  |
+| `data.templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
+| `data.userId` | string (uuid) | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | The caller's role does not allow this, or it would give more than their own role or stores |
+| 404 | — | No such tenant, role, member, grant or share in it |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### DELETE /api/v1/tenants/{tenantSlug}/access/members/{membershipId}
+
+Remove a member: their role, grants and shares stop at once
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantAccessController_removeMember` · [source](../../../apps/api/src/contexts/authorization/presentation/http/tenant-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+| `membershipId` | path | string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — Member removed
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.ok` | true | yes | The action was accepted |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | The caller's role does not allow this, or it would give more than their own role or stores |
+| 404 | — | No such tenant, role, member, grant or share in it |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/tenants/{tenantSlug}/access/members/{membershipId}/grants
+
+A member's extra permissions still in force, newest first, with their end time
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantAccessController_grants` · [source](../../../apps/api/src/contexts/authorization/presentation/http/tenant-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+| `membershipId` | path | string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — The member's grants
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data` | object[] | yes |  |
+| `data[].expiresAt` | integer \| null | yes |  |
+| `data[].grantedAt` | integer | yes |  |
+| `data[].grantedBy` | string \| null | yes |  |
+| `data[].grantedVia` | string \| null | yes |  |
+| `data[].id` | string (uuid) | yes |  |
+| `data[].locationId` | string (uuid) \| null | yes |  |
+| `data[].membershipId` | string (uuid) | yes |  |
+| `data[].permission` | object | yes |  |
+| `data[].permission.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
+| `data[].permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | The caller's role does not allow this, or it would give more than their own role or stores |
+| 404 | — | No such tenant, role, member, grant or share in it |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/tenants/{tenantSlug}/access/members/{membershipId}/grants
+
+Give a member an extra permission, permanent or until `expiresAt`
+
+Only a permission the caller's own role gives, within the caller's stores.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantAccessController_grant` · [source](../../../apps/api/src/contexts/authorization/presentation/http/tenant-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+| `membershipId` | path | string (uuid) | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `expiresAt` | integer | no |  |
+| `locationId` | string (uuid) | no |  |
+| `permission` | object | yes |  |
+| `permission.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
+| `permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+
+**Response 201 Created** (`application/json`) — Permission granted
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.expiresAt` | integer \| null | yes |  |
+| `data.grantedAt` | integer | yes |  |
+| `data.grantedBy` | string \| null | yes |  |
+| `data.grantedVia` | string \| null | yes |  |
+| `data.id` | string (uuid) | yes |  |
+| `data.locationId` | string (uuid) \| null | yes |  |
+| `data.membershipId` | string (uuid) | yes |  |
+| `data.permission` | object | yes |  |
+| `data.permission.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
+| `data.permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | The caller's role does not allow this, or it would give more than their own role or stores |
+| 404 | — | No such tenant, role, member, grant or share in it |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### PUT /api/v1/tenants/{tenantSlug}/access/members/{membershipId}/role
+
+Change a member's role
+
+Only an Owner makes an Owner; the last Owner keeps the Owner role.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantAccessController_changeMemberRole` · [source](../../../apps/api/src/contexts/authorization/presentation/http/tenant-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+| `membershipId` | path | string (uuid) | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `roleId` | string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — Member's role changed
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.ok` | true | yes | The action was accepted |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | The caller's role does not allow this, or it would give more than their own role or stores |
+| 404 | — | No such tenant, role, member, grant or share in it |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/tenants/{tenantSlug}/access/roles
+
+The tenant's roles, with their permissions and how many members hold each
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantAccessController_roles` · [source](../../../apps/api/src/contexts/authorization/presentation/http/tenant-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — The tenant's roles
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data` | object[] | yes |  |
+| `data[].holderCount` | integer | yes |  |
+| `data[].id` | string (uuid) | yes |  |
+| `data[].name` | string | yes |  |
+| `data[].permissions` | object[] | yes |  |
+| `data[].permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
+| `data[].permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+| `data[].templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | The caller's role does not allow this, or it would give more than their own role or stores |
+| 404 | — | No such tenant, role, member, grant or share in it |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/tenants/{tenantSlug}/access/roles
+
+Create a role from tenant permissions the caller's own role holds
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantAccessController_createRole` · [source](../../../apps/api/src/contexts/authorization/presentation/http/tenant-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `name` | string | yes | length 1–100 |
+| `permissions` | object[] | yes | 0–200 items |
+| `permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
+| `permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+
+**Response 201 Created** (`application/json`) — Role created
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.holderCount` | integer | yes |  |
+| `data.id` | string (uuid) | yes |  |
+| `data.name` | string | yes |  |
+| `data.permissions` | object[] | yes |  |
+| `data.permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
+| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+| `data.templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | The caller's role does not allow this, or it would give more than their own role or stores |
+| 404 | — | No such tenant, role, member, grant or share in it |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### PATCH /api/v1/tenants/{tenantSlug}/access/roles/{roleId}
+
+Rename a role or replace its permissions (never the Owner role)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantAccessController_updateRole` · [source](../../../apps/api/src/contexts/authorization/presentation/http/tenant-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+| `roleId` | path | string (uuid) | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `name` | string | no | length 1–100 |
+| `permissions` | object[] | no | 0–200 items |
+| `permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
+| `permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+
+**Response 200 OK** (`application/json`) — Role updated
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.holderCount` | integer | yes |  |
+| `data.id` | string (uuid) | yes |  |
+| `data.name` | string | yes |  |
+| `data.permissions` | object[] | yes |  |
+| `data.permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
+| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+| `data.templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | The caller's role does not allow this, or it would give more than their own role or stores |
+| 404 | — | No such tenant, role, member, grant or share in it |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### DELETE /api/v1/tenants/{tenantSlug}/access/roles/{roleId}
+
+Delete a role no member holds
+
+409 with `holderCount` and `holdersVersion` while members hold it: reassign them first.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantAccessController_deleteRole` · [source](../../../apps/api/src/contexts/authorization/presentation/http/tenant-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+| `roleId` | path | string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — Role deleted
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.ok` | true | yes | The action was accepted |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | The caller's role does not allow this, or it would give more than their own role or stores |
+| 404 | — | No such tenant, role, member, grant or share in it |
+| 409 | — | Members still hold the role |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/tenants/{tenantSlug}/access/roles/{roleId}/holders
+
+The members holding a role, and the version of that list to quote when reassigning them
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantAccessController_holders` · [source](../../../apps/api/src/contexts/authorization/presentation/http/tenant-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+| `roleId` | path | string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — The role's holders
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.holders` | object[] | yes |  |
+| `data.holders[].email` | string (email) | yes |  |
+| `data.holders[].fullName` | string | yes |  |
+| `data.holders[].membershipId` | string (uuid) | yes |  |
+| `data.holders[].userId` | string (uuid) | yes |  |
+| `data.holdersVersion` | string | yes | at least 1 characters |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | The caller's role does not allow this, or it would give more than their own role or stores |
+| 404 | — | No such tenant, role, member, grant or share in it |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/tenants/{tenantSlug}/access/roles/{roleId}/reassign
+
+Move every holder of a role to a new role in one step
+
+409 when the holders changed since `holdersVersion` was read.
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantAccessController_reassign` · [source](../../../apps/api/src/contexts/authorization/presentation/http/tenant-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+| `roleId` | path | string (uuid) | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `assignments` | object[] | yes | 1–1000 items |
+| `assignments[].membershipId` | string (uuid) | yes |  |
+| `assignments[].roleId` | string (uuid) | yes |  |
+| `holdersVersion` | string | yes | at least 1 characters |
+
+**Response 201 Created** (`application/json`) — Holders reassigned
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.ok` | true | yes | The action was accepted |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | The caller's role does not allow this, or it would give more than their own role or stores |
+| 404 | — | No such tenant, role, member, grant or share in it |
+| 409 | — | The role's holders changed |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/tenants/{tenantSlug}/access/roles/{roleId}/reset
+
+Make a role equal the template it was copied from again
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantAccessController_resetRole` · [source](../../../apps/api/src/contexts/authorization/presentation/http/tenant-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+| `roleId` | path | string (uuid) | yes |  |
+
+**Response 201 Created** (`application/json`) — Role reset to its template
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.holderCount` | integer | yes |  |
+| `data.id` | string (uuid) | yes |  |
+| `data.name` | string | yes |  |
+| `data.permissions` | object[] | yes |  |
+| `data.permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
+| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
+| `data.templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | The caller's role does not allow this, or it would give more than their own role or stores |
+| 404 | — | No such tenant, role, member, grant or share in it |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/tenants/{tenantSlug}/access/shares
+
+The records shared with single members, newest first
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantAccessController_shares` · [source](../../../apps/api/src/contexts/authorization/presentation/http/tenant-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — The tenant's shares
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data` | object[] | yes |  |
+| `data[].expiresAt` | integer \| null | yes |  |
+| `data[].id` | string (uuid) | yes |  |
+| `data[].level` | "VIEW" \| "EDIT" | yes |  |
+| `data[].membershipId` | string (uuid) | yes |  |
+| `data[].resource` | "REWARD" | yes |  |
+| `data[].resourceId` | string (uuid) | yes |  |
+| `data[].sharedAt` | integer | yes |  |
+| `data[].sharedBy` | string \| null | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | The caller's role does not allow this, or it would give more than their own role or stores |
+| 404 | — | No such tenant, role, member, grant or share in it |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/tenants/{tenantSlug}/access/shares
+
+Share one record with one member, to view or edit, permanent or until `expiresAt`
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantAccessController_share` · [source](../../../apps/api/src/contexts/authorization/presentation/http/tenant-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `expiresAt` | integer | no |  |
+| `level` | "VIEW" \| "EDIT" | yes |  |
+| `membershipId` | string (uuid) | yes |  |
+| `resource` | "REWARD" | yes |  |
+| `resourceId` | string (uuid) | yes |  |
+
+**Response 201 Created** (`application/json`) — Record shared
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.expiresAt` | integer \| null | yes |  |
+| `data.id` | string (uuid) | yes |  |
+| `data.level` | "VIEW" \| "EDIT" | yes |  |
+| `data.membershipId` | string (uuid) | yes |  |
+| `data.resource` | "REWARD" | yes |  |
+| `data.resourceId` | string (uuid) | yes |  |
+| `data.sharedAt` | integer | yes |  |
+| `data.sharedBy` | string \| null | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | The caller's role does not allow this, or it would give more than their own role or stores |
+| 404 | — | No such tenant, role, member, grant or share in it |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### DELETE /api/v1/tenants/{tenantSlug}/access/shares/{shareId}
+
+Stop sharing a record (its sharer always may)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantAccessController_unshare` · [source](../../../apps/api/src/contexts/authorization/presentation/http/tenant-access.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+| `shareId` | path | string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — Share removed
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.ok` | true | yes | The action was accepted |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 403 | — | The caller's role does not allow this, or it would give more than their own role or stores |
+| 404 | — | No such tenant, role, member, grant or share in it |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
 
 ## Tenant Analytics
 
@@ -4883,8 +5600,8 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "period": {
-      "from": 1788105600000,
-      "to": 1792586072976,
+      "from": 1788710400000,
+      "to": 1793190896626,
       "timeZone": "Asia/Kuala_Lumpur"
     },
     "totalRewards": {
@@ -4913,12 +5630,12 @@ Response `200 OK` (application/json):
     },
     "claimsOverTime": [
       {
-        "date": 1788105600000,
+        "date": 1788710400000,
         "claims": 21,
         "redemptions": 22
       },
       {
-        "date": 1788710400000,
+        "date": 1789315200000,
         "claims": 28,
         "redemptions": 22
       }
@@ -4953,22 +5670,22 @@ Response `200 OK` (application/json):
       },
       "overTime": [
         {
-          "date": 1788105600000,
+          "date": 1788710400000,
           "salesMinor": 52410,
           "bills": 22
         },
         {
-          "date": 1788710400000,
+          "date": 1789315200000,
           "salesMinor": 61748,
           "bills": 22
         }
       ],
-      "firstBillAt": 1761008340000
+      "firstBillAt": 1761613140000
     }
   },
   "meta": {
-    "correlationId": "3mnM449ea7QE97qigr_0O",
-    "timestamp": 1792586073056
+    "correlationId": "_1yfQ86VY61BEDaYA3xEO",
+    "timestamp": 1793190896811
   }
 }
 ```
@@ -5095,15 +5812,15 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "range": {
-      "from": 1789994073232,
-      "to": 1792586073232,
+      "from": 1790598897020,
+      "to": 1793190897020,
       "timeZone": "Asia/Kuala_Lumpur",
       "interval": "week",
-      "previousFrom": 1787402073232,
-      "previousTo": 1789994073232
+      "previousFrom": 1788006897020,
+      "previousTo": 1790598897020
     },
     "currency": "MYR",
-    "firstBillAt": 1761008340000,
+    "firstBillAt": 1761613140000,
     "totals": {
       "salesMinor": {
         "value": 278677,
@@ -5150,8 +5867,8 @@ Response `200 OK` (application/json):
     },
     "series": [
       {
-        "start": 1789994073232,
-        "end": 1790524800000,
+        "start": 1790598897020,
+        "end": 1791129600000,
         "isPartial": true,
         "salesMinor": 61220,
         "bills": 20,
@@ -5160,8 +5877,8 @@ Response `200 OK` (application/json):
         "redemptions": 20
       },
       {
-        "start": 1790524800000,
-        "end": 1791129600000,
+        "start": 1791129600000,
+        "end": 1791734400000,
         "isPartial": false,
         "salesMinor": 64001,
         "bills": 22,
@@ -5181,7 +5898,7 @@ Response `200 OK` (application/json):
         "redemptions": 98
       },
       {
-        "locationId": "01a15e74-9171-792c-bef6-26bdc06ad2e2",
+        "locationId": "01a18281-7b12-75fd-aa8e-86a3847fec12",
         "name": "Brew & Bean KL — Bangsar",
         "city": "KUALA_LUMPUR",
         "salesMinor": 0,
@@ -5218,8 +5935,8 @@ Response `200 OK` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "Ysn3pEHvGu90Juz6w2RY2",
-    "timestamp": 1792586073263
+    "correlationId": "goUAzybKgNwSBfKsmCQOQ",
+    "timestamp": 1793190897085
   }
 }
 ```
@@ -5262,7 +5979,7 @@ The body is the file (Content-Disposition: attachment). Range: `from` (inclusive
 **Example** — called as brew.owner@kl-rewards.demo (merchant portal). The body is the file itself (Content-Type of the format, Content-Disposition: attachment; filename=…); errors keep the JSON error envelope. See docs/technical/api/analytics.md.
 
 ```http
-GET /api/v1/tenants/brew-bean-kl/analytics/export?from=1789994073290&to=1792586073290&format=xlsx
+GET /api/v1/tenants/brew-bean-kl/analytics/export?from=1790598897096&to=1793190897096&format=xlsx
 X-Client-Type: merchant
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -5270,5 +5987,5 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Response `200 OK` (application/vnd.openxmlformats-officedocument.spreadsheetml.sheet):
 
 ```text
-<8692 bytes of application/vnd.openxmlformats-officedocument.spreadsheetml.sheet>
+<8672 bytes of application/vnd.openxmlformats-officedocument.spreadsheetml.sheet>
 ```

@@ -3,7 +3,6 @@ import { LIST_SLOT_INDEX } from "../../../../lib/named-list-index";
 
 import { AuthorizationCheckResultSchema, AuthorizationCheckSchema, AuthorizationDecisionsResponseSchema } from "../../../../authorization/decisions.schema";
 import { AuthorizationResultSchema } from "../../../../authorization/policy-dsl.schema";
-import { PolicyDraftCreatedResponseSchema, PolicyPublishResponseSchema, PolicySimulationResultSchema } from "../authorization-policy";
 import { CapabilityCatalogResponseSchema } from "../capabilities";
 import { AuditLogEntrySchema } from "../rbac-audit";
 import { RbacMessageResponseSchema } from "../rbac-inspection";
@@ -17,7 +16,7 @@ import {
 	PermissionListQuerySchema,
 } from "../rbac-permissions";
 import {
-	CreateRoleExtendedSchema,
+	CreateRoleSchema,
 	RoleAssignmentPreviewSchema,
 	RoleAssignmentValidationResponseSchema,
 	RoleListItemSchema,
@@ -31,9 +30,6 @@ const CREATED_AT_MS = 1_786_300_000_000;
 const UPDATED_AT_MS = 1_786_300_060_000;
 const ROLE_ID = "8f9c2a52-1d1f-4c1f-9a51-6c7f0d0b3a10";
 const PERMISSION_ID = "0b6c7e8a-3c2d-4f6e-8a1b-2c3d4e5f6a7b";
-const DRAFT_ID = "5e1d0c9b-8a7f-4e6d-9c5b-4a3f2e1d0c9b";
-const PUBLISHED_VERSION = 3;
-const AFFECTED_PRINCIPALS = 12;
 const CATALOG_SORT_ORDER = 10;
 
 const role = {
@@ -41,7 +37,6 @@ const role = {
 	name: "Editor",
 	description: null,
 	isActive: true,
-	parentId: null,
 	isDeleted: false,
 	deletedAt: null,
 	createdAt: CREATED_AT_MS,
@@ -56,7 +51,6 @@ const permission = {
 	scope: "GLOBAL",
 	group: null,
 	isSystem: true,
-	conditions: null,
 	isDeleted: false,
 	deletedAt: null,
 	createdAt: CREATED_AT_MS,
@@ -80,7 +74,7 @@ describe("RBAC response schemas (ADR 022 — open, strip unknown keys)", () => {
 	});
 
 	it("parses the role list, assignment validation, preview and message payloads", () => {
-		const listItem = { id: ROLE_ID, name: "Editor", description: null, isActive: true, parentId: null };
+		const listItem = { id: ROLE_ID, name: "Editor", description: null, isActive: true, kind: "PLATFORM" };
 		expect(RoleListItemSchema.parse({ ...listItem, isDeleted: false })).toEqual(listItem);
 		expect(RoleListQuerySchema.parse({ search: "edit", filter: { isActive: { eq: "true" } } })).toMatchObject({
 			page: 1,
@@ -101,11 +95,10 @@ describe("RBAC response schemas (ADR 022 — open, strip unknown keys)", () => {
 		expect(RbacMessageResponseSchema.parse({ message: "ok", extra: 1 })).toEqual({ message: "ok" });
 	});
 
-	it("keeps an admin permission's scope and nested policy-DSL conditions, and never answers a detail with null", () => {
-		const conditions = { and: [{ field: "ownerId", operator: "equals", value: "$subject.userId" }] };
-		const parsed = AdminPermissionResponseSchema.parse({ ...permission, conditions, legacyFlag: true });
+	it("keeps an admin permission's scope, strips unknown keys (the retired conditions too), and never answers a detail with null", () => {
+		const parsed = AdminPermissionResponseSchema.parse({ ...permission, conditions: { field: "ownerId" }, legacyFlag: true });
 		expect(parsed.scope).toBe("GLOBAL");
-		expect(parsed.conditions).toEqual(conditions);
+		expect(parsed).not.toHaveProperty("conditions");
 		expect(parsed).not.toHaveProperty("legacyFlag");
 		expect(AdminPermissionResponseSchema.safeParse(null).success).toBe(false);
 	});
@@ -171,25 +164,6 @@ describe("RBAC response schemas (ADR 022 — open, strip unknown keys)", () => {
 		expect(CapabilityCatalogResponseSchema.parse([{ ...definition, createdAt: CREATED_AT_MS }])).toEqual([definition]);
 	});
 
-	it("parses the policy control-plane payloads", () => {
-		expect(PolicyDraftCreatedResponseSchema.parse({ draftId: DRAFT_ID })).toEqual({ draftId: DRAFT_ID });
-		expect(PolicyPublishResponseSchema.parse({ version: PUBLISHED_VERSION })).toEqual({ version: PUBLISHED_VERSION });
-		const change = { tenantId: ROLE_ID, userId: PERMISSION_ID, membershipRole: "CASHIER", action: "tenant:manage_team", before: "Allow", after: "Deny" };
-		const simulation = {
-			simulationId: DRAFT_ID,
-			passed: true,
-			warnings: [],
-			errors: [],
-			evaluatedPrincipalCount: AFFECTED_PRINCIPALS,
-			affectedPrincipalCount: AFFECTED_PRINCIPALS,
-			wouldLockOutOwners: false,
-			decisionChanges: [change],
-			decisionChangesTruncated: false,
-		};
-		expect(PolicySimulationResultSchema.parse(simulation)).toEqual(simulation);
-		expect(PolicySimulationResultSchema.safeParse({ ...simulation, decisionChanges: [{ ...change, after: "Maybe" }] }).success).toBe(false);
-	});
-
 	it("parses authorization decisions and an explanation, stripping unknown nested keys", () => {
 		const check = { action: "READ", resource: "USER", allowed: false };
 		expect(AuthorizationDecisionsResponseSchema.parse({ results: [{ ...check, attributes: { owner: "x" } }] })).toEqual({ results: [check] });
@@ -204,7 +178,9 @@ describe("RBAC response schemas (ADR 022 — open, strip unknown keys)", () => {
 
 describe("RBAC request schemas stay closed", () => {
 	it("rejects unknown keys on role create / update bodies", () => {
-		expect(CreateRoleExtendedSchema.safeParse({ name: "Editor", isSystem: true }).success).toBe(false);
+		expect(CreateRoleSchema.safeParse({ name: "Editor", isSystem: true }).success).toBe(false);
+		// Roles are flat (ADR 067): there is no parent to set on create or update.
+		expect(CreateRoleSchema.safeParse({ name: "Editor", parentId: ROLE_ID }).success).toBe(false);
 		expect(UpdateRoleSchema.safeParse({ name: "Editor", parentId: ROLE_ID }).success).toBe(false);
 	});
 

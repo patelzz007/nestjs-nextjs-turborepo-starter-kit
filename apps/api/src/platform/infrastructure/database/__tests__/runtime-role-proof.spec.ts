@@ -36,7 +36,7 @@ describe("evaluateRuntimeRoleProof", () => {
 			{ subject: "role app_runtime", problem: "has BYPASSRLS, which ignores every RLS policy" },
 		]);
 		expect(evaluateRuntimeRoleProof(facts({ role: { role: "app_runtime", exists: false, isSuperuser: false, bypassesRls: false } }))).toEqual([
-			{ subject: "role app_runtime", problem: "does not exist (run pnpm db:apply-security)" },
+			{ subject: "role app_runtime", problem: "does not exist (run pnpm tools db:apply-security)" },
 		]);
 	});
 

@@ -76,14 +76,6 @@
 	}
 }
 
-/* The page column widens as the sidebar collapses — 88rem beside an open sidebar, 104rem with it out of sight — on
-   the same spring, so it eases with the panel instead of snapping. Below lg the sidebar is a drawer: always 104rem. */
-@media (min-width: 64rem) {
-	[data-slot="panel-shell-content"] {
-		max-width: calc(var(--max-width-10xl) - (var(--max-width-10xl) - var(--max-width-8xl)) * var(--sidebar-progress, 0));
-	}
-}
-
 /* Loading skeletons (components/skeleton.tsx, skeleton-region.tsx, skeleton-patterns.tsx).
    One highlight sweeps the whole viewport: every bone paints the same gradient with a FIXED attachment, so the
    band sits at one screen position at a time and travels across all bones together — a single wave, not dozens of

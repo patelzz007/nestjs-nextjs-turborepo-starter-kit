@@ -46,9 +46,12 @@ export const TAILWIND_THEME: TailwindTheme = {
 		{ name: "sidebar-width-mobile", token: "sidebar-width-mobile" },
 		{ name: "sidebar-width-icon", token: "sidebar-width-icon" },
 		{ name: "font-button", token: "font-button" },
-		{ name: "max-width-8xl", token: "max-width-8xl" },
-		{ name: "max-width-9xl", token: "max-width-9xl" },
-		{ name: "max-width-10xl", token: "max-width-10xl" },
+		// The page widths past Tailwind's `max-w-7xl` (80rem), on its own 8rem step: `max-w-8xl` 88rem,
+		// `max-w-9xl` 96rem, `max-w-10xl` 104rem — every page's width (rules/07). Tailwind v4 reads
+		// `max-w-*` sizes from the `--container-*` namespace (as `max-w-7xl` is `--container-7xl`).
+		{ name: "container-8xl", token: "max-width-8xl" },
+		{ name: "container-9xl", token: "max-width-9xl" },
+		{ name: "container-10xl", token: "max-width-10xl" },
 	],
 	colors: [
 		"auth-panel",

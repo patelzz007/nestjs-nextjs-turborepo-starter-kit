@@ -6,8 +6,7 @@ import type { UnitOfWork } from "../../../../../platform/application/unit-of-wor
 import type { SupportAccessGrantAggregate } from "../../../domain/aggregates/support-access-grant.aggregate";
 import { SupportAccessApproverNotOwnerError, SupportAccessGrantNotFoundError, SupportAccessGrantNotPendingError } from "../../../domain/errors/authorization.errors";
 import type { AuthorizationScope } from "../../authorization-scope";
-import { AUTHORIZATION_UNIT_OF_WORK, CEDAR_POLICY_EVALUATOR, SUPPORT_ACCESS_APPROVE_OPERATION } from "../../ports/authorization.tokens";
-import type { CedarPolicyEvaluatorPort } from "../../ports/cedar-policy-evaluator.port";
+import { AUTHORIZATION_UNIT_OF_WORK, SUPPORT_ACCESS_APPROVE_OPERATION } from "../../ports/authorization.tokens";
 import { requireUserActor } from "../../services/rbac-actor";
 import { SupportAccessGrantLocator } from "../../services/support-access-grant-locator";
 import { SUPPORT_ACCESS_AUDIT_ACTIONS, SUPPORT_ACCESS_AUDIT_RESOURCE_TYPE } from "../../services/support-access-audit";
@@ -23,7 +22,6 @@ export class ApproveSupportAccessHandler implements ICommandHandler<ApproveSuppo
 	public constructor(
 		@Inject(AUTHORIZATION_UNIT_OF_WORK) private readonly uow: UnitOfWork<AuthorizationScope>,
 		private readonly locator: SupportAccessGrantLocator,
-		@Inject(CEDAR_POLICY_EVALUATOR) private readonly cedar: CedarPolicyEvaluatorPort,
 		@Inject(CLOCK) private readonly clock: Clock,
 	) {}
 
@@ -31,7 +29,6 @@ export class ApproveSupportAccessHandler implements ICommandHandler<ApproveSuppo
 		const { grantId } = command;
 		const actor = requireUserActor(command.actor);
 		const tenantId: string = await this.locator.tenantOf(actor, grantId);
-		const policyVersion: number = await this.cedar.getActivePolicyVersion(tenantId);
 		await this.uow.runSystemOperation(SUPPORT_ACCESS_APPROVE_OPERATION, actor, async (scope: AuthorizationScope): Promise<void> => {
 			if (!(await scope.supportTenants.isActiveOwner(tenantId, actor.userId))) {
 				throw new SupportAccessApproverNotOwnerError();
@@ -47,7 +44,6 @@ export class ApproveSupportAccessHandler implements ICommandHandler<ApproveSuppo
 			await scope.tenantAudit.record({
 				tenantId,
 				actorUserId: actor.userId,
-				policyVersion,
 				action: SUPPORT_ACCESS_AUDIT_ACTIONS.approved,
 				resourceType: SUPPORT_ACCESS_AUDIT_RESOURCE_TYPE,
 				resourceId: grantId,

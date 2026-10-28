@@ -2,14 +2,12 @@ import type { TenantAppealStatus, TenantLifecycleState, MembershipRole, Prisma, 
 import * as bcrypt from "bcrypt";
 import { assertNever, PILOT_CITY_TIME_ZONES, DAY_MS } from "@workspace/shared";
 
-import { findActivePolicyVersionInTx, seedDefaultTenantPolicies } from "../../src/contexts/authorization/public-api";
-
 import { prisma } from "./client";
+import { seedTenantRoleId } from "./tenant-roles";
 import { deterministicUuid } from "./deterministic-uuid";
 import { seedLifecycleCorrelationId } from "./lifecycle-correlation";
 import { upsertLiveSeedMembership } from "./memberships";
 import { TENANT_SEED_IDS } from "./tenant-seed-ids";
-import { defaultTenantPolicySeedIds } from "./policy-seed-ids";
 import { seedTenantEncryptionKeys } from "./tenant-encryption";
 
 // ---------------------------------------------------------------------------
@@ -85,7 +83,6 @@ async function auditRow(
 			action: row.action,
 			resourceType: row.resourceType,
 			resourceId: row.resourceId,
-			policyVersion: await findActivePolicyVersionInTx(prisma, row.tenantId),
 			createdAt: row.createdAt,
 			...(row.metadata === undefined ? {} : { metadata: row.metadata }),
 		},
@@ -440,6 +437,7 @@ async function seedLifecycleTenant(spec: LifecycleTenant, platformAdminId: strin
 			tenantId,
 			userId: owner.id,
 			role: "OWNER",
+			roleId: await seedTenantRoleId(prisma, tenantId, "OWNER"),
 			status: "ACTIVE",
 			isDeleted: deleted,
 			deletedAt: deleted ? deletedAt : null,
@@ -453,7 +451,6 @@ async function seedLifecycleTenant(spec: LifecycleTenant, platformAdminId: strin
 	await prisma.membershipLocationScope.create({ data: { tenantId, membershipId, scopeType: "ALL_LOCATIONS", createdAt: activatedAt } });
 
 	// Tenant policy + data key, as provisioning creates them (the key is created once; a re-run keeps it).
-	await seedDefaultTenantPolicies(prisma, tenantId, platformAdminId, defaultTenantPolicySeedIds(tenantId));
 	await seedTenantEncryptionKeys([{ tenantId, actorUserId: platformAdminId }]);
 
 	const events: LifecycleEventSeed[] = [

@@ -75,3 +75,18 @@ tick into one history entry. On its own, though, it fixes only the first cause.
   would make, and it is cached for the query's stale time.
 - A list that adds tabs over one query must use `useIsOtherViewPlaceholder` (rules/06). Otherwise the
   second cause comes back.
+
+## Amendment (2026-10-28) — Back / Forward re-reads the address bar
+
+nuqs 2.10.2 (`useQueryStates`) re-syncs from the URL only when the router's value for one of its keys
+changes. A Back that lands after nuqs pushed `?search=coffee` but before React rendered that URL returns
+the router to the value it already had, so nuqs never re-syncs and keeps showing "coffee" under a URL
+without it. It showed up under load as the failing browser test "a Back pressed before the submitted
+search was committed still restores the search box text".
+
+`useUrlState` therefore re-reads the address bar after every history traversal
+(`useHistoryTraversalCount`): where its keys differ from nuqs's state, it adopts the address bar's values
+with a `replace` write (the same entry, nothing added to history). When nuqs already agrees, nothing is
+written. Unit tests: `use-url-state.test.tsx` ("follows the address bar after a Back the router never
+reported…", "writes nothing after a Back the state already follows"). Remove this if nuqs fixes it
+upstream (the unit test above then still holds without it).

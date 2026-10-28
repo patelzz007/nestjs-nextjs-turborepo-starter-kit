@@ -34,9 +34,6 @@ export interface UserInvalidationScope {
 	readonly trigger: UserInvalidationTrigger;
 }
 
-/** Which compiled policy bundles a policy publish made stale. */
-export type PolicyBundleInvalidationScope = { readonly kind: "tenant"; readonly tenantId: string } | { readonly kind: "all" };
-
 /**
  * The single place authorization state is invalidated AFTER commit, on this instance and (through Redis
  * `authz:invalidate`) on every other one. At-most-once: a lost message is caught by every instance's
@@ -53,5 +50,4 @@ export interface AuthorizationCacheInvalidationPort {
 	invalidateUsersOnThisInstance(userIds: readonly string[], trigger: UserInvalidationTrigger): void;
 	/** Drop every cached authorization entry (catalog-wide changes such as a registry sync). */
 	clearAll(): Promise<void>;
-	invalidatePolicyBundles(scope: PolicyBundleInvalidationScope): Promise<void>;
 }

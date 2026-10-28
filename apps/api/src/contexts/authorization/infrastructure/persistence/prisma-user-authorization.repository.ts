@@ -120,12 +120,17 @@ export class PrismaUserAuthorizationRepository implements UserAuthorizationRepos
 		await this.db.userRole.createMany({ data: roleIds.map((roleId: string) => ({ userId, roleId, assignedBy })), skipDuplicates: true });
 	}
 
+	/** A platform grant (no tenant): one row per user and permission, revived rather than duplicated. */
 	private async grant(userId: string, grant: DirectPermissionGrant, assignedBy: string): Promise<void> {
 		const now: number = nowEpochMs();
-		await this.db.userPermission.upsert({
-			where: { userId_permissionId: { userId, permissionId: grant.permissionId } },
-			create: { userId, permissionId: grant.permissionId, effect: grant.effect, expiresAt: grant.expiresAt ?? null, assignedBy },
-			update: {
+		const existing = await this.db.userPermission.findFirst({ where: { userId, permissionId: grant.permissionId, tenantId: null }, select: { id: true } });
+		if (existing === null) {
+			await this.db.userPermission.create({ data: { userId, permissionId: grant.permissionId, effect: grant.effect, expiresAt: grant.expiresAt ?? null, assignedBy } });
+			return;
+		}
+		await this.db.userPermission.update({
+			where: { id: existing.id },
+			data: {
 				isDeleted: false,
 				deletedAt: null,
 				effect: grant.effect,

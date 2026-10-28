@@ -241,7 +241,14 @@ function renderWith(capabilities: readonly CapabilitySlug[], node: React.ReactNo
 }
 
 const BOARD_PATH = "/components/kanban-board";
-const EVERYTHING: readonly CapabilitySlug[] = [PERMISSION.KANBAN_TASK.MANAGE];
+const EVERYTHING: readonly CapabilitySlug[] = [
+	PERMISSION.KANBAN_TASK.LIST,
+	PERMISSION.KANBAN_TASK.READ,
+	PERMISSION.KANBAN_TASK.CREATE,
+	PERMISSION.KANBAN_TASK.UPDATE,
+	PERMISSION.KANBAN_TASK.DELETE,
+	PERMISSION.KANBAN_BOARD.UPDATE,
+];
 
 beforeEach(() => {
 	window.history.replaceState(null, "", BOARD_PATH);

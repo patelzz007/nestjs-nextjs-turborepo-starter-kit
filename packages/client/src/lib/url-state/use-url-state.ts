@@ -21,6 +21,14 @@
 //     table's own "back to page 1" — are applied on top of each other (the
 //     updater sees the queued values), then written as ONE history entry.
 //
+// Back / Forward re-reads the address bar (`useHistoryTraversalCount`). nuqs
+// re-syncs only when the router's value for a key changes; a Back that lands
+// after nuqs pushed `?search=x` but before React rendered it returns the router
+// to the value it already had, so nuqs would keep showing `x` under a URL
+// without it. After every traversal each hook compares its keys with the
+// address bar and, where they differ, adopts the address bar's values
+// (`replace`: the same entry, nothing added to history).
+//
 // The codec stays the single declaration of the state (zod per param, used by
 // the server page too); nuqs only carries each owned key's raw string.
 //
@@ -32,9 +40,11 @@
 //     is not flooded with one entry per keystroke.
 
 import { parseAsString, useQueryStates } from "nuqs";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 import type { UrlState, UrlStateCodec, UrlStateShape } from "./url-state";
+
+import { useHistoryTraversalCount } from "./use-history-traversal";
 
 /** How an update is recorded in browser history. */
 export type UrlHistoryMode = "push" | "replace";
@@ -72,12 +82,27 @@ export function isSameRawUrlParams(current: RawUrlParams, next: RawUrlParams): b
 	return Object.entries(next).every(([key, value]): boolean => (current[key] ?? null) === value);
 }
 
+/** The raw value of each of `urlKeys` in `search` (a `location.search`), `null` when absent. */
+export function rawUrlParamsFromSearch(urlKeys: readonly string[], search: string): RawUrlParams {
+	const params = new URLSearchParams(search);
+	return Object.fromEntries(urlKeys.map((key: string): [string, string | null] => [key, params.get(key)]));
+}
+
 /** `[state, update]` for one URL state declared with `defineUrlState`. */
 export function useUrlState<TShape extends UrlStateShape>(codec: UrlStateCodec<TShape>): readonly [UrlState<TShape>, UrlStateUpdate<UrlState<TShape>>] {
 	// One raw string parser per owned key: the codec, not nuqs, decides what a value means.
 	const rawParsers = useMemo(() => Object.fromEntries(codec.urlKeys.map((key: string) => [key, parseAsString])), [codec]);
 	const [raw, setRaw] = useQueryStates(rawParsers);
 	const state: UrlState<TShape> = useMemo((): UrlState<TShape> => codec.parse(rawUrlParamsToSearch(raw)), [codec, raw]);
+	const traversals: number = useHistoryTraversalCount();
+	useEffect((): void => {
+		if (traversals === 0) {
+			return;
+		}
+		// After a Back / Forward the address bar is the truth (see the header).
+		const addressBar: RawUrlParams = rawUrlParamsFromSearch(codec.urlKeys, window.location.search);
+		void setRaw((current: RawUrlParams): RawUrlParams => (isSameRawUrlParams(current, addressBar) ? {} : addressBar), { history: "replace" });
+	}, [codec, setRaw, traversals]);
 	const update = useCallback(
 		(patch: Partial<UrlState<TShape>>, options?: UrlStateUpdateOptions): void => {
 			void setRaw(

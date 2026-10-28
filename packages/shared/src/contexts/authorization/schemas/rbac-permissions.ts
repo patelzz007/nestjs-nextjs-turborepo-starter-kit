@@ -3,7 +3,6 @@ import { z } from "zod";
 import { PermissionScopeSchema } from "../../../authorization/policy-dsl.schema";
 import { BaseResponseSchema } from "../../../schemas/api/common";
 import { defineListQuery, LIST_MAX_LIMIT, listFilter, ListSearchSchema } from "../../../schemas/api/list-query";
-import { JsonValueSchema } from "../../../schemas/runtime/json";
 import { PermissionActionSchema, PermissionResourceSchema } from "./permission-enums";
 
 export const CreatePermissionSchema = z
@@ -39,9 +38,6 @@ export const CreatePermissionExtendedSchema = CreatePermissionSchema.extend({
 
 export type CreatePermissionExtendedInput = z.output<typeof CreatePermissionExtendedSchema>;
 
-const abacConditionValue = z.union([z.string(), z.number(), z.boolean(), z.null()]);
-const abacConditions = z.record(z.string(), abacConditionValue);
-
 export const PermissionUpdateSchema = z
 	.object({
 		description: z.string().optional().meta({
@@ -49,9 +45,6 @@ export const PermissionUpdateSchema = z
 		}),
 		group: z.string().optional().meta({
 			description: "Updated permission group",
-		}),
-		conditions: abacConditions.nullable().optional().meta({
-			description: "ABAC conditions as JSON object (null to clear)",
 		}),
 	})
 	.strict();
@@ -89,9 +82,6 @@ export type PermissionFilterInput = z.output<typeof PermissionFilterSchema>;
 // ── Responses ────────────────────────────────────────────────────────────────
 // Response schemas are open (strip unknown keys, never reject — ADR 022).
 // `BaseResponseSchema` is strict, so its `shape` is spread into a fresh object.
-
-/** Flat ABAC condition record (`null` when the permission is unconditional). */
-const FlatConditionsSchema = z.nullable(z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])));
 
 /** Slim permission row returned by `GET /admin/permissions`. */
 export const PermissionListItemSchema = z.object({
@@ -154,7 +144,6 @@ export const PermissionResponseSchema = z.object({
 	description: z.string().nullable(),
 	group: z.string().nullable(),
 	isSystem: z.boolean(),
-	conditions: FlatConditionsSchema,
 	rolePermissions: z.array(z.object({ role: RoleRefSchema })).optional(),
 	userPermissions: z.array(z.object({ user: UserRefSchema })).optional(),
 });
@@ -170,20 +159,13 @@ export const PermissionCreatedResponseSchema = z.object({
 	description: z.string().nullable(),
 	group: z.string().nullable(),
 	isSystem: z.boolean(),
-	conditions: FlatConditionsSchema,
 });
 
 export type PermissionCreatedResponse = z.output<typeof PermissionCreatedResponseSchema>;
 
-/**
- * Permission as the `/admin/permissions` CRUD routes answer it. Widens
- * `PermissionCreatedResponseSchema` for two real fields that schema does not
- * model: `scope`, and `conditions` holding the nested policy DSL (a flat
- * record would reject real rows).
- */
-export const AdminPermissionResponseSchema = PermissionCreatedResponseSchema.omit({ conditions: true }).extend({
+/** Permission as the `/admin/permissions` CRUD routes answer it: the created shape plus its `scope`. */
+export const AdminPermissionResponseSchema = PermissionCreatedResponseSchema.extend({
 	scope: PermissionScopeSchema,
-	conditions: JsonValueSchema.nullable(),
 });
 
 export type AdminPermissionResponse = z.output<typeof AdminPermissionResponseSchema>;
@@ -211,7 +193,6 @@ export const PermissionUpdatedResponseSchema = z.object({
 	description: z.string().nullable(),
 	group: z.string().nullable(),
 	isSystem: z.boolean(),
-	conditions: FlatConditionsSchema,
 });
 
 export type PermissionUpdatedResponse = z.output<typeof PermissionUpdatedResponseSchema>;
@@ -225,7 +206,6 @@ export const PermissionPreviewResponseSchema = z.object({
 		description: z.string().nullable(),
 		group: z.string().nullable(),
 		isSystem: z.boolean(),
-		conditions: FlatConditionsSchema,
 	}),
 	dryRun: z.boolean(),
 	changes: z.array(PermissionChangeSchema),

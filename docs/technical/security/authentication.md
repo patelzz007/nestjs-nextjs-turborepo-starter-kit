@@ -52,7 +52,7 @@ every endpoint with a real request/response is in the
   | App | Who may sign in | Otherwise |
   | --- | --- | --- |
   | Admin | SuperAdmins and users holding an `ADMIN_DASHBOARD` permission | `401 INVALID_CREDENTIALS` — the same answer as a wrong password, so the admin login reveals nothing |
-  | Merchant | users with an ACTIVE membership in a tenant that has a merchant profile, holders of `MANAGE:MERCHANT_ORG`, or anyone with a **pending, unexpired team invite** for their email (so they can sign in and accept it) | `403 MERCHANT_ACCESS_REQUIRED` |
+  | Merchant | users with an ACTIVE membership in a tenant that has a merchant profile, holders of `UPDATE:MERCHANT_ORG` (platform staff), or anyone with a **pending, unexpired team invite** for their email (so they can sign in and accept it) | `403 MERCHANT_ACCESS_REQUIRED` |
   | Web | any active account | — |
 
   Signing in to one app never signs you in to another: each has its own cookie pair.
@@ -194,7 +194,7 @@ under its own allow-listed system operation (`support_access.*`).
 | --- | --- | --- |
 | `401 TOKEN_VERSION_MISMATCH` right after a password, 2FA, role or permission change | Expected: older tokens are revoked | The client refreshes or signs in again; never disable the check |
 | Redirect loop between a page and `/auth/…` | A restricted session (email or MFA pending) on a route the proxy does not allow for restricted sessions | Finish verification / enrolment; when adding a setup route, add it to the allow-list in `packages/client/src/lib/contexts/identity/edge/restricted-session.ts` |
-| A shared schema "is not defined" in a client after an auth change | Stale `@workspace/shared` build | `pnpm build:shared`, restart dev |
+| A shared schema "is not defined" in a client after an auth change | Stale `@workspace/shared` build | `pnpm tools build:shared`, restart dev |
 | Login 2FA code always rejected | Server clock skew, or a reused code (a code is valid once per 30-second step) | Sync the clock; wait for the next code |
 | MFA recovery approved but 2FA still required | `MFA_RECOVERY_DELAY_MS` has not elapsed | Wait for the delay; a job (`TaskScheduleService`, every 10 minutes) then completes the request and removes 2FA |
 | Logged in on web but "not authenticated" on admin | Cookie isolation by design | Sign in on each app |

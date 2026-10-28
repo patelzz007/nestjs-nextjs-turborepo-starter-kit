@@ -121,8 +121,8 @@ afterEach(() => {
 });
 
 describe("SampleCategoryView authorization", () => {
-	it("links the create button with SAMPLE_CATEGORY create (MANAGE implies it)", () => {
-		renderWith([PERMISSION.SAMPLE_CATEGORY.MANAGE], <SampleCategoryView />);
+	it("links the create button with SAMPLE_CATEGORY create", () => {
+		renderWith([PERMISSION.SAMPLE_CATEGORY.CREATE], <SampleCategoryView />);
 		// A real link styled as a button — announced as a link, not a button.
 		expect(screen.getByRole("link", { name: "New category" }).getAttribute("href")).toBe("/catalog/categories/new");
 		expect(screen.queryByRole("button", { name: "New category" })).toBeNull();

@@ -1,6 +1,6 @@
 /**
  * Signs a seeded demo account in through the API, for phase C of
- * `pnpm dev:timing` (plan §19.1): the representative routes are signed-in
+ * `pnpm tools dev:timing` (plan §19.1): the representative routes are signed-in
  * pages, so their first compile is only measured when the request carries a
  * real session. The browser client types receive their tokens as httpOnly
  * cookies (docs/technical/api-reference/auth-and-sessions.md), which this

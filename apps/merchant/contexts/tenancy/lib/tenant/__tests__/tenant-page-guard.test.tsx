@@ -38,7 +38,7 @@ describe("guardTenantPage (server-side tenant page guard)", () => {
 	});
 
 	it("renders the owner-only denial when an admin opens business verification directly", async () => {
-		signedInAs("ADMIN");
+		signedInAs("MANAGER");
 
 		render(<>{await guardTenantPage(TEST_ORG_SLUG, "/settings/verification")}</>);
 

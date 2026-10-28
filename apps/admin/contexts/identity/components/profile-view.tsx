@@ -90,7 +90,7 @@ export function ProfileView({ initialProfile }: ProfileViewProps): React.JSX.Ele
 	if (profile === undefined) {
 		return profileQuery.isError ? (
 			<div className="flex w-full flex-col gap-6">
-				<h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
+				<h2 className="text-xl font-semibold tracking-tight">Profile</h2>
 				<p role="alert" className="text-destructive">
 					Could not load your profile.
 				</p>

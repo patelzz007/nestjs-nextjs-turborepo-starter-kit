@@ -46,7 +46,7 @@ export const MIN_SECRET_LENGTH = 32;
 /** The placeholder shipped in `.env.example` files — never a real secret. */
 const PLACEHOLDER_SECRET_PATTERN = /change-me/i;
 
-const GENERATE_SECRETS_HINT = "generate one with: pnpm secrets:generate apps/api/.env";
+const GENERATE_SECRETS_HINT = "generate one with: pnpm tools secrets:generate apps/api/.env";
 
 /**
  * A signing secret: at least {@link MIN_SECRET_LENGTH} characters and not

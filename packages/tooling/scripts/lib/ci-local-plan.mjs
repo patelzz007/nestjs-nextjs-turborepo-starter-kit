@@ -127,7 +127,7 @@ export function staticSteps({ base, noCache, errorsOnly = false }) {
 		// One workspace's suite at a time (docs/technical/operations/ci.md, "Unit tests").
 		{ id: "test", job: "Unit tests", command: "pnpm", args: [...turbo("test"), "--concurrency=1"] },
 		{ id: "build", job: "Build", command: "pnpm", args: turbo("build"), env: CI_BUILD_ENV },
-		{ id: "bundle-budgets", job: "Build", command: "pnpm", args: ["bundle:check"] },
+		{ id: "bundle-budgets", job: "Build", command: "pnpm", args: ["tools", "bundle:check"] },
 		{ id: "rls-manifest", job: "RLS manifest drift", command: "pnpm", args: ["--filter", "@workspace/api", "db:check-rls-manifest"] },
 		{ id: "deps", job: "Dependency consistency", command: "pnpm", args: ["turbo", "run", "deps:check"] },
 		{ id: "migration-history", job: "Migration history", command: "node", args: ["packages/tooling/scripts/check-migration-history.mjs", "--base", base, "--working-tree"] },
@@ -177,7 +177,7 @@ export function databaseSteps({ databaseUrl, shadowDatabaseUrl, consumerLoginUrl
 	const api = { DATABASE_URL: databaseUrl };
 	const steps = [
 		{ id: "e2e:build", job: "Database + API e2e", command: "pnpm", args: ["turbo", "run", "build", "--filter=@workspace/api^..."] },
-		{ id: "e2e:deploy", job: "Database + API e2e", command: "pnpm", args: ["db:deploy"], env: api },
+		{ id: "e2e:deploy", job: "Database + API e2e", command: "pnpm", args: ["tools", "db:deploy"], env: api },
 		{
 			id: "e2e:drift",
 			job: "Database + API e2e",
@@ -246,7 +246,7 @@ export function browserJob({ databaseUrl }) {
 				args: ["turbo", "run", "build", "--filter=@workspace/api", "--filter=@workspace/web", "--filter=@workspace/admin"],
 				env: { ...CI_BUILD_ENV, ...BROWSER_ADMIN_FEATURE_ENV },
 			},
-			{ id: "browser:deploy", job, command: "pnpm", args: ["db:deploy"], env: api },
+			{ id: "browser:deploy", job, command: "pnpm", args: ["tools", "db:deploy"], env: api },
 			{ id: "browser:seed", job, command: "pnpm", args: ["db:seed", "--", "--scenario", "development"], env: api },
 			{ id: "browser:install", job, command: "pnpm", args: ["exec", "playwright", "install", "chromium"] },
 		],

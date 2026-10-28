@@ -9,7 +9,7 @@
  * so point it at a throwaway database, never at the one you develop against:
  *
  *   createdb docs_api_capture
- *   DATABASE_URL=postgresql://…/docs_api_capture pnpm db:deploy
+ *   DATABASE_URL=postgresql://…/docs_api_capture pnpm tools db:deploy
  *   DATABASE_URL=postgresql://…/docs_api_capture pnpm db:seed
  *   # start the built API on its own port with:
  *   #   DATABASE_URL=…/docs_api_capture PORT=8097 BULLMQ_PREFIX=docs-capture \
@@ -608,16 +608,17 @@ async function captureRbac(context) {
 		body: { userId: context.userIds["manager@example.com"], action: "READ", resource: "GEO" },
 	});
 	const existing = new Set(firstArray(allPermissions.json?.data).map((permission) => `${permission.action}:${permission.resource}`));
-	const freeResource = ["REPORT", "INVENTORY", "ORDER", "PAYMENT", "DEVTOOLS"].find((resource) => !existing.has(`MANAGE:${resource}`)) ?? "REPORT";
+	// The seed keeps a retired DELETE:REPORT (soft-deleted rows still hold the unique pair), so REPORT is not a candidate.
+	const freeResource = ["INVENTORY", "ORDER", "PAYMENT", "DEVTOOLS"].find((resource) => !existing.has(`DELETE:${resource}`)) ?? "INVENTORY";
 	const created = await capture("PermissionsController_create", admin, {
 		method: "POST",
 		path: api("/admin/permissions"),
-		body: { action: "MANAGE", resource: freeResource, group: "Reports", description: `Manage ${freeResource.toLowerCase()} records` },
+		body: { action: "DELETE", resource: freeResource, group: "Reports", description: `Delete ${freeResource.toLowerCase()} records` },
 	});
 	await capture("PermissionsController_update", admin, {
 		method: "PATCH",
 		path: api(`/admin/permissions/${created?.id}`),
-		body: { description: `Manage every ${freeResource.toLowerCase()} record` },
+		body: { description: `Delete any ${freeResource.toLowerCase()} record` },
 	});
 	await capture("PermissionsController_remove", admin, { method: "DELETE", path: api(`/admin/permissions/${created?.id}`) });
 	await capture("PermissionsController_restore", admin, { method: "POST", path: api(`/admin/permissions/${created?.id}/restore`) });
@@ -647,14 +648,13 @@ async function captureRbac(context) {
 	const role = await capture("RolesController_create", admin, {
 		method: "POST",
 		path: api("/admin/roles"),
-		body: { name: "Store Auditor", description: "Reads geography and audit data for store reviews", parentId: userRole.id },
+		body: { name: "Store Auditor", description: "Reads geography and audit data for store reviews" },
 	});
 	await capture("RolesController_update", admin, {
 		method: "PATCH",
 		path: api(`/admin/roles/${role?.id}`),
 		body: { description: "Reads geography, audit and analytics data for store reviews" },
 	});
-	await capture("RolesController_setParent", admin, { method: "PATCH", path: api(`/admin/roles/${role?.id}/parent`), body: { parentId: managerRole.id } });
 	await capture("RolesController_syncPermissions", admin, { method: "POST", path: api(`/admin/roles/${role?.id}/permissions`), body: { permissionIds: [readGeo.id] } });
 	const isla = context.userIds["isla.taylor@example.com"];
 	await capture("RolesController_validateAssignment", admin, {
@@ -686,29 +686,6 @@ async function captureRbac(context) {
 	});
 	await capture("CapabilitiesCatalogController_listCatalog", admin, { method: "GET", path: api("/capabilities/catalog") });
 	await capture("AuditController_list", admin, { method: "GET", path: api("/admin/audit"), query: { limit: "2" } });
-
-	const author = admin;
-	const draft = await capture("PolicyControlPlaneController_createDraft", author, {
-		method: "POST",
-		path: api("/policies/drafts"),
-		body: {
-			name: "Brew & Bean KL — owners and admins manage rewards",
-			description: "Tenant role-capability policy for Brew & Bean KL",
-			scope: "TENANT",
-			tenantId: SEED.klTenantId,
-			builderPayload: { templateId: "tenant.role_capability", parameters: { allowedRoles: ["OWNER", "ADMIN"] } },
-		},
-	});
-	await capture("PolicyControlPlaneController_simulate", author, { method: "POST", path: api(`/policies/drafts/${draft?.draftId}/simulate`) });
-	await capture(
-		"PolicyControlPlaneController_publish",
-		admin,
-		{ method: "POST", path: api("/policies/publish"), body: { draftId: draft?.draftId, approvalNote: "Reviewed against the tenant guardrails" } },
-		{
-			note: "Four-eyes rule: a draft is published by a SECOND SuperAdmin. The seed has one SuperAdmin, so this sample shows the author being refused; a different SuperAdmin gets 201 with the published policy.",
-			expect: [201, 403, 409],
-		},
-	);
 }
 
 async function captureGeo(context) {

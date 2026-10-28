@@ -21,7 +21,7 @@ Run these from `apps/docs` (or with `pnpm --filter @workspace/docs <script>` fro
 | `pnpm lint`          | Oxfmt check + Oxlint (shared monorepo config)                         |
 | `pnpm typecheck`     | `astro check` — types **and** every guide's frontmatter               |
 | `pnpm check:links`   | Only the link checker (`scripts/check-links.mjs`)                     |
-| `pnpm docs:api`      | Re-render `docs/technical/api-reference/` from `docs/generated/` (vitest `--update`) |
+| `pnpm tools docs:api`      | Re-render `docs/technical/api-reference/` from `docs/generated/` (vitest `--update`) |
 
 ## The generated API reference
 
@@ -29,7 +29,7 @@ Run these from `apps/docs` (or with `pnpm --filter @workspace/docs <script>` fro
 (`docs/generated/openapi.json`), the API's controller decorators and the captured seed samples
 (`docs/generated/api-samples.json`, written by `scripts/capture-api-samples.mjs` against a throwaway
 seeded API — the script header lists the exact commands). `pnpm test` fails when the committed pages
-are stale; `pnpm docs:api` re-renders them. Full description:
+are stale; `pnpm tools docs:api` re-renders them. Full description:
 [API conventions → How the reference is generated](../../docs/technical/api/README.md#how-the-reference-is-generated).
 
 ## Adding or editing a guide

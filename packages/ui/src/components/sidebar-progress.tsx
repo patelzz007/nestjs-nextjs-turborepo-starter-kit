@@ -23,8 +23,7 @@ export interface SidebarProgressProps {
  * shell): animates `--sidebar-progress` — 0 collapsed, 1 open — on one
  * critically damped spring (lib/sidebar/motion.ts). Everything that moves with
  * the sidebar is a CSS expression of that one value (styles/components.css):
- * the gap the sidebar reserves, its slide, and the page column's width — so
- * they can never drift apart.
+ * the gap the sidebar reserves and its slide — so they can never drift apart.
  *
  * `display: contents`: it adds no box, so the shell's flex row and its
  * `peer` / `group` selectors are unaffected, yet everything inside inherits

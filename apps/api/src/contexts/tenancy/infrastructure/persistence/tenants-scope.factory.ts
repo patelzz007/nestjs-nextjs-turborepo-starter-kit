@@ -13,7 +13,6 @@ import type { TenantAuditPort } from "../../application/ports/tenant-audit.port"
 import type { TenantsScope } from "../../application/tenants-scope";
 import { TransactionKybFiles } from "../adapters/kyb-files.adapter";
 import { TransactionTenantEmails } from "../adapters/tenant-emails.adapter";
-import { TransactionTenantPolicyProvisioning } from "../adapters/tenant-policy.adapter";
 import { TransactionTenantAuditWriter, type TenantAuditTransaction } from "../audit/tenant-audit.adapter";
 import { PrismaAccessRequestRepository } from "./prisma-access-request.repository";
 import { PrismaSuspensionAppealRepository } from "./prisma-suspension-appeal.repository";
@@ -65,7 +64,6 @@ export class TenantsScopeFactory implements ScopeFactory<TenantsScope, Prisma.Tr
 			locationClosure: deps.locationClosure.forTransaction(db),
 			redemptionCustomers: deps.redemptionCustomers.forTransaction(db),
 			customerBans: new PrismaCustomerBanRepository(db),
-			tenantPolicies: new TransactionTenantPolicyProvisioning(db),
 			audit: new TransactionTenantAuditWriter(db, deps.audit),
 			emails: new TransactionTenantEmails(db, events, deps.notifications, deps.config, deps.logs),
 			events,

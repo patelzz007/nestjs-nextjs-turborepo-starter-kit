@@ -30,11 +30,6 @@ export const CAPABILITY_CATALOG_SYNC_OPERATION: SystemOperationName = "authoriza
 /** CLI/seed: the whole platform reference data. */
 export const REFERENCE_DATA_SYNC_OPERATION: SystemOperationName = "reference_data.sync";
 
-export const POLICY_DRAFT_CREATE_OPERATION: SystemOperationName = "policy.draft.create";
-/** D37: the whole simulation (draft load, every principal page, the result row and its audit row) runs under this ONE operation. */
-export const POLICY_DRAFT_SIMULATE_OPERATION: SystemOperationName = "policy.draft.simulate";
-export const POLICY_PUBLISH_OPERATION: SystemOperationName = "policy.publish";
-
 export const SUPPORT_ACCESS_GRANT_OPERATION: SystemOperationName = "support_access.grant";
 export const SUPPORT_ACCESS_APPROVE_OPERATION: SystemOperationName = "support_access.approve";
 export const SUPPORT_ACCESS_REVOKE_OPERATION: SystemOperationName = "support_access.revoke";
@@ -52,19 +47,18 @@ export const RBAC_INSPECTION_READ = Symbol("RBAC_INSPECTION_READ");
 export const PERMISSION_AUDIT_LOG_READ = Symbol("PERMISSION_AUDIT_LOG_READ");
 export const CAPABILITY_CATALOG_READ = Symbol("CAPABILITY_CATALOG_READ");
 export const REQUEST_TENANT = Symbol("REQUEST_TENANT");
-export const POLICY_TEMPLATE_COMPILER = Symbol("POLICY_TEMPLATE_COMPILER");
 
 // Public ports (re-exported by public-api.ts).
 export const AUTHORIZATION_PORT = Symbol("AUTHORIZATION_PORT");
 export const AUTHORIZATION_KERNEL = Symbol("AUTHORIZATION_KERNEL");
-export const AUTHORIZATION_DECISION_AUDIT = Symbol("AUTHORIZATION_DECISION_AUDIT");
 export const SUPER_ADMIN_BYPASS_AUDIT = Symbol("SUPER_ADMIN_BYPASS_AUDIT");
 export const REQUEST_TENANT_RESOLVER = Symbol("REQUEST_TENANT_RESOLVER");
 export const AUTHORIZATION_CACHE_INVALIDATION = Symbol("AUTHORIZATION_CACHE_INVALIDATION");
 export const SUBJECT_AUTHORIZATION_READ = Symbol("SUBJECT_AUTHORIZATION_READ");
 export const PERMISSION_HOLDERS_READ = Symbol("PERMISSION_HOLDERS_READ");
-export const CEDAR_POLICY_EVALUATOR = Symbol("CEDAR_POLICY_EVALUATOR");
+
+/** The access decision service (`AccessControlPort`, ADR 067) for contexts outside authorization. */
+export const ACCESS_CONTROL = Symbol("ACCESS_CONTROL");
 export const ACCOUNT_DEFAULT_ROLE = Symbol("ACCOUNT_DEFAULT_ROLE");
 export const AUTHORIZATION_HEALTH_INDICATOR = Symbol("AUTHORIZATION_HEALTH_INDICATOR");
 export const REFERENCE_DATA_SYNC = Symbol("REFERENCE_DATA_SYNC");
-export const POLICY_SIMULATOR = Symbol("POLICY_SIMULATOR");

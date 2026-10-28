@@ -7,6 +7,7 @@ import {
 	type EmailPreview,
 	type EmailSendResult,
 	type MembershipRole,
+	TENANT_ROLE_TEMPLATE_NAMES,
 } from "@workspace/shared";
 
 import type { TypedConfigService } from "../../../../config/typed-config.service";
@@ -23,13 +24,7 @@ import {
 import type { MerchantInviteEmail, MerchantInviteEmailPreviewPort, TenantEmailPort, TeamInviteEmail } from "../../application/ports/tenant-emails.port";
 import { ONBOARDING_INVITE_TTL_DAYS } from "../../domain/policies/invitation-validity.policy";
 
-const ROLE_LABELS: Readonly<Record<MembershipRole, string>> = {
-	OWNER: "Owner",
-	ADMIN: "Admin",
-	MEMBER: "Member",
-	POLICY_ADMIN: "Policy admin",
-	CASHIER: "Cashier",
-};
+const ROLE_LABELS: Readonly<Record<MembershipRole, string>> = TENANT_ROLE_TEMPLATE_NAMES;
 
 /** Placeholder token in the admin's preview link (the real token only ever goes out in the sent email). */
 const INVITE_PREVIEW_TOKEN = "preview-invite-token";

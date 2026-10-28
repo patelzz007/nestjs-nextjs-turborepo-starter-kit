@@ -1,7 +1,7 @@
 import type { EpochMs } from "@workspace/shared";
 import { z } from "zod";
 
-import { DeletedRoleNotFoundError, RoleHierarchyCycleError, SystemRoleImmutableError } from "../errors/authorization.errors";
+import { DeletedRoleNotFoundError, SystemRoleImmutableError } from "../errors/authorization.errors";
 import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 /** `Role.name` column width. */
@@ -13,7 +13,6 @@ const RoleStateSchema = z.object({
 	description: z.string().nullable(),
 	isActive: z.boolean(),
 	isSystem: z.boolean(),
-	parentId: z.string().min(1).nullable(),
 	isDeleted: z.boolean(),
 	deletedAt: z.number().int().nonnegative().nullable(),
 	createdAt: z.number().int().nonnegative(),
@@ -35,7 +34,6 @@ export interface NewRole {
 	readonly id: string;
 	readonly name: string;
 	readonly description: string | null;
-	readonly parentId: string | null;
 }
 
 /** One change the repository writes on save, in order. */
@@ -44,13 +42,12 @@ export type RoleChange =
 	| { readonly kind: "revised"; readonly revision: RoleRevision }
 	| { readonly kind: "removed" }
 	| { readonly kind: "restored" }
-	| { readonly kind: "reparented"; readonly parentId: string | null }
 	| { readonly kind: "permissions_synced"; readonly permissionIds: readonly string[]; readonly assignedBy: string };
 
 /**
- * A role: its catalog row, its place in the hierarchy and its permission set.
+ * A role: its catalog row and its permission set. Roles are flat: no role inherits another's permissions.
  *
- * System roles (`isSystem`) are server-controlled: their name, state, hierarchy and permission set never
+ * System roles (`isSystem`) are server-controlled: their name, state and permission set never
  * change through the API, and they are never deleted. Every write is a soft delete or an update.
  */
 export class RoleAggregate {
@@ -66,7 +63,6 @@ export class RoleAggregate {
 				description: role.description,
 				isActive: true,
 				isSystem: false,
-				parentId: role.parentId,
 				isDeleted: false,
 				deletedAt: null,
 				createdAt: now,
@@ -100,10 +96,6 @@ export class RoleAggregate {
 
 	public get isDeleted(): boolean {
 		return this.state.isDeleted;
-	}
-
-	public get parentId(): string | null {
-		return this.state.parentId;
 	}
 
 	/** A copy of the current state (responses, persistence). */
@@ -148,20 +140,6 @@ export class RoleAggregate {
 		}
 		this.state = { ...this.state, isDeleted: false, deletedAt: null, isActive: true, updatedAt: now };
 		this.changes.push({ kind: "restored" });
-	}
-
-	/**
-	 * Set (or clear) the parent. `parentAncestry` is the new parent plus every ancestor, walked through
-	 * deleted and inactive roles alike: if it contains this role, the hierarchy would become circular.
-	 */
-	public reparent(parent: { readonly id: string; readonly name: string } | null, parentAncestry: ReadonlySet<string>, now: EpochMs): void {
-		this.assertMutable();
-		if (parent !== null && parentAncestry.has(this.state.id)) {
-			throw new RoleHierarchyCycleError(parent.name, this.state.name);
-		}
-		const parentId: string | null = parent === null ? null : parent.id;
-		this.state = { ...this.state, parentId, updatedAt: now };
-		this.changes.push({ kind: "reparented", parentId });
 	}
 
 	/** Replace the role's permission set (the caller has verified every id names a live permission). */

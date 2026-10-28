@@ -12,7 +12,7 @@ order: 1
 
 ## Scope
 
-Tenant-scoped isolation for the merchant portal, shared PostgreSQL with RLS, in-process Cedar ABAC, background jobs, object storage, caches, analytics, and JIT support access.
+Tenant-scoped isolation for the merchant portal, shared PostgreSQL with RLS, the in-process access decision service (role, grant, share, ownership — ADR 067), background jobs, object storage, caches, analytics, and JIT support access.
 
 **Out of scope at pilot launch:** HIPAA/PHI, contractual RPO/RTO on single-VPS topology.
 
@@ -23,7 +23,7 @@ Tenant-scoped isolation for the merchant portal, shared PostgreSQL with RLS, in-
 | Tenant business data (rewards, KYB, files, keys) | Tenant |
 | User credentials and MFA secrets | Global user |
 | Platform RBAC catalog | Platform |
-| Cedar policy bundles | Platform + tenant |
+| Tenant roles, grants and shares | Tenant |
 | Audit and support-grant records | Platform (tenant-scoped views for org admins) |
 | Encryption key metadata | Tenant |
 
@@ -38,7 +38,7 @@ flowchart TB
   end
   subgraph api [API Layer]
     OrgCtx[Tenant Context]
-    Cedar[Cedar Evaluator]
+    Access[Access Control]
     TenantTx[Tenant Transaction]
   end
   subgraph data [Data Plane]
@@ -48,8 +48,8 @@ flowchart TB
     Queue[BullMQ]
   end
   MerchantUI -->|orgSlug URL| OrgCtx
-  OrgCtx --> Cedar
-  Cedar --> TenantTx
+  OrgCtx --> Access
+  Access --> TenantTx
   TenantTx --> PG
   TenantTx --> Redis
   TenantTx --> S3
@@ -62,12 +62,12 @@ flowchart TB
 | --- | --- | --- | --- |
 | T1 | Confused deputy via client tenant header | Cross-tenant read/write | URL slug resolution + membership check; reject client `tenantId` |
 | T2 | Slug enumeration | Tenant discovery | Uniform not-found; rate limits |
-| T3 | IDOR on tenant resources | Data leak | RLS + Cedar + composite FKs |
+| T3 | IDOR on tenant resources | Data leak | RLS + access decisions + composite FKs |
 | T4 | Cross-tenant FK reference | Integrity break | Composite `(tenantId, id)` constraints |
 | T5 | Pool/session context bleed | Wrong-tenant query | Transaction-local `SET LOCAL`; fail-closed without context |
 | T6 | Implicit RLS bypass | Global data exposure | Remove default bypass; allowlisted system ops only |
-| T7 | Stale authorization cache | Post-revocation access | Policy version in cache keys; pub/sub invalidation; seconds SLA |
-| T8 | Cache key without org namespace | Cross-tenant cache hit | Prefix keys with env + org + policy version |
+| T7 | Stale authorization cache | Post-revocation access | Pub/sub invalidation on every role, grant and share change; durable change-stamp sweep; seconds SLA |
+| T8 | Cache key without org namespace | Cross-tenant cache hit | Prefix keys with env + org |
 | T9 | Worker trusts queue payload | Forged tenant job | Signed job context + re-authorization at execution |
 | T10 | Super-admin permanent impersonation | Unaudited full access | JIT grants, read-only default, expiry, tenant approval |
 | T11 | Tenant policy lockout / escalation | Admin loss / privilege gain | Platform forbids, simulation, protected policy-admin role |
@@ -79,7 +79,7 @@ flowchart TB
 | T17 | Realtime subscription bleed | Live data leak | Per-channel authz + revalidation on revocation |
 | T18 | Support grant without approval | Unauthorized access | Tenant or two-person emergency approval |
 | T19 | Encryption key misuse | Decrypt without audit | Envelope keys + audited decrypt operations |
-| T20 | Migration partial state | Exposure during cutover | Expand/backfill/contract gates; shadow Cedar parity |
+| T20 | Migration partial state | Exposure during cutover | Expand/backfill/contract gates |
 
 ## Abuse cases (detailed)
 
@@ -142,7 +142,7 @@ never influence authorization. A body-presented refresh token is audited as `REF
 
 - Two-tenant integration tests per resource class
 - RLS policy coverage tests per classified table
-- Cedar golden tests for guardrail + tenant templates
+- Access-decision edge matrix (ADR 067) through the API and as `app_runtime`
 - Cache isolation tests across org switch
 - Job context tampering tests
 - Support grant expiry and revocation tests

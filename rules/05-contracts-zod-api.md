@@ -162,7 +162,7 @@ public findOne(@ZodParam('id', OrderIdSchema) id: OrderId): Promise<PrismaOrder>
 public findOne(@ZodParam('id', OrderIdSchema) id: OrderId): Promise<Order> { return this.orders.getById(id); }
 ```
 
-`docs/generated/openapi.json` is the committed export of the resulting document; regenerate it with `pnpm openapi:export` whenever a request or response contract changes (the e2e suite fails while it is stale).
+`docs/generated/openapi.json` is the committed export of the resulting document; regenerate it with `pnpm tools openapi:export` whenever a request or response contract changes (the e2e suite fails while it is stale).
 
 ## REST conventions
 

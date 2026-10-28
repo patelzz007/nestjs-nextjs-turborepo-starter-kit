@@ -96,7 +96,7 @@ describe("MerchantRewardsPageView authorization", () => {
 	});
 
 	it("denies the page (and skips the list query) without merchant:view_rewards", () => {
-		renderWithAuthorization(<MerchantRewardsPageView tenantSlug={TEST_ORG_SLUG} />, { role: "MEMBER" });
+		renderWithAuthorization(<MerchantRewardsPageView tenantSlug={TEST_ORG_SLUG} />, { role: "CASHIER", capabilities: [] });
 
 		expect(screen.getByText("You don't have access to this page")).toBeTruthy();
 		expect(rewardsListQuery).not.toHaveBeenCalled();

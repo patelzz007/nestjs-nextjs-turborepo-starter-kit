@@ -5,7 +5,7 @@ import { Test } from "@nestjs/testing";
 import { API_VERSION_PREFIX } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { RequirePermission } from "../../../../../platform/presentation/http/security/decorators/require-permission.decorator";
+import { REQUIRED_PERMISSION_KEY } from "../../../../../platform/presentation/http/security/decorators/route-requirements.metadata";
 import { ResponseContract } from "../../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { GITHUB_CONTRIBUTIONS } from "../../../application/ports/github.tokens";
 import { GetGithubCommitHandler } from "../../../application/queries/get-github-commit/get-github-commit.handler";
@@ -19,7 +19,6 @@ import { GithubController } from "../github.controller";
 import { handlerOf } from "./route-metadata";
 
 const reflector = new Reflector();
-const REQUIRED_PERMISSION_KEY = RequirePermission("READ", "GITHUB").KEY;
 
 type HandlerName = "listRepositories" | "getRepositorySummary" | "getCommitPage" | "getCommit" | "getContributorStats";
 
@@ -32,7 +31,7 @@ describe("GithubController", () => {
 
 	it.each(HANDLERS)("requires READ GITHUB for %s, with one response contract", (name: HandlerName) => {
 		const handler = handlerOf(GithubController.prototype, name);
-		expect(reflector.get<object>(REQUIRED_PERMISSION_KEY, handler)).toEqual({ action: "READ", resource: "GITHUB" });
+		expect(reflector.get<readonly object[]>(REQUIRED_PERMISSION_KEY, handler)).toEqual([{ action: "READ", resource: "GITHUB" }]);
 		expect(reflector.get(ResponseContract, handler)).toBeDefined();
 	});
 

@@ -4,7 +4,7 @@
 // The raw colour scales, shared by every app and the docs site. Components
 // NEVER read these — they read the semantic tokens (semantic.ts: `--background`,
 // `--primary`, …), which map onto these steps per theme. A rebrand edits a
-// scale here, then runs `pnpm tokens:generate`.
+// scale here, then runs `pnpm tools tokens:generate`.
 //
 // Every neutral carries the same faint cool cast (hue 258, "ink"), so light and
 // dark read as one family and every brand accent sits on it cleanly.

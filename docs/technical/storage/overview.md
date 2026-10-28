@@ -116,11 +116,11 @@ Every reward shows 1–10 photos in order (`RewardImage`, position 0 is the cove
   `RewardImage` itself follows its reward (`reward_images_read`, plus the API-key principal's
   policies).
 - **Downloadable by reviewers.** `GET /admin/rewards/:rewardId/images/:fileId/download`
-  (`MANAGE REWARD`, the moderation permission) signs a short-lived URL for the image's original
+  (`APPROVE REWARD`, the moderation permission) signs a short-lived URL for the image's original
   upload with `Content-Disposition: attachment`, named after the uploaded file. Only a live image of
   that live reward resolves (`404 REWARD_IMAGE_NOT_FOUND` otherwise), so a reviewer needs no file
   capability in the merchant's tenant.
-- **Downloadable all at once.** `GET /admin/rewards/:rewardId/images/archive` (`MANAGE REWARD`)
+- **Downloadable all at once.** `GET /admin/rewards/:rewardId/images/archive` (`APPROVE REWARD`)
   streams every live image of the reward as one ZIP (`<reward-title>-photos.zip`) of the original
   uploads, in display order, as entries `1-<original name>`, `2-…` (names through
   `sanitizeFileName`, so no entry carries a path). `FileService.createZipArchive` builds it with

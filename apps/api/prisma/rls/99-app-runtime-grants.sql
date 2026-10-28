@@ -3,7 +3,7 @@
 -- ============================================================================
 -- Re-applies table/sequence/function grants so every object created by Prisma
 -- migrations is visible to SET ROLE app_runtime (seed, API pool, tenant tx).
--- Idempotent; safe to run on every `pnpm db:apply-security`.
+-- Idempotent; safe to run on every `pnpm tools db:apply-security`.
 -- ============================================================================
 
 -- The role itself is created in 00-app-helpers.sql (applied first).
@@ -78,7 +78,7 @@ END $$;
 --
 -- The tables and privileges are declared ONCE, in
 -- prisma/rls/withheld-privileges.ts (APP_RUNTIME_WITHHELD_PRIVILEGES).
--- `pnpm db:apply-security` (prisma/rls/apply.ts) appends the generated
+-- `pnpm tools db:apply-security` (prisma/rls/apply.ts) appends the generated
 -- REVOKEs to THIS file's transaction — right after the blanket grant above —
 -- and then verifies against the live catalog that app_runtime lacks each one.
 -- Do not hand-write `REVOKE … FROM app_runtime` here or in rls.sql:

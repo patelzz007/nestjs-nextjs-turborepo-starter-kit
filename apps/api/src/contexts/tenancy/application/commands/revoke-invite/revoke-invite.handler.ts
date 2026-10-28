@@ -38,7 +38,6 @@ export class RevokeInviteHandler implements ICommandHandler<RevokeInviteCommand,
 			await scope.audit.record({
 				tenantId: member.tenantId,
 				actorUserId: manager.userId,
-				policyVersion: member.policyVersion,
 				action: "membership.invite_revoked",
 				resourceType: "TenantInvitation",
 				resourceId: invite.id,

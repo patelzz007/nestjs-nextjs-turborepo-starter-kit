@@ -21,7 +21,7 @@ import { ReactivateTenantCommand } from "./reactivate-tenant.command";
 @CommandHandler(ReactivateTenantCommand)
 export class ReactivateTenantHandler implements ICommandHandler<ReactivateTenantCommand, TenantLifecycleResponse> {
 	public constructor(
-		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<Pick<TenantsScope, "tenants" | "memberships" | "audit" | "tenantPolicies" | "events">>,
+		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<Pick<TenantsScope, "tenants" | "memberships" | "audit" | "events">>,
 		@Inject(TENANT_LIFECYCLE_READ) private readonly reads: TenantLifecycleReadPort,
 		@Inject(CLOCK) private readonly clock: Clock,
 	) {}
@@ -43,7 +43,6 @@ export class ReactivateTenantHandler implements ICommandHandler<ReactivateTenant
 			await scope.audit.record({
 				tenantId: tenant.id,
 				actorUserId: user.userId,
-				policyVersion: await scope.tenantPolicies.activePolicyVersion(tenant.id),
 				action: "tenant.reactivated",
 				resourceType: "Tenant",
 				resourceId: tenant.id,

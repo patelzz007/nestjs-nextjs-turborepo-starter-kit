@@ -28,7 +28,6 @@ const OTHER_REDEMPTION_ID = "0199a1b2-0000-7000-8000-000000000005";
 const SLUG = "brew";
 const NOW = epochMs(1_792_368_000_000);
 const CLOCK: Clock = { now: () => NOW };
-const POLICY_VERSION = 3;
 
 const MANAGER: ActorContext = {
 	kind: "user",
@@ -170,7 +169,7 @@ const DIRECTORY: TenantDirectoryPort = {
 				id: "m-1",
 				tenantId: TENANT_ID,
 				userId: MANAGER_ID,
-				role: "ADMIN",
+				role: "MANAGER",
 				status: "ACTIVE",
 				displayName: null,
 				locationScopeType: "SELECTED",
@@ -178,7 +177,6 @@ const DIRECTORY: TenantDirectoryPort = {
 				createdAt: NOW,
 				updatedAt: NOW,
 			},
-			policyVersion: POLICY_VERSION,
 		}),
 	assertAccessibleLocation: () => Promise.resolve(),
 	resolveTenantId: () => Promise.resolve(TENANT_ID),
@@ -227,7 +225,6 @@ describe("BanCustomerHandler", () => {
 			{
 				tenantId: TENANT_ID,
 				actorUserId: MANAGER_ID,
-				policyVersion: POLICY_VERSION,
 				action: "tenant.customer_banned",
 				resourceType: "TenantCustomerBan",
 				resourceId: "ban-1",
@@ -261,7 +258,7 @@ describe("LiftCustomerBanHandler", () => {
 		await lift(created.id);
 
 		expect(store.bans.get(created.id)?.liftedAt).toBe(NOW);
-		expect(store.audit.at(-1)).toMatchObject({ action: "tenant.customer_ban_lifted", resourceId: created.id, policyVersion: POLICY_VERSION });
+		expect(store.audit.at(-1)).toMatchObject({ action: "tenant.customer_ban_lifted", resourceId: created.id });
 		expect(store.operations).toEqual(["tenant.customer_ban.create", "tenant.customer_ban.lift"]);
 		await expect(ban(REDEMPTION_ID, "Back again")).resolves.toMatchObject({ id: "ban-2" });
 	});

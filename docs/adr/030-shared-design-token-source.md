@@ -30,7 +30,7 @@ built on this starter would inherit the drift.
 - It **generates** the web CSS variables that `packages/ui` consumes, replacing the hand-written
   values in `palette.css` and `tokens.css` (variable names stay the same, so components do not
   change), and the mobile app's Uniwind theme CSS in the same format (ADR 032).
-- Generated output is never edited by hand. It is **committed**, produced by `pnpm tokens:generate`,
+- Generated output is never edited by hand. It is **committed**, produced by `pnpm tools tokens:generate`,
   and a test (run in CI) fails when the committed output is stale, the same discipline as
   generated migrations.
 - Both platforms get the **same variable names and values**; only a thin wrapper differs (`:root` /

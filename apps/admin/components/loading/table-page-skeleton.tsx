@@ -18,7 +18,7 @@ export interface TablePageShape {
 	readonly withAvatar: boolean;
 	/** The table card's header has a `CardDescription` under its title. */
 	readonly withCardDescription: boolean;
-	/** The page wrapper's own width classes (e.g. `mx-auto w-full max-w-7xl`), so the table starts where the page's does. */
+	/** The page wrapper's own width classes (e.g. `mx-auto w-full max-w-10xl`), so the table starts where the page's does. */
 	readonly className: string;
 }
 
@@ -31,9 +31,9 @@ export const PRODUCTS_TABLE_PAGE: TablePageShape = { columns: 10, actions: 1, wi
 /** `/catalog/categories` — select + five category columns + row actions; "New Category" in the header. */
 export const CATEGORIES_TABLE_PAGE: TablePageShape = { columns: 7, actions: 1, withAvatar: false, withCardDescription: false, className: "" };
 /** `/audit-logs` — Time, Activity, Actor, Result, Client; "Refresh" in the header. */
-export const AUDIT_LOG_TABLE_PAGE: TablePageShape = { columns: 5, actions: 1, withAvatar: false, withCardDescription: true, className: "mx-auto w-full max-w-7xl" };
+export const AUDIT_LOG_TABLE_PAGE: TablePageShape = { columns: 5, actions: 1, withAvatar: false, withCardDescription: true, className: "mx-auto w-full max-w-10xl" };
 /** `/emails/log` — select + Subject, To, Status, Sent at; the live pill and "Refresh" in the header. */
-export const EMAIL_LOG_TABLE_PAGE: TablePageShape = { columns: 5, actions: 2, withAvatar: false, withCardDescription: true, className: "mx-auto w-full max-w-7xl" };
+export const EMAIL_LOG_TABLE_PAGE: TablePageShape = { columns: 5, actions: 2, withAvatar: false, withCardDescription: true, className: "mx-auto w-full max-w-10xl" };
 /** `/users/mfa-recovery` — select + User, Status, Requested + row actions. */
 export const MFA_RECOVERY_TABLE_PAGE: TablePageShape = { columns: 5, actions: 0, withAvatar: false, withCardDescription: true, className: "" };
 

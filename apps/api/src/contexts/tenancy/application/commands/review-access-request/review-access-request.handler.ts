@@ -50,7 +50,6 @@ export class ReviewAccessRequestHandler implements ICommandHandler<ReviewAccessR
 			const auditBase = {
 				tenantId: member.tenantId,
 				actorUserId: reviewer.userId,
-				policyVersion: member.policyVersion,
 				resourceType: "TenantAccessRequest",
 				resourceId: request.id,
 			};

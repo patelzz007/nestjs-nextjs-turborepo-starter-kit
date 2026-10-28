@@ -1,5 +1,5 @@
 {
-	"baseline": "20261026133813_init",
-	"reason": "Fifth pre-release reset: the owner regenerated the one init migration after the audit log's debugging detail (session id, claimed X-Tenant-Id / X-Location-Id, request headers, failure reason) and the transaction log. No shared or deployed database has run the previous baseline.",
-	"since": "2026-10-26"
+	"baseline": "20261028124647_init",
+	"reason": "Sixth pre-release reset: the owner regenerated the one init migration after ADR 067 Phase 4 (Cedar, the JSON policy engine, MANAGE and role inheritance removed). No shared or deployed database has run the previous baseline.",
+	"since": "2026-10-28"
 }

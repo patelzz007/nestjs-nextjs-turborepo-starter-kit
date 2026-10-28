@@ -47,7 +47,7 @@ Development only. `tunnel` and `github-webhook` refuse to run when `NODE_ENV=pro
 
 | Package script                                    | Command             | What it does                                                                                                                    |
 | ------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm dev:tunnel` (root)                          | `tunnel`            | Starts a detached Cloudflare quick tunnel to the API, then re-points the Resend delivery webhook and GitHub live updates to it. |
+| `pnpm tools dev:tunnel` (root)                          | `tunnel`            | Starts a detached Cloudflare quick tunnel to the API, then re-points the Resend delivery webhook and GitHub live updates to it. |
 | `github:webhook-tunnel <url>`                     | `github-webhook`    | Re-points GitHub live pull-request updates only ([GitHub pull requests](../github-pull-requests.md)).                           |
 | `pnpm mail:latest [--to <email>] [--code]` (root) | `mail`              | Prints the newest email in the local Mailpit ([Mailpit](../email/mailpit-local-inbox.md)).                                      |
 | `webhook:test-signature`                          | `webhook-signature` | Posts a signed and a tampered Resend event to the email webhook (expect 200, then 403).                                         |

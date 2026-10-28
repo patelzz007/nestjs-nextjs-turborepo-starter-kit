@@ -14,8 +14,8 @@ export interface MerchantCapabilityCatalogEntry extends MerchantCapabilityCatalo
 /**
  * Display metadata for every MERCHANT-scope capability (`CapabilityDefinition`
  * rows). A `Record` over the shared vocabulary, so a new `MERCHANT_CAPABILITY`
- * cannot ship without its catalog row. Which roles hold each capability lives
- * in `MERCHANT_ROLE_CAPABILITIES` (`@workspace/shared`), not here.
+ * cannot ship without its catalog row. Which roles hold each capability is the
+ * tenant's own roles' permissions (ADR 067), not this table.
  */
 const MERCHANT_CAPABILITY_CATALOG_DETAILS: Readonly<Record<MerchantCapability, MerchantCapabilityCatalogDetails>> = {
 	"merchant:view_dashboard": {

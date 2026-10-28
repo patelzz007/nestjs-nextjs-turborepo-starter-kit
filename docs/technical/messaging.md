@@ -40,7 +40,7 @@ cp apps/analytics-consumer/.env.example apps/analytics-consumer/.env   # then se
 pnpm --filter @workspace/analytics-consumer db:provision-login        # the consumer's own least-privilege DB login
 pnpm --filter @workspace/analytics-consumer kafka:provision-topics    # create platform.* topics explicitly
 pnpm dev:api
-pnpm dev:analytics-consumer   # optional
+pnpm tools dev:analytics-consumer   # optional
 ```
 
 Required env (API):

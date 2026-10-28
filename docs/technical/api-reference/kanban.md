@@ -3,12 +3,12 @@ title: "API reference — Kanban boards"
 description: "The platform staff's two linked boards: the epic → feature → story → task → subtask hierarchy with item keys, moves under the board lock (optimistic locking), Move to… (a new parent), ranked item search, WIP limits, checklists, links, watchers, history, comments with files, CSV import and attachments."
 order: 14
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792540800000
+lastUpdated: 1793145600000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
 
-<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm docs:api -->
+<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm tools docs:api -->
 
 # API reference — Kanban boards
 
@@ -160,7 +160,7 @@ Set or clear a column's soft WIP limit (optimistic lock: send the version you re
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
-- **Permission** `MANAGE:KANBAN_TASK`.
+- **Permission** `UPDATE:KANBAN_BOARD`.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
@@ -305,7 +305,7 @@ Move a column right of another on its board (or first); answers that board
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
-- **Permission** `MANAGE:KANBAN_TASK`.
+- **Permission** `UPDATE:KANBAN_BOARD`.
 - Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
 - Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)

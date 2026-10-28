@@ -51,7 +51,7 @@ export function PendingRewardsPageSkeleton(): React.JSX.Element {
 /** `/rewards/review/[id]`: back link, header (status, title, merchant, decisions), then photos and copy beside the details card. */
 export function RewardReviewDetailPageSkeleton(): React.JSX.Element {
 	return (
-		<SkeletonRegion labels={REWARD_LOADING_LABELS} className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+		<SkeletonRegion labels={REWARD_LOADING_LABELS} className="mx-auto flex w-full max-w-10xl flex-col gap-6">
 			<Skeleton className="h-9 w-32" />
 			<div data-skeleton="reward-review-header" className="flex flex-wrap items-start justify-between gap-4">
 				<div className="flex min-w-0 flex-col gap-3">

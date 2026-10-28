@@ -16,7 +16,7 @@ export class ValidateRoleAssignmentHandler implements IQueryHandler<ValidateRole
 		const { userId, roleIds } = query.proposal;
 		await this.inspection.inspect(query.actor, "Validate a proposed role assignment against separation-of-duty rules", async (reader: RbacInspectionReader): Promise<void> => {
 			const current: string[] = await reader.assignedRoleIds(userId);
-			assertSeparationOfDuties(await reader.effectiveRoleNames([...current, ...roleIds]));
+			assertSeparationOfDuties(await reader.activeRoleNames([...current, ...roleIds]));
 		});
 		return { valid: true, message: "No conflicts detected" };
 	}

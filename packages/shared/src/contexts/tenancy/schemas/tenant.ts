@@ -16,7 +16,8 @@ export type TenantLifecycleState = z.output<typeof TenantLifecycleStateSchema>;
 /** The only lifecycle state in which a merchant operates: its rewards are listed, claimed and redeemed. */
 export const TENANT_OPERATING_LIFECYCLE_STATE: TenantLifecycleState = TenantLifecycleStateSchema.enum.ACTIVE;
 
-export const MembershipRoleSchema = z.enum(["OWNER", "ADMIN", "MEMBER", "POLICY_ADMIN", "CASHIER"]);
+/** The tenant-role templates (ADR 067). A member's real role is a tenant role row; this names its template. */
+export const MembershipRoleSchema = z.enum(["OWNER", "MANAGER", "CASHIER"]);
 
 export type MembershipRole = z.output<typeof MembershipRoleSchema>;
 
@@ -43,14 +44,6 @@ export type TenantInvitationKind = z.output<typeof TenantInvitationKindSchema>;
 export const TenantAccessRequestStatusSchema = z.enum(["PENDING", "APPROVED", "REJECTED", "CANCELLED"]);
 
 export type TenantAccessRequestStatus = z.output<typeof TenantAccessRequestStatusSchema>;
-
-export const AuthorizationPolicyScopeSchema = z.enum(["PLATFORM_GUARDRAIL", "PLATFORM", "TENANT"]);
-
-export type AuthorizationPolicyScope = z.output<typeof AuthorizationPolicyScopeSchema>;
-
-export const AuthorizationPolicyStatusSchema = z.enum(["DRAFT", "PENDING_APPROVAL", "APPROVED", "PUBLISHED", "SUPERSEDED", "ROLLED_BACK"]);
-
-export type AuthorizationPolicyStatus = z.output<typeof AuthorizationPolicyStatusSchema>;
 
 export const SupportAccessGrantModeSchema = z.enum(["READ_ONLY", "WRITE_ELEVATED"]);
 
@@ -369,7 +362,6 @@ export const TenantContextResponseSchema = z.object({
 	membership: MembershipResponseSchema,
 	locations: z.array(LocationResponseSchema),
 	merchantProfile: TenantMerchantProfileResponseSchema.nullable(),
-	policyVersion: z.number().int().nonnegative(),
 });
 
 export type TenantContextResponse = z.output<typeof TenantContextResponseSchema>;
@@ -508,6 +500,8 @@ export const TenantMemberRosterResponseSchema = z.object({
 	email: z.email(),
 	fullName: z.string(),
 	role: MembershipRoleSchema,
+	/** The member's tenant role (ADR 067) — the business's own copy of a template, or a role it created. */
+	roleId: z.uuid(),
 	status: MembershipStatusSchema,
 	displayName: z.string().nullable(),
 	locationScopeType: LocationScopeTypeSchema,
@@ -590,27 +584,6 @@ export const TenantTeamInviteAcceptResponseSchema = z.object({
 });
 
 export type TenantTeamInviteAcceptResponse = z.output<typeof TenantTeamInviteAcceptResponseSchema>;
-
-export const PolicyBuilderPayloadSchema = z
-	.object({
-		templateId: z.string(),
-		parameters: z.record(z.string(), z.union([z.string(), z.boolean(), z.array(z.string())])),
-	})
-	.strict();
-
-export type PolicyBuilderPayload = z.output<typeof PolicyBuilderPayloadSchema>;
-
-export const AuthorizationPolicyDraftResponseSchema = z.object({
-	id: z.uuid(),
-	tenantId: z.uuid().nullable(),
-	scope: AuthorizationPolicyScopeSchema,
-	name: z.string(),
-	status: AuthorizationPolicyStatusSchema,
-	createdAt: EpochMsSchema,
-	updatedAt: EpochMsSchema,
-});
-
-export type AuthorizationPolicyDraftResponse = z.output<typeof AuthorizationPolicyDraftResponseSchema>;
 
 export const SupportAccessGrantRequestSchema = z
 	.object({

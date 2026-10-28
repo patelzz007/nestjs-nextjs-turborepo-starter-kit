@@ -6,7 +6,7 @@
  * importing tenants' tokens never drags the composition graph (and identity) in.
  *
  * - `MERCHANT_ACCESS` (`MerchantAccessPort`, declared once in `platform/application/ports/authorization.port.ts`): the merchant capability gate with
- *   the caller's store scope; every Cedar decision writes its `authorize.*`
+ *   the caller's store scope; every capability decision writes its `authorize.*`
  *   tenant audit row. Provided by `TenantAccessModule`.
  * - `TENANT_READ` (`TenantReadPort`): batched display data (name +
  *   logo image sources) and owner user ids. Provided by `TenantAccessModule`.

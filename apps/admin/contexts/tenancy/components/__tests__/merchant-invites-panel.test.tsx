@@ -104,7 +104,7 @@ const CREATED: AdminMerchantInviteCreatedResponse = {
 
 const refetch = vi.fn((): Promise<void> => Promise.resolve());
 
-function renderPanel(capabilities: readonly CapabilitySlug[] = [PERMISSION.MERCHANT_ORG.MANAGE]): void {
+function renderPanel(capabilities: readonly CapabilitySlug[] = [PERMISSION.MERCHANT_ORG.CREATE]): void {
 	render(
 		<CapabilitiesProvider capabilities={capabilities}>
 			<MerchantInvitesPanel />
@@ -295,11 +295,11 @@ describe("MerchantInvitesPanel sending", () => {
 	});
 
 	it("links the template browser only for admins with EMAIL READ", () => {
-		renderPanel([PERMISSION.MERCHANT_ORG.MANAGE]);
+		renderPanel([PERMISSION.MERCHANT_ORG.CREATE]);
 		expect(screen.queryByRole("link", { name: "Open template" })).toBeNull();
 		cleanup();
 
-		renderPanel([PERMISSION.MERCHANT_ORG.MANAGE, PERMISSION.EMAIL.READ]);
+		renderPanel([PERMISSION.MERCHANT_ORG.CREATE, PERMISSION.EMAIL.READ]);
 		expect(screen.getByRole("link", { name: "Open template" }).getAttribute("href")).toBe("/emails/templates?key=merchant-invite");
 	});
 });

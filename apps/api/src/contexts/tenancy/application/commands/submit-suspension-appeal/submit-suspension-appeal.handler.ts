@@ -44,7 +44,6 @@ export class SubmitSuspensionAppealHandler implements ICommandHandler<SubmitSusp
 			await scope.audit.record({
 				tenantId: tenant.id,
 				actorUserId: user.userId,
-				policyVersion: member.policyVersion,
 				action: "tenant.suspension.appealed",
 				resourceType: "TenantSuspensionAppeal",
 				resourceId: appeal.id,

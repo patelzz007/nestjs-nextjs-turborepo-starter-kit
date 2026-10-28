@@ -22,7 +22,7 @@ tags: ["security", "encryption", "kms", "secrets"]
 | `STORAGE_PROCESSING_CALLBACK_SECRET` | Shared secret | `POST /files/processing-callback` (unset = every callback rejected) | Change on both sides |
 | `RESEND_WEBHOOK_SECRET` | `whsec_…` from Resend | Verifying delivery webhooks | Recreate the webhook, update the env |
 
-`pnpm secrets:generate apps/api/.env` fills every app-owned secret; `pnpm secrets:scan` keeps real
+`pnpm tools secrets:generate apps/api/.env` fills every app-owned secret; `pnpm tools secrets:scan` keeps real
 values out of `.env.example`. Production values belong in a secrets manager, never in the repo.
 
 ### If a secret leaked
@@ -32,14 +32,14 @@ committed or copied into a deployed environment:
 
 1. Generate new values for `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `EMAIL_VERIFICATION_SECRET`
    and `TWO_FACTOR_PENDING_SECRET`, plus a new `MFA_ENCRYPTION_KEYS` version
-   (`pnpm secrets:generate apps/api/.env`). The generator never removes an MFA key version: secrets
+   (`pnpm tools secrets:generate apps/api/.env`). The generator never removes an MFA key version: secrets
    stored under the leaked version still need it to decrypt. New MFA secrets use the highest
    version; the leaked one can be deleted only once no stored MFA secret uses it (every affected
    user re-enrolled) — there is no automated re-encryption job yet.
 2. Rotate `RESEND_WEBHOOK_SECRET` in the Resend dashboard and on the server.
 3. Update the live environment variables (never commit real values) and restart the API. Every
    existing session becomes invalid; users sign in again.
-4. Run `pnpm secrets:scan` before opening the PR.
+4. Run `pnpm tools secrets:scan` before opening the PR.
 
 ## Tenant envelope encryption
 

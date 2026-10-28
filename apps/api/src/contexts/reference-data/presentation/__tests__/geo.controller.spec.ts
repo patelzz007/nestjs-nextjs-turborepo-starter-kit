@@ -3,14 +3,12 @@ import { GUARDS_METADATA, METHOD_METADATA, PATH_METADATA } from "@nestjs/common/
 import { Reflector } from "@nestjs/core";
 import { API_VERSION_PREFIX, epochMs, type PermissionAction } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { TransactionalEventCollector } from "../../../../platform/application/events/transactional-event-collector";
 import { FixedClock } from "../../../../platform/application/__tests__/fixed-clock";
 import { InMemoryUnitOfWork } from "../../../../platform/application/__tests__/fakes/in-memory-unit-of-work";
-import { AUTHORIZE_KEY } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
-import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
+import { REQUIRED_PERMISSION_KEY } from "../../../../platform/presentation/http/security/decorators/route-requirements.metadata";
 import { SUPER_ADMIN_KEY } from "../../../../platform/presentation/http/security/decorators/super-admin.decorator";
 import { SuperAdminGuard } from "../../../../platform/presentation/http/security/guards/super-admin.guard";
 import { RATE_LIMIT_POLICY, RATE_LIMIT_POLICY_KEY } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
@@ -23,8 +21,6 @@ import { GeographyApplicationService } from "../../application/services/geograph
 import { GeoController } from "../http/geo.controller";
 
 const reflector = new Reflector();
-/** The metadata key `@RequirePermission` stores its requirement under. */
-const REQUIRED_PERMISSION_KEY: string = z.string().parse(RequirePermission("READ", "GEO").KEY);
 
 /** Every public member of the controller is a route handler. */
 type RouteName = keyof GeoController;
@@ -103,7 +99,7 @@ describe("GeoController routes", () => {
 		const handler = handlerOf(expected.name);
 		expect(reflector.get<string>(PATH_METADATA, handler)).toBe(expected.path);
 		expect(reflector.get<RequestMethod>(METHOD_METADATA, handler)).toBe(expected.method);
-		expect(reflector.get<object>(REQUIRED_PERMISSION_KEY, handler)).toEqual({ action: expected.action, resource: "GEO" });
+		expect(reflector.get<readonly object[]>(REQUIRED_PERMISSION_KEY, handler)).toMatchObject([{ action: expected.action, resource: "GEO" }]);
 	});
 
 	it.each(ROUTES)("$name: one $contract response contract answering $status", (expected) => {
@@ -119,7 +115,9 @@ describe("GeoController routes", () => {
 	});
 
 	it("authorizes the import through the kernel as CREATE GEO", () => {
-		expect(reflector.get<object>(AUTHORIZE_KEY, handlerOf("importData"))).toMatchObject({ action: "CREATE", resource: "GEO", description: "Import geo data" });
+		expect(reflector.get<readonly object[]>(REQUIRED_PERMISSION_KEY, handlerOf("importData"))).toEqual([
+			{ action: "CREATE", resource: "GEO", description: "Import geo data" },
+		]);
 	});
 });
 

@@ -2,6 +2,7 @@
 
 import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
+import type { RoleListItem } from "@workspace/shared";
 import * as React from "react";
 
 import { SearchableEntityPicker, toSearchParam, type EntityOption } from "@/components/common/searchable-entity-picker";
@@ -21,6 +22,14 @@ export interface RolePickerProps {
 }
 
 /**
+ * The roles a staff member can be given: platform roles they do not already hold. Tenant-role templates
+ * (ADR 067) define each business's roles and are never assigned to staff.
+ */
+export function assignableRoleOptions(roles: readonly Pick<RoleListItem, "id" | "name" | "kind">[], excludedRoleIds: ReadonlySet<string>): readonly EntityOption[] {
+	return roles.filter((role) => role.kind === "PLATFORM" && !excludedRoleIds.has(role.id)).map((role) => ({ id: role.id, label: role.name }));
+}
+
+/**
  * Active-role picker backed by `GET /admin/roles` (server-side name search, `filter[isActive]=true`,
  * `ROLE_PICKER_RESULT_LIMIT` matches per query). The chosen role's name is kept when the next search no
  * longer matches it, so the closed picker always shows a name, never an id.
@@ -36,10 +45,7 @@ export function RolePicker({ id, value, onChange, excludedRoleIds, enabled }: Ro
 	);
 
 	const roles = listQuery.data?.data;
-	const options = React.useMemo(
-		(): readonly EntityOption[] => (roles ?? []).filter((role) => !excludedRoleIds.has(role.id)).map((role) => ({ id: role.id, label: role.name })),
-		[excludedRoleIds, roles],
-	);
+	const options = React.useMemo((): readonly EntityOption[] => assignableRoleOptions(roles ?? [], excludedRoleIds), [excludedRoleIds, roles]);
 
 	const handleChange = React.useCallback(
 		(roleId: string): void => {

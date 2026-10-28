@@ -43,14 +43,9 @@ import {
 	TEAM_INVITE_PREVIEW_QUERY_SCOPE,
 	VERIFICATION_CODE_LENGTH,
 } from "@/contexts/tenancy/lib/team-invite/invite-form";
+import { TENANT_ROLE_LABELS } from "@/contexts/tenancy/lib/tenant/role-labels";
 
-const ROLE_LABELS: Readonly<Record<MembershipRole, string>> = {
-	OWNER: "Owner",
-	ADMIN: "Admin",
-	MEMBER: "Member",
-	POLICY_ADMIN: "Policy admin",
-	CASHIER: "Cashier",
-};
+const ROLE_LABELS: Readonly<Record<MembershipRole, string>> = TENANT_ROLE_LABELS;
 
 function formatLocationSummary(preview: TenantTeamInvitePreview): string {
 	if (preview.locationScopeType === "ALL_LOCATIONS") {

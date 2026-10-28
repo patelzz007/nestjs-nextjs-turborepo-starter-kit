@@ -9,7 +9,6 @@ import { createTenantsTransactionalPorts } from "../../../tenancy/public-api";
 import { PrismaAuthorizationCatalogStore } from "./prisma-authorization-catalog.store";
 import { PrismaPermissionAuditWriter } from "./prisma-permission-audit.writer";
 import { PrismaPermissionRepository } from "./prisma-permission.repository";
-import { PrismaPolicyControlPlaneStore, PrismaPolicyDraftRepository } from "./prisma-policy-control-plane.repository";
 import { PrismaRbacGraphReader, PrismaRbacMutationLock } from "./prisma-rbac-graph.reader";
 import { PrismaRoleRepository } from "./prisma-role.repository";
 import { PrismaSupportAccessGrantRepository } from "./prisma-support-access-grant.repository";
@@ -23,7 +22,6 @@ export class AuthorizationScopeFactory implements ScopeFactory<AuthorizationScop
 	) {}
 
 	public create(db: Prisma.TransactionClient, events: TransactionalEventCollector): AuthorizationScope {
-		const controlPlane = new PrismaPolicyControlPlaneStore(db, this.requestContext);
 		const tenants = createTenantsTransactionalPorts(db);
 		return {
 			roles: new PrismaRoleRepository(db),
@@ -34,11 +32,6 @@ export class AuthorizationScopeFactory implements ScopeFactory<AuthorizationScop
 			permissionAudit: new PrismaPermissionAuditWriter(db, this.requestContext),
 			identitySessions: this.identitySessions.forTransaction(db),
 			catalog: new PrismaAuthorizationCatalogStore(db),
-			policyDrafts: new PrismaPolicyDraftRepository(db),
-			policyVersions: controlPlane,
-			policySimulations: controlPlane,
-			policyPrincipals: controlPlane,
-			policyAudit: controlPlane,
 			supportGrants: new PrismaSupportAccessGrantRepository(db),
 			supportTenants: tenants.existence,
 			tenantAudit: tenants.audit,

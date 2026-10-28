@@ -1,4 +1,4 @@
-import { merchantRoleHasCapability, type FileUploadRequest, type FileCategory, type MerchantCapability } from "@workspace/shared";
+import type { FileUploadRequest, FileCategory, MerchantCapability } from "@workspace/shared";
 
 import { fileForbidden, type FileAccessAction, type FileAccessSubject, type FileActor, type FileCategoryAccessRule } from "../../../files/public-api";
 import type { MembershipRoleLookupPort, MerchantCapabilityGatePort, TenantFileCapabilities } from "../ports/tenant-file-access.port";
@@ -31,12 +31,6 @@ export class TenantFileAccessRule implements FileCategoryAccessRule {
 		const role = await this.memberships.activeRole(userId, tenantId);
 		if (role === null) {
 			throw fileForbidden(action, this.capabilities.deniedMessage);
-		}
-		if (this.gate.isMembershipOnly(capability)) {
-			if (!merchantRoleHasCapability(role, capability)) {
-				throw fileForbidden(action, this.capabilities.deniedMessage);
-			}
-			return;
 		}
 		await this.gate.requireMembershipCapability({ userId, tenantId, role }, capability);
 	}

@@ -63,7 +63,7 @@ Typecheck, build, and the rest of the pipeline still run in CI (`rules/13-ci-cd-
 
 ## Reading emails while testing locally
 
-Locally the API delivers every email into Mailpit (`EMAIL_PROVIDER=mailpit`, run with `pnpm mailpit`), never to a real inbox. To sign in, verify an email or open an invite while driving the app, read the code or link from there — never ask a human to check their mailbox:
+Locally the API delivers every email into Mailpit (`EMAIL_PROVIDER=mailpit`, a Docker service started by `pnpm docker:up`), never to a real inbox. To sign in, verify an email or open an invite while driving the app, read the code or link from there — never ask a human to check their mailbox:
 
 ```bash
 pnpm mail:latest --to <email> --code   # prints only the six-digit code (exit 1 if none)

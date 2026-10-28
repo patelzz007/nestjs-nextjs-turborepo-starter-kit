@@ -56,19 +56,19 @@ A one-page checklist. Each line links to the rule that explains *why*; the ruleb
 - ✅ Validate on the server always; on the client too (same schema) for UX.
 - ✅ Lists use the one grammar: whitelisted sort, filter AST, keyset cursors ([list queries](./api/list-queries.md)).
 - ✅ After any route or schema change: `pnpm --filter @workspace/api openapi:export`, then
-  `pnpm docs:api` ([API reference](./api-reference/README.md)).
+  `pnpm tools docs:api` ([API reference](./api-reference/README.md)).
 - ❌ Never trust the frontend; never accept tenant ids or ownership from the body as facts.
 
 ## Authorization ([rules/10](../../rules/10-security-auth-authorization.md), [authorization](./authorization/overview.md))
 
-- ✅ A decorator (`@RequirePermission`, `@Authorize`, `@SuperAdminOnly`) or a kernel call on every
+- ✅ A decorator (`@RequirePermission`, `@SuperAdminOnly`) or a kernel call on every
   mutation and privileged read; record-dependent checks pass the record (`resourceId`, org/store).
 - ✅ Merchant code checks `MERCHANT_CAPABILITY.*`, never role names; list endpoints filter in the
-  query (`kernel.filter()`), never in JavaScript.
+  query (its `where` clause, with RLS underneath), never in JavaScript.
 - ✅ Return the generic 403; use `self()` for own-account routes; audits name the real actor.
 - ❌ No `if (user.role === "ADMIN")`; membership is not permission; no permissions in JWTs; no second
   authorization engine; never bypass `PrivilegeEscalationService`.
-- The full list, with the reason behind each rule: [Authorization dos and don'ts](./authorization/dos-and-donts.md).
+- The full list, with the reason behind each rule: [Authorization dos and don'ts](./authorization/recipes.md#14-dos-and-donts).
 
 ## Database and RLS ([rules/08](../../rules/08-database-prisma.md), [database](./database.md), [database security](./security/database-security.md))
 

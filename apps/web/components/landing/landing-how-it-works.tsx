@@ -33,7 +33,7 @@ const STEPS: readonly Step[] = [
 export function LandingHowItWorks(): React.JSX.Element {
 	return (
 		<section id={LANDING_SECTION_IDS.howItWorks} aria-labelledby={HEADING_ID} className="scroll-mt-20 border-t border-border/80 bg-muted/30 py-20 sm:py-24">
-			<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+			<div className="mx-auto max-w-10xl px-4 sm:px-6 lg:px-8">
 				<div className="max-w-2xl">
 					<p className="text-xs font-semibold tracking-wide text-primary uppercase">How it works</p>
 					<h2 id={HEADING_ID} className="mt-2 font-[family-name:var(--font-heading)] text-4xl font-medium tracking-tight text-balance text-foreground sm:text-5xl">

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { epochMs, type CapabilityDefinition } from "@workspace/shared";
 
 import { UserAuthorizationChanged } from "../../domain/events/user-authorization-changed.event";
-import { PolicyPublished } from "../../domain/events/policy-published.event";
 import { PurgeOldPermissionAuditLogsCommand } from "../commands/purge-old-permission-audit-logs/purge-old-permission-audit-logs.command";
 import { PERMISSION_AUDIT_RETENTION_MS, PurgeOldPermissionAuditLogsHandler } from "../commands/purge-old-permission-audit-logs/purge-old-permission-audit-logs.handler";
 import { SyncCapabilityCatalogCommand } from "../commands/sync-capability-catalog/sync-capability-catalog.command";
@@ -12,13 +11,7 @@ import { SyncPermissionRegistryHandler } from "../commands/sync-permission-regis
 import { SyncReferenceDataCommand } from "../commands/sync-reference-data/sync-reference-data.command";
 import { SyncReferenceDataHandler } from "../commands/sync-reference-data/sync-reference-data.handler";
 import { InvalidateAuthorizationOnUserAuthorizationChanged } from "../event-handlers/after-commit/invalidate-authorization-on-user-authorization-changed.event-handler";
-import { InvalidatePolicyBundlesOnPolicyPublished } from "../event-handlers/after-commit/invalidate-policy-bundles-on-policy-published.event-handler";
-import type {
-	AuthorizationCacheInvalidationPort,
-	PolicyBundleInvalidationScope,
-	UserInvalidationScope,
-	UserInvalidationTrigger,
-} from "../ports/authorization-cache-invalidation.port";
+import type { AuthorizationCacheInvalidationPort, UserInvalidationScope, UserInvalidationTrigger } from "../ports/authorization-cache-invalidation.port";
 import type { ReferenceDataSyncPort, ReferenceDataSyncReport } from "../ports/catalog-sync.port";
 import type { CapabilityCatalogReadPort } from "../ports/rbac-read.port";
 import { authorizationSystemActor } from "../services/rbac-actor";
@@ -26,7 +19,6 @@ import { InMemoryAuthorizationStore, NOW } from "./fakes/authorization.fakes";
 
 class RecordingInvalidation implements AuthorizationCacheInvalidationPort {
 	public readonly users: { readonly userIds: readonly string[]; readonly scope: UserInvalidationScope }[] = [];
-	public readonly bundles: PolicyBundleInvalidationScope[] = [];
 	public cleared = 0;
 
 	public constructor(private readonly failure: Error | null = null) {}
@@ -46,14 +38,6 @@ class RecordingInvalidation implements AuthorizationCacheInvalidationPort {
 
 	public invalidateUsersOnThisInstance(userIds: readonly string[], trigger: UserInvalidationTrigger): void {
 		this.users.push({ userIds, scope: { accessTokenState: true, trigger } });
-	}
-
-	public invalidatePolicyBundles(scope: PolicyBundleInvalidationScope): Promise<void> {
-		if (this.failure !== null) {
-			return Promise.reject(this.failure);
-		}
-		this.bundles.push(scope);
-		return Promise.resolve();
 	}
 }
 
@@ -144,20 +128,9 @@ describe("After-commit invalidation", () => {
 		expect(invalidation.users).toEqual([{ userIds: ["user-1", "user-2"], scope: { accessTokenState: true, trigger: "rbac_mutation" } }]);
 	});
 
-	it("drops one tenant's policy bundles, or every bundle for a platform policy", async () => {
-		const invalidation = new RecordingInvalidation();
-		const handler = new InvalidatePolicyBundlesOnPolicyPublished(invalidation);
-
-		await handler.handle(new PolicyPublished(NOW, "draft-1", "org-1", 2));
-		await handler.handle(new PolicyPublished(NOW, "draft-2", null, 5));
-
-		expect(invalidation.bundles).toEqual([{ kind: "tenant", tenantId: "org-1" }, { kind: "all" }]);
-	});
-
 	it("logs instead of throwing after commit when the cache is unavailable", async () => {
 		const broken = new RecordingInvalidation(new Error("redis down"));
 
 		await expect(new InvalidateAuthorizationOnUserAuthorizationChanged(broken).handle(new UserAuthorizationChanged(NOW, ["user-1"]))).resolves.toBeUndefined();
-		await expect(new InvalidatePolicyBundlesOnPolicyPublished(broken).handle(new PolicyPublished(NOW, "draft-1", "org-1", 2))).resolves.toBeUndefined();
 	});
 });

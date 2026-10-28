@@ -23,7 +23,7 @@ export const APPEAL_CLOSED_BY_BAN_NOTE = "Closed: the platform banned this busin
 @CommandHandler(BanTenantCommand)
 export class BanTenantHandler implements ICommandHandler<BanTenantCommand, TenantLifecycleResponse> {
 	public constructor(
-		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<Pick<TenantsScope, "tenants" | "appeals" | "audit" | "tenantPolicies" | "events">>,
+		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<Pick<TenantsScope, "tenants" | "appeals" | "audit" | "events">>,
 		@Inject(TENANT_LIFECYCLE_READ) private readonly reads: TenantLifecycleReadPort,
 		@Inject(CLOCK) private readonly clock: Clock,
 	) {}
@@ -48,7 +48,6 @@ export class BanTenantHandler implements ICommandHandler<BanTenantCommand, Tenan
 			await scope.audit.record({
 				tenantId: tenant.id,
 				actorUserId: adminUserId,
-				policyVersion: await scope.tenantPolicies.activePolicyVersion(tenant.id),
 				action: "tenant.banned",
 				resourceType: "Tenant",
 				resourceId: tenant.id,

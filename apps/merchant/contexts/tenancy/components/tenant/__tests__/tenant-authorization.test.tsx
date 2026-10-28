@@ -13,7 +13,8 @@ import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
 import { LOCATION_SKELETON_CARDS, MERCHANT_LOCATIONS_LOADING_LABELS, MERCHANT_TEAM_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
 import { busyRegionAnnouncements } from "@/test/skeleton";
 
-const { contextQuery, listMembersQuery, listInvitesQuery, tenantMutation } = vi.hoisted(() => ({
+const { contextQuery, listMembersQuery, listInvitesQuery, tenantMutation, rolesQuery } = vi.hoisted(() => ({
+	rolesQuery: vi.fn(),
 	contextQuery: vi.fn(),
 	listMembersQuery: vi.fn(),
 	listInvitesQuery: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 				createLocation: { useMutation: tenantMutation },
 				resubmitLocation: { useMutation: tenantMutation },
 			},
+			tenantAccess: { roles: { useQuery: rolesQuery }, changeMemberRole: { useMutation: tenantMutation } },
 		},
 	}),
 }));
@@ -45,6 +47,7 @@ beforeEach((): void => {
 	contextQuery.mockReturnValue({ data: undefined, isLoading: false, isError: false, refetch: vi.fn() });
 	listMembersQuery.mockReturnValue({ data: { data: [] }, isLoading: false });
 	listInvitesQuery.mockReturnValue({ data: { data: [] }, isLoading: false });
+	rolesQuery.mockReturnValue({ data: { data: [] }, isLoading: false });
 	tenantMutation.mockReturnValue({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false });
 });
 
@@ -57,18 +60,30 @@ afterEach((): void => {
 });
 
 describe("TenantTeamPageView authorization (merchant:manage_team)", () => {
-	it("shows the roster and invite form to admins", () => {
-		renderAs(<TenantTeamPageView tenantSlug={TEST_ORG_SLUG} />, "ADMIN");
+	it("shows the roster, its tabs and the invite action to managers", () => {
+		renderAs(<TenantTeamPageView tenantSlug={TEST_ORG_SLUG} />, "MANAGER");
 
-		expect(screen.getByRole("button", { name: "Send invitation" })).toBeTruthy();
-		expect(screen.getByText("Pending invitations")).toBeTruthy();
+		expect(screen.getByRole("button", { name: "Invite teammate" })).toBeTruthy();
+		expect(screen.getByRole("tab", { name: /Members/ })).toBeTruthy();
+		expect(screen.getByRole("tab", { name: /Pending invites/ })).toBeTruthy();
+		expect(screen.getByRole("tab", { name: /Roles/ })).toBeTruthy();
+		expect(screen.getByRole("heading", { name: "What each role can do" })).toBeTruthy();
 	});
 
-	it.each(["CASHIER", "POLICY_ADMIN", "MEMBER"] satisfies MembershipRole[])("denies the page and skips the roster queries for %s", (role) => {
+	it("opens the invitation form in a dialog", () => {
+		renderAs(<TenantTeamPageView tenantSlug={TEST_ORG_SLUG} />, "MANAGER");
+
+		fireEvent.click(screen.getByRole("button", { name: "Invite teammate" }));
+
+		expect(screen.getByRole("dialog", { name: "Invite a teammate" })).toBeTruthy();
+		expect(screen.getByRole("button", { name: "Send invitation" })).toBeTruthy();
+	});
+
+	it.each(["CASHIER"] satisfies MembershipRole[])("denies the page and skips the roster queries for %s", (role) => {
 		renderAs(<TenantTeamPageView tenantSlug={TEST_ORG_SLUG} />, role);
 
 		expect(screen.getByText("Team access required")).toBeTruthy();
-		expect(screen.queryByRole("button", { name: "Send invitation" })).toBeNull();
+		expect(screen.queryByRole("button", { name: "Invite teammate" })).toBeNull();
 		expect(listMembersQuery).not.toHaveBeenCalled();
 	});
 
@@ -81,23 +96,32 @@ describe("TenantTeamPageView authorization (merchant:manage_team)", () => {
 });
 
 describe("TenantTeamPageView loading", () => {
-	it("draws member rows (not 'No members found') while the roster loads, and invitation rows while they load", () => {
+	it("draws member rows (not 'No members found') while the roster loads, and the invite action never waits", () => {
 		listMembersQuery.mockReturnValue({ data: undefined, isLoading: true });
-		listInvitesQuery.mockReturnValue({ data: undefined, isLoading: true });
-		renderAs(<TenantTeamPageView tenantSlug={TEST_ORG_SLUG} />, "ADMIN");
+		renderAs(<TenantTeamPageView tenantSlug={TEST_ORG_SLUG} />, "MANAGER");
 
-		expect(busyRegionAnnouncements()).toEqual([TEAM_MEMBERS_LOADING_LABELS.loading, TEAM_INVITES_LOADING_LABELS.loading]);
+		expect(busyRegionAnnouncements()).toEqual([TEAM_MEMBERS_LOADING_LABELS.loading]);
 		expect(screen.queryByText("No members found.")).toBeNull();
-		expect(screen.queryByText("No pending invitations.")).toBeNull();
-		// The invite form never waits on the roster.
-		expect(screen.getByRole("button", { name: "Send invitation" })).toBeTruthy();
+		expect(screen.getByRole("button", { name: "Invite teammate" })).toBeTruthy();
 	});
 
-	it("shows the empty roster and invitations once both have loaded, with nothing busy", () => {
-		renderAs(<TenantTeamPageView tenantSlug={TEST_ORG_SLUG} />, "ADMIN");
+	it("draws invitation rows on the Pending invites tab while they load", () => {
+		window.history.replaceState(null, "", "/?tab=invites");
+		listInvitesQuery.mockReturnValue({ data: undefined, isLoading: true });
+		renderAs(<TenantTeamPageView tenantSlug={TEST_ORG_SLUG} />, "MANAGER");
 
+		expect(busyRegionAnnouncements()).toEqual([TEAM_INVITES_LOADING_LABELS.loading]);
+		expect(screen.queryByText("No pending invitations.")).toBeNull();
+	});
+
+	it("shows the empty roster, and the empty invitations on their tab, with nothing busy", () => {
+		renderAs(<TenantTeamPageView tenantSlug={TEST_ORG_SLUG} />, "MANAGER");
 		expect(busyRegionAnnouncements()).toEqual([]);
 		expect(screen.getByText("No members found.")).toBeTruthy();
+		cleanup();
+
+		window.history.replaceState(null, "", "/?tab=invites");
+		renderAs(<TenantTeamPageView tenantSlug={TEST_ORG_SLUG} />, "MANAGER");
 		expect(screen.getByText("No pending invitations.")).toBeTruthy();
 	});
 });
@@ -115,14 +139,14 @@ describe("TenantLocationsPageView loading", () => {
 });
 
 describe("TenantLocationsPageView authorization (merchant:manage_locations)", () => {
-	it.each(["OWNER", "ADMIN"] satisfies MembershipRole[])("offers store requests to %s", (role) => {
+	it.each(["OWNER", "MANAGER"] satisfies MembershipRole[])("offers store requests to %s", (role) => {
 		renderAs(<LocationsPageView tenantSlug={TEST_ORG_SLUG} />, role);
 
 		expect(screen.getByRole("button", { name: "Add store" })).toBeTruthy();
 		expect(screen.queryByRole("note")).toBeNull();
 	});
 
-	it.each(["CASHIER", "POLICY_ADMIN", "MEMBER"] satisfies MembershipRole[])("hides store requests and explains why for %s", (role) => {
+	it.each(["CASHIER"] satisfies MembershipRole[])("hides store requests and explains why for %s", (role) => {
 		renderAs(<LocationsPageView tenantSlug={TEST_ORG_SLUG} />, role);
 
 		expect(screen.queryByRole("button", { name: "Add store" })).toBeNull();
@@ -150,7 +174,8 @@ describe("TenantDashboardPageView authorization", () => {
 		renderAs(<TenantDashboardPageView tenantSlug={TEST_ORG_SLUG} context={null} />, "CASHIER");
 
 		expect(screen.getByText("Rewards")).toBeTruthy();
-		expect(screen.getByText("Analytics")).toBeTruthy();
+		// Analytics needs a grant for a cashier (ADR 067, edge case 4).
+		expect(screen.queryByText("Analytics")).toBeNull();
 		expect(screen.getByText("Redemptions log")).toBeTruthy();
 		expect(screen.getByText("Store locations")).toBeTruthy();
 		expect(screen.queryByText("Team & access")).toBeNull();
@@ -158,14 +183,19 @@ describe("TenantDashboardPageView authorization", () => {
 	});
 
 	it("shows admins the team shortcut but not business verification", () => {
-		renderAs(<TenantDashboardPageView tenantSlug={TEST_ORG_SLUG} context={null} />, "ADMIN");
+		renderAs(<TenantDashboardPageView tenantSlug={TEST_ORG_SLUG} context={null} />, "MANAGER");
 
 		expect(screen.getByText("Team & access")).toBeTruthy();
 		expect(screen.queryByText("Business verification")).toBeNull();
 	});
 
 	it("hides operations shortcuts from members without merchant capabilities", () => {
-		renderAs(<TenantDashboardPageView tenantSlug={TEST_ORG_SLUG} context={null} />, "MEMBER");
+		renderWithAuthorization(
+			<QueryClientProvider client={new QueryClient()}>
+				<TenantDashboardPageView tenantSlug={TEST_ORG_SLUG} context={null} />
+			</QueryClientProvider>,
+			{ role: "CASHIER", capabilities: [] },
+		);
 
 		expect(screen.queryByText("Rewards")).toBeNull();
 		expect(screen.queryByText("Analytics")).toBeNull();
@@ -202,7 +232,7 @@ describe("TenantTeamPageView pages", () => {
 			isLoading: false,
 			isPlaceholderData: false,
 		});
-		renderAs(<TenantTeamPageView tenantSlug={TEST_ORG_SLUG} />, "ADMIN");
+		renderAs(<TenantTeamPageView tenantSlug={TEST_ORG_SLUG} />, "MANAGER");
 
 		expect(screen.getByText("41")).toBeDefined();
 		expect(listMembersQuery).toHaveBeenLastCalledWith({ tenantSlug: TEST_ORG_SLUG, page: 1, limit: 20 }, expect.anything());

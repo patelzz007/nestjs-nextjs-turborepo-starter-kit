@@ -42,9 +42,22 @@ export interface TenantRewardRoutes {
 	readonly edit: (rewardId: string) => AppPath;
 }
 
+/** The team's roles (ADR 067): the list, a new role, one role's read-only page and its editor. */
+export interface TenantTeamRoleRoutes {
+	readonly list: AppPath;
+	readonly new: AppPath;
+	readonly detail: (roleId: string) => AppPath;
+	readonly edit: (roleId: string) => AppPath;
+}
+
 export interface TenantSettingsRoutes {
 	readonly index: AppPath;
 	readonly team: AppPath;
+	readonly teamRoles: TenantTeamRoleRoutes;
+	/** One member's access: their role and their extra permissions. */
+	readonly teamMember: (membershipId: string) => AppPath;
+	/** Tills and API keys, at a glance. */
+	readonly integrations: AppPath;
 	readonly locations: AppPath;
 	readonly branding: AppPath;
 	readonly verification: AppPath;
@@ -116,6 +129,14 @@ export const TENANT_ROUTES: TenantRouteTable = {
 	settings: {
 		index: "/settings",
 		team: "/settings/team",
+		teamRoles: {
+			list: "/settings/team/roles",
+			new: "/settings/team/roles/new",
+			detail: (roleId: string): AppPath => `/settings/team/roles/${encodeURIComponent(roleId)}`,
+			edit: (roleId: string): AppPath => `/settings/team/roles/${encodeURIComponent(roleId)}/edit`,
+		},
+		teamMember: (membershipId: string): AppPath => `/settings/team/members/${encodeURIComponent(membershipId)}`,
+		integrations: "/settings/integrations",
 		locations: "/settings/locations",
 		branding: "/settings/branding",
 		verification: "/settings/verification",
@@ -136,6 +157,9 @@ export const TENANT_STATIC_ROUTES: readonly AppPath[] = [
 	TENANT_ROUTES.stores,
 	TENANT_ROUTES.settings.index,
 	TENANT_ROUTES.settings.team,
+	TENANT_ROUTES.settings.teamRoles.list,
+	TENANT_ROUTES.settings.teamRoles.new,
+	TENANT_ROUTES.settings.integrations,
 	TENANT_ROUTES.settings.locations,
 	TENANT_ROUTES.settings.branding,
 	TENANT_ROUTES.settings.verification,
@@ -216,6 +240,10 @@ export interface TenantRewardHrefs {
 export interface TenantSettingsHrefs {
 	readonly index: AppPath;
 	readonly team: AppPath;
+	readonly teamRoles: TenantTeamRoleRoutes;
+	readonly teamMember: (membershipId: string) => AppPath;
+	/** Tills and API keys, at a glance. */
+	readonly integrations: AppPath;
 	readonly locations: AppPath;
 	readonly branding: AppPath;
 	readonly verification: AppPath;
@@ -256,6 +284,14 @@ export function tenantRoutes(slug: string): TenantHrefs {
 		settings: {
 			index: tenantPath(slug, TENANT_ROUTES.settings.index),
 			team: tenantPath(slug, TENANT_ROUTES.settings.team),
+			teamRoles: {
+				list: tenantPath(slug, TENANT_ROUTES.settings.teamRoles.list),
+				new: tenantPath(slug, TENANT_ROUTES.settings.teamRoles.new),
+				detail: (roleId: string): AppPath => tenantPath(slug, TENANT_ROUTES.settings.teamRoles.detail(roleId)),
+				edit: (roleId: string): AppPath => tenantPath(slug, TENANT_ROUTES.settings.teamRoles.edit(roleId)),
+			},
+			teamMember: (membershipId: string): AppPath => tenantPath(slug, TENANT_ROUTES.settings.teamMember(membershipId)),
+			integrations: tenantPath(slug, TENANT_ROUTES.settings.integrations),
 			locations: tenantPath(slug, TENANT_ROUTES.settings.locations),
 			branding: tenantPath(slug, TENANT_ROUTES.settings.branding),
 			verification: tenantPath(slug, TENANT_ROUTES.settings.verification),

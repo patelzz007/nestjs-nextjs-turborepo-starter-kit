@@ -10,7 +10,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { MerchantAnalyticsPageView, type MerchantAnalyticsPageViewProps } from "@/contexts/reporting/components/merchant-analytics-page-view";
 import { tenantRoutes } from "@/lib/routes";
 import { buildMerchantDashboard } from "@/test/analytics-dashboard";
-import { renderWithAuthorization, TEST_ORG_SLUG, type AuthorizationFixture } from "@/test/authorization";
+import { CASHIER_GRANTED_ANALYTICS, renderWithAuthorization, TEST_ORG_SLUG, type AuthorizationFixture } from "@/test/authorization";
 import { testEnvelope } from "@/test/envelope";
 import { contextQueryState, twoStoreSeed, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
 import { STORE_B } from "@/test/terminals";
@@ -57,7 +57,7 @@ function spaced(value: string | null | undefined): string {
 	return (value ?? "").replace(/\s/g, " ");
 }
 
-function renderView(props: Partial<MerchantAnalyticsPageViewProps> = {}, fixture: AuthorizationFixture = { role: "CASHIER" }): void {
+function renderView(props: Partial<MerchantAnalyticsPageViewProps> = {}, fixture: AuthorizationFixture = { role: "CASHIER", capabilities: CASHIER_GRANTED_ANALYTICS }): void {
 	renderWithAuthorization(<MerchantAnalyticsPageView tenantSlug={TEST_ORG_SLUG} nowMs={NOW_MS} timeZone={KUALA_LUMPUR} {...props} />, fixture);
 }
 
@@ -122,8 +122,8 @@ describe("MerchantAnalyticsPageView authorization", () => {
 		expect(mocks.dashboardQuery).toHaveBeenCalled();
 	});
 
-	it("denies the page and skips the query without the capability", () => {
-		renderView({}, { role: "MEMBER" });
+	it("denies the page and skips the query without the capability (a cashier with no analytics grant)", () => {
+		renderView({}, { role: "CASHIER" });
 
 		expect(screen.getByText("You don't have access to this page")).toBeTruthy();
 		expect(mocks.dashboardQuery).not.toHaveBeenCalled();
@@ -162,7 +162,7 @@ describe("MerchantAnalyticsPageView data", () => {
 	it("narrows the query and the export to the store picked in the store selector", async () => {
 		mocks.dashboardQuery.mockReturnValue(ready());
 		mocks.download.mockResolvedValue({ blob: new Blob(["x"]), fileName: "analytics_acme-coffee.csv", contentType: "text/csv" } satisfies DownloadedFile);
-		renderView({}, { role: "CASHIER", tenantContext: twoStoreSeed(STORE_B.id) });
+		renderView({}, { role: "CASHIER", capabilities: CASHIER_GRANTED_ANALYTICS, tenantContext: twoStoreSeed(STORE_B.id) });
 
 		expect(lastInput()).toMatchObject({ locationId: STORE_B.id });
 
@@ -215,14 +215,17 @@ describe("MerchantAnalyticsPageView server prefetch (no double fetch)", () => {
 
 	it("seeds the first render with data fetched for the same range and store", () => {
 		const data = testEnvelope(buildMerchantDashboard());
-		renderView({ initialDashboard: { stateKey: KEY_ALL_STORES, data } }, { role: "CASHIER", tenantContext: twoStoreSeed(null) });
+		renderView({ initialDashboard: { stateKey: KEY_ALL_STORES, data } }, { role: "CASHIER", capabilities: CASHIER_GRANTED_ANALYTICS, tenantContext: twoStoreSeed(null) });
 
 		expect(lastOptions()?.initialData).toEqual(data);
 	});
 
 	it("never seeds another store's numbers under the client's key", () => {
 		const data = testEnvelope(buildMerchantDashboard());
-		renderView({ initialDashboard: { stateKey: KEY_ALL_STORES, data } }, { role: "CASHIER", tenantContext: twoStoreSeed(STORE_B.id) });
+		renderView(
+			{ initialDashboard: { stateKey: KEY_ALL_STORES, data } },
+			{ role: "CASHIER", capabilities: CASHIER_GRANTED_ANALYTICS, tenantContext: twoStoreSeed(STORE_B.id) },
+		);
 
 		expect(lastOptions()?.initialData).toBeUndefined();
 	});

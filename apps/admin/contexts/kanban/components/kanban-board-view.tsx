@@ -235,7 +235,7 @@ export function KanbanBoardView({ initialBoard }: KanbanBoardViewProps): React.J
 	const queryClient = useQueryClient();
 	const canCreateTasks = can(PERMISSION.KANBAN_TASK.CREATE);
 	const canMoveTasks = can(PERMISSION.KANBAN_TASK.UPDATE);
-	const canManageColumns = can(PERMISSION.KANBAN_TASK.MANAGE);
+	const canManageColumns = can(PERMISSION.KANBAN_BOARD.UPDATE);
 
 	const [urlState, updateUrlState] = useUrlState(KANBAN_BOARD_URL_STATE);
 	const boardKind = KANBAN_BOARD_OF_PARAM[urlState.board];

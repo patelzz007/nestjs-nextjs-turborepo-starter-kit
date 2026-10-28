@@ -3,6 +3,7 @@ import { z } from "zod";
 import { BaseResponseSchema, EpochMsSchema } from "../../../schemas/api/common";
 import { CanonicalEmailSchema } from "../../../schemas/api/email-address";
 import { defineListQuery, listFilter, ListSearchSchema } from "../../../schemas/api/list-query";
+import { MerchantCapabilitySchema } from "../../../authorization/permission";
 import { JsonObjectSchema } from "../../../schemas/runtime/json";
 import { REWARD_LIST_DEFAULT_LIMIT } from "../../rewards/schemas/reward";
 import { MerchantKybDocumentRecordSchema } from "./merchant-kyb";
@@ -113,6 +114,11 @@ export const TenantRewardMembershipResponseSchema = z.object({
 	tenantSlug: TenantSlugSchema,
 	displayName: z.string(),
 	role: MembershipRoleSchema,
+	/**
+	 * What the member may do right now (their role + live grants, ADR 067) — the merchant app shows exactly
+	 * this. Present on the active tenant's context; absent on list rows (the tenant switcher).
+	 */
+	capabilities: z.array(MerchantCapabilitySchema).optional(),
 	kybStatus: KybStatusSchema,
 	lifecycleState: TenantLifecycleStateSchema,
 	createdAt: EpochMsSchema.optional(),

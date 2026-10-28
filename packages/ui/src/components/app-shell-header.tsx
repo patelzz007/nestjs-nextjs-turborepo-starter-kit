@@ -43,20 +43,24 @@ export const AppShellHeader = React.forwardRef<HTMLElement, AppShellHeaderProps>
 ): React.JSX.Element {
 	const labels = useUiKitLabels("appShellTopbarSearch", searchLabels);
 	return (
-		<header ref={ref} data-slot="app-shell-header" className={cn("flex h-14 shrink-0 items-center gap-2 border-b border-border bg-shell-panel px-4 sm:px-6", className)}>
-			<span data-slot="app-shell-header-toggle" className="flex shrink-0 overflow-hidden">
-				<SidebarTrigger className="shrink-0 text-muted-foreground hover:text-foreground" />
-			</span>
-			<div className="min-w-0 flex-1">{breadcrumb}</div>
-			{actions !== undefined && actions !== null ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
-			<Button type="button" variant="outline" size="sm" onClick={onOpenSearch} aria-label={labels.desktopAriaLabel} className="shrink-0 gap-2 text-muted-foreground">
-				<Search aria-hidden="true" />
-				<span className="hidden sm:inline">{labels.mobileAriaLabel}</span>
-				<KbdGroup className="hidden md:inline-flex">
-					<Kbd>⌘</Kbd>
-					<Kbd>K</Kbd>
-				</KbdGroup>
-			</Button>
+		<header ref={ref} data-slot="app-shell-header" className={cn("flex h-14 shrink-0 border-b border-border bg-shell-panel", className)}>
+			{/* The bar spans the panel; its row sits in the page column (`max-w-10xl`, the same side padding as
+			    `PanelShellContent`), so the breadcrumb and search line up with the page below on any screen. */}
+			<div data-slot="app-shell-header-row" className="mx-auto flex w-full max-w-10xl items-center gap-2 px-4 sm:px-6">
+				<span data-slot="app-shell-header-toggle" className="flex shrink-0 overflow-hidden">
+					<SidebarTrigger className="shrink-0 text-muted-foreground hover:text-foreground" />
+				</span>
+				<div className="min-w-0 flex-1">{breadcrumb}</div>
+				{actions !== undefined && actions !== null ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+				<Button type="button" variant="outline" size="sm" onClick={onOpenSearch} aria-label={labels.desktopAriaLabel} className="shrink-0 gap-2 text-muted-foreground">
+					<Search aria-hidden="true" />
+					<span className="hidden sm:inline">{labels.mobileAriaLabel}</span>
+					<KbdGroup className="hidden md:inline-flex">
+						<Kbd>⌘</Kbd>
+						<Kbd>K</Kbd>
+					</KbdGroup>
+				</Button>
+			</div>
 		</header>
 	);
 });

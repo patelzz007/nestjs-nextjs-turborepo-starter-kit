@@ -69,7 +69,6 @@ function TenantDashboardPageContent({ tenantSlug, context, contextError = false 
 	const lifecycleState = context?.tenant.lifecycleState;
 	const membershipRole = context?.membership.role;
 	const locationCount = context?.locations.length ?? 0;
-	const policyVersion = context?.policyVersion;
 	const kybStatus = context?.merchantProfile?.kybStatus;
 	const primaryLocation = context?.locations.find((location) => location.isPrimary) ?? context?.locations[LIST_SLOT_INDEX.first];
 
@@ -115,7 +114,7 @@ function TenantDashboardPageContent({ tenantSlug, context, contextError = false 
 				</Card>
 			) : null}
 
-			<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+			<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
 				<StatCard
 					label="Your role"
 					tone="violet"
@@ -136,13 +135,6 @@ function TenantDashboardPageContent({ tenantSlug, context, contextError = false 
 					value={kybStatus !== undefined ? KYB_STATUS_DISPLAY[kybStatus].label : "—"}
 					hint="Business verification for this org"
 					icon={<ShieldCheck className="size-5" aria-hidden="true" />}
-				/>
-				<StatCard
-					label="Policy version"
-					tone="orange"
-					value={policyVersion !== undefined ? String(policyVersion) : "—"}
-					hint="Active authorization policy revision"
-					icon={<LayoutDashboard className="size-5" aria-hidden="true" />}
 				/>
 			</div>
 

@@ -5,13 +5,29 @@ import { z } from "zod";
 
 import { defineContract } from "../../contracts/define-contract";
 import { paginatedResponse, singleResponse } from "../../contracts/response";
-import { adminRbacRoutes, capabilitiesRoutes, supportAccessRoutes } from "./routes";
+import { adminRbacRoutes, capabilitiesRoutes, supportAccessRoutes, tenantAccessRoutes } from "./routes";
 import { CapabilityCatalogQuerySchema, CapabilityCatalogResponseSchema } from "./schemas/capabilities";
 import { AssignPermissionToUserSchema, AssignRoleToUserSchema, CheckPermissionSchema, SyncUserPermissionsSchema, SyncUserRolesSchema } from "./schemas/rbac";
 import { RbacMessageResponseSchema } from "./schemas/rbac-inspection";
 import { CheckPermissionResponseSchema, PermissionListItemSchema, PermissionListQuerySchema } from "./schemas/rbac-permissions";
 import { RoleListItemSchema, RoleListQuerySchema } from "./schemas/rbac-roles";
-import { MessageResponseSchema } from "../../schemas/api/message";
+import {
+	TenantGrantCreateSchema,
+	TenantGrantListResponseSchema,
+	TenantGrantResponseSchema,
+	TenantMemberAccessResponseSchema,
+	TenantMemberRoleSchema,
+	TenantRoleCreateSchema,
+	TenantRoleHoldersSchema,
+	TenantRoleListResponseSchema,
+	TenantRoleReassignSchema,
+	TenantRoleResponseSchema,
+	TenantRoleUpdateSchema,
+	TenantShareCreateSchema,
+	TenantShareListResponseSchema,
+	TenantShareResponseSchema,
+} from "./schemas/tenant-access";
+import { MessageResponseSchema, OkResponseSchema } from "../../schemas/api/message";
 import { UuidParamSchema } from "../../schemas/domain/platform/param-schemas";
 import {
 	SupportAccessGrantDetailListSchema,
@@ -19,6 +35,7 @@ import {
 	SupportAccessGrantListQuerySchema,
 	SupportAccessGrantRequestSchema,
 	SupportAccessGrantResponseSchema,
+	TenantRouteKeySchema,
 	TenantSlugParamSchema,
 } from "../tenancy/schemas/tenant";
 
@@ -110,5 +127,73 @@ export const supportAccessContract = {
 		path: supportAccessRoutes.revoke,
 		input: z.object({ grantId: UuidParamSchema }).strict(),
 		response: singleResponse(MessageResponseSchema),
+	}),
+};
+
+const RoleParamSchema = z.object({ tenantSlug: TenantRouteKeySchema, roleId: UuidParamSchema }).strict();
+const MemberParamSchema = z.object({ tenantSlug: TenantRouteKeySchema, membershipId: UuidParamSchema }).strict();
+
+/** Contract leaves composed into `apiContract.tenantAccess` (ADR 067): path params and body in one input. */
+export const tenantAccessContract = {
+	roles: defineContract({ method: "GET", path: tenantAccessRoutes.roles, input: TenantSlugParamSchema, response: singleResponse(TenantRoleListResponseSchema) }),
+	createRole: defineContract({
+		method: "POST",
+		path: tenantAccessRoutes.roles,
+		input: TenantRoleCreateSchema.extend({ tenantSlug: TenantRouteKeySchema }),
+		response: singleResponse(TenantRoleResponseSchema),
+	}),
+	updateRole: defineContract({
+		method: "PATCH",
+		path: tenantAccessRoutes.role,
+		input: TenantRoleUpdateSchema.extend(RoleParamSchema.shape),
+		response: singleResponse(TenantRoleResponseSchema),
+	}),
+	deleteRole: defineContract({ method: "DELETE", path: tenantAccessRoutes.role, input: RoleParamSchema, response: singleResponse(OkResponseSchema) }),
+	roleHolders: defineContract({ method: "GET", path: tenantAccessRoutes.roleHolders, input: RoleParamSchema, response: singleResponse(TenantRoleHoldersSchema) }),
+	reassignHolders: defineContract({
+		method: "POST",
+		path: tenantAccessRoutes.roleReassign,
+		input: TenantRoleReassignSchema.extend(RoleParamSchema.shape),
+		response: singleResponse(OkResponseSchema),
+	}),
+	resetRole: defineContract({ method: "POST", path: tenantAccessRoutes.roleReset, input: RoleParamSchema, response: singleResponse(TenantRoleResponseSchema) }),
+	member: defineContract({ method: "GET", path: tenantAccessRoutes.member, input: MemberParamSchema, response: singleResponse(TenantMemberAccessResponseSchema) }),
+	changeMemberRole: defineContract({
+		method: "PUT",
+		path: tenantAccessRoutes.memberRole,
+		input: TenantMemberRoleSchema.extend(MemberParamSchema.shape),
+		response: singleResponse(OkResponseSchema),
+	}),
+	removeMember: defineContract({ method: "DELETE", path: tenantAccessRoutes.member, input: MemberParamSchema, response: singleResponse(OkResponseSchema) }),
+	memberGrants: defineContract({
+		method: "GET",
+		path: tenantAccessRoutes.memberGrants,
+		input: MemberParamSchema,
+		response: singleResponse(TenantGrantListResponseSchema),
+	}),
+	grant: defineContract({
+		method: "POST",
+		path: tenantAccessRoutes.memberGrants,
+		input: TenantGrantCreateSchema.extend(MemberParamSchema.shape),
+		response: singleResponse(TenantGrantResponseSchema),
+	}),
+	revokeGrant: defineContract({
+		method: "DELETE",
+		path: tenantAccessRoutes.grant,
+		input: z.object({ tenantSlug: TenantRouteKeySchema, grantId: UuidParamSchema }).strict(),
+		response: singleResponse(OkResponseSchema),
+	}),
+	shares: defineContract({ method: "GET", path: tenantAccessRoutes.shares, input: TenantSlugParamSchema, response: singleResponse(TenantShareListResponseSchema) }),
+	share: defineContract({
+		method: "POST",
+		path: tenantAccessRoutes.shares,
+		input: TenantShareCreateSchema.extend({ tenantSlug: TenantRouteKeySchema }),
+		response: singleResponse(TenantShareResponseSchema),
+	}),
+	unshare: defineContract({
+		method: "DELETE",
+		path: tenantAccessRoutes.share,
+		input: z.object({ tenantSlug: TenantRouteKeySchema, shareId: UuidParamSchema }).strict(),
+		response: singleResponse(OkResponseSchema),
 	}),
 };

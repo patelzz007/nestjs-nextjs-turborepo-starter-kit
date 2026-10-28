@@ -93,5 +93,5 @@ cache no pipe read: boot took ~3.3 s, now ~1 s.
 ## Tests
 
 API e2e tests (`apps/api/test/*.e2e-spec.ts`) call `app.inject()` (light-my-request) on a
-`NestFastifyApplication` — no port, no supertest. See [Testing authorization](../authorization/testing.md)
+`NestFastifyApplication` — no port, no supertest. See [Testing authorization](../authorization/recipes.md#13-testing)
 for the database-backed suites.

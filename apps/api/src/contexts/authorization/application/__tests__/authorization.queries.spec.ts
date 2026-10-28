@@ -1,11 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type {
 	AdminPermissionResponse,
-	AuthorizationContext,
 	AuthorizationDecision,
 	AuthorizationRequest,
 	AuthorizationResult,
-	AuthorizationRowFilter,
 	PaginatedServiceResult,
 	PermissionListItem,
 	PermissionListQuery,
@@ -64,14 +62,6 @@ class ScriptedKernel implements AuthorizationKernelPort {
 		this.asked.push(request);
 		return Promise.resolve({ decision: "DENY", request: { ...request, subject: request.subject }, evaluation: [] });
 	}
-
-	public filter(context: AuthorizationContext): Promise<AuthorizationRowFilter> {
-		return Promise.reject(new Error(`filter is not used here (${context.userId})`));
-	}
-
-	public hasRoles(): Promise<boolean> {
-		return Promise.resolve(false);
-	}
 }
 
 /** The dry-run reads over the in-memory RBAC rows. */
@@ -86,12 +76,12 @@ class StoreInspection implements RbacInspectionReadPort, RbacInspectionReader {
 		return Promise.resolve([...(this.store.users.get(userId)?.roleIds ?? [])]);
 	}
 
-	public effectiveRoleNames(roleIds: readonly string[]): Promise<ReadonlySet<string>> {
-		return Promise.resolve(new Set([...this.store.ancestorsOf(roleIds)].flatMap((id: string): string[] => this.liveName(id))));
+	public activeRoleNames(roleIds: readonly string[]): Promise<ReadonlySet<string>> {
+		return Promise.resolve(new Set(roleIds.flatMap((id: string): string[] => this.liveName(id))));
 	}
 
 	public effectiveRoleSet(roleIds: readonly string[]): Promise<EffectiveRoleSet> {
-		const permissionKeys: string[] = [...this.store.ancestorsOf(roleIds)].flatMap((id: string): string[] =>
+		const permissionKeys: string[] = roleIds.flatMap((id: string): string[] =>
 			this.liveName(id).length === 0
 				? []
 				: (this.store.rolePermissions.get(id) ?? []).flatMap((permissionId: string): string[] => {
@@ -160,7 +150,7 @@ beforeEach(() => {
 	rbac.seedPermission({ id: "p-update", action: "UPDATE", resource: "USER" });
 	rbac.seedPermission({ id: "p-delete", action: "DELETE", resource: "USER" });
 	rbac.seedRole({ id: "role-viewer", name: "Viewer" }, ["p-read"]);
-	rbac.seedRole({ id: "role-editor", name: "Editor", parentId: "role-viewer" }, ["p-update"]);
+	rbac.seedRole({ id: "role-editor", name: "Editor" }, ["p-read", "p-update"]);
 	rbac.seedRole({ id: "role-manager", name: "Location Manager" });
 	rbac.seedRole({ id: "role-staff", name: "Location Staff" });
 	rbac.seedUser("user-1", ["role-viewer", "role-manager"], [{ id: "ov-1", permissionId: "p-delete", effect: "DENY", expiresAt: null }]);

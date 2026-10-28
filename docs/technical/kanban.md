@@ -146,7 +146,7 @@ unwatched), history, comments (one with a file) and real attachment files writte
 configured storage provider, plus one soft-deleted story and one removed attachment; and board
 preferences for three staff members (one reset). A counter is never wound back, and a preference a
 person set through the board is kept. The `KANBAN_TASK` grants come from the system role catalog
-(`pnpm db:sync-reference-data`): Admin all six actions, Manager all but `DELETE` and `MANAGE`.
+(`pnpm db:sync-reference-data`): Admin all five `KANBAN_TASK` actions plus `UPDATE KANBAN_BOARD` (the columns).
 
 ## Converting an older board
 

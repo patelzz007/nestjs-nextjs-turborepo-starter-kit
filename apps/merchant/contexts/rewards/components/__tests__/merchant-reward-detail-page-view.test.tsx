@@ -27,6 +27,13 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 			tenants: {
 				rewards: { get: { useQuery: rewardQuery }, publish: { useMutation: publishMutation } },
 				context: { useQuery: (): object => contextQueryState(TWO_STORE_CONTEXT) },
+				listMembers: { useQuery: (): object => ({ data: { data: [] }, isLoading: false }) },
+			},
+			// The reward page's "Shared with" card (ADR 067): nothing shared yet.
+			tenantAccess: {
+				shares: { useQuery: (): object => ({ data: { data: [] }, isLoading: false }) },
+				share: { useMutation: (): object => ({ mutate: vi.fn(), reset: vi.fn(), isPending: false, error: null }) },
+				unshare: { useMutation: (): object => ({ mutate: vi.fn(), reset: vi.fn(), isPending: false, error: null }) },
 			},
 		},
 	}),

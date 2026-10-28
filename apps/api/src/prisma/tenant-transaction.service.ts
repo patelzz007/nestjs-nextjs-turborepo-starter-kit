@@ -30,7 +30,6 @@ const UNSET_SESSION_VALUE = "";
 /** Every transaction-local setting a transaction opened here stamps. Each path sets all of them, so none is inherited. */
 export interface TransactionSessionVariables extends RlsSessionVariables {
 	readonly actorPurpose: string;
-	readonly policyVersion: string;
 	readonly correlationId: string;
 }
 
@@ -49,7 +48,6 @@ async function applySessionVariables(tx: TransactionClient, session: Transaction
 		set_config('app.current_api_key_id', ${session.currentApiKeyId}, true),
 		set_config('app.current_api_key_location_id', ${session.currentApiKeyLocationId}, true),
 		set_config('app.actor_purpose', ${session.actorPurpose}, true),
-		set_config('app.policy_version', ${session.policyVersion}, true),
 		set_config('app.correlation_id', ${session.correlationId}, true)`;
 }
 
@@ -87,11 +85,10 @@ export class TenantTransactionService {
 	/**
 	 * One transaction stamped with the actor's RLS session (`rlsSessionVariables`).
 	 * A user scope that requires an explicit tenant and has none fails closed
-	 * ({@link MissingTenantContextError}) before any connection is used. `app.policy_version`
-	 * is cleared: an actor carries no encryption policy version.
+	 * ({@link MissingTenantContextError}) before any connection is used.
 	 * System scopes also write the same audit line as {@link withSystemOperation}, and they keep the
 	 * actor's tenant id. Encryption sessions stay on {@link withTenantTransaction} because they
-	 * carry purpose and policy version, which an actor does not.
+	 * carry a purpose, which an actor does not.
 	 */
 	public async withRlsContext<T>(scope: RlsTransactionScope, handler: (tx: TransactionClient) => Promise<T>): Promise<T> {
 		assertExplicitContext(scope.context);
@@ -215,7 +212,6 @@ export class TenantTransactionService {
 			currentApiKeyId: UNSET_SESSION_VALUE,
 			currentApiKeyLocationId: UNSET_SESSION_VALUE,
 			actorPurpose: context.purpose,
-			policyVersion: String(context.policyVersion),
 			correlationId,
 		});
 	}
@@ -225,8 +221,6 @@ export class TenantTransactionService {
 		await applySessionVariables(tx, {
 			...session,
 			actorPurpose: reason ?? UNSET_SESSION_VALUE,
-			// An actor carries no encryption policy version: cleared, never inherited from the checkout.
-			policyVersion: UNSET_SESSION_VALUE,
 			correlationId,
 		});
 	}
@@ -241,7 +235,6 @@ export class TenantTransactionService {
 			currentApiKeyId: UNSET_SESSION_VALUE,
 			currentApiKeyLocationId: UNSET_SESSION_VALUE,
 			actorPurpose: context.reason,
-			policyVersion: UNSET_SESSION_VALUE,
 			correlationId,
 		});
 	}

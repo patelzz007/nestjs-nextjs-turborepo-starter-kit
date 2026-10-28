@@ -1,13 +1,11 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { LIST_SLOT_INDEX, epochMs, IanaTimeZoneSchema, UuidParamSchema, type TenantContextResponse, type MembershipResponse } from "@workspace/shared";
 
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
-import { CEDAR_POLICY_EVALUATOR, type CedarPolicyEvaluatorPort } from "../../../authorization/public-api";
 import { mapLocationToResponse } from "../persistence/tenant-location.mapper";
 import { mapTenantLogo, TENANT_LOGO_ASSETS_SELECT } from "../persistence/tenant-logo";
 import { mapMembershipToResponse } from "../persistence/tenant-membership.mapper";
-import { TenantAuditService } from "../audit/tenant-audit.adapter";
 import { PublicUrlResolver } from "../../../../config/public-url.resolver";
 
 export interface ResolvedTenantContext {
@@ -16,15 +14,12 @@ export interface ResolvedTenantContext {
 	readonly displayName: string;
 	readonly userId: string;
 	readonly membership: MembershipResponse;
-	readonly policyVersion: number;
 }
 
 @Injectable()
 export class TenantContextService {
 	public constructor(
 		private readonly tenantTx: TenantTransactionService,
-		@Inject(CEDAR_POLICY_EVALUATOR) private readonly cedar: CedarPolicyEvaluatorPort,
-		private readonly audit: TenantAuditService,
 		private readonly publicUrls: PublicUrlResolver,
 	) {}
 
@@ -51,7 +46,7 @@ export class TenantContextService {
 	/**
 	 * Resolve slug or tenant id → tenant; uniform not-found for a
 	 * missing tenant AND for a non-member (no existence oracle). Any other
-	 * failure (database down, policy load error) propagates as itself — it is
+	 * failure (database down) propagates as itself — it is
 	 * never disguised as a 404.
 	 */
 	public async resolveBySlug(userId: string, routeKey: string): Promise<ResolvedTenantContext> {
@@ -78,7 +73,6 @@ export class TenantContextService {
 			throw new NotFoundException();
 		}
 
-		const policyVersion = await this.cedar.getActivePolicyVersion(row.id);
 		const membershipResponse: MembershipResponse = mapMembershipToResponse(membership);
 
 		return {
@@ -87,7 +81,6 @@ export class TenantContextService {
 			displayName: row.displayName,
 			userId,
 			membership: membershipResponse,
-			policyVersion,
 		};
 	}
 
@@ -99,7 +92,6 @@ export class TenantContextService {
 				userId,
 				tenantId: resolved.tenantId,
 				purpose: "tenant.context",
-				policyVersion: resolved.policyVersion,
 			},
 			async (tx) => {
 				const org = await tx.tenant.findUnique({
@@ -143,7 +135,6 @@ export class TenantContextService {
 								contactPhone: org.merchantProfile.contactPhone,
 							}
 						: null,
-					policyVersion: resolved.policyVersion,
 				};
 			},
 		);
@@ -193,37 +184,6 @@ export class TenantContextService {
 				message: "Location is outside your membership scope",
 				error: "TENANT_LOCATION_FORBIDDEN",
 			});
-		}
-	}
-
-	public async assertActionAllowed(resolved: ResolvedTenantContext, action: string, resourceType: string, resourceId: string): Promise<void> {
-		const decision = await this.cedar.evaluate({
-			tenantId: resolved.tenantId,
-			principal: {
-				userId: resolved.userId,
-				role: resolved.membership.role,
-				locationScope: resolved.membership.locationScopeType,
-				locationIds: resolved.membership.locationIds,
-			},
-			action,
-		});
-
-		await this.tenantTx.withTenantTransaction(
-			{ userId: resolved.userId, tenantId: resolved.tenantId, purpose: `authorize.${action}`, policyVersion: decision.policyVersion },
-			async (tx) =>
-				this.audit.recordInTx(tx, {
-					tenantId: resolved.tenantId,
-					actorUserId: resolved.userId,
-					action: `authorize.${action}`,
-					resourceType,
-					resourceId,
-					decision: decision.decision,
-					policyVersion: decision.policyVersion,
-				}),
-		);
-
-		if (decision.decision !== "Allow") {
-			throw new NotFoundException();
 		}
 	}
 }

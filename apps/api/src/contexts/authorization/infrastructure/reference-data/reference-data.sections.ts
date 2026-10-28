@@ -1,4 +1,4 @@
-import type { Permission, Prisma, Role, RolePermission } from "@prisma/client";
+import type { MembershipRole, RoleKind, Permission, Prisma, Role, RolePermission } from "@prisma/client";
 import { getPermissionDefinitions, nowEpochMs } from "@workspace/shared";
 
 import { MERCHANT_CAPABILITY_CATALOG } from "./merchant-capability-catalog";
@@ -47,13 +47,19 @@ export class PermissionCatalogSection implements ReferenceDataSection {
 	}
 }
 
+/** A catalogue role's kind: a tenant-role TEMPLATE (with the template it defines) or a PLATFORM role. */
+function kindOf(definition: SystemRoleDefinition): { readonly kind: RoleKind; readonly templateKey: MembershipRole | null } {
+	return definition.template === undefined ? { kind: "PLATFORM", templateKey: null } : { kind: "TEMPLATE", templateKey: definition.template };
+}
+
 /** The system roles: present, `isSystem`, flat (no parent), live. A role's activation flag is an operator decision and is left alone. */
 export class SystemRoleSection implements ReferenceDataSection {
 	public readonly name = "system-roles";
 
 	public async sync(tx: Tx): Promise<SectionChange> {
 		const existing = new Map<string, Role>(
-			(await tx.role.findMany({ where: { name: { in: SYSTEM_ROLE_CATALOG.map((role) => role.name) } } })).map((row: Role): [string, Role] => [row.name, row]),
+			// Platform roles and templates only: tenants' copies share the template names (ADR 067).
+			(await tx.role.findMany({ where: { tenantId: null, name: { in: SYSTEM_ROLE_CATALOG.map((role) => role.name) } } })).map((row: Role): [string, Role] => [row.name, row]),
 		);
 		const now: number = nowEpochMs();
 		let created = 0;
@@ -63,16 +69,16 @@ export class SystemRoleSection implements ReferenceDataSection {
 		for (const definition of SYSTEM_ROLE_CATALOG) {
 			const row: Role | undefined = existing.get(definition.name);
 			if (row === undefined) {
-				await tx.role.create({ data: { name: definition.name, description: definition.description, isActive: true, isSystem: true } });
+				await tx.role.create({ data: { name: definition.name, description: definition.description, isActive: true, isSystem: true, ...kindOf(definition) } });
 				created += 1;
 			} else if (row.isDeleted) {
 				await tx.role.update({
 					where: { id: row.id },
-					data: { isDeleted: false, deletedAt: null, description: definition.description, isSystem: true, parentId: null, updatedAt: now },
+					data: { isDeleted: false, deletedAt: null, description: definition.description, isSystem: true, updatedAt: now, ...kindOf(definition) },
 				});
 				restored += 1;
-			} else if (row.description !== definition.description || !row.isSystem || row.parentId !== null) {
-				await tx.role.update({ where: { id: row.id }, data: { description: definition.description, isSystem: true, parentId: null, updatedAt: now } });
+			} else if (row.description !== definition.description || !row.isSystem || row.kind !== kindOf(definition).kind || row.templateKey !== kindOf(definition).templateKey) {
+				await tx.role.update({ where: { id: row.id }, data: { description: definition.description, isSystem: true, updatedAt: now, ...kindOf(definition) } });
 				updated += 1;
 			}
 		}
@@ -85,7 +91,7 @@ export class RolePermissionMatrixSection implements ReferenceDataSection {
 	public readonly name = "role-permissions";
 
 	public async sync(tx: Tx): Promise<SectionChange> {
-		const roles: Role[] = await tx.role.findMany({ where: { isDeleted: false, name: { in: SYSTEM_ROLE_CATALOG.map((role) => role.name) } } });
+		const roles: Role[] = await tx.role.findMany({ where: { isDeleted: false, tenantId: null, name: { in: SYSTEM_ROLE_CATALOG.map((role) => role.name) } } });
 		// The matrix covers the code's registry only. Permissions an operator created (or retired) are not ours:
 		// their grants are neither added nor withdrawn here. A soft-deleted registry permission keeps its grants.
 		const registry: ReadonlySet<string> = registryPermissionKeys();

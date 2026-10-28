@@ -11,7 +11,7 @@ export interface LocationRoleSeedSummary {
 }
 
 /** Tenant roles that run every location their scope covers. */
-const LOCATION_MANAGER_TENANT_ROLES: ReadonlySet<MembershipRole> = new Set<MembershipRole>(["OWNER", "ADMIN"]);
+const LOCATION_MANAGER_TENANT_ROLES: ReadonlySet<MembershipRole> = new Set<MembershipRole>(["OWNER", "MANAGER"]);
 
 function requireRole(roles: readonly Role[], name: string): Role {
 	const role = roles.find((candidate) => candidate.name === name);
@@ -23,7 +23,7 @@ function requireRole(roles: readonly Role[], name: string): Role {
 
 /**
  * Location roles: every live location scope of an active membership carries one —
- * OWNER / ADMIN → "Location Manager" wherever their scope reaches (every location
+ * OWNER / MANAGER → "Location Manager" wherever their scope reaches (every location
  * for ALL_LOCATIONS), other members → "Location Staff" at their SELECTED locations.
  */
 export async function seedLocationRoles(roles: readonly Role[]): Promise<LocationRoleSeedSummary> {

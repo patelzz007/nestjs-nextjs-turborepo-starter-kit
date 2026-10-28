@@ -23,6 +23,7 @@ import { SecuritySettingsPanelSkeleton } from "@workspace/client/lib/contexts/id
 import { MerchantKybVerificationSkeleton } from "@workspace/client/lib/contexts/tenancy/kyb/verification-skeleton";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { ChartSkeleton, FormSkeleton, ListSkeleton, PageHeaderSkeleton, ProseSkeleton, StatCardsSkeleton } from "@workspace/ui/components/skeleton-patterns";
+import { SettingsSectionHeaderSkeleton } from "@workspace/ui/components/settings-shell";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { UiKitLabelsOverride } from "@workspace/ui/lib/labels/ui-kit-labels";
@@ -40,6 +41,8 @@ import * as React from "react";
 
 /** Pages stack their sections 2rem apart (`space-y-8`); the region is a flex column so the gap reaches the bones. */
 const PAGE_STACK = "flex flex-col gap-8";
+/** A settings section's stack (the views' `space-y-6`), drawn inside the settings page that stays mounted. */
+const SECTION_STACK = "flex flex-col gap-6";
 
 // ── Announcements ────────────────────────────────────────────────────────────
 
@@ -55,7 +58,8 @@ export const MERCHANT_REWARDS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegio
 export const MERCHANT_STORES_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading your stores…" };
 export const MERCHANT_REWARD_EDITOR_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading reward editor…" };
 export const MERCHANT_REWARD_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading reward…" };
-export const MERCHANT_SETTINGS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading settings…" };
+export const MERCHANT_SETTINGS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading business profile…" };
+export const MERCHANT_INTEGRATIONS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading integrations…" };
 export const MERCHANT_LOCATIONS_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading store locations…" };
 export const MERCHANT_BRANDING_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading store branding…" };
 export const MERCHANT_TEAM_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegion"> = { loading: "Loading team…" };
@@ -65,8 +69,8 @@ export const MERCHANT_ACCOUNT_LOADING_LABELS: UiKitLabelsOverride<"skeletonRegio
 
 // ── Counts (what a typical page holds; the real rows replace them) ───────────
 
-/** Tenant dashboard KPI tiles: role, locations, KYB status, policy version. */
-const DASHBOARD_STAT_CARDS = 4;
+/** Tenant dashboard KPI tiles: role, locations, KYB status. */
+const DASHBOARD_STAT_CARDS = 3;
 /** Shortcut links per dashboard column (administration, operations). */
 const DASHBOARD_LINKS_PER_COLUMN = 3;
 /** Dashboard columns of shortcut links. */
@@ -108,8 +112,12 @@ const REWARD_SCHEDULE_FIELDS = 4;
 const REWARD_DETAIL_ROWS = 5;
 /** Counts in the reward page's performance row: claimed, redeemed (stock is drawn as a meter). */
 const REWARD_PERFORMANCE_COUNTS = 2;
-/** Tenant-settings link cards: team, locations, verification. */
-const SETTINGS_LINK_CARDS = 4;
+/** Facts in the business profile card's grid: legal name, category, city, contacts, time zone, address, joined. */
+export const BUSINESS_PROFILE_FACTS = 6;
+/** Cards under the business profile: support-access approvals and "leave this business". */
+const BUSINESS_PROFILE_SIDE_CARDS = 2;
+/** Integration cards: tills and API keys. */
+export const INTEGRATION_CARDS = 2;
 /** Store-location cards while the locations load. */
 export const LOCATION_SKELETON_CARDS = 4;
 /** Team members while the roster loads. */
@@ -245,7 +253,7 @@ export function MerchantDashboardPageSkeleton({ labels = MERCHANT_DASHBOARD_LOAD
 					<ProseSkeleton lines={DASHBOARD_HERO_NOTES} />
 				</div>
 			</Card>
-			<MerchantStatCardsSkeleton count={DASHBOARD_STAT_CARDS} className="sm:grid-cols-2 xl:grid-cols-4" />
+			<MerchantStatCardsSkeleton count={DASHBOARD_STAT_CARDS} className="sm:grid-cols-2 xl:grid-cols-3" />
 			<div className="grid gap-6 lg:grid-cols-2">
 				{placeholderKeys("column", DASHBOARD_LINK_COLUMNS).map((columnKey): React.JSX.Element => (
 					<div key={columnKey} data-slot="dashboard-links-skeleton" className="flex flex-col gap-4">
@@ -539,18 +547,56 @@ export function MerchantRewardDetailPageSkeleton(): React.JSX.Element {
 
 // ── Settings ─────────────────────────────────────────────────────────────────
 
-/** `/t/[tenantSlug]/settings`: the header, one link card per settings area, and the pointer to Account. */
+/** `/t/[tenantSlug]/settings` (Business profile): the section header, the profile card, then the two cards under it. */
 export function MerchantSettingsPageSkeleton(): React.JSX.Element {
 	return (
-		<SkeletonRegion labels={MERCHANT_SETTINGS_LOADING_LABELS} className={PAGE_STACK}>
-			<PageHeaderSkeleton />
-			{placeholderKeys("setting", SETTINGS_LINK_CARDS).map((key): React.JSX.Element => (
-				<div key={key} data-slot="settings-link-skeleton" className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
-					<MerchantHeadingSkeleton />
-					<Skeleton className="h-9 w-36 shrink-0" />
+		<SkeletonRegion labels={MERCHANT_SETTINGS_LOADING_LABELS} className={SECTION_STACK}>
+			<SettingsSectionHeaderSkeleton />
+			<Card data-slot="business-profile-skeleton" className="gap-6 p-6">
+				<div className="flex items-center gap-4">
+					<Skeleton className="size-16 rounded-xl" />
+					<div className="flex flex-col gap-2">
+						<Skeleton variant="text" className="h-5 w-48" />
+						<Skeleton className="h-5 w-32 rounded-full" />
+					</div>
 				</div>
+				<div className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
+					{placeholderKeys("fact", BUSINESS_PROFILE_FACTS).map((key, index): React.JSX.Element => (
+						<div key={key} data-slot="business-profile-fact-skeleton" className="flex flex-col gap-1.5">
+							<Skeleton variant="text" className="h-3.5 w-24" />
+							<Skeleton variant="text" className={cn("h-4", cycledWidth(["w-48", "w-36", "w-40"], index))} />
+						</div>
+					))}
+				</div>
+			</Card>
+			{placeholderKeys("side-card", BUSINESS_PROFILE_SIDE_CARDS).map((key): React.JSX.Element => (
+				<Card key={key} className="gap-3 p-6">
+					<MerchantHeadingSkeleton />
+				</Card>
 			))}
-			<Skeleton variant="text" className="h-3.5 w-96 max-w-full" />
+		</SkeletonRegion>
+	);
+}
+
+/** `/t/[tenantSlug]/settings/integrations`: the section header, then the tills and API-keys cards side by side. */
+export function MerchantIntegrationsPageSkeleton(): React.JSX.Element {
+	return (
+		<SkeletonRegion labels={MERCHANT_INTEGRATIONS_LOADING_LABELS} className={SECTION_STACK}>
+			<SettingsSectionHeaderSkeleton />
+			<div className="grid gap-4 md:grid-cols-2">
+				{placeholderKeys("integration", INTEGRATION_CARDS).map((key): React.JSX.Element => (
+					<Card key={key} data-slot="integration-card-skeleton" className="gap-4 p-5">
+						<div className="flex items-center gap-3">
+							<Skeleton className="size-10 rounded-lg" />
+							<div className="flex flex-col gap-1.5">
+								<Skeleton variant="text" className="h-4 w-24" />
+								<Skeleton variant="text" className="h-4 w-40" />
+							</div>
+						</div>
+						<Skeleton className="h-9 w-32" />
+					</Card>
+				))}
+			</div>
 		</SkeletonRegion>
 	);
 }
@@ -587,11 +633,11 @@ export function LocationsSkeleton(): React.JSX.Element {
 	);
 }
 
-/** `/t/[tenantSlug]/settings/locations`: header with "Add store", the summary and the location cards. */
+/** `/t/[tenantSlug]/settings/locations`: the section header with "Add store", the summary and the location cards. */
 export function MerchantLocationsPageSkeleton(): React.JSX.Element {
 	return (
-		<SkeletonRegion labels={MERCHANT_LOCATIONS_LOADING_LABELS} className={PAGE_STACK}>
-			<MerchantPageHeaderSkeleton actions={1} />
+		<SkeletonRegion labels={MERCHANT_LOCATIONS_LOADING_LABELS} className={SECTION_STACK}>
+			<SettingsSectionHeaderSkeleton withAction />
 			<LocationsSkeleton />
 		</SkeletonRegion>
 	);
@@ -616,27 +662,16 @@ export function StoreLogoSkeleton(): React.JSX.Element {
 	);
 }
 
-/** `/t/[tenantSlug]/settings/branding`: header and the store-logo panel. */
+/** `/t/[tenantSlug]/settings/branding`: the section header and the store-logo panel. */
 export function MerchantBrandingPageSkeleton(): React.JSX.Element {
 	return (
-		<SkeletonRegion labels={MERCHANT_BRANDING_LOADING_LABELS} className={PAGE_STACK}>
-			<MerchantPageHeaderSkeleton />
+		<SkeletonRegion labels={MERCHANT_BRANDING_LOADING_LABELS} className={SECTION_STACK}>
+			<SettingsSectionHeaderSkeleton />
 			<StoreLogoSkeleton />
 		</SkeletonRegion>
 	);
 }
 
-/** A roster panel's title row: the heading and its count badge. */
-function RosterHeadingSkeleton(): React.JSX.Element {
-	return (
-		<div className="flex items-center justify-between gap-3">
-			<Skeleton variant="text" className="h-4.5 w-40" />
-			<Skeleton className="h-5 w-8 rounded-full" />
-		</div>
-	);
-}
-
-/** `/t/[tenantSlug]/settings/team`: header, current members, pending invitations and the invite form. */
 /** Store rows drawn while the stores page loads. */
 export const STORE_ROW_SKELETON_ROWS = 4;
 /** Lines of one store row: its name and the member's role. */
@@ -653,27 +688,19 @@ export function MerchantStoresPageSkeleton(): React.JSX.Element {
 	);
 }
 
+/** `/t/[tenantSlug]/settings/team`: the section header with "Invite teammate", the three tabs, then the members table. */
 export function MerchantTeamPageSkeleton(): React.JSX.Element {
 	return (
-		<SkeletonRegion labels={MERCHANT_TEAM_LOADING_LABELS} className={PAGE_STACK}>
-			<MerchantPageHeaderSkeleton />
-			<Card className="gap-4 p-6">
-				<RosterHeadingSkeleton />
+		<SkeletonRegion labels={MERCHANT_TEAM_LOADING_LABELS} className={SECTION_STACK}>
+			<SettingsSectionHeaderSkeleton withAction />
+			<div data-slot="team-tabs-skeleton" className="flex gap-6 border-b border-border pb-3">
+				<Skeleton variant="text" className="h-4 w-24" />
+				<Skeleton variant="text" className="h-4 w-32" />
+				<Skeleton variant="text" className="h-4 w-16" />
+			</div>
+			<div className="overflow-hidden rounded-xl border border-border bg-card p-4">
 				<MerchantBorderedRowsSkeleton rows={TEAM_MEMBER_SKELETON_ROWS} lines={TEAM_MEMBER_LINES} trailing="badge" surface="card" />
-			</Card>
-			<Card className="gap-4 p-6">
-				<RosterHeadingSkeleton />
-				<MerchantBorderedRowsSkeleton rows={TEAM_INVITE_SKELETON_ROWS} lines={TEAM_INVITE_LINES} trailing="button" surface="card" />
-			</Card>
-			<Card className="gap-6 p-6">
-				<Skeleton variant="text" className="h-4.5 w-48" />
-				<div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_12rem]">
-					<FormSkeleton surface="plain" fields={1} withActions={false} />
-					<FormSkeleton surface="plain" fields={1} withActions={false} />
-				</div>
-				<Skeleton className="h-28 w-full rounded-xl" />
-				<Skeleton className="h-9 w-36" />
-			</Card>
+			</div>
 		</SkeletonRegion>
 	);
 }
@@ -683,11 +710,11 @@ export const BANNED_CUSTOMER_SKELETON_ROWS = 3;
 /** Lines of one ban row: the redemption it was made from, and the reason. */
 export const BANNED_CUSTOMER_LINES = 2;
 
-/** `/t/[tenantSlug]/settings/banned-customers`: the header, then the ban rows with their lift button. */
+/** `/t/[tenantSlug]/settings/banned-customers`: the section header, then the ban rows with their lift button. */
 export function MerchantBannedCustomersPageSkeleton(): React.JSX.Element {
 	return (
-		<SkeletonRegion labels={MERCHANT_BANNED_CUSTOMERS_LOADING_LABELS} className={PAGE_STACK}>
-			<MerchantPageHeaderSkeleton />
+		<SkeletonRegion labels={MERCHANT_BANNED_CUSTOMERS_LOADING_LABELS} className={SECTION_STACK}>
+			<SettingsSectionHeaderSkeleton />
 			<MerchantBorderedRowsSkeleton rows={BANNED_CUSTOMER_SKELETON_ROWS} lines={BANNED_CUSTOMER_LINES} trailing="button" surface="card" />
 		</SkeletonRegion>
 	);
@@ -711,12 +738,11 @@ export function MerchantKybVerificationSectionSkeleton(): React.JSX.Element {
 	);
 }
 
-/** `/t/[tenantSlug]/settings/verification`: header, the pointer to Account, and the verification form. */
+/** `/t/[tenantSlug]/settings/verification`: the section header and the verification form. */
 export function MerchantVerificationPageSkeleton(): React.JSX.Element {
 	return (
-		<SkeletonRegion labels={MERCHANT_VERIFICATION_LOADING_LABELS} className={PAGE_STACK}>
-			<PageHeaderSkeleton />
-			<Skeleton variant="text" className="h-3.5 w-96 max-w-full" />
+		<SkeletonRegion labels={MERCHANT_VERIFICATION_LOADING_LABELS} className={SECTION_STACK}>
+			<SettingsSectionHeaderSkeleton />
 			<MerchantKybVerificationSkeleton />
 		</SkeletonRegion>
 	);
@@ -724,11 +750,11 @@ export function MerchantVerificationPageSkeleton(): React.JSX.Element {
 
 // ── Account ──────────────────────────────────────────────────────────────────
 
-/** `/t/[tenantSlug]/account`: header, then the security panel's sections. */
+/** `/t/[tenantSlug]/account` (Security): the section header, then the security panel's sections. */
 export function MerchantAccountPageSkeleton(): React.JSX.Element {
 	return (
-		<SkeletonRegion labels={MERCHANT_ACCOUNT_LOADING_LABELS} className={PAGE_STACK}>
-			<PageHeaderSkeleton />
+		<SkeletonRegion labels={MERCHANT_ACCOUNT_LOADING_LABELS} className={SECTION_STACK}>
+			<SettingsSectionHeaderSkeleton />
 			<SecuritySettingsPanelSkeleton />
 		</SkeletonRegion>
 	);

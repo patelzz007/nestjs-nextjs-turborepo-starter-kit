@@ -44,7 +44,7 @@ export const TEST_API_SWITCHES: TestEnv = {
  * data keys with the master key, encrypts TOTP secrets with the MFA key ring, stores claim /
  * pairing codes as HMACs under the reward-code key ring and encrypts the demo linked GitHub token
  * with the GitHub credential key ring — so an e2e run must use the same keys as
- * the seed did. They are still secrets (`.env.example` ships them empty; `pnpm secrets:generate`
+ * the seed did. They are still secrets (`.env.example` ships them empty; `pnpm tools secrets:generate`
  * fills them); only the e2e precedence differs from {@link TEST_API_SECRETS}.
  */
 export const TEST_API_DATA_KEYS: TestEnv = {

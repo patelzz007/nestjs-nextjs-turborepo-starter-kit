@@ -36,7 +36,7 @@ pnpm --filter @workspace/api admin:bootstrap-superadmin -- --email ops@example.c
 
 ## Before you run it
 
-1. `pnpm db:deploy` (migrations + RLS) against the production `DATABASE_URL`.
+1. `pnpm tools db:deploy` (migrations + RLS) against the production `DATABASE_URL`.
 2. Load the platform reference data, because the command assigns the `SuperAdmin` role:
    `pnpm --filter @workspace/api db:sync-reference-data` (see [below](#loading-the-reference-data)).
    Without it the command exits `2` ("Not ready") and creates nothing.
@@ -51,7 +51,7 @@ six system roles (`isSystem`, flat) with their role-permission matrix, and the c
 capabilities derived from and linked to their permission via `permissionId`, MERCHANT capabilities without a
 link because tenant policies authorize them). It is **production-safe**: no users, tenants or demo data, no seed guard involved, and it
 only ever adds or corrects rows defined by the code (it never deletes anything an operator created, such
-as custom roles or permissions). Put it in every deploy, right after `pnpm db:deploy`.
+as custom roles or permissions). Put it in every deploy, right after `pnpm tools db:deploy`.
 
 - **Idempotent and diff-based.** It compares the database with the catalog and writes only differences. A
   run that finds nothing to change writes nothing at all, not even an audit row (it prints "nothing was

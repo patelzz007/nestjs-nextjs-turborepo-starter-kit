@@ -49,7 +49,6 @@ const MEMBER: ResolvedTenantMember = {
 		createdAt: NOW,
 		updatedAt: NOW,
 	},
-	policyVersion: 1,
 };
 
 function emptyPage<Item>(): PaginatedServiceResult<Item> {

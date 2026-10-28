@@ -1,4 +1,4 @@
-import { MERCHANT_CAPABILITY_CEDAR_ACTIONS, type FileCategory, type MerchantCapability, type MembershipRole } from "@workspace/shared";
+import type { FileCategory, MerchantCapability, MembershipRole } from "@workspace/shared";
 
 import { FILES_AUTHORIZATION_OPERATION } from "../../../../platform/application/shared-system-operations";
 import type { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
@@ -24,13 +24,9 @@ class PrismaMembershipRoleLookup implements MembershipRoleLookupPort {
 	}
 }
 
-/** The role table, then the tenant Cedar policy through the same audited check every merchant route uses. */
-class CedarMerchantCapabilityGate implements MerchantCapabilityGatePort {
+/** The same audited capability check every merchant route uses (ADR 067: role, grant, share). */
+class MerchantCapabilityGate implements MerchantCapabilityGatePort {
 	public constructor(private readonly tenantAuth: TenantRewardAuthService) {}
-
-	public isMembershipOnly(capability: MerchantCapability): boolean {
-		return MERCHANT_CAPABILITY_CEDAR_ACTIONS[capability] === null;
-	}
 
 	public requireMembershipCapability(
 		subject: { readonly userId: string; readonly tenantId: string; readonly role: MembershipRole },
@@ -40,14 +36,14 @@ class CedarMerchantCapabilityGate implements MerchantCapabilityGatePort {
 	}
 }
 
-/** {@link TenantFileAccessPort} over the membership table and the tenant Cedar policy. */
+/** {@link TenantFileAccessPort} over the membership table and the merchant capability gate. */
 export class TenantFileAccessAdapter implements TenantFileAccessPort {
 	private readonly memberships: MembershipRoleLookupPort;
 	private readonly gate: MerchantCapabilityGatePort;
 
 	public constructor(transactions: TenantTransactionService, tenantAuth: TenantRewardAuthService) {
 		this.memberships = new PrismaMembershipRoleLookup(transactions);
-		this.gate = new CedarMerchantCapabilityGate(tenantAuth);
+		this.gate = new MerchantCapabilityGate(tenantAuth);
 	}
 
 	public ruleFor(categories: readonly FileCategory[], capabilities: TenantFileCapabilities): FileCategoryAccessRule {

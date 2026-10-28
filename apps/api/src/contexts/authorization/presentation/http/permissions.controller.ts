@@ -21,7 +21,6 @@ import {
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
-import { Authorize } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { SkipAuthThrottle } from "../../../../platform/presentation/http/security/decorators/skip-auth-throttle.decorator";
@@ -66,8 +65,7 @@ export class PermissionsController {
 
 	@Post()
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
-	@RequirePermission("CREATE", "PERMISSION")
-	@Authorize({ action: "CREATE", resource: "PERMISSION", description: "Create new permission" })
+	@RequirePermission("CREATE", "PERMISSION", { description: "Create new permission" })
 	@ZodResponse(AdminPermissionResponseSchema, { status: HttpStatus.CREATED, description: "Created permission" })
 	@PlatformOperation(RBAC_MUTATE_OPERATION)
 	public async create(@CurrentActor() actor: ActorContext, @ZodBody(CreatePermissionDto.schema) body: CreatePermissionDto): Promise<AdminPermissionResponse> {
@@ -85,7 +83,7 @@ export class PermissionsController {
 	@Patch(":id")
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
 	@RequirePermission("UPDATE", "PERMISSION")
-	@Authorize({ action: "UPDATE", resource: "PERMISSION", resourceId: "id", description: "Update permission" })
+	@RequirePermission("UPDATE", "PERMISSION", { resourceId: "id", description: "Update permission" })
 	@ZodResponse(AdminPermissionResponseSchema, { description: "Updated permission" })
 	@PlatformOperation(RBAC_MUTATE_OPERATION)
 	public async update(

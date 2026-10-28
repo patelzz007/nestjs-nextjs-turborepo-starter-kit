@@ -14,12 +14,12 @@ import { ReinstateTenantCommand } from "./reinstate-tenant.command";
 /**
  * SUSPENDED → ACTIVE, and the tenant's PENDING appeal (locked first) accepted with the admin's
  * reason as its answer — state, lifecycle event, appeal review and audit row in one transaction.
- * Authorization: the route's `MANAGE MERCHANT_ORG` permission.
+ * Authorization: the route's `REACTIVATE MERCHANT_ORG` permission.
  */
 @CommandHandler(ReinstateTenantCommand)
 export class ReinstateTenantHandler implements ICommandHandler<ReinstateTenantCommand, TenantLifecycleResponse> {
 	public constructor(
-		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<Pick<TenantsScope, "tenants" | "appeals" | "audit" | "tenantPolicies" | "events">>,
+		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<Pick<TenantsScope, "tenants" | "appeals" | "audit" | "events">>,
 		@Inject(TENANT_LIFECYCLE_READ) private readonly reads: TenantLifecycleReadPort,
 		@Inject(CLOCK) private readonly clock: Clock,
 	) {}
@@ -43,7 +43,6 @@ export class ReinstateTenantHandler implements ICommandHandler<ReinstateTenantCo
 			await scope.audit.record({
 				tenantId: tenant.id,
 				actorUserId: adminUserId,
-				policyVersion: await scope.tenantPolicies.activePolicyVersion(tenant.id),
 				action: "tenant.reinstated",
 				resourceType: "Tenant",
 				resourceId: tenant.id,

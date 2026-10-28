@@ -82,7 +82,7 @@ describe("Reference data sync (integration, scratch database)", () => {
 		expect(report.totalChanges).toBeGreaterThan(0);
 		expect(report.sections.map((entry) => entry.section)).toEqual(["permissions", "system-roles", "role-permissions", "platform-capabilities", "merchant-capabilities"]);
 		expect(await count('SELECT count(*)::int AS n FROM "Permission"')).toBe(getPermissionDefinitions().length);
-		expect(await count(`SELECT count(*)::int AS n FROM "Role" WHERE "isSystem" AND "parentId" IS NULL AND NOT "isDeleted"`)).toBe(SYSTEM_ROLE_CATALOG.length);
+		expect(await count(`SELECT count(*)::int AS n FROM "Role" WHERE "isSystem" AND NOT "isDeleted"`)).toBe(SYSTEM_ROLE_CATALOG.length);
 		expect(await count(`SELECT count(*)::int AS n FROM "CapabilityDefinition" WHERE scope = 'MERCHANT' AND "permissionId" IS NULL`)).toBe(MERCHANT_CAPABILITY_CATALOG.length);
 		const platform = await count(`SELECT count(*)::int AS n FROM "CapabilityDefinition" WHERE scope = 'PLATFORM' AND "permissionId" IS NOT NULL`);
 		expect(platform).toBeGreaterThan(0);
@@ -138,7 +138,7 @@ describe("Reference data sync (integration, scratch database)", () => {
 
 	it("converges drift in system rows and leaves operator-created roles, permissions and grants alone", async () => {
 		await pool.query(`INSERT INTO "Role" (id, name, description) VALUES (uuidv7(), 'Support Lead', 'operator-made')`);
-		await pool.query(`UPDATE "Role" SET description = 'tampered', "parentId" = (SELECT id FROM "Role" WHERE name = 'SuperAdmin') WHERE name = 'Manager'`);
+		await pool.query(`UPDATE "Role" SET description = 'tampered' WHERE name = 'Manager'`);
 		await pool.query(
 			`UPDATE "RolePermission" SET "isDeleted" = true, "deletedAt" = 1 WHERE id = (SELECT rp.id FROM "RolePermission" rp JOIN "Role" r ON r.id = rp."roleId" WHERE r.name = 'User' LIMIT 1)`,
 		);
@@ -153,7 +153,7 @@ describe("Reference data sync (integration, scratch database)", () => {
 				.filter((entry) => entry.changes > 0)
 				.map((entry) => entry.section),
 		).toEqual(["permissions", "system-roles", "role-permissions", "platform-capabilities", "merchant-capabilities"]);
-		expect(await count(`SELECT count(*)::int AS n FROM "Role" WHERE name = 'Manager' AND description <> 'tampered' AND "parentId" IS NULL`)).toBe(1);
+		expect(await count(`SELECT count(*)::int AS n FROM "Role" WHERE name = 'Manager' AND description <> 'tampered'`)).toBe(1);
 		expect(await count('SELECT count(*)::int AS n FROM "RolePermission" WHERE "isDeleted"')).toBe(0);
 		expect(await count("SELECT count(*)::int AS n FROM \"CapabilityDefinition\" WHERE label = 'tampered'")).toBe(0);
 		expect(await count('SELECT count(*)::int AS n FROM "Permission"')).toBe(getPermissionDefinitions().length);

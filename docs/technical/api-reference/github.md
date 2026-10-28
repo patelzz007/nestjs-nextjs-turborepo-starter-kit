@@ -3,12 +3,12 @@ title: "API reference — GitHub contributions"
 description: "Read-only summary, commit history with line counts and contributor totals of the GitHub repositories the API is configured with."
 order: 11
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792540800000
+lastUpdated: 1793145600000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
 
-<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm docs:api -->
+<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm tools docs:api -->
 
 # API reference — GitHub contributions
 
@@ -71,8 +71,8 @@ Response `200 OK` (application/json):
     "repositories": []
   },
   "meta": {
-    "correlationId": "uBovBcvM_9YEGsaE-Co2w",
-    "timestamp": 1792586047573
+    "correlationId": "on4qfvJAC843NQZDWr8x3",
+    "timestamp": 1793190875662
   }
 }
 ```

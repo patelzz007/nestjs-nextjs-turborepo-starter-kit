@@ -21,7 +21,6 @@ import {
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
-import { Authorize } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { SkipAuthThrottle } from "../../../../platform/presentation/http/security/decorators/skip-auth-throttle.decorator";
@@ -31,7 +30,6 @@ import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presenta
 import { AssignRoleCommand } from "../../application/commands/assign-role/assign-role.command";
 import { CreateRoleCommand } from "../../application/commands/create-role/create-role.command";
 import { RemoveRoleCommand } from "../../application/commands/remove-role/remove-role.command";
-import { ReparentRoleCommand } from "../../application/commands/reparent-role/reparent-role.command";
 import { RestoreRoleCommand } from "../../application/commands/restore-role/restore-role.command";
 import { ReviseRoleCommand } from "../../application/commands/revise-role/revise-role.command";
 import { SyncRolePermissionsCommand } from "../../application/commands/sync-role-permissions/sync-role-permissions.command";
@@ -43,9 +41,9 @@ import { PreviewRoleAssignmentQuery } from "../../application/queries/preview-ro
 import { ValidateRoleAssignmentQuery } from "../../application/queries/validate-role-assignment/validate-role-assignment.query";
 import { RBAC_CATALOG_READ_OPERATION, RBAC_INSPECT_OPERATION, RBAC_MUTATE_OPERATION } from "../../application/ports/authorization.tokens";
 import { SyncRolePermissionsDto } from "./dtos/permission.dto";
-import { AssignRoleToUserDto, CreateRoleDto, SetRoleParentDto, SyncUserRolesDto, UpdateRoleDto, ValidateRoleAssignmentDto } from "./dtos/role.dto";
+import { AssignRoleToUserDto, CreateRoleDto, SyncUserRolesDto, UpdateRoleDto, ValidateRoleAssignmentDto } from "./dtos/role.dto";
 
-/** Role catalog, hierarchy and user → role assignment. Every route makes exactly one bus call. */
+/** Role catalog and user → role assignment. Every route makes exactly one bus call. */
 @Controller(apiPath("/admin/roles"))
 @ApiTags("Roles")
 export class RolesController {
@@ -65,12 +63,11 @@ export class RolesController {
 
 	@Post()
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
-	@RequirePermission("CREATE", "ROLE")
-	@Authorize({ action: "CREATE", resource: "ROLE", description: "Create new role" })
+	@RequirePermission("CREATE", "ROLE", { description: "Create new role" })
 	@ZodResponse(RoleResponseSchema, { status: HttpStatus.CREATED, description: "Created role" })
 	@PlatformOperation(RBAC_MUTATE_OPERATION)
 	public async create(@CurrentActor() actor: ActorContext, @ZodBody(CreateRoleDto.schema) body: CreateRoleDto): Promise<RoleResponse> {
-		return this.commandBus.execute(new CreateRoleCommand(actor, { name: body.name, description: body.description, parentId: body.parentId }));
+		return this.commandBus.execute(new CreateRoleCommand(actor, { name: body.name, description: body.description }));
 	}
 
 	// ── User role assignment (action-style) ───────────────────────────────
@@ -78,11 +75,7 @@ export class RolesController {
 	@Post("user/assign")
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
 	@RequirePermission("UPDATE", "ROLE")
-	@Authorize({
-		action: "UPDATE",
-		resource: "USER",
-		description: "Assign role to user",
-	})
+	@RequirePermission("UPDATE", "USER", { description: "Assign role to user" })
 	@ZodResponse(RbacMessageResponseSchema, { status: HttpStatus.CREATED, description: "Role assigned to user" })
 	@PlatformOperation(RBAC_MUTATE_OPERATION)
 	public async assignRoleToUser(@CurrentActor() actor: ActorContext, @ZodBody(AssignRoleToUserDto.schema) body: AssignRoleToUserDto): Promise<RbacMessageResponse> {
@@ -145,19 +138,6 @@ export class RolesController {
 	public async remove(@CurrentActor() actor: ActorContext, @ZodParam("id", UuidParamSchema) id: string): Promise<RbacMessageResponse> {
 		await this.commandBus.execute(new RemoveRoleCommand(actor, id));
 		return { message: "Role deleted successfully" };
-	}
-
-	@Patch(":id/parent")
-	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
-	@RequirePermission("UPDATE", "ROLE")
-	@ZodResponse(RoleResponseSchema, { description: "Parent role updated" })
-	@PlatformOperation(RBAC_MUTATE_OPERATION)
-	public async setParent(
-		@CurrentActor() actor: ActorContext,
-		@ZodParam("id", UuidParamSchema) id: string,
-		@ZodBody(SetRoleParentDto.schema) body: SetRoleParentDto,
-	): Promise<RoleResponse> {
-		return this.commandBus.execute(new ReparentRoleCommand(actor, id, body.parentId));
 	}
 
 	@Post(":id/permissions")

@@ -9,8 +9,6 @@ export interface ResolvedTenantMember {
 	readonly displayName: string;
 	readonly userId: string;
 	readonly membership: MembershipResponse;
-	/** Active tenant Cedar policy version (tenant audit rows carry it). */
-	readonly policyVersion: number;
 }
 
 /** Route-key resolution for tenant use cases (a slug or an id in the URL). */

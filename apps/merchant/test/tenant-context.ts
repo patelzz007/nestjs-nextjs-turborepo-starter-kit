@@ -75,7 +75,6 @@ export function tenantContextFixture({ locations, locationScopeType = "ALL_LOCAT
 		},
 		locations: [...locations],
 		merchantProfile: null,
-		policyVersion: 1,
 	});
 }
 

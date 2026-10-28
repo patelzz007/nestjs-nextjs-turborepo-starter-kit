@@ -6,7 +6,7 @@ import type { RewardReadPort } from "../../ports/reward-read.port";
 import { REWARD_READS } from "../../ports/rewards.tokens";
 import { ListRewardsPendingReviewQuery } from "./list-rewards-pending-review.query";
 
-/** The moderation queue, oldest first. The route's `MANAGE REWARD` permission is the authorization. */
+/** The moderation queue, oldest first. The route's `APPROVE REWARD` permission is the authorization. */
 @QueryHandler(ListRewardsPendingReviewQuery)
 export class ListRewardsPendingReviewHandler implements IQueryHandler<ListRewardsPendingReviewQuery, PaginatedServiceResult<RewardResponse>> {
 	public constructor(@Inject(REWARD_READS) private readonly reads: RewardReadPort) {}

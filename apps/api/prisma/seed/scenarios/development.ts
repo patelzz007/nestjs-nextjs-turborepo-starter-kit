@@ -16,7 +16,6 @@ import { seedGeo } from "../geo-seed";
 import { seedGeoDemo } from "../geo-demo";
 import { seedKernelDecisionAudits } from "../kernel-decision-audit";
 import { seedTenantReviewStates } from "../tenant-review-states";
-import { seedTenantPolicyRevision } from "../tenant-policy-revision";
 import { seedHttpAuditTrail } from "../http-audit";
 import { seedGithubAccountLinks } from "../github-account-links";
 import { seedGithubWebhooks } from "../github-webhooks";
@@ -25,13 +24,14 @@ import { seedAnalyticsIngest } from "../analytics-ingest";
 import { seedPlatformRecords } from "../platform-records";
 import { seedEmailDelivery } from "../email-delivery";
 import { seedInboxDeadLetters } from "../inbox-dead-letters";
-import { TENANT_SEED_IDS, TENANT_SEED_SLUGS, printTenantSeedCredentials, seedPlatformGuardrails } from "../tenants";
+import { TENANT_SEED_IDS, TENANT_SEED_SLUGS, printTenantSeedCredentials } from "../tenants";
 import { seedProducts } from "../products";
 import { seedReferenceData } from "../reference-data";
 import { requireRow } from "../require-row";
 import { cleanupRewardSeedData, printRewardSeedCredentials, REWARD_SEED_IDS, seedRewards } from "../rewards";
 import { seedSamplePlatform } from "../sample-platform";
 import { seedLocationRoles } from "../location-roles";
+import { seedTenantAccess } from "../tenant-access";
 import { createPasswordResetTokens, createRefreshTokens } from "../tokens";
 import { seedRbacDemo } from "../rbac-demo";
 import { seedSignupReferralCodes, seedSignupReferralDemo } from "../signup-referrals";
@@ -106,13 +106,13 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	await assignAdditionalPermissions(users, permissions);
 	seedLog("✅ Permission overrides assigned");
 
-	seedLog("Seeding RBAC administration history (hierarchy, overrides, retired rows, audit trail)...");
+	seedLog("Seeding RBAC administration history (support roles, overrides, retired rows, audit trail)...");
 	const rbacSummary = await seedRbacDemo(users, roles, permissions);
 	seedLog(`✅ RBAC history: ${String(rbacSummary.roles)} roles, ${String(rbacSummary.auditRows)} permission audit rows`);
 
 	seedLog("Seeding Authorization Kernel (ACLs, Policies)...");
 	const kernelSummary = await seedAuthorizationKernel(users, roles);
-	seedLog(`✅ Authorization Kernel: ${String(kernelSummary.acls)} ACLs, ${String(kernelSummary.policies)} policies`);
+	seedLog(`✅ Legacy resource ACLs: ${String(kernelSummary.acls)}`);
 
 	seedLog("Creating refresh tokens...");
 	await createRefreshTokens(allUsers);
@@ -151,14 +151,10 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 		"user admin@example.com",
 	);
 
-	seedLog("Seeding platform guardrail policies...");
-	// Four-eyes: drafted by the platform admin, approved and published by the SuperAdmin.
 	const superAdminUser = requireRow(
 		users.find((u) => u.email === "superadmin@example.com"),
 		"user superadmin@example.com",
 	);
-	await seedPlatformGuardrails(adminUser, superAdminUser);
-	seedLog("✅ Platform guardrails seeded");
 
 	seedLog("Seeding rewards platform (tenants, merchants, rewards, claims)...");
 	const rewardSummary = await seedRewards(adminUser, allUsers);
@@ -186,12 +182,14 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	seedLog(
 		`✅ ${String(reviewStates.reviewedAccessRequests)} reviewed access requests, ${String(reviewStates.rejectedLocationRequests)} rejected store request, ${String(reviewStates.lifecycleTenants)} tenants in a lifecycle state (deletion, suspension, ban), ${String(reviewStates.deletedUsers)} soft-deleted user, ${String(reviewStates.bannedUsers)} banned user`,
 	);
-	seedLog("Publishing a four-eyes tenant policy revision (supersedes the default policy)...");
-	const revisionPublished = await seedTenantPolicyRevision(TENANT_SEED_IDS.mlkTenant, adminUser, superAdminUser);
-	seedLog(`✅ Tenant policy revision ${revisionPublished ? "published" : "already in place"}`);
 	seedLog("Seeding authorization kernel decision audit rows...");
 	const kernelDecisions = await seedKernelDecisionAudits();
 	seedLog(`✅ ${String(kernelDecisions)} kernel decision audit rows`);
+	seedLog("Seeding tenant access (role copies, a 48-hour and a permanent grant, a reward share)...");
+	const tenantAccess = await seedTenantAccess();
+	seedLog(
+		`✅ Tenant access: ${String(tenantAccess.tenantsProvisioned)} tenants with role copies, ${String(tenantAccess.grants)} grants, ${String(tenantAccess.shares)} share`,
+	);
 	seedLog("Seeding location roles...");
 	const locationRoles = await seedLocationRoles(roles);
 	seedLog(`✅ Location roles: ${String(locationRoles.scopesWithRole)} location scopes with a role, ${String(locationRoles.closedLocations)} closed location`);
@@ -229,7 +227,7 @@ export async function runDevelopmentScenario(options: SeedRunOptions): Promise<v
 	seedLog(
 		githubLinks.status === "seeded"
 			? `✅ ${String(githubLinks.links)} GitHub account links${githubLinks.kept > 0 ? ` (${String(githubLinks.kept)} developer's own link kept as it is)` : ""}`
-			: "⚠️ GitHub account links skipped: GITHUB_CREDENTIAL_ENCRYPTION_KEYS is not set (run `pnpm secrets:generate`)",
+			: "⚠️ GitHub account links skipped: GITHUB_CREDENTIAL_ENCRYPTION_KEYS is not set (run `pnpm tools secrets:generate`)",
 	);
 
 	seedLog("Seeding GitHub live updates (one repository on, one turned off, two deliveries)...");

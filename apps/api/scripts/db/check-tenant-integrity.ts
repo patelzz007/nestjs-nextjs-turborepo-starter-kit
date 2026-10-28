@@ -2,7 +2,7 @@
  * Counts the rows that would violate a composite tenant foreign key (multi-tenancy plan MT-60, §7):
  * a child row whose parent belongs to another tenant.
  *
- *   pnpm db:check-tenant-integrity
+ *   pnpm tools db:check-tenant-integrity
  *
  * Read-only, under the `tenancy.data_check` system operation. It prints one line per relation and
  * exits 1 when any count is non-zero. It never fixes data: a violation is reported for a human.

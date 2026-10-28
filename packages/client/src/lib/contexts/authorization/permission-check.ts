@@ -1,40 +1,21 @@
-import { parsePermissionSlug, permissionSatisfies, type CapabilitySlug, type PermissionPair } from "@workspace/shared";
+import { parsePermissionSlug, type CapabilitySlug } from "@workspace/shared";
 
-/**
- * Pre-indexed session grants: raw slugs for exact lookups plus the parsed
- * platform `(action, resource)` pairs used for `MANAGE` implication.
- */
+/** The session's grants, indexed once so repeated checks stay cheap. */
 export interface GrantedCapabilities {
 	readonly slugs: ReadonlySet<string>;
-	readonly pairs: readonly PermissionPair[];
 }
 
 /** Indexes a capability list once so repeated checks stay cheap. */
 export function createGrantedCapabilities(capabilities: readonly CapabilitySlug[]): GrantedCapabilities {
-	const pairs: PermissionPair[] = [];
-	for (const slug of capabilities) {
-		const pair = parsePermissionSlug(slug);
-		if (pair !== null) {
-			pairs.push(pair);
-		}
-	}
-	return { slugs: new Set<string>(capabilities), pairs };
+	return { slugs: new Set<string>(capabilities) };
 }
 
 /**
- * True when `required` is held directly, or implied by a held platform
- * permission (`MANAGE` on the same resource implies every action on it).
- * Non-platform slugs (e.g. `merchant:*`) only match exactly.
+ * True when `required` is held: the exact capability. There is no catch-all action (ADR 067 retired
+ * `MANAGE`), so holding one verb on a resource never implies another.
  */
 export function isCapabilityGranted(granted: GrantedCapabilities, required: CapabilitySlug): boolean {
-	if (granted.slugs.has(required)) {
-		return true;
-	}
-	const requiredPair = parsePermissionSlug(required);
-	if (requiredPair === null) {
-		return false;
-	}
-	return granted.pairs.some((held) => permissionSatisfies(held, requiredPair));
+	return granted.slugs.has(required);
 }
 
 /**

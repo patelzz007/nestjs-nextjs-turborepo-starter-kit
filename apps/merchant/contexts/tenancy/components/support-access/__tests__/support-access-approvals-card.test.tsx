@@ -79,7 +79,7 @@ describe("SupportAccessApprovalsCard", () => {
 	});
 
 	it("never asks the API for anyone but the owner", () => {
-		renderAs("ADMIN");
+		renderAs("MANAGER");
 
 		expect(screen.queryByText("Support access")).toBeNull();
 		expect(listQuery).toHaveBeenCalledWith({ tenantSlug: "acme-coffee" }, { enabled: false });

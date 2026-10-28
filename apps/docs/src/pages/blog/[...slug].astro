@@ -6,6 +6,7 @@ import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import Feedback from "@/components/Feedback.astro";
 import Icon from "@/components/Icon.astro";
 import PageCover from "@/components/PageCover.astro";
+import PageHeader from "@/components/PageHeader.astro";
 import Pager from "@/components/Pager.astro";
 import TableOfContents from "@/components/TableOfContents.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
@@ -39,20 +40,22 @@ const editUrl = githubEditUrl("blog", `${post.id}.md`);
 ---
 
 <BaseLayout title={post.data.title} description={post.data.description} image={post.data.coverImage} type="article">
-	<main id="main-content" class="docs-main docs-main--centered">
+	<main id="main-content" class="docs-page docs-page--solo">
+		<PageCover src={post.data.coverImage} />
+		<div class="docs-main docs-main--centered">
 		<article class="docs-article">
 			<Breadcrumbs crumbs={[{ label: "Blog", href: "/blog" }, { label: post.data.category }, { label: post.data.title }]} />
-			<PageCover src={post.data.coverImage} />
-			<h1 class="page-title">{post.data.title}</h1>
-			<p class="page-description">{post.data.description}</p>
-			<div class="page-meta">
-				<span><Icon name="users" size={14} />{post.data.author}</span>
-				<span>
-					<Icon name="pencil" size={14} /><time datetime={new Date(post.data.date).toISOString()}>{formatEpochDate(post.data.date)}</time>
-				</span>
-				<span><Icon name="timer" size={14} />{readingMinutes(post.body ?? "")} min read</span>
-				<span class="tag">{post.data.category}</span>
-			</div>
+			<PageHeader
+				title={post.data.title}
+				icon="newspaper"
+				description={post.data.description}
+				properties={[
+					{ icon: "users", label: "Author", value: post.data.author },
+					{ icon: "pencil", label: "Published", value: formatEpochDate(post.data.date), dateTime: new Date(post.data.date).toISOString() },
+					{ icon: "timer", label: "Reading time", value: `${String(readingMinutes(post.body ?? ""))} min` },
+				]}
+				tags={[post.data.category]}
+			/>
 			<div class="prose">
 				<Content />
 			</div>
@@ -64,5 +67,6 @@ const editUrl = githubEditUrl("blog", `${post.id}.md`);
 			<Pager previous={previous} next={next} />
 		</article>
 		<TableOfContents items={buildToc(headings)} editUrl={editUrl} />
+		</div>
 	</main>
 </BaseLayout>

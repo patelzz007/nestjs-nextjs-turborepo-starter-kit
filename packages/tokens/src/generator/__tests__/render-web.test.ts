@@ -39,6 +39,12 @@ describe("renderWebStylesheet", () => {
 	it("maps tokens to Tailwind utilities in @theme inline", () => {
 		expect(theme.get("color-card")).toBe("var(--card)");
 		expect(theme.get("z-index-toast")).toBe("var(--z-toast)");
+		// max-w-8xl / 9xl / 10xl in Tailwind's own namespace, never a variable that names itself.
+		expect([theme.get("container-8xl"), theme.get("container-9xl"), theme.get("container-10xl")]).toEqual([
+			"var(--max-width-8xl)",
+			"var(--max-width-9xl)",
+			"var(--max-width-10xl)",
+		]);
 		expect(theme.get("shadow-sm")).toBe("0 1px 3px 0 var(--shadow-ambient), 0 1px 2px -1px var(--shadow-ambient)");
 		expect(theme.get("inset-shadow-edge")).toBe("inset 0 1px 0 0 var(--edge-highlight)");
 		expect(theme.get("radius-lg")).toBe("var(--radius)");

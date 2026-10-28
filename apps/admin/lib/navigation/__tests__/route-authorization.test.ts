@@ -30,7 +30,7 @@ const MENU: SidebarMenuData = {
 				{
 					title: "Admin",
 					url: "/admin",
-					authorization: { permissions: [PERMISSION.ROLE.MANAGE], cascade: true },
+					authorization: { permissions: [PERMISSION.ROLE.UPDATE], cascade: true },
 					children: [{ title: "Roles", url: "/admin/roles" }],
 				},
 				{ title: "Beta", url: "/beta", featureFlag: "beta", children: [{ title: "Beta child", url: "/beta/child" }] },
@@ -117,7 +117,7 @@ describe("buildRouteAuthorizationRules", () => {
 	});
 
 	it("propagates cascading requirements to descendant routes", () => {
-		expect(resolveRouteAuthorization(RULES, "/admin/roles")?.authorization?.permissions).toEqual([PERMISSION.ROLE.MANAGE]);
+		expect(resolveRouteAuthorization(RULES, "/admin/roles")?.authorization?.permissions).toEqual([PERMISSION.ROLE.UPDATE]);
 	});
 
 	it("propagates feature flags to descendant routes", () => {
@@ -195,10 +195,10 @@ describe("ADMIN_ROUTE_AUTHORIZATION", () => {
 
 	it("gates merchant, reward, email, and geography pages by the permission of the API route they call", () => {
 		expect(permissionsFor("/merchants")).toEqual([PERMISSION.MERCHANT_ORG.LIST]);
-		expect(permissionsFor("/merchants/invites")).toEqual([PERMISSION.MERCHANT_ORG.MANAGE]);
+		expect(permissionsFor("/merchants/invites")).toEqual([PERMISSION.MERCHANT_ORG.CREATE]);
 		expect(permissionsFor("/merchants/verification")).toEqual([PERMISSION.MERCHANT_ORG.LIST]);
 		expect(permissionsFor("/merchants/store-requests")).toEqual([PERMISSION.MERCHANT_ORG.LIST]);
-		expect(permissionsFor("/rewards/review")).toEqual([PERMISSION.REWARD.MANAGE]);
+		expect(permissionsFor("/rewards/review")).toEqual([PERMISSION.REWARD.APPROVE]);
 		expect(permissionsFor("/emails/templates")).toEqual([PERMISSION.EMAIL.READ]);
 		expect(permissionsFor("/emails/log")).toEqual([PERMISSION.EMAIL.LIST]);
 		expect(permissionsFor("/geography")).toEqual([PERMISSION.GEO.READ]);

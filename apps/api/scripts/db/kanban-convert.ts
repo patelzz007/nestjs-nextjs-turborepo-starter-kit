@@ -233,7 +233,7 @@ function printReport(output: CliOutput, stage: KanbanConversionStageName, report
 
 export async function runConversion(prisma: PrismaClient, args: ConvertArguments, output: CliOutput): Promise<number> {
 	if (!(await migrationOneApplied(prisma))) {
-		output.err("Migration 1 (kanban_split_columns_keys_subtasks) has not been applied: run `pnpm db:deploy` first. Nothing was changed.");
+		output.err("Migration 1 (kanban_split_columns_keys_subtasks) has not been applied: run `pnpm tools db:deploy` first. Nothing was changed.");
 		return EXIT_FAILED;
 	}
 	if (args.mode === "verify") {

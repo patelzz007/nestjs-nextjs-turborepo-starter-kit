@@ -9,7 +9,6 @@ import {
 	PermissionsNotFoundError,
 	PlatformRoleNotConfiguredError,
 	ProtectedRoleWithoutHolderError,
-	RoleHierarchyCycleError,
 	RoleLimitExceededError,
 	RoleNameTakenError,
 	SeparationOfDutyViolationError,
@@ -36,8 +35,6 @@ import { RemovePermissionCommand } from "../commands/remove-permission/remove-pe
 import { RemovePermissionHandler } from "../commands/remove-permission/remove-permission.handler";
 import { RemoveRoleCommand } from "../commands/remove-role/remove-role.command";
 import { RemoveRoleHandler } from "../commands/remove-role/remove-role.handler";
-import { ReparentRoleCommand } from "../commands/reparent-role/reparent-role.command";
-import { ReparentRoleHandler } from "../commands/reparent-role/reparent-role.handler";
 import { RestorePermissionCommand } from "../commands/restore-permission/restore-permission.command";
 import { RestorePermissionHandler } from "../commands/restore-permission/restore-permission.handler";
 import { RestoreRoleCommand } from "../commands/restore-role/restore-role.command";
@@ -82,7 +79,7 @@ beforeEach(() => {
 	store.rbac.seedRole({ id: "role-super", name: "SuperAdmin", isSystem: true });
 	store.rbac.seedRole({ id: "role-admin", name: "Admin", isSystem: true }, ["p-read"]);
 	store.rbac.seedRole({ id: "role-viewer", name: "Viewer" }, ["p-read"]);
-	store.rbac.seedRole({ id: "role-child", name: "Junior Viewer", parentId: "role-viewer" });
+	store.rbac.seedRole({ id: "role-child", name: "Junior Viewer" }, ["p-read"]);
 	store.rbac.seedRole({ id: "role-deleter", name: "Deleter" }, ["p-delete"]);
 	store.rbac.seedRole({ id: "role-manager", name: "Location Manager" });
 	store.rbac.seedRole({ id: "role-staff", name: "Location Staff" });
@@ -201,41 +198,31 @@ describe("User role assignments", () => {
 });
 
 describe("Role catalog changes", () => {
-	it("creates a role under a parent within reach, refusing a taken name", async () => {
-		const handler = new CreateRoleHandler(rbac, guard, store.clock);
+	it("creates a flat role with no permissions, refusing a taken name", async () => {
+		const handler = new CreateRoleHandler(rbac, store.clock);
 
-		const created = await handler.execute(new CreateRoleCommand(admin, { name: "Support", parentId: "role-viewer" }));
+		const created = await handler.execute(new CreateRoleCommand(admin, { name: "Support" }));
 
-		expect(created).toMatchObject({ name: "Support", parentId: "role-viewer" });
+		expect(created).toMatchObject({ name: "Support" });
+		expect(created).not.toHaveProperty("parentId");
 		expect(store.identitySessions.revocations.flatMap((revocation) => revocation.userIds)).toEqual([]);
 		await expect(handler.execute(new CreateRoleCommand(admin, { name: "Viewer" }))).rejects.toBeInstanceOf(RoleNameTakenError);
-		await expect(handler.execute(new CreateRoleCommand(admin, { name: "Cleaner", parentId: "role-deleter" }))).rejects.toBeInstanceOf(AccessDeniedError);
 	});
 
-	it("revises a role and signs out everyone holding it or a role below it", async () => {
+	it("revises a role and signs out exactly its holders (roles are flat: no one inherits it)", async () => {
 		await new ReviseRoleHandler(rbac, guard, store.clock).execute(new ReviseRoleCommand(root, "role-viewer", { description: "read-only" }));
 
-		expect([...(store.identitySessions.revocations.at(-1)?.userIds ?? [])].sort()).toEqual(["user-1", "user-2"]);
+		expect([...(store.identitySessions.revocations.at(-1)?.userIds ?? [])].sort()).toEqual(["user-2"]);
 	});
 
-	it("removes and restores a role, each reaching every holder of its lineage", async () => {
+	it("removes and restores a role, each reaching every holder of it", async () => {
 		await new RemoveRoleHandler(rbac, guard, store.clock).execute(new RemoveRoleCommand(root, "role-viewer"));
 		expect(store.rbac.roles.get("role-viewer")?.isDeleted).toBe(true);
 
 		await new RestoreRoleHandler(rbac, guard, store.clock).execute(new RestoreRoleCommand(root, "role-viewer"));
 		expect(store.rbac.roles.get("role-viewer")?.isDeleted).toBe(false);
 		expect(store.permissionAudit.entries.map((entry) => entry.action)).toEqual(["ROLE_DELETED", "ROLE_RESTORED"]);
-		expect(store.identitySessions.revocations.map((revocation) => [...revocation.userIds].sort())).toEqual([
-			["user-1", "user-2"],
-			["user-1", "user-2"],
-		]);
-	});
-
-	it("refuses to reparent a role under its own descendant", async () => {
-		await expect(new ReparentRoleHandler(rbac, guard, store.clock).execute(new ReparentRoleCommand(root, "role-viewer", "role-child"))).rejects.toBeInstanceOf(
-			RoleHierarchyCycleError,
-		);
-		expect(store.rbac.roles.get("role-viewer")?.parentId).toBeNull();
+		expect(store.identitySessions.revocations.map((revocation) => [...revocation.userIds].sort())).toEqual([["user-2"], ["user-2"]]);
 	});
 
 	it("syncs a role's permissions within reach, refusing unknown ones", async () => {
@@ -246,7 +233,8 @@ describe("Role catalog changes", () => {
 		await handler.execute(new SyncRolePermissionsCommand(root, "role-viewer", ["p-read", "p-delete"]));
 
 		expect(store.rbac.rolePermissions.get("role-viewer")).toEqual(["p-read", "p-delete"]);
-		expect(store.rbac.heldPermissionKeys("user-1").has("DELETE:USER")).toBe(true);
+		expect(store.rbac.heldPermissionKeys("user-2").has("DELETE:USER")).toBe(true);
+		expect(store.rbac.heldPermissionKeys("user-1").has("DELETE:USER")).toBe(false);
 	});
 });
 
@@ -261,7 +249,7 @@ describe("Permission catalog changes", () => {
 		expect(store.permissionAudit.entries.map((entry) => entry.action)).toEqual(["PERMISSION_CREATED"]);
 	});
 
-	it("removing a permission signs out holders of roles inheriting it, too", async () => {
+	it("removing a permission signs out the holders of every role that confers it", async () => {
 		await new RemovePermissionHandler(rbac, guard, store.clock).execute(new RemovePermissionCommand(root, "p-read"));
 
 		expect([...(store.identitySessions.revocations.at(-1)?.userIds ?? [])].sort()).toEqual([ADMIN, "user-1", "user-2"]);
@@ -270,7 +258,7 @@ describe("Permission catalog changes", () => {
 	});
 
 	it("revises a permission's metadata without touching anyone's sessions, never a system one", async () => {
-		store.rbac.seedPermission({ id: "p-system", action: "MANAGE", resource: "SYSTEM_SETTINGS", isSystem: true });
+		store.rbac.seedPermission({ id: "p-system", action: "UPDATE", resource: "ROLE", isSystem: true });
 		const handler = new RevisePermissionHandler(rbac, store.clock);
 
 		await expect(handler.execute(new RevisePermissionCommand(admin, "p-read", { group: "Accounts" }))).resolves.toMatchObject({ group: "Accounts" });

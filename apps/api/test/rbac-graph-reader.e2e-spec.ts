@@ -12,8 +12,8 @@ import { TenantTransactionService } from "../src/prisma/tenant-transaction.servi
 import { createE2eApp } from "./e2e-helpers";
 
 /**
- * Who an RBAC change touches, against the real schema: a child role inherits its parent's permissions,
- * so a change to a permission the PARENT confers reaches holders of the CHILD as well.
+ * Who an RBAC change touches, against the real schema. Roles are flat (ADR 067): a change reaches the
+ * holders of the roles it concerns, and no one else.
  */
 
 const HOLDER_EMAIL = "user@example.com";
@@ -24,30 +24,30 @@ describe("PrismaRbacGraphReader (e2e)", () => {
 	let pool: Pool;
 	let holderId: string;
 	let permissionId: string;
-	const parentRoleId: string = randomUUID();
-	const childRoleId: string = randomUUID();
+	const conferringRoleId: string = randomUUID();
+	const otherRoleId: string = randomUUID();
 
 	beforeAll(async () => {
 		app = await createE2eApp();
 		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
 		holderId = IdRowSchema.parse((await pool.query(`SELECT id FROM public."User" WHERE email = $1`, [HOLDER_EMAIL])).rows.at(0)).id;
 		permissionId = IdRowSchema.parse((await pool.query(`SELECT id FROM public."Permission" WHERE "isDeleted" = false ORDER BY id LIMIT 1`)).rows.at(0)).id;
-		await pool.query(`INSERT INTO public."Role" (id, name) VALUES ($1, $2)`, [parentRoleId, `e2e-parent-${parentRoleId}`]);
-		await pool.query(`INSERT INTO public."Role" (id, name, "parentId") VALUES ($1, $2, $3)`, [childRoleId, `e2e-child-${childRoleId}`, parentRoleId]);
+		await pool.query(`INSERT INTO public."Role" (id, name) VALUES ($1, $2)`, [conferringRoleId, `e2e-conferring-${conferringRoleId}`]);
+		await pool.query(`INSERT INTO public."Role" (id, name) VALUES ($1, $2)`, [otherRoleId, `e2e-other-${otherRoleId}`]);
 		await pool.query(`INSERT INTO public."RolePermission" (id, "roleId", "permissionId", "assignedBy") VALUES ($1, $2, $3, $4)`, [
 			randomUUID(),
-			parentRoleId,
+			conferringRoleId,
 			permissionId,
 			holderId,
 		]);
-		await pool.query(`INSERT INTO public."UserRole" (id, "userId", "roleId", "assignedBy") VALUES ($1, $2, $3, $4)`, [randomUUID(), holderId, childRoleId, holderId]);
+		await pool.query(`INSERT INTO public."UserRole" (id, "userId", "roleId", "assignedBy") VALUES ($1, $2, $3, $4)`, [randomUUID(), holderId, conferringRoleId, holderId]);
 	});
 
 	afterAll(async () => {
 		// Fixture teardown through the superuser pool: these rows exist only for this spec.
-		await pool.query(`DELETE FROM public."UserRole" WHERE "roleId" = ANY($1)`, [[parentRoleId, childRoleId]]);
-		await pool.query(`DELETE FROM public."RolePermission" WHERE "roleId" = ANY($1)`, [[parentRoleId, childRoleId]]);
-		await pool.query(`DELETE FROM public."Role" WHERE id = ANY($1)`, [[childRoleId, parentRoleId]]);
+		await pool.query(`DELETE FROM public."UserRole" WHERE "roleId" = ANY($1)`, [[conferringRoleId, otherRoleId]]);
+		await pool.query(`DELETE FROM public."RolePermission" WHERE "roleId" = ANY($1)`, [[conferringRoleId, otherRoleId]]);
+		await pool.query(`DELETE FROM public."Role" WHERE id = ANY($1)`, [[conferringRoleId, otherRoleId]]);
 		await pool.end();
 		await app.close();
 	});
@@ -60,19 +60,17 @@ describe("PrismaRbacGraphReader (e2e)", () => {
 			);
 	}
 
-	it("counts a holder of a child role among the holders of a permission its parent confers", async () => {
+	it("counts the holders of a role that confers a permission among its holders", async () => {
 		expect(await onGraph((graph) => graph.holdersOfPermission(permissionId))).toContain(holderId);
 	});
 
-	it("counts holders of every role below a role in its lineage", async () => {
-		expect(await onGraph((graph) => graph.holdersOfLineage(parentRoleId))).toContain(holderId);
-		expect(await onGraph((graph) => graph.holdersOfLineage(childRoleId))).toContain(holderId);
+	it("reaches exactly a role's own holders", async () => {
+		expect(await onGraph((graph) => graph.holdersOfRole(conferringRoleId))).toContain(holderId);
+		expect(await onGraph((graph) => graph.holdersOfRole(otherRoleId))).toEqual([]);
 	});
 
-	it("walks ancestors for effective roles: the child role carries its parent", async () => {
-		const ancestry = await onGraph((graph) => graph.withAllAncestors([childRoleId]));
-
-		expect([...ancestry].sort()).toEqual([childRoleId, parentRoleId].sort());
-		expect(await onGraph((graph) => graph.effectiveRoleNames([childRoleId]))).toEqual(new Set([`e2e-child-${childRoleId}`, `e2e-parent-${parentRoleId}`]));
+	it("names the active roles it is given, and only those", async () => {
+		expect(await onGraph((graph) => graph.activeRoleNames([conferringRoleId]))).toEqual(new Set([`e2e-conferring-${conferringRoleId}`]));
+		expect(await onGraph((graph) => graph.activeRoleNames([]))).toEqual(new Set());
 	});
 });

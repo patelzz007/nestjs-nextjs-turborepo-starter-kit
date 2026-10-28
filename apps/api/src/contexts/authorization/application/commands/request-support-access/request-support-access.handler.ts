@@ -7,8 +7,7 @@ import type { UnitOfWork } from "../../../../../platform/application/unit-of-wor
 import { SupportAccessGrantAggregate, type SupportAccessGrantState } from "../../../domain/aggregates/support-access-grant.aggregate";
 import { SupportAccessTenantNotFoundError } from "../../../domain/errors/authorization.errors";
 import type { AuthorizationScope } from "../../authorization-scope";
-import { AUTHORIZATION_UNIT_OF_WORK, CEDAR_POLICY_EVALUATOR, SUPPORT_ACCESS_GRANT_OPERATION } from "../../ports/authorization.tokens";
-import type { CedarPolicyEvaluatorPort } from "../../ports/cedar-policy-evaluator.port";
+import { AUTHORIZATION_UNIT_OF_WORK, SUPPORT_ACCESS_GRANT_OPERATION } from "../../ports/authorization.tokens";
 import { requireUserActor } from "../../services/rbac-actor";
 import { SUPPORT_ACCESS_AUDIT_ACTIONS, SUPPORT_ACCESS_AUDIT_RESOURCE_TYPE } from "../../services/support-access-audit";
 import { RequestSupportAccessCommand } from "./request-support-access.command";
@@ -18,14 +17,12 @@ import { RequestSupportAccessCommand } from "./request-support-access.command";
 export class RequestSupportAccessHandler implements ICommandHandler<RequestSupportAccessCommand, SupportAccessGrantResponse> {
 	public constructor(
 		@Inject(AUTHORIZATION_UNIT_OF_WORK) private readonly uow: UnitOfWork<AuthorizationScope>,
-		@Inject(CEDAR_POLICY_EVALUATOR) private readonly cedar: CedarPolicyEvaluatorPort,
 		@Inject(CLOCK) private readonly clock: Clock,
 	) {}
 
 	public async execute(command: RequestSupportAccessCommand): Promise<SupportAccessGrantResponse> {
 		const { input } = command;
 		const actor = requireUserActor(command.actor);
-		const policyVersion: number = await this.cedar.getActivePolicyVersion(input.tenantId);
 		const grant: SupportAccessGrantState = await this.uow.runSystemOperation(
 			SUPPORT_ACCESS_GRANT_OPERATION,
 			actor,
@@ -49,7 +46,6 @@ export class RequestSupportAccessHandler implements ICommandHandler<RequestSuppo
 				await scope.tenantAudit.record({
 					tenantId: input.tenantId,
 					actorUserId: actor.userId,
-					policyVersion,
 					action: SUPPORT_ACCESS_AUDIT_ACTIONS.requested,
 					resourceType: SUPPORT_ACCESS_AUDIT_RESOURCE_TYPE,
 					resourceId: stored.id,

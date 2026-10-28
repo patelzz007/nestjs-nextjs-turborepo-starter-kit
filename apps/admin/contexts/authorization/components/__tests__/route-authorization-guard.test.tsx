@@ -70,8 +70,8 @@ describe("RouteAuthorizationGuard", () => {
 		expect(screen.getByRole("heading", { name: "You don't have access to this page" })).toBeDefined();
 	});
 
-	it("renders the page when the permission is held (MANAGE implies LIST)", () => {
-		renderGuard({ pathname: "/orders/42", capabilities: [PERMISSION.ORDER.MANAGE] });
+	it("renders the page when the permission is held", () => {
+		renderGuard({ pathname: "/orders/42", capabilities: [PERMISSION.ORDER.LIST] });
 		expect(screen.getByText("page-content")).toBeDefined();
 	});
 
@@ -111,7 +111,11 @@ describe("RouteAuthorizationGuard", () => {
 	});
 
 	it("denies super-admin-only routes to other sessions, even with every capability", () => {
-		renderGuard({ pathname: "/users/42", capabilities: [PERMISSION.USER.MANAGE], superAdmin: { isSuperAdmin: false, isResolved: true } });
+		renderGuard({
+			pathname: "/users/42",
+			capabilities: [PERMISSION.USER.LIST, PERMISSION.USER.READ, PERMISSION.USER.UPDATE, PERMISSION.USER.DELETE],
+			superAdmin: { isSuperAdmin: false, isResolved: true },
+		});
 		expect(screen.queryByText("page-content")).toBeNull();
 		expect(screen.getByRole("heading", { name: "You don't have access to this page" })).toBeDefined();
 	});
@@ -134,7 +138,7 @@ describe("RouteAuthorizationGuard", () => {
 	});
 
 	it("shows no loading skeleton once the page renders", () => {
-		renderGuard({ pathname: "/orders/42", capabilities: [PERMISSION.ORDER.MANAGE] });
+		renderGuard({ pathname: "/orders/42", capabilities: [PERMISSION.ORDER.LIST] });
 		expect(screen.getByText("page-content")).toBeDefined();
 		expect(screen.queryByRole("status")).toBeNull();
 	});

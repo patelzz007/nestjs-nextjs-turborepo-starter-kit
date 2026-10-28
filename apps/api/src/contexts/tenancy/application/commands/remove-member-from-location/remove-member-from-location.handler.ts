@@ -48,7 +48,6 @@ export class RemoveMemberFromLocationHandler implements ICommandHandler<RemoveMe
 			await scope.audit.record({
 				tenantId: member.tenantId,
 				actorUserId: manager.userId,
-				policyVersion: member.policyVersion,
 				action: "membership.removed_from_location",
 				resourceType: "Membership",
 				resourceId: target.id,

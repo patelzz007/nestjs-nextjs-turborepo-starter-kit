@@ -6,10 +6,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { prisma as seedClient } from "../../../prisma/seed/client";
-import { defaultTenantPolicySeedIds } from "../../../prisma/seed/policy-seed-ids";
 import { getApiConfig } from "../../../src/config/api-config";
-import { seedDefaultTenantPolicies } from "../../../src/contexts/authorization/public-api";
 import { TypedConfigService } from "../../../src/config/typed-config.service";
 import { CryptoService } from "../../../src/contexts/identity/infrastructure/security/crypto.service";
 import { PrismaService } from "../../../src/prisma/prisma.service";
@@ -61,7 +58,6 @@ describe("tenancy single mode over HTTP", () => {
 		await prisma.$disconnect();
 		// The default tenant's default policies, as provisioning gives every real tenant, so its owner is authorized
 		// and only the tenancy rules below can refuse.
-		await seedDefaultTenantPolicies(seedClient, TWO_TENANT_FIXTURE.tenantA, TWO_TENANT_FIXTURE.userAOwner, defaultTenantPolicySeedIds(TWO_TENANT_FIXTURE.tenantA));
 		app = await createE2eApp();
 		pool = new Pool({ connectionString: z.string().min(1).parse(process.env.DATABASE_URL) });
 		const ids = TWO_TENANT_FIXTURE;

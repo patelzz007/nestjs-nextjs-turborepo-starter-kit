@@ -12,7 +12,7 @@ import { RbacMutationScope, type RbacMutationOutcome } from "../../services/rbac
 import { toRoleResponse } from "../../services/rbac-response.mapper";
 import { ReviseRoleCommand } from "./revise-role.command";
 
-/** Holders of the role (and of roles inheriting it) are re-authenticated; a re-activation is SoD-checked after the write. */
+/** Holders of the role are re-authenticated; a re-activation is SoD-checked after the write. */
 @CommandHandler(ReviseRoleCommand)
 export class ReviseRoleHandler implements ICommandHandler<ReviseRoleCommand, RoleResponse> {
 	public constructor(
@@ -29,7 +29,7 @@ export class ReviseRoleHandler implements ICommandHandler<ReviseRoleCommand, Rol
 			if (role.isRenamedBy(revision) && revision.name !== undefined && (await scope.roles.isNameTaken(revision.name))) {
 				throw new RoleNameTakenError(revision.name, false);
 			}
-			const affectedUserIds: string[] = await scope.rbacGraph.holdersOfLineage(roleId);
+			const affectedUserIds: string[] = await scope.rbacGraph.holdersOfRole(roleId);
 			role.revise(revision, this.clock.now());
 			const stored: RoleState = await scope.roles.save(role);
 			await this.guard.assertUsersHaveNoConflicts(scope, affectedUserIds);

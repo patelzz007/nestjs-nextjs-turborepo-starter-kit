@@ -53,7 +53,7 @@ Composer's snapshot is now tagged: `git tag ddd-composer-snapshot` (= `a0387300d
   - So identity and authorization reach each other's providers by token, with no module import, and there is no `forwardRef`.
   - TODO: remove `OrganizationsModule` and `AuthorizationModule` from their `public-api.ts` and import them directly in `app.module.ts`.
 - **Bug to fix in `StopImpersonation`:** the minted access token has no `sid`, and `ActorContextFactory` now treats a sid-less user token as `unresolvable`. Bind it to the impersonator's own device session.
-- **Unit test failures left:** the legacy identity specs (`login-verification`, `two-factor`, `task-schedule`, `user-provisioning`) fail on a JS import cycle (`organization-team-invite.controller` → identity internals). They are deleted with `auth/` in step 2. The docs `api-reference.artifact.test.ts` needs `pnpm docs:api` after the controllers settle.
+- **Unit test failures left:** the legacy identity specs (`login-verification`, `two-factor`, `task-schedule`, `user-provisioning`) fail on a JS import cycle (`organization-team-invite.controller` → identity internals). They are deleted with `auth/` in step 2. The docs `api-reference.artifact.test.ts` needs `pnpm tools docs:api` after the controllers settle.
 - **The new identity CQRS layer has NO tests.** Organizations' application layer has none either: `__tests__/fakes` is empty, apart from the new file-access specs.
 
 ### 0.3 Done since (identity step 2 is mostly complete; the app boots)
@@ -107,7 +107,7 @@ Composer's snapshot is now tagged: `git tag ddd-composer-snapshot` (= `a0387300d
   - `IdentityTokensPort.generateAccessToken(user, sessionId)` now always sets `sid`.
   - Each app starts and stops impersonation under its own client type, so the browser already sends the right refresh cookie; the frontends needed no change.
   - e2e `impersonation-session.e2e-spec.ts` has 6 cases, including restored-token usability, missing refresh token and a revoked session. The fixture is `openAdminDeviceSession()` in `test/support/impersonation.ts`.
-  - Docs: `docs/technical/security/authentication.md`, plus the route's OpenAPI description. Regenerate `docs/technical/api-reference` with `pnpm docs:api`.
+  - Docs: `docs/technical/security/authentication.md`, plus the route's OpenAPI description. Regenerate `docs/technical/api-reference` with `pnpm tools docs:api`.
 - `docs/technical/operations/superadmin-bootstrap.md` paths updated.
 - Fixed a slipped value import of `AccessTokenPayload` in `authorization/presentation/http/policy-control-plane.controller.ts` (TS1272).
 - **Identity application specs (done, 72 tests):** every command handler (26), every query handler (11) and the after-commit handlers, in `identity/application/__tests__/`:
@@ -149,7 +149,7 @@ Composer's snapshot is now tagged: `git tag ddd-composer-snapshot` (= `a0387300d
 - **Tests:**
   - Claims unit specs: domain (11) and application (27), using `application/__tests__/fakes/claims.fakes.ts` with a rolling-back unit of work. Infrastructure: the codes adapter, the mapper and the processors.
   - e2e: `consumer-claims` (HTTP: claim, list / detail, QR rotation, another customer's 404, OTP required and wrong attempt, the inbox), `claims-expiry`, `reward-review-notices`, plus `reward-claim-reservation`, rewritten against `ClaimRewardCommand` (parallel claims: never over `maxUsePerUser`, never oversold). `access-hardening` uses `POST …/qr`.
-  - `app.e2e` and `openapi-document` pass now. `openapi-artifact` needs `pnpm openapi:export` (do it last).
+  - `app.e2e` and `openapi-document` pass now. `openapi-artifact` needs `pnpm tools openapi:export` (do it last).
 - **Plan race tests (D01–D10), all e2e on a real database:**
   - `rewards-races`:
     - D01: approve vs reject; exactly one wins, and only its outbox event is recorded.
@@ -171,7 +171,7 @@ Composer's snapshot is now tagged: `git tag ddd-composer-snapshot` (= `a0387300d
 
 - **Root gate (last full run):**
   - `pnpm run lint` exit 0.
-  - `pnpm run test`: every package green (API 3529 tests). The only failure is `@workspace/docs` `api-reference.artifact.test` (10 tests), because the generated API reference is stale. Fix with `pnpm openapi:export` (API e2e `openapi-artifact`, against a `ddd_*` clone) and then `pnpm docs:api` once the routes settle.
+  - `pnpm run test`: every package green (API 3529 tests). The only failure is `@workspace/docs` `api-reference.artifact.test` (10 tests), because the generated API reference is stale. Fix with `pnpm tools openapi:export` (API e2e `openapi-artifact`, against a `ddd_*` clone) and then `pnpm tools docs:api` once the routes settle.
   - Full API e2e: 460/461; the only failure is `openapi-artifact`, same cause.
 - **Step 5 (pos) has just started.** Only the domain exists so far, in `src/contexts/pos/domain/`: errors, `redemption-eligibility.policy`, the `SaleCheckedOut` event and the `RewardSale` aggregate. It has no specs yet; it typechecks but hasn't been linted.
 - **POS design decisions:**
@@ -203,7 +203,7 @@ Composer's snapshot is now tagged: `git tag ddd-composer-snapshot` (= `a0387300d
   - **Deviation from plan §7.4 (recorded in `context-map.md`):** the referrer-credit email lives in claims, not referrals. Referrals cannot read the referrer's address (identity already depends on referrals); claims already depends on identity, referrals and notifications.
   - Claims' in-transaction `RecordNotificationOnSignupReferralSucceeded` was removed (and its one test case): under the till key's RLS it could neither read the referee's name nor insert into the referrer's inbox. Its behaviour is covered by the after-commit delivery and its specs.
 - **Shared code moved, not duplicated:** `minorUnitsToNumber` → `platform/infrastructure/persistence/minor-units.ts` (reporting and pos); `unambiguousCode` → `platform/infrastructure/crypto/unambiguous-code.ts` (claims and pos).
-- **Verified:** API typecheck, lint and unit tests green (3573). Root `pnpm run lint` exit 0. Full API e2e 467/468: only `openapi-artifact`. The POS safety net (`pos-checkout`, `pos-terminals`, `store-closure`, `api-key-rls-principal`, `merchant-location-scope`, `organization-terminal-unique`) passes with assertions unchanged (`pos-checkout` changed one import path). Root `pnpm run test`: only `@workspace/docs` `api-reference.artifact.test` (11): the stale generated artifact (it still names session 3's `ConsumerClaimsController_getClaimQr` / `getAnalytics*`). Fix: `pnpm --filter @workspace/api openapi:export` (e2e `openapi-artifact`, against a `ddd_*` clone), then `pnpm docs:api`.
+- **Verified:** API typecheck, lint and unit tests green (3573). Root `pnpm run lint` exit 0. Full API e2e 467/468: only `openapi-artifact`. The POS safety net (`pos-checkout`, `pos-terminals`, `store-closure`, `api-key-rls-principal`, `merchant-location-scope`, `organization-terminal-unique`) passes with assertions unchanged (`pos-checkout` changed one import path). Root `pnpm run test`: only `@workspace/docs` `api-reference.artifact.test` (11): the stale generated artifact (it still names session 3's `ConsumerClaimsController_getClaimQr` / `getAnalytics*`). Fix: `pnpm --filter @workspace/api openapi:export` (e2e `openapi-artifact`, against a `ddd_*` clone), then `pnpm tools docs:api`.
 - **Follow-ups:**
   - Decision still open: count wrong backup codes against the sign-in challenge (§0.4).
   - Decision still open: regenerate the OpenAPI artifact and the API reference now or at the end.
@@ -345,9 +345,9 @@ The PL agent was stopped before it reported, so **the status of each item below 
 ### 1.4 Tooling and performance (P0, done)
 
 - **Built:**
-  - `pnpm dev:timing` (`packages/tooling/src/dev-timing/`)
+  - `pnpm tools dev:timing` (`packages/tooling/src/dev-timing/`)
   - a watch runner plus `dev` scripts for `shared`, `messaging` and `api-client`
-  - `pnpm bundle:check [--write-baseline]` (`packages/tooling/src/bundle-budget/`, reads the `.next` manifests and the `expo export` metadata)
+  - `pnpm tools bundle:check [--write-baseline]` (`packages/tooling/src/bundle-budget/`, reads the `.next` manifests and the `expo export` metadata)
   - `turbo.json` concurrency raised to 16
   - docs `--force` dropped
   - a rspack `WatchWorkspaceDistPlugin` that restarts the API when a package's `dist/` changes (pinned by `scripts/__tests__/dev-script-runtime.spec.ts`)
@@ -408,8 +408,8 @@ The PL agent was stopped before it reported, so **the status of each item below 
     - Load the report fonts on each export, with no cache.
     - Build Swagger on each request.
     - Load Cedar WASM on first use, behind one in-flight promise.
-15. **Bundle budgets** (T45): after step 13, `pnpm turbo run build --filter=@workspace/web --filter=@workspace/admin --filter=@workspace/merchant --filter=@workspace/mobile && pnpm bundle:check --write-baseline`, commit `bundle-budgets.json`, and add a `pnpm bundle:check` CI step.
-16. **T46:** re-run `pnpm dev:timing` (3× cold, 3× warm) and compare with §1.4. Record the targets and results in `rules/19`.
+15. **Bundle budgets** (T45): after step 13, `pnpm turbo run build --filter=@workspace/web --filter=@workspace/admin --filter=@workspace/merchant --filter=@workspace/mobile && pnpm tools bundle:check --write-baseline`, commit `bundle-budgets.json`, and add a `pnpm tools bundle:check` CI step.
+16. **T46:** re-run `pnpm tools dev:timing` (3× cold, 3× warm) and compare with §1.4. Record the targets and results in `rules/19`.
 17. **Docs:**
     - Real front matter on `ddd-cqrs-spec.md`, `ddd-cqrs-migration-plan.md` and `ddd-cqrs-migration-gaps.md` (all three currently carry ADR 001's).
     - ADR 059: lazy boot as actually implemented, plus the uncached-fonts trade-off.

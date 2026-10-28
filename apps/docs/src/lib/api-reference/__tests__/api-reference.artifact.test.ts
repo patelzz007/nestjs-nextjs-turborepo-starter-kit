@@ -13,7 +13,7 @@ import { renderApiReference } from "../render";
 //   - apps/api/src/**/*.controller.ts  (guards, permissions, rate limits)
 //   - docs/generated/api-samples.json  (apps/docs/scripts/capture-api-samples.mjs)
 // This test fails when the committed pages differ from what those inputs
-// render. Regenerate with `pnpm docs:api` (this file with `--update`).
+// render. Regenerate with `pnpm tools docs:api` (this file with `--update`).
 
 const REPOSITORY_ROOT: string = path.resolve(import.meta.dirname, "../../../../../..");
 const OUTPUT_DIRECTORY: string = path.join(REPOSITORY_ROOT, "docs/technical/api-reference");
@@ -54,7 +54,7 @@ describe("generated API reference", () => {
 		expect(committed.filter((file) => !files.has(file))).toEqual([]);
 	});
 
-	it.each([...files.keys()])("docs/technical/api-reference/%s is up to date (run `pnpm docs:api` when this fails)", async (file) => {
+	it.each([...files.keys()])("docs/technical/api-reference/%s is up to date (run `pnpm tools docs:api` when this fails)", async (file) => {
 		await expect(files.get(file)).toMatchFileSnapshot(path.join(OUTPUT_DIRECTORY, file));
 	});
 });

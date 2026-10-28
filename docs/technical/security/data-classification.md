@@ -70,14 +70,13 @@ order: 2
 | Surface                    | Class       | Isolation control                                                                                                                                 |
 | -------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Redis auth cache           | OPERATIONAL | Key: `auth:{userId}` — not tenant data                                                                                                            |
-| Redis authorization cache  | OPERATIONAL | Include `policyVersion`                                                                                                                           |
+| Redis authorization cache  | OPERATIONAL | Key: user id; dropped on every role, grant or share change (`authz:invalidate`)                                                                   |
 | Merchant React Query cache | TENANT      | Key must include `tenantId`                                                                                                                       |
 | BullMQ job payloads        | TENANT      | Signed `TenantJobContext`                                                                                                                         |
 | S3 object paths            | TENANT      | `orgs/{tenantId}/...` prefix                                                                                                                      |
 | Kafka platform events      | OPERATIONAL | Tenant id in envelope only. No email addresses: `email.log.updated` carries no recipient and is not keyed by it (the address stays in `EmailLog`) |
 | Analytics warehouse rows   | OPERATIONAL | `tenantId` tag + row policies                                                                                                                     |
 | Webhook secrets            | TENANT      | Envelope-encrypted per tenant                                                                                                                     |
-| Cedar policy bundle cache  | OPERATIONAL | Versioned; org-scoped tenant policies                                                                                                             |
 
 ## Schema test requirement
 

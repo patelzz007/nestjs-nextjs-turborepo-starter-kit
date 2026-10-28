@@ -21,15 +21,17 @@ Every **deployed** environment (dev, staging, production) delivers through
 
 ## Set it up
 
-Mailpit runs natively, not in Docker:
+Mailpit is one of the Docker services in `compose.yml`, so `pnpm docker:up` starts it with the rest
+(nothing to install):
 
 ```bash
-brew install mailpit      # once (Linux/Windows: https://mailpit.axllent.org/docs/install/)
-pnpm mailpit              # inbox + API on http://localhost:8025, SMTP on 127.0.0.1:1025
+pnpm docker:up            # Redis, Kafka, RabbitMQ, Bull Board and Mailpit
+pnpm mailpit              # or Mailpit alone (docker compose up -d mailpit)
 ```
 
-`pnpm mailpit` binds to `127.0.0.1` only and keeps messages in memory (they are gone when it
-stops). To run it in the background instead: `brew services start mailpit`.
+The inbox and its API answer on `http://localhost:8025`, SMTP on `127.0.0.1:1025`, both bound to
+`127.0.0.1` only (override the host ports with `MAILPIT_UI_PORT` / `MAILPIT_SMTP_PORT`). Messages live
+in memory, so restarting the container empties the inbox.
 
 In `apps/api/.env` (the defaults of `.env.example`):
 
@@ -41,6 +43,9 @@ EMAIL_PROVIDER=mailpit
 
 If Mailpit is not running when the API starts, the API logs one warning; each send then fails
 (after its retries) with a hint to run `pnpm mailpit`, and the email log row is marked `failed`.
+
+`EMAIL_TEST_TO` (redirect every email to one address) is ignored with Mailpit: Mailpit already keeps
+every email under its real recipient, which is what `pnpm mail:latest --to <email>` searches by.
 
 ## Read an email
 
@@ -59,8 +64,8 @@ so a test or an agent can sign in with it directly. Each message is tagged with 
 `X-Email-Log-Id` header, so you can also search the inbox (`tag:login-verification`) or call the
 [Mailpit API](https://mailpit.axllent.org/docs/api-v1/) yourself.
 
-`EMAIL_TEST_TO` still applies: when it is set, every email lands in Mailpit addressed to it, so
-search for that address instead of the original recipient.
+Search by the account's own address: `EMAIL_TEST_TO` does not apply with Mailpit, so every email keeps
+its real recipient.
 
 ## Switch to Resend locally
 

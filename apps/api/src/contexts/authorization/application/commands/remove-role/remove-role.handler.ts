@@ -25,7 +25,7 @@ export class RemoveRoleHandler implements ICommandHandler<RemoveRoleCommand, voi
 		const actor = requireUserActor(command.actor);
 		const name: string = await this.rbac.run({ kind: "user", actor }, async (scope: AuthorizationScope): Promise<RbacMutationOutcome<string>> => {
 			const role: RoleAggregate = await this.guard.requireMutableRole(scope, rbacActorOf(actor), roleId);
-			const affectedUserIds: string[] = await scope.rbacGraph.holdersOfLineage(roleId);
+			const affectedUserIds: string[] = await scope.rbacGraph.holdersOfRole(roleId);
 			role.remove(this.clock.now());
 			await scope.roles.save(role);
 			return { kind: "changed", result: role.name, audits: [{ action: "ROLE_DELETED", targetRoleId: roleId, detail: role.name }], affectedUserIds };

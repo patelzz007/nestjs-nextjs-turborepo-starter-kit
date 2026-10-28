@@ -6,7 +6,7 @@
  * INSERT / UPDATE / DELETE (and a statement-level one for TRUNCATE) in
  * `DataChangeLog`, in the same transaction as the change. Capture is the
  * DEFAULT: a table created by a later migration is captured the next time
- * `pnpm db:apply-security` runs (it is chained after every migrate / deploy /
+ * `pnpm tools db:apply-security` runs (it is chained after every migrate / deploy /
  * reset / push). The only ways out are declared HERE, with a reason:
  *
  * - {@link DATA_CHANGE_CAPTURE_EXEMPTIONS} — tables that are themselves audit
@@ -25,7 +25,7 @@
  * {@link planDataChangeCapture} refuses a manifest that names an unknown
  * table / column or leaves a secret-looking column unclassified — at apply
  * time against the live catalog (`prisma/rls/apply.ts`) and in CI against
- * the Prisma schema (`pnpm db:check-rls-manifest`).
+ * the Prisma schema (`pnpm tools db:check-rls-manifest`).
  */
 
 import { AUDIT_PAYLOAD_MAX_BYTES, isEmailField, isPersonalDataField, PII_MASK } from "../../src/platform/infrastructure/audit/audit-data-policy";
@@ -132,9 +132,6 @@ export const DATA_CHANGE_NON_SECRET_COLUMNS: Readonly<Record<string, Readonly<Re
 	GithubAccountLink: {
 		tokenKeyVersion: KEY_VERSION_REASON,
 		tokenExpiresAt: "When GitHub expires the linked token (epoch ms): a date the app shows to its owner, not part of the credential.",
-	},
-	AuthorizationPolicyVersion: {
-		contentHash: "SHA-256 of a published authorization policy document: identifies the version, derived from non-secret content.",
 	},
 	RewardSale: {
 		requestHash: "Fingerprint of a POS sale request used to detect idempotent replays; derived from the sale body, not from a credential.",

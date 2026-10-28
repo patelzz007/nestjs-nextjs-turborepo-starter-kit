@@ -3,12 +3,12 @@ title: "API reference — System: health and version"
 description: "Liveness, readiness and deep health probes, the apps' connection-quality ping and the API version manifest."
 order: 15
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792540800000
+lastUpdated: 1793145600000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
 
-<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm docs:api -->
+<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm tools docs:api -->
 
 # API reference — System: health and version
 
@@ -52,8 +52,8 @@ Response `200 OK` (application/json):
   "success": true,
   "data": "Hello from the API!",
   "meta": {
-    "correlationId": "PIHA4fWomZlge7EaVE2w8",
-    "timestamp": 1792586020364
+    "correlationId": "oBdzmgEyQutWVYmL0jamJ",
+    "timestamp": 1793190838326
   }
 }
 ```
@@ -98,11 +98,11 @@ Response `200 OK` (application/json):
   "data": {
     "status": "ok",
     "db": "connected",
-    "timestamp": 1792586020384
+    "timestamp": 1793190838554
   },
   "meta": {
-    "correlationId": "RbdBWQVwYPvLnOCYfkkaA",
-    "timestamp": 1792586020384
+    "correlationId": "o9TsRBRwtZ-9uaD174DQL",
+    "timestamp": 1793190838554
   }
 }
 ```
@@ -150,7 +150,7 @@ Response `200 OK` (application/json):
   "data": {
     "status": "ok",
     "db": "connected",
-    "timestamp": 1792586020430,
+    "timestamp": 1793190839434,
     "filesystem": "ok",
     "checks": {},
     "modules": [
@@ -158,7 +158,7 @@ Response `200 OK` (application/json):
         "name": "authorization",
         "healthy": true,
         "details": {
-          "systemRolesExpected": 6,
+          "systemRolesExpected": 8,
           "systemRolesMissing": null
         }
       },
@@ -174,8 +174,8 @@ Response `200 OK` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "QjjJdtWY7PhCj-a3XWY9e",
-    "timestamp": 1792586020431
+    "correlationId": "dRKyylJsiN3EGCl2t-txl",
+    "timestamp": 1793190839434
   }
 }
 ```
@@ -216,12 +216,12 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "status": "ok",
-    "uptimeSeconds": 12.89508875,
-    "timestamp": 1792586020393
+    "uptimeSeconds": 3.021908333,
+    "timestamp": 1793190838686
   },
   "meta": {
-    "correlationId": "GuEIVc1sFK2tanVrI8qoN",
-    "timestamp": 1792586020393
+    "correlationId": "lxzv1c6kGGzEZWQEHd_5i",
+    "timestamp": 1793190838686
   }
 }
 ```
@@ -246,8 +246,27 @@ Connection-quality probe — the apps time this round trip (never touches the da
 | --- | --- | --- |
 | 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
 
-> [!WARNING]
-> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+**Example** — called as no session.
+
+```http
+GET /health/ping
+X-Client-Type: web
+```
+
+Response `200 OK` (application/json):
+
+```json
+{
+  "success": true,
+  "data": {
+    "timestamp": 1793190838742
+  },
+  "meta": {
+    "correlationId": "GV6w1_HDvth9pVM89gJN6",
+    "timestamp": 1793190838742
+  }
+}
+```
 
 ### GET /health/ready
 
@@ -302,11 +321,11 @@ Response `200 OK` (application/json):
         "critical": true
       }
     ],
-    "timestamp": 1792586020412
+    "timestamp": 1793190838989
   },
   "meta": {
-    "correlationId": "5GSZZsSYH2cG5VHuzsnp9",
-    "timestamp": 1792586020412
+    "correlationId": "jk2OSHK56O7uqlju0k4ov",
+    "timestamp": 1793190838989
   }
 }
 ```

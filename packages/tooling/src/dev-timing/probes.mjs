@@ -1,5 +1,5 @@
 /**
- * Readiness probes and the polling loop behind `pnpm dev:timing` (plan §19.1).
+ * Readiness probes and the polling loop behind `pnpm tools dev:timing` (plan §19.1).
  * Each probe answers one question about one server; `pollUntil` repeats a
  * probe until it says yes and returns the clock reading at that moment. The
  * clock and sleep are injected so the loop is unit-tested with fake time, and

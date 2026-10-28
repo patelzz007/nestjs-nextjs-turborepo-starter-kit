@@ -140,7 +140,7 @@ const EXPLICIT_ROUTE_RULES: readonly RouteAuthorizationRule[] = [
 	// plus GET /admin/data-changes (LIST AUDIT_LOG): the rows the request changed.
 	{ prefix: ROUTE_PATTERNS.auditLogs.detail, authorization: { permissions: [PERMISSION.AUDIT_LOG.READ, PERMISSION.AUDIT_LOG.LIST], mode: "all" } },
 	// GET /admin/merchants/:tenantId + /lifecycle (LIST MERCHANT_ORG); suspend, reinstate and appeal
-	// review are shown only with MANAGE MERCHANT_ORG.
+	// review are shown only with SUSPEND / REACTIVATE / REJECT MERCHANT_ORG.
 	{ prefix: ROUTE_PATTERNS.merchants.detail, authorization: { permissions: [PERMISSION.MERCHANT_ORG.LIST] } },
 	// GET /product/:id, GET /sample-category/:id (READ)
 	{ prefix: ROUTE_PATTERNS.catalog.products.detail, authorization: { permissions: [PERMISSION.PRODUCT.READ] } },

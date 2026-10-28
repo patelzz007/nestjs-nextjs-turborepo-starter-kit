@@ -24,7 +24,7 @@ export interface RbacPermissionPair {
  * exempt: they already hold everything.
  *
  * 1. **No self-escalation.** An actor cannot change their own role assignments or direct permissions,
- *    nor edit a role they currently hold (directly or through the hierarchy).
+ *    nor edit a role they currently hold.
  * 2. **Subset rule.** An actor can only grant, assign, restore, remove, or make inheritable permissions
  *    they themselves hold with GLOBAL reach. Removal counts: a lesser administrator cannot strip a role
  *    or a grant it could not have handed out.
@@ -51,8 +51,8 @@ export function assertCanManageAccount(actor: RbacActor, target: RbacTargetAccou
 }
 
 /**
- * Rule 1 for role edits: `heldRoleLineage` is every role the actor holds directly plus every ancestor,
- * walked through deleted and inactive roles alike (a restore or re-activation can bring any of them back).
+ * Rule 1 for role edits: `heldRoleLineage` is every role the actor holds,
+ * deleted and inactive ones included (a restore or re-activation can bring any of them back).
  */
 export function assertNotHoldingRole(actor: RbacActor, heldRoleLineage: ReadonlySet<string>, roleId: string): void {
 	if (needsReachCheck(actor) && heldRoleLineage.has(roleId)) {

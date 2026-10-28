@@ -34,8 +34,8 @@ export interface RoleSeparationOfDutyRule {
 
 /**
  * Separation-of-duty rules enforced on every write that changes a user's effective role set (assign,
- * sync, re-parent, restore, re-activate) and by `POST /admin/roles/:id/validate-assignment`. Roles are
- * matched by name against the user's effective set (direct roles plus inherited ancestors), so they
+ * sync, restore, re-activate) and by `POST /admin/roles/:id/validate-assignment`. Roles are
+ * matched by name against the user's live, active roles, so they
  * reference system roles, which cannot be renamed through the API.
  *
  * Extend this list in a product built on the kit. An empty list is valid but disables SoD enforcement.

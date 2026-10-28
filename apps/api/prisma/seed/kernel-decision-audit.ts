@@ -28,6 +28,11 @@ const NAMESPACE = "seed.authorization_audits.kernel-decisions";
 /** Fixed demo clock (2026-09-20T03:30:00Z) — rows are byte-identical across runs. */
 const BASE_EPOCH_MS = 1_789_875_000_000;
 const ONE_MINUTE_MS = 60_000;
+/**
+ * A JSON-engine policy id as an old decision recorded it: the engine and its table were removed (ADR 067
+ * Phase 4), but a decision's audit row keeps the ids it cited.
+ */
+const RETIRED_POLICY_ID = deterministicUuid("kernel-seed-policy", "beruang-payment-cap-v2");
 /** RFC 5737 documentation address of the Bukit Beruang till. */
 const CLIENT_IP = "192.0.2.58";
 const CLIENT_USER_AGENT = "Starter-POS/2.4.1 (Android 14; Sunmi V2 Pro)";
@@ -64,7 +69,7 @@ export async function seedKernelDecisionAudits(): Promise<number> {
 	const allowTrace: readonly AuthorizationEvaluationStep[] = [
 		{ source: "tenant", effect: "NO_MATCH", reason: "Caller verified for the tenant and store" },
 		{ source: "acl", effect: "NO_MATCH", reason: "No explicit ACL entry" },
-		{ source: "policy", effect: "ALLOW", reason: "Payment is within the Bukit Beruang cap", details: { policyId: KERNEL_SEED_IDS.policyV2Published } },
+		{ source: "policy", effect: "ALLOW", reason: "Payment is within the Bukit Beruang cap", details: { policyId: RETIRED_POLICY_ID } },
 	];
 	const rows: readonly KernelDecisionRow[] = [
 		{
@@ -88,7 +93,7 @@ export async function seedKernelDecisionAudits(): Promise<number> {
 			decision: "ALLOW",
 			trace: allowTrace,
 			aclIds: [],
-			policyIds: [KERNEL_SEED_IDS.policyV2Published],
+			policyIds: [RETIRED_POLICY_ID],
 			durationMs: ALLOW_DURATION_MS,
 		},
 	];

@@ -43,17 +43,16 @@ merchant list. The seeded **Lucky Gold Traders** is banned, for trying it out.
 ```mermaid
 flowchart LR
     U[User] -->|has roles| R[Role<br/>e.g. Manager]
-    R -->|inherits from| P[Parent role]
     R -->|grants| Pm[Permissions<br/>ACTION:RESOURCE]
     U -->|direct ALLOW / DENY<br/>optional expiry| Pm
     Pm --> D{Decision}
     D -->|DENY wins over ALLOW| X[Allowed / denied]
 ```
 
-- **Roles** bundle permissions and can inherit from a parent role. Create, rename, deactivate,
+- **Roles** bundle permissions (each role lists its own; none inherits another's). Create, rename, deactivate,
   soft-delete and restore roles; **preview** what a user would be able to do before assigning.
 - **Permissions** are `ACTION:RESOURCE` pairs (actions: `CREATE`, `READ`, `UPDATE`, `DELETE`,
-  `LIST`, `MANAGE`). They can also be granted or denied to one user directly, optionally until a
+  `LIST`, and lifecycle verbs such as `APPROVE`, `SUSPEND`, `BAN`). They can also be granted or denied to one user directly, optionally until a
   date. A direct **DENY** always wins.
 - **Check** shows whether a user has a permission; the API's **explain** answers "why was this
   403?".
@@ -61,9 +60,9 @@ flowchart LR
   request.
 
 Merchant staff roles (Owner, Admin, Cashier, …) are a separate, per-tenant system managed
-by the merchant ([Stores and team](./03-stores-and-team.md)). Tenant policies (Cedar) can narrow
-what a merchant role may do; publishing a policy needs two SuperAdmins (the author cannot publish
-their own draft).
+by the merchant ([Stores and team](./03-stores-and-team.md)): each merchant edits its own roles,
+gives a teammate an extra permission for a while or for good, and shares one record with one teammate.
+Admin → Access control shows the tenant role templates every new merchant starts from.
 
 ## Audit log
 
@@ -97,7 +96,8 @@ a record).
 ## Emails
 
 - **Emails → Templates**: preview every transactional email with sample data and **send a test**
-  (with `EMAIL_TEST_TO` set in development, it goes to that inbox).
+  (it goes to the template's sample recipient — in local development that is the Mailpit inbox; with
+  Resend, `EMAIL_TEST_TO` sends it to your own inbox instead).
 - **Emails → Log**: every outbound email with its delivery status (`sent`, `delivered`,
   `bounced`, `complained`, `failed`), updated live from Resend's webhooks
   ([Email setup](../technical/email/resend-setup.md)).
@@ -167,8 +167,8 @@ carry **files**: the paperclip in the comment box attaches up to 5 PDFs or image
 
 Permissions: `LIST`/`READ` `KANBAN_TASK` to see the boards and items (and to watch), `CREATE` to add
 items, `UPDATE` to edit, move, link, tick checklists, comment and attach, `DELETE` to delete items (once
-they have no children), `MANAGE` to rearrange columns and set WIP limits. Admins have all of them;
-Managers everything but deleting items and managing columns. Anyone holding `READ` can be assigned.
+they have no children), and `UPDATE` on `KANBAN_BOARD` to rearrange columns and set WIP limits. Admins
+have all of them. Anyone holding `READ` can be assigned.
 The boards sit in the Components section, so they are shown where that section is enabled
 (`ADMIN_COMPONENT_GALLERY`).
 

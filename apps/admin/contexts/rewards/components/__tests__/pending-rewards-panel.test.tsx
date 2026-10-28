@@ -100,7 +100,7 @@ function pageMeta(page: number, total: number, totalPages: number): ApiPaginated
 function renderPanel(): RenderResult {
 	return render(
 		<QueryClientProvider client={new QueryClient()}>
-			<CapabilitiesProvider capabilities={[PERMISSION.REWARD.MANAGE]}>
+			<CapabilitiesProvider capabilities={[PERMISSION.REWARD.APPROVE, PERMISSION.REWARD.REJECT]}>
 				<PendingRewardsPanel />
 			</CapabilitiesProvider>
 		</QueryClientProvider>,

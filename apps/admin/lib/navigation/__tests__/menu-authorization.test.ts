@@ -88,13 +88,13 @@ describe("admin sidebar authorization", () => {
 			expect(urls).not.toContain(url);
 		}
 		expect(visibleTitles([])).not.toContain("Review");
-		expect(visibleTitles([PERMISSION.REWARD.MANAGE])).toContain("Review");
+		expect(visibleTitles([PERMISSION.REWARD.APPROVE])).toContain("Review");
 		expect(urls).toContain("/account/profile");
 		expect(urls).toContain("/account/security");
 	});
 
-	it("shows each page once its API permission is granted (MANAGE implies LIST)", () => {
-		const urls = visibleUrls([PERMISSION.GEO.READ, PERMISSION.EMAIL.LIST, PERMISSION.MERCHANT_ORG.MANAGE, PERMISSION.PRODUCT.LIST]);
+	it("shows each page once its API permission is granted", () => {
+		const urls = visibleUrls([PERMISSION.GEO.READ, PERMISSION.EMAIL.LIST, PERMISSION.MERCHANT_ORG.LIST, PERMISSION.MERCHANT_ORG.CREATE, PERMISSION.PRODUCT.LIST]);
 		expect(urls).toContain("/geography");
 		expect(urls).toContain("/emails/log");
 		expect(urls).toContain("/merchants");
@@ -106,8 +106,8 @@ describe("admin sidebar authorization", () => {
 		expect(urls).not.toContain("/emails/templates");
 	});
 
-	it("hides merchant invites on a single-tenant deployment, even with MANAGE", () => {
-		const urls = visibleUrls([PERMISSION.MERCHANT_ORG.MANAGE], false, []);
+	it("hides merchant invites on a single-tenant deployment, even with CREATE", () => {
+		const urls = visibleUrls([PERMISSION.MERCHANT_ORG.LIST, PERMISSION.MERCHANT_ORG.CREATE], false, []);
 		expect(urls).not.toContain("/merchants/invites");
 		expect(urls).toContain("/merchants/verification");
 	});
@@ -125,8 +125,8 @@ describe("admin sidebar authorization", () => {
 	});
 
 	it("hides super-admin-only pages unless the session is a super admin", () => {
-		expect(visibleUrls([PERMISSION.USER.MANAGE])).not.toContain("/users");
-		expect(visibleUrls([PERMISSION.USER.MANAGE])).not.toContain("/users/mfa-recovery");
+		expect(visibleUrls([PERMISSION.USER.LIST, PERMISSION.USER.READ])).not.toContain("/users");
+		expect(visibleUrls([PERMISSION.USER.LIST, PERMISSION.USER.READ])).not.toContain("/users/mfa-recovery");
 		expect(visibleUrls([], true)).toContain("/users");
 		expect(visibleUrls([], true)).toContain("/users/mfa-recovery");
 	});

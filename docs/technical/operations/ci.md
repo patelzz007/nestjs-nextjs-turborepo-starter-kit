@@ -37,15 +37,15 @@ them individually.
 | **Typecheck** | `turbo run typecheck` across every workspace (builds `^build` deps first). In `apps/api` this covers **all** TypeScript: `src/` (`tsconfig.typecheck.json`), specs, `test/**`, `prisma/**`, `scripts/**` and tool configs (`tsconfig.json`) — Vitest itself never type-checks | `pnpm typecheck` |
 | **Unit tests** | `turbo run test --concurrency=1` (the root `test` script) — every workspace's Vitest suite; `apps/mobile` runs its jest-expo suites ([ADR 031](../../adr/031-jest-expo-for-mobile-tests.md)) followed by `expo install --check` (Expo SDK version drift fails). **One workspace at a time**: each test runner already spreads its files over every core, so running several suites side by side only starves them — on a 4-vCPU runner, after a change to a shared package, 17 suites at once made screen tests 5× slower and tipped them past their timeouts. One suite at a time runs each under the same conditions as on its own. Inside a suite, Vitest runs its files in parallel, one worker per core (the web, admin and merchant suites ran one file at a time until 2026-10-27: admin took 190 s instead of 46 s). A test must never depend on how fast the machine is: a component behind `next/dynamic` is preloaded in `beforeAll` (its first load is an on-demand Vite transform), never left to an async query's 1 s default wait | `pnpm test` |
 | **Build** | `turbo run build` — API bundle, all Next.js apps, docs site (which also link-checks), and the mobile app's bundle check (`expo export --platform ios --platform android` into `apps/mobile/dist`: proves Metro resolves every workspace package without Xcode or Android Studio) | `pnpm build` |
-| **RLS manifest drift** | Prisma models ↔ RLS manifest ↔ RLS SQL agree, and the RLS apply plan is valid | `pnpm db:check-rls-manifest` |
-| **Dependency consistency** | Shared dependencies (React, Zod, TypeScript, Next) use one version everywhere (syncpack); `apps/mobile` has its own groups for what Expo SDK 57 pins (React 19.2, React Native, Metro, Jest 29) | `pnpm deps:check` |
+| **RLS manifest drift** | Prisma models ↔ RLS manifest ↔ RLS SQL agree, and the RLS apply plan is valid | `pnpm tools db:check-rls-manifest` |
+| **Dependency consistency** | Shared dependencies (React, Zod, TypeScript, Next) use one version everywhere (syncpack); `apps/mobile` has its own groups for what Expo SDK 57 pins (React 19.2, React Native, Metro, Jest 29) | `pnpm tools deps:check` |
 | **Migration history** | Committed Prisma migrations at or after the [baseline](#migration-baseline) are immutable: relative to the merge base, none is edited, deleted, renamed or extended, and every new one is strictly newer than the latest committed one with a unique timestamp prefix. Migrations older than the baseline are ignored | `node packages/tooling/scripts/check-migration-history.mjs --base origin/main --working-tree` |
 | **Dependency audit** | `pnpm audit --audit-level=high` finds no high/critical advisory. Fix by upgrading, or with a scoped `overrides` entry in `pnpm-workspace.yaml` that names the advisory and the condition for removing it. An advisory with **no patched release** that is unreachable from untrusted input may be accepted under `auditConfig.ignoreGhsas` (reason + `# review-by:` date) — see [Dependency review](#dependency-review-weekly) | `pnpm audit --audit-level=high` |
-| **Secret scan (.env.example)** | No real-looking secrets in tracked `.env.example` files | `pnpm secrets:scan` |
-| **Docs link check** | Every internal link and anchor in `docs/` resolves | `pnpm docs:check-links` |
+| **Secret scan (.env.example)** | No real-looking secrets in tracked `.env.example` files | `pnpm tools secrets:scan` |
+| **Docs link check** | Every internal link and anchor in `docs/` resolves | `pnpm tools docs:check-links` |
 | **Database + API e2e** | See below | See below |
 | **Browser e2e (Playwright — web + admin)** | Seeds a fresh Postgres, starts the API, web and admin apps, waits for `/health/ready`, then runs the web and admin Playwright suites in Chromium (admin login: the public seed SuperAdmin) | `pnpm ci:local --e2e-only` (runs it against a throwaway `<name>_ci_local_browser` database) |
-| **Analytics consumer e2e (Postgres + Kafka)** | Postgres (`postgres:18.6`) and Kafka (`apache/kafka:4.3.1`, KRaft, broker auto-create off) service containers; `pnpm db:deploy` (creates the `analytics_consumer` role), then `pnpm --filter @workspace/analytics-consumer test:e2e`: inbox idempotency, binary-safe parking, least-privilege role checks, retention + advisory locks, login provisioning, topic provisioning and the consumer start position. The consumer login password is random per run | `pnpm docker:up && pnpm db:deploy`, set `apps/analytics-consumer/.env`, then `pnpm --filter @workspace/analytics-consumer test:e2e` (also part of `pnpm test:e2e`) |
+| **Analytics consumer e2e (Postgres + Kafka)** | Postgres (`postgres:18.6`) and Kafka (`apache/kafka:4.3.1`, KRaft, broker auto-create off) service containers; `pnpm tools db:deploy` (creates the `analytics_consumer` role), then `pnpm --filter @workspace/analytics-consumer test:e2e`: inbox idempotency, binary-safe parking, least-privilege role checks, retention + advisory locks, login provisioning, topic provisioning and the consumer start position. The consumer login password is random per run | `pnpm docker:up && pnpm tools db:deploy`, set `apps/analytics-consumer/.env`, then `pnpm --filter @workspace/analytics-consumer test:e2e` (also part of `pnpm test:e2e`) |
 
 The **Build** job sets the Next.js apps' public `NEXT_PUBLIC_*` config (local-dev origins, no
 secrets): the apps validate it with zod while prerendering, and CI has no `.env` files. When an app
@@ -71,7 +71,7 @@ the local Docker stack in [Local infrastructure](./local-infrastructure.md)):
    GitHub pull requests are on (`GITHUB_CREDENTIAL_ENCRYPTION_KEYS`, a random key ring), so the
    seed can seal its demo GitHub links and step 4a finds `GithubAccountLink` populated.
 2. Builds the API's workspace dependencies (`turbo run build --filter=@workspace/api^...`).
-3. `pnpm db:deploy` — `prisma migrate deploy` **then** `db:apply-security` (RLS). A migration that
+3. `pnpm tools db:deploy` — `prisma migrate deploy` **then** `db:apply-security` (RLS). A migration that
    does not apply cleanly to an empty database fails here.
 3a. Schema drift: `pnpm --filter @workspace/api db:check-drift` replays `prisma/migrations` into a separate shadow database (`app_ci_shadow`) and fails when the result differs from `prisma/schema.prisma`.
 4. `pnpm db:seed -- --scenario development` — a schema change that breaks `seed.ts` fails here,
@@ -100,7 +100,7 @@ copies `DATABASE_URL`'s database, but the copy needs it idle — stop `pnpm dev`
 
 ```bash
 pnpm docker:up                                   # Postgres + the rest of the local stack
-pnpm db:deploy                                   # migrations + RLS
+pnpm tools db:deploy                                   # migrations + RLS
 pnpm db:seed -- --scenario development
 pnpm --filter @workspace/api db:check-seed-coverage
 pnpm test:e2e

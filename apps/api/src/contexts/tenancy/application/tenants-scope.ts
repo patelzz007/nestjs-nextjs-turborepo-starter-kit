@@ -13,7 +13,6 @@ import type { TenantRepository } from "../domain/repositories/tenant.repository"
 import type { KybFilesInTransaction } from "./ports/kyb-files.port";
 import type { TenantAuditWriter } from "./ports/tenant-audit.port";
 import type { TenantEmailPort } from "./ports/tenant-emails.port";
-import type { TenantPolicyProvisioningPort } from "./ports/tenant-policy.port";
 
 /** Everything one tenants unit of work can touch. Every member is bound to that transaction. */
 export interface TenantsScope {
@@ -30,7 +29,6 @@ export interface TenantsScope {
 	/** Pos's redemption lookup: the customer a ban is made from. */
 	readonly redemptionCustomers: RedemptionCustomerPort;
 	readonly customerBans: CustomerBanRepository;
-	readonly tenantPolicies: TenantPolicyProvisioningPort;
 	readonly audit: TenantAuditWriter;
 	readonly emails: TenantEmailPort;
 	readonly events: TransactionalEventCollector;

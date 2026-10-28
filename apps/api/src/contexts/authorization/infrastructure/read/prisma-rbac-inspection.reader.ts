@@ -18,7 +18,7 @@ function actorUserIdOf(actor: ActorContext): string | null {
 }
 
 /**
- * Mirrors the kernel's grant resolution: active, non-deleted roles; their active, non-deleted ancestors;
+ * Mirrors the kernel's grant resolution: active, non-deleted roles (flat — no inheritance);
  * live role permissions; live, unexpired direct ALLOW / DENY overrides.
  */
 class PrismaInspectionReader implements RbacInspectionReader {
@@ -32,32 +32,17 @@ class PrismaInspectionReader implements RbacInspectionReader {
 		return this.graph.assignedRoleIds(userId);
 	}
 
-	public async effectiveRoleNames(roleIds: readonly string[]): Promise<ReadonlySet<string>> {
-		return this.graph.effectiveRoleNames(roleIds);
+	public async activeRoleNames(roleIds: readonly string[]): Promise<ReadonlySet<string>> {
+		return this.graph.activeRoleNames(roleIds);
 	}
 
 	public async effectiveRoleSet(roleIds: readonly string[]): Promise<EffectiveRoleSet> {
 		if (roleIds.length === 0) {
 			return { roleNames: [], permissionKeys: [] };
 		}
-		const direct = await this.db.role.findMany({ where: { id: { in: [...roleIds] }, isDeleted: false, isActive: true }, select: { id: true, name: true, parentId: true } });
-		const lineage = new Set<string>();
-		let frontier: { readonly id: string; readonly parentId: string | null }[] = direct;
-		while (frontier.length > 0) {
-			const parentIds: string[] = [];
-			for (const role of frontier) {
-				lineage.add(role.id);
-				if (role.parentId !== null && !lineage.has(role.parentId)) {
-					parentIds.push(role.parentId);
-				}
-			}
-			frontier =
-				parentIds.length === 0
-					? []
-					: await this.db.role.findMany({ where: { id: { in: parentIds }, isDeleted: false, isActive: true }, select: { id: true, parentId: true } });
-		}
+		const direct = await this.db.role.findMany({ where: { id: { in: [...roleIds] }, isDeleted: false, isActive: true }, select: { id: true, name: true } });
 		const rolePermissions = await this.db.rolePermission.findMany({
-			where: { roleId: { in: [...lineage] }, isDeleted: false, permission: { isDeleted: false } },
+			where: { roleId: { in: direct.map((role): string => role.id) }, isDeleted: false, permission: { isDeleted: false } },
 			select: { permission: { select: { action: true, resource: true } } },
 		});
 		return {

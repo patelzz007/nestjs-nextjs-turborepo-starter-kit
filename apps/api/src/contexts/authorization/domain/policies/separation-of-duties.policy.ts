@@ -3,8 +3,7 @@ import { ROLE_SEPARATION_OF_DUTY_RULES, type RoleSeparationOfDutyRule } from "..
 
 /**
  * Separation-of-duty rules violated by holding every role in `effectiveRoleNames` at once. The names are
- * the user's EFFECTIVE set: live, active direct roles plus every live, active ancestor they inherit (the
- * hierarchy the kernel evaluates).
+ * the user's live, active roles (the set the kernel evaluates; roles are flat).
  */
 export function findSeparationOfDutyViolations(
 	effectiveRoleNames: ReadonlySet<string>,

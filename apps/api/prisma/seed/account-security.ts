@@ -9,7 +9,6 @@ import { IMPERSONATION_TOKEN_TTL_SECONDS, ImpersonationAuditAction } from "../..
 import { MfaRecoveryAuditAction } from "../../src/contexts/identity/domain/aggregates/mfa-recovery-request.aggregate";
 import { CryptoService } from "../../src/contexts/identity/infrastructure/security/crypto.service";
 import { SecretEncryptionService } from "../../src/contexts/identity/infrastructure/security/secret-encryption.service";
-import { findActivePolicyVersionInTx } from "../../src/contexts/authorization/public-api";
 import { revokedBySystem, revokedByUser, type SessionRevoker } from "../../src/contexts/identity/domain/value-objects/session-revoker.value-object";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
@@ -550,7 +549,6 @@ export class AccountSecuritySeeder {
 	/** One grant per lifecycle state, each transition with its tenant audit row (real actor + active policy version). */
 	private async seedSupportAccess(now: number): Promise<number> {
 		const { superAdmin, supportAccess } = this.cast;
-		const policyVersion: number = await findActivePolicyVersionInTx(prisma, supportAccess.tenantId);
 		const grants: {
 			readonly key: string;
 			readonly status: SupportAccessGrantStatus;
@@ -580,14 +578,12 @@ export class AccountSecuritySeeder {
 			};
 			await prisma.supportAccessGrant.upsert({ where: { id }, create: { id, ...data }, update: data });
 
-			const audits: WithId<Prisma.TenantAuditLogUncheckedCreateInput>[] = [
-				this.supportAudit(id, "requested", superAdmin.id, policyVersion, grant.requestedAt, { mode: grant.mode }),
-			];
+			const audits: WithId<Prisma.TenantAuditLogUncheckedCreateInput>[] = [this.supportAudit(id, "requested", superAdmin.id, grant.requestedAt, { mode: grant.mode })];
 			if (grant.approved) {
-				audits.push(this.supportAudit(id, "approved", supportAccess.owner.id, policyVersion, grant.requestedAt + 2 * MINUTE_MS, null));
+				audits.push(this.supportAudit(id, "approved", supportAccess.owner.id, grant.requestedAt + 2 * MINUTE_MS, null));
 			}
 			if (grant.revokedAt !== null) {
-				audits.push(this.supportAudit(id, "revoked", superAdmin.id, policyVersion, grant.revokedAt, null));
+				audits.push(this.supportAudit(id, "revoked", superAdmin.id, grant.revokedAt, null));
 			}
 			for (const audit of audits) {
 				await prisma.tenantAuditLog.upsert({ where: { id: audit.id }, create: audit, update: audit });
@@ -671,7 +667,6 @@ export class AccountSecuritySeeder {
 		grantId: string,
 		transition: "requested" | "approved" | "revoked",
 		actorUserId: string,
-		policyVersion: number,
 		at: number,
 		metadata: Prisma.InputJsonObject | null,
 	): WithId<Prisma.TenantAuditLogUncheckedCreateInput> {
@@ -684,7 +679,6 @@ export class AccountSecuritySeeder {
 			resourceType: "SupportAccessGrant",
 			resourceId: grantId,
 			decision: transition === "approved" ? "Allow" : null,
-			policyVersion,
 			correlationId: id.replaceAll("-", "").slice(0, 21),
 			...(metadata === null ? {} : { metadata }),
 			createdAt: at,

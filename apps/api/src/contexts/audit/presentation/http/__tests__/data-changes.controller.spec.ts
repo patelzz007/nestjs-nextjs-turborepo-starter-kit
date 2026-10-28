@@ -54,11 +54,11 @@ describe("DataChangesController authorization", () => {
 	});
 
 	it("needs LIST AUDIT_LOG for the table", () => {
-		expect(reflector.get<object>(REQUIRED_PERMISSION_METADATA_KEY, handlerOf("list"))).toEqual({ action: "LIST", resource: "AUDIT_LOG" });
+		expect(reflector.get<readonly object[]>(REQUIRED_PERMISSION_METADATA_KEY, handlerOf("list"))).toEqual([{ action: "LIST", resource: "AUDIT_LOG" }]);
 	});
 
 	it("needs READ AUDIT_LOG for one complete record (row images included)", () => {
-		expect(reflector.get<object>(REQUIRED_PERMISSION_METADATA_KEY, handlerOf("get"))).toEqual({ action: "READ", resource: "AUDIT_LOG" });
+		expect(reflector.get<readonly object[]>(REQUIRED_PERMISSION_METADATA_KEY, handlerOf("get"))).toEqual([{ action: "READ", resource: "AUDIT_LOG" }]);
 	});
 
 	it("keeps one response contract per route: a page of change summaries, and one complete change", () => {

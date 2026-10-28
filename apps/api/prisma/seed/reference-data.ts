@@ -2,7 +2,6 @@ import type { Permission, Role } from "@prisma/client";
 
 import { createReferenceDataSyncService } from "../../src/contexts/authorization/infrastructure/reference-data/reference-data.composition";
 import { formatReferenceDataReport } from "../../src/contexts/authorization/infrastructure/reference-data/sync-reference-data.report";
-import { seedAbacConditions } from "./abac";
 import { prisma } from "./client";
 import { seedLog } from "./seed-log";
 
@@ -23,10 +22,6 @@ export async function seedReferenceData(): Promise<ReferenceData> {
 
 	const permissions: Permission[] = await prisma.permission.findMany();
 	const roles: Role[] = await prisma.role.findMany();
-
-	seedLog("Seeding ABAC demo conditions...");
-	await seedAbacConditions(permissions);
-	seedLog("✅ ABAC conditions seeded on MANAGE:SYSTEM_SETTINGS");
 
 	return { permissions, roles };
 }

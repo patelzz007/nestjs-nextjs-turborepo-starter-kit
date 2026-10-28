@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 import { DomainError } from "../../../../platform/domain/errors/domain-error";
 import { DomainErrorCodeSchema, type DomainErrorCode } from "../../../../platform/domain/errors/error-codes";
 
@@ -15,15 +13,12 @@ export const AuthorizationErrorCodeSchema = DomainErrorCodeSchema.extract([
 	"NOT_FOUND",
 	"VALIDATION_ERROR",
 	"CORRUPT_AGGREGATE_STATE",
-	"POLICY_IMPERSONATION_FORBIDDEN",
-	"POLICY_SELF_APPROVAL_FORBIDDEN",
-	"POLICY_DRAFT_NOT_PUBLISHABLE",
-	"POLICY_SIMULATION_REQUIRED",
-	"POLICY_SIMULATION_FAILED",
-	"POLICY_SIMULATION_STALE",
 	"SUPPORT_ACCESS_APPROVER_NOT_OWNER",
 	"SUPPORT_ACCESS_GRANT_NOT_PENDING",
 	"SUPPORT_ACCESS_GRANT_NOT_REVOCABLE",
+	"TENANT_OWNER_PROTECTED",
+	"TENANT_OWNER_REQUIRED",
+	"TENANT_SCOPE_ESCALATION",
 ]);
 
 export type AuthorizationErrorCode = (typeof AuthorizationErrorCodeSchema)["options"][number];
@@ -84,14 +79,6 @@ export class PermissionAlreadyExistsError extends DomainError {
 
 	public constructor(permissionKey: string) {
 		super(`Permission ${permissionKey} already exists (restore it if it was deleted)`);
-	}
-}
-
-export class RoleHierarchyCycleError extends DomainError {
-	public readonly code: DomainErrorCode = "CONFLICT";
-
-	public constructor(parentName: string, roleName: string) {
-		super(`Setting "${parentName}" as parent of "${roleName}" would create a circular hierarchy`);
 	}
 }
 
@@ -212,81 +199,6 @@ export class PlatformRoleNotConfiguredError extends DomainError {
 
 	public constructor(roleName: string) {
 		super(`Platform role "${roleName}" is not configured`);
-	}
-}
-
-// ── Policy control plane ─────────────────────────────────────────────────────
-
-export class PolicyImpersonationForbiddenError extends DomainError {
-	public readonly code: DomainErrorCode = "POLICY_IMPERSONATION_FORBIDDEN";
-
-	public constructor() {
-		super("Policies cannot be changed from an impersonated session");
-	}
-}
-
-export class PolicySelfApprovalForbiddenError extends DomainError {
-	public readonly code: DomainErrorCode = "POLICY_SELF_APPROVAL_FORBIDDEN";
-
-	public constructor() {
-		super("A policy draft must be approved by a SuperAdmin other than its author");
-	}
-}
-
-/** Why a draft can no longer move forward: simulating a published draft, or publishing one a concurrent publish claimed. */
-export const PolicyDraftNotPublishableReasonSchema = z.enum(["not_a_draft", "claimed"]);
-export type PolicyDraftNotPublishableReason = z.output<typeof PolicyDraftNotPublishableReasonSchema>;
-
-const POLICY_DRAFT_NOT_PUBLISHABLE_MESSAGES: Readonly<Record<PolicyDraftNotPublishableReason, string>> = {
-	not_a_draft: "Only an unpublished draft can be simulated",
-	claimed: "The policy draft is no longer publishable",
-};
-
-export class PolicyDraftNotPublishableError extends DomainError {
-	public readonly code: DomainErrorCode = "POLICY_DRAFT_NOT_PUBLISHABLE";
-
-	public constructor(reason: PolicyDraftNotPublishableReason) {
-		super(POLICY_DRAFT_NOT_PUBLISHABLE_MESSAGES[reason]);
-	}
-}
-
-export class PolicySimulationRequiredError extends DomainError {
-	public readonly code: DomainErrorCode = "POLICY_SIMULATION_REQUIRED";
-
-	public constructor() {
-		super("The policy draft must be simulated before it is published");
-	}
-}
-
-export class PolicySimulationFailedError extends DomainError {
-	public readonly code: DomainErrorCode = "POLICY_SIMULATION_FAILED";
-
-	public constructor() {
-		super("The latest simulation of the policy draft failed");
-	}
-}
-
-export class PolicySimulationStaleError extends DomainError {
-	public readonly code: DomainErrorCode = "POLICY_SIMULATION_STALE";
-
-	public constructor() {
-		super("The published policies or the simulation are out of date; simulate the draft again");
-	}
-}
-
-export class PolicyDraftNotFoundError extends DomainError {
-	public readonly code: DomainErrorCode = "NOT_FOUND";
-
-	public constructor() {
-		super("Policy draft not found");
-	}
-}
-
-export class TenantPolicyDraftTenantRequiredError extends DomainError {
-	public readonly code: DomainErrorCode = "VALIDATION_ERROR";
-
-	public constructor() {
-		super("A TENANT policy draft must name its tenant");
 	}
 }
 

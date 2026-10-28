@@ -106,9 +106,9 @@ For a genuinely performance-sensitive endpoint, verify with a realistic dataset 
 
 The budget is enforced: `bundle-budgets.json` (repo root) holds each Next route's first-load JS (gzip) and
 each mobile platform's Hermes bundle, at the measured baseline + 10%. CI and `pnpm ci:local` run
-`pnpm bundle:check` after the build; a route over its budget, a new route without one, or a budget for a
+`pnpm tools bundle:check` after the build; a route over its budget, a new route without one, or a budget for a
 removed route fails it. Raising a budget is a reviewed edit of that file; after a deliberate size change,
-rebuild and run `pnpm bundle:check --write-baseline`. To see what a chunk holds:
+rebuild and run `pnpm tools bundle:check --write-baseline`. To see what a chunk holds:
 `ANALYZE=true pnpm --filter @workspace/<web|admin|merchant> exec next build --webpack`.
 
 ## Code splitting and lazy loading

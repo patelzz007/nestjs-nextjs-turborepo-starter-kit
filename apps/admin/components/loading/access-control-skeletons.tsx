@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from "@workspace/ui/components/card";
 import { placeholderKeys } from "@workspace/ui/lib/skeleton/placeholders";
+import { SettingsSectionHeaderSkeleton } from "@workspace/ui/components/settings-shell";
 import { Skeleton } from "@workspace/ui/components/skeleton";
-import { PageHeaderSkeleton } from "@workspace/ui/components/skeleton-patterns";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import type * as React from "react";
 
@@ -45,11 +45,11 @@ export function PermissionGroupsSkeleton(): React.JSX.Element {
 	);
 }
 
-/** `/settings/access`: header, the roles / permissions / checker tab list, then the roles card (the first tab). */
+/** `/settings/access`: the section header, the roles / permissions / checker tab list, then the roles card (the first tab). */
 export function AccessControlPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={ACCESS_CONTROL_LOADING_LABELS} className="flex flex-col gap-6">
-			<PageHeaderSkeleton />
+			<SettingsSectionHeaderSkeleton />
 			<div className="flex flex-col gap-4">
 				<Skeleton className="h-9 w-96 max-w-full rounded-lg" />
 				<Card>

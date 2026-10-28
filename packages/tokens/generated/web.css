@@ -1,7 +1,7 @@
 /*
  * GENERATED FILE: do not edit by hand.
  * Source: packages/tokens/src, the one design token source (ADR 030).
- * Regenerate with `pnpm tokens:generate`; a test fails while this file is stale.
+ * Regenerate with `pnpm tools tokens:generate`; a test fails while this file is stale.
  *
  * The web design tokens, imported by packages/ui src/styles/globals.css:
  * :root holds the palette primitives, the theme-independent tokens and the light
@@ -418,9 +418,9 @@
 	--sidebar-width-mobile: var(--sidebar-width-mobile);
 	--sidebar-width-icon: var(--sidebar-width-icon);
 	--font-button: var(--font-button);
-	--max-width-8xl: var(--max-width-8xl);
-	--max-width-9xl: var(--max-width-9xl);
-	--max-width-10xl: var(--max-width-10xl);
+	--container-8xl: var(--max-width-8xl);
+	--container-9xl: var(--max-width-9xl);
+	--container-10xl: var(--max-width-10xl);
 	--color-auth-panel: var(--auth-panel);
 	--color-auth-panel-muted: var(--auth-panel-muted);
 	--color-auth-panel-foreground: var(--auth-panel-foreground);

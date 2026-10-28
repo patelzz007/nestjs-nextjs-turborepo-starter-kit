@@ -30,7 +30,8 @@ import type { FastifyRequest } from "fastify";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { ApiErrorResponseDto } from "../../../../platform/presentation/http/dto/api-response.dto";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
-import { Authorize, self } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
+import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
+import { self } from "../../../../platform/presentation/http/security/decorators/permission-target";
 import { GetUser } from "../../../../platform/presentation/http/security/decorators/get-user.decorator";
 import { Public } from "../../../../platform/presentation/http/security/decorators/public.decorator";
 import { SkipAuthThrottle } from "../../../../platform/presentation/http/security/decorators/skip-auth-throttle.decorator";
@@ -132,7 +133,7 @@ export class SessionsController {
 	@SkipAuthThrottle()
 	@ApiBearerAuth()
 	@Get("/sessions")
-	@Authorize({ action: "READ", resource: "USER", resourceId: self(), description: "A user lists their own device sessions" })
+	@RequirePermission("READ", "USER", { resourceId: self(), description: "A user lists their own device sessions" })
 	@ApiOperation({ summary: "List the caller's signed-in devices (every client type), most recently active first; `isCurrent` marks this one" })
 	@ZodPaginatedResponse(SessionSchema, { description: "One page of the caller's active device sessions; pagination is in `meta`" })
 	public async getSessions(
@@ -146,7 +147,7 @@ export class SessionsController {
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@ApiBearerAuth()
 	@Post("/sessions/:sessionId/revoke")
-	@Authorize({ action: "UPDATE", resource: "USER", resourceId: self(), description: "A user signs out one of their own devices (never during impersonation)" })
+	@RequirePermission("UPDATE", "USER", { resourceId: self(), description: "A user signs out one of their own devices (never during impersonation)" })
 	@ApiOperation({
 		summary: "Sign out one of the caller's devices",
 		description:

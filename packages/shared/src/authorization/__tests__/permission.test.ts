@@ -1,23 +1,26 @@
 import { describe, expect, it } from "vitest";
 
 import {
+	isTenantPermission,
 	MERCHANT_CAPABILITY,
-	MERCHANT_ROLE_CAPABILITIES,
+	MERCHANT_CAPABILITY_PERMISSION,
+	merchantCapabilitiesOf,
 	MerchantCapabilitySchema,
-	merchantRoleHasCapability,
 	PERMISSION,
+	TENANT_PERMISSIONS,
+	TENANT_ROLE_TEMPLATE_NAMES,
+	TENANT_ROLE_TEMPLATES,
 	IMPLICIT_SELF_GRANTS,
 	parsePermissionSlug,
 	permissionSatisfies,
-	readResourceCapability,
-	withResourceCapability,
 } from "../permission";
-import { PolicyConditionsSchema } from "../policy-dsl.schema";
+import { AuthorizationAttributeValueSchema } from "../policy-dsl.schema";
+import { PermissionActionSchema } from "../../contexts/authorization/schemas/permission-enums";
 import { MembershipRoleSchema } from "../../contexts/tenancy/schemas/tenant";
 
 describe("permission vocabulary", () => {
 	it("derives platform capability slugs from resource × action", () => {
-		expect(PERMISSION.DEVTOOLS.MANAGE).toBe("platform:devtools.manage");
+		expect(PERMISSION.KANBAN_BOARD.UPDATE).toBe("platform:kanban_board.update");
 		expect(PERMISSION.ORDER.DELETE).toBe("platform:order.delete");
 		expect(PERMISSION.ADMIN_DASHBOARD.READ).toBe("platform:admin_dashboard.read");
 	});
@@ -29,91 +32,81 @@ describe("permission vocabulary", () => {
 		expect(parsePermissionSlug("USER:DELETE")).toBeNull();
 	});
 
-	it("treats MANAGE as every action on the same resource only", () => {
-		expect(permissionSatisfies({ action: "MANAGE", resource: "ORDER" }, { action: "DELETE", resource: "ORDER" })).toBe(true);
-		expect(permissionSatisfies({ action: "MANAGE", resource: "ORDER" }, { action: "DELETE", resource: "PAYMENT" })).toBe(false);
-		expect(permissionSatisfies({ action: "READ", resource: "ORDER" }, { action: "UPDATE", resource: "ORDER" })).toBe(false);
+	it("is satisfied only by the same action on the same resource (no catch-all action)", () => {
+		expect(permissionSatisfies({ action: "DELETE", resource: "ORDER" }, { action: "DELETE", resource: "ORDER" })).toBe(true);
+		expect(permissionSatisfies({ action: "DELETE", resource: "ORDER" }, { action: "DELETE", resource: "PAYMENT" })).toBe(false);
+		expect(permissionSatisfies({ action: "UPDATE", resource: "ORDER" }, { action: "READ", resource: "ORDER" })).toBe(false);
+		expect(PermissionActionSchema.safeParse("MANAGE").success).toBe(false);
 	});
 
 	it("keeps implicit self grants to read/update of one's own account", () => {
 		expect(IMPLICIT_SELF_GRANTS.map((pair) => `${pair.action}:${pair.resource}`).sort()).toEqual(["READ:PROFILE", "READ:USER", "UPDATE:PROFILE", "UPDATE:USER"]);
 	});
+});
 
-	it("reads and writes server-provided resource capabilities", () => {
-		const map = withResourceCapability(withResourceCapability({}, "DELETE", false), "UPDATE", true);
-
-		expect(map).toEqual({ delete: false, update: true });
-		expect(readResourceCapability(map, "UPDATE")).toBe(true);
-		expect(readResourceCapability(map, "READ")).toBeUndefined();
+describe("authorization attribute values", () => {
+	it("accepts JSON scalars and scalar lists, and nothing executable or nested", () => {
+		for (const value of ["ACTIVE", 150, true, null, ["a", 1]]) {
+			expect(AuthorizationAttributeValueSchema.safeParse(value).success).toBe(true);
+		}
+		expect(AuthorizationAttributeValueSchema.safeParse({ field: "x", operator: "eval" }).success).toBe(false);
+		expect(AuthorizationAttributeValueSchema.safeParse([["nested"]]).success).toBe(false);
 	});
 });
 
-describe("policy DSL schema", () => {
-	it("accepts nested all/any/condition rules", () => {
-		const parsed = PolicyConditionsSchema.safeParse({
-			all: [
-				{ condition: { field: "order.tenantId", operator: "equals", valueRef: "$user.tenantId" } },
-				{ any: [{ condition: { field: "order.status", operator: "not_equals", value: "COMPLETED" } }] },
-			],
-		});
+describe("tenant role templates", () => {
+	const has = (role: "OWNER" | "MANAGER" | "CASHIER", action: string, resource: string): boolean =>
+		TENANT_ROLE_TEMPLATES[role].some((held) => held.action === action && held.resource === resource);
 
-		expect(parsed.success).toBe(true);
+	it("gives the Owner every tenant permission", () => {
+		expect(TENANT_ROLE_TEMPLATES.OWNER).toEqual(TENANT_PERMISSIONS);
 	});
 
-	it("rejects executable-looking or legacy shapes", () => {
-		expect(PolicyConditionsSchema.safeParse({ all: [{ operator: "gte", path: "context.hour", value: 9 }] }).success).toBe(false);
-		expect(PolicyConditionsSchema.safeParse({ condition: { field: "x", operator: "eval", value: "process.exit()" } }).success).toBe(false);
-		expect(PolicyConditionsSchema.safeParse("user.storeId === order.storeId").success).toBe(false);
-	});
-});
-
-describe("merchant role capabilities", () => {
-	it("gives owners every capability", () => {
-		expect(MERCHANT_ROLE_CAPABILITIES.OWNER).toEqual(MerchantCapabilitySchema.options);
-		expect(merchantRoleHasCapability("OWNER", MERCHANT_CAPABILITY.manageVerification)).toBe(true);
-	});
-
-	it("gives admins everything except business verification (KYB stays owner-only)", () => {
-		expect(MERCHANT_ROLE_CAPABILITIES.ADMIN).toEqual(MerchantCapabilitySchema.options.filter((capability) => capability !== MERCHANT_CAPABILITY.manageVerification));
-		expect(merchantRoleHasCapability("ADMIN", MERCHANT_CAPABILITY.manageRewards)).toBe(true);
-		expect(merchantRoleHasCapability("ADMIN", MERCHANT_CAPABILITY.manageTeam)).toBe(true);
-		expect(merchantRoleHasCapability("ADMIN", MERCHANT_CAPABILITY.manageLocations)).toBe(true);
-		expect(merchantRoleHasCapability("ADMIN", MERCHANT_CAPABILITY.manageVerification)).toBe(false);
-	});
-
-	it("keeps cashiers read-only", () => {
-		expect(MERCHANT_ROLE_CAPABILITIES.CASHIER).toEqual([
-			MERCHANT_CAPABILITY.viewDashboard,
-			MERCHANT_CAPABILITY.viewRewards,
-			MERCHANT_CAPABILITY.viewRedemptions,
-			MERCHANT_CAPABILITY.viewAnalytics,
-			MERCHANT_CAPABILITY.viewLocations,
-		]);
-		expect(merchantRoleHasCapability("CASHIER", MERCHANT_CAPABILITY.manageRewards)).toBe(false);
-		expect(merchantRoleHasCapability("CASHIER", MERCHANT_CAPABILITY.manageApiKeys)).toBe(false);
-		expect(merchantRoleHasCapability("CASHIER", MERCHANT_CAPABILITY.manageTeam)).toBe(false);
-		expect(merchantRoleHasCapability("CASHIER", MERCHANT_CAPABILITY.manageLocations)).toBe(false);
-		expect(merchantRoleHasCapability("CASHIER", MERCHANT_CAPABILITY.manageVerification)).toBe(false);
-	});
-
-	it("limits policy admins and members to the dashboard and the store locations list", () => {
-		for (const role of ["POLICY_ADMIN", "MEMBER"] satisfies ("POLICY_ADMIN" | "MEMBER")[]) {
-			expect(MERCHANT_ROLE_CAPABILITIES[role]).toEqual([MERCHANT_CAPABILITY.viewDashboard, MERCHANT_CAPABILITY.viewLocations]);
+	it("gives the Manager everything except the Owner-only permissions", () => {
+		expect(has("MANAGER", "UPDATE", "REWARD")).toBe(true);
+		expect(has("MANAGER", "UPDATE", "MEMBER")).toBe(true);
+		expect(has("MANAGER", "DELETE", "SHARE")).toBe(true);
+		for (const [resource, action] of [
+			["KYB", "UPDATE"],
+			["SUPPORT_ACCESS", "APPROVE"],
+			["TENANT", "UPDATE"],
+		] satisfies [string, string][]) {
+			expect(has("MANAGER", action, resource)).toBe(false);
 		}
 	});
 
-	it("lets every member read the store locations (the tenant context is member-wide on the API)", () => {
+	it("keeps the Cashier at the counter: no analytics, no team, no management", () => {
+		expect(has("CASHIER", "REDEEM", "CLAIM")).toBe(true);
+		expect(has("CASHIER", "READ", "REWARD")).toBe(true);
+		expect(has("CASHIER", "READ", "ANALYTICS")).toBe(false);
+		expect(has("CASHIER", "UPDATE", "REWARD")).toBe(false);
+		expect(has("CASHIER", "UPDATE", "MEMBER")).toBe(false);
+	});
+
+	it("draws every template permission from the tenant catalogue, and names each template", () => {
 		for (const role of MembershipRoleSchema.options) {
-			expect(merchantRoleHasCapability(role, MERCHANT_CAPABILITY.viewLocations)).toBe(true);
+			expect(TENANT_ROLE_TEMPLATES[role].every(isTenantPermission)).toBe(true);
+			expect(TENANT_ROLE_TEMPLATE_NAMES[role].length).toBeGreaterThan(0);
 		}
+		expect(isTenantPermission({ action: "DELETE", resource: "USER" })).toBe(false);
+	});
+});
+
+describe("merchant capability bridge", () => {
+	it("maps every capability slug to a tenant permission", () => {
+		for (const capability of MerchantCapabilitySchema.options) {
+			expect(isTenantPermission(MERCHANT_CAPABILITY_PERMISSION[capability])).toBe(true);
+		}
+	});
+
+	it("derives the capabilities a set of permissions satisfies", () => {
+		expect(merchantCapabilitiesOf(TENANT_ROLE_TEMPLATES.OWNER)).toEqual(MerchantCapabilitySchema.options);
+		expect(merchantCapabilitiesOf([{ action: "READ", resource: "ANALYTICS" }])).toEqual([MERCHANT_CAPABILITY.viewAnalytics]);
+		expect(merchantCapabilitiesOf([])).toEqual([]);
 	});
 
 	it("registers every capability slug exactly once", () => {
 		const byName = (left: string, right: string): number => left.localeCompare(right);
 		expect(Object.values(MERCHANT_CAPABILITY).sort(byName)).toEqual([...MerchantCapabilitySchema.options].sort(byName));
-	});
-
-	it("fails closed on unknown capabilities", () => {
-		expect(merchantRoleHasCapability("OWNER", "merchant:manage_kyb")).toBe(false);
 	});
 });

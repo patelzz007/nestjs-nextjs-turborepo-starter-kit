@@ -1,5 +1,5 @@
 /**
- * `pnpm deps:check` (CI: "Shared dependency versions are aligned") must lint
+ * `pnpm tools deps:check` (CI: "Shared dependency versions are aligned") must lint
  * the WHOLE workspace. It used to run `syncpack lint` inside packages/tooling,
  * where syncpack discovers only that package and none of the repository's
  * .syncpackrc.json: the check passed while real drift sat in other workspaces.

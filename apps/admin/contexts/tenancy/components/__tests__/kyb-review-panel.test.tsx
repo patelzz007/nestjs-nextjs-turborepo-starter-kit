@@ -200,7 +200,7 @@ describe("KybReviewPanel loading", () => {
 
 	it("shows the merchant card's skeleton while the selected merchant loads", () => {
 		kybLoad.merchant = true;
-		renderPanel([PERMISSION.MERCHANT_ORG.MANAGE]);
+		renderPanel([PERMISSION.MERCHANT_ORG.LIST, PERMISSION.MERCHANT_ORG.APPROVE]);
 
 		const status = screen.getByRole("status");
 		expect(status.textContent).toBe("Loading merchant details…");
@@ -211,7 +211,7 @@ describe("KybReviewPanel loading", () => {
 
 describe("KybReviewPanel authorization", () => {
 	it("shows the review decision form with MERCHANT_ORG manage", () => {
-		renderPanel([PERMISSION.MERCHANT_ORG.MANAGE]);
+		renderPanel([PERMISSION.MERCHANT_ORG.LIST, PERMISSION.MERCHANT_ORG.APPROVE]);
 		expect(screen.getByText("Review decision")).toBeDefined();
 		expect(screen.queryByRole("note")).toBeNull();
 	});
@@ -269,7 +269,7 @@ describe("KybReviewPanel KYB update invalidation", () => {
 		queryClient.setQueryData(apiRouter.rewardsAdmin.listTenants.queryKey(ALL_MERCHANTS_QUERY), null);
 		queryClient.setQueryData(apiRouter.rewardsAdmin.getTenant.queryKey({ tenantId: SELECTED_ORG_ID }), null);
 		queryClient.setQueryData(apiRouter.rewardsAdmin.getTenant.queryKey({ tenantId: OTHER_ORG_ID }), null);
-		render(panel([PERMISSION.MERCHANT_ORG.MANAGE], queryClient), { wrapper: ClientTestProviders });
+		render(panel([PERMISSION.MERCHANT_ORG.LIST, PERMISSION.MERCHANT_ORG.APPROVE], queryClient), { wrapper: ClientTestProviders });
 
 		const options: UpdateKybOptionsStub | undefined = updateKybOptions.mock.lastCall?.at(0);
 		await options?.onSuccess?.(null, { tenantId: SELECTED_ORG_ID });
@@ -288,7 +288,7 @@ describe("KybReviewPanel decision form", () => {
 	}
 
 	it("refuses a rejection without the reviewer's reason — no reason is invented", async () => {
-		renderPanel([PERMISSION.MERCHANT_ORG.MANAGE]);
+		renderPanel([PERMISSION.MERCHANT_ORG.LIST, PERMISSION.MERCHANT_ORG.APPROVE]);
 		await clickAndSettle(screen.getByRole("button", { name: "Reject" }));
 
 		expect(updateKybMutate).not.toHaveBeenCalled();
@@ -296,7 +296,7 @@ describe("KybReviewPanel decision form", () => {
 	});
 
 	it("sends the reviewer's reason with the rejection", async () => {
-		renderPanel([PERMISSION.MERCHANT_ORG.MANAGE]);
+		renderPanel([PERMISSION.MERCHANT_ORG.LIST, PERMISSION.MERCHANT_ORG.APPROVE]);
 		fireEvent.change(screen.getByLabelText("Rejection reason"), { target: { value: "SSM certificate is expired" } });
 		await clickAndSettle(screen.getByRole("button", { name: "Reject" }));
 

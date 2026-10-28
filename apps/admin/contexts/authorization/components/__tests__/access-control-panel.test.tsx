@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CapabilitiesProvider } from "@workspace/client/lib/contexts/authorization";
 import { ApiError } from "@workspace/client/lib/api/api-request";
-import { LIST_SLOT_INDEX, PERMISSION, type CapabilitySlug, type CheckPermissionInput } from "@workspace/shared";
+import { LIST_SLOT_INDEX, PERMISSION, type CapabilitySlug, type CheckPermissionInput, type RoleListItem } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/toast";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -12,7 +12,7 @@ import { ClientTestProviders } from "@workspace/client/testing/client-test-provi
 
 interface ListQueryStub {
 	readonly useQuery: () => {
-		readonly data: { readonly data: readonly []; readonly meta: object } | undefined;
+		readonly data: { readonly data: readonly RoleListItem[]; readonly meta: object } | undefined;
 		readonly isError: boolean;
 		readonly isLoading: boolean;
 		readonly isPlaceholderData: boolean;
@@ -70,7 +70,7 @@ vi.mock("@workspace/client/lib/contexts/identity", () => {
 		useQuery: () =>
 			catalogLoad.roles
 				? { data: undefined, isError: false, isLoading: true, isPlaceholderData: false }
-				: { data: { data: [], meta: EMPTY_PAGE_META }, isError: false, isLoading: false, isPlaceholderData: false },
+				: { data: { data: CATALOG_ROLES, meta: EMPTY_PAGE_META }, isError: false, isLoading: false, isPlaceholderData: false },
 	};
 	const permissionList: ListQueryStub = {
 		useQuery: () =>
@@ -121,12 +121,25 @@ async function clickAndSettle(element: HTMLElement): Promise<void> {
 	await act(() => Promise.resolve());
 }
 
+/** A platform role and a tenant-role template, as `GET /admin/roles` lists them (ADR 067). */
+const CATALOG_ROLES: readonly RoleListItem[] = [
+	{ id: "role-admin", name: "Admin", description: null, isActive: true, kind: "PLATFORM" },
+	{ id: "role-manager-template", name: "Manager", description: null, isActive: true, kind: "TEMPLATE" },
+];
+
 describe("AccessControlPanel authorization", () => {
 	it("shows every tab when all three permissions are granted", () => {
 		renderPanel([PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ]);
 		expect(screen.getByRole("tab", { name: /Roles/ })).toBeDefined();
 		expect(screen.getByRole("tab", { name: /Permissions/ })).toBeDefined();
 		expect(screen.getByRole("tab", { name: "Permission checker" })).toBeDefined();
+	});
+
+	it("labels the tenant-role templates, and only them", () => {
+		renderPanel([PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ]);
+
+		expect(screen.getAllByText("Tenant template")).toHaveLength(1);
+		expect(screen.getByText("Admin")).toBeDefined();
 	});
 
 	it("shows only the checker tab (selected) for permission.read alone", () => {

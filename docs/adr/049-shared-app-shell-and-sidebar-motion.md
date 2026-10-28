@@ -119,3 +119,12 @@ paint shows the panel at its collapsed position.
   would cost a full Recharts render per frame (about 30 ms for the four analytics charts in a dev build).
 - New sidebar parts read `useSidebarControls()` unless they render the open state.
 - `AppShellTopbar` is no longer used by the apps; it stays in `packages/ui` with its tests until removed.
+
+## Amendment (2026-10-28) — one page width, no widening
+
+The page column no longer widens with the collapse. Every page in web, merchant and admin, and the docs
+site, now centres its content in one width, `max-w-10xl` (104 rem, `packages/tokens` `max-width-10xl`;
+the docs read it from `palette.css`). The CSS expression that eased the column from 88 rem to 104 rem is
+gone, so toggling the sidebar moves the panel's edge but never reflows the page inside it. The gap and
+the slide still follow `--sidebar-progress`; charts still hold their size until the spring settles,
+because the panel's own width still changes.

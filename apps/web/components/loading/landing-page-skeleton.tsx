@@ -21,7 +21,7 @@ function LandingHeroSkeleton(): React.JSX.Element {
 	return (
 		<section className="relative isolate -mt-16 overflow-hidden pt-16">
 			<div className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-b from-secondary via-background to-background" />
-			<div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 px-4 pt-14 pb-16 sm:px-6 sm:pt-20 sm:pb-20 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:px-8 lg:pt-24 lg:pb-24">
+			<div className="mx-auto grid max-w-10xl grid-cols-1 items-center gap-14 px-4 pt-14 pb-16 sm:px-6 sm:pt-20 sm:pb-20 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:px-8 lg:pt-24 lg:pb-24">
 				<div>
 					<Skeleton variant="text" className="h-7 w-48" />
 					<div className="mt-6 flex flex-col gap-3">
@@ -95,7 +95,7 @@ function PhonePreviewSkeleton(): React.JSX.Element {
 function LandingMerchantsSkeleton(): React.JSX.Element {
 	return (
 		<section className="border-b border-border/80 py-10">
-			<div className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-4 sm:px-6 lg:flex-row lg:gap-8 lg:px-8">
+			<div className="mx-auto flex max-w-10xl flex-col items-center gap-5 px-4 sm:px-6 lg:flex-row lg:gap-8 lg:px-8">
 				<Skeleton variant="text" className="h-4 w-48" />
 				<div className="flex flex-wrap justify-center gap-2.5 lg:justify-start">
 					{placeholderKeys("merchant", FEATURED_MERCHANT_LIMIT).map((key, index) => (
@@ -119,7 +119,7 @@ export function LandingPageSkeleton(): React.JSX.Element {
 		<SkeletonRegion labels={LANDING_LOADING_LABELS}>
 			<LandingHeroSkeleton />
 			<LandingMerchantsSkeleton />
-			<section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
+			<section className="mx-auto max-w-10xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
 				<RewardBrowseBones variant="landing" viewMode={viewMode} />
 			</section>
 		</SkeletonRegion>

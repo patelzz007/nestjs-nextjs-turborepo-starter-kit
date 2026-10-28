@@ -69,7 +69,8 @@ export function buildPermissionListOrder(query: PermissionListQuery): ListOrder<
 export function buildRoleListWhere(query: RoleListQuery): Prisma.RoleWhereInput {
 	return {
 		AND: [
-			{ isDeleted: false },
+			// Platform roles and the tenant-role templates; a tenant's own roles are its data, never listed here (ADR 067).
+			{ isDeleted: false, tenantId: null },
 			...fieldWhere(toPrismaBooleanFilter(query.filter?.isActive), (isActive) => ({ isActive })),
 			...(query.search === undefined ? [] : [roleNameMatches(query.search)]),
 		],
@@ -133,13 +134,21 @@ export class PrismaRbacCatalogReader implements RbacCatalogReadPort {
 			}),
 		);
 		return toPaginatedServiceResult(
-			mapListResult(page, (row): RoleListItem => ({ id: row.id, name: row.name, description: row.description, isActive: row.isActive, parentId: row.parentId })),
+			mapListResult(page, (row): RoleListItem => ({
+				id: row.id,
+				name: row.name,
+				description: row.description,
+				isActive: row.isActive,
+				kind: row.kind,
+			})),
 			query,
 		);
 	}
 
 	public async findRole(actor: ActorContext, roleId: string): Promise<RoleResponse | null> {
-		const row = await this.reads.readAsSystemOperation(RBAC_CATALOG_READ_OPERATION, actor, (db) => db.role.findFirst({ where: { id: roleId, isDeleted: false } }));
+		const row = await this.reads.readAsSystemOperation(RBAC_CATALOG_READ_OPERATION, actor, (db) =>
+			db.role.findFirst({ where: { id: roleId, isDeleted: false, tenantId: null } }),
+		);
 		return row === null ? null : toRoleResponse(roleStateOf(row));
 	}
 }

@@ -8,8 +8,7 @@ import type { UnitOfWork } from "../../../../../platform/application/unit-of-wor
 import { auditActorId } from "../../tenant-actor";
 import { toLocationResponse } from "../../tenant-responses";
 import type { TenantsScope } from "../../tenants-scope";
-import { TENANTS_UNIT_OF_WORK, TENANT_POLICY, LOCATION_ADMIN_REVIEW_OPERATION } from "../../ports/tenants.tokens";
-import type { TenantPolicyPort } from "../../ports/tenant-policy.port";
+import { TENANTS_UNIT_OF_WORK, LOCATION_ADMIN_REVIEW_OPERATION } from "../../ports/tenants.tokens";
 import { ReviewLocationCommand } from "./review-location.command";
 
 /** PENDING_APPROVAL → ACTIVE / REJECTED as a compare-and-set: a concurrent review wins, the loser gets 409. */
@@ -17,14 +16,12 @@ import { ReviewLocationCommand } from "./review-location.command";
 export class ReviewLocationHandler implements ICommandHandler<ReviewLocationCommand, LocationResponse> {
 	public constructor(
 		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<TenantsScope>,
-		@Inject(TENANT_POLICY) private readonly tenantPolicy: TenantPolicyPort,
 		@Inject(CLOCK) private readonly clock: Clock,
 	) {}
 
 	public async execute(command: ReviewLocationCommand): Promise<LocationResponse> {
 		const { actor, input } = command;
 		const adminUserId = auditActorId(actor);
-		const policyVersion = await this.tenantPolicy.activePolicyVersion(input.tenantId);
 
 		return this.uow.runSystemOperation(LOCATION_ADMIN_REVIEW_OPERATION, actor, async (scope): Promise<LocationResponse> => {
 			const location = await scope.locations.findLive(input.tenantId, input.locationId);
@@ -36,7 +33,6 @@ export class ReviewLocationHandler implements ICommandHandler<ReviewLocationComm
 			await scope.audit.record({
 				tenantId: input.tenantId,
 				actorUserId: adminUserId,
-				policyVersion,
 				action: input.approve ? "tenant.location.approved" : "tenant.location.rejected",
 				resourceType: "Location",
 				resourceId: stored.id,

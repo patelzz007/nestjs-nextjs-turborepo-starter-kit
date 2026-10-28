@@ -1,28 +1,25 @@
-import type { PermissionAction, PermissionResource } from "@workspace/shared";
+import type { AuthorizationAttributes, PermissionAction, PermissionResource } from "@workspace/shared";
 
-/** Metadata key for permission-based route guards. */
-export const REQUIRED_PERMISSIONS_KEY = "requiredPermissions";
-
-/** Metadata key for role-based route guards. */
-export const REQUIRED_ROLES_KEY = "requiredRoles";
+import type { ResourceAttributesExtractor, ResourceIdExtractor } from "./permission-target";
 
 /** Key used by the `@RequirePermission` decorator. */
 export const REQUIRED_PERMISSION_KEY = "requiredPermission";
 
-/** Shape of the metadata set by @RequireAllPermissions / @RequireAnyPermission. */
-export interface RequiredPermissionsMetadata {
-	readonly mode: "all" | "any";
-	readonly permissions: readonly [PermissionAction, PermissionResource][];
-}
-
-/** Shape of the metadata set by @RequireAllRoles / @RequireAnyRole. */
-export interface RequiredRolesMetadata {
-	readonly mode: "all" | "any";
-	readonly roles: readonly string[];
+/** Which record a permission check is about, when it is about one. */
+export interface RequiredPermissionTarget {
+	/**
+	 * The record: a route **param name** (`"id"` → `req.params.id`) or an extractor such as
+	 * `self()` / `fromParam()` (`./permission-target`). Declared but unresolvable: the guard denies.
+	 */
+	readonly resourceId?: string | ResourceIdExtractor;
+	/** Resource attributes for policy conditions: static values or an extractor such as `attributesFromBody()`. */
+	readonly attributes?: AuthorizationAttributes | ResourceAttributesExtractor;
+	/** Human-readable purpose, surfaced in audits and docs. */
+	readonly description?: string;
 }
 
 /** Shape of the metadata set by @RequirePermission. */
-export interface RequiredPermission {
+export interface RequiredPermission extends RequiredPermissionTarget {
 	readonly action: PermissionAction;
 	readonly resource: PermissionResource;
 }

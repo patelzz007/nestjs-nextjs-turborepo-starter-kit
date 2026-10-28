@@ -22,7 +22,6 @@ import {
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { ApiErrorResponseDto } from "../../../../platform/presentation/http/dto/api-response.dto";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
-import { Authorize } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { SuperAdminOnly } from "../../../../platform/presentation/http/security/decorators/super-admin.decorator";
@@ -65,12 +64,7 @@ export class SupportAccessController {
 	@Post("request")
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
 	@SuperAdminOnly()
-	@RequirePermission("CREATE", "USER")
-	@Authorize({
-		action: "CREATE",
-		resource: "USER",
-		description: "SuperAdmin can request support access",
-	})
+	@RequirePermission("CREATE", "USER", { description: "SuperAdmin can request support access" })
 	@ZodResponse(SupportAccessGrantResponseSchema, { status: HttpStatus.CREATED, description: "Support access grant requested" })
 	@PlatformOperation(SUPPORT_ACCESS_GRANT_OPERATION)
 	public async requestGrant(
@@ -99,12 +93,7 @@ export class SupportAccessController {
 	@Post(":grantId/revoke")
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
 	@SuperAdminOnly()
-	@Authorize({
-		action: "DELETE",
-		resource: "USER",
-		resourceId: "grantId",
-		description: "SuperAdmin can revoke support access",
-	})
+	@RequirePermission("DELETE", "USER", { resourceId: "grantId", description: "SuperAdmin can revoke support access" })
 	@ZodResponse(MessageResponseSchema, { status: HttpStatus.CREATED, description: "Support access grant revoked" })
 	@ApiResponse({ status: 409, type: ApiErrorResponseDto, description: "Grant is already revoked, expired, or denied" })
 	@PlatformOperation(SUPPORT_ACCESS_REVOKE_OPERATION)

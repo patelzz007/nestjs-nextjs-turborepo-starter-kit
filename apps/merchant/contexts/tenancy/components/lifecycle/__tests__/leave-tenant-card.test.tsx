@@ -37,7 +37,7 @@ afterEach(() => {
 });
 
 describe("LeaveTenantCard", () => {
-	it.each(["ADMIN", "CASHIER", "MEMBER"] satisfies MembershipRole[])("offers a %s to leave", (role) => {
+	it.each(["MANAGER", "CASHIER", "CASHIER"] satisfies MembershipRole[])("offers a %s to leave", (role) => {
 		renderAs(role);
 
 		expect(screen.getByRole("button", { name: "Leave this tenant" })).toBeDefined();

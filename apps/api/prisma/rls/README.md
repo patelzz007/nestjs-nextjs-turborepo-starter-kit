@@ -10,7 +10,7 @@ Instead:
 
 1. Change **`prisma/schema.prisma`** for tables/columns/indexes.
 2. Run **`pnpm db:migrate`** (creates/applies Prisma migration).
-3. RLS is applied automatically by **`pnpm db:apply-security`** (chained after migrate, deploy, reset, and push).
+3. RLS is applied automatically by **`pnpm tools db:apply-security`** (chained after migrate, deploy, reset, and push).
 
 ## File layout
 
@@ -71,7 +71,7 @@ A table added without `ALTER TABLE … FORCE ROW LEVEL SECURITY` beside its `ENA
 | ---------------------------- | ------------------------------------------------------- |
 | `pnpm db:migrate`            | Dev schema change — migrates **and** applies RLS        |
 | `pnpm db:reset`              | Clean DB — migrate, apply RLS, seed                     |
-| `pnpm db:check-rls-manifest` | Verify Prisma tables ↔ manifest ↔ RLS SQL (CI-friendly) |
-| `pnpm db:deploy`             | Production — deploy migrations **and** apply RLS        |
+| `pnpm tools db:check-rls-manifest` | Verify Prisma tables ↔ manifest ↔ RLS SQL (CI-friendly) |
+| `pnpm tools db:deploy`             | Production — deploy migrations **and** apply RLS        |
 
 You do **not** need a separate manual RLS step after reset when using these scripts.

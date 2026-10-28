@@ -56,7 +56,7 @@ export default function MerchantDetailView({ tenantId, initialMerchant, initialL
 	}
 
 	return (
-		<div className="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-6">
+		<div className="mx-auto flex w-full max-w-10xl min-w-0 flex-col gap-6">
 			<header className="flex flex-wrap items-center justify-between gap-4">
 				<div className="min-w-0">
 					<h1 className="text-2xl font-semibold tracking-tight text-foreground">{merchant.businessName}</h1>

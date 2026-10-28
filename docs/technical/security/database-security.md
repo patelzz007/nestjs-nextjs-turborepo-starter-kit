@@ -127,7 +127,7 @@ bare `prisma migrate reset` recreates the schema without them. Re-apply the secu
 ## Row-level data-change trail (ADR 051)
 
 Every table in `public` except the declared exemptions carries two triggers, generated and
-installed by `pnpm db:apply-security` (`prisma/rls/data-change-capture.ts`):
+installed by `pnpm tools db:apply-security` (`prisma/rls/data-change-capture.ts`):
 
 - `data_change_capture` (AFTER INSERT / UPDATE / DELETE, per row) and
   `data_change_capture_truncate` (AFTER TRUNCATE, per statement) append one `DataChangeLog`

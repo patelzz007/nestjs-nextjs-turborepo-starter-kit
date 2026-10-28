@@ -3,6 +3,7 @@ import { DAY_MS } from "@workspace/shared";
 
 import { deterministicUuid } from "./deterministic-uuid";
 import { prisma } from "./client";
+import { upsertSeedGrant } from "./tenant-roles";
 import { recordSeedAudit } from "./rbac-audit";
 import { requireRow } from "./require-row";
 
@@ -16,7 +17,7 @@ import { requireRow } from "./require-row";
 //   - `RolePermission.assignedBy` / `UserRole.assignedBy` on every row
 //     (platform operator for the seeded matrix and staff roles, the account
 //     itself for self-provisioned consumer roles);
-//   - a real role hierarchy: "Support Agent" extends "Support Viewer"
+//   - two flat support roles: "Support Agent" holds "Support Viewer"'s permissions plus UPDATE:USER
 //     (same trust plane — the child only ADDS capabilities);
 //   - soft-deleted rows: a deleted role, a deleted admin-created permission, a
 //     removed role assignment, an expired direct grant;
@@ -105,10 +106,14 @@ async function attributeSelfProvisionedRoles(consumerRole: Role): Promise<number
 	return unattributed.length;
 }
 
-/** "Support Agent" inherits "Support Viewer" (child adds UPDATE:USER); assigned to a staff member. */
-async function seedSupportHierarchy(find: Lookup, operator: User): Promise<void> {
+/**
+ * Two flat support roles (ADR 067: no inheritance): "Support Viewer" looks up accounts; "Support Agent"
+ * holds the same permissions plus UPDATE:USER, written out on the role itself. The agent role is assigned
+ * to a staff member.
+ */
+async function seedSupportRoles(find: Lookup, operator: User): Promise<void> {
 	const viewerPermissions = [find.permission("READ", "USER"), find.permission("LIST", "USER"), find.permission("READ", "PROFILE")];
-	const agentPermissions = [find.permission("UPDATE", "USER")];
+	const agentPermissions = [...viewerPermissions, find.permission("UPDATE", "USER")];
 	const agentHolder = find.user("david.lee@example.com");
 
 	await prisma.$transaction(async (tx: Prisma.TransactionClient): Promise<void> => {
@@ -124,9 +129,8 @@ async function seedSupportHierarchy(find: Lookup, operator: User): Promise<void>
 				name: "Support Agent",
 				description: "Support desk — Support Viewer plus correcting customer account details",
 				isSystem: false,
-				parentId: SUPPORT_VIEWER_ROLE_ID,
 			},
-			update: { isDeleted: false, deletedAt: null, parentId: SUPPORT_VIEWER_ROLE_ID },
+			update: { isDeleted: false, deletedAt: null },
 		});
 		for (const [roleId, granted] of [
 			[SUPPORT_VIEWER_ROLE_ID, viewerPermissions],
@@ -149,14 +153,6 @@ async function seedSupportHierarchy(find: Lookup, operator: User): Promise<void>
 				detail: JSON.stringify({ permissionIds: granted.map((permission) => permission.id) }),
 			});
 		}
-		await recordSeedAudit(tx, {
-			key: `role-parent:${SUPPORT_AGENT_ROLE_ID}`,
-			action: "ROLE_PARENT_SET",
-			actorKind: "USER",
-			actorId: operator.id,
-			targetRoleId: SUPPORT_AGENT_ROLE_ID,
-			detail: JSON.stringify({ parentId: SUPPORT_VIEWER_ROLE_ID }),
-		});
 		await tx.userRole.upsert({
 			where: { userId_roleId: { userId: agentHolder.id, roleId: SUPPORT_AGENT_ROLE_ID } },
 			create: { userId: agentHolder.id, roleId: SUPPORT_AGENT_ROLE_ID, assignedBy: operator.id },
@@ -288,7 +284,7 @@ async function seedDirectOverrides(find: Lookup, operator: User, nowMs: number):
 		readonly expiresAt: number | null;
 	}[] = [
 		{ user: admin, permission: find.permission("DELETE", "USER"), effect: "ALLOW", assignedBy: operator, expiresAt: null },
-		{ user: find.user("frank.miller@example.com"), permission: find.permission("MANAGE", "SYSTEM_SETTINGS"), effect: "ALLOW", assignedBy: operator, expiresAt: null },
+		{ user: find.user("frank.miller@example.com"), permission: find.permission("UPDATE", "PROFILE"), effect: "ALLOW", assignedBy: operator, expiresAt: null },
 		// Temporary analytics access for a quarterly review. Granted to an account no e2e suite uses as a
 		// plain consumer, so the consumer personas (alice, bob, …) keep exactly their role's permissions.
 		{
@@ -298,15 +294,16 @@ async function seedDirectOverrides(find: Lookup, operator: User, nowMs: number):
 			assignedBy: admin,
 			expiresAt: nowMs + TEMPORARY_GRANT_TTL_MS,
 		},
-		// The Manager role grants LIST:REPORT; this manager is restricted from it.
+		// The Admin role grants LIST:REPORT; this admin is restricted from it (a legacy DENY row, ignored since ADR 067).
 		{ user: find.user("david.lee@example.com"), permission: find.permission("LIST", "REPORT"), effect: "DENY", assignedBy: admin, expiresAt: null },
 	];
 	for (const grant of seeded) {
 		await prisma.$transaction(async (tx: Prisma.TransactionClient): Promise<void> => {
-			await tx.userPermission.upsert({
-				where: { userId_permissionId: { userId: grant.user.id, permissionId: grant.permission.id } },
-				create: { userId: grant.user.id, permissionId: grant.permission.id, effect: grant.effect, assignedBy: grant.assignedBy.id, expiresAt: grant.expiresAt },
-				update: { isDeleted: false, deletedAt: null, effect: grant.effect, assignedBy: grant.assignedBy.id, expiresAt: grant.expiresAt },
+			await upsertSeedGrant(tx, {
+				userId: grant.user.id,
+				permissionId: grant.permission.id,
+				tenantId: null,
+				data: { isDeleted: false, deletedAt: null, effect: grant.effect, assignedBy: grant.assignedBy.id, expiresAt: grant.expiresAt, locationId: null, grantedVia: "Admin" },
 			});
 			await recordSeedAudit(tx, {
 				key: `permission-granted:${grant.user.id}:${grant.permission.id}`,
@@ -325,10 +322,11 @@ async function seedDirectOverrides(find: Lookup, operator: User, nowMs: number):
 	const readReport = find.permission("READ", "REPORT");
 	const expiredAt = nowMs - EXPIRED_GRANT_AGE_MS;
 	await prisma.$transaction(async (tx: Prisma.TransactionClient): Promise<void> => {
-		await tx.userPermission.upsert({
-			where: { userId_permissionId: { userId: carol.id, permissionId: readReport.id } },
-			create: { userId: carol.id, permissionId: readReport.id, effect: "ALLOW", assignedBy: admin.id, expiresAt: expiredAt, isDeleted: true, deletedAt: expiredAt },
-			update: {},
+		await upsertSeedGrant(tx, {
+			userId: carol.id,
+			permissionId: readReport.id,
+			tenantId: null,
+			data: { effect: "ALLOW", assignedBy: admin.id, expiresAt: expiredAt, isDeleted: true, deletedAt: expiredAt, locationId: null, grantedVia: "Admin" },
 		});
 		await recordSeedAudit(tx, {
 			key: `permission-expired:${carol.id}:${readReport.id}`,
@@ -345,7 +343,7 @@ async function seedDirectOverrides(find: Lookup, operator: User, nowMs: number):
 /** A removed staff role (soft-deleted assignment) and an impersonated re-attachment of a consumer role. */
 async function seedAssignmentHistory(find: Lookup, operator: User, nowMs: number): Promise<void> {
 	const eve = find.user("eve.davis@example.com");
-	const manager = find.role("Manager");
+	const manager = find.role("Admin");
 	await prisma.$transaction(async (tx: Prisma.TransactionClient): Promise<void> => {
 		await tx.userRole.upsert({
 			where: { userId_roleId: { userId: eve.id, roleId: manager.id } },
@@ -386,7 +384,7 @@ export async function seedRbacDemo(users: readonly User[], roles: readonly Role[
 
 	await stampRoleMatrixOperator(roles, operator.id);
 	await attributeSelfProvisionedRoles(find.role("User"));
-	await seedSupportHierarchy(find, operator);
+	await seedSupportRoles(find, operator);
 	await seedRetiredCatalogRows(find, operator, nowMs);
 	await seedRetentionHistory(find, operator);
 	await seedDirectOverrides(find, operator, nowMs);

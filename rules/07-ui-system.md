@@ -129,6 +129,8 @@ Semantic HTML; keyboard support; visible focus; accessible names; correct labels
 
 Verify every new/changed layout at mobile, tablet, desktop, and wide-desktop widths, using responsive utility classes rather than JS-based breakpoint detection (`useEffect` + `window.innerWidth` reads are slower, cause layout flicker on load, and don't work during SSR).
 
+**One page width.** Every page in web, merchant and admin, and the docs site, centres its content in `max-w-10xl` (104rem). The scale continues Tailwind's own 8rem steps past `max-w-7xl` (80rem): `max-w-8xl` 88rem, `max-w-9xl` 96rem, `max-w-10xl` 104rem — `packages/tokens` `max-width-*`, mapped to Tailwind's `--container-*` namespace (the docs read them from `palette.css`). A panel page gets it from `PanelShellContent`; a page outside the panel (landing, onboarding, a public page) sets `mx-auto max-w-10xl` itself. It does not change when the sidebar opens or closes. Narrower columns are content measures inside the page (a reading column, a single-task card such as accepting an invitation, an error message or the checkout QR code), never a second page width.
+
 ## Compound components and slot patterns
 
 For a component with several related, co-dependent parts (a `Card` with a header/body/footer, a `Tabs` with a list and panels), prefer a compound-component pattern over one giant component with a dozen boolean/config props trying to control every internal section.
@@ -254,7 +256,7 @@ ADR 030). A generator writes the CSS every platform consumes; nothing else holds
    `layout.ts`, `motion.ts`; the Tailwind mapping in `tailwind-theme.ts`. Zod schemas (`schema.ts`)
    validate every value.
 
-**Generated CSS is never edited by hand.** Change the TypeScript source, run `pnpm tokens:generate`,
+**Generated CSS is never edited by hand.** Change the TypeScript source, run `pnpm tools tokens:generate`,
 and commit the regenerated files in `packages/tokens/generated/`:
 
 | File | Holds | Consumed by |
@@ -277,7 +279,7 @@ names onto the same primitives, so it cannot drift (`apps/docs/src/styles/theme-
 Every text pair meets WCAG AA and every ring / chart series meets 3:1 (`packages/ui/src/styles/__tests__/tokens-contrast.test.ts`, which reads the generated `web.css`).
 
 To rebrand a product built on this kit: change the accent scale(s) in `packages/tokens/src/palette.ts`,
-run `pnpm tokens:generate`, then re-run `pnpm run test` — the contrast tests tell you which steps need nudging.
+run `pnpm tools tokens:generate`, then re-run `pnpm run test` — the contrast tests tell you which steps need nudging.
 
 - **Brand colour is reserved for meaning** — primary actions, links, focus rings, the active nav
   row and the lead chart series. Hover rows stay neutral. Status (success / warning / destructive /

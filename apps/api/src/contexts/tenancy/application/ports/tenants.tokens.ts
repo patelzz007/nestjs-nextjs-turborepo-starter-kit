@@ -6,7 +6,6 @@ export const MERCHANT_ACCESS = Symbol("MERCHANT_ACCESS");
 export const TENANT_DIRECTORY = Symbol("TENANT_DIRECTORY");
 export const TENANT_READ = Symbol("TENANT_READ");
 export const TENANT_AUDIT = Symbol("TENANT_AUDIT");
-export const TENANT_POLICY = Symbol("TENANT_POLICY");
 export const TENANT_EMAILS = Symbol("TENANT_EMAILS");
 export const INVITE_TOKENS = Symbol("INVITE_TOKENS");
 export const KYB_FILE_ACCESS = Symbol("KYB_FILE_ACCESS");

@@ -90,7 +90,7 @@ export class RewardsAdminInvitesController {
 	) {}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
-	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@RequirePermission("CREATE", "MERCHANT_ORG")
 	@PlatformOperation(PROVISION_ADMIN_MERCHANT_INVITE_OPERATION)
 	@Post()
 	@ApiOperation({ summary: "Create merchant invite" })
@@ -103,7 +103,7 @@ export class RewardsAdminInvitesController {
 	}
 
 	// The admin panel asks before showing the invite page: a single-tenant deployment refuses new merchants.
-	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@RequirePermission("CREATE", "MERCHANT_ORG")
 	@Get("availability")
 	@ApiOperation({
 		summary: "Whether a new merchant may be invited",
@@ -115,7 +115,7 @@ export class RewardsAdminInvitesController {
 	}
 
 	// A pure render (no state change), so a GET: the admin page re-renders it live as the form is typed.
-	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@RequirePermission("CREATE", "MERCHANT_ORG")
 	@Get("preview-email")
 	@ApiOperation({
 		summary: "Preview merchant invite email (does not send)",
@@ -204,7 +204,7 @@ export class RewardsAdminMerchantsController {
 
 	/** D05: checked against the KYB transition table under the profile's row lock, audited in the same transaction. */
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
-	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@RequirePermission("APPROVE", "MERCHANT_ORG")
 	@PlatformOperation(KYB_ADMIN_DECIDE_OPERATION)
 	@Patch(":tenantId/kyb")
 	@ApiOperation({ summary: "Update merchant KYB status (REJECTED / ACTION_REQUIRED require kybFields.rejectionReason)" })
@@ -219,7 +219,7 @@ export class RewardsAdminMerchantsController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
-	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@RequirePermission("UPDATE", "MERCHANT_ORG")
 	@PlatformOperation(LOCATION_ADMIN_CREATE_OPERATION)
 	@Post(":tenantId/locations")
 	@ApiOperation({ summary: "Create a tenant store location" })
@@ -233,7 +233,7 @@ export class RewardsAdminMerchantsController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
-	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@RequirePermission("APPROVE", "MERCHANT_ORG")
 	@PlatformOperation(LOCATION_ADMIN_REVIEW_OPERATION)
 	@Patch(":tenantId/locations/:locationId/review")
 	@ApiOperation({ summary: "Approve or reject a tenant store location request" })
@@ -259,7 +259,7 @@ export class RewardsAdminMerchantsController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
-	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@RequirePermission("SUSPEND", "MERCHANT_ORG")
 	@PlatformOperation(TENANT_LIFECYCLE_ADMIN_SUSPEND_OPERATION)
 	@Post(":tenantId/suspend")
 	@ApiOperation({ summary: "Suspend an active or restricted tenant: only its lifecycle routes keep working" })
@@ -273,7 +273,7 @@ export class RewardsAdminMerchantsController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
-	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@RequirePermission("REACTIVATE", "MERCHANT_ORG")
 	@PlatformOperation(TENANT_LIFECYCLE_ADMIN_REINSTATE_OPERATION)
 	@Post(":tenantId/reinstate")
 	@ApiOperation({ summary: "Reinstate a suspended tenant (its pending appeal is accepted with this reason)" })
@@ -288,7 +288,7 @@ export class RewardsAdminMerchantsController {
 
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
 	@SuperAdminOnly()
-	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@RequirePermission("BAN", "MERCHANT_ORG")
 	@PlatformOperation(TENANT_LIFECYCLE_ADMIN_BAN_OPERATION)
 	@Post(":tenantId/ban")
 	@ApiOperation({
@@ -307,7 +307,7 @@ export class RewardsAdminMerchantsController {
 
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
 	@SuperAdminOnly()
-	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@RequirePermission("UNBAN", "MERCHANT_ORG")
 	@PlatformOperation(TENANT_LIFECYCLE_ADMIN_UNBAN_OPERATION)
 	@Post(":tenantId/unban")
 	@ApiOperation({ summary: "SuperAdmin: lift a tenant's ban (it is active again)" })
@@ -321,7 +321,7 @@ export class RewardsAdminMerchantsController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
-	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@RequirePermission("REJECT", "MERCHANT_ORG")
 	@PlatformOperation(TENANT_LIFECYCLE_ADMIN_REJECT_APPEAL_OPERATION)
 	@Post(":tenantId/appeals/:appealId/reject")
 	@ApiOperation({ summary: "Reject a tenant's pending appeal against its suspension" })

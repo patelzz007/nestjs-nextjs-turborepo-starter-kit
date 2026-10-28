@@ -49,7 +49,7 @@ a while the two ran side by side:
    never role names — so creating or changing a role never needs a migration.
 6. **`AuthorizationCheckerService` stays for the session payload only** (`/auth/me`,
    `/auth/permissions`, the admin "check" endpoint), never for a security decision
-   ([RBAC internals](../technical/authorization/rbac.md#two-readers-of-the-same-data)).
+   ([RBAC internals](../technical/authorization/backend.md#two-readers-of-the-same-data)).
 
 ## Alternatives considered
 
@@ -68,6 +68,6 @@ a while the two ran side by side:
 - Adding a scope, an owner type or a policy operator is a kernel change with kernel tests, not a
   search through controllers.
 - The kernel is code this repository maintains — its precedence, filters and audits are covered by
-  unit and e2e tests ([Testing authorization](../technical/authorization/testing.md)).
+  unit and e2e tests ([Testing authorization](../technical/authorization/recipes.md#13-testing)).
 - Adding another authorization engine is a rule violation
-  ([dos and don'ts](../technical/authorization/dos-and-donts.md)).
+  ([dos and don'ts](../technical/authorization/recipes.md#14-dos-and-donts)).

@@ -2,18 +2,13 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { PERMISSION, type ResourceAuthorization } from "@workspace/shared";
+import { PERMISSION } from "@workspace/shared";
 
 import { Can, CapabilitiesProvider, useAuthorization, useCan } from "../index";
 
 const READ = PERMISSION.USER.READ;
 const DELETE = PERMISSION.USER.DELETE;
-const MANAGE = PERMISSION.USER.MANAGE;
-
-interface TestOrder {
-	readonly id: string;
-	readonly authorization?: ResourceAuthorization;
-}
+const UPDATE = PERMISSION.USER.UPDATE;
 
 afterEach(() => {
 	cleanup();
@@ -73,9 +68,9 @@ describe("Can component", () => {
 		expect(screen.getByText("all-denied")).toBeDefined();
 	});
 
-	it("treats MANAGE on the same resource as implying every action", () => {
+	it("never lets one held action imply another, on the same resource or any other", () => {
 		render(
-			<CapabilitiesProvider capabilities={[MANAGE]}>
+			<CapabilitiesProvider capabilities={[UPDATE]}>
 				<Can permission={READ} fallback={<div>read-denied</div>}>
 					<div>read-content</div>
 				</Can>
@@ -85,29 +80,10 @@ describe("Can component", () => {
 			</CapabilitiesProvider>,
 		);
 
-		expect(screen.getByText("read-content")).toBeDefined();
+		expect(screen.getByText("read-denied")).toBeDefined();
+		expect(screen.queryByText("read-content")).toBeNull();
 		expect(screen.getByText("other-resource-denied")).toBeDefined();
 		expect(screen.queryByText("other-resource-content")).toBeNull();
-	});
-
-	it("honours the server-evaluated resource capability and renders the fallback when denied", () => {
-		const lockedOrder: TestOrder = { id: "o1", authorization: { can: { delete: false } } };
-		const openOrder: TestOrder = { id: "o2", authorization: { can: { delete: true } } };
-
-		render(
-			<CapabilitiesProvider capabilities={[PERMISSION.ORDER.DELETE]}>
-				<Can permission={PERMISSION.ORDER.DELETE} resource={lockedOrder} fallback={<div>locked-fallback</div>}>
-					<div>locked-content</div>
-				</Can>
-				<Can permission={PERMISSION.ORDER.DELETE} resource={openOrder} fallback={<div>open-fallback</div>}>
-					<div>open-content</div>
-				</Can>
-			</CapabilitiesProvider>,
-		);
-
-		expect(screen.getByText("locked-fallback")).toBeDefined();
-		expect(screen.queryByText("locked-content")).toBeNull();
-		expect(screen.getByText("open-content")).toBeDefined();
 	});
 });
 
@@ -161,25 +137,20 @@ describe("useCan hook", () => {
 });
 
 describe("useAuthorization hook", () => {
-	interface ProbeProps {
-		readonly capabilities: readonly string[];
-		readonly order?: TestOrder | undefined;
-	}
-
-	function Probe({ capabilities, order }: ProbeProps): React.JSX.Element {
+	function Probe({ capabilities }: { readonly capabilities: readonly string[] }): React.JSX.Element {
 		return (
 			<CapabilitiesProvider capabilities={capabilities}>
-				<Checks order={order} />
+				<Checks />
 			</CapabilitiesProvider>
 		);
 	}
 
-	function Checks({ order }: { readonly order?: TestOrder | undefined }): React.JSX.Element {
+	function Checks(): React.JSX.Element {
 		const auth = useAuthorization();
 		return (
 			<div>
-				<span>{auth.can(PERMISSION.ORDER.DELETE, order) ? "can-yes" : "can-no"}</span>
-				<span>{auth.cannot(PERMISSION.ORDER.DELETE, order) ? "cannot-yes" : "cannot-no"}</span>
+				<span>{auth.can(DELETE) ? "can-yes" : "can-no"}</span>
+				<span>{auth.cannot(DELETE) ? "cannot-yes" : "cannot-no"}</span>
 			</div>
 		);
 	}
@@ -191,42 +162,14 @@ describe("useAuthorization hook", () => {
 		expect(screen.getByText("cannot-yes")).toBeDefined();
 	});
 
-	it("denies when the server says false even though the global permission is held", () => {
-		render(<Probe capabilities={[PERMISSION.ORDER.DELETE]} order={{ id: "o1", authorization: { can: { delete: false } } }} />);
+	it("allows exactly the held permission", () => {
+		render(<Probe capabilities={[DELETE]} />);
+		expect(screen.getByText("can-yes")).toBeDefined();
+		cleanup();
 
+		render(<Probe capabilities={[UPDATE]} />);
 		expect(screen.getByText("can-no")).toBeDefined();
 		expect(screen.getByText("cannot-yes")).toBeDefined();
-	});
-
-	it("denies when the server map has no entry for the action", () => {
-		render(<Probe capabilities={[PERMISSION.ORDER.DELETE]} order={{ id: "o1", authorization: { can: { read: true } } }} />);
-
-		expect(screen.getByText("can-no")).toBeDefined();
-	});
-
-	it("trusts the server decision for the resource even without the global permission (e.g. an ACL grant)", () => {
-		render(<Probe capabilities={[PERMISSION.ORDER.READ]} order={{ id: "o1", authorization: { can: { delete: true } } }} />);
-
-		expect(screen.getByText("can-yes")).toBeDefined();
-	});
-
-	it("denies on the resource when the server denies, even with the global permission", () => {
-		render(<Probe capabilities={[PERMISSION.ORDER.DELETE]} order={{ id: "o1", authorization: { can: { delete: false } } }} />);
-
-		expect(screen.getByText("can-no")).toBeDefined();
-	});
-
-	it("allows when MANAGE implies the action and the server allows it on the resource", () => {
-		render(<Probe capabilities={[PERMISSION.ORDER.MANAGE]} order={{ id: "o1", authorization: { can: { delete: true } } }} />);
-
-		expect(screen.getByText("can-yes")).toBeDefined();
-		expect(screen.getByText("cannot-no")).toBeDefined();
-	});
-
-	it("falls back to the global check for resources without an authorization block", () => {
-		render(<Probe capabilities={[PERMISSION.ORDER.DELETE]} order={{ id: "o1" }} />);
-
-		expect(screen.getByText("can-yes")).toBeDefined();
 	});
 
 	it("useCan exposes the same checker", () => {

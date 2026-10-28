@@ -62,7 +62,7 @@ export class InviteMemberHandler implements ICommandHandler<InviteMemberCommand,
 				manager.userId,
 				now,
 			);
-			const auditBase = { tenantId, actorUserId: manager.userId, policyVersion: member.policyVersion, resourceType: "TenantInvitation" };
+			const auditBase = { tenantId, actorUserId: manager.userId, resourceType: "TenantInvitation" };
 
 			// A lapsed invitation no longer blocks a fresh one: close it first, so the one-PENDING-per-email index admits the new row.
 			const pending = await scope.invitations.findPendingTeamInviteByEmail(tenantId, input.email);

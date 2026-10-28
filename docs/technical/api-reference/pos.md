@@ -3,12 +3,12 @@ title: "API reference — Point of sale and integrations (machine-to-machine)"
 description: "Terminal pairing, validating a customer's QR / backup code and recording the paid bill, plus the integration API (`/integration/*`: rewards, analytics, redemption history). Authenticated with a merchant API key, which names its own tenant."
 order: 7
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792540800000
+lastUpdated: 1793145600000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
 
-<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm docs:api -->
+<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm tools docs:api -->
 
 # API reference — Point of sale and integrations (machine-to-machine)
 
@@ -64,7 +64,7 @@ POST /api/v1/integration/terminals/pair
 Content-Type: application/json
 
 {
-  "pairingCode": "RTF7WGEP"
+  "pairingCode": "5H3VY7P3"
 }
 ```
 
@@ -88,8 +88,8 @@ Response `201 Created` (application/json):
     }
   },
   "meta": {
-    "correlationId": "5VxZRgn2DZxa_xAjVjwib",
-    "timestamp": 1792586071341
+    "correlationId": "jT0zZF-gFkqdUmjeQa-JT",
+    "timestamp": 1793190895405
   }
 }
 ```
@@ -156,7 +156,7 @@ X-Terminal-Id: KL-REGISTER-01
 Content-Type: application/json
 
 {
-  "idempotencyKey": "96199fc5-22cb-47a7-a9d3-e5f2d8300732",
+  "idempotencyKey": "16c11563-feee-46ba-8274-eddf949c48d1",
   "billTotalMinor": 2500,
   "currency": "MYR",
   "codes": [
@@ -173,14 +173,14 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "saleId": "01a15e74-be34-7019-8c17-5db1a96d590a",
+    "saleId": "01a18281-9fab-7cec-a09a-0b6b7b2a186c",
     "billTotalMinor": 2500,
     "currency": "MYR",
-    "paidAt": 1792586071567,
-    "idempotencyKey": "96199fc5-22cb-47a7-a9d3-e5f2d8300732",
+    "paidAt": 1793190895511,
+    "idempotencyKey": "16c11563-feee-46ba-8274-eddf949c48d1",
     "redemptions": [
       {
-        "redemptionId": "01a15e74-be84-75ec-90a7-f6bb44b10234",
+        "redemptionId": "01a18281-9fdc-7158-8117-226b815c6e9b",
         "claimId": "019b76da-a800-7c1a-9069-f2e16d4af0a3",
         "rewardId": "019b76da-a800-7abc-a318-2ac9fe8ee4ca",
         "rewardTitle": "Free coffee — Grand Opening"
@@ -188,8 +188,8 @@ Response `201 Created` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "d1S62ZDp8eewIOdxcz9Kq",
-    "timestamp": 1792586071748
+    "correlationId": "DoVewN8MsnMmmNvDpKlDn",
+    "timestamp": 1793190895605
   }
 }
 ```
@@ -257,14 +257,14 @@ Response `201 Created` (application/json):
     "claimId": "019b76da-a800-7c1a-9069-f2e16d4af0a3",
     "rewardTitle": "Free coffee — Grand Opening",
     "rewardType": "FREE_ITEM",
-    "claimExpiresAt": 1793190782380,
+    "claimExpiresAt": 1793795615854,
     "valid": true,
     "invalidReason": null,
     "minSpendMinor": 0
   },
   "meta": {
-    "correlationId": "m5Zpw3CzpOTgECLFlWPIX",
-    "timestamp": 1792586071474
+    "correlationId": "NZ7kRukDf5mDccqdZqljA",
+    "timestamp": 1793190895471
   }
 }
 ```
@@ -362,8 +362,8 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "period": {
-      "from": 1788105600000,
-      "to": 1792586076488,
+      "from": 1788710400000,
+      "to": 1793190900260,
       "timeZone": "Asia/Kuala_Lumpur"
     },
     "totalRewards": {
@@ -392,12 +392,12 @@ Response `200 OK` (application/json):
     },
     "claimsOverTime": [
       {
-        "date": 1788105600000,
+        "date": 1788710400000,
         "claims": 21,
         "redemptions": 22
       },
       {
-        "date": 1788710400000,
+        "date": 1789315200000,
         "claims": 28,
         "redemptions": 22
       }
@@ -432,22 +432,22 @@ Response `200 OK` (application/json):
       },
       "overTime": [
         {
-          "date": 1788105600000,
+          "date": 1788710400000,
           "salesMinor": 52410,
           "bills": 22
         },
         {
-          "date": 1788710400000,
+          "date": 1789315200000,
           "salesMinor": 61748,
           "bills": 22
         }
       ],
-      "firstBillAt": 1761008340000
+      "firstBillAt": 1761613140000
     }
   },
   "meta": {
-    "correlationId": "vp3H8Sd1jzcgRg8F4uBOf",
-    "timestamp": 1792586076559
+    "correlationId": "KxkyzUJJRVedz3QeQ-bHM",
+    "timestamp": 1793190900350
   }
 }
 ```
@@ -572,15 +572,15 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "range": {
-      "from": 1789994076654,
-      "to": 1792586076654,
+      "from": 1790598900425,
+      "to": 1793190900425,
       "timeZone": "Asia/Kuala_Lumpur",
       "interval": "week",
-      "previousFrom": 1787402076654,
-      "previousTo": 1789994076654
+      "previousFrom": 1788006900425,
+      "previousTo": 1790598900425
     },
     "currency": "MYR",
-    "firstBillAt": 1761008340000,
+    "firstBillAt": 1761613140000,
     "totals": {
       "salesMinor": {
         "value": 278677,
@@ -627,8 +627,8 @@ Response `200 OK` (application/json):
     },
     "series": [
       {
-        "start": 1789994076654,
-        "end": 1790524800000,
+        "start": 1790598900425,
+        "end": 1791129600000,
         "isPartial": true,
         "salesMinor": 61220,
         "bills": 20,
@@ -637,8 +637,8 @@ Response `200 OK` (application/json):
         "redemptions": 20
       },
       {
-        "start": 1790524800000,
-        "end": 1791129600000,
+        "start": 1791129600000,
+        "end": 1791734400000,
         "isPartial": false,
         "salesMinor": 64001,
         "bills": 22,
@@ -658,7 +658,7 @@ Response `200 OK` (application/json):
         "redemptions": 98
       },
       {
-        "locationId": "01a15e74-9171-792c-bef6-26bdc06ad2e2",
+        "locationId": "01a18281-7b12-75fd-aa8e-86a3847fec12",
         "name": "Brew & Bean KL — Bangsar",
         "city": "KUALA_LUMPUR",
         "salesMinor": 0,
@@ -695,8 +695,8 @@ Response `200 OK` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "U0IURmP37lAd3p1oxO1va",
-    "timestamp": 1792586076688
+    "correlationId": "FBLPGBzOSnMfbXW9pJxv8",
+    "timestamp": 1793190900459
   }
 }
 ```
@@ -738,7 +738,7 @@ The body is the file (Content-Disposition: attachment). Range: `from` (inclusive
 **Example** — called as an integration API key (the key names its tenant). The body is the file itself (Content-Type of the format, Content-Disposition: attachment; filename=…); errors keep the JSON error envelope. See docs/technical/api/analytics.md.
 
 ```http
-GET /api/v1/integration/analytics/export?from=1789994076714&to=1792586076714&format=csv
+GET /api/v1/integration/analytics/export?from=1790598900469&to=1793190900469&format=csv
 X-API-Key: mk_live_<the INTEGRATION key returned by POST /api/v1/tenants/{tenantSlug}/api-keys>
 ```
 
@@ -809,9 +809,9 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "redemptionId": "01a15e74-be84-75ec-90a7-f6bb44b10234",
+      "redemptionId": "01a18281-9fdc-7158-8117-226b815c6e9b",
       "rewardTitle": "Free coffee — Grand Opening",
-      "redeemedAt": 1792586071567,
+      "redeemedAt": 1793190895511,
       "terminalId": "KL-REGISTER-01",
       "redemptionMethod": "MANUAL",
       "customerBanned": false
@@ -819,7 +819,7 @@ Response `200 OK` (application/json):
     {
       "redemptionId": "019b76da-a800-704e-9593-80d298dad1b4",
       "rewardTitle": "Free coffee — Grand Opening",
-      "redeemedAt": 1792585982381,
+      "redeemedAt": 1793190815855,
       "terminalId": "KL-REGISTER-01",
       "redemptionMethod": "SCAN",
       "customerBanned": false
@@ -827,14 +827,14 @@ Response `200 OK` (application/json):
   ],
   "meta": {
     "limit": 2,
-    "total": 918,
+    "total": 914,
     "page": 1,
-    "totalPages": 459,
-    "nextCursor": "eyJhdCI6MTc5MjU4NTk4MjM4MSwiaWQiOiIwMTliNzZkYS1hODAwLTcwNGUtOTU5My04MGQyOThkYWQxYjQifQ",
+    "totalPages": 457,
+    "nextCursor": "eyJhdCI6MTc5MzE5MDgxNTg1NSwiaWQiOiIwMTliNzZkYS1hODAwLTcwNGUtOTU5My04MGQyOThkYWQxYjQifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "xI_KIBKLvT-wy_8lqpvSr",
-    "timestamp": 1792586076898
+    "correlationId": "LO7WC0oZ99n8rDhL5BcWC",
+    "timestamp": 1793190900681
   }
 }
 ```
@@ -939,11 +939,11 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792586067923,
-      "updatedAt": 1792586068124,
+      "createdAt": 1793190892897,
+      "updatedAt": 1793190893059,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15e74-afd5-7ff2-8242-198a87ee28fe",
+      "id": "01a18281-9562-73f3-a64b-8ef541b66b8b",
       "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
       "tenantName": "Brew & Bean KL",
       "tenantLogoUrl": null,
@@ -957,18 +957,18 @@ Response `200 OK` (application/json):
       "category": "cafe",
       "images": [
         {
-          "fileId": "01a15e74-a3b9-73f2-b9ce-90ff869877d1",
-          "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/LARGE/local-public",
+          "fileId": "01a18281-89e3-761c-9766-ef5c90059d9f",
+          "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/LARGE/local-public",
           "width": 1920,
           "height": 1080,
           "sources": [
             {
               "width": 640,
-              "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/THUMBNAIL/local-public"
+              "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/THUMBNAIL/local-public"
             },
             {
               "width": 1280,
-              "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/MEDIUM/local-public"
+              "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/MEDIUM/local-public"
             }
           ]
         }
@@ -976,8 +976,8 @@ Response `200 OK` (application/json):
       "quantityTotal": 200,
       "quantityRemaining": 200,
       "quantityReserved": 0,
-      "startDate": 1792586066463,
-      "expiryDate": 1797770066463,
+      "startDate": 1793190891590,
+      "expiryDate": 1798374891590,
       "status": "DRAFT",
       "claimCount": 0,
       "redemptionCount": 0,
@@ -993,11 +993,11 @@ Response `200 OK` (application/json):
       "locationIds": []
     },
     {
-      "createdAt": 1792586066689,
-      "updatedAt": 1792586069401,
+      "createdAt": 1793190891864,
+      "updatedAt": 1793190894038,
       "isDeleted": false,
       "deletedAt": null,
-      "id": "01a15e74-ab08-77b1-9a35-67e97fd0ad61",
+      "id": "01a18281-915c-71cb-a2a2-867c0e7b89e1",
       "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
       "tenantName": "Brew & Bean KL",
       "tenantLogoUrl": null,
@@ -1011,18 +1011,18 @@ Response `200 OK` (application/json):
       "category": "cafe",
       "images": [
         {
-          "fileId": "01a15e74-a3b9-73f2-b9ce-90ff869877d1",
-          "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/LARGE/local-public",
+          "fileId": "01a18281-89e3-761c-9766-ef5c90059d9f",
+          "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/LARGE/local-public",
           "width": 1920,
           "height": 1080,
           "sources": [
             {
               "width": 640,
-              "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/THUMBNAIL/local-public"
+              "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/THUMBNAIL/local-public"
             },
             {
               "width": 1280,
-              "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/MEDIUM/local-public"
+              "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/MEDIUM/local-public"
             }
           ]
         }
@@ -1030,15 +1030,15 @@ Response `200 OK` (application/json):
       "quantityTotal": 250,
       "quantityRemaining": 249,
       "quantityReserved": 1,
-      "startDate": 1792586066463,
-      "expiryDate": 1797770066463,
+      "startDate": 1793190891590,
+      "expiryDate": 1798374891590,
       "status": "PUBLISHED",
       "claimCount": 1,
       "redemptionCount": 0,
       "referralsEnabled": true,
       "referralPoolTotal": 50,
       "referralPoolRemaining": 50,
-      "referrerRewardId": "01a15e74-ab08-7ebb-a3ea-a0f64db406d2",
+      "referrerRewardId": "01a18281-915c-7dcf-8d6e-77e86bf5df31",
       "rules": {
         "minSpendMyr": 15,
         "maxUsePerUser": 1
@@ -1052,11 +1052,11 @@ Response `200 OK` (application/json):
     "total": 16,
     "page": 1,
     "totalPages": 8,
-    "nextCursor": "eyJhdCI6MTc5MjU4NjA2NjY4OSwiaWQiOiIwMWExNWU3NC1hYjA4LTc3YjEtOWEzNS02N2U5N2ZkMGFkNjEifQ",
+    "nextCursor": "eyJhdCI6MTc5MzE5MDg5MTg2NCwiaWQiOiIwMWExODI4MS05MTVjLTcxY2ItYTJhMi04NjdjMGU3Yjg5ZTEifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "tKJRF4llVcMeHmXUJ_9_r",
-    "timestamp": 1792586073882
+    "correlationId": "Y09C5usV3kWc4NTJWXRLm",
+    "timestamp": 1793190897818
   }
 }
 ```
@@ -1163,7 +1163,7 @@ Content-Type: application/json
 
 {
   "imageFileIds": [
-    "01a15e74-c81e-78e9-9c75-6c80102ffff1"
+    "01a18281-a96e-778c-841a-e2ce89936492"
   ],
   "title": "Synced from the back office",
   "description": "One free Kopi O when you order any breakfast set at Brew & Bean KL.",
@@ -1171,8 +1171,8 @@ Content-Type: application/json
   "rewardType": "FREE_ITEM",
   "rewardValue": 6,
   "quantityTotal": 200,
-  "startDate": 1792586075810,
-  "expiryDate": 1797770075810,
+  "startDate": 1793190899652,
+  "expiryDate": 1798374899652,
   "locationScopeType": "ALL_LOCATIONS",
   "rules": {
     "maxUsePerUser": 1,
@@ -1191,11 +1191,11 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792586075885,
-    "updatedAt": 1792586075924,
+    "createdAt": 1793190899718,
+    "updatedAt": 1793190899788,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15e74-cef0-7918-ba2a-513866e3a134",
+    "id": "01a18281-b00a-7e30-99bd-f31fde21d383",
     "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "tenantName": "Brew & Bean KL",
     "tenantLogoUrl": null,
@@ -1209,18 +1209,18 @@ Response `201 Created` (application/json):
     "category": "cafe",
     "images": [
       {
-        "fileId": "01a15e74-c81e-78e9-9c75-6c80102ffff1",
-        "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-c81e-78e9-9c75-6c80102ffff1/variants/LARGE/local-public",
+        "fileId": "01a18281-a96e-778c-841a-e2ce89936492",
+        "url": "http://10.117.81.236:8097/api/v1/files/01a18281-a96e-778c-841a-e2ce89936492/variants/LARGE/local-public",
         "width": 1920,
         "height": 1080,
         "sources": [
           {
             "width": 640,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-c81e-78e9-9c75-6c80102ffff1/variants/THUMBNAIL/local-public"
+            "url": "http://10.117.81.236:8097/api/v1/files/01a18281-a96e-778c-841a-e2ce89936492/variants/THUMBNAIL/local-public"
           },
           {
             "width": 1280,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-c81e-78e9-9c75-6c80102ffff1/variants/MEDIUM/local-public"
+            "url": "http://10.117.81.236:8097/api/v1/files/01a18281-a96e-778c-841a-e2ce89936492/variants/MEDIUM/local-public"
           }
         ]
       }
@@ -1228,15 +1228,15 @@ Response `201 Created` (application/json):
     "quantityTotal": 200,
     "quantityRemaining": 200,
     "quantityReserved": 0,
-    "startDate": 1792586075810,
-    "expiryDate": 1797770075810,
+    "startDate": 1793190899652,
+    "expiryDate": 1798374899652,
     "status": "DRAFT",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "01a15e74-cef0-7f9f-b609-7348f76774d4",
+    "referrerRewardId": "01a18281-b00a-7e29-8e19-d2503da189ed",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -1245,8 +1245,8 @@ Response `201 Created` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "4uHR4qQsddDg03uB2YL31",
-    "timestamp": 1792586076021
+    "correlationId": "-bbMfFiTcuwJZcVGN98Lj",
+    "timestamp": 1793190899910
   }
 }
 ```
@@ -1327,7 +1327,7 @@ Read one of the API key's tenant rewards (404 when not offered at the key's stor
 **Example** — called as an integration API key (the key names its tenant).
 
 ```http
-GET /api/v1/integration/rewards/01a15e74-afd5-7ff2-8242-198a87ee28fe
+GET /api/v1/integration/rewards/01a18281-9562-73f3-a64b-8ef541b66b8b
 X-API-Key: mk_live_<the INTEGRATION key returned by POST /api/v1/tenants/{tenantSlug}/api-keys>
 ```
 
@@ -1337,11 +1337,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792586067923,
-    "updatedAt": 1792586068124,
+    "createdAt": 1793190892897,
+    "updatedAt": 1793190893059,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15e74-afd5-7ff2-8242-198a87ee28fe",
+    "id": "01a18281-9562-73f3-a64b-8ef541b66b8b",
     "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "tenantName": "Brew & Bean KL",
     "tenantLogoUrl": null,
@@ -1355,18 +1355,18 @@ Response `200 OK` (application/json):
     "category": "cafe",
     "images": [
       {
-        "fileId": "01a15e74-a3b9-73f2-b9ce-90ff869877d1",
-        "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/LARGE/local-public",
+        "fileId": "01a18281-89e3-761c-9766-ef5c90059d9f",
+        "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/LARGE/local-public",
         "width": 1920,
         "height": 1080,
         "sources": [
           {
             "width": 640,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/THUMBNAIL/local-public"
+            "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/THUMBNAIL/local-public"
           },
           {
             "width": 1280,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-a3b9-73f2-b9ce-90ff869877d1/variants/MEDIUM/local-public"
+            "url": "http://10.117.81.236:8097/api/v1/files/01a18281-89e3-761c-9766-ef5c90059d9f/variants/MEDIUM/local-public"
           }
         ]
       }
@@ -1374,8 +1374,8 @@ Response `200 OK` (application/json):
     "quantityTotal": 200,
     "quantityRemaining": 200,
     "quantityReserved": 0,
-    "startDate": 1792586066463,
-    "expiryDate": 1797770066463,
+    "startDate": 1793190891590,
+    "expiryDate": 1798374891590,
     "status": "DRAFT",
     "claimCount": 0,
     "redemptionCount": 0,
@@ -1391,8 +1391,8 @@ Response `200 OK` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "45Mjq-y63tDGYlfFaEt5N",
-    "timestamp": 1792586074045
+    "correlationId": "IT_MP8E0kOHb5P0X-CKFe",
+    "timestamp": 1793190897957
   }
 }
 ```
@@ -1495,7 +1495,7 @@ Update a draft or pending reward of the API key's tenant
 **Example** — called as an integration API key (the key names its tenant).
 
 ```http
-PATCH /api/v1/integration/rewards/01a15e74-cef0-7918-ba2a-513866e3a134
+PATCH /api/v1/integration/rewards/01a18281-b00a-7e30-99bd-f31fde21d383
 X-API-Key: mk_live_<the INTEGRATION key returned by POST /api/v1/tenants/{tenantSlug}/api-keys>
 Content-Type: application/json
 
@@ -1510,11 +1510,11 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792586075885,
-    "updatedAt": 1792586076100,
+    "createdAt": 1793190899718,
+    "updatedAt": 1793190899953,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15e74-cef0-7918-ba2a-513866e3a134",
+    "id": "01a18281-b00a-7e30-99bd-f31fde21d383",
     "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "tenantName": "Brew & Bean KL",
     "tenantLogoUrl": null,
@@ -1528,18 +1528,18 @@ Response `200 OK` (application/json):
     "category": "cafe",
     "images": [
       {
-        "fileId": "01a15e74-c81e-78e9-9c75-6c80102ffff1",
-        "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-c81e-78e9-9c75-6c80102ffff1/variants/LARGE/local-public",
+        "fileId": "01a18281-a96e-778c-841a-e2ce89936492",
+        "url": "http://10.117.81.236:8097/api/v1/files/01a18281-a96e-778c-841a-e2ce89936492/variants/LARGE/local-public",
         "width": 1920,
         "height": 1080,
         "sources": [
           {
             "width": 640,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-c81e-78e9-9c75-6c80102ffff1/variants/THUMBNAIL/local-public"
+            "url": "http://10.117.81.236:8097/api/v1/files/01a18281-a96e-778c-841a-e2ce89936492/variants/THUMBNAIL/local-public"
           },
           {
             "width": 1280,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-c81e-78e9-9c75-6c80102ffff1/variants/MEDIUM/local-public"
+            "url": "http://10.117.81.236:8097/api/v1/files/01a18281-a96e-778c-841a-e2ce89936492/variants/MEDIUM/local-public"
           }
         ]
       }
@@ -1547,15 +1547,15 @@ Response `200 OK` (application/json):
     "quantityTotal": 120,
     "quantityRemaining": 120,
     "quantityReserved": 0,
-    "startDate": 1792586075810,
-    "expiryDate": 1797770075810,
+    "startDate": 1793190899652,
+    "expiryDate": 1798374899652,
     "status": "DRAFT",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "01a15e74-cef0-7f9f-b609-7348f76774d4",
+    "referrerRewardId": "01a18281-b00a-7e29-8e19-d2503da189ed",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -1564,8 +1564,8 @@ Response `200 OK` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "H1luyQMiqiz9DkWblxP5m",
-    "timestamp": 1792586076204
+    "correlationId": "ZjbXClsBuxBcR8QsvP0tp",
+    "timestamp": 1793190900049
   }
 }
 ```
@@ -1652,7 +1652,7 @@ _No fields._
 **Example** — called as an integration API key (the key names its tenant).
 
 ```http
-POST /api/v1/integration/rewards/01a15e74-cef0-7918-ba2a-513866e3a134/publish
+POST /api/v1/integration/rewards/01a18281-b00a-7e30-99bd-f31fde21d383/publish
 X-API-Key: mk_live_<the INTEGRATION key returned by POST /api/v1/tenants/{tenantSlug}/api-keys>
 Content-Type: application/json
 
@@ -1665,11 +1665,11 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792586075885,
-    "updatedAt": 1792586076271,
+    "createdAt": 1793190899718,
+    "updatedAt": 1793190900100,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15e74-cef0-7918-ba2a-513866e3a134",
+    "id": "01a18281-b00a-7e30-99bd-f31fde21d383",
     "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
     "tenantName": "Brew & Bean KL",
     "tenantLogoUrl": null,
@@ -1683,18 +1683,18 @@ Response `201 Created` (application/json):
     "category": "cafe",
     "images": [
       {
-        "fileId": "01a15e74-c81e-78e9-9c75-6c80102ffff1",
-        "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-c81e-78e9-9c75-6c80102ffff1/variants/LARGE/local-public",
+        "fileId": "01a18281-a96e-778c-841a-e2ce89936492",
+        "url": "http://10.117.81.236:8097/api/v1/files/01a18281-a96e-778c-841a-e2ce89936492/variants/LARGE/local-public",
         "width": 1920,
         "height": 1080,
         "sources": [
           {
             "width": 640,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-c81e-78e9-9c75-6c80102ffff1/variants/THUMBNAIL/local-public"
+            "url": "http://10.117.81.236:8097/api/v1/files/01a18281-a96e-778c-841a-e2ce89936492/variants/THUMBNAIL/local-public"
           },
           {
             "width": 1280,
-            "url": "http://192.168.100.23:8097/api/v1/files/01a15e74-c81e-78e9-9c75-6c80102ffff1/variants/MEDIUM/local-public"
+            "url": "http://10.117.81.236:8097/api/v1/files/01a18281-a96e-778c-841a-e2ce89936492/variants/MEDIUM/local-public"
           }
         ]
       }
@@ -1702,15 +1702,15 @@ Response `201 Created` (application/json):
     "quantityTotal": 120,
     "quantityRemaining": 120,
     "quantityReserved": 0,
-    "startDate": 1792586075810,
-    "expiryDate": 1797770075810,
+    "startDate": 1793190899652,
+    "expiryDate": 1798374899652,
     "status": "PENDING_REVIEW",
     "claimCount": 0,
     "redemptionCount": 0,
     "referralsEnabled": true,
     "referralPoolTotal": 50,
     "referralPoolRemaining": 50,
-    "referrerRewardId": "01a15e74-cef0-7f9f-b609-7348f76774d4",
+    "referrerRewardId": "01a18281-b00a-7e29-8e19-d2503da189ed",
     "rules": {
       "minSpendMyr": 15,
       "maxUsePerUser": 1
@@ -1719,8 +1719,8 @@ Response `201 Created` (application/json):
     "locationIds": []
   },
   "meta": {
-    "correlationId": "NliBgzbmOSlEMPlcAshXy",
-    "timestamp": 1792586076381
+    "correlationId": "Kh3lHnLBXCblhGSei_JW1",
+    "timestamp": 1793190900196
   }
 }
 ```
@@ -1778,8 +1778,8 @@ Response `200 OK` (application/json):
     "unitsRemaining": 1587
   },
   "meta": {
-    "correlationId": "-Pg_7QBXev5haXxldBC1W",
-    "timestamp": 1792586073921
+    "correlationId": "9GxX8sey6irPpj-Me5TXy",
+    "timestamp": 1793190897848
   }
 }
 ```

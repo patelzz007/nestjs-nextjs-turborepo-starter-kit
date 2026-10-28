@@ -22,9 +22,9 @@ export interface EndpointAccess {
 	readonly allowsIntegrationKey: boolean;
 	readonly superAdminOnly: boolean;
 	readonly adminAccessOnly: boolean;
-	/** `ACTION:RESOURCE` pairs from `@RequirePermission`. */
+	/** `ACTION:RESOURCE` pairs from the route's `@RequirePermission`s without a record target. */
 	readonly permissions: readonly string[];
-	/** `@Authorize` policies: `ACTION:RESOURCE` plus the policy's own description. */
+	/** `@RequirePermission`s with a record target or a description: `ACTION:RESOURCE` plus that description. */
 	readonly policies: readonly string[];
 	readonly emailVerified: boolean;
 	readonly fullSession: boolean;
@@ -50,8 +50,6 @@ interface DecoratorSet {
 const CLASS_PATTERN = /^(?:export\s+)?class\s+(?<name>\w+)/;
 const METHOD_PATTERN = /^\s+(?:public\s+)?(?:async\s+)?(?<name>\w+)\s*\(/;
 const STRING_ARGUMENT_PATTERN = /"(?<value>[^"]*)"/g;
-const ACTION_ARGUMENT_PATTERN = /action:\s*"(?<action>\w+)"/;
-const RESOURCE_ARGUMENT_PATTERN = /resource:\s*"(?<resource>\w+)"/;
 const DESCRIPTION_ARGUMENT_PATTERN = /description:\s*"(?<description>[^"]*)"/;
 const DECORATOR_START = /^\s*@\w+/;
 const MS_PER_SECOND = 1000;
@@ -182,15 +180,15 @@ function has(decorators: readonly string[], name: string): boolean {
 
 function toAccess(sourceFile: string, decorators: readonly string[], rateLimitPolicies: ReadonlyMap<string, string>): EndpointAccess {
 	const guards = decorators.filter((decorator) => decorator.startsWith("@UseGuards(")).join(" ");
-	const permissions = decorators
-		.filter((decorator) => decorator.startsWith("@RequirePermission("))
+	const required = decorators.filter((decorator) => decorator.startsWith("@RequirePermission("));
+	const permissions = required
+		.filter((decorator) => !/\bresourceId:/.test(decorator))
 		.map((decorator) => stringArguments(decorator))
 		.map(([action = "", resource = ""]) => `${action}:${resource}`);
-	const policies = decorators
-		.filter((decorator) => decorator.startsWith("@Authorize("))
+	const policies = required
+		.filter((decorator) => /\b(resourceId|description):/.test(decorator))
 		.map((decorator) => {
-			const action = ACTION_ARGUMENT_PATTERN.exec(decorator)?.groups?.action ?? "?";
-			const resource = RESOURCE_ARGUMENT_PATTERN.exec(decorator)?.groups?.resource ?? "?";
+			const [action = "?", resource = "?"] = stringArguments(decorator);
 			const description = DESCRIPTION_ARGUMENT_PATTERN.exec(decorator)?.groups?.description;
 			const self = /resourceId:\s*self\(\)/.test(decorator) ? " (own record only)" : "";
 			return `${action}:${resource}${self}${description === undefined ? "" : ` — ${description}`}`;

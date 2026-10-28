@@ -9,10 +9,9 @@ export interface PanelShellContentProps extends React.ComponentProps<"div"> {
 }
 
 /**
- * Centered panel main column, `max-w-10xl`. On desktop inside a panel shell
- * it is narrower beside an open sidebar (88rem) and widens as the sidebar
- * collapses (104rem), easing on the sidebar's spring (styles/components.css)
- * rather than snapping when the toggle is pressed.
+ * Centered panel main column, `max-w-10xl` (104rem) — the one page width web,
+ * merchant, admin and the docs share. It stays the same whether the sidebar is
+ * open or collapsed, so a page never reflows when the sidebar is toggled.
  */
 export const PanelShellContent = React.forwardRef<HTMLDivElement, PanelShellContentProps>(function PanelShellContent(
 	{ children, className, ...props },

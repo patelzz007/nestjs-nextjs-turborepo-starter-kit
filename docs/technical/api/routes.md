@@ -118,7 +118,7 @@ schema.
 5. Controller method: `@ZodBody` / `@ZodQuery` / `@ZodListQuery` / `@ZodParams` with the contract's
    input, exactly one response decorator, the authorization decorators. A `POST` that creates passes
    `{ status: HttpStatus.CREATED }` to the response decorator.
-6. `pnpm --filter @workspace/api openapi:export` and `pnpm docs:api`
+6. `pnpm --filter @workspace/api openapi:export` and `pnpm tools docs:api`
    ([how the reference is generated](./README.md#how-the-reference-is-generated)).
 
 ## 5. Removing an endpoint
@@ -364,7 +364,7 @@ API change shows up as a reviewable diff. Regenerate it after changing a route, 
 or a response contract:
 
 ```bash
-pnpm openapi:export          # = turbo run openapi:export --filter=@workspace/api (needs Postgres + Redis, like test:e2e)
+pnpm tools openapi:export          # = turbo run openapi:export --filter=@workspace/api (needs Postgres + Redis, like test:e2e)
 ```
 
 `apps/api/test/openapi-artifact.e2e-spec.ts` (part of `pnpm --filter @workspace/api test:e2e`)

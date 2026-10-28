@@ -33,6 +33,13 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 					publish: { useMutation: rewardsMutation },
 				},
 				context: { useQuery: (): object => contextQueryState(TWO_STORE_CONTEXT) },
+				listMembers: { useQuery: (): object => ({ data: { data: [] }, isLoading: false }) },
+			},
+			// The reward page's "Shared with" card (ADR 067): nothing shared yet.
+			tenantAccess: {
+				shares: { useQuery: (): object => ({ data: { data: [] }, isLoading: false }) },
+				share: { useMutation: (): object => ({ mutate: vi.fn(), reset: vi.fn(), isPending: false, error: null }) },
+				unshare: { useMutation: (): object => ({ mutate: vi.fn(), reset: vi.fn(), isPending: false, error: null }) },
 			},
 		},
 	}),
@@ -147,6 +154,8 @@ describe("MerchantRewardDetailPageView authorization", () => {
 		expect(screen.getByRole("heading", { level: 1, name: "Free latte" })).toBeTruthy();
 		expect(screen.getByRole("button", { name: "Submit for review" })).toBeTruthy();
 		expect(screen.getByRole("link", { name: "Edit reward" }).getAttribute("href")).toBe(tenantRoutes(TEST_ORG_SLUG).rewards.edit(REWARD_ID));
+		// Sharing the reward with one teammate (ADR 067) is offered to those who manage rewards.
+		expect(screen.getByRole("heading", { name: "Shared with" })).toBeTruthy();
 	});
 
 	it("keeps a reward in review editable but not submittable again", () => {
@@ -171,10 +180,16 @@ describe("MerchantRewardDetailPageView authorization", () => {
 		expect(screen.getByRole("heading", { level: 1, name: "Free latte" })).toBeTruthy();
 		expect(screen.queryByRole("link", { name: "Edit reward" })).toBeNull();
 		expect(screen.queryByRole("button", { name: "Submit for review" })).toBeNull();
+		expect(screen.queryByRole("heading", { name: "Shared with" })).toBeNull();
 	});
 
 	it("denies the page without merchant:view_rewards", () => {
-		renderWithQueryClient(<MerchantRewardDetailPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, "MEMBER");
+		renderWithAuthorization(
+			<QueryClientProvider client={new QueryClient()}>
+				<MerchantRewardDetailPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />
+			</QueryClientProvider>,
+			{ role: "CASHIER", capabilities: [] },
+		);
 
 		expect(screen.getByText("You don't have access to this page")).toBeTruthy();
 		expect(rewardQuery).not.toHaveBeenCalled();

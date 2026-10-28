@@ -52,7 +52,6 @@ export const SEED_COVERAGE_EXEMPTIONS: readonly SeedCoverageExemption[] = [
 		"AnalyticsEvent",
 		"AuditLog",
 		"AuthorizationAudit",
-		"AuthorizationPolicySimulation",
 		"DataChangeLog",
 		"EmailDeliveryEvent",
 		"EmailLog",
@@ -65,14 +64,6 @@ export const SEED_COVERAGE_EXEMPTIONS: readonly SeedCoverageExemption[] = [
 	].map((table: string): SeedCoverageExemption => neverSoftDeleted(table, APPEND_ONLY_RECORD)),
 	...["GithubWebhookDelivery", "InboxDeadLetter", "InboxProcessedEvent", "OutboxEvent", "PlatformResourceIdempotencyRecord"].map((table: string): SeedCoverageExemption =>
 		neverSoftDeleted(table, DELIVERY_BOOKKEEPING),
-	),
-	neverSoftDeleted(
-		"AuthorizationPolicyDraft",
-		"A tenant policy draft ends through its status (PENDING_APPROVAL → APPROVED → PUBLISHED, SUPERSEDED or ROLLED_BACK) and is kept as the approval record; nothing soft-deletes a draft.",
-	),
-	neverSoftDeleted(
-		"AuthorizationPolicyVersion",
-		"A published policy version is immutable history: a newer publication stamps supersededAt on the old one, which stays so a rollback can restore it; nothing soft-deletes a version.",
 	),
 	neverSoftDeleted(
 		"CapabilityDefinition",

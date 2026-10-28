@@ -27,7 +27,7 @@ import {
 import { ADMIN_ACCESS_MESSAGE_KEY } from "../platform/presentation/http/security/admin-access";
 import { PLATFORM_OPERATION_KEY } from "../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { PUBLIC_OPERATION_KEY } from "../platform/presentation/http/security/decorators/public-operation.decorator";
-import { REQUIRED_PERMISSION_KEY, REQUIRED_PERMISSIONS_KEY } from "../platform/presentation/http/security/decorators/route-requirements.metadata";
+import { REQUIRED_PERMISSION_KEY, type RequiredPermission } from "../platform/presentation/http/security/decorators/route-requirements.metadata";
 import { SUPER_ADMIN_KEY } from "../platform/presentation/http/security/decorators/super-admin.decorator";
 import { discoverControllerRoutes, routeMetadataOf, type ControllerRoute } from "../../test/support/controller-routes";
 import { handlerOf } from "../../test/support/route-metadata";
@@ -41,18 +41,23 @@ function operationOf(handler: MetadataTarget, controller: MetadataTarget): strin
 	return reflector.getAllAndOverride<string | undefined>(PLATFORM_OPERATION_KEY, [handler, controller]);
 }
 
+/** Whether a route's `@RequirePermission`s include one over a whole collection (no record target). */
+function requiresCollectionPermission(route: ControllerRoute): boolean {
+	const requirements = reflector.get<readonly RequiredPermission[] | undefined>(REQUIRED_PERMISSION_KEY, route.handler) ?? [];
+	return requirements.some((requirement) => requirement.resourceId === undefined);
+}
+
 /**
  * An admin-console route: it requires admin access, a superadmin, or a platform
- * permission (`@RequirePermission*`, checked against the JWT's platform grants), or
- * it is served under `/admin`. Tenant routes authorize through `@Authorize` and the
- * tenant's membership instead, and never match.
+ * permission over a collection (`@RequirePermission` without a record target, checked
+ * against the JWT's platform grants), or it is served under `/admin`. Self-service routes
+ * (a target of `self()`) and tenant routes (the tenant's membership) never match.
  */
 function isAdminConsoleRoute(route: ControllerRoute): boolean {
 	return (
 		routeMetadataOf(route, SUPER_ADMIN_KEY) === true ||
 		routeMetadataOf(route, ADMIN_ACCESS_MESSAGE_KEY) !== undefined ||
-		routeMetadataOf(route, REQUIRED_PERMISSION_KEY) !== undefined ||
-		routeMetadataOf(route, REQUIRED_PERMISSIONS_KEY) !== undefined ||
+		requiresCollectionPermission(route) ||
 		route.path.split("/").includes("admin")
 	);
 }

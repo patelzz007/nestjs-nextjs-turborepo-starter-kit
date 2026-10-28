@@ -257,7 +257,7 @@ async function assertRowAuditInstalled(pool: Pool, plan: RowAuditPlan): Promise<
  * are planned against the live catalog, installed, and verified.
  *
  * No local `psql` binary required — only a reachable `DATABASE_URL` (Docker Postgres on localhost is fine).
- * Progress lines go to `log` (stdout by default). Run it with `pnpm db:apply-security`.
+ * Progress lines go to `log` (stdout by default). Run it with `pnpm tools db:apply-security`.
  */
 export async function applyRowLevelSecurity(log: RlsApplyLog = writeLine): Promise<void> {
 	const databaseUrl = stripPrismaQueryParams(getDatabaseUrl());

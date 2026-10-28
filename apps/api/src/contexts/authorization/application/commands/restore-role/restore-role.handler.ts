@@ -14,8 +14,8 @@ import { toRoleResponse } from "../../services/rbac-response.mapper";
 import { RestoreRoleCommand } from "./restore-role.command";
 
 /**
- * Holders regain the role's permissions and those of every ancestor, so every ancestor (deleted ones
- * included) must be within the actor's reach. Holders are re-authenticated and SoD-checked after the write.
+ * Holders regain the role's permissions, so all of them must be within the actor's reach. Holders are
+ * re-authenticated and SoD-checked after the write.
  */
 @CommandHandler(RestoreRoleCommand)
 export class RestoreRoleHandler implements ICommandHandler<RestoreRoleCommand, RoleResponse> {
@@ -38,7 +38,7 @@ export class RestoreRoleHandler implements ICommandHandler<RestoreRoleCommand, R
 			await this.guard.assertCanGrantRoles(scope, rbacActor, [roleId]);
 			role.restore(this.clock.now());
 			const stored: RoleState = await scope.roles.save(role);
-			const affectedUserIds: string[] = await scope.rbacGraph.holdersOfLineage(roleId);
+			const affectedUserIds: string[] = await scope.rbacGraph.holdersOfRole(roleId);
 			await this.guard.assertUsersHaveNoConflicts(scope, affectedUserIds);
 			return { kind: "changed", result: toRoleResponse(stored), audits: [{ action: "ROLE_RESTORED", targetRoleId: roleId, detail: stored.name }], affectedUserIds };
 		});

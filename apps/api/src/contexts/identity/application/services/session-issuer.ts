@@ -55,9 +55,9 @@ export interface IssueSessionOptions {
 	readonly mfaAssured?: boolean | undefined;
 }
 
-/** The permission that lets platform staff into the merchant portal without a membership. */
-const MANAGE_MERCHANTS_ACTION = "MANAGE";
-const MANAGE_MERCHANTS_RESOURCE = "MERCHANT_ORG";
+/** The permission that lets platform staff into the merchant portal without a membership: `UPDATE MERCHANT_ORG`. */
+const MERCHANT_STAFF_ACTION = "UPDATE";
+const MERCHANT_STAFF_RESOURCE = "MERCHANT_ORG";
 
 /**
  * Issues a device session (one `RefreshToken` row and its token pair) to a user who passed every
@@ -188,7 +188,7 @@ export class SessionIssuer {
 		const access = await this.merchantAccess.findAccess(account.id, account.email.value, now);
 		assertMerchantPortalAccess({
 			hasMerchantMembership: access.tenantSlug !== null,
-			canManageMerchants: permissions.permissions.some((permission) => permission.action === MANAGE_MERCHANTS_ACTION && permission.resource === MANAGE_MERCHANTS_RESOURCE),
+			canManageMerchants: permissions.permissions.some((permission) => permission.action === MERCHANT_STAFF_ACTION && permission.resource === MERCHANT_STAFF_RESOURCE),
 			hasPendingTeamInvite: access.hasPendingTeamInvite,
 		});
 		return access.tenantSlug;

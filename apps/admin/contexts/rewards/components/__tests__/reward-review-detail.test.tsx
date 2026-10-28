@@ -168,7 +168,7 @@ function showReward(reward: RewardStub): void {
 function renderPage(): RenderResult {
 	return render(
 		<QueryClientProvider client={new QueryClient()}>
-			<CapabilitiesProvider capabilities={[PERMISSION.REWARD.MANAGE]}>
+			<CapabilitiesProvider capabilities={[PERMISSION.REWARD.APPROVE, PERMISSION.REWARD.REJECT]}>
 				<RewardReviewDetailView rewardId={REWARD.id} />
 			</CapabilitiesProvider>
 		</QueryClientProvider>,

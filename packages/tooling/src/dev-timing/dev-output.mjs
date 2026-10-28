@@ -1,6 +1,6 @@
 /**
  * Parsing of `pnpm dev`'s streamed output (turbo `--ui=stream`), for
- * `pnpm dev:timing` (plan §19.1): which task printed a line, the moment the
+ * `pnpm tools dev:timing` (plan §19.1): which task printed a line, the moment the
  * API's rspack build finished (RunScriptWebpackPlugin spawns the API process
  * right after that emit, so it is the start of phase B), and the `markPhase`
  * lines `apps/api/src/bootstrap/bootstrap-app.ts` prints during boot.

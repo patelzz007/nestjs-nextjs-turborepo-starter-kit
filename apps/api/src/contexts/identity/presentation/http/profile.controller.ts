@@ -6,7 +6,8 @@ import { apiContract, apiPath, OwnProfileSchema, type AccessTokenPayload, type O
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
-import { Authorize, self } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
+import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
+import { self } from "../../../../platform/presentation/http/security/decorators/permission-target";
 import { GetUser } from "../../../../platform/presentation/http/security/decorators/get-user.decorator";
 import { ZodBody } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
@@ -26,7 +27,7 @@ export class ProfileController {
 	@SkipThrottle({ strict: true })
 	@ApiBearerAuth()
 	@Get("/profile")
-	@Authorize({ action: "READ", resource: "PROFILE", resourceId: self(), description: "A user reads their own profile" })
+	@RequirePermission("READ", "PROFILE", { resourceId: self(), description: "A user reads their own profile" })
 	@ApiOperation({ summary: "Get the signed-in user's own profile (name, avatar, optimistic-lock version)" })
 	@ZodResponse(OwnProfileSchema, { description: "The signed-in user's own profile" })
 	public async getOwnProfile(@GetUser() user: AccessTokenPayload, @CurrentActor() actor: ActorContext): Promise<OwnProfile> {
@@ -36,7 +37,7 @@ export class ProfileController {
 	@SkipThrottle({ strict: true })
 	@ApiBearerAuth()
 	@Patch("/profile")
-	@Authorize({ action: "UPDATE", resource: "PROFILE", resourceId: self(), description: "A user edits their own profile (never during impersonation)" })
+	@RequirePermission("UPDATE", "PROFILE", { resourceId: self(), description: "A user edits their own profile (never during impersonation)" })
 	@ApiOperation({
 		summary: "Edit the signed-in user's own profile",
 		description:

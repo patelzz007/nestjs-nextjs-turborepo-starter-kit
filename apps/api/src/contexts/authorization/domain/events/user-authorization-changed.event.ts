@@ -3,8 +3,8 @@ import type { EpochMs } from "@workspace/shared";
 import { DomainEvent } from "../../../../platform/domain/domain-event";
 
 /**
- * The effective authorization of `userIds` changed (roles, direct grants, a role's permissions, a role
- * hierarchy edit, an expired override). Their sessions were revoked in the same transaction.
+ * The effective authorization of `userIds` changed (roles, direct grants, a role's permissions, an
+ * expired override). Their sessions were revoked in the same transaction.
  *
  * Published after commit only (mechanism 2). Handlers drop cached authorization and access-token state
  * on every instance (`authz:invalidate`) and the identity context clears its `/auth/me` cache. A

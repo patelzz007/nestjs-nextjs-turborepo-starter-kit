@@ -19,15 +19,12 @@ import { ApproveSupportAccessHandler } from "./application/commands/approve-supp
 import { AssignDefaultRoleHandler } from "./application/commands/assign-default-role/assign-default-role.handler";
 import { AssignRoleHandler } from "./application/commands/assign-role/assign-role.handler";
 import { CreatePermissionHandler } from "./application/commands/create-permission/create-permission.handler";
-import { CreatePolicyDraftHandler } from "./application/commands/create-policy-draft/create-policy-draft.handler";
 import { CreateRoleHandler } from "./application/commands/create-role/create-role.handler";
 import { ExpireTimeBoundPermissionOverridesHandler } from "./application/commands/expire-time-bound-permission-overrides/expire-time-bound-permission-overrides.handler";
 import { GrantUserPermissionHandler } from "./application/commands/grant-user-permission/grant-user-permission.handler";
-import { PublishPolicyHandler } from "./application/commands/publish-policy/publish-policy.handler";
 import { PurgeOldPermissionAuditLogsHandler } from "./application/commands/purge-old-permission-audit-logs/purge-old-permission-audit-logs.handler";
 import { RemovePermissionHandler } from "./application/commands/remove-permission/remove-permission.handler";
 import { RemoveRoleHandler } from "./application/commands/remove-role/remove-role.handler";
-import { ReparentRoleHandler } from "./application/commands/reparent-role/reparent-role.handler";
 import { RequestSupportAccessHandler } from "./application/commands/request-support-access/request-support-access.handler";
 import { RestorePermissionHandler } from "./application/commands/restore-permission/restore-permission.handler";
 import { RestoreRoleHandler } from "./application/commands/restore-role/restore-role.handler";
@@ -35,7 +32,6 @@ import { RevisePermissionHandler } from "./application/commands/revise-permissio
 import { ReviseRoleHandler } from "./application/commands/revise-role/revise-role.handler";
 import { RevokeSupportAccessHandler } from "./application/commands/revoke-support-access/revoke-support-access.handler";
 import { RevokeUserPermissionHandler } from "./application/commands/revoke-user-permission/revoke-user-permission.handler";
-import { SimulatePolicyDraftHandler } from "./application/commands/simulate-policy-draft/simulate-policy-draft.handler";
 import { SyncCapabilityCatalogHandler } from "./application/commands/sync-capability-catalog/sync-capability-catalog.handler";
 import { SyncPermissionRegistryHandler } from "./application/commands/sync-permission-registry/sync-permission-registry.handler";
 import { SyncReferenceDataHandler } from "./application/commands/sync-reference-data/sync-reference-data.handler";
@@ -44,21 +40,17 @@ import { SyncUserPermissionsHandler } from "./application/commands/sync-user-per
 import { SyncUserRolesHandler } from "./application/commands/sync-user-roles/sync-user-roles.handler";
 import { UnassignRoleHandler } from "./application/commands/unassign-role/unassign-role.handler";
 import { InvalidateAuthorizationOnUserAuthorizationChanged } from "./application/event-handlers/after-commit/invalidate-authorization-on-user-authorization-changed.event-handler";
-import { InvalidatePolicyBundlesOnPolicyPublished } from "./application/event-handlers/after-commit/invalidate-policy-bundles-on-policy-published.event-handler";
 import {
 	ACCOUNT_DEFAULT_ROLE,
 	AUTHORIZATION_CACHE_INVALIDATION,
-	AUTHORIZATION_DECISION_AUDIT,
 	AUTHORIZATION_HEALTH_INDICATOR,
 	AUTHORIZATION_KERNEL,
 	AUTHORIZATION_PORT,
 	AUTHORIZATION_UNIT_OF_WORK,
 	CAPABILITY_CATALOG_READ,
-	CEDAR_POLICY_EVALUATOR,
+	ACCESS_CONTROL,
 	PERMISSION_AUDIT_LOG_READ,
 	PERMISSION_REACH,
-	POLICY_SIMULATOR,
-	POLICY_TEMPLATE_COMPILER,
 	RBAC_CATALOG_READ,
 	RBAC_INSPECTION_READ,
 	PERMISSION_HOLDERS_READ,
@@ -70,7 +62,6 @@ import {
 	SUPPORT_ACCESS_READ,
 } from "./application/ports/authorization.tokens";
 import type { ReferenceDataSyncPort } from "./application/ports/catalog-sync.port";
-import { POLICY_ENGINE } from "./application/ports/policy-engine.port";
 import { CheckPermissionHandler } from "./application/queries/check-permission/check-permission.handler";
 import { DecideAuthorizationHandler } from "./application/queries/decide-authorization/decide-authorization.handler";
 import { ExplainAuthorizationHandler } from "./application/queries/explain-authorization/explain-authorization.handler";
@@ -95,19 +86,17 @@ import { PermissionReachAdapter } from "./infrastructure/adapters/permission-rea
 import { SuperAdminBypassAuditAdapter } from "./infrastructure/adapters/super-admin-bypass-audit.adapter";
 import { AuthorizationCacheService } from "./infrastructure/cache/authorization-cache.service";
 import { AuthorizationInvalidationService } from "./infrastructure/cache/authorization-invalidation.service";
-import { CedarPolicyEvaluatorService } from "./infrastructure/cedar/cedar-policy-evaluator.service";
-import { CedarWasmPolicyEngine } from "./infrastructure/cedar/cedar-wasm-policy-engine";
-import { PolicyBundleCacheRegistration } from "./infrastructure/cedar/policy-bundle-cache.registration";
-import { PolicySimulator } from "./infrastructure/cedar/policy-simulator";
-import { PolicyTemplateCompilerAdapter } from "./infrastructure/cedar/policy-template.compiler";
 import { AuthorizationHealthIndicator } from "./infrastructure/health/authorization.health";
-import { AclService } from "./infrastructure/kernel/acl.service";
+import { AccessControlService } from "./application/services/access-control.service";
+import { ACCESS_FACTS_READER, RECORD_OWNERSHIP } from "./application/ports/access-facts.port";
+import { TENANT_ACCESS_STORE } from "./application/ports/tenant-access-store.port";
+import { TenantAccessService } from "./application/services/tenant-access.service";
+import { PrismaTenantAccessStore } from "./infrastructure/access/prisma-tenant-access.store";
+import { PrismaAccessFactsReader } from "./infrastructure/access/prisma-access-facts.reader";
+import { PrismaRecordOwnership } from "./infrastructure/access/prisma-record-ownership";
 import { AuthorizationAuditKernelService } from "./infrastructure/kernel/authorization-audit-kernel.service";
 import { AuthorizationContextResolver } from "./infrastructure/kernel/authorization-context.resolver";
 import { AuthorizationKernelService } from "./infrastructure/kernel/authorization-kernel.service";
-import { PolicyEngineService } from "./infrastructure/kernel/policy-engine.service";
-import { ResourceOwnershipResolver } from "./infrastructure/kernel/resource-ownership.resolver";
-import { SubjectGrantsLoader } from "./infrastructure/kernel/subject-grants.loader";
 import { TenantMembershipService } from "./infrastructure/kernel/tenant-membership.service";
 import { AuthorizationScopeFactory } from "./infrastructure/persistence/authorization-scope.factory";
 import { CapabilityCatalogReader } from "./infrastructure/read/capability-catalog.reader";
@@ -125,7 +114,7 @@ import { ExpireSupportAccessGrantsHandler } from "./application/commands/expire-
 
 /**
  * The authorization context's composition root: what you may do (roles, permissions, overrides, the
- * decision kernel, the Cedar policy plane, capabilities, support access).
+ * access decisions and the kernel facade, capabilities, support access).
  *
  * Global, so every context and the platform security kit reach the public ports by token without an
  * import cycle. Identity is global too: authorization takes `IDENTITY_SESSIONS` (revocation inside
@@ -172,7 +161,6 @@ import { ExpireSupportAccessGrantsHandler } from "./application/commands/expire-
 		ReviseRoleHandler,
 		RemoveRoleHandler,
 		RestoreRoleHandler,
-		ReparentRoleHandler,
 		SyncRolePermissionsHandler,
 		AssignRoleHandler,
 		UnassignRoleHandler,
@@ -183,9 +171,6 @@ import { ExpireSupportAccessGrantsHandler } from "./application/commands/expire-
 		SyncPermissionRegistryHandler,
 		SyncCapabilityCatalogHandler,
 		SyncReferenceDataHandler,
-		CreatePolicyDraftHandler,
-		SimulatePolicyDraftHandler,
-		PublishPolicyHandler,
 		RequestSupportAccessHandler,
 		ApproveSupportAccessHandler,
 		RevokeSupportAccessHandler,
@@ -202,18 +187,21 @@ import { ExpireSupportAccessGrantsHandler } from "./application/commands/expire-
 		DecideAuthorizationHandler,
 		ExplainAuthorizationHandler,
 		InvalidateAuthorizationOnUserAuthorizationChanged,
-		InvalidatePolicyBundlesOnPolicyPublished,
-		// ── Kernel (the single decision point, ADR 026) ─────────────────
+		// ── Access decisions (ADR 067): one service, four allow paths ──
+		AccessControlService,
+		PrismaAccessFactsReader,
+		{ provide: ACCESS_FACTS_READER, useExisting: PrismaAccessFactsReader },
+		PrismaTenantAccessStore,
+		{ provide: TENANT_ACCESS_STORE, useExisting: PrismaTenantAccessStore },
+		TenantAccessService,
+		PrismaRecordOwnership,
+		{ provide: RECORD_OWNERSHIP, useExisting: PrismaRecordOwnership },
+		// ── Kernel facade (tenant verification + audit, ADR 026 / 067) ──
 		AuthorizationKernelService,
-		SubjectGrantsLoader,
 		TenantMembershipService,
-		ResourceOwnershipResolver,
-		PolicyEngineService,
-		AclService,
 		AuthorizationAuditKernelService,
 		AuthorizationContextResolver,
 		{ provide: AUTHORIZATION_KERNEL, useExisting: AuthorizationKernelService },
-		{ provide: AUTHORIZATION_DECISION_AUDIT, useExisting: AuthorizationAuditKernelService },
 		{ provide: REQUEST_TENANT_RESOLVER, useExisting: AuthorizationContextResolver },
 		AuthorizationPortAdapter,
 		{ provide: AUTHORIZATION_PORT, useExisting: AuthorizationPortAdapter },
@@ -242,14 +230,7 @@ import { ExpireSupportAccessGrantsHandler } from "./application/commands/expire-
 		{ provide: CAPABILITY_CATALOG_READ, useExisting: CapabilityCatalogReader },
 		RequestTenantAdapter,
 		{ provide: REQUEST_TENANT, useExisting: RequestTenantAdapter },
-		// ── Cedar policy plane ──────────────────────────────────────────
-		{ provide: POLICY_ENGINE, useClass: CedarWasmPolicyEngine },
-		CedarPolicyEvaluatorService,
-		{ provide: CEDAR_POLICY_EVALUATOR, useExisting: CedarPolicyEvaluatorService },
-		PolicyBundleCacheRegistration,
-		PolicySimulator,
-		{ provide: POLICY_SIMULATOR, useExisting: PolicySimulator },
-		{ provide: POLICY_TEMPLATE_COMPILER, useFactory: (): PolicyTemplateCompilerAdapter => new PolicyTemplateCompilerAdapter() },
+		{ provide: ACCESS_CONTROL, useExisting: AccessControlService },
 		// ── Reference data, provisioning, health ────────────────────────
 		{
 			provide: REFERENCE_DATA_SYNC,
@@ -267,19 +248,18 @@ import { ExpireSupportAccessGrantsHandler } from "./application/commands/expire-
 		AuditLogRetentionCron,
 	],
 	exports: [
+		ACCESS_CONTROL,
+		TenantAccessService,
 		AUTHORIZATION_PORT,
 		AUTHORIZATION_KERNEL,
-		AUTHORIZATION_DECISION_AUDIT,
 		SUPER_ADMIN_BYPASS_AUDIT,
 		REQUEST_TENANT_RESOLVER,
 		AUTHORIZATION_CACHE_INVALIDATION,
 		SUBJECT_AUTHORIZATION_READ,
 		PERMISSION_HOLDERS_READ,
-		CEDAR_POLICY_EVALUATOR,
 		ACCOUNT_DEFAULT_ROLE,
 		USER_GRANTS_READ,
 		AUTHORIZATION_HEALTH_INDICATOR,
-		POLICY_ENGINE,
 		// The catalog-sync bootstrap in the HTTP module dispatches system commands.
 		SystemCommandModule,
 	],

@@ -1,8 +1,8 @@
 /**
  * Carries the superadmin's GitHub account link across a baseline reset (multi-tenancy plan MT-02).
  *
- *   pnpm db:carry-github-link -- export [--out <file>]   (default ~/.starter-kit/github-link.json)
- *   pnpm db:carry-github-link -- import --in <file>
+ *   pnpm tools db:carry-github-link -- export [--out <file>]   (default ~/.starter-kit/github-link.json)
+ *   pnpm tools db:carry-github-link -- import --in <file>
  *
  * The file holds the row exactly as stored (ciphertext, never decrypted) plus the user's email,
  * so the link can be matched after a reseed. The token is never written to the log.

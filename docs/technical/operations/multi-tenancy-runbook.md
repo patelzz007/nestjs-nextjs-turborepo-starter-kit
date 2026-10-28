@@ -23,7 +23,6 @@ order: 1
 
 | Switch | Env / flag | Effect |
 | --- | --- | --- |
-| Policy publish freeze | `POLICY_PUBLISH_FROZEN=true` | Block new policy versions |
 | Tenant creation freeze | `ORG_CREATION_FROZEN=true` | Platform invite only (already default) |
 | Tenant write freeze | Per-org `RESTRICTED` state | Read-only for tenant |
 | Support access revoke all | Admin API `POST /admin/support-access/revoke-all` | Expire all active grants |
@@ -32,10 +31,10 @@ order: 1
 
 **Never disable RLS to restore availability.**
 
-On Cedar/RLS disagreement after cutover:
+On an API/RLS disagreement after a release:
 
 1. Fail closed (deny ambiguous requests)
-2. Roll back application and policy bundle versions
+2. Roll back the application version
 3. Place affected tenants in read-only maintenance if needed
 4. Use audited repair tooling
 
@@ -64,7 +63,7 @@ On Cedar/RLS disagreement after cutover:
 
 - [ ] Named on-call owner in team roster
 - [ ] Access to remote backup console
-- [ ] Policy version dashboard
+- [ ] Access decision (allow path) dashboard from `TenantAuditLog` `authorize.*` rows
 - [ ] RLS denial rate alert configured
 - [ ] Support grant audit stream monitored
 

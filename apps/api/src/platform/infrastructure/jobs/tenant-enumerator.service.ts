@@ -26,13 +26,12 @@ export class TenantEnumeratorService {
 		return rows.map((r) => r.id);
 	}
 
-	public buildTenantJobContext(tenantId: string, purpose: string, policyVersion: number): ReturnType<TenantJobContextService["sign"]> {
+	public buildTenantJobContext(tenantId: string, purpose: string): ReturnType<TenantJobContextService["sign"]> {
 		const now = Date.now();
 		return this.jobContext.sign({
 			tenantId,
 			initiatingActorId: null,
 			purpose,
-			policyVersion,
 			correlationId: `${purpose}:${tenantId}:${String(now)}`,
 			issuedAt: now,
 			expiresAt: now + 300_000,

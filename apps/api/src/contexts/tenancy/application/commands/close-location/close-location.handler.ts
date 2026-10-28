@@ -58,7 +58,6 @@ export class CloseLocationHandler implements ICommandHandler<CloseLocationComman
 			await scope.audit.record({
 				tenantId: member.tenantId,
 				actorUserId: user.userId,
-				policyVersion: member.policyVersion,
 				action: "tenant.location.closed",
 				resourceType: "Location",
 				resourceId: location.id,

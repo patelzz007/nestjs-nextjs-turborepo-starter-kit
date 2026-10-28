@@ -1,7 +1,6 @@
 import type { LocationScopeType, LocationStatus, PilotCity, Role } from "@prisma/client";
 import { DAY_MS } from "@workspace/shared";
 
-import { findActivePolicyVersionInTx } from "../../src/contexts/authorization/public-api";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
 import { TENANT_SEED_IDS } from "./tenant-seed-ids";
@@ -47,7 +46,6 @@ export async function seedLocationClosureAndRemoval(staffRole: Role): Promise<Lo
 		(await prisma.membership.findFirst({ where: { tenantId, role: "CASHIER", isDeleted: false } })) ?? undefined,
 		"Jonker Street Kitchen cashier membership",
 	);
-	const policyVersion = await findActivePolicyVersionInTx(prisma, tenantId);
 
 	const closedAt = Date.now() - LOCATION_CLOSED_DAYS_AGO * DAY_MS;
 	const closedData = {
@@ -82,7 +80,6 @@ export async function seedLocationClosureAndRemoval(staffRole: Role): Promise<Lo
 			action: "tenant.location.closed",
 			resourceType: "Location",
 			resourceId: location.id,
-			policyVersion,
 			metadata: { reason: CLOSED_LOCATION_REASON, memberScopesRemoved: 1, terminalsRemoved: 0, apiKeysRevoked: 0 },
 			createdAt: closedAt,
 		},
@@ -105,7 +102,6 @@ export async function seedLocationClosureAndRemoval(staffRole: Role): Promise<Lo
 			action: "membership.removed_from_location",
 			resourceType: "Membership",
 			resourceId: cashier.id,
-			policyVersion,
 			metadata: { locationId: TENANT_SEED_IDS.mlkLocationKatil, memberUserId: cashier.userId, allowNoLocations: false, remainingStores: 1 },
 			createdAt: removedAt,
 		},

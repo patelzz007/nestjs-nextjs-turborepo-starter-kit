@@ -17,7 +17,8 @@ import {
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
-import { Authorize, self } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
+import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
+import { self } from "../../../../platform/presentation/http/security/decorators/permission-target";
 import { GetUser } from "../../../../platform/presentation/http/security/decorators/get-user.decorator";
 import { ZodBody, ZodParams } from "../../../../platform/presentation/http/validation/decorators/zod-request.decorators";
 import { ZodResponse } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
@@ -38,7 +39,7 @@ export class PreferencesController {
 	@SkipThrottle({ strict: true })
 	@ApiBearerAuth()
 	@Get("/preferences")
-	@Authorize({ action: "READ", resource: "PROFILE", resourceId: self(), description: "A user reads their own preferences" })
+	@RequirePermission("READ", "PROFILE", { resourceId: self(), description: "A user reads their own preferences" })
 	@ApiOperation({ summary: "The signed-in user's preferences; a key that is absent uses the page's default" })
 	@ZodResponse(UserPreferencesSchema, { description: "The stored preferences the registry still accepts" })
 	public list(@GetUser() user: AccessTokenPayload, @CurrentActor() actor: ActorContext): Promise<UserPreferences> {
@@ -48,7 +49,7 @@ export class PreferencesController {
 	@SkipThrottle({ strict: true })
 	@ApiBearerAuth()
 	@Put("/preferences/:key")
-	@Authorize({ action: "UPDATE", resource: "PROFILE", resourceId: self(), description: "A user remembers one of their own choices" })
+	@RequirePermission("UPDATE", "PROFILE", { resourceId: self(), description: "A user remembers one of their own choices" })
 	@ApiOperation({ summary: "Remember one choice", description: "400 when the key does not accept the value (the shared preference registry)." })
 	@ZodResponse(UserPreferenceSchema, { description: "The stored preference, with its new version" })
 	public set(
@@ -63,7 +64,7 @@ export class PreferencesController {
 	@SkipThrottle({ strict: true })
 	@ApiBearerAuth()
 	@Delete("/preferences/:key")
-	@Authorize({ action: "UPDATE", resource: "PROFILE", resourceId: self(), description: "A user resets one of their own choices to the default" })
+	@RequirePermission("UPDATE", "PROFILE", { resourceId: self(), description: "A user resets one of their own choices to the default" })
 	@ApiOperation({ summary: "Reset one choice to the default (soft delete); answers the preferences left" })
 	@ZodResponse(UserPreferencesSchema, { description: "The preferences left" })
 	public reset(

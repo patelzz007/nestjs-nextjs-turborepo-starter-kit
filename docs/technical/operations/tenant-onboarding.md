@@ -17,7 +17,7 @@ A tenant is created by the platform, never by self-signup (multi-tenant mode).
 3. **KYB.** The owner submits KYB documents on the onboarding page; a platform admin reviews them (`tenant.kyb.admin_decide`).
 4. **Encryption key.** The tenant's data key is provisioned (`encryption.tenant_key.provision`) the first time it is needed; it is never destroyed.
 5. **Verify isolation** before handing over:
-   - `pnpm db:check-tenant-integrity` exits 0 (no child row references another tenant's parent).
+   - `pnpm tools db:check-tenant-integrity` exits 0 (no child row references another tenant's parent).
    - The owner sees only their tenant; a user from another tenant gets 404 on the new tenant's routes.
 6. **API keys.** The owner creates POS or integration keys from the merchant app. A key carries its tenant (and, when store-scoped, its store); integrations call the integration API (`/integration/rewards`, `/integration/analytics`, `/integration/redemptions`), which names no tenant.
 

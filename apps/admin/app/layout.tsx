@@ -24,7 +24,7 @@ import { BRAND_NAME } from "@workspace/tokens";
 export const metadata: Metadata = {
 	title: `${BRAND_NAME} Admin`,
 	// Icons come from the file conventions in this folder — icon.svg, favicon.ico, apple-icon.png —
-	// all generated from the brand mark by `pnpm tokens:generate` (ADR 040).
+	// all generated from the brand mark by `pnpm tools tokens:generate` (ADR 040).
 };
 
 export default async function RootLayout({

@@ -8,7 +8,7 @@
 -- They used to live in `rls.sql` §2, which runs AFTER `01` — on a fresh
 -- database (no app_* functions yet) `01` failed with:
 --   ERROR: function app_rls_bypass() does not exist
--- so `pnpm db:apply-security` aborted before any grants were applied.
+-- so `pnpm tools db:apply-security` aborted before any grants were applied.
 -- They now live here. The apply order and a use-before-define check live in
 -- `RLS_APPLY_ORDER` (prisma/rls/apply-plan.ts) and run before any SQL executes.
 -- It also creates the `app_runtime` role — the ONLY place it is created. Every

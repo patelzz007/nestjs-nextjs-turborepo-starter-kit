@@ -39,3 +39,21 @@ export const supportAccessRoutes = {
 	approve: "/support-access/:grantId/approve",
 	revoke: "/support-access/:grantId/revoke",
 } satisfies Record<string, RouteTree>;
+
+/**
+ * Path templates composed into `apiRoutes.tenantAccess`: a tenant administers its own roles, members'
+ * roles, grants and shares (ADR 067).
+ */
+export const tenantAccessRoutes = {
+	roles: "/tenants/:tenantSlug/access/roles",
+	role: "/tenants/:tenantSlug/access/roles/:roleId",
+	roleHolders: "/tenants/:tenantSlug/access/roles/:roleId/holders",
+	roleReassign: "/tenants/:tenantSlug/access/roles/:roleId/reassign",
+	roleReset: "/tenants/:tenantSlug/access/roles/:roleId/reset",
+	member: "/tenants/:tenantSlug/access/members/:membershipId",
+	memberRole: "/tenants/:tenantSlug/access/members/:membershipId/role",
+	memberGrants: "/tenants/:tenantSlug/access/members/:membershipId/grants",
+	grant: "/tenants/:tenantSlug/access/grants/:grantId",
+	shares: "/tenants/:tenantSlug/access/shares",
+	share: "/tenants/:tenantSlug/access/shares/:shareId",
+} satisfies Record<string, RouteTree>;

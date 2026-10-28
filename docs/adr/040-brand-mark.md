@@ -40,7 +40,7 @@ inherits it.
     replaces the icons in the web, merchant and admin sidebar headers.
   - **Mobile:** `BrandMark` (`react-native-svg`, coloured with `colorClassName`) in the
     `AuthShell`.
-- **Favicons are generated, in every format browsers need.** `pnpm tokens:generate` renders the
+- **Favicons are generated, in every format browsers need.** `pnpm tools tokens:generate` renders the
   Expo app's sign-in tile exactly: the mark in `auth-panel-foreground`, at half the tile's size, on
   an `auth-brand-from` square with the same corner proportion. The phone's tile is the reference.
   Each app's tile takes the colour of its own sign-in tile (`--auth-brand-from`), so the apps are
@@ -79,7 +79,7 @@ inherits it.
 
 ## Consequences
 
-- Changing the mark means editing `brand.ts` and running `pnpm tokens:generate`. Every surface
+- Changing the mark means editing `brand.ts` and running `pnpm tools tokens:generate`. Every surface
   follows, and the tests catch a forgotten copy.
 - `AuthLayout` callers no longer pass a logo. A product that needs its own mark replaces
   `brand.ts`, not the layout.

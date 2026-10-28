@@ -9,8 +9,6 @@ export type TenantAuditMetadata = Readonly<Record<string, string | number | bool
 export interface TenantAuditEntry {
 	readonly tenantId: string;
 	readonly actorUserId: string;
-	/** Active tenant Cedar policy version the action was authorized under. */
-	readonly policyVersion: number;
 	readonly action: string;
 	readonly resourceType: string;
 	readonly resourceId: string;

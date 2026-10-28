@@ -54,7 +54,7 @@ describe("MerchantAuthorizationProvider", () => {
 	});
 
 	it("exposes tenant management as capabilities, not roles (admins cannot manage verification)", () => {
-		const membership = membershipFixture("ADMIN");
+		const membership = membershipFixture("MANAGER");
 		merchantCapabilities.mockReturnValue({ membership, capabilities: resolveMerchantCapabilities(membership), isLoading: false, isPolicyReady: true });
 
 		render(

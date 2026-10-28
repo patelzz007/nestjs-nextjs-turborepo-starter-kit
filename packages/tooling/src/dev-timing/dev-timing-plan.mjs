@@ -1,5 +1,5 @@
 /**
- * What `pnpm dev:timing` measures (plan §19.1, decision #53): the servers
+ * What `pnpm tools dev:timing` measures (plan §19.1, decision #53): the servers
  * `pnpm dev` boots and how each one proves it is ready, the representative
  * signed-in page per Next app, the Metro bundle, and what a cold run deletes.
  * Pure data, so the plan is unit-tested and changes are reviewed in one place.
@@ -70,14 +70,6 @@ export const PAGE_TARGETS = [
 		account: { email: "brew.owner@kl-rewards.demo", password: "BrewOwner@123", clientType: "merchant", origin: "http://localhost:3003" },
 	},
 ];
-
-/**
- * The API's env file, read for one key only: EMAIL_TEST_TO (dev-only) sends
- * every email, login codes included, to one address, which is then the
- * Mailpit mailbox to read the code from.
- */
-export const API_ENV_FILE = "apps/api/.env";
-export const EMAIL_REDIRECT_KEY = "EMAIL_TEST_TO";
 
 /** The API every login goes to. */
 export const API_PORT = 8080;

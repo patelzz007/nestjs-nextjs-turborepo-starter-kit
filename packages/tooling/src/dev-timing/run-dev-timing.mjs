@@ -1,5 +1,5 @@
 /**
- * One `pnpm dev:timing` run (plan §19.1): optionally reset to cold, spawn
+ * One `pnpm tools dev:timing` run (plan §19.1): optionally reset to cold, spawn
  * `pnpm dev`, measure phases A–D, then stop the whole process group and wait
  * until every port is free again. The measuring itself lives in
  * `measure.mjs`; this file only owns processes and the file system, which is
@@ -8,7 +8,7 @@
  */
 import { exec, spawn } from "node:child_process";
 import { createWriteStream } from "node:fs";
-import { readFile, readdir, rm } from "node:fs/promises";
+import { readdir, rm } from "node:fs/promises";
 import path from "node:path";
 import readline from "node:readline";
 import { setTimeout as delay } from "node:timers/promises";
@@ -17,11 +17,9 @@ import { promisify } from "node:util";
 import { findOccupiedPorts } from "../../scripts/lib/port-preflight.mjs";
 import { ApiBootRecorder } from "./dev-output.mjs";
 import {
-	API_ENV_FILE,
 	API_PORT,
 	COLD_RESET_PATHS,
 	DEV_SERVERS,
-	EMAIL_REDIRECT_KEY,
 	METRO_CACHE_DIRECTORY,
 	METRO_FILE_MAP_PREFIX,
 	METRO_MANIFEST_HEADERS,
@@ -32,7 +30,6 @@ import {
 	localUrl,
 	metroCacheRoots,
 } from "./dev-timing-plan.mjs";
-import { readEnvValue } from "./env-file.mjs";
 import { apiBootMeasurement, measureDownload, measureReadiness } from "./measure.mjs";
 import { readLaunchAssetUrl } from "./probes.mjs";
 import { signIn } from "./session.mjs";
@@ -89,24 +86,6 @@ export async function resetToCold(repoRoot) {
 }
 
 /**
- * The Mailpit mailbox a login code for `email` lands in: the API's
- * EMAIL_TEST_TO when it is set (every email is redirected there), else the
- * account's own address.
- *
- * @param {string} repoRoot
- * @returns {Promise<(email: string) => string>}
- */
-async function mailboxResolver(repoRoot) {
-	let redirect = undefined;
-	try {
-		redirect = readEnvValue(await readFile(path.join(repoRoot, API_ENV_FILE), "utf8"), EMAIL_REDIRECT_KEY);
-	} catch {
-		redirect = undefined;
-	}
-	return (email) => redirect ?? email;
-}
-
-/**
  * The newest six-digit code in `mailbox`, or `undefined`.
  *
  * @param {string} repoRoot
@@ -128,22 +107,19 @@ async function readMailpitCode(repoRoot, mailbox) {
 
 /**
  * @param {string} repoRoot
- * @param {(email: string) => string} mailboxOf
  * @returns {(email: string, previousCode: string | undefined) => Promise<string>}
  */
-function freshCodeReader(repoRoot, mailboxOf) {
+function freshCodeReader(repoRoot) {
 	return async (email, previousCode) => {
 		const deadline = Date.now() + LOGIN_CODE_TIMEOUT_MS;
 		while (Date.now() < deadline) {
-			const code = await readMailpitCode(repoRoot, mailboxOf(email));
+			const code = await readMailpitCode(repoRoot, email);
 			if (code !== undefined && code !== previousCode) {
 				return code;
 			}
 			await delay(LOGIN_CODE_POLL_INTERVAL_MS);
 		}
-		throw new Error(
-			`no new login code for ${email} reached Mailpit within ${String(LOGIN_CODE_TIMEOUT_MS)} ms (is \`pnpm mailpit\` running? ${EMAIL_REDIRECT_KEY} in ${API_ENV_FILE} picks the mailbox)`,
-		);
+		throw new Error(`no new login code for ${email} reached Mailpit within ${String(LOGIN_CODE_TIMEOUT_MS)} ms (is the Mailpit container running? \`pnpm docker:up\`)`);
 	};
 }
 
@@ -259,9 +235,9 @@ export async function runDevTiming({ repoRoot, mode, logPath, signal, sessions =
 			errors.push(`phase ${PHASES.apiBoot.id}: ${messageOf(error)}`);
 		}
 
-		const mailboxOf = await mailboxResolver(repoRoot);
-		const readLoginCode = freshCodeReader(repoRoot, mailboxOf);
-		const readCurrentCode = (/** @type {string} */ email) => readMailpitCode(repoRoot, mailboxOf(email));
+		// Mailpit keeps every email under its real recipient (the API ignores EMAIL_TEST_TO with Mailpit).
+		const readLoginCode = freshCodeReader(repoRoot);
+		const readCurrentCode = (/** @type {string} */ email) => readMailpitCode(repoRoot, email);
 		for (const page of PAGE_TARGETS) {
 			signal.throwIfAborted();
 			try {

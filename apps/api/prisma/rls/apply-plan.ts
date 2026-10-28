@@ -9,6 +9,7 @@ import { resolve } from "node:path";
  *
  * 1. `00-app-helpers.sql`          — session primitives (`app_rls_bypass()`, `app_owns()`, …)
  * 2. `01-acl-location-access.sql`  — tenant/ACL helpers (call the primitives)
+ *    `02-access-model.sql`         — ADR 067 allow paths: `app_has_permission`, `app_shared`
  * 3. `prisma/rls.sql`              — role, enable RLS, policies (call both helper layers)
  *    `90-analytics-consumer.sql`   — the analytics consumer's least-privilege role + policies
  * 4. `99-app-runtime-grants.sql`   — grants over everything created above (must run last)
@@ -21,13 +22,14 @@ import { resolve } from "node:path";
  *   database (the original `function app_rls_bypass() does not exist` bug);
  * - each helper may be defined in exactly one file.
  *
- * `pnpm db:apply-security` applies this plan; `pnpm db:check-rls-manifest`
+ * `pnpm tools db:apply-security` applies this plan; `pnpm tools db:check-rls-manifest`
  * runs the same validation so violations fail in CI too.
  */
 export const RLS_APPLY_ORDER: readonly string[] = [
 	"prisma/rls/00-app-helpers.sql",
 	"prisma/rls/00-system-operation-scopes.sql",
 	"prisma/rls/01-acl-location-access.sql",
+	"prisma/rls/02-access-model.sql",
 	"prisma/rls.sql",
 	"prisma/rls/30-authorization-change-stamp.sql",
 	"prisma/rls/40-api-key-principal.sql",

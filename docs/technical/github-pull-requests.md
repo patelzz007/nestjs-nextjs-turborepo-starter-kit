@@ -36,7 +36,7 @@ flowchart LR
 
 | Variable                            | Meaning                                                                                                                                                                                                                                                                                                                       |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GITHUB_CREDENTIAL_ENCRYPTION_KEYS` | Turns pull requests on. A versioned key ring, same format as `MFA_ENCRYPTION_KEYS` but its **own** keys: `{"1":"<openssl rand -base64 32>"}`. `pnpm secrets:generate` adds it (and a new version on every run). Unset: `GET /github/account` answers `{ "status": "off" }`, every other route 503 `GITHUB_PULL_REQUESTS_OFF`. |
+| `GITHUB_CREDENTIAL_ENCRYPTION_KEYS` | Turns pull requests on. A versioned key ring, same format as `MFA_ENCRYPTION_KEYS` but its **own** keys: `{"1":"<openssl rand -base64 32>"}`. `pnpm tools secrets:generate` adds it (and a new version on every run). Unset: `GET /github/account` answers `{ "status": "off" }`, every other route 503 `GITHUB_PULL_REQUESTS_OFF`. |
 | `GITHUB_REQUEST_TIMEOUT_MS`         | Shared with the contributions integration: the budget of one GitHub request.                                                                                                                                                                                                                                                  |
 | `GITHUB_WEBHOOK_URL`                | Turns **live updates** on (with the secret). Where GitHub delivers webhooks: this API's public **https** address + `/api/v1/github/webhook`. GitHub must reach it from the internet, so local development has no live updates unless the API is public.                                                         |
 | `GITHUB_WEBHOOK_SECRET`             | Signs every delivery (`openssl rand -hex 32`, at least 32 characters). Set both or neither; both need `GITHUB_CREDENTIAL_ENCRYPTION_KEYS`. Unset: live updates answer `{ "status": "off" }` and the apps read on open and on pull-to-refresh.                                                                            |
@@ -94,7 +94,7 @@ status answers `health: "rejected"` and every pull-request route 409 `GITHUB_TOK
 new token is linked. A token no configured key version opens (its version was removed from the ring)
 is treated the same way.
 
-**Key rotation:** add a version (`pnpm secrets:generate`); new links use it, existing tokens keep
+**Key rotation:** add a version (`pnpm tools secrets:generate`); new links use it, existing tokens keep
 decrypting with their own. Remove an old version only once every admin has re-linked.
 
 ## 4. Reading
@@ -313,7 +313,7 @@ are configured (`GithubPullRequestChangesHub`; reconnects with backoff, then tel
 repository when GitHub named no pull request) and passes the change to its open streams. No Redis is
 needed: the database reaches every instance.
 
-**Trying it on a laptop.** GitHub can only reach a public https address. `pnpm dev:tunnel`
+**Trying it on a laptop.** GitHub can only reach a public https address. `pnpm tools dev:tunnel`
 (the `tunnel` command of `apps/api/scripts/dev.ts`) starts a detached Cloudflare quick tunnel to `localhost:8080`
 and wires it: the Resend webhook is re-pointed (as before), and `github:webhook-tunnel`
 (its `github-webhook` command) writes `GITHUB_WEBHOOK_URL=<tunnel>/api/v1/github/webhook`
@@ -326,7 +326,7 @@ deleted on GitHub meanwhile is turned off here). Then:
    GitHub sends a `ping`: Settings → Webhooks → Recent Deliveries on the repository shows it.
 3. Comment, react or push on github.com — the pull request open in the app reloads by itself.
 
-Every quick tunnel gets a new address, so run `pnpm dev:tunnel` again after a restart; it re-points the
+Every quick tunnel gets a new address, so run `pnpm tools dev:tunnel` again after a restart; it re-points the
 hooks. Stop it with `pkill -f 'cloudflared tunnel --url'`. The quick tunnel runs with an empty config of
 its own: a named tunnel's `~/.cloudflared/config.yml` would otherwise apply its ingress rules to it and
 answer every request 404. Development only (refused with `NODE_ENV=production`); a deployed API sets

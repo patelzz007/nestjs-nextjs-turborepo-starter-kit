@@ -86,7 +86,7 @@ flowchart LR
     Z[zod contracts +<br/>controllers] -->|pnpm --filter @workspace/api openapi:export| O[docs/generated/openapi.json]
     Z -->|decorators read from source| R
     S[seeded throwaway API] -->|apps/docs/scripts/capture-api-samples.mjs| J[docs/generated/api-samples.json]
-    O --> R[pnpm docs:api<br/>renderer in apps/docs/src/lib/api-reference]
+    O --> R[pnpm tools docs:api<br/>renderer in apps/docs/src/lib/api-reference]
     J --> R
     R --> M[docs/technical/api-reference/*.md]
 ```
@@ -100,13 +100,13 @@ flowchart LR
    header lists the exact commands). Ids, names and codes come from the seed or earlier responses in
    the same run; session tokens, signed links, generated API keys and one-time secrets are redacted;
    arrays are cut to two items. Endpoints that cannot be captured are listed with the reason.
-4. **Render** — `pnpm docs:api` writes `docs/technical/api-reference/`. The docs unit tests
+4. **Render** — `pnpm tools docs:api` writes `docs/technical/api-reference/`. The docs unit tests
    (`apps/docs/src/lib/api-reference/__tests__/api-reference.artifact.test.ts`) fail when the committed pages
    differ from what the three inputs render, when a controller cannot be matched, or when a new
    OpenAPI tag has no page.
 
 When you change an endpoint: export OpenAPI, re-capture (or add the endpoint to the capture
-script), run `pnpm docs:api`, commit all three outputs.
+script), run `pnpm tools docs:api`, commit all three outputs.
 
 Per-endpoint domain error codes appear in the reference only where the contract declares them
 (explicit responses or the operation description). Describing every non-obvious error in the zod →

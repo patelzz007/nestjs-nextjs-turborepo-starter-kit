@@ -80,7 +80,7 @@ export function AuditLogDrawerSkeleton(): React.JSX.Element {
 /** `/audit-logs/[id]`: the small "Back to audit log" button over the full-page record. */
 export function AuditLogDetailPageSkeleton(): React.JSX.Element {
 	return (
-		<SkeletonRegion labels={AUDIT_RECORD_LOADING_LABELS} className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+		<SkeletonRegion labels={AUDIT_RECORD_LOADING_LABELS} className="mx-auto flex w-full max-w-10xl flex-col gap-6">
 			<Skeleton className="h-8 w-40" />
 			<AuditLogRecordSkeleton layout="page" />
 		</SkeletonRegion>

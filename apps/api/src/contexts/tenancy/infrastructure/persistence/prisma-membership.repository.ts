@@ -6,6 +6,7 @@ import { ConcurrentModificationError } from "../../../../platform/infrastructure
 import { AlreadyMemberError } from "../../domain/errors/tenants.errors";
 import type { MembershipRepository, PersistedMembership } from "../../domain/repositories/membership.repository";
 import type { TenantsDb } from "./tenant-db";
+import { TenantRoleCopies } from "../../../authorization/public-api";
 import { withUniqueViolationAs } from "./unique-violation";
 
 type MembershipRow = MembershipRecord & { readonly locationScopes: readonly Pick<MembershipLocationScope, "scopeType" | "locationId">[] };
@@ -53,6 +54,8 @@ export class PrismaMembershipRepository implements MembershipRepository {
 	}
 
 	public async add(membership: Membership, duplicateMessage: string): Promise<void> {
+		// A member holds the tenant's own copy of their role's template (ADR 067).
+		const roleId = await new TenantRoleCopies(this.db).roleIdFor(membership.tenantId, membership.role);
 		await withUniqueViolationAs(
 			async () =>
 				this.db.membership.create({
@@ -60,6 +63,7 @@ export class PrismaMembershipRepository implements MembershipRepository {
 						id: membership.id,
 						tenantId: membership.tenantId,
 						userId: membership.userId,
+						roleId,
 						role: membership.role,
 						status: membership.status,
 						locationScopes: {

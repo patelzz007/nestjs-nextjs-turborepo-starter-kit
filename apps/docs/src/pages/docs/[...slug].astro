@@ -5,12 +5,13 @@ import { render } from "astro:content";
 import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import Feedback from "@/components/Feedback.astro";
 import Icon from "@/components/Icon.astro";
-import PageCover from "@/components/PageCover.astro";
+import PageHeader from "@/components/PageHeader.astro";
 import Pager from "@/components/Pager.astro";
 import DocsLayout from "@/layouts/DocsLayout.astro";
 import { getGuides, navSectionsFor } from "@/lib/content";
 import { formatEpochDate, readingMinutes } from "@/lib/dates";
 import { findNeighbours, findSection } from "@/lib/navigation";
+import { docIcon } from "@/lib/icons";
 import { githubEditUrl } from "@/lib/site";
 import { buildToc } from "@/lib/toc";
 
@@ -38,27 +39,20 @@ const visibleTags = guide.data.tags.filter((tag) => tag !== "superseded");
 	activeId={guide.id}
 	toc={buildToc(headings)}
 	editUrl={editUrl}
-	image={guide.data.coverImage}>
+	image={guide.data.coverImage}
+	cover={guide.data.coverImage}>
 	<Breadcrumbs crumbs={[{ label: "Guides", href: "/docs" }, ...(section === null ? [] : [{ label: section.title }]), { label: guide.data.title }]} />
-	<PageCover src={guide.data.coverImage} />
-	<h1 class="page-title">{guide.data.title}</h1>
-	{guide.data.description !== undefined && <p class="page-description">{guide.data.description}</p>}
-	<div class="page-meta">
-		<span><Icon name="users" size={14} />{guide.data.author}</span>
-		<span>
-			<Icon name="pencil" size={14} />Updated <time datetime={new Date(guide.data.lastUpdated).toISOString()}>{formatEpochDate(guide.data.lastUpdated)}</time>
-		</span>
-		<span><Icon name="timer" size={14} />{readingMinutes(guide.body ?? "")} min read</span>
-		{
-			visibleTags.length > 0 && (
-				<ul class="tag-list" aria-label="Tags">
-					{visibleTags.map((tag) => (
-						<li class="tag">{tag}</li>
-					))}
-				</ul>
-			)
-		}
-	</div>
+	<PageHeader
+		title={guide.data.title}
+		icon={docIcon(guide.id)}
+		description={guide.data.description}
+		properties={[
+			{ icon: "users", label: "Author", value: guide.data.author },
+			{ icon: "pencil", label: "Last edited", value: formatEpochDate(guide.data.lastUpdated), dateTime: new Date(guide.data.lastUpdated).toISOString() },
+			{ icon: "timer", label: "Reading time", value: `${String(readingMinutes(guide.body ?? ""))} min` },
+		]}
+		tags={visibleTags}
+	/>
 	{
 		superseded && (
 			<aside class="callout mt-6" data-kind="warning">

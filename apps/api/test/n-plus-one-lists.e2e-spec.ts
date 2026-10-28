@@ -175,7 +175,7 @@ describe("hot lists have no N+1 (e2e)", () => {
 							sourceMembershipId,
 							new Map([
 								["userId", userId],
-								["role", "MEMBER"],
+								["role", "CASHIER"],
 							]),
 						);
 					}

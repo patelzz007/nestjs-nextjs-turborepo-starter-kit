@@ -106,7 +106,7 @@ import { SearchKanbanItemsQuery } from "../../application/queries/search-kanban-
  * The platform staff's two linked kanban boards (planning: epics and features;
  * execution: stories, tasks and subtasks). Admin-panel sessions only, and every route is
  * gated by one `KANBAN_TASK` permission (LIST a board or a lookup, READ an item
- * or watch it, CREATE / UPDATE / DELETE items, MANAGE the columns) and runs
+ * or watch it, CREATE / UPDATE / DELETE items, UPDATE KANBAN_BOARD to rearrange the columns) and runs
  * under a named platform operation, because the boards' tables are bypass-only under RLS.
  */
 @ApiTags("Kanban")
@@ -243,7 +243,7 @@ export class KanbanController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
-	@RequirePermission("MANAGE", "KANBAN_TASK")
+	@RequirePermission("UPDATE", "KANBAN_BOARD")
 	@PlatformOperation(KANBAN_WRITE_OPERATION)
 	@Post("columns/:columnId/move")
 	@ApiOperation({ summary: "Move a column right of another on its board (or first); answers that board" })
@@ -257,7 +257,7 @@ export class KanbanController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
-	@RequirePermission("MANAGE", "KANBAN_TASK")
+	@RequirePermission("UPDATE", "KANBAN_BOARD")
 	@PlatformOperation(KANBAN_WRITE_OPERATION)
 	@Patch("columns/:columnId")
 	@ApiOperation({ summary: "Set or clear a column's soft WIP limit (optimistic lock: send the version you read); answers that board" })

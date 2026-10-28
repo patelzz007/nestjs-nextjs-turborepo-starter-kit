@@ -6,11 +6,25 @@ import { normalizeCaughtError } from "../../../../platform/infrastructure/utils/
 import { parsePrismaNullableJson } from "../../../../platform/infrastructure/utils/prisma-json";
 import { SystemPrismaService } from "../../../../prisma/system-prisma.service";
 
-import type { AuthorizationAuditMetadata, AuthorizationDecisionAuditPort } from "../../application/ports/authorization-kernel.port";
+import type { AuthorizationAuditMetadata } from "../../application/ports/authorization-kernel.port";
 
 export type { AuthorizationAuditMetadata };
 
-const WRITE_ACTIONS: ReadonlySet<string> = new Set(["CREATE", "UPDATE", "DELETE", "MANAGE"]);
+/** Every verb that changes something: CRUD writes and the lifecycle verbs (ADR 067). */
+const WRITE_ACTIONS: ReadonlySet<string> = new Set([
+	"CREATE",
+	"UPDATE",
+	"DELETE",
+	"PUBLISH",
+	"APPROVE",
+	"REJECT",
+	"SUSPEND",
+	"BAN",
+	"UNBAN",
+	"REACTIVATE",
+	"UNLOCK",
+	"REDEEM",
+]);
 const SENSITIVE_READ_RESOURCES: ReadonlySet<string> = new Set(["USER", "ROLE", "PERMISSION", "AUDIT_LOG", "SYSTEM_SETTINGS"]);
 
 function readEvaluationDetailId(step: AuthorizationEvaluationStep, detailKey: "policyId" | "aclId"): string | undefined {
@@ -26,7 +40,7 @@ function readEvaluationDetailId(step: AuthorizationEvaluationStep, detailKey: "p
  * writes go through the system client. Audit failures never fail the request.
  */
 @Injectable()
-export class AuthorizationAuditKernelService implements AuthorizationDecisionAuditPort {
+export class AuthorizationAuditKernelService {
 	private readonly logger = new Logger(AuthorizationAuditKernelService.name);
 
 	public constructor(private readonly systemDb: SystemPrismaService) {}

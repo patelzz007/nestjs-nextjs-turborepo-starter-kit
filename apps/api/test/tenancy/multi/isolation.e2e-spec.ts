@@ -21,9 +21,7 @@ import { buildMarketplaceWhere, MARKETPLACE_REWARD_SELECT } from "../../../src/c
 import { RewardsReadSession } from "../../../src/contexts/rewards/infrastructure/persistence/rewards-read-session";
 import { TenantDisplayAdapter } from "../../../src/contexts/rewards/infrastructure/adapters/tenant-display.adapter";
 import type { TenantDisplayData } from "../../../src/contexts/tenancy/application/ports/tenant-read.port";
-import type { CedarAuthorizationDecision } from "@workspace/shared";
 import { TenantContextService } from "../../../src/contexts/tenancy/infrastructure/adapters/tenant-context.service";
-import { TenantAuditService } from "../../../src/contexts/tenancy/infrastructure/audit/tenant-audit.adapter";
 import { createTestPublicUrls } from "../../support/public-urls";
 import { decideTenantLifecycle } from "../../../src/contexts/tenancy/domain/policies/tenant-lifecycle.policy";
 import { seedTwoTenantFixture, TWO_TENANT_FIXTURE } from "../../support/two-tenant-fixture";
@@ -177,15 +175,7 @@ describe("tenancy multi isolation", () => {
 
 	it("LOC-002: the KL manager is rejected for the Malacca location", async () => {
 		const ids = TWO_TENANT_FIXTURE;
-		const context = new TenantContextService(
-			transactions,
-			{
-				getActivePolicyVersion: (): Promise<number> => Promise.resolve(1),
-				evaluate: (): Promise<CedarAuthorizationDecision> => Promise.reject(new Error("cedar evaluate is not used by location access")),
-			},
-			new TenantAuditService(),
-			createTestPublicUrls(),
-		);
+		const context = new TenantContextService(transactions, createTestPublicUrls());
 		await expect(context.assertAccessibleLocation(ids.userAKlManager, "fixture-tenant-a", ids.locationAKl)).resolves.toBeUndefined();
 		await expect(context.assertAccessibleLocation(ids.userAKlManager, "fixture-tenant-a", ids.locationAMalacca)).rejects.toBeInstanceOf(ForbiddenException);
 	});

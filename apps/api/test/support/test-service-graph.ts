@@ -12,12 +12,13 @@
 import type { Prisma } from "@prisma/client";
 
 import type { TypedConfigService } from "../../src/config/typed-config.service";
+import type { Clock } from "../../src/platform/application/clock.port";
+import { FixedClock } from "../../src/contexts/authorization/application/__tests__/fakes/authorization.fakes";
+import { AccessControlService } from "../../src/contexts/authorization/application/services/access-control.service";
+import { PrismaAccessFactsReader } from "../../src/contexts/authorization/infrastructure/access/prisma-access-facts.reader";
+import { PrismaRecordOwnership } from "../../src/contexts/authorization/infrastructure/access/prisma-record-ownership";
 import { AuthorizationAuditKernelService } from "../../src/contexts/authorization/infrastructure/kernel/authorization-audit-kernel.service";
-import { AclService } from "../../src/contexts/authorization/infrastructure/kernel/acl.service";
 import { AuthorizationKernelService } from "../../src/contexts/authorization/infrastructure/kernel/authorization-kernel.service";
-import { PolicyEngineService } from "../../src/contexts/authorization/infrastructure/kernel/policy-engine.service";
-import { ResourceOwnershipResolver } from "../../src/contexts/authorization/infrastructure/kernel/resource-ownership.resolver";
-import { SubjectGrantsLoader } from "../../src/contexts/authorization/infrastructure/kernel/subject-grants.loader";
 import { TenantMembershipService } from "../../src/contexts/authorization/infrastructure/kernel/tenant-membership.service";
 import { PrismaService } from "../../src/prisma/prisma.service";
 import { SystemPrismaService } from "../../src/prisma/system-prisma.service";
@@ -46,24 +47,17 @@ export function createTestSystemPrisma(config: TypedConfigService = createTestTy
 
 /** Every collaborator the authorization kernel is constructed from. */
 export interface TestAuthorizationKernelCollaborators {
-	readonly grantsLoader: SubjectGrantsLoader;
 	readonly tenantMembership: TenantMembershipService;
-	readonly ownership: ResourceOwnershipResolver;
-	readonly aclService: AclService;
-	readonly policyEngine: PolicyEngineService;
+	readonly accessControl: AccessControlService;
 	readonly audit: AuthorizationAuditKernelService;
 }
 
 /** Builds the kernel's collaborators with their real constructor arguments. */
-export function createTestAuthorizationKernelCollaborators(prisma: PrismaService = createTestPrisma()): TestAuthorizationKernelCollaborators {
+export function createTestAuthorizationKernelCollaborators(prisma: PrismaService = createTestPrisma(), clock: Clock = new FixedClock()): TestAuthorizationKernelCollaborators {
 	const lookup = lookupOn(prisma);
-	const policyEngine = new PolicyEngineService(lookup);
 	return {
-		grantsLoader: new SubjectGrantsLoader(lookup),
 		tenantMembership: new TenantMembershipService(lookup, SERVES_EVERY_TENANT),
-		ownership: new ResourceOwnershipResolver(lookup),
-		aclService: new AclService(policyEngine, lookup),
-		policyEngine,
+		accessControl: new AccessControlService(new PrismaAccessFactsReader(lookup, clock), new PrismaRecordOwnership(lookup), clock),
 		audit: new AuthorizationAuditKernelService(createTestSystemPrisma()),
 	};
 }
@@ -71,12 +65,5 @@ export function createTestAuthorizationKernelCollaborators(prisma: PrismaService
 /** Builds the authorization kernel with its real constructor graph. */
 export function createTestAuthorizationKernel(prisma: PrismaService = createTestPrisma()): AuthorizationKernelService {
 	const collaborators = createTestAuthorizationKernelCollaborators(prisma);
-	return new AuthorizationKernelService(
-		collaborators.grantsLoader,
-		collaborators.tenantMembership,
-		collaborators.ownership,
-		collaborators.aclService,
-		collaborators.policyEngine,
-		collaborators.audit,
-	);
+	return new AuthorizationKernelService(collaborators.tenantMembership, collaborators.accessControl, collaborators.audit);
 }

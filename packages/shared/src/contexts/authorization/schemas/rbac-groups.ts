@@ -46,7 +46,6 @@ const PermissionAssignmentSchema = z.object({
 	resource: PermissionResourceSchema,
 	description: z.string().nullable(),
 	isSystem: z.boolean(),
-	conditions: z.nullable(z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()]))),
 	roles: z.array(RoleRefSchema),
 	directUsers: z.number(),
 });

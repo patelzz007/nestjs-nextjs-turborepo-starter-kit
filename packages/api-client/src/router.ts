@@ -742,6 +742,41 @@ export const apiRouter = {
 		approve: defineMutation(apiContract.supportAccess.approve),
 		revoke: defineMutation(apiContract.supportAccess.revoke),
 	},
+	tenantAccess: {
+		/**
+		 * A tenant's own access (ADR 067). Every key sits under `["tenant", slug, "access"]`, so one
+		 * invalidation of `roles.scopeKey` / `shares.scopeKey` refreshes the lists after any change.
+		 */
+		roles: defineQuery(apiContract.tenantAccess.roles, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "access", "roles"] }),
+		roleHolders: defineQuery(apiContract.tenantAccess.roleHolders, {
+			scope: ({ tenantSlug, roleId }: TenantScope & { readonly roleId: string }): ApiQueryKey => ["tenant", tenantSlug, "access", "roles", roleId, "holders"],
+		}),
+		member: defineQuery(apiContract.tenantAccess.member, {
+			scope: ({ tenantSlug, membershipId }: TenantScope & { readonly membershipId: string }): ApiQueryKey => ["tenant", tenantSlug, "access", "members", membershipId],
+		}),
+		memberGrants: defineQuery(apiContract.tenantAccess.memberGrants, {
+			scope: ({ tenantSlug, membershipId }: TenantScope & { readonly membershipId: string }): ApiQueryKey => [
+				"tenant",
+				tenantSlug,
+				"access",
+				"members",
+				membershipId,
+				"grants",
+			],
+		}),
+		shares: defineQuery(apiContract.tenantAccess.shares, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "access", "shares"] }),
+		createRole: defineMutation(apiContract.tenantAccess.createRole),
+		updateRole: defineMutation(apiContract.tenantAccess.updateRole),
+		deleteRole: defineMutation(apiContract.tenantAccess.deleteRole),
+		reassignHolders: defineMutation(apiContract.tenantAccess.reassignHolders),
+		resetRole: defineMutation(apiContract.tenantAccess.resetRole),
+		changeMemberRole: defineMutation(apiContract.tenantAccess.changeMemberRole),
+		removeMember: defineMutation(apiContract.tenantAccess.removeMember),
+		grant: defineMutation(apiContract.tenantAccess.grant),
+		revokeGrant: defineMutation(apiContract.tenantAccess.revokeGrant),
+		share: defineMutation(apiContract.tenantAccess.share),
+		unshare: defineMutation(apiContract.tenantAccess.unshare),
+	},
 	tenants: {
 		/** The member's tenants (membership + capabilities) — invalidate after any identity or membership change. */
 		membershipsBootstrap: defineQuery(apiContract.tenants.membershipsBootstrap, { scope: (): ApiQueryKey => ["tenants", "memberships"] }),

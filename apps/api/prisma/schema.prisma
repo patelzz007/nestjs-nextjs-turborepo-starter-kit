@@ -191,51 +191,47 @@ model User {
   impersonationSessionsRun    ImpersonationSession[]    @relation("ImpersonationSessionImpersonator")
   impersonationSessionsOf     ImpersonationSession[]    @relation("ImpersonationSessionTarget")
 
-  memberships                          Membership[]                    @relation("Memberships")
-  tenantInvitationsCreated             TenantInvitation[]              @relation("TenantInvitationCreator")
-  tenantInvitationsAccepted            TenantInvitation[]              @relation("TenantInvitationAcceptor")
-  tenantAccessRequests                 TenantAccessRequest[]           @relation("TenantAccessRequests")
-  tenantAccessRequestsReviewed         TenantAccessRequest[]           @relation("TenantAccessRequestReviewer")
-  authorizationPolicyDraftsCreated     AuthorizationPolicyDraft[]      @relation("AuthorizationPolicyDraftCreator")
-  authorizationPolicyDraftsApproved    AuthorizationPolicyDraft[]      @relation("AuthorizationPolicyDraftApprover")
-  authorizationPolicyVersionsPublished AuthorizationPolicyVersion[]    @relation("AuthorizationPolicyPublisher")
-  authorizationPolicySimulations       AuthorizationPolicySimulation[] @relation("AuthorizationPolicySimulator")
-  supportAccessGrants                  SupportAccessGrant[]            @relation("SupportAccessGrantSupportUser")
-  tenantApiKeysCreated                 TenantApiKey[]                  @relation("TenantApiKeyCreator")
-  bannedBy                             User?                           @relation("UserBannedBy", fields: [bannedByUserId], references: [id], onDelete: SetNull)
-  usersBanned                          User[]                          @relation("UserBannedBy")
-  tenantAppealsSubmitted               TenantSuspensionAppeal[]        @relation("TenantSuspensionAppealSubmitter")
-  tenantAppealsReviewed                TenantSuspensionAppeal[]        @relation("TenantSuspensionAppealReviewer")
-  merchantBansReceived                 TenantCustomerBan[]             @relation("TenantCustomerBanCustomer")
-  merchantBansIssued                   TenantCustomerBan[]             @relation("TenantCustomerBanIssuer")
-  merchantBansLifted                   TenantCustomerBan[]             @relation("TenantCustomerBanLifter")
-  tenantTerminalsCreated               TenantTerminal[]                @relation("TenantTerminalCreator")
-  tenantTerminalPairingCodesIssued     TenantTerminal[]                @relation("TenantTerminalPairingCodeIssuer")
-  locationsRequested                   Location[]                      @relation("LocationRequestedBy")
-  locationsReviewed                    Location[]                      @relation("LocationReviewedBy")
-  rewardClaims                         RewardClaim[]
-  rewardRedemptions                    RewardRedemption[]
-  rewardSales                          RewardSale[]
-  rewardReferralsAsReferrer            RewardReferral[]                @relation("ReferrerUser")
-  rewardReferralsAsReferee             RewardReferral[]                @relation("RefereeUser")
-  signupReferralCodes                  SignupReferralCode[]
-  signupReferralsAsReferrer            SignupReferral[]                @relation("SignupReferrerUser")
-  signupReferralsAsReferee             SignupReferral?                 @relation("SignupRefereeUser")
-  rewardOtpChallenges                  RewardOtpChallenge[]
-  rewardLegalAcceptances               RewardLegalAcceptance[]
-  rewardNotifications                  RewardNotification[]
-  rewardAuditLogs                      RewardAuditLog[]
-  avatar                               UserAvatar?
-  githubAccountLink                    GithubAccountLink?
-  githubWebhookSubscriptions           GithubWebhookSubscription[]
-  storedFilesUploaded                  StoredFile[]                    @relation("StoredFileUploader")
-  kanbanTasksOwned                     KanbanTask[]                    @relation("KanbanTaskOwner")
-  kanbanTasksAssigned                  KanbanTask[]                    @relation("KanbanTaskAssignee")
-  kanbanTaskComments                   KanbanTaskComment[]             @relation("KanbanTaskCommentAuthor")
-  kanbanChecklistItemsAssigned         KanbanChecklistItem[]           @relation("KanbanChecklistItemAssignee")
-  kanbanTasksWatched                   KanbanTaskWatcher[]             @relation("KanbanTaskWatcherUser")
-  kanbanActivity                       KanbanTaskActivity[]            @relation("KanbanTaskActivityActor")
-  preferences                          UserPreference[]
+  memberships                      Membership[]                @relation("Memberships")
+  tenantInvitationsCreated         TenantInvitation[]          @relation("TenantInvitationCreator")
+  tenantInvitationsAccepted        TenantInvitation[]          @relation("TenantInvitationAcceptor")
+  tenantAccessRequests             TenantAccessRequest[]       @relation("TenantAccessRequests")
+  tenantAccessRequestsReviewed     TenantAccessRequest[]       @relation("TenantAccessRequestReviewer")
+  supportAccessGrants              SupportAccessGrant[]        @relation("SupportAccessGrantSupportUser")
+  tenantApiKeysCreated             TenantApiKey[]              @relation("TenantApiKeyCreator")
+  bannedBy                         User?                       @relation("UserBannedBy", fields: [bannedByUserId], references: [id], onDelete: SetNull)
+  usersBanned                      User[]                      @relation("UserBannedBy")
+  tenantAppealsSubmitted           TenantSuspensionAppeal[]    @relation("TenantSuspensionAppealSubmitter")
+  tenantAppealsReviewed            TenantSuspensionAppeal[]    @relation("TenantSuspensionAppealReviewer")
+  merchantBansReceived             TenantCustomerBan[]         @relation("TenantCustomerBanCustomer")
+  merchantBansIssued               TenantCustomerBan[]         @relation("TenantCustomerBanIssuer")
+  merchantBansLifted               TenantCustomerBan[]         @relation("TenantCustomerBanLifter")
+  tenantTerminalsCreated           TenantTerminal[]            @relation("TenantTerminalCreator")
+  tenantTerminalPairingCodesIssued TenantTerminal[]            @relation("TenantTerminalPairingCodeIssuer")
+  locationsRequested               Location[]                  @relation("LocationRequestedBy")
+  locationsReviewed                Location[]                  @relation("LocationReviewedBy")
+  rewardClaims                     RewardClaim[]
+  rewardRedemptions                RewardRedemption[]
+  rewardSales                      RewardSale[]
+  rewardReferralsAsReferrer        RewardReferral[]            @relation("ReferrerUser")
+  rewardReferralsAsReferee         RewardReferral[]            @relation("RefereeUser")
+  signupReferralCodes              SignupReferralCode[]
+  signupReferralsAsReferrer        SignupReferral[]            @relation("SignupReferrerUser")
+  signupReferralsAsReferee         SignupReferral?             @relation("SignupRefereeUser")
+  rewardOtpChallenges              RewardOtpChallenge[]
+  rewardLegalAcceptances           RewardLegalAcceptance[]
+  rewardNotifications              RewardNotification[]
+  rewardAuditLogs                  RewardAuditLog[]
+  avatar                           UserAvatar?
+  githubAccountLink                GithubAccountLink?
+  githubWebhookSubscriptions       GithubWebhookSubscription[]
+  storedFilesUploaded              StoredFile[]                @relation("StoredFileUploader")
+  kanbanTasksOwned                 KanbanTask[]                @relation("KanbanTaskOwner")
+  kanbanTasksAssigned              KanbanTask[]                @relation("KanbanTaskAssignee")
+  kanbanTaskComments               KanbanTaskComment[]         @relation("KanbanTaskCommentAuthor")
+  kanbanChecklistItemsAssigned     KanbanChecklistItem[]       @relation("KanbanChecklistItemAssignee")
+  kanbanTasksWatched               KanbanTaskWatcher[]         @relation("KanbanTaskWatcherUser")
+  kanbanActivity                   KanbanTaskActivity[]        @relation("KanbanTaskActivityActor")
+  preferences                      UserPreference[]
 
   @@index([pendingAttributionToken])
   @@index([authorizationChangedAt])
@@ -650,13 +646,24 @@ model UserPreference {
 // ============================================================================
 
 // Enums
+/// The verbs of the `noun.verb` permission catalogue (ADR 067): CRUD plus the closed list of
+/// lifecycle verbs, each pinned to its noun in the ADR. There is no catch-all verb: a route names the
+/// verb it performs and a role holds each verb it may use.
 enum PermissionAction {
   CREATE
   READ
   UPDATE
   DELETE
   LIST
-  MANAGE
+  PUBLISH
+  APPROVE
+  REJECT
+  SUSPEND
+  BAN
+  UNBAN
+  REACTIVATE
+  UNLOCK
+  REDEEM
 }
 
 enum PermissionResource {
@@ -685,6 +692,18 @@ enum PermissionResource {
   GITHUB
   GITHUB_PULL_REQUEST
   KANBAN_TASK
+  KANBAN_BOARD
+  MEMBER
+  KYB
+  ACCESS_REQUEST
+  SUPPORT_ACCESS
+  API_KEY
+  INVITE
+  SESSION
+  CUSTOMER_BAN
+  SHARE
+  CLAIM
+  TERMINAL
 }
 
 enum PermissionScope {
@@ -700,9 +719,17 @@ enum AclEffect {
   DENY
 }
 
-enum PolicyEffect {
-  ALLOW
-  DENY
+/// Where a role applies (ADR 067): the platform, a tenant-role template, or one tenant's own copy.
+enum RoleKind {
+  PLATFORM
+  TEMPLATE
+  TENANT
+}
+
+/// What a per-record share gives (ADR 067): VIEW = read, EDIT = read + update.
+enum ShareLevel {
+  VIEW
+  EDIT
 }
 
 enum AuthorizationDecision {
@@ -724,25 +751,30 @@ model Role {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  name        String  @unique @db.VarChar(100)
-  description String? @db.Text
-  isActive    Boolean @default(true)
+  name        String          @db.VarChar(100)
+  description String?         @db.Text
+  isActive    Boolean         @default(true)
+  /// PLATFORM (tenantId NULL), TEMPLATE (a tenant-role template, tenantId NULL) or TENANT (one tenant's copy).
+  kind        RoleKind        @default(PLATFORM)
+  /// The tenant a TENANT role belongs to; NULL for PLATFORM and TEMPLATE roles.
+  tenantId    String?
+  /// The template a TEMPLATE role defines, or a TENANT copy was made from (NULL: a tenant's own custom role).
+  templateKey MembershipRole?
   /// Server-controlled: platform roles the code depends on by name (seeded). API callers can never
-  /// set this flag, and a system role cannot be renamed, deactivated, re-parented, re-permissioned or deleted.
-  isSystem    Boolean @default(false)
-
-  // Self-referential hierarchy — a role can inherit permissions from a parent role.
-  parentId String?
-  parent   Role?   @relation("RoleHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children Role[]  @relation("RoleHierarchy")
+  /// set this flag, and a system role cannot be renamed, deactivated, re-permissioned or deleted. Roles are flat: no role inherits another's permissions.
+  isSystem    Boolean         @default(false)
 
   // Relations
   userRoles       UserRole[]
   rolePermissions RolePermission[]
   /// Location roles (Location Manager / Location Staff) granted through a membership's location scope.
   locationScopes  MembershipLocationScope[]
+  tenant          Tenant?                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  memberships     Membership[]
 
-  @@index([parentId])
+  /// One name per tenant (and, with tenantId NULL, per platform/template set — kept unique by the catalogue sync).
+  @@unique([tenantId, name], where: { isDeleted: false })
+  @@index([kind])
 }
 
 /// RLS: catalog — SELECT true; writes need `app_rls_bypass()`.
@@ -764,9 +796,8 @@ model Permission {
   description String?            @db.Text
   scope       PermissionScope    @default(GLOBAL)
 
-  group      String? @db.VarChar(100)
-  isSystem   Boolean @default(false)
-  conditions Json?
+  group    String? @db.VarChar(100)
+  isSystem Boolean @default(false)
 
   // Relations
   rolePermissions      RolePermission[]
@@ -905,14 +936,26 @@ model UserPermission {
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
-  /// Per-user override: ALLOW grants the permission; DENY revokes it even when a role grants it.
+  /// Retired by ADR 067 (grants only add); the decision service reads ALLOW rows only. Dropped in Phase 4.
   effect AclEffect @default(ALLOW)
 
   assignedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
   assignedBy String?
+  /// End of a temporary grant (epoch ms); NULL = permanent. Checked against now on every request.
   expiresAt  BigInt?
+  /// The tenant a member's grant applies in; NULL = a platform grant.
+  tenantId   String?
+  /// One store the grant is limited to (intersected with the member's stores); NULL = the whole tenant.
+  locationId String?
+  /// The granter's role name when the grant was made — a grant may outlive its issuer's authority (ADR 067).
+  grantedVia String? @db.VarChar(100)
 
-  @@unique([userId, permissionId])
+  tenant   Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location Location? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  @@index([userId, permissionId])
+  @@index([tenantId])
+  @@index([locationId])
 }
 
 /// RLS: catalog — SELECT true; writes need `app_rls_bypass()`.
@@ -969,49 +1012,21 @@ model ResourceAcl {
   scope        PermissionScope?
   tenantId     String?
   locationId   String?
-  conditions   Json?
   expiresAt    BigInt?
   assignedBy   String?
   reason       String?          @db.Text
+  /// A per-record share (ADR 067): the member it is shared with. NULL on legacy ACL rows (dropped in Phase 4).
+  membershipId String?
+  /// What the share gives: VIEW (read) or EDIT (read + update).
+  level        ShareLevel?
 
+  membership Membership? @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([membershipId])
   @@index([subjectType, subjectId])
   @@index([resourceType, resourceId])
   @@index([tenantId])
   @@index([locationId])
-}
-
-/// RLS: catalog — Policy definitions with Zod-validated DSL.
-/// @extends BaseModel
-model PolicyDefinition {
-  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
-  id        String  @id @default(uuid(7))
-  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
-  createdBy String? @db.VarChar(128)
-  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
-  updatedBy String? @db.VarChar(128)
-  isDeleted Boolean @default(false)
-  deletedAt BigInt?
-  deletedBy String? @db.VarChar(128)
-  // ── end BaseModel ──
-
-  name         String          @db.VarChar(200)
-  description  String?         @db.Text
-  version      Int             @default(1)
-  effect       PolicyEffect
-  scope        PermissionScope
-  actions      String[] // ["CREATE", "UPDATE", ...]
-  resources    String[] // ["ORDER", "PAYMENT", ...]
-  tenantId     String?
-  locationId   String?
-  conditions   Json? // Zod-validated policy DSL
-  isActive     Boolean         @default(true)
-  publishedAt  BigInt?
-  publishedBy  String?
-  supersededBy String?
-
-  @@index([tenantId])
-  @@index([locationId])
-  @@index([isActive])
 }
 
 /// RLS: bypass only — Authorization audit trail.
@@ -1053,30 +1068,6 @@ model AuthorizationAudit {
   @@index([createdAt])
 }
 
-enum AuthorizationPolicyScope {
-  PLATFORM_GUARDRAIL
-  PLATFORM
-  TENANT
-}
-
-/// How a published policy draft was approved.
-enum AuthorizationPolicyApprovalKind {
-  /// Approved and published by a SuperAdmin other than its author (policy control plane).
-  FOUR_EYES
-  /// The fixed, code-reviewed default tenant template published at tenant provisioning;
-  /// no human approver exists (`approvedById` is NULL) and the publish is audited with this reason.
-  PLATFORM_DEFAULT_TEMPLATE
-}
-
-enum AuthorizationPolicyStatus {
-  DRAFT
-  PENDING_APPROVAL
-  APPROVED
-  PUBLISHED
-  SUPERSEDED
-  ROLLED_BACK
-}
-
 enum SupportAccessGrantMode {
   READ_ONLY
   WRITE_ELEVATED
@@ -1089,108 +1080,6 @@ enum SupportAccessGrantStatus {
   EXPIRED
   REVOKED
   DENIED
-}
-
-/// RLS: TENANT + GLOBAL — Cedar policy drafts.
-/// @extends BaseModel
-model AuthorizationPolicyDraft {
-  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
-  id        String  @id @default(uuid(7))
-  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
-  createdBy String? @db.VarChar(128)
-  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
-  updatedBy String? @db.VarChar(128)
-  isDeleted Boolean @default(false)
-  deletedAt BigInt?
-  deletedBy String? @db.VarChar(128)
-  // ── end BaseModel ──
-
-  tenantId       String?
-  scope          AuthorizationPolicyScope
-  name           String                           @db.VarChar(120)
-  description    String?                          @db.Text
-  builderPayload Json
-  cedarSource    String                           @db.Text
-  sqlPredicate   String?                          @db.Text
-  status         AuthorizationPolicyStatus        @default(DRAFT)
-  createdById    String
-  /// The second SuperAdmin who approved a FOUR_EYES publish; NULL for PLATFORM_DEFAULT_TEMPLATE.
-  approvedById   String?
-  /// NULL until the draft is published.
-  approvalKind   AuthorizationPolicyApprovalKind?
-
-  tenant      Tenant?                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  creator     User                            @relation("AuthorizationPolicyDraftCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  approvedBy  User?                           @relation("AuthorizationPolicyDraftApprover", fields: [approvedById], references: [id], onDelete: SetNull)
-  versions    AuthorizationPolicyVersion[]
-  simulations AuthorizationPolicySimulation[]
-
-  @@index([tenantId, status])
-}
-
-/// RLS: TENANT + GLOBAL — immutable published policy versions.
-/// @extends BaseModel
-model AuthorizationPolicyVersion {
-  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
-  id        String  @id @default(uuid(7))
-  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
-  createdBy String? @db.VarChar(128)
-  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
-  updatedBy String? @db.VarChar(128)
-  isDeleted Boolean @default(false)
-  deletedAt BigInt?
-  deletedBy String? @db.VarChar(128)
-  // ── end BaseModel ──
-
-  tenantId      String?
-  draftId       String
-  scope         AuthorizationPolicyScope
-  version       Int
-  cedarSource   String                   @db.Text
-  sqlPredicate  String?                  @db.Text
-  contentHash   String                   @db.VarChar(64)
-  publishedAt   BigInt
-  publishedById String
-  supersededAt  BigInt?
-
-  tenant      Tenant?                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  draft       AuthorizationPolicyDraft @relation(fields: [draftId], references: [id], onDelete: Restrict)
-  publishedBy User                     @relation("AuthorizationPolicyPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
-
-  @@unique([tenantId, scope, version])
-  @@unique([scope, version], where: { tenantId: null })
-  @@unique([tenantId, scope], where: { supersededAt: null })
-  @@unique([scope], where: { tenantId: null, supersededAt: null })
-  @@index([tenantId, publishedAt])
-}
-
-/// RLS: OPERATIONAL — policy simulation runs.
-/// @extends BaseModel
-model AuthorizationPolicySimulation {
-  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
-  id        String  @id @default(uuid(7))
-  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
-  createdBy String? @db.VarChar(128)
-  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
-  updatedBy String? @db.VarChar(128)
-  isDeleted Boolean @default(false)
-  deletedAt BigInt?
-  deletedBy String? @db.VarChar(128)
-  // ── end BaseModel ──
-
-  draftId             String
-  actorUserId         String
-  result              Json
-  passed              Boolean
-  /// sha256 of the published policy versions the draft was simulated against.
-  /// Publishing requires it to equal the current baseline (NULL = recorded before
-  /// baseline tracking existed; never accepted for publish).
-  baselineFingerprint String? @db.VarChar(64)
-
-  draft AuthorizationPolicyDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
-  actor User                     @relation("AuthorizationPolicySimulator", fields: [actorUserId], references: [id], onDelete: Restrict)
-
-  @@index([draftId, createdAt])
 }
 
 /// RLS: OPERATIONAL — JIT support access grants.
@@ -1253,11 +1142,10 @@ enum TenantLifecycleState {
   DELETED
 }
 
+/// The tenant-role templates (ADR 067). A member's real role is `Membership.roleId`; this names its template.
 enum MembershipRole {
   OWNER
-  ADMIN
-  MEMBER
-  POLICY_ADMIN
+  MANAGER
   CASHIER
 }
 
@@ -1335,13 +1223,13 @@ model Tenant {
   slugHistory              TenantSlugHistory[]
   locations                Location[]
   memberships              Membership[]
+  roles                    Role[]
+  grants                   UserPermission[]
   merchantProfile          TenantMerchantProfile?
   invitations              TenantInvitation[]
   accessRequests           TenantAccessRequest[]
   lifecycleEvents          TenantLifecycleEvent[]
   placement                TenantPlacement?
-  policyDrafts             AuthorizationPolicyDraft[]
-  policyVersions           AuthorizationPolicyVersion[]
   supportGrants            SupportAccessGrant[]
   encryptionKeys           TenantEncryptionKey[]
   auditLogs                TenantAuditLog[]
@@ -1427,6 +1315,7 @@ model Location {
   redemptions              RewardRedemption[]
   rewardSales              RewardSale[]
   apiKeys                  TenantApiKey[]
+  grants                   UserPermission[]
 
   @@unique([tenantId, code])
   /// At most one live primary location per tenant (partial unique — soft-deleted rows ignored).
@@ -1454,6 +1343,9 @@ model Membership {
 
   tenantId    String
   userId      String
+  /// The member's role (a TENANT role of this tenant, ADR 067): its permissions apply within the member's stores.
+  roleId      String
+  /// Mirror of `role.templateKey` kept by the membership repository until Phase 4 removes it (ADR 067).
   role        MembershipRole
   status      MembershipStatus @default(ACTIVE)
   /// The member's own name for this tenant (`PATCH /tenants/:tenantSlug/members/me`); trimmed, at most
@@ -1462,13 +1354,17 @@ model Membership {
 
   tenant         Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user           User                      @relation("Memberships", fields: [userId], references: [id], onDelete: Cascade)
+  /// Deleting a role members still hold is refused (ADR 067): reassign them first.
+  tenantRole     Role                      @relation(fields: [roleId], references: [id], onDelete: Restrict)
   locationScopes MembershipLocationScope[]
+  shares         ResourceAcl[]
 
   @@unique([tenantId, userId], where: { isDeleted: false })
   /// Composite target of the tenant-scoped foreign keys (multi-tenancy plan §7): a child row
   /// can reference this row only from the same tenant.
   @@unique([tenantId, id])
   @@index([userId])
+  @@index([roleId])
   @@index([tenantId, status])
   /// `GET /tenants/:tenantSlug/members` (join order within one tenant) and `GET /tenants/memberships` (one user's, in join order).
   @@index([tenantId, createdAt, id])
@@ -1821,7 +1717,6 @@ model TenantAuditLog {
   resourceType  String  @db.VarChar(120)
   resourceId    String? @db.VarChar(64)
   decision      String? @db.VarChar(32)
-  policyVersion Int?
   correlationId String? @db.VarChar(64)
   metadata      Json?
 

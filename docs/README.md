@@ -29,7 +29,7 @@ docs/
 ├── user-guide/        operator guide: setup → onboarding → stores/team → rewards → claims → POS → referrals → analytics → admin → security
 ├── technical/         engineering docs
 │   ├── api/           conventions, routes registry, errors, list queries, response contracts, HTTP server (Fastify)
-│   ├── api-reference/ GENERATED — do not edit (pnpm docs:api)
+│   ├── api-reference/ GENERATED — do not edit (pnpm tools docs:api)
 │   ├── authorization/ kernel, RBAC internals, tenancy & RLS, frontend can(), recipes, testing, troubleshooting, dos & don'ts
 │   ├── security/      authentication & MFA, token refresh, database security, encryption & KMS, threat model
 │   ├── storage/       overview, AWS S3 setup, Firebase Storage setup
@@ -46,11 +46,11 @@ docs/
 
 The docs site (`pnpm dev` → `http://localhost:3002`, or `pnpm --filter @workspace/docs dev`) renders
 this folder; how to add a page is in [`apps/docs/README.md`](../apps/docs/README.md). Every internal
-link is checked by `pnpm docs:check-links` and in CI.
+link is checked by `pnpm tools docs:check-links` and in CI.
 
 ## Keeping it true
 
 - Update the relevant page in the same change as the code ([`rules/14`](../rules/14-documentation.md)).
 - After an API change: `pnpm --filter @workspace/api openapi:export`, re-capture samples if needed,
-  then `pnpm docs:api` — the docs tests fail when the reference is stale.
+  then `pnpm tools docs:api` — the docs tests fail when the reference is stale.
 - A decision that changes direction gets a new ADR; the old one is marked superseded, not deleted.

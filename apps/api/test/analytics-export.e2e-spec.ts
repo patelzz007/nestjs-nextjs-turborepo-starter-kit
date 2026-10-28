@@ -13,7 +13,7 @@ import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
 import { sha256Hex } from "../src/platform/infrastructure/crypto/sha256";
 import { REPORT_FONT_FAMILIES } from "../src/contexts/reporting/infrastructure/report/fonts/report-fonts";
 import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
-import { createE2eApp, grantSeedUsersFullSession, login, type InjectResponse, type LoginResult } from "./e2e-helpers";
+import { createE2eApp, grantSeedUsersFullSession, grantTenantPermission, login, revokeTenantGrant, type InjectResponse, type LoginResult } from "./e2e-helpers";
 import { pdfTextRuns } from "./support/report-files";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
@@ -77,6 +77,7 @@ describe("Analytics exports (e2e)", () => {
 	let pool: Pool;
 	let owner: LoginResult;
 	let cashier: LoginResult;
+	let analyticsGrantId: string;
 	let superAdmin: LoginResult;
 	let alice: LoginResult;
 	let ownerId: string;
@@ -161,11 +162,19 @@ describe("Analytics exports (e2e)", () => {
 
 		owner = await login(app, "jonker.owner@melaka-rewards.demo", "JonkerOwner@123", "merchant");
 		cashier = await login(app, "jonker.cashier@melaka-rewards.demo", "JonkerCashier@123", "merchant");
+		// A Cashier reads analytics only through a grant (ADR 067, edge cases 4–5): the owner gives this
+		// store-limited cashier `analytics.read`, so what follows is the store scoping of analytics itself.
+		analyticsGrantId = await grantTenantPermission(app, owner, {
+			tenantSlug: TENANT_SEED_SLUGS.mlk,
+			membershipId: TENANT_SEED_IDS.mlkCashierMembership,
+			permission: { action: "READ", resource: "ANALYTICS" },
+		});
 		superAdmin = await login(app, "superadmin@example.com", "SuperAdmin@123");
 		alice = await login(app, "alice.johnson@example.com", "Alice@123");
 	});
 
 	afterAll(async () => {
+		await revokeTenantGrant(app, owner, TENANT_SEED_SLUGS.mlk, analyticsGrantId);
 		await pool.query('DELETE FROM public."RewardSale" WHERE id = ANY($1::text[])', [saleIds]);
 		await pool.query('DELETE FROM public."RewardClaim" WHERE id = $1', [claimId]);
 		await pool.query('DELETE FROM public."Reward" WHERE id = $1', [rewardId]);

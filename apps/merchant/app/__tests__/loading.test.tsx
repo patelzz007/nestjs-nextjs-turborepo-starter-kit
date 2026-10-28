@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import MerchantAuthLoading from "@/app/auth/loading";
 import MerchantEntryLoading from "@/app/loading";
 import MerchantOnboardingLoading from "@/app/onboarding/loading";
-import MerchantAccountLoading from "@/app/t/[tenantSlug]/account/loading";
+import MerchantAccountLoading from "@/app/t/[tenantSlug]/(settings)/account/loading";
 import MerchantAnalyticsLoading from "@/app/t/[tenantSlug]/analytics/loading";
 import MerchantApiKeysLoading from "@/app/t/[tenantSlug]/api-keys/loading";
 import MerchantDashboardLoading from "@/app/t/[tenantSlug]/dashboard/loading";
@@ -18,11 +18,12 @@ import MerchantEditRewardLoading from "@/app/t/[tenantSlug]/rewards/[rewardId]/e
 import MerchantRewardDetailLoading from "@/app/t/[tenantSlug]/rewards/[rewardId]/loading";
 import MerchantRewardsLoading from "@/app/t/[tenantSlug]/rewards/loading";
 import MerchantCreateRewardLoading from "@/app/t/[tenantSlug]/rewards/new/loading";
-import MerchantSettingsLoading from "@/app/t/[tenantSlug]/settings/loading";
-import MerchantBrandingLoading from "@/app/t/[tenantSlug]/settings/branding/loading";
-import MerchantLocationsLoading from "@/app/t/[tenantSlug]/settings/locations/loading";
-import MerchantTeamLoading from "@/app/t/[tenantSlug]/settings/team/loading";
-import MerchantVerificationLoading from "@/app/t/[tenantSlug]/settings/verification/loading";
+import MerchantSettingsLoading from "@/app/t/[tenantSlug]/(settings)/settings/loading";
+import MerchantBrandingLoading from "@/app/t/[tenantSlug]/(settings)/settings/branding/loading";
+import MerchantIntegrationsLoading from "@/app/t/[tenantSlug]/(settings)/settings/integrations/loading";
+import MerchantLocationsLoading from "@/app/t/[tenantSlug]/(settings)/settings/locations/loading";
+import MerchantTeamLoading from "@/app/t/[tenantSlug]/(settings)/settings/team/loading";
+import MerchantVerificationLoading from "@/app/t/[tenantSlug]/(settings)/settings/verification/loading";
 import MerchantTerminalsLoading from "@/app/t/[tenantSlug]/terminals/loading";
 import MerchantTeamInviteLoading from "@/app/team-invite/loading";
 import { MERCHANT_AUTH_LOADING_LABELS } from "@/components/loading/auth-skeletons";
@@ -35,6 +36,9 @@ import {
 	MERCHANT_API_KEYS_LOADING_LABELS,
 	MERCHANT_DASHBOARD_LOADING_LABELS,
 	MERCHANT_BRANDING_LOADING_LABELS,
+	MERCHANT_INTEGRATIONS_LOADING_LABELS,
+	BUSINESS_PROFILE_FACTS,
+	INTEGRATION_CARDS,
 	MERCHANT_LOCATIONS_LOADING_LABELS,
 	MERCHANT_REDEMPTIONS_LOADING_LABELS,
 	MERCHANT_REWARD_EDITOR_LOADING_LABELS,
@@ -49,7 +53,6 @@ import {
 	MerchantWorkspaceSkeleton,
 	REDEMPTION_SKELETON_ROWS,
 	REDEMPTION_STAT_CARDS,
-	TEAM_INVITE_SKELETON_ROWS,
 	TEAM_MEMBER_SKELETON_ROWS,
 } from "@/components/loading/merchant-page-skeletons";
 import { TEAM_INVITE_LOADING_LABELS } from "@/contexts/tenancy/components/team-invite/team-invite-skeletons";
@@ -81,8 +84,6 @@ afterEach((): void => {
 const DASHBOARD_LINK_COLUMNS = 2;
 /** The analytics page's time-series charts. */
 const ANALYTICS_CHARTS = 4;
-/** The tenant-settings link cards: team, locations, branding, verification. */
-const SETTINGS_LINK_CARDS = 4;
 /** The invitation's detail rows: role, invited email, location access. */
 const INVITE_DETAILS = 3;
 
@@ -157,7 +158,8 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		element: <MerchantAccountLoading />,
 		labels: MERCHANT_ACCOUNT_LOADING_LABELS,
 		landmarks: [
-			{ selector: slot("page-header-skeleton"), count: 1 },
+			{ selector: slot("settings-section-header-skeleton"), count: 1 },
+			{ selector: slot("page-header-skeleton"), count: 0 },
 			{ selector: slot("security-settings-panel-skeleton"), count: 1 },
 		],
 	},
@@ -241,7 +243,20 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		route: "/t/[tenantSlug]/settings",
 		element: <MerchantSettingsLoading />,
 		labels: MERCHANT_SETTINGS_LOADING_LABELS,
-		landmarks: [{ selector: slot("settings-link-skeleton"), count: SETTINGS_LINK_CARDS }],
+		landmarks: [
+			{ selector: slot("settings-section-header-skeleton"), count: 1 },
+			{ selector: slot("business-profile-skeleton"), count: 1 },
+			{ selector: slot("business-profile-fact-skeleton"), count: BUSINESS_PROFILE_FACTS },
+		],
+	},
+	{
+		route: "/t/[tenantSlug]/settings/integrations",
+		element: <MerchantIntegrationsLoading />,
+		labels: MERCHANT_INTEGRATIONS_LOADING_LABELS,
+		landmarks: [
+			{ selector: slot("settings-section-header-skeleton"), count: 1 },
+			{ selector: slot("integration-card-skeleton"), count: INTEGRATION_CARDS },
+		],
 	},
 	{
 		route: "/t/[tenantSlug]/settings/locations",
@@ -259,7 +274,11 @@ const ROUTES: readonly RouteLoadingCase[] = [
 		route: "/t/[tenantSlug]/settings/team",
 		element: <MerchantTeamLoading />,
 		labels: MERCHANT_TEAM_LOADING_LABELS,
-		landmarks: [{ selector: slot("merchant-bordered-row-skeleton"), count: TEAM_MEMBER_SKELETON_ROWS + TEAM_INVITE_SKELETON_ROWS }],
+		landmarks: [
+			{ selector: slot("settings-section-action-skeleton"), count: 1 },
+			{ selector: slot("team-tabs-skeleton"), count: 1 },
+			{ selector: slot("merchant-bordered-row-skeleton"), count: TEAM_MEMBER_SKELETON_ROWS },
+		],
 	},
 	{
 		route: "/t/[tenantSlug]/settings/verification",

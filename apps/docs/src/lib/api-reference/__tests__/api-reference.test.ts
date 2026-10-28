@@ -28,9 +28,7 @@ export class RedemptionsController {
 export class RolesController {
 	@RequirePermission("UPDATE", "ROLE")
 	@Throttle({ strict: { ttl: 60000, limit: 5 } })
-	@Authorize({
-		action: "UPDATE",
-		resource: "USER",
+	@RequirePermission("UPDATE", "USER", {
 		resourceId: self(),
 		description: "User can only change their own role",
 	})

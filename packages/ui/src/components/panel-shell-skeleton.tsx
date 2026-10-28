@@ -156,22 +156,24 @@ export const AppShellHeaderSkeleton = React.forwardRef<HTMLElement, AppShellHead
 			ref={ref}
 			aria-hidden="true"
 			data-slot="app-shell-header-skeleton"
-			className={cn("flex h-14 shrink-0 items-center gap-2 border-b border-border bg-shell-panel px-4 sm:px-6", className)}
+			className={cn("flex h-14 shrink-0 border-b border-border bg-shell-panel", className)}
 			{...props}>
-			<span data-slot="app-shell-header-toggle" className="flex shrink-0 overflow-hidden">
-				<Skeleton className="size-7 rounded-md" />
-			</span>
-			<div className="min-w-0 flex-1">
-				<Skeleton variant="text" className="h-3.5 w-36" />
-			</div>
-			{actions.length > 0 ? (
-				<div className="flex shrink-0 items-center gap-2">
-					{actions.map((kind, index) => (
-						<Skeleton key={`action-${String(index)}`} className={headerActionSkeletonVariants({ kind })} />
-					))}
+			<div className="mx-auto flex w-full max-w-10xl items-center gap-2 px-4 sm:px-6">
+				<span data-slot="app-shell-header-toggle" className="flex shrink-0 overflow-hidden">
+					<Skeleton className="size-7 rounded-md" />
+				</span>
+				<div className="min-w-0 flex-1">
+					<Skeleton variant="text" className="h-3.5 w-36" />
 				</div>
-			) : null}
-			<Skeleton className="h-8 w-9 shrink-0 rounded-md sm:w-28 md:w-36" />
+				{actions.length > 0 ? (
+					<div className="flex shrink-0 items-center gap-2">
+						{actions.map((kind, index) => (
+							<Skeleton key={`action-${String(index)}`} className={headerActionSkeletonVariants({ kind })} />
+						))}
+					</div>
+				) : null}
+				<Skeleton className="h-8 w-9 shrink-0 rounded-md sm:w-28 md:w-36" />
+			</div>
 		</header>
 	);
 });

@@ -135,12 +135,14 @@ CREATE POLICY user_permissions_own ON public."UserPermission"
   USING ((SELECT app_rls_bypass_on('UserPermission')) OR (app_owns("userId")))
   WITH CHECK ((SELECT app_rls_bypass_on('UserPermission')) OR (app_owns("userId")));
 
--- ── Shared / RBAC tables (world-readable, bypass-only writes) ──────────────
+-- ── Shared / RBAC tables (catalogue world-readable, bypass-only writes) ─────
 
+-- Platform roles and templates (no tenant) are the catalogue; a tenant's own roles (ADR 067) are
+-- visible to its members only — tenant A never sees tenant B's roles.
 DROP POLICY IF EXISTS roles_read ON public."Role";
 CREATE POLICY roles_read ON public."Role"
   FOR SELECT
-  USING (true);
+  USING ((SELECT app_rls_bypass_on('Role')) OR "tenantId" IS NULL OR app_tenant_org_member("tenantId"));
 
 DROP POLICY IF EXISTS roles_write ON public."Role";
 CREATE POLICY roles_write ON public."Role"
@@ -170,10 +172,11 @@ CREATE POLICY capability_definitions_write ON public."CapabilityDefinition"
   USING ((SELECT app_rls_bypass_on('CapabilityDefinition')))
   WITH CHECK ((SELECT app_rls_bypass_on('CapabilityDefinition')));
 
+-- A role's permissions are visible exactly when the role is (the EXISTS runs under roles_read).
 DROP POLICY IF EXISTS role_permissions_read ON public."RolePermission";
 CREATE POLICY role_permissions_read ON public."RolePermission"
   FOR SELECT
-  USING (true);
+  USING ((SELECT app_rls_bypass_on('RolePermission')) OR EXISTS (SELECT 1 FROM public."Role" r WHERE r.id = "RolePermission"."roleId"));
 
 DROP POLICY IF EXISTS role_permissions_write ON public."RolePermission";
 CREATE POLICY role_permissions_write ON public."RolePermission"
@@ -191,27 +194,11 @@ CREATE POLICY resource_acls_member ON public."ResourceAcl"
   USING (
     (SELECT app_rls_bypass_on('ResourceAcl'))
     OR "tenantId" IS NULL
-    OR app_tenant_member_of("tenantId")
+    -- ADR 067: a member sees the shares made to them; seeing everyone's needs member.read.
+    OR EXISTS (SELECT 1 FROM public."Membership" m WHERE m.id = "ResourceAcl"."membershipId" AND app_owns(m."userId"))
+    OR app_has_permission('MEMBER', 'READ', "tenantId", NULL)
   )
   WITH CHECK ((SELECT app_rls_bypass_on('ResourceAcl')));
-
-ALTER TABLE public."PolicyDefinition" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public."PolicyDefinition" FORCE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS policy_definitions_read ON public."PolicyDefinition";
-CREATE POLICY policy_definitions_read ON public."PolicyDefinition"
-  FOR SELECT
-  USING (
-    (SELECT app_rls_bypass_on('PolicyDefinition'))
-    OR "tenantId" IS NULL
-    OR app_tenant_member_of("tenantId")
-  );
-
-DROP POLICY IF EXISTS policy_definitions_write ON public."PolicyDefinition";
-CREATE POLICY policy_definitions_write ON public."PolicyDefinition"
-  FOR ALL
-  USING ((SELECT app_rls_bypass_on('PolicyDefinition')))
-  WITH CHECK ((SELECT app_rls_bypass_on('PolicyDefinition')));
 
 ALTER TABLE public."AuthorizationAudit" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public."AuthorizationAudit" FORCE ROW LEVEL SECURITY;
@@ -510,14 +497,16 @@ $$;
 
 GRANT EXECUTE ON FUNCTION app_holds_reward_claim(text) TO app_runtime;
 
--- Published consumer rewards are marketplace-readable; tenant members see all org
--- rewards; a claim holder sees the reward they claimed, whatever its state now.
+-- Published consumer rewards are marketplace-readable; a member whose role or grant gives
+-- reward.read sees all org rewards, and a member it was shared with sees that one (ADR 067);
+-- a claim holder sees the reward they claimed, whatever its state now.
 DROP POLICY IF EXISTS rewards_read ON public."Reward";
 CREATE POLICY rewards_read ON public."Reward"
   FOR SELECT
   USING (
     (SELECT app_rls_bypass_on('Reward'))
-    OR app_tenant_org_member("tenantId")
+    OR app_has_permission('REWARD', 'READ', "tenantId", NULL)
+    OR app_shared('REWARD', id, 'VIEW')
     OR (
       "isDeleted" = false
       AND "rewardKind" = 'CONSUMER'
@@ -529,18 +518,30 @@ CREATE POLICY rewards_read ON public."Reward"
 DROP POLICY IF EXISTS rewards_write ON public."Reward";
 CREATE POLICY rewards_write ON public."Reward"
   FOR INSERT
-  WITH CHECK (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('Reward')));
+  WITH CHECK (app_has_permission('REWARD', 'CREATE', "tenantId", NULL) OR (SELECT app_rls_bypass_on('Reward')));
 
+-- An edit, or publishing (a lifecycle step that rewrites the row); or an EDIT share. Platform
+-- review (approve, reject) runs as its own system operation.
 DROP POLICY IF EXISTS rewards_update ON public."Reward";
 CREATE POLICY rewards_update ON public."Reward"
   FOR UPDATE
-  USING (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('Reward')))
-  WITH CHECK (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('Reward')));
+  USING (
+    (SELECT app_rls_bypass_on('Reward'))
+    OR app_has_permission('REWARD', 'UPDATE', "tenantId", NULL)
+    OR app_has_permission('REWARD', 'PUBLISH', "tenantId", NULL)
+    OR app_shared('REWARD', id, 'EDIT')
+  )
+  WITH CHECK (
+    (SELECT app_rls_bypass_on('Reward'))
+    OR app_has_permission('REWARD', 'UPDATE', "tenantId", NULL)
+    OR app_has_permission('REWARD', 'PUBLISH', "tenantId", NULL)
+    OR app_shared('REWARD', id, 'EDIT')
+  );
 
 DROP POLICY IF EXISTS rewards_delete ON public."Reward";
 CREATE POLICY rewards_delete ON public."Reward"
   FOR DELETE
-  USING (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('Reward')));
+  USING (app_has_permission('REWARD', 'DELETE', "tenantId", NULL) OR (SELECT app_rls_bypass_on('Reward')));
 
 ALTER TABLE public."RewardLocationScope" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public."RewardLocationScope" FORCE ROW LEVEL SECURITY;
@@ -590,10 +591,10 @@ CREATE POLICY reward_claims_own ON public."RewardClaim"
   USING (app_owns("userId") OR (SELECT app_rls_bypass_on('RewardClaim')))
   WITH CHECK (app_owns("userId") OR (SELECT app_rls_bypass_on('RewardClaim')));
 
--- The merchant's members may READ the claims of their tenant's rewards
--- (redemption history and analytics join a redemption to its claim and reward).
+-- A merchant member whose role or grant gives claim.read may READ the claims of their tenant's
+-- rewards (redemption history and analytics join a redemption to its claim and reward); the
+-- customer sees only their own (reward_claims_own: user A never sees user B's claims).
 -- Read-only: claims are written by the customer (own row) or system flows.
--- Location scope within the tenant is enforced by the API service layer.
 DROP POLICY IF EXISTS reward_claims_merchant_read ON public."RewardClaim";
 CREATE POLICY reward_claims_merchant_read ON public."RewardClaim"
   FOR SELECT
@@ -602,7 +603,7 @@ CREATE POLICY reward_claims_merchant_read ON public."RewardClaim"
     OR (EXISTS (
       SELECT 1 FROM public."Reward" r
       WHERE r.id = "RewardClaim"."rewardId"
-        AND app_tenant_org_member(r."tenantId")
+        AND app_has_permission('CLAIM', 'READ', r."tenantId", NULL)
     ))
   );
 
@@ -615,7 +616,8 @@ CREATE POLICY reward_redemptions_select ON public."RewardRedemption"
   FOR SELECT
   USING (
     app_owns("userId")
-    OR app_tenant_org_member("tenantId")
+    -- ADR 067: redemption.read, at the redemption's store (a cashier sees only their stores).
+    OR app_has_permission('REDEMPTION', 'READ', "tenantId", "locationId")
     OR (SELECT app_rls_bypass_on('RewardRedemption'))
   );
 DROP POLICY IF EXISTS reward_redemptions_system_write ON public."RewardRedemption";
@@ -785,8 +787,6 @@ BEGIN
     'TenantCustomerBan',
     'TenantLifecycleEvent',
     'TenantPlacement',
-    'AuthorizationPolicyDraft',
-    'AuthorizationPolicyVersion',
     'SupportAccessGrant',
     'TenantEncryptionKey',
     'TenantAuditLog'
@@ -907,8 +907,6 @@ BEGIN
     'TenantInvitationLocationScope',
     'TenantLifecycleEvent',
     'TenantPlacement',
-    'AuthorizationPolicyDraft',
-    'AuthorizationPolicyVersion',
     'SupportAccessGrant',
     'TenantEncryptionKey'
   ]
@@ -920,13 +918,6 @@ BEGIN
     );
   END LOOP;
 END $$;
-
-ALTER TABLE public."AuthorizationPolicySimulation" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public."AuthorizationPolicySimulation" FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS authorization_policy_simulations_bypass ON public."AuthorizationPolicySimulation";
-CREATE POLICY authorization_policy_simulations_bypass ON public."AuthorizationPolicySimulation"
-  USING ((SELECT app_rls_bypass_on('AuthorizationPolicySimulation')))
-  WITH CHECK ((SELECT app_rls_bypass_on('AuthorizationPolicySimulation')));
 
 -- RLS for SampleCategory (admin-only)
 ALTER TABLE "SampleCategory" ENABLE ROW LEVEL SECURITY;

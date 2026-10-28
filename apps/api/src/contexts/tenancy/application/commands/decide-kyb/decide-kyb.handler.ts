@@ -11,13 +11,13 @@ import { TENANTS_UNIT_OF_WORK, KYB_ADMIN_DECIDE_OPERATION } from "../../ports/te
 import { DecideKybCommand } from "./decide-kyb.command";
 
 /** The part of the tenants unit of work a KYB decision touches. */
-export type KybDecisionScope = Pick<TenantsScope, "merchantVerifications" | "audit" | "tenantPolicies" | "events">;
+export type KybDecisionScope = Pick<TenantsScope, "merchantVerifications" | "audit" | "events">;
 
 /**
  * D05: the decision is checked against the MerchantVerification transition
  * table, taken under the merchant profile's row lock and written as a
  * compare-and-set, with the tenant audit row in the same transaction.
- * Authorization: the route's `MANAGE MERCHANT_ORG` permission.
+ * Authorization: the route's `APPROVE MERCHANT_ORG` permission.
  */
 @CommandHandler(DecideKybCommand)
 export class DecideKybHandler implements ICommandHandler<DecideKybCommand, void> {
@@ -42,7 +42,6 @@ export class DecideKybHandler implements ICommandHandler<DecideKybCommand, void>
 			await scope.audit.record({
 				tenantId: input.tenantId,
 				actorUserId: adminUserId,
-				policyVersion: await scope.tenantPolicies.activePolicyVersion(input.tenantId),
 				action: "merchant.kyb_decided",
 				resourceType: "TenantMerchantProfile",
 				resourceId: input.tenantId,

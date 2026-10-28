@@ -28,7 +28,7 @@ A cross-check against the plan found this file partly out of date, and the owner
 | T44 Metro `inlineRequires` | On (`apps/mobile/metro.config.js`), checked by `packages/tooling/src/mobile-metro/__tests__/metro-config.test.mjs`; still to be confirmed on a device |
 | T48 rules and `docs/technical` paths | Rules 00, 01, 02, 05, 08, 09, 10, 14–17, 20, 22–26 point at `src/contexts/` and `packages/shared`; the eslint guide matches the real config |
 | §17.2 follow-ups | Cross-app duplication reduced (shared impersonation bar, session-permission rules, menu-icon resolver, profile-cache rules in `@workspace/api-client/react`, `contractFormSchema` in `packages/client`; one-line re-export files deleted). Demo-account lists stay per app on purpose: server-only on the web, `__DEV__`-gated on mobile, so passwords never reach a bundle. Referral attribution captured (share links + pending attribution). `react-hook-form` removed. Support-access expiry job added |
-| Stale claims below | The `runtime/` folders are gone; contracts are split per context (`packages/shared/src/contexts/*/{contract,routes}.ts`); mobile is regrouped (`apps/mobile/src/contexts/*`); `pnpm dev:timing` exists; mobile lazy screens use `lib/lazy-view.tsx`. The older notes below are kept as history and marked where superseded |
+| Stale claims below | The `runtime/` folders are gone; contracts are split per context (`packages/shared/src/contexts/*/{contract,routes}.ts`); mobile is regrouped (`apps/mobile/src/contexts/*`); `pnpm tools dev:timing` exists; mobile lazy screens use `lib/lazy-view.tsx`. The older notes below are kept as history and marked where superseded |
 
 ## T07 — base repository
 
@@ -97,14 +97,14 @@ A cross-check against the plan found this file partly out of date, and the owner
 ## Phase E2 — T40 to T46
 
 - API dev builds use `cheap-module-source-map`. Production keeps `source-map`. Pinned by `apps/api/scripts/__tests__/dev-script-runtime.spec.ts`.
-- *(Partly superseded: `pnpm dev:timing` exists — `packages/tooling/src/dev-timing`. It was still not run on 2026-10-21: it starts the dev stack from `apps/api/.env`, whose database needed the owner's reset first. Startup medians stay **NOT VERIFIED** until the owner runs it three times warm and three times cold.)* `pnpm dev:timing` was not added and was not run (it needs ports 3000/3001 free). Warm and cold medians are **NOT VERIFIED**. Targets (40% faster than a T40 baseline, API boot ≤ 5000 ms warm) cannot be judged without that measurement. No cache was added to chase the number.
+- *(Partly superseded: `pnpm tools dev:timing` exists — `packages/tooling/src/dev-timing`. It was still not run on 2026-10-21: it starts the dev stack from `apps/api/.env`, whose database needed the owner's reset first. Startup medians stay **NOT VERIFIED** until the owner runs it three times warm and three times cold.)* `pnpm tools dev:timing` was not added and was not run (it needs ports 3000/3001 free). Warm and cold medians are **NOT VERIFIED**. Targets (40% faster than a T40 baseline, API boot ≤ 5000 ms warm) cannot be judged without that measurement. No cache was added to chase the number.
 - Every maintenance scheduler adds itself to `MaintenanceSchedulerRegistry` from `onModuleInit`; after bootstrap all register at once (`Promise.allSettled`, 10 s timeout). The registry is a critical readiness indicator only until that first attempt settles; a failure is reported and retried every 30 s, never a reason to leave rotation.
 - Report fonts load per PDF export (`ReportFontLoader`, no cache, ADR 059). Swagger is unchanged (owner decision).
 - *(Owner, 2026-10-21: keeping Swagger and Cedar at boot is deferred to a later decision.)* Cedar's WASM is still loaded at boot: it measures ~8 ms, and loading it on first use needs a dynamic `import()`, which would make the synchronous `PolicyEngine` port asynchronous on every authorization path. Owner decision needed (ADR 059 asks for first use).
 - *(Superseded 2026-10-21: the range controls and the API-keys code blocks are now `next/dynamic` chunks.)* T43: `CLIENT_ONLY_WIDGETS` and its lint rule, the chart, command-palette, image-crop and KYB-preview wrappers, `LazyMotion` (`m.*`) and the merchant bundle analyzer are in place; the permission explorer tree is an SSR `next/dynamic` chunk. The analytics range controls and the code block stay static: the code block is compound components sharing one context (shiki is already lazy inside), and the range controls have no sized skeleton yet.
 - *(Superseded 2026-10-21: `inlineRequires` is on; lazy screens use `lib/lazy-view.tsx`.)* T44: Expo Router async routes are on for development (`asyncRoutes: "development"`). Metro `inlineRequires` stays at Expo's default (`false`) and the `React.lazy` screen splits were not made: both change module evaluation order and need a run on a device to verify.
-- T45: `bundle-budgets.json` holds the measured baseline + 10% (web 18 routes, admin 42, merchant 28, mobile iOS and Android), written by `pnpm bundle:check --write-baseline` from fresh builds. CI and `pnpm ci:local` run `pnpm bundle:check` after the build. Proven: an eager recharts import in web's root layout put every web route over budget (exit 1); the probe was reverted.
-- T46 cannot compare against T40 until `pnpm dev:timing` exists and has been run three times cold and three times warm.
+- T45: `bundle-budgets.json` holds the measured baseline + 10% (web 18 routes, admin 42, merchant 28, mobile iOS and Android), written by `pnpm tools bundle:check --write-baseline` from fresh builds. CI and `pnpm ci:local` run `pnpm tools bundle:check` after the build. Proven: an eager recharts import in web's root layout put every web route over budget (exit 1); the probe was reverted.
+- T46 cannot compare against T40 until `pnpm tools dev:timing` exists and has been run three times cold and three times warm.
 
 ## Phase F — T47 to T49
 
@@ -123,6 +123,6 @@ A cross-check against the plan found this file partly out of date, and the owner
 
 ## Final report (2026-10-21)
 
-- **Implementation summary:** every open item of the DDD + CQRS and multi-tenancy cross-check is closed, except loading Swagger and Cedar at boot (deferred by the owner) and the `pnpm dev:timing` measurement (not run: it needs the owner's database reset first).
+- **Implementation summary:** every open item of the DDD + CQRS and multi-tenancy cross-check is closed, except loading Swagger and Cedar at boot (deferred by the owner) and the `pnpm tools dev:timing` measurement (not run: it needs the owner's database reset first).
 - **Completion gate (after the last edit):** `pnpm run format` 0; `pnpm run lint` 18/18 tasks, 0 warnings; `pnpm run test` 20/20 tasks; `pnpm run ci:local` every job green after the two new admin pages got their bundle budgets.
 - **Remaining:** startup timing medians (T46) NOT VERIFIED; Metro `inlineRequires` still to be confirmed on a device; `RewardReferralStatus.BLOCKED` is not modelled.

@@ -60,6 +60,6 @@ export class ProvisioningRoleAssigner implements DefaultRoleAssignmentPort {
 		}
 		account.attachProvisioningRole(roleId, assignedBy);
 		await this.scope.userAuthorizations.save(account);
-		assertSeparationOfDuties(await this.scope.rbacGraph.effectiveRoleNames(await this.scope.rbacGraph.assignedRoleIds(userId)));
+		assertSeparationOfDuties(await this.scope.rbacGraph.activeRoleNames(await this.scope.rbacGraph.assignedRoleIds(userId)));
 	}
 }

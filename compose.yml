@@ -23,16 +23,17 @@
 #                 apps/api/.env DATABASE_URL).
 #   Object storage — there is no MinIO service. Use STORAGE_PROVIDER=local for
 #                 zero-setup storage, or a real S3 bucket (apps/api/.env.example).
-#   Mailpit     — runs natively, not in Docker: `brew install mailpit`, then
-#                 `pnpm mailpit` (web inbox + API at http://localhost:8025).
-#                 The API delivers into it with EMAIL_PROVIDER=mailpit.
+#   Mailpit     — the local email inbox (`mailpit` below): web inbox + API at
+#                 http://localhost:8025, SMTP on 1025. The API delivers into it
+#                 with EMAIL_PROVIDER=mailpit; read codes with `pnpm mail:latest`.
 #
 # Full reference: docs/technical/operations/local-infrastructure.md
 #
 # EVERY service binds to 127.0.0.1 only, so the default dev passwords are never
 # reachable from other machines on your network. Host ports and the RabbitMQ
 # credentials can be overridden (RABBITMQ_DEFAULT_USER / RABBITMQ_DEFAULT_PASS,
-# REDIS_PORT, KAFKA_PORT, RABBITMQ_AMQP_PORT, RABBITMQ_UI_PORT, BULL_BOARD_PORT).
+# REDIS_PORT, KAFKA_PORT, RABBITMQ_AMQP_PORT, RABBITMQ_UI_PORT, BULL_BOARD_PORT,
+# MAILPIT_UI_PORT, MAILPIT_SMTP_PORT).
 
 name: hello-world
 
@@ -46,7 +47,7 @@ services:
   #   ports:
   #     - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
   #   environment:
-  #     # POSTGRES_DB is created on first start. `pnpm db:deploy` then applies the
+  #     # POSTGRES_DB is created on first start. `pnpm tools db:deploy` then applies the
   #     # migrations and prisma/rls*.sql, which create the `app_runtime` RLS role.
   #     POSTGRES_USER: ${POSTGRES_USER:-postgres}
   #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -148,6 +149,24 @@ services:
       timeout: 10s
       retries: 12
       start_period: 20s
+    networks:
+      - infra
+
+  # The local email inbox: every email the API sends with EMAIL_PROVIDER=mailpit lands here (nothing
+  # leaves the machine). Messages live in memory, so a restart empties the inbox.
+  mailpit:
+    image: axllent/mailpit:v1.31.3
+    container_name: hello-world-mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
     networks:
       - infra
 

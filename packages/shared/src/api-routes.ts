@@ -16,7 +16,7 @@
 
 import { authRoutes } from "./contexts/identity/routes";
 import { rewardReferralsRoutes, signupReferralsAuthRoutes } from "./contexts/referrals/routes";
-import { adminRbacRoutes, capabilitiesRoutes, supportAccessRoutes } from "./contexts/authorization/routes";
+import { adminRbacRoutes, capabilitiesRoutes, supportAccessRoutes, tenantAccessRoutes } from "./contexts/authorization/routes";
 import { emailRoutes, merchantInviteEmailPreviewRoutes } from "./contexts/notifications/routes";
 import { auditLogsRoutes, auditTrailRoutes, dataChangesRoutes } from "./contexts/audit/routes";
 import { githubPicturesRoutes, githubPullRequestsRoutes, githubRoutes } from "./contexts/integrations-github/routes";
@@ -75,6 +75,7 @@ export const apiRoutes = {
 	},
 	adminTenants: adminTenantsRoutes,
 	supportAccess: supportAccessRoutes,
+	tenantAccess: tenantAccessRoutes,
 	referrals: rewardReferralsRoutes,
 	rewardsAdmin: {
 		...rewardsAdminTenantRoutes,

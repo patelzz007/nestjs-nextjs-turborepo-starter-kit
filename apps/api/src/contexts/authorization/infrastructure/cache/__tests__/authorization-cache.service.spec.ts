@@ -111,30 +111,6 @@ describe("AuthorizationCacheService", () => {
 		});
 	});
 
-	describe("role hierarchy", () => {
-		it("returns null when hierarchy is not set", () => {
-			expect(service.getHierarchy()).toBeNull();
-		});
-
-		it("stores and retrieves hierarchy", () => {
-			const hierarchy = new Map([
-				["admin", null],
-				["manager", "admin"],
-			]);
-			service.setHierarchy(hierarchy);
-			const cached = service.getHierarchy();
-			expect(cached).not.toBeNull();
-			expect(cached?.get("admin")).toBeNull();
-			expect(cached?.get("manager")).toBe("admin");
-		});
-
-		it("invalidates hierarchy", () => {
-			service.setHierarchy(new Map([["admin", null]]));
-			service.invalidateHierarchy();
-			expect(service.getHierarchy()).toBeNull();
-		});
-	});
-
 	describe("getMemoryEstimate", () => {
 		it("returns zero for empty cache", () => {
 			const estimate = service.getMemoryEstimate();

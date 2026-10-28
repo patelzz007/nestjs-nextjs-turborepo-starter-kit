@@ -208,7 +208,7 @@ Switching `TENANCY_ENABLED` on an existing production database is a **major** op
 
 1. Freeze writes or maintenance window.
 2. Audit all `@RlsBypass()` usage and admin code paths assuming staff bypass.
-3. Re-test every admin list endpoint with `kernel.filter()` and RLS policies.
+3. Re-test every admin list endpoint against the RLS policies.
 4. Re-run full API e2e and authorization test suites.
 5. Update client apps to send org context headers where required.
 
@@ -292,7 +292,7 @@ Kafka and `apps/analytics-consumer` **remain in the default template**, not hidd
 
 ```text
 pnpm docker:up     → Redis, Kafka, RabbitMQ, Mailpit, Bull Board (see compose.yml)
-pnpm mailpit       → native local email inbox (EMAIL_PROVIDER=mailpit)
+pnpm mailpit       → the local email inbox, a Docker service (EMAIL_PROVIDER=mailpit)
 KAFKA_BROKERS unset  → API still runs; outbox events may remain pending (documented)
 analytics-consumer   → separate process; needs apps/analytics-consumer/.env
 ```
@@ -317,6 +317,10 @@ Because consumer stays in template, provide a **“deploy consumer”** section:
 ---
 
 ## Cedar for all agency forks
+
+> **Superseded (2026-10-28).** [ADR 067](../adr/067-unified-authorization-model.md) removed Cedar and
+> the JSON policy engine (Phase 4): roles, grants, shares, ownership and store scope cover every job
+> they did. This section is kept as the record of the earlier decision.
 
 ### Decision (#4)
 
@@ -352,7 +356,7 @@ Every fork engineer should read:
 
 1. [Authorization overview](./authorization/overview.md)
 2. [Backend kernel](./authorization/backend.md) — Cedar section
-3. [Troubleshooting](./authorization/troubleshooting.md) — `TENANT_ACTION_FORBIDDEN`
+3. [Troubleshooting](./authorization/recipes.md#12-troubleshooting) — `TENANT_ACTION_FORBIDDEN`
 
 Provide **authorization ladder** appendix (see §10) mapping “I only build admin CRUD” vs “I build org portal with Cedar.”
 
@@ -387,7 +391,7 @@ Ship **semver releases with migration notes** — forks are expected to **merge 
 2. **Env:** new required variables, renamed variables, stricter validation.
 3. **Authorization:** new permissions — run `db:sync-reference-data`.
 4. **Breaking:** removed routes, removed apps pages, Cedar action renames.
-5. **Upgrade command sequence:** `pnpm install`, `pnpm build:shared`, `pnpm db:deploy`, sync reference data, restart workers.
+5. **Upgrade command sequence:** `pnpm install`, `pnpm tools build:shared`, `pnpm tools db:deploy`, sync reference data, restart workers.
 
 ### Recommended branching model for agencies
 
@@ -430,7 +434,7 @@ Consider [Changesets](https://github.com/changesets/changesets) only if you publ
   - **Option 1:** New baseline migration (update `migrations-baseline.json`) — clean for agencies, painful for existing forks.
   - **Option 2:** Forward migrations dropping tables — better for ongoing forks; more SQL review.
 - RLS: remove policies for dropped tables; update `manifest-index.ts`.
-- Run `pnpm db:check-rls-manifest` after every migration PR.
+- Run `pnpm tools db:check-rls-manifest` after every migration PR.
 
 #### WS-B — API modules
 
@@ -439,7 +443,7 @@ Consider [Changesets](https://github.com/changesets/changesets) only if you publ
 - Prune `apiRoutes` and `contracts/index.ts` leaves.
 - Update `app.module` imports and queue modules.
 - Remove POS rate limit guards if only used by rewards.
-- Re-run `openapi:export` and `pnpm docs:api` sample capture.
+- Re-run `openapi:export` and `pnpm tools docs:api` sample capture.
 
 #### WS-C — Shared contracts
 
@@ -516,9 +520,6 @@ Frontend `can()` is **never** step 2 — only step 6 UX.
 | `can()` | Boolean check |
 | `authorize()` | Throws mapped 403 |
 | `explain()` | Why deny — debugging |
-| `filter()` | List queries — DB-side scope |
-| `resourceCapabilities()` | UI capability sets |
-| `hasRoles()` | Role checks |
 
 Location: `apps/api/src/contexts/authorization/infrastructure/kernel/authorization-kernel.service.ts`
 
@@ -563,7 +564,7 @@ Document in [Recipes](./authorization/recipes.md) (expand):
 
 **Level 3 — Row-level list filtering**
 
-- `kernel.filter()` in repository list methods.
+- The repository's `where` clause narrows list queries; RLS sits underneath.
 - Never fetch-all-then-filter in JavaScript.
 
 ### Why not rewrite the kernel during rewards removal?
@@ -702,10 +703,10 @@ See [Frontend configuration](./configuration/frontend.md):
 
 ```bash
 # 1. Build artifacts (CI does this)
-pnpm build:shared
+pnpm tools build:shared
 pnpm turbo run build --filter=@workspace/api ...
 # 2. Database
-pnpm db:deploy              # migrate + RLS
+pnpm tools db:deploy              # migrate + RLS
 pnpm db:sync-reference-data # permissions catalog
 # 3. One-time per environment (not per deploy)
 # pnpm admin:bootstrap-superadmin ...
@@ -745,9 +746,9 @@ pnpm db:sync-reference-data # permissions catalog
 pnpm setup
 cp apps/api/.env.example apps/api/.env
 # ... web, admin, merchant examples
-pnpm secrets:generate apps/api/.env
+pnpm tools secrets:generate apps/api/.env
 pnpm docker:up
-pnpm db:deploy && pnpm db:seed -- --scenario minimal   # after you add minimal
+pnpm tools db:deploy && pnpm db:seed -- --scenario minimal   # after you add minimal
 pnpm dev:api
 pnpm dev:admin
 ```
@@ -899,7 +900,7 @@ pnpm ci:local
 - ...
 
 ### Migrations
-- Run `pnpm db:deploy` — includes migration `2026....`
+- Run `pnpm tools db:deploy` — includes migration `2026....`
 
 ### Environment
 - New required: `...`
@@ -1071,7 +1072,7 @@ Copy into each feature's module README or PR description:
 | 6 | `apps/api/src/contexts/authorization/infrastructure/kernel/tenant-membership.service.ts` | Org/store/location proof |
 | 7 | `apps/api/src/contexts/authorization/infrastructure/kernel/authorization-context.resolver.ts` | Tenant headers → verified context |
 | 8 | `packages/shared/src/authorization/permission.ts` | Permission and capability constants |
-| 9 | `apps/api/src/platform/presentation/http/security/decorators/authorize.decorator.ts` | Route requirement DSL |
+| 9 | `apps/api/src/platform/presentation/http/security/decorators/require-permission.decorator.ts` | Route requirements (`@RequirePermission`) |
 | 10 | `docs/technical/authorization/backend.md` | Cedar + merchant capabilities chapter |
 
 ### Appendix J — Rule 28 migration patterns
@@ -1109,7 +1110,7 @@ Unset `KAFKA_BROKERS`; API runs; outbox events stay pending. Analytics-consumer 
 
 #### How do we upgrade from template v1.2 to v1.3?
 
-Read GitHub Release notes; `pnpm install`; `pnpm build:shared`; `pnpm db:deploy`; `pnpm db:sync-reference-data`; redeploy apps; run smoke tests. Major versions: read migration baseline notes.
+Read GitHub Release notes; `pnpm install`; `pnpm tools build:shared`; `pnpm tools db:deploy`; `pnpm db:sync-reference-data`; redeploy apps; run smoke tests. Major versions: read migration baseline notes.
 
 #### How do we test multi-tenant locally?
 

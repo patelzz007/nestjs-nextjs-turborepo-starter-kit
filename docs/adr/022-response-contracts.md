@@ -75,7 +75,7 @@ not contracts at all:
    an `apiContract` leaf whose handler uses a different schema reference or envelope kind.
 7. **Exported artifact (C3).** `docs/generated/openapi.json` is the committed document, serialized
    deterministically (sorted keys, two-space indent, trailing newline).
-   `pnpm openapi:export` regenerates it; `test/openapi-artifact.e2e-spec.ts` fails while it is
+   `pnpm tools openapi:export` regenerates it; `test/openapi-artifact.e2e-spec.ts` fails while it is
    stale.
 
 ## Alternatives considered

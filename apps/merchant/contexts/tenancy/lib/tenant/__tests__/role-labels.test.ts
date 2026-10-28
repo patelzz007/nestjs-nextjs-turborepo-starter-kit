@@ -8,6 +8,6 @@ describe("TENANT_ROLE_LABELS", () => {
 		for (const role of MembershipRoleSchema.options) {
 			expect(TENANT_ROLE_LABELS[role].length, role).toBeGreaterThan(0);
 		}
-		expect(TENANT_ROLE_LABELS.POLICY_ADMIN).toBe("Policy admin");
+		expect(TENANT_ROLE_LABELS).toEqual({ OWNER: "Owner", MANAGER: "Manager", CASHIER: "Cashier" });
 	});
 });

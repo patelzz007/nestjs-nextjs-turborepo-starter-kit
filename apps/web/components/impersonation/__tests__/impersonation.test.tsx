@@ -104,11 +104,11 @@ describe("ImpersonateUserPanel", () => {
 		expect(screen.queryByText("No users found.")).toBeNull();
 	});
 
-	it("accepts MANAGE USER as implying both actions", () => {
+	it("needs both actions: LIST USER alone never stands in for CREATE USER", () => {
 		harness.user = SUPER_ADMIN;
-		renderWithSession(signedInSession({ capabilities: [PERMISSION.USER.MANAGE] }), <ImpersonateUserPanel />);
+		renderWithSession(signedInSession({ capabilities: [PERMISSION.USER.LIST] }), <ImpersonateUserPanel />);
 
-		expect(screen.getByText("Impersonate user")).toBeDefined();
+		expect(screen.queryByText("Impersonate user")).toBeNull();
 	});
 
 	it("is hidden when CREATE USER (impersonate) is missing", () => {

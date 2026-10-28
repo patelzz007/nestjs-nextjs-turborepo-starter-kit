@@ -21,7 +21,7 @@ AI agents (and humans) also follow the rulebook: [`AGENTS.md`](../../AGENTS.md) 
 3. [Dos and don'ts](./dos-and-donts.md) — the PR checklist.
 4. [Adding a feature](./adding-a-feature.md) — the end-to-end checklist.
 5. [API conventions](./api/README.md) and the [API reference](./api-reference/README.md).
-6. [Authorization overview](./authorization/overview.md) and [Tenancy and RLS](./authorization/tenancy-and-rls.md).
+6. [Authorization: start here](./authorization/overview.md), then [Tenancy and RLS](./authorization/tenancy-and-rls.md).
 7. The [junior onboarding guide](../../rules/26-junior-onboarding-guide.md) in the rulebook.
 
 ## Map
@@ -32,7 +32,7 @@ AI agents (and humans) also follow the rulebook: [`AGENTS.md`](../../AGENTS.md) 
 | API | [Conventions](./api/README.md) · [**Reference (generated)**](./api-reference/README.md) · [Routes registry](./api/routes.md) · [Errors](./api/errors.md) · [List queries](./api/list-queries.md) · [Response contracts](./api/response-contracts.md) · [Analytics dashboards and exports](./api/analytics.md) · [HTTP server (Fastify)](./api/http-server.md) · [POS integration](./pos-integration.md) · [GitHub contributions](./github-contributions.md) |
 | Configuration | [API environment](./configuration/api.md) · [Frontend environment](./configuration/frontend.md) |
 | Data | [Database, migrations and seed](./database.md) · [Messaging, jobs, outbox](./messaging.md) |
-| Authorization | [Overview](./authorization/overview.md) · [Backend kernel](./authorization/backend.md) · [RBAC internals](./authorization/rbac.md) · [Tenancy and RLS](./authorization/tenancy-and-rls.md) · [Frontend](./authorization/frontend.md) · [Recipes](./authorization/recipes.md) · [Testing](./authorization/testing.md) · [Troubleshooting](./authorization/troubleshooting.md) · [Dos and don'ts](./authorization/dos-and-donts.md) · [Change log](./authorization/changelog.md) |
+| Authorization | [Start here](./authorization/overview.md) · [Backend](./authorization/backend.md) · [Frontend](./authorization/frontend.md) · [Tenancy and RLS](./authorization/tenancy-and-rls.md) · [Recipes, troubleshooting and tests](./authorization/recipes.md) |
 | Security | [Authentication, MFA, impersonation](./security/authentication.md) · [Token refresh](./security/token-refresh.md) · [Database security](./security/database-security.md) · [Encryption and KMS](./security/encryption-and-kms.md) · [Threat model](./security/threat-model.md) · [Data classification](./security/data-classification.md) |
 | Files and email | [Storage overview](./storage/overview.md) · [**AWS S3 setup**](./storage/aws-s3.md) · [**Firebase Storage setup**](./storage/firebase.md) · [**Resend setup**](./email/resend-setup.md) · [Email templates](./email/templates.md) |
 | Frontend | [Routing and URL conventions](./frontend/routing.md) · [Admin panel](./frontend/admin-panel.md) · [Analytics dashboards](./frontend/analytics-charts.md) · [Toasts](./frontend/toast.md) · [Date pickers](./frontend/date-pickers.md) · [QR codes](./frontend/qr-codes.md) · [PDF viewer](./frontend/pdf-viewer.md) · [Carousels](./frontend/carousel.md) · [Image resizer](./frontend/image-resizer.md) · [Streams (RxJS)](./frontend/streams.md) |

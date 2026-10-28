@@ -8,11 +8,6 @@ import { PERMISSION_HOLDERS_READ_OPERATION } from "../../application/ports/autho
 import type { PermissionHoldersReadPort } from "../../application/ports/permission-holders-read.port";
 import { resolvePermissionHolders } from "../../domain/policies/permission-holders.policy";
 
-/** `MANAGE` implies every action, so a `MANAGE` grant also answers for the action asked about. */
-function actionsSatisfying(action: PermissionAction): PermissionAction[] {
-	return action === "MANAGE" ? ["MANAGE"] : [action, "MANAGE"];
-}
-
 /** The audited actor of the read, or `null` for a non-user actor. */
 function actorUserIdOf(actor: ActorContext): string | null {
 	if (actor.kind === "user") {
@@ -23,8 +18,7 @@ function actorUserIdOf(actor: ActorContext): string | null {
 
 /**
  * {@link PermissionHoldersReadPort} over Prisma, under `authorization.permission_holders.read`
- * (the RBAC tables are bypass-only). A fixed number of statements plus one per level of the role
- * hierarchy below the conferring roles, whatever the number of holders.
+ * (the RBAC tables are bypass-only). A fixed number of statements, whatever the number of holders.
  */
 @Injectable()
 export class PrismaPermissionHoldersReader implements PermissionHoldersReadPort {
@@ -35,7 +29,7 @@ export class PrismaPermissionHoldersReader implements PermissionHoldersReadPort 
 			{ operation: PERMISSION_HOLDERS_READ_OPERATION, reason: `holders of ${action} ${resource}`, actorUserId: actorUserIdOf(actor) },
 			async (db: Prisma.TransactionClient): Promise<readonly string[]> => {
 				const nowMs = nowEpochMs();
-				const permissionWhere = { resource, action: { in: actionsSatisfying(action) }, isDeleted: false } satisfies Prisma.PermissionWhereInput;
+				const permissionWhere = { resource, action, isDeleted: false } satisfies Prisma.PermissionWhereInput;
 				const liveOverride = {
 					isDeleted: false,
 					permission: permissionWhere,
@@ -46,10 +40,7 @@ export class PrismaPermissionHoldersReader implements PermissionHoldersReadPort 
 					db.userPermission.findMany({ where: liveOverride, select: { userId: true, effect: true } }),
 					db.user.findMany({ where: { isSuperAdmin: true }, select: { id: true } }),
 				]);
-				const roleIds = await this.withLiveDescendants(
-					db,
-					rolePermissions.map((row) => row.roleId),
-				);
+				const roleIds: string[] = [...new Set<string>(rolePermissions.map((row) => row.roleId))];
 				const [userRoles, locationScopes] =
 					roleIds.length === 0
 						? [[], []]
@@ -78,19 +69,5 @@ export class PrismaPermissionHoldersReader implements PermissionHoldersReadPort 
 				});
 			},
 		);
-	}
-
-	/** The roles and every live, active role below them (a child role inherits its ancestors' grants). */
-	private async withLiveDescendants(db: Prisma.TransactionClient, roleIds: readonly string[]): Promise<string[]> {
-		const lineage = new Set<string>(roleIds);
-		let frontier: string[] = [...lineage];
-		while (frontier.length > 0) {
-			const children = await db.role.findMany({ where: { parentId: { in: frontier }, isDeleted: false, isActive: true }, select: { id: true } });
-			frontier = children.map((row) => row.id).filter((id) => !lineage.has(id));
-			for (const id of frontier) {
-				lineage.add(id);
-			}
-		}
-		return [...lineage];
 	}
 }

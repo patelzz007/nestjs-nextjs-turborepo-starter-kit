@@ -1,5 +1,5 @@
 // ============================================
-// scripts/generate.ts — `pnpm tokens:generate`
+// scripts/generate.ts — `pnpm tools tokens:generate`
 // ============================================
 // Writes every generated file into packages/tokens/generated/, then copies the
 // icons to each app that serves them (a test in each app fails while its copy

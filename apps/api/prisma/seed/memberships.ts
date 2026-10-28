@@ -2,6 +2,7 @@ import type { Membership, MembershipRole, MembershipStatus, Prisma } from "@pris
 import { TenantMemberDisplayNameSchema } from "@workspace/shared";
 
 import { prisma } from "./client";
+import { seedTenantRoleId } from "./tenant-roles";
 
 /** Every seed membership is an active one. */
 const SEED_MEMBERSHIP_STATUS: MembershipStatus = "ACTIVE";
@@ -18,7 +19,7 @@ export interface SeedMembershipInput {
 }
 
 /** The seed membership row the transaction writes through (Prisma's interactive transaction client). */
-type SeedMembershipClient = Pick<Prisma.TransactionClient, "membership">;
+type SeedMembershipClient = Pick<Prisma.TransactionClient, "membership" | "role" | "rolePermission">;
 
 /**
  * Converge the ONE live membership of (tenant, user) onto `input.id`.
@@ -49,6 +50,7 @@ export async function upsertLiveSeedMembership(input: SeedMembershipInput): Prom
 			tenantId: input.tenantId,
 			userId: input.userId,
 			role: input.role,
+			roleId: await seedTenantRoleId(tx, input.tenantId, input.role),
 			status: SEED_MEMBERSHIP_STATUS,
 			// Same rule as the API: trimmed, 1–100 characters (TenantOwnMembershipUpdateSchema).
 			...(input.displayName === undefined ? {} : { displayName: input.displayName === null ? null : TenantMemberDisplayNameSchema.parse(input.displayName) }),

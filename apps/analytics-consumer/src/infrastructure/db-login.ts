@@ -5,7 +5,7 @@ import { z } from "zod";
 /**
  * Group role holding the consumer's privileges — created, granted and given
  * its RLS policies by apps/api/prisma/rls/90-analytics-consumer.sql
- * (`pnpm db:apply-security`). NOLOGIN: the worker logs in as a separate
+ * (`pnpm tools db:apply-security`). NOLOGIN: the worker logs in as a separate
  * LOGIN role that is a member of it.
  */
 export const ANALYTICS_CONSUMER_GROUP_ROLE = "analytics_consumer";

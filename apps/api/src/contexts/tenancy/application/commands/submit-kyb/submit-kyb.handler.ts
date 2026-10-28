@@ -58,7 +58,6 @@ export class SubmitKybHandler implements ICommandHandler<SubmitKybCommand, Merch
 			await scope.audit.record({
 				tenantId: member.tenantId,
 				actorUserId: user.userId,
-				policyVersion: member.policyVersion,
 				action: "merchant.kyb_submitted",
 				resourceType: "TenantMerchantProfile",
 				resourceId: member.tenantId,

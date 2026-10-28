@@ -20,7 +20,7 @@
 
 import { authContract } from "../contexts/identity/contract";
 import { rewardReferralsContract, signupReferralsAuthContract } from "../contexts/referrals/contract";
-import { adminRbacContract, capabilitiesContract, supportAccessContract } from "../contexts/authorization/contract";
+import { adminRbacContract, capabilitiesContract, supportAccessContract, tenantAccessContract } from "../contexts/authorization/contract";
 import { emailContract, merchantInviteEmailPreviewContract } from "../contexts/notifications/contract";
 import { auditLogsContract, auditTrailContract, dataChangesContract } from "../contexts/audit/contract";
 import { githubContract, githubPullRequestsContract } from "../contexts/integrations-github/contract";
@@ -78,6 +78,7 @@ export const apiContract = {
 	capabilities: capabilitiesContract,
 	admin: adminRbacContract,
 	supportAccess: supportAccessContract,
+	tenantAccess: tenantAccessContract,
 	referrals: rewardReferralsContract,
 	auditLogs: auditLogsContract,
 	auditTrail: auditTrailContract,

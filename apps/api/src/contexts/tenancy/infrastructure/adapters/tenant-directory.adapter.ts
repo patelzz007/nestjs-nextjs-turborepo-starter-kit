@@ -26,7 +26,6 @@ export class TenantDirectoryAdapter implements TenantDirectoryPort, TenantContex
 			displayName: resolved.displayName,
 			userId: resolved.userId,
 			membership: resolved.membership,
-			policyVersion: resolved.policyVersion,
 		};
 	}
 

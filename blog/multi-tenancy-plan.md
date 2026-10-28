@@ -145,7 +145,7 @@ If one of these is wrong, stop and report (§0.2).
 - RLS SQL lives in `apps/api/prisma/rls/*.sql`. The table classification is in `apps/api/prisma/rls/table-manifest.ts`, and the system-operation scopes are generated into `00-system-operation-scopes.sql` by `pnpm db:generate-system-operation-scopes`.
 - The registry is `apps/api/src/prisma/system-operation.registry.ts`, with 88 operations: 24 `tables(...)`, 60 `NOT_YET_NARROWED`, and 4 `REQUEST_SCOPE` (`request.pre_handler`, `route.rls_bypass`, `platform.superadmin` and `platform.staff_single_tenant`).
 - Migrations are one baseline, `apps/api/prisma/migrations/20261019182652_init/`, with the marker `apps/api/prisma/migrations-baseline.json`.
-- The scripts are `db:migrate:create`, `db:generate`, `db:seed`, `db:rls`, `db:apply-security`, `db:check-rls-manifest`, `db:check-seed-coverage`, `db:check-drift` and `db:generate-system-operation-scopes`.
+- The scripts are `db:migrate:create`, `db:generate`, `db:seed`, `db:apply-security`, `db:check-rls-manifest`, `db:check-seed-coverage`, `db:check-drift` and `db:generate-system-operation-scopes`.
 - CI is `.github/workflows/ci.yml`. Its `e2e` job runs `pnpm --filter @workspace/api test:e2e`, and no CI job sets `TENANCY_ENABLED`, so every test today runs single-tenant.
 
 ### 2.3 Size of the rename
@@ -465,7 +465,7 @@ Every ID below is a real automated test against Postgres as `app_runtime`, in `a
 **MT-03: Rename the Prisma schema and regenerate the baseline**
 
 - **Do:**
-  1. Run `pnpm db:carry-github-link export` against the dev DB. **Do not proceed** until the file exists.
+  1. Run `pnpm tools db:carry-github-link export` against the dev DB. **Do not proceed** until the file exists.
   2. Apply §5 to `apps/api/prisma/schema.prisma`: models, enums, columns and relation names, plus `/// RLS:` comments that say "organization". Keep `/// @extends BaseModel` blocks untouched apart from the model names.
   3. Delete `apps/api/prisma/migrations/20261019182652_init/` and run `pnpm db:migrate:create --name init` against a **throwaway** database to generate the new baseline.
   4. Set `migrations-baseline.json` `baseline` to the new directory name. Its `reason` is: "Second pre-release reset: Organization → Tenant rename (multi-tenancy plan D14). No shared or deployed database has run the previous baseline." `since` is the date.
@@ -520,7 +520,7 @@ Every ID below is a real automated test against Postgres as `app_runtime`, in `a
 **MT-09: P1 gate**
 
 - **Do:**
-  - Recreate the dev DB from the new baseline (`pnpm db:reset` plus seed, on the **dev** DB this one time, as the human approved in D14), then run `pnpm db:carry-github-link import`.
+  - Recreate the dev DB from the new baseline (`pnpm db:reset` plus seed, on the **dev** DB this one time, as the human approved in D14), then run `pnpm tools db:carry-github-link import`.
   - Verify that the superadmin's GitHub link exists and that `GET /github/account` returns the linked login (shown masked).
 - **Gate:** G +e2e +ci, all green. **P1 is not done until the GitHub link check passes.**
 
@@ -673,7 +673,7 @@ Every ID below is a real automated test against Postgres as `app_runtime`, in `a
 
 **MT-51: `FORCE ROW LEVEL SECURITY`**
 
-- **Do:** in the RLS SQL applied by `db:rls` (the same files that `ENABLE` RLS), add `ALTER TABLE … FORCE ROW LEVEL SECURITY` for every table that has RLS enabled. This is RLS SQL, not a migration. It follows the existing `db:apply-security` flow.
+- **Do:** in the RLS SQL applied by `db:apply-security` (the same files that `ENABLE` RLS), add `ALTER TABLE … FORCE ROW LEVEL SECURITY` for every table that has RLS enabled. This is RLS SQL, not a migration. It follows the existing `db:apply-security` flow.
 
 **MT-52: Seed operations (D24)**
 
@@ -781,7 +781,7 @@ Every ID below is a real automated test against Postgres as `app_runtime`, in `a
    | tenancy multi     | `… test:e2e:tenancy`                    |        |
    | tenancy single    | `… test:e2e:tenancy:single`             |        |
    | RLS runtime role  | `… test:e2e:rls`                        |        |
-   | data check        | `pnpm db:check-tenant-integrity`        |        |
+   | data check        | `pnpm tools db:check-tenant-integrity`        |        |
    | migration history | `pnpm --filter @workspace/tooling test` |        |
    | ci:local          | `pnpm run ci:local`                     |        |
 

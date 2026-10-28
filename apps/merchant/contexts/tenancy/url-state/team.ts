@@ -4,8 +4,16 @@
 
 import { listStateToListQuery, type TableFilterState, type TableListQueryInput } from "@workspace/client/lib/api/list-query";
 import { listUrlParams } from "@workspace/client/lib/url-state/list-url-state";
-import { defineUrlState } from "@workspace/client/lib/url-state/url-state";
+import { defineUrlState, urlParamWithDefault } from "@workspace/client/lib/url-state/url-state";
 import { LIST_DEFAULT_LIMIT, tenantMemberInviteListQuery, tenantMemberListQuery } from "@workspace/shared";
+import { z } from "zod";
+
+/** The three tabs of Team & permissions: who is in, who is invited, and the roles. */
+export const TeamTabSchema = z.enum(["members", "invites", "roles"]);
+export type TeamTab = z.output<typeof TeamTabSchema>;
+
+/** `?tab=` — the open tab (members by default), shareable and undone by Back. */
+export const TEAM_TAB_URL_STATE = defineUrlState({ tab: urlParamWithDefault(TeamTabSchema, "members") });
 
 /** Rows per page of either list. */
 export const TEAM_LIST_PAGE_SIZE = LIST_DEFAULT_LIMIT;

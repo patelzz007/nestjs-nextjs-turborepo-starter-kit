@@ -36,7 +36,7 @@ describe("merchant nav authorization", () => {
 	});
 
 	it("hides business verification from admins (owner-only)", () => {
-		const can = predicateFor(resolveMerchantCapabilities(membershipFixture("ADMIN")));
+		const can = predicateFor(resolveMerchantCapabilities(membershipFixture("MANAGER")));
 		const ids = filterMerchantNavItems(MERCHANT_NAV_ITEMS, can).map((item) => item.id);
 
 		expect(ids).toContain("settings-team");
@@ -49,7 +49,8 @@ describe("merchant nav authorization", () => {
 		const ids = filterMerchantNavItems(MERCHANT_NAV_ITEMS, can).map((item) => item.id);
 
 		// Cashiers can see the store logo (merchant:view_locations); only changing it needs merchant:manage_locations.
-		expect(ids).toEqual(["dashboard", "analytics", "rewards", "redemptions", "settings", "settings-locations", "settings-branding", "account"]);
+		// Analytics needs a grant for a cashier (ADR 067, edge case 4).
+		expect(ids).toEqual(["dashboard", "rewards", "redemptions", "settings", "settings-locations", "settings-branding", "account"]);
 		expect(buildMerchantPaletteItems(can).map((item) => item.id)).toEqual(ids);
 	});
 
@@ -66,7 +67,7 @@ describe("merchant nav authorization", () => {
 	});
 
 	it("drops a pinned team page once the role loses merchant:manage_team", () => {
-		const can = predicateFor(resolveMerchantCapabilities(membershipFixture("MEMBER")));
+		const can = predicateFor(resolveMerchantCapabilities(membershipFixture("CASHIER")));
 
 		expect(resolvePinnedMerchantNavItems([TENANT_ROUTES.settings.team, TENANT_ROUTES.settings.locations], can).map((item) => item.id)).toEqual(["settings-locations"]);
 	});

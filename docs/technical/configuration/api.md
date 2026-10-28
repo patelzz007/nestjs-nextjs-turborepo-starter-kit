@@ -86,7 +86,7 @@ sees the real runtime value.
 Invalid environment configuration for apps/api:
   - DATABASE_URL: must be a postgres:// or postgresql:// connection URL
   - JWT_ACCESS_SECRET: is required but not set
-  - JWT_REFRESH_SECRET: must be at least 32 characters (generate one with: pnpm secrets:generate apps/api/.env)
+  - JWT_REFRESH_SECRET: must be at least 32 characters (generate one with: pnpm tools secrets:generate apps/api/.env)
   - TENANT_ENCRYPTION_MASTER_KEY: is required but not set
 Set these variables (see the app's .env.example). Values are never printed.
 ```
@@ -225,8 +225,8 @@ else fails boot instead of being guessed.
 
 | Change | Action |
 | --- | --- |
-| Secrets have **no defaults** anywhere (previously dev fallbacks such as `access-secret-change-me`, a public dev MFA key, `pilot-dev-job-secret-change-me`) | Set them: `pnpm secrets:generate apps/api/.env` |
-| `MFA_ENCRYPTION_KEYS` entries must be base64 of **exactly 32 bytes** (the service always required it at use time; the old generator produced 128 bytes, so MFA encryption failed at runtime) | Regenerate the MFA key (`pnpm secrets:generate` now emits 32-byte keys). No existing MFA secret can have been encrypted with a non-32-byte key |
+| Secrets have **no defaults** anywhere (previously dev fallbacks such as `access-secret-change-me`, a public dev MFA key, `pilot-dev-job-secret-change-me`) | Set them: `pnpm tools secrets:generate apps/api/.env` |
+| `MFA_ENCRYPTION_KEYS` entries must be base64 of **exactly 32 bytes** (the service always required it at use time; the old generator produced 128 bytes, so MFA encryption failed at runtime) | Regenerate the MFA key (`pnpm tools secrets:generate` now emits 32-byte keys). No existing MFA secret can have been encrypted with a non-32-byte key |
 | Newly required: `NODE_ENV`, `APP_NAME`, `APP_URL`, `ADMIN_APP_URL`, `MERCHANT_APP_URL`, `CORS_ORIGINS`, `EMAIL_FROM_ADDRESS` (previously localhost/example fallbacks) | Set them (all are in `.env.example`) |
 | `RESEND_API_KEY` required when `EMAIL_MODE=send` (the default) | Set it, or use `EMAIL_MODE=log-only` / `noop` |
 | `REDIS_URL` required in **production** (was "outside development", checked only in `main.ts`) | Set it in production |

@@ -16,7 +16,16 @@ import {
 } from "@workspace/shared";
 
 import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
-import { createE2eApp, login, markSeedUserEmailVerified, parseSuccessEnvelope, type InjectResponse, type LoginResult } from "./e2e-helpers";
+import {
+	createE2eApp,
+	grantTenantPermission,
+	login,
+	markSeedUserEmailVerified,
+	parseSuccessEnvelope,
+	revokeTenantGrant,
+	type InjectResponse,
+	type LoginResult,
+} from "./e2e-helpers";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
 
@@ -74,6 +83,7 @@ describe("Analytics dashboards (e2e)", () => {
 	let pool: Pool;
 	let owner: LoginResult;
 	let cashier: LoginResult;
+	let analyticsGrantId: string;
 	let superAdmin: LoginResult;
 	let alice: LoginResult;
 	const saleIds: string[] = [];
@@ -154,11 +164,19 @@ describe("Analytics dashboards (e2e)", () => {
 		}
 		owner = await login(app, "jonker.owner@melaka-rewards.demo", "JonkerOwner@123", "merchant");
 		cashier = await login(app, "jonker.cashier@melaka-rewards.demo", "JonkerCashier@123", "merchant");
+		// A Cashier reads analytics only through a grant (ADR 067, edge cases 4–5): the owner gives this
+		// store-limited cashier `analytics.read`, so what follows is the store scoping of analytics itself.
+		analyticsGrantId = await grantTenantPermission(app, owner, {
+			tenantSlug: TENANT_SEED_SLUGS.mlk,
+			membershipId: TENANT_SEED_IDS.mlkCashierMembership,
+			permission: { action: "READ", resource: "ANALYTICS" },
+		});
 		superAdmin = await login(app, "superadmin@example.com", "SuperAdmin@123");
 		alice = await login(app, "alice.johnson@example.com", "Alice@123");
 	});
 
 	afterAll(async () => {
+		await revokeTenantGrant(app, owner, TENANT_SEED_SLUGS.mlk, analyticsGrantId);
 		await pool.query('DELETE FROM public."RewardSale" WHERE id = ANY($1::text[])', [saleIds]);
 		await pool.query('DELETE FROM public."RewardClaim" WHERE id = ANY($1::text[])', [claimIds]);
 		await pool.query('DELETE FROM public."RewardReferral" WHERE id = ANY($1::text[])', [referralIds]);

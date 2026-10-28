@@ -8,7 +8,6 @@ import type { FastifyRequest } from "fastify";
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { ApiErrorResponseDto } from "../../../../platform/presentation/http/dto/api-response.dto";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
-import { Authorize } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
 import { EmailVerified } from "../../../../platform/presentation/http/security/decorators/email-verified.decorator";
 import { GetUser } from "../../../../platform/presentation/http/security/decorators/get-user.decorator";
 import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
@@ -48,12 +47,7 @@ export class ImpersonationController {
 	@EmailVerified()
 	@RequirePermission("CREATE", "USER")
 	@PlatformOperation(IMPERSONATION_START_OPERATION)
-	@Authorize({
-		action: "CREATE",
-		resource: "USER",
-		resourceId: "userId",
-		description: "SuperAdmin can impersonate any user",
-	})
+	@RequirePermission("CREATE", "USER", { resourceId: "userId", description: "SuperAdmin can impersonate any user" })
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@Post("/impersonate/:userId")
 	@UseInterceptors(SetAuthCookiesInterceptor)

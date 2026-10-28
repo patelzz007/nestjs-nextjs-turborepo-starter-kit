@@ -123,19 +123,19 @@ Run from the **repo root**:
 
 | Command           | What it does                                                     | Exit code                                 |
 | ----------------- | ---------------------------------------------------------------- | ----------------------------------------- |
-| `pnpm deps:check` | Lint all versions/ranges against the config. Prints drift if any | `0` = clean, `1` = drift found (fails CI) |
-| `pnpm deps:fix`   | Auto-align all `package.json` files to the configured versions   | —                                         |
-| `pnpm deps:list`  | Show every dependency version per workspace                      | —                                         |
+| `pnpm tools deps:check` | Lint all versions/ranges against the config. Prints drift if any | `0` = clean, `1` = drift found (fails CI) |
+| `pnpm tools deps:fix`   | Auto-align all `package.json` files to the configured versions   | —                                         |
+| `pnpm tools deps:list`  | Show every dependency version per workspace                      | —                                         |
 
 Examples:
 
 ```bash
 # Check for drift (CI-safe — exits 1 on problems)
-pnpm deps:check
+pnpm tools deps:check
 
 # Auto-fix drift, then verify
-pnpm deps:fix
-pnpm deps:check
+pnpm tools deps:fix
+pnpm tools deps:check
 ```
 
 > [!NOTE] **`deps:check` / `deps:fix` / `deps:list` ARE turbo tasks.** turbo 2.x does not
@@ -147,7 +147,7 @@ pnpm deps:check
 > `packages/tooling` proves it now sees every workspace manifest and the pnpm overrides.
 >
 > ```bash
-> pnpm deps:check          # → turbo run deps:check → cd ../.. && syncpack lint && pnpm peers check
+> pnpm tools deps:check          # → turbo run deps:check → cd ../.. && syncpack lint && pnpm peers check
 > pnpm turbo run deps:check   # same thing, invoked directly through the pipeline
 > ```
 
@@ -168,9 +168,9 @@ To bump a shared dependency (e.g. `zod`):
 3. **Install & verify no drift:**
    ```bash
    pnpm install
-   pnpm deps:check
+   pnpm tools deps:check
    ```
-4. If syncpack reports drift you didn't intend to keep, use `pnpm deps:fix`.
+4. If syncpack reports drift you didn't intend to keep, use `pnpm tools deps:fix`.
 
 > [!NOTE] **Non-shared dependencies** (e.g. `@nestjs/common`, `lucide-react`) may use carets —
 > only the 5 deps in `.syncpackrc.json` are pinned exact — but syncpack's default group still

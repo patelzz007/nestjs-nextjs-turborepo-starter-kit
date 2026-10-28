@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader } from "@workspace/ui/components/card";
+import { SettingsSectionHeaderSkeleton } from "@workspace/ui/components/settings-shell";
 import { Skeleton } from "@workspace/ui/components/skeleton";
-import { FormSkeleton, ListSkeleton, PageHeaderSkeleton, ProseSkeleton } from "@workspace/ui/components/skeleton-patterns";
+import { FormSkeleton, ListSkeleton, ProseSkeleton } from "@workspace/ui/components/skeleton-patterns";
 import { SkeletonRegion } from "@workspace/ui/components/skeleton-region";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type * as React from "react";
@@ -97,13 +98,13 @@ function SecuritySectionSkeleton({ wide, children }: { readonly wide: boolean; r
 }
 
 /**
- * `/account/security`: header, then the security grid — email verification,
+ * `/account/security`: the section header, then the security grid — email verification,
  * change password beside two-factor, signed-in devices, MFA recovery.
  */
 export function SecurityPageSkeleton(): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={SECURITY_LOADING_LABELS} className="flex flex-col gap-6">
-			<PageHeaderSkeleton />
+			<SettingsSectionHeaderSkeleton />
 			<div className="grid gap-8 lg:grid-cols-2">
 				<SecuritySectionSkeleton wide>
 					<Skeleton variant="text" className="h-3.5 w-64 max-w-full" />
@@ -146,7 +147,7 @@ export interface GithubTokenPageSkeletonProps {
 export function GithubTokenPageSkeleton({ withHeader = false }: GithubTokenPageSkeletonProps): React.JSX.Element {
 	return (
 		<SkeletonRegion labels={GITHUB_TOKEN_LOADING_LABELS} className="flex flex-col gap-6">
-			{withHeader ? <PageHeaderSkeleton /> : null}
+			{withHeader ? <SettingsSectionHeaderSkeleton /> : null}
 			<div className="grid items-start gap-6 lg:grid-cols-2">
 				<Card>
 					<CardHeader>

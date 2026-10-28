@@ -75,7 +75,7 @@ function readAppIdentity(): AppIdentityEnv {
 
 /**
  * The launch assets, generated from the brand mark and the `splash` colour
- * tokens by `pnpm tokens:generate` (packages/tokens, ADR 043) — never edited here.
+ * tokens by `pnpm tools tokens:generate` (packages/tokens, ADR 043) — never edited here.
  */
 const APP_ICON = "./assets/app-icon.png";
 const SPLASH_IMAGE = "./assets/splash-icon.png";
@@ -90,7 +90,7 @@ type LaunchColors = z.output<typeof LaunchColorsSchema>;
 function readLaunchColors(): LaunchColors {
 	const parsed = LaunchColorsSchema.safeParse(generatedLaunchColors);
 	if (!parsed.success) {
-		throw new Error(`Invalid assets/launch-colors.json — run \`pnpm tokens:generate\` (${parsed.error.issues.map((issue): string => issue.message).join("; ")})`);
+		throw new Error(`Invalid assets/launch-colors.json — run \`pnpm tools tokens:generate\` (${parsed.error.issues.map((issue): string => issue.message).join("; ")})`);
 	}
 	return parsed.data;
 }

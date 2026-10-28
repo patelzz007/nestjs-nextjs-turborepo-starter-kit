@@ -2,18 +2,14 @@ import type { Tenant, Prisma, User } from "@prisma/client";
 import { PILOT_CITY_TIME_ZONES } from "@workspace/shared";
 
 import { sha256Hex } from "../../src/platform/infrastructure/crypto/sha256";
-import { POLICY_AUDIT_ACTIONS, POLICY_DRAFT_AUDIT_RESOURCE } from "../../src/contexts/authorization/application/ports/policy-control-plane.port";
-import { policyBaselineFingerprint } from "../../src/contexts/authorization/infrastructure/cedar/policy-baseline";
-import { PolicyTemplateCompiler } from "../../src/contexts/authorization/infrastructure/cedar/policy-template.compiler";
 import { OWN_DISPLAY_NAME_UPDATED_AUDIT_ACTION } from "../../src/contexts/tenancy/application/commands/rename-own-membership/rename-own-membership.handler";
-import { findActivePolicyVersionInTx, seedDefaultTenantPolicies } from "../../src/contexts/authorization/public-api";
 
 import { prisma } from "./client";
+import { seedTenantRoleId } from "./tenant-roles";
 import { seedLifecycleCorrelationId } from "./lifecycle-correlation";
 import { upsertLiveSeedMembership } from "./memberships";
 import { deterministicUuid } from "./deterministic-uuid";
 import { daysFromNow } from "./helpers";
-import { defaultTenantPolicySeedIds, platformGuardrailSeedIds } from "./policy-seed-ids";
 import { seedTenantEncryptionKeys } from "./tenant-encryption";
 import { TENANT_SEED_IDS } from "./tenant-seed-ids";
 import { seedLog } from "./seed-log";
@@ -49,7 +45,7 @@ const KL_FORMER_CASHIER_REMOVED_DAYS_AGO = 30;
  * next run converges. Never touches another tenant, never deletes the
  * tenants themselves (their audit trail — `TenantAuditLog`,
  * `TenantLifecycleEvent` — cascades from them and is kept), and keeps
- * tenant policy history and tenant data keys (a data key is never destroyed: it
+ * tenant data keys (a data key is never destroyed: it
  * would orphan what is encrypted with it; the seed creates it once).
  */
 export async function cleanupTenantSeedData(): Promise<void> {
@@ -74,119 +70,6 @@ async function convergePendingAccessRequest(tenantId: string, userId: string, me
 	}
 	await prisma.tenantAccessRequest.create({
 		data: { id: deterministicUuid("tenant-seed", `access-request:${tenantId}:${userId}`), tenantId, userId, status: "PENDING", message },
-	});
-}
-
-/**
- * Publishes the platform guardrail exactly as the policy control plane would:
- * a draft by `author`, a passing simulation against the current baseline, and
- * four-eyes approval + publish by a DIFFERENT SuperAdmin (`approver`), with
- * the authorization audit rows the app writes — all in one transaction.
- */
-export async function seedPlatformGuardrails(author: Pick<User, "id">, approver: Pick<User, "id">): Promise<void> {
-	if (author.id === approver.id) {
-		throw new Error("Seed guardrail approval needs two distinct users (four-eyes)");
-	}
-	const existing = await prisma.authorizationPolicyVersion.findFirst({
-		where: { tenantId: null, scope: "PLATFORM_GUARDRAIL", supersededAt: null },
-	});
-
-	if (existing !== null) {
-		return;
-	}
-
-	const builderPayload = { templateId: "platform.guardrail.no_escalation", parameters: {} };
-	const compiled = new PolicyTemplateCompiler().compile(builderPayload, null);
-	const now = Date.now();
-	const ids = platformGuardrailSeedIds();
-
-	await prisma.$transaction(async (tx) => {
-		const baselineIds = await tx.authorizationPolicyVersion.findMany({ where: { supersededAt: null }, select: { id: true } });
-		const memberCount = await tx.membership.count({ where: { status: "ACTIVE", isDeleted: false } });
-		const draft = await tx.authorizationPolicyDraft.create({
-			data: {
-				id: ids.draftId,
-				tenantId: null,
-				scope: "PLATFORM_GUARDRAIL",
-				name: "Platform guardrails",
-				description: "Non-bypassable owner and policy-admin protections",
-				builderPayload,
-				cedarSource: compiled.cedarSource,
-				sqlPredicate: compiled.sqlPredicate,
-				status: "PUBLISHED",
-				createdById: author.id,
-				approvedById: approver.id,
-				approvalKind: "FOUR_EYES",
-			},
-		});
-		const simulationId = ids.simulationId;
-		await tx.authorizationPolicySimulation.create({
-			data: {
-				id: simulationId,
-				draftId: draft.id,
-				actorUserId: approver.id,
-				passed: true,
-				baselineFingerprint: policyBaselineFingerprint(baselineIds.map((row) => row.id)),
-				result: {
-					simulationId,
-					passed: true,
-					warnings: [],
-					errors: [],
-					evaluatedPrincipalCount: memberCount,
-					affectedPrincipalCount: 0,
-					wouldLockOutOwners: false,
-					decisionChanges: [],
-					decisionChangesTruncated: false,
-				},
-			},
-		});
-		const version = await tx.authorizationPolicyVersion.create({
-			data: {
-				id: ids.versionId,
-				tenantId: null,
-				draftId: draft.id,
-				scope: "PLATFORM_GUARDRAIL",
-				version: 1,
-				cedarSource: compiled.cedarSource,
-				sqlPredicate: compiled.sqlPredicate,
-				contentHash: sha256Hex(compiled.cedarSource),
-				publishedAt: BigInt(now),
-				publishedById: approver.id,
-			},
-		});
-		const audit = (
-			id: string,
-			action: string,
-			actorId: string,
-			policyIds: string[],
-			evaluation: Record<string, string | number | null>,
-		): Prisma.AuthorizationAuditCreateInput & { readonly id: string } => ({
-			id,
-			actorId,
-			tenantId: null,
-			action,
-			resource: POLICY_DRAFT_AUDIT_RESOURCE,
-			resourceId: draft.id,
-			decision: "ALLOW",
-			policyIds,
-			evaluation: { ...evaluation, scope: "PLATFORM_GUARDRAIL" },
-			// Seeded outside any HTTP request: there is no correlation id.
-			requestId: null,
-		});
-		const rows: readonly (Prisma.AuthorizationAuditCreateInput & { readonly id: string })[] = [
-			audit(ids.auditIds.created, POLICY_AUDIT_ACTIONS.draftCreated, author.id, [], { name: draft.name }),
-			audit(ids.auditIds.simulated, POLICY_AUDIT_ACTIONS.draftSimulated, approver.id, [], { simulationId, evaluatedPrincipalCount: memberCount, affectedPrincipalCount: 0 }),
-			audit(ids.auditIds.published, POLICY_AUDIT_ACTIONS.draftPublished, approver.id, [version.id], {
-				version: 1,
-				authorUserId: author.id,
-				approverUserId: approver.id,
-				approvalNote: null,
-			}),
-		];
-		// Upsert on the deterministic ids: audit history is append-only and a re-run must not duplicate it.
-		for (const row of rows) {
-			await tx.authorizationAudit.upsert({ where: { id: row.id }, create: row, update: {} });
-		}
 	});
 }
 
@@ -467,9 +350,6 @@ export async function seedTenantsAndMerchants(
 
 	await convergePendingAccessRequest(mlkTenant.id, accessRequestUser.id, "I run a food blog and would like to help promote Jonker Street Kitchen rewards.");
 
-	await seedDefaultTenantPolicies(prisma, klTenant.id, adminUser.id, defaultTenantPolicySeedIds(klTenant.id));
-	await seedDefaultTenantPolicies(prisma, mlkTenant.id, adminUser.id, defaultTenantPolicySeedIds(mlkTenant.id));
-
 	await seedFormerKlCashierMembership(klTenant.id, klOwner.id, klPendingCashier.id);
 	await seedMemberDisplayNameAudits([
 		{ tenantId: klTenant.id, membershipId: TENANT_SEED_IDS.klOwnerMembership, userId: klOwner.id, displayName: SEED_MEMBER_DISPLAY_NAMES.klOwner },
@@ -495,6 +375,7 @@ export async function seedTenantsAndMerchants(
  */
 async function seedFormerKlCashierMembership(tenantId: string, removedByUserId: string, userId: string): Promise<void> {
 	const removedAt = BigInt(Date.now() - KL_FORMER_CASHIER_REMOVED_DAYS_AGO * 24 * 60 * 60 * 1000);
+	const roleId = await seedTenantRoleId(prisma, tenantId, "CASHIER");
 	await prisma.membership.upsert({
 		where: { id: KL_FORMER_CASHIER_MEMBERSHIP_ID },
 		create: {
@@ -502,12 +383,13 @@ async function seedFormerKlCashierMembership(tenantId: string, removedByUserId: 
 			tenantId,
 			userId,
 			role: "CASHIER",
+			roleId,
 			status: "ACTIVE",
 			isDeleted: true,
 			deletedAt: removedAt,
 			deletedBy: removedByUserId,
 		},
-		update: { tenantId, userId, role: "CASHIER", isDeleted: true, deletedAt: removedAt, deletedBy: removedByUserId },
+		update: { tenantId, userId, role: "CASHIER", roleId, isDeleted: true, deletedAt: removedAt, deletedBy: removedByUserId },
 	});
 	// Removing the member retired their store scope with them: soft-deleted, by the same owner, at the same time.
 	await prisma.membershipLocationScope.create({
@@ -530,7 +412,6 @@ async function seedFormerKlCashierMembership(tenantId: string, removedByUserId: 
 			action: "membership.removed",
 			resourceType: "Membership",
 			resourceId: KL_FORMER_CASHIER_MEMBERSHIP_ID,
-			policyVersion: await findActivePolicyVersionInTx(prisma, tenantId),
 			createdAt: removedAt,
 		},
 		update: {},
@@ -558,7 +439,6 @@ async function seedMemberDisplayNameAudits(rows: readonly SeedMemberDisplayName[
 			action: OWN_DISPLAY_NAME_UPDATED_AUDIT_ACTION,
 			resourceType: "Membership",
 			resourceId: row.membershipId,
-			policyVersion: await findActivePolicyVersionInTx(prisma, row.tenantId),
 			metadata: { previousDisplayName: null, displayName: row.displayName },
 		};
 		await prisma.tenantAuditLog.upsert({ where: { id: auditId }, create: { id: auditId, ...audit }, update: audit });

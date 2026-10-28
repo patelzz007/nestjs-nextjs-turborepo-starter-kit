@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * `pnpm bundle:check [--write-baseline] [--cwd <repo root>]`
+ * `pnpm tools bundle:check [--write-baseline] [--cwd <repo root>]`
  *
  * Per-route first-load JS (gzip) of the three Next apps and the Hermes bundle
  * of each mobile platform, checked against `bundle-budgets.json` at the repo
@@ -99,7 +99,7 @@ async function main() {
 	try {
 		budgets = BudgetsSchema.parse(JSON.parse(await readFile(budgetsPath, "utf8")));
 	} catch (error) {
-		throw new Error(`cannot read ${BUDGETS_FILE} (${error instanceof Error ? error.message : String(error)}); generate it with \`pnpm bundle:check --write-baseline\``, {
+		throw new Error(`cannot read ${BUDGETS_FILE} (${error instanceof Error ? error.message : String(error)}); generate it with \`pnpm tools bundle:check --write-baseline\``, {
 			cause: error,
 		});
 	}

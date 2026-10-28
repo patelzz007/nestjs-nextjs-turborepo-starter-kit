@@ -18,7 +18,7 @@ import { UnbanTenantCommand } from "./unban-tenant.command";
 @CommandHandler(UnbanTenantCommand)
 export class UnbanTenantHandler implements ICommandHandler<UnbanTenantCommand, TenantLifecycleResponse> {
 	public constructor(
-		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<Pick<TenantsScope, "tenants" | "audit" | "tenantPolicies" | "events">>,
+		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<Pick<TenantsScope, "tenants" | "audit" | "events">>,
 		@Inject(TENANT_LIFECYCLE_READ) private readonly reads: TenantLifecycleReadPort,
 		@Inject(CLOCK) private readonly clock: Clock,
 	) {}
@@ -36,7 +36,6 @@ export class UnbanTenantHandler implements ICommandHandler<UnbanTenantCommand, T
 			await scope.audit.record({
 				tenantId: tenant.id,
 				actorUserId: adminUserId,
-				policyVersion: await scope.tenantPolicies.activePolicyVersion(tenant.id),
 				action: "tenant.unbanned",
 				resourceType: "Tenant",
 				resourceId: tenant.id,

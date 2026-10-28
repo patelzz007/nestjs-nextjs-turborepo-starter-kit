@@ -130,7 +130,7 @@ A new tenant-owned table, in the same change:
 1. carries a non-null `tenantId` and a `/// RLS:` annotation naming its policy class;
 2. enables **and forces** RLS in the RLS SQL (`db:apply-security`) — boot fails otherwise;
 3. references every same-tenant parent through a composite foreign key, `fields: [tenantId, <fk>], references: [tenantId, id]`, with `@@unique([tenantId, id])` on the parent. Use `onDelete: Restrict`, not `SetNull`, on an optional one: `SetNull` would also null the non-null `tenantId`;
-4. adds its row to `docs/technical/database/rls-coverage.md` and its relation to `TENANT_INTEGRITY_RELATIONS` (`pnpm db:check-tenant-integrity`);
+4. adds its row to `docs/technical/database/rls-coverage.md` and its relation to `TENANT_INTEGRITY_RELATIONS` (`pnpm tools db:check-tenant-integrity`);
 5. seeds its rows through the seed's `seed.demo_dataset` operation (the seed runs as `app_runtime` under forced RLS, so a table it hard-deletes needs a policy that admits it).
 
 ## Transactions and race conditions
@@ -269,7 +269,7 @@ Every schema change needs: a migration, a test/verification step, a deployment c
 - **Migrations are generated, not hand-written.** Edit `prisma/schema.prisma`, then `pnpm db:migrate:create --name <change>` (or `db:migrate`). The generated SQL must contain only your change; if it contains anything else, the schema has drifted — fix the drift, don't strip the SQL by hand.
 - **`dbgenerated(...)` defaults are written in Postgres's canonical form** — the text `pg_get_expr` returns, which Prisma compares literally. The epoch-ms default is exactly `dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint")`. Any other spelling (`EXTRACT(EPOCH …) * 1000`) means the same thing but makes every future migration re-emit `ALTER COLUMN … SET DEFAULT` for every such column. For a new expression: apply it once, read `information_schema.columns.column_default`, and copy that text back into the schema.
 - **`pnpm db:check-drift` must pass** (`apps/api/scripts/db.ts check-drift`): it replays `prisma/migrations` into the throwaway `SHADOW_DATABASE_URL` database and fails if the result differs from `schema.prisma`.
-- **RLS, roles and grants are not migrations.** They live in `apps/api/prisma/rls.sql` and `apps/api/prisma/rls/NN-*.sql` and are applied by `pnpm db:apply-security` (run by `db:migrate`, `db:deploy`, `db:push` and `db:reset`). Never append them to a `migration.sql`.
+- **RLS, roles and grants are not migrations.** They live in `apps/api/prisma/rls.sql` and `apps/api/prisma/rls/NN-*.sql` and are applied by `pnpm tools db:apply-security` (run by `db:migrate`, `db:deploy`, `db:push` and `db:reset`). Never append them to a `migration.sql`.
 - **Documented exception — the vendored geography dataset.** `Region`, `Subregion`, `Country`, `State` and `City` (seeded from dr5hn/countries-states-cities-database by `prisma/seed/geo-seed.ts`) override the base model's `id` with the dataset's own `Int` ids, so the rows stay a faithful mirror of the published dataset and its foreign keys. Everything else — epoch-ms `createdAt`/`updatedAt`, the actor columns and soft delete — comes from the base model like on every other table. A new table never overrides `id` without an equally structural reason.
 
 ## Seed data — mandatory on every schema change

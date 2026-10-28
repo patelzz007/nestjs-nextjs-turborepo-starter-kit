@@ -19,7 +19,19 @@ import { seedGithubAccountLinks } from "../prisma/seed/github-account-links";
 import { GITHUB_FETCH, type GithubFetch } from "../src/contexts/integrations-github/infrastructure/github-api/github-http.transport";
 import { GITHUB_TOKEN_EXPIRATION_HEADER } from "../src/contexts/integrations-github/infrastructure/github-api/github-pull-request.client";
 import { restoreGithubAccountLinks, snapshotGithubAccountLinks, type GithubAccountLinkSnapshot } from "./support/github-account-link-snapshots";
-import { createE2eApp, login, markSeedUserEmailVerified, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
+import {
+	createE2eApp,
+	createTestPlatformRole,
+	dropTestPlatformRole,
+	login,
+	markSeedUserEmailVerified,
+	mutationHeaders,
+	parseSuccessEnvelope,
+	uniqueClientIp,
+	type InjectResponse,
+	type LoginResult,
+	type TestPermissionPairs,
+} from "./e2e-helpers";
 
 /**
  * GitHub pull requests with an admin's own token (ADR 052) against the real
@@ -33,7 +45,15 @@ const ACCOUNT_URL = `${API_VERSION_PREFIX}/github/account`;
 const LIST_URL = `${API_VERSION_PREFIX}/github/pull-requests`;
 const ADMIN_EMAIL = "admin@example.com";
 const SUPER_ADMIN_EMAIL = "superadmin@example.com";
-const MANAGER_EMAIL = "manager@example.com";
+/**
+ * Staff without GitHub pull requests: a seed account given, for this spec only, a platform role with the
+ * admin panel and GitHub reads but no pull-request permission (ADR 067 retired the seeded Manager).
+ */
+const STAFF_EMAIL = "jack.anderson@example.com";
+const STAFF_PERMISSIONS: TestPermissionPairs = [
+	["READ", "ADMIN_DASHBOARD"],
+	["READ", "GITHUB"],
+];
 const TOKEN = "github_pat_11E2ETEST0000000000000_e2e_only_token_value";
 const REFUSED_TOKEN = "github_pat_11E2ETEST0000000000000_refused_by_github";
 
@@ -157,6 +177,7 @@ describe("GitHub pull requests (e2e, real Postgres + RLS + audit trail)", () => 
 	let admin: LoginResult;
 	let superAdmin: LoginResult;
 	let manager: LoginResult;
+	const staffRoleId = randomUUID();
 	let adminId: string;
 	let superAdminId: string;
 	/** The two link rows exactly as they were before this suite ran (a developer's own link included), restored afterwards. */
@@ -200,22 +221,24 @@ describe("GitHub pull requests (e2e, real Postgres + RLS + audit trail)", () => 
 		linksBefore = await snapshotGithubAccountLinks(pool, [adminId, superAdminId]);
 		// This suite's starting point, whatever links the database had: the seed's demo links (the SuperAdmin unlinked).
 		await seedGithubAccountLinks({ adminId, superAdminId }, Date.now(), { replaceRealLinks: true });
-		for (const email of [ADMIN_EMAIL, SUPER_ADMIN_EMAIL, MANAGER_EMAIL]) {
+		await createTestPlatformRole(pool, { id: staffRoleId, label: "github reader", permissions: STAFF_PERMISSIONS, holderEmail: STAFF_EMAIL });
+		for (const email of [ADMIN_EMAIL, SUPER_ADMIN_EMAIL, STAFF_EMAIL]) {
 			await markSeedUserEmailVerified(pool, email);
 		}
 		admin = await login(app, ADMIN_EMAIL, "Admin@123");
 		superAdmin = await login(app, SUPER_ADMIN_EMAIL, "SuperAdmin@123");
-		manager = await login(app, MANAGER_EMAIL, "Manager@123");
+		manager = await login(app, STAFF_EMAIL, "Jack@123");
 	});
 
 	afterAll(async () => {
 		// Put back exactly what was there before, so running the suite never replaces a developer's own link.
 		await restoreGithubAccountLinks(pool, linksBefore);
+		await dropTestPlatformRole(pool, staffRoleId);
 		await pool.end();
 		await app.close();
 	});
 
-	it("refuses roles without GitHub pull requests (a Manager)", async () => {
+	it("refuses roles without GitHub pull requests (staff without them)", async () => {
 		const response = await app.inject({ method: "GET", url: ACCOUNT_URL, headers: headers(manager) });
 
 		expect(response.statusCode, response.body).toBe(HTTP_FORBIDDEN);
@@ -359,7 +382,7 @@ describe("GitHub pull requests (e2e, real Postgres + RLS + audit trail)", () => 
 		expect(githubWrites.merges).toEqual(["PUT /repos/octocat/hello-world/pulls/7/merge", "DELETE /repos/octocat/hello-world/git/refs/heads/feature/e2e"]);
 	});
 
-	it("refuses comments from roles without GitHub pull requests (a Manager)", async () => {
+	it("refuses comments from roles without GitHub pull requests (staff without them)", async () => {
 		const response = await app.inject({
 			method: "POST",
 			url: COMMENTS_URL,

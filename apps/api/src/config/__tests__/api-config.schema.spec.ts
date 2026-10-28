@@ -427,6 +427,11 @@ describe("API env schema", () => {
 			expect(parse({ EMAIL_TEST_TO: "dev@example.com" }).email.testTo).toBe("dev@example.com");
 		});
 
+		it("ignores EMAIL_TEST_TO with Mailpit, which keeps every email under its real recipient", () => {
+			expect(parse({ EMAIL_PROVIDER: "mailpit", EMAIL_TEST_TO: "dev@example.com" }).email.testTo).toBeUndefined();
+			expect(parse({ EMAIL_PROVIDER: "resend", RESEND_API_KEY: "re_test", EMAIL_TEST_TO: "dev@example.com" }).email.testTo).toBe("dev@example.com");
+		});
+
 		it("allows EMAIL_TEST_TO for a production build running on localhost", () => {
 			const local = parse({ ...PRODUCTION, APP_URL: "http://localhost:3000", EMAIL_TEST_TO: "dev@example.com" });
 			expect(local.runtime.isProduction).toBe(true);

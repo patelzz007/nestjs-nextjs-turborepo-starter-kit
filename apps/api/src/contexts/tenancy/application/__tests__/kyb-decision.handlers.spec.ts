@@ -10,12 +10,10 @@ import type { MerchantVerificationRepository } from "../../domain/repositories/m
 import { DecideKybCommand } from "../commands/decide-kyb/decide-kyb.command";
 import { DecideKybHandler, type KybDecisionScope } from "../commands/decide-kyb/decide-kyb.handler";
 import type { TenantAuditEntry } from "../ports/tenant-audit.port";
-import type { TenantPolicyProvisioningPort } from "../ports/tenant-policy.port";
 
 const TENANT_ID = "0199a1b2-0000-7000-8000-000000000001";
 const ADMIN_ID = "0199a1b2-0000-7000-8000-000000000009";
 const NOW = epochMs(1_792_368_000_000);
-const POLICY_VERSION = 3;
 const REASON = "The registration certificate is unreadable.";
 const ACTOR: ActorContext = {
 	kind: "user",
@@ -34,17 +32,6 @@ interface Committed {
 	readonly audit: TenantAuditEntry[];
 }
 
-/** The tenant's tenant policy at a fixed version; a decision never seeds policies. */
-class FixedTenantPolicies implements TenantPolicyProvisioningPort {
-	public seedDefaultPolicies(): Promise<void> {
-		return Promise.reject(new Error("a KYB decision never seeds tenant policies"));
-	}
-
-	public activePolicyVersion(): Promise<number> {
-		return Promise.resolve(POLICY_VERSION);
-	}
-}
-
 /**
  * A transactional fake: writes made inside `work` are buffered and only reach `committed` when `work`
  * resolves — a throw anywhere discards them, as a rolled-back transaction would.
@@ -52,7 +39,6 @@ class FixedTenantPolicies implements TenantPolicyProvisioningPort {
 class TransactionalFakeUnitOfWork implements UnitOfWork<KybDecisionScope> {
 	public readonly committed: Committed = { statuses: [], audit: [] };
 	public saveFails = false;
-	private readonly tenantPolicies = new FixedTenantPolicies();
 
 	public constructor(private readonly stored: { status: string }) {}
 
@@ -85,7 +71,6 @@ class TransactionalFakeUnitOfWork implements UnitOfWork<KybDecisionScope> {
 					return Promise.resolve();
 				},
 			},
-			tenantPolicies: this.tenantPolicies,
 			events: new TransactionalEventCollector(),
 		};
 		const result = await work(scope);
@@ -116,7 +101,6 @@ describe("DecideKybHandler (D05)", () => {
 			{
 				tenantId: TENANT_ID,
 				actorUserId: ADMIN_ID,
-				policyVersion: POLICY_VERSION,
 				action: "merchant.kyb_decided",
 				resourceType: "TenantMerchantProfile",
 				resourceId: TENANT_ID,

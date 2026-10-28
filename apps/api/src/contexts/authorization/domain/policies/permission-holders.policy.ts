@@ -1,6 +1,6 @@
 /** The grants that decide who holds one permission, each a list of user ids. */
 export interface PermissionHolderGrants {
-	/** Holders of a role (directly or as a location role) that confers the permission, or of one of its descendants. */
+	/** Holders of a role (directly or as a location role) that confers the permission. */
 	readonly roleHolders: readonly string[];
 	/** Users with a live, unexpired direct ALLOW override of it. */
 	readonly directAllow: readonly string[];

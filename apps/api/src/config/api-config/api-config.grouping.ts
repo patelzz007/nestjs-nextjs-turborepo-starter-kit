@@ -115,7 +115,9 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
 			mailpitUrl: env.MAILPIT_URL,
 			fromAddress: env.EMAIL_FROM_ADDRESS,
 			replyTo: env.EMAIL_REPLY_TO,
-			testTo: env.EMAIL_TEST_TO,
+			// Mailpit already keeps every email, under its real recipient, on this machine: redirecting them
+			// to one address there only hides whose email is whose (and breaks `pnpm mail:latest --to`).
+			testTo: env.EMAIL_PROVIDER === "mailpit" ? undefined : env.EMAIL_TEST_TO,
 			maxAttempts: env.EMAIL_MAX_ATTEMPTS,
 			timeoutMs: env.EMAIL_TIMEOUT_MS,
 			rateLimitPerMinute: env.EMAIL_RATE_LIMIT_PER_MINUTE,

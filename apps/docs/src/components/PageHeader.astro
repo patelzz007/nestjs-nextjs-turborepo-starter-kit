@@ -1,0 +1,68 @@
+---
+/**
+ * A page's head, laid out like a Notion page: its icon, the title, a short list of properties — each a muted label and its value — and the description as the
+ * page's opening paragraph. Purely presentational: the page passes what it knows.
+ */
+import Icon from "@/components/Icon.astro";
+import type { IconName } from "@/lib/icons";
+
+export interface PageProperty {
+	readonly icon: IconName;
+	readonly label: string;
+	readonly value: string;
+	/** Machine-readable form of a date value (`<time datetime>`). */
+	readonly dateTime?: string | undefined;
+}
+
+interface Props {
+	readonly title: string;
+	readonly icon?: IconName | undefined;
+	readonly description?: string | undefined;
+	readonly properties: readonly PageProperty[];
+	readonly tags?: readonly string[] | undefined;
+}
+
+const { title, icon, description, properties, tags = [] } = Astro.props;
+---
+
+<header class="page-header">
+	{
+		icon !== undefined && (
+			<div class="page-icon" aria-hidden="true">
+				<Icon name={icon} size={40} />
+			</div>
+		)
+	}
+	<h1 class="page-title">{title}</h1>
+	<dl class="page-properties">
+		{
+			properties.map((property) => (
+				<div class="page-property">
+					<dt>
+						<Icon name={property.icon} size={14} />
+						{property.label}
+					</dt>
+					<dd>{property.dateTime === undefined ? property.value : <time datetime={property.dateTime}>{property.value}</time>}</dd>
+				</div>
+			))
+		}
+		{
+			tags.length > 0 && (
+				<div class="page-property">
+					<dt>
+						<Icon name="layers" size={14} />
+						Tags
+					</dt>
+					<dd>
+						<ul class="tag-list" aria-label="Tags">
+							{tags.map((tag) => (
+								<li class="tag">{tag}</li>
+							))}
+						</ul>
+					</dd>
+				</div>
+			)
+		}
+	</dl>
+	{description !== undefined && <p class="page-description">{description}</p>}
+</header>

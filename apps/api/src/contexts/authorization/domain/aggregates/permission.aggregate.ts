@@ -1,4 +1,4 @@
-import { JsonValueSchema, PermissionActionSchema, PermissionResourceSchema, PermissionScopeSchema, type EpochMs } from "@workspace/shared";
+import { PermissionActionSchema, PermissionResourceSchema, PermissionScopeSchema, type EpochMs } from "@workspace/shared";
 import { z } from "zod";
 
 import { DeletedPermissionNotFoundError, SystemPermissionImmutableError } from "../errors/authorization.errors";
@@ -16,8 +16,6 @@ const PermissionStateSchema = z.object({
 	description: z.string().nullable(),
 	group: z.string().max(PERMISSION_GROUP_MAX_LENGTH).nullable(),
 	isSystem: z.boolean(),
-	/** ABAC conditions (policy DSL); edited only through the policy workflow, never by the catalog API. */
-	conditions: JsonValueSchema.nullable(),
 	isDeleted: z.boolean(),
 	deletedAt: z.number().int().nonnegative().nullable(),
 	createdAt: z.number().int().nonnegative(),
@@ -66,7 +64,6 @@ export class PermissionAggregate {
 				description: permission.description,
 				group: permission.group,
 				isSystem: false,
-				conditions: null,
 				isDeleted: false,
 				deletedAt: null,
 				createdAt: now,

@@ -30,7 +30,7 @@ const FOOTER_COLUMNS: readonly { readonly heading: string; readonly links: reado
 export function LandingFooter(): React.JSX.Element {
 	return (
 		<footer className="border-t border-border/80 bg-card">
-			<div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-[1.5fr_1fr_1fr] sm:px-6 lg:px-8">
+			<div className="mx-auto grid max-w-10xl gap-10 px-4 py-12 sm:grid-cols-[1.5fr_1fr_1fr] sm:px-6 lg:px-8">
 				<div className="max-w-xs">
 					<Link href={ROUTES.home} className="inline-flex items-center gap-2.5 rounded-md focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
 						<span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -58,7 +58,7 @@ export function LandingFooter(): React.JSX.Element {
 				))}
 			</div>
 			<div className="border-t border-border/80">
-				<p className="mx-auto max-w-6xl px-4 py-5 text-xs text-muted-foreground sm:px-6 lg:px-8">
+				<p className="mx-auto max-w-10xl px-4 py-5 text-xs text-muted-foreground sm:px-6 lg:px-8">
 					© {new Date().getFullYear()} Rewardly · Pilot programme in Kuala Lumpur &amp; Melaka
 				</p>
 			</div>

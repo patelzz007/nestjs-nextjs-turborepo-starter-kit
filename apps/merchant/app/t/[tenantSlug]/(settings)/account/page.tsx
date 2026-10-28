@@ -1,0 +1,33 @@
+import { EmailVerificationGateDialog } from "@/contexts/identity/components/email-verification-gate-dialog";
+import { guardTenantPage } from "@/contexts/tenancy/lib/tenant/tenant-page-guard";
+import { SecuritySettingsPanel } from "@workspace/client/lib/contexts/identity/mfa/security-settings-panel";
+import { SettingsSectionHeader } from "@workspace/ui/components/settings-shell";
+import * as React from "react";
+
+interface MerchantAccountPageProps {
+	readonly params: Promise<{ tenantSlug: string }>;
+}
+
+/**
+ * Personal account — the signed-in user's own email verification, password,
+ * and two-factor authentication. Restricted (enrollment) sessions land here
+ * and may not leave until enrollment completes, so the route is explicitly
+ * open in `ORG_PAGE_RULES`. Tenant configuration lives under
+ * `/t/{slug}/settings`.
+ */
+export default async function MerchantAccountPage({ params }: MerchantAccountPageProps): Promise<React.JSX.Element> {
+	const { tenantSlug } = await params;
+	const denied = await guardTenantPage(tenantSlug, "/account");
+	if (denied !== null) {
+		return denied;
+	}
+
+	// Security is the Personal section of Settings: the `(settings)` layout draws the settings navigation around it.
+	return (
+		<>
+			<EmailVerificationGateDialog />
+			<SettingsSectionHeader title="Security" description="Verify your email, manage your password, and configure two-factor authentication." />
+			<SecuritySettingsPanel />
+		</>
+	);
+}

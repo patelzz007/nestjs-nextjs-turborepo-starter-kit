@@ -3,7 +3,7 @@
 import { useMerchantAuthorizationStatus } from "@/contexts/tenancy/components/access/merchant-authorization-provider";
 import { MerchantReadOnlyNotice } from "@/contexts/tenancy/components/access/merchant-capability-gate";
 import { MERCHANT_LOCATIONS_LOADING_LABELS, LocationsSkeleton } from "@/components/loading/merchant-page-skeletons";
-import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
+import { SettingsSectionHeader } from "@workspace/ui/components/settings-shell";
 import { LocationList } from "@/contexts/tenancy/components/tenant/tenant-location-list";
 import { LocationRequestForm } from "@/contexts/tenancy/components/tenant/tenant-location-request-form";
 import { resolveActiveLocations, resolveAllLocations } from "@/contexts/tenancy/lib/tenant/location-access";
@@ -60,10 +60,10 @@ export function LocationsPageView({ tenantSlug }: LocationsPageViewProps): React
 
 	return (
 		<div className="space-y-8">
-			<MerchantPageHeader
+			<SettingsSectionHeader
 				title="Store locations"
 				description="Manage stores under this tenant. New locations require platform approval before they appear to customers or POS integrations."
-				actions={
+				action={
 					canManageLocations ? (
 						<Button type="button" onClick={handleToggleCreateForm} disabled={contextQuery.isLoading}>
 							{showCreateForm ? "Close form" : "Add store"}

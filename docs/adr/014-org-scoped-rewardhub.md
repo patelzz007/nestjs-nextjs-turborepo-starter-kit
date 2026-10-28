@@ -106,7 +106,7 @@ SQL migration: `20260913120000_org_scoped_rewardhub`
 1. Backfill `organization_id` on rewards, redemptions, audit logs, stored files from `merchant_orgs.organization_id`.
 2. Create org-scoped replacement tables (`organization_api_keys`, `organization_terminals`, KYB tables, assets).
 3. Drop legacy merchant-org tables and `merchant_role_capabilities`.
-4. Re-apply RLS policies keyed on `organization_id` (`pnpm db:rls`).
+4. Re-apply RLS policies keyed on `organization_id` (`pnpm tools db:apply-security`).
 
 ## Consequences
 
@@ -129,7 +129,7 @@ After deploy:
 
 ```bash
 cd apps/api
-pnpm db:deploy    # or recover partial apply then pnpm db:rls
+pnpm tools db:deploy    # or recover partial apply then pnpm tools db:apply-security
 pnpm db:seed      # re-seed demo orgs + rewards
 ```
 

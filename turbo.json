@@ -144,9 +144,6 @@
 		"db:apply-security": {
 			"cache": false
 		},
-		"db:rls": {
-			"cache": false
-		},
 		"db:migrate": {
 			"cache": false,
 			"interactive": true

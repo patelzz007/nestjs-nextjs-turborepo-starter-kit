@@ -1,4 +1,4 @@
-import { getPermissionDefinitions } from "@workspace/shared";
+import { getPermissionDefinitions, isTenantPermission, MembershipRoleSchema, TENANT_ROLE_TEMPLATE_NAMES, TENANT_ROLE_TEMPLATES } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { ADMIN_ROLE_NAME, DEFAULT_CONSUMER_ROLE_NAME, LOCATION_MANAGER_ROLE_NAME, LOCATION_STAFF_ROLE_NAME, SUPER_ADMIN_ROLE_NAME } from "../../../domain/rbac-catalog";
@@ -49,30 +49,57 @@ describe("SYSTEM_ROLE_CATALOG", () => {
 	});
 
 	it("lets every platform role read the configured GitHub repositories", () => {
-		for (const roleName of ["SuperAdmin", "Admin", "Manager", "User"]) {
+		for (const roleName of ["SuperAdmin", "Admin", "User"]) {
 			expect(keys(grantsOf(roleName)).has("READ:GITHUB:GLOBAL"), roleName).toBe(true);
 		}
 	});
 
-	it("withholds RBAC, system settings and the two direct-grant permissions from Manager and Admin as documented", () => {
-		expect(grantsOf("Manager").some((permission) => permission.resource === "ROLE" || permission.resource === "SYSTEM_SETTINGS")).toBe(false);
+	it("withholds the two direct-grant permissions from Admin as documented", () => {
 		expect(keys(grantsOf("Admin")).has("DELETE:USER:GLOBAL")).toBe(false);
 		expect(keys(grantsOf("Admin")).has("MANAGE:SYSTEM_SETTINGS:GLOBAL")).toBe(false);
 	});
 
-	it("gives Admin the whole kanban board and Manager every board action except deleting tasks and rearranging columns", () => {
-		const kanbanOf = (roleName: string): string[] => [...keys(grantsOf(roleName).filter((permission) => permission.resource === "KANBAN_TASK"))].sort();
+	it("defines one tenant-role template per tenant role, holding exactly its template's GLOBAL permissions (ADR 067)", () => {
+		for (const template of MembershipRoleSchema.options) {
+			const definition = SYSTEM_ROLE_CATALOG.find((role) => role.template === template);
+			const expected = TENANT_ROLE_TEMPLATES[template].map((permission) => `${permission.action}:${permission.resource}:GLOBAL`);
+
+			expect(definition?.name).toBe(TENANT_ROLE_TEMPLATE_NAMES[template]);
+			expect([...keys(grantsOf(TENANT_ROLE_TEMPLATE_NAMES[template]))].sort()).toEqual([...expected].sort());
+			expect(grantsOf(TENANT_ROLE_TEMPLATE_NAMES[template]).every((permission) => isTenantPermission(permission))).toBe(true);
+		}
+	});
+
+	it("keeps platform roles free of templates: no platform role is named like a tenant role", () => {
+		const platformNames = SYSTEM_ROLE_CATALOG.filter((role) => role.template === undefined).map((role) => role.name);
+
+		expect(platformNames.filter((name) => Object.values(TENANT_ROLE_TEMPLATE_NAMES).includes(name))).toEqual([]);
+	});
+
+	it("gives Admin the whole kanban board and the customer none of it", () => {
+		const kanbanOf = (roleName: string): string[] =>
+			[...keys(grantsOf(roleName).filter((permission) => permission.resource === "KANBAN_TASK" || permission.resource === "KANBAN_BOARD"))].sort();
 
 		expect(kanbanOf("Admin")).toEqual([
 			"CREATE:KANBAN_TASK:GLOBAL",
 			"DELETE:KANBAN_TASK:GLOBAL",
 			"LIST:KANBAN_TASK:GLOBAL",
-			"MANAGE:KANBAN_TASK:GLOBAL",
 			"READ:KANBAN_TASK:GLOBAL",
+			"UPDATE:KANBAN_BOARD:GLOBAL",
 			"UPDATE:KANBAN_TASK:GLOBAL",
 		]);
-		expect(kanbanOf("Manager")).toEqual(["CREATE:KANBAN_TASK:GLOBAL", "LIST:KANBAN_TASK:GLOBAL", "READ:KANBAN_TASK:GLOBAL", "UPDATE:KANBAN_TASK:GLOBAL"]);
 		expect(kanbanOf("User")).toEqual([]);
+	});
+
+	it("gives Admin the precise moderation and lifecycle verbs, never banning (SuperAdmin only)", () => {
+		const of = (resource: string): string[] => [...keys(grantsOf("Admin").filter((permission) => permission.resource === resource))].sort();
+
+		expect(of("REWARD")).toEqual(expect.arrayContaining(["APPROVE:REWARD:GLOBAL", "REJECT:REWARD:GLOBAL"]));
+		expect(of("MERCHANT_ORG")).toEqual(
+			expect.arrayContaining(["APPROVE:MERCHANT_ORG:GLOBAL", "REJECT:MERCHANT_ORG:GLOBAL", "SUSPEND:MERCHANT_ORG:GLOBAL", "REACTIVATE:MERCHANT_ORG:GLOBAL"]),
+		);
+		expect(of("MERCHANT_ORG")).not.toEqual(expect.arrayContaining(["BAN:MERCHANT_ORG:GLOBAL"]));
+		expect(of("MERCHANT_ORG")).not.toEqual(expect.arrayContaining(["UNBAN:MERCHANT_ORG:GLOBAL"]));
 	});
 
 	it("makes Location Staff a subset of Location Manager, both only LOCATION-scoped", () => {

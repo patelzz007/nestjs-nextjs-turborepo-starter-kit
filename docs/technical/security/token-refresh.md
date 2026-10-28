@@ -375,7 +375,7 @@ Merchant
 
 This prevents a login or logout in one application from changing the session in another application.
 Merchant login also requires an active merchant membership or the global
-`MANAGE MERCHANT_ORG` permission, so consumer-only accounts are rejected before
+`UPDATE MERCHANT_ORG` permission (platform staff), so consumer-only accounts are rejected before
 a merchant session is created.
 
 ---

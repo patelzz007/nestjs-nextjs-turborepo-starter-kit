@@ -17,7 +17,7 @@ import { ChevronLeft, ChevronRight, UserX } from "lucide-react";
 import * as React from "react";
 
 import { BannedCustomerRowsSkeleton, MerchantBannedCustomersPageSkeleton } from "@/components/loading/merchant-page-skeletons";
-import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
+import { SettingsSectionHeader } from "@workspace/ui/components/settings-shell";
 import { BANNED_CUSTOMERS_URL_STATE, toBannedCustomersQuery } from "@/contexts/tenancy/url-state/banned-customers";
 
 import { MerchantCapabilityGate } from "../access/merchant-capability-gate";
@@ -115,7 +115,7 @@ function TenantBannedCustomersPageContent({ tenantSlug }: TenantBannedCustomersP
 
 	return (
 		<div className="space-y-8">
-			<MerchantPageHeader
+			<SettingsSectionHeader
 				title="Banned customers"
 				description="Customers you banned can't claim your rewards, and your tills refuse their codes. Ban a customer from a row of the redemption log."
 			/>

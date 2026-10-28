@@ -9,7 +9,7 @@ import { declaration } from "./css";
 import { formatColorLiteral, formatLength, formatVariableReference, paletteVariableName } from "./format";
 
 /** The command that rewrites every generated file — named in each header and in every staleness failure. */
-export const GENERATE_COMMAND = "pnpm tokens:generate";
+export const GENERATE_COMMAND = "pnpm tools tokens:generate";
 
 /** The base radius every `rounded-*` step multiplies. */
 export const BASE_RADIUS: RadiusName = "radius";

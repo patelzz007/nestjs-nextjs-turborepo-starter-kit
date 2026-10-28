@@ -1,5 +1,5 @@
 /**
- * Byte counts for `pnpm bundle:check` (plan §19.6): the gzip size of a Next
+ * Byte counts for `pnpm tools bundle:check` (plan §19.6): the gzip size of a Next
  * route's first-load chunks (what the browser downloads), and the raw size of
  * a mobile Hermes bundle read from `expo export`'s `metadata.json`.
  */

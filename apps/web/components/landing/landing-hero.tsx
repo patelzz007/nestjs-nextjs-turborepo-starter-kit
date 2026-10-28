@@ -40,7 +40,7 @@ export function LandingHero({ featuredOffers, liveOfferCount, secondaryAction }:
 			<div
 				className={cn(
 					"mx-auto grid grid-cols-1 items-center gap-14 px-4 pt-14 pb-16 sm:px-6 sm:pt-20 sm:pb-20 lg:px-8 lg:pt-24 lg:pb-24",
-					hasPreview ? "max-w-6xl lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]" : "max-w-3xl text-center",
+					hasPreview ? "max-w-10xl lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]" : "max-w-3xl text-center",
 				)}>
 				<div>
 					<p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/70 px-3 py-1 text-xs font-semibold tracking-wide text-primary uppercase shadow-xs backdrop-blur-sm">

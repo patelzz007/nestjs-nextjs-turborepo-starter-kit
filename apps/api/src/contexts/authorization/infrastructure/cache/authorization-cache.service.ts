@@ -34,9 +34,6 @@ export interface CachedAuthorization {
 	readonly cachedAt: number;
 }
 
-/** How long the role hierarchy (roleId → parentRoleId) is reused before it is reloaded. */
-const ROLE_HIERARCHY_TTL_MS = 15 * 60 * 1000;
-
 // ── Service ─────────────────────────────────────────────────────────────────
 
 @Injectable()
@@ -45,11 +42,6 @@ export class AuthorizationCacheService {
 
 	private readonly store: BoundedTtlCache<string, CachedAuthorization>;
 	private readonly defaultTtlMs: number;
-
-	/** Cached role hierarchy graph: roleId → parentRoleId. */
-	private readonly roleHierarchy: Map<string, string | null> = new Map<string, string | null>();
-	private hierarchyLoadedAt = 0;
-	private readonly hierarchyTtlMs: number = ROLE_HIERARCHY_TTL_MS;
 
 	public constructor(config: TypedConfigService) {
 		this.defaultTtlMs = config.caches.authorizationTtlMs;
@@ -125,35 +117,6 @@ export class AuthorizationCacheService {
 
 	public get maxEntries(): number {
 		return this.store.getDiagnostics().maxEntries;
-	}
-
-	// ── Role hierarchy cache ────────────────────────────────────────────
-
-	/**
-	 * Get the cached role hierarchy. Returns `null` if expired or not loaded.
-	 */
-	public getHierarchy(): Map<string, string | null> | null {
-		if (nowEpochMs() > this.hierarchyLoadedAt + this.hierarchyTtlMs) {
-			return null;
-		}
-		return this.roleHierarchy;
-	}
-
-	/**
-	 * Store the role hierarchy graph.
-	 */
-	public setHierarchy(hierarchy: Map<string, string | null>): void {
-		this.roleHierarchy.clear();
-		for (const [key, value] of hierarchy) {
-			this.roleHierarchy.set(key, value);
-		}
-		this.hierarchyLoadedAt = nowEpochMs();
-	}
-
-	/** Invalidate the cached role hierarchy (call after role parent changes). */
-	public invalidateHierarchy(): void {
-		this.roleHierarchy.clear();
-		this.hierarchyLoadedAt = 0;
 	}
 
 	/** Approximate memory footprint for diagnostics. */

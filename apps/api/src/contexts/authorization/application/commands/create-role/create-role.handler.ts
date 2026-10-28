@@ -5,10 +5,8 @@ import type { RoleResponse } from "@workspace/shared";
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import { RoleAggregate, type RoleState } from "../../../domain/aggregates/role.aggregate";
 import { RoleNameTakenError } from "../../../domain/errors/authorization.errors";
-import type { RbacActor } from "../../../domain/policies/rbac-escalation.policy";
 import type { AuthorizationScope } from "../../authorization-scope";
-import { rbacActorOf, requireUserActor } from "../../services/rbac-actor";
-import { RbacMutationGuard } from "../../services/rbac-mutation-guard";
+import { requireUserActor } from "../../services/rbac-actor";
 import { RbacMutationScope, type RbacMutationOutcome } from "../../services/rbac-mutation-scope";
 import { toRoleResponse } from "../../services/rbac-response.mapper";
 import { CreateRoleCommand } from "./create-role.command";
@@ -20,26 +18,17 @@ export class CreateRoleHandler implements ICommandHandler<CreateRoleCommand, Rol
 
 	public constructor(
 		private readonly rbac: RbacMutationScope,
-		private readonly guard: RbacMutationGuard,
 		@Inject(CLOCK) private readonly clock: Clock,
 	) {}
 
 	public async execute(command: CreateRoleCommand): Promise<RoleResponse> {
 		const { input } = command;
 		const actor = requireUserActor(command.actor);
-		const rbacActor: RbacActor = rbacActorOf(actor);
 		const created: RoleResponse = await this.rbac.run({ kind: "user", actor }, async (scope: AuthorizationScope): Promise<RbacMutationOutcome<RoleResponse>> => {
 			if (await scope.roles.isNameTaken(input.name)) {
 				throw new RoleNameTakenError(input.name, true);
 			}
-			if (input.parentId !== undefined) {
-				await this.guard.requireLiveRole(scope, input.parentId);
-				await this.guard.assertCanGrantRoles(scope, rbacActor, [input.parentId]);
-			}
-			const role: RoleAggregate = RoleAggregate.create(
-				{ id: newRowId(), name: input.name, description: input.description ?? null, parentId: input.parentId ?? null },
-				this.clock.now(),
-			);
+			const role: RoleAggregate = RoleAggregate.create({ id: newRowId(), name: input.name, description: input.description ?? null }, this.clock.now());
 			const stored: RoleState = await scope.roles.save(role);
 			return {
 				kind: "changed",

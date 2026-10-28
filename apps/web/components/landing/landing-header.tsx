@@ -33,7 +33,7 @@ export function LandingHeader(): React.JSX.Element {
 				"sticky top-0 z-50 border-b transition-[background-color,border-color,box-shadow] duration-200 motion-reduce:transition-none",
 				isDetached ? "border-border/80 bg-background/80 shadow-sm backdrop-blur-md" : "border-transparent bg-transparent",
 			)}>
-			<div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+			<div className="mx-auto flex h-16 max-w-10xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
 				<Link
 					href={ROUTES.home}
 					className="flex min-w-0 items-center gap-2.5 rounded-md transition-opacity hover:opacity-90 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">

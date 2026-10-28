@@ -29,7 +29,7 @@
 | Cross-tenant references guarded in the database (TI-09, TI-27) | Composite `(tenantId, id)` foreign keys (ADR 062; 14 in `schema.prisma`) | ✅ matches |
 | Two-tenant isolation tests (TI-30) | Shared two-tenant fixture; `test/tenancy/multi/isolation.e2e-spec.ts` and 20+ cross-tenant suites; full e2e runs in multi mode | ✅ matches |
 | Token claims are hints, not membership proof (TI-36) | JWTs carry identity only (ADR 003); per-session revocation is immediate (ADR 034) | ✅ stricter |
-| Migrations (stack constraint 3, TI-34) | Migrations are generated from `schema.prisma` (`pnpm db:migrate:create`), never hand-written; RLS SQL lives in `prisma/rls.sql` and is applied by `pnpm db:apply-security` | ✅ matches |
+| Migrations (stack constraint 3, TI-34) | Migrations are generated from `schema.prisma` (`pnpm db:migrate:create`), never hand-written; RLS SQL lives in `prisma/rls.sql` and is applied by `pnpm tools db:apply-security` | ✅ matches |
 
 ## 0. Operating contract for the AI agent
 

@@ -4,29 +4,18 @@ import { PublicUrlResolver } from "../../../config/public-url.resolver";
 import { MERCHANT_TENANT_RESOLVER, type MerchantTenantResolverPort } from "../../../platform/application/ports/merchant-tenant-resolver.port";
 import { PrismaModule } from "../../../prisma/prisma.module";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
-import { CEDAR_POLICY_EVALUATOR, type CedarPolicyEvaluatorPort } from "../../authorization/public-api";
 import { MERCHANT_PORTAL_ACCESS } from "../../identity/public-api";
 import type { ApiKeyCapabilitiesPort } from "../application/ports/api-key-capabilities.port";
 import type { MerchantAccessPort } from "../../../platform/application/ports/authorization.port";
 import type { TenantReadPort } from "../application/ports/tenant-read.port";
 import type { TenantFileAccessPort } from "../application/ports/tenant-file-access.port";
-import {
-	API_KEY_CAPABILITIES,
-	MERCHANT_ACCESS,
-	TENANT_CONTEXT_READ,
-	TENANT_DIRECTORY,
-	TENANT_FILE_ACCESS,
-	TENANT_READ,
-	TENANT_POLICY,
-} from "../application/ports/tenants.tokens";
-import type { TenantPolicyPort } from "../application/ports/tenant-policy.port";
+import { API_KEY_CAPABILITIES, MERCHANT_ACCESS, TENANT_CONTEXT_READ, TENANT_DIRECTORY, TENANT_FILE_ACCESS, TENANT_READ } from "../application/ports/tenants.tokens";
 import { MerchantAccessAdapter } from "./adapters/merchant-access.adapter";
 import { MerchantPortalAccessAdapter } from "./adapters/merchant-portal-access.adapter";
 import { TenantContextService } from "./adapters/tenant-context.service";
 import { TenantDirectoryAdapter } from "./adapters/tenant-directory.adapter";
 import { TenantFileAccessAdapter } from "./adapters/tenant-file-access.adapter";
 import { TenantRewardAuthService } from "./adapters/tenant-reward-auth.service";
-import { CedarTenantPolicyAdapter } from "./adapters/tenant-policy.adapter";
 import { TenantAuditModule } from "./audit/tenant-audit.module";
 import { PrismaTenantReadRepository } from "./persistence/prisma-tenant-read.repository";
 import { PrismaOwnMembershipsReadRepository } from "./persistence/prisma-own-memberships.read-repository";
@@ -46,11 +35,6 @@ import { PrismaOwnMembershipsReadRepository } from "./persistence/prisma-own-mem
 	providers: [
 		TenantContextService,
 		TenantRewardAuthService,
-		{
-			provide: TENANT_POLICY,
-			inject: [CEDAR_POLICY_EVALUATOR],
-			useFactory: (cedar: CedarPolicyEvaluatorPort): TenantPolicyPort => new CedarTenantPolicyAdapter(cedar),
-		},
 		{
 			provide: MERCHANT_ACCESS,
 			inject: [TenantRewardAuthService, TenantContextService, API_KEY_CAPABILITIES],
@@ -94,7 +78,6 @@ import { PrismaOwnMembershipsReadRepository } from "./persistence/prisma-own-mem
 		MERCHANT_PORTAL_ACCESS,
 		TENANT_DIRECTORY,
 		TENANT_CONTEXT_READ,
-		TENANT_POLICY,
 		TenantAuditModule,
 		TenantContextService,
 		TenantRewardAuthService,

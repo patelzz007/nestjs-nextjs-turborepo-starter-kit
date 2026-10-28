@@ -200,7 +200,7 @@ interface MutationCallbacks<TData> {
 }
 
 function renderAsAdmin(): void {
-	renderWithAuthorization(<TerminalsPageView tenantSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: tenantSeed });
+	renderWithAuthorization(<TerminalsPageView tenantSlug={TEST_ORG_SLUG} />, { role: "MANAGER", tenantContext: tenantSeed });
 }
 
 function openAddDialog(): HTMLElement {
@@ -575,7 +575,7 @@ const SERVER_PAGE: Envelope<MerchantTerminalSummary[]> = {
 describe("TerminalsPageView server prefetch (no double fetch)", () => {
 	function renderWithPrefetch(prefetchedFor: string | undefined): ListOptions | undefined {
 		renderWithAuthorization(<TerminalsPageView tenantSlug={TEST_ORG_SLUG} initialTerminals={{ locationId: prefetchedFor, data: SERVER_PAGE }} />, {
-			role: "ADMIN",
+			role: "MANAGER",
 			tenantContext: tenantSeed,
 		});
 		const [input, options] = terminalsListQuery.mock.calls.at(0) ?? [];

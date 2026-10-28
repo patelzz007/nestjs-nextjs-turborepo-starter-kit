@@ -141,7 +141,7 @@ Each row is a decision from the design review. The **Why** column is the reason.
 | 51 | A rate-limit table (§10) covers every public, credential-checking and email-sending endpoint, with an e2e test that confirms the request after the limit is rejected. Throttles live in presentation; attempt limits are domain invariants. | Infrastructure ("how often may this IP call") is separate from domain ("how many attempts does a claim allow"). |
 | 52 | Prevent N+1 queries and prove it with an e2e SQL statement counter: same statement count for a 1-row page and a 25-row page (§11). | Counting statements proves there's no N+1 instead of hoping. The 1-vs-25 comparison works whatever the absolute count. |
 | 53 | "Fast local startup" covers four phases: cold `pnpm dev`, API boot to `/health/ready`, first page compile in Next dev, and the first Metro bundle (§19). | A slow step in any one of them is what people experience as "startup is slow". Measuring each separately avoids fixing the wrong one. |
-| 54 | Measure a baseline first (`pnpm dev:timing`). Targets: ≥ 40% faster than baseline and API ready ≤ 5 s on a warm cache, recorded in `rules/19`. **No CI gate on startup time.** | Numbers chosen before measuring are guesses. CI machines aren't laptops, so a startup gate would be flaky. |
+| 54 | Measure a baseline first (`pnpm tools dev:timing`). Targets: ≥ 40% faster than baseline and API ready ≤ 5 s on a warm cache, recorded in `rules/19`. **No CI gate on startup time.** | Numbers chosen before measuring are guesses. CI machines aren't laptops, so a startup gate would be flaky. |
 | 55 | Startup gets faster through **lazy initialisation** (same in every environment) and visible flags. Correctness work is never skipped. | Different behaviour in dev and prod hides bugs. |
 | 56 | Code splitting at three levels (routes, heavy components, heavy libraries in handlers) **while every page stays SSR**. | Most of the payoff is in heavy components. `next/dynamic` splits code whether or not SSR is on, so the two don't conflict. |
 | 57 | Bundle budgets enforced in CI: per-route first-load JS for Next, main bundle for mobile. Baseline + 10%. | Without a gate, splitting decays the first time someone imports a chart into a layout. |
@@ -174,7 +174,7 @@ These were checked against the code. If you find one that is wrong, stop and rep
 - pnpm workspaces plus Turborepo. Root scripts:
   - `lint` (`turbo lint`), `test` (`turbo run test --concurrency=1`), `typecheck`
   - `test:e2e` (API plus analytics-consumer)
-  - `db:migrate:create`, `db:generate`, `db:seed`, `db:rls`, `db:check-rls-manifest`
+  - `db:migrate:create`, `db:generate`, `db:seed`, `db:apply-security`, `db:check-rls-manifest`
 - `apps/api` versions: NestJS `^12.1.2` (`@nestjs/core`, `@nestjs/common`), `@nestjs/bullmq ^12`, `@nestjs/schedule ^12`, `@nestjs/throttler ^6.7.1`, Prisma `^7.10` with `@prisma/adapter-pg`, zod `4.6.5`, TypeScript `6.0.3`, Vitest `^5`.
 - The API runs on the **Fastify** adapter (ADR 027).
 - `@nestjs/cqrs` is **not installed**. The latest published version is `12.1.0`, with peers `@nestjs/core ^12`, `@nestjs/common ^12`, `rxjs ^7.2`, `reflect-metadata`.
@@ -1438,7 +1438,7 @@ Create `platform/presentation/http/security/throttling/rate-limit-policy.ts`. Th
 1. Stop and report (§0.2).
 2. Once approved: edit `schema.prisma` → `pnpm db:migrate:create` → review the generated SQL (never hand-write it) → `pnpm db:generate`.
 3. Seed **every** new column in `apps/api/prisma/seed/` (repository rule).
-4. Re-run `pnpm db:check-rls-manifest` and the RLS tests.
+4. Re-run `pnpm tools db:check-rls-manifest` and the RLS tests.
 
 ---
 
@@ -1892,7 +1892,7 @@ Each task: the §16 definition of done.
 ### Phase E2: startup and bundle performance (§19)
 
 **T40: Measure the baseline**
-- **Do:** build `pnpm dev:timing` (§19.1). Run it 3× cold and 3× warm and record the medians in `rules/19` and the PR description.
+- **Do:** build `pnpm tools dev:timing` (§19.1). Run it 3× cold and 3× warm and record the medians in `rules/19` and the PR description.
 - **Gate:** standard.
 
 **T41: Dev scripts**
@@ -1905,7 +1905,7 @@ Each task: the §16 definition of done.
 **T42: API boot**
 - **Do:** §19.3.
 - **Gate:** `+e2e`.
-- **Also:** re-run `pnpm dev:timing` and record the API boot number.
+- **Also:** re-run `pnpm tools dev:timing` and record the API boot number.
 
 **T43: Next lazy loading, all pages SSR**
 - **Do:**
@@ -1924,7 +1924,7 @@ Each task: the §16 definition of done.
 - **Gate:** standard + the budget script exit 0.
 
 **T46: Verify the targets**
-- **Do:** re-run `pnpm dev:timing` and compare against the T40 targets (decision #54).
+- **Do:** re-run `pnpm tools dev:timing` and compare against the T40 targets (decision #54).
 - If a target is missed, report the phase, the numbers, and the top three boot phases from the API `markPhase` log. **Do not** add caches or skip work to hit a number (decisions #55 and #62).
 - **Gate:** standard.
 
@@ -1940,7 +1940,7 @@ Each task: the §16 definition of done.
   - `pnpm run typecheck`
   - `pnpm run test`
   - `pnpm test:e2e`
-  - `pnpm db:check-rls-manifest`
+  - `pnpm tools db:check-rls-manifest`
   - every app's build
 - **Compare against the T01 baseline:**
   - Test counts must be ≥ baseline. Unit tests should be well above, because of §13.
@@ -2001,7 +2001,7 @@ Each task: the §16 definition of done.
 - [ ] Contract snapshot identical to T01 except `claims.qr` method and the new `claims.get`.
 - [ ] Every Next page is SSR; `ssr: false` appears only for allowlisted widgets with sized skeletons.
 - [ ] Bundle budget script passes in CI for web, admin, merchant and mobile.
-- [ ] `pnpm dev:timing` results recorded at T40 and T46; targets met or the misses reported with evidence.
+- [ ] `pnpm tools dev:timing` results recorded at T40 and T46; targets met or the misses reported with evidence.
 - [ ] No new caches were introduced for startup (decision #62).
 - [ ] Frontend contexts regrouped; public paths unchanged; mobile untouched except folders.
 - [ ] ADRs 058–060 written; 015/017/026 headers updated; rules rewritten; `.cursorrules` is a pointer; `AGENTS.md` routing updated; context map and glossary updated.
@@ -2048,7 +2048,7 @@ unit tests: <n> → <n>   e2e files: <n> → <n>
 
 ### 19.1 Measuring (T40)
 
-- **Script:** `pnpm dev:timing` → `packages/tooling/src/dev-timing/` (Node script, no new dependency). It measures four phases, each in milliseconds:
+- **Script:** `pnpm tools dev:timing` → `packages/tooling/src/dev-timing/` (Node script, no new dependency). It measures four phases, each in milliseconds:
 
 | Phase | Start | End |
 |---|---|---|
@@ -2134,12 +2134,12 @@ unit tests: <n> → <n>   e2e files: <n> → <n>
 
 ### 19.6 Bundle budgets (T45)
 
-- **Script:** `packages/tooling/src/bundle-budget/` with `pnpm bundle:check` at the root.
+- **Script:** `packages/tooling/src/bundle-budget/` with `pnpm tools bundle:check` at the root.
   - **Next apps:** read `node_modules/next/dist/docs` for 16.3 to identify the build manifest that maps each App Router route to its client chunks (for example the app build manifest or client reference manifests). For each route, sum the **gzip** size (`node:zlib` `gzipSync`, default level) of its unique first-load JS chunks. If no manifest maps routes to chunks, stop and report.
   - **Mobile:** read the bundle size from the `expo export` output the CI build already produces (the Hermes bytecode bundle per platform).
 - **Budgets file:** `bundle-budgets.json` at the repo root: `{ "web": { "<route>": <bytes> }, "admin": {...}, "merchant": {...}, "mobile": { "ios": <bytes>, "android": <bytes> } }`.
-  - Generate it once after T43/T44 with `pnpm bundle:check --write-baseline`, which writes measured × `BUDGET_HEADROOM = 1.10` (named constant: 10% headroom, decision #57), rounded up to the next KiB.
+  - Generate it once after T43/T44 with `pnpm tools bundle:check --write-baseline`, which writes measured × `BUDGET_HEADROOM = 1.10` (named constant: 10% headroom, decision #57), rounded up to the next KiB.
   - Commit it.
   - Raising a budget later requires a PR that edits this file. That diff is the review signal.
-- **CI:** add a step to `.github/workflows/ci.yml` after the existing build job's `turbo run build`: `pnpm bundle:check`. It fails when any route exceeds its budget or when a route has no budget entry (a new route must add one).
+- **CI:** add a step to `.github/workflows/ci.yml` after the existing build job's `turbo run build`: `pnpm tools bundle:check`. It fails when any route exceeds its budget or when a route has no budget entry (a new route must add one).
 - **Tests:** unit tests for manifest parsing (fixture manifests in `__tests__/fixtures/`), the gzip summing, the headroom rounding, and the "missing route fails" rule.

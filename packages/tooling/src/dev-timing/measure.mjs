@@ -1,5 +1,5 @@
 /**
- * The measuring steps of `pnpm dev:timing` (plan §19.1), each turning probes
+ * The measuring steps of `pnpm tools dev:timing` (plan §19.1), each turning probes
  * into `Measurement`s. Separated from the process handling in
  * `run-dev-timing.mjs` so they are unit-tested against fake servers on
  * ephemeral ports, without ever spawning the real stack.

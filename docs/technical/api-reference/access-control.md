@@ -1,18 +1,18 @@
 ---
-title: "API reference — Roles, permissions, policies and audit"
-description: "Platform RBAC administration, authorization decisions, Cedar policy drafts, the capability catalog and the HTTP audit log."
+title: "API reference — Roles, permissions and audit"
+description: "Platform RBAC administration, authorization decisions, the capability catalog and the HTTP audit log."
 order: 3
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792540800000
+lastUpdated: 1793145600000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
 
-<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm docs:api -->
+<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm tools docs:api -->
 
-# API reference — Roles, permissions, policies and audit
+# API reference — Roles, permissions and audit
 
-Platform RBAC administration, authorization decisions, Cedar policy drafts, the capability catalog and the HTTP audit log.
+Platform RBAC administration, authorization decisions, the capability catalog and the HTTP audit log.
 
 How these endpoints fit together: [Authorization overview](../authorization/overview.md). Conventions shared by every endpoint (envelope, auth, errors, pagination): [API reference overview](./README.md).
 
@@ -44,8 +44,8 @@ How these endpoints fit together: [Authorization overview](../authorization/over
 | `data[].description` | string \| null | yes |  |
 | `data[].id` | string | yes |  |
 | `data[].isActive` | boolean | yes |  |
+| `data[].kind` | "PLATFORM" \| "TEMPLATE" \| "TENANT" | yes |  |
 | `data[].name` | string | yes |  |
-| `data[].parentId` | string \| null | yes |  |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
 | `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
 | `meta.limit` | integer | yes | Items per page; range 1–100 |
@@ -78,30 +78,30 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "01a15e72-12d9-756d-afe4-5d44b11d3219",
+      "id": "01a1827f-3e06-7438-92b4-3fbb54409b4f",
       "name": "Admin",
       "description": "Admin panel — manage users, settings, and platform data",
       "isActive": true,
-      "parentId": null
+      "kind": "PLATFORM"
     },
     {
-      "id": "01a15e72-12e4-72bd-85bd-bf7b7d360f07",
-      "name": "Location Manager",
-      "description": "Location role — runs a location (details, rewards, redemptions)",
+      "id": "01a1827f-3e19-72d4-b0e2-fb46b7f9fd35",
+      "name": "Cashier",
+      "description": "Tenant role template — every tenant's Cashier starts as a copy of this",
       "isActive": true,
-      "parentId": null
+      "kind": "TEMPLATE"
     }
   ],
   "meta": {
     "limit": 20,
-    "total": 8,
+    "total": 10,
     "page": 1,
     "totalPages": 1,
     "nextCursor": null,
     "hasNext": false,
     "hasPrevious": false,
-    "correlationId": "JaJv1MZQfpJQ1vkhfyNeq",
-    "timestamp": 1792586044294
+    "correlationId": "2yuXLCmeMSppbpLbEgsG1",
+    "timestamp": 1793190873743
   }
 }
 ```
@@ -122,7 +122,6 @@ Response `200 OK` (application/json):
 | --- | --- | --- | --- |
 | `description` | string | no | Role description |
 | `name` | string | yes | Role name; at most 100 characters |
-| `parentId` | string (uuid) | no | Parent role ID for role hierarchy |
 
 **Response 201 Created** (`application/json`) — Created role
 
@@ -131,10 +130,6 @@ Response `200 OK` (application/json):
 | `data._count` | object | no |  |
 | `data._count.rolePermissions` | number | yes |  |
 | `data._count.userRoles` | number | yes |  |
-| `data.children` | object[] | no |  |
-| `data.children[].id` | string | yes |  |
-| `data.children[].isActive` | boolean | yes |  |
-| `data.children[].name` | string | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string \| null | yes |  |
@@ -143,10 +138,6 @@ Response `200 OK` (application/json):
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | no |  |
 | `data.name` | string | yes |  |
-| `data.parent` | object \| null | no |  |
-| `data.parent.id` | string | yes |  |
-| `data.parent.name` | string | yes |  |
-| `data.parentId` | string \| null | yes |  |
 | `data.rolePermissions` | object[] | no |  |
 | `data.rolePermissions[].permission` | object | yes |  |
 | `data.rolePermissions[].permission.action` | string | yes |  |
@@ -181,8 +172,7 @@ Content-Type: application/json
 
 {
   "name": "Store Auditor",
-  "description": "Reads geography and audit data for store reviews",
-  "parentId": "01a15e72-12e1-759c-b594-26a0a071f259"
+  "description": "Reads geography and audit data for store reviews"
 }
 ```
 
@@ -192,20 +182,19 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792586044439,
-    "updatedAt": 1792586044439,
+    "createdAt": 1793190873832,
+    "updatedAt": 1793190873832,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15e74-541b-7b43-a4cd-f76b3288f820",
+    "id": "01a18281-4aee-763a-bba6-e9d25c590423",
     "name": "Store Auditor",
     "description": "Reads geography and audit data for store reviews",
     "isActive": true,
-    "isSystem": false,
-    "parentId": "01a15e72-12e1-759c-b594-26a0a071f259"
+    "isSystem": false
   },
   "meta": {
-    "correlationId": "CYRX0g1LOKnNI9XPMWDCk",
-    "timestamp": 1792586044475
+    "correlationId": "7M3LbOrUQ6r2HlvxLdznu",
+    "timestamp": 1793190873858
   }
 }
 ```
@@ -230,10 +219,6 @@ Response `201 Created` (application/json):
 | `data._count` | object | no |  |
 | `data._count.rolePermissions` | number | yes |  |
 | `data._count.userRoles` | number | yes |  |
-| `data.children` | object[] | no |  |
-| `data.children[].id` | string | yes |  |
-| `data.children[].isActive` | boolean | yes |  |
-| `data.children[].name` | string | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string \| null | yes |  |
@@ -242,10 +227,6 @@ Response `201 Created` (application/json):
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | no |  |
 | `data.name` | string | yes |  |
-| `data.parent` | object \| null | no |  |
-| `data.parent.id` | string | yes |  |
-| `data.parent.name` | string | yes |  |
-| `data.parentId` | string \| null | yes |  |
 | `data.rolePermissions` | object[] | no |  |
 | `data.rolePermissions[].permission` | object | yes |  |
 | `data.rolePermissions[].permission.action` | string | yes |  |
@@ -272,7 +253,7 @@ Response `201 Created` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/admin/roles/01a15e72-12dd-756d-86fd-d5396d5ab9d1
+GET /api/v1/admin/roles/01a1827f-3e16-778b-9a2c-cbe82254ecbc
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -283,20 +264,19 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792585896655,
-    "updatedAt": 1792585896655,
+    "createdAt": 1793190739449,
+    "updatedAt": 1793190739449,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15e72-12dd-756d-86fd-d5396d5ab9d1",
+    "id": "01a1827f-3e16-778b-9a2c-cbe82254ecbc",
     "name": "Manager",
-    "description": "Admin panel — read/update users and reports (no RBAC or system settings)",
+    "description": "Tenant role template — every tenant's Manager starts as a copy of this",
     "isActive": true,
-    "isSystem": true,
-    "parentId": null
+    "isSystem": true
   },
   "meta": {
-    "correlationId": "CnFwTv00rgOKpqqim7C3D",
-    "timestamp": 1792586044386
+    "correlationId": "pEnJ5cX1FytSqNJZ0_Gtd",
+    "timestamp": 1793190873810
   }
 }
 ```
@@ -331,10 +311,6 @@ Response `200 OK` (application/json):
 | `data._count` | object | no |  |
 | `data._count.rolePermissions` | number | yes |  |
 | `data._count.userRoles` | number | yes |  |
-| `data.children` | object[] | no |  |
-| `data.children[].id` | string | yes |  |
-| `data.children[].isActive` | boolean | yes |  |
-| `data.children[].name` | string | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string \| null | yes |  |
@@ -343,10 +319,6 @@ Response `200 OK` (application/json):
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | no |  |
 | `data.name` | string | yes |  |
-| `data.parent` | object \| null | no |  |
-| `data.parent.id` | string | yes |  |
-| `data.parent.name` | string | yes |  |
-| `data.parentId` | string \| null | yes |  |
 | `data.rolePermissions` | object[] | no |  |
 | `data.rolePermissions[].permission` | object | yes |  |
 | `data.rolePermissions[].permission.action` | string | yes |  |
@@ -373,7 +345,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/admin/roles/01a15e74-541b-7b43-a4cd-f76b3288f820
+PATCH /api/v1/admin/roles/01a18281-4aee-763a-bba6-e9d25c590423
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -390,20 +362,19 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792586044439,
-    "updatedAt": 1792586044536,
+    "createdAt": 1793190873832,
+    "updatedAt": 1793190873898,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15e74-541b-7b43-a4cd-f76b3288f820",
+    "id": "01a18281-4aee-763a-bba6-e9d25c590423",
     "name": "Store Auditor",
     "description": "Reads geography, audit and analytics data for store reviews",
     "isActive": true,
-    "isSystem": false,
-    "parentId": "01a15e72-12e1-759c-b594-26a0a071f259"
+    "isSystem": false
   },
   "meta": {
-    "correlationId": "UuhXY734Ux3APR8O91Efh",
-    "timestamp": 1792586044551
+    "correlationId": "086teHKYxsFdFThLKWD0i",
+    "timestamp": 1793190873919
   }
 }
 ```
@@ -441,7 +412,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-DELETE /api/v1/admin/roles/01a15e74-541b-7b43-a4cd-f76b3288f820
+DELETE /api/v1/admin/roles/01a18281-4aee-763a-bba6-e9d25c590423
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -456,113 +427,8 @@ Response `200 OK` (application/json):
     "message": "Role deleted successfully"
   },
   "meta": {
-    "correlationId": "_J6ZYAyd6FlY0jCk2Ykhl",
-    "timestamp": 1792586045347
-  }
-}
-```
-
-### PATCH /api/v1/admin/roles/{id}/parent
-
-- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **Permission** `UPDATE:ROLE`.
-- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
-- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
-- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RolesController_setParent` · [source](../../../apps/api/src/contexts/authorization/presentation/http/roles.controller.ts)
-
-**Parameters**
-
-| Name | In | Type | Required | Notes |
-| --- | --- | --- | --- | --- |
-| `id` | path | string (uuid) | yes |  |
-
-**Request body** (`application/json`, required)
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `parentId` | string (uuid) \| null | yes | New parent role ID (null to remove parent) |
-
-**Response 200 OK** (`application/json`) — Parent role updated
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `data._count` | object | no |  |
-| `data._count.rolePermissions` | number | yes |  |
-| `data._count.userRoles` | number | yes |  |
-| `data.children` | object[] | no |  |
-| `data.children[].id` | string | yes |  |
-| `data.children[].isActive` | boolean | yes |  |
-| `data.children[].name` | string | yes |  |
-| `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
-| `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
-| `data.description` | string \| null | yes |  |
-| `data.id` | string | yes |  |
-| `data.isActive` | boolean | yes |  |
-| `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
-| `data.isSystem` | boolean | no |  |
-| `data.name` | string | yes |  |
-| `data.parent` | object \| null | no |  |
-| `data.parent.id` | string | yes |  |
-| `data.parent.name` | string | yes |  |
-| `data.parentId` | string \| null | yes |  |
-| `data.rolePermissions` | object[] | no |  |
-| `data.rolePermissions[].permission` | object | yes |  |
-| `data.rolePermissions[].permission.action` | string | yes |  |
-| `data.rolePermissions[].permission.description` | string \| null | yes |  |
-| `data.rolePermissions[].permission.group` | string \| null | yes |  |
-| `data.rolePermissions[].permission.id` | string | yes |  |
-| `data.rolePermissions[].permission.resource` | string | yes |  |
-| `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
-| `data.userRoles` | object[] | no |  |
-| `data.userRoles[].user` | object | yes |  |
-| `data.userRoles[].user.email` | string | yes |  |
-| `data.userRoles[].user.fullName` | string | yes |  |
-| `data.userRoles[].user.id` | string | yes |  |
-
-**Errors** (standard envelope, branch on `error.code`)
-
-| Status | Code | When |
-| --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
-| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
-| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
-| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
-
-**Example** — called as superadmin@example.com (admin panel).
-
-```http
-PATCH /api/v1/admin/roles/01a15e74-541b-7b43-a4cd-f76b3288f820/parent
-X-Client-Type: admin
-X-Mutation-Intent: same-origin
-Cookie: <session cookies from POST /api/v1/auth/login>
-Content-Type: application/json
-
-{
-  "parentId": "01a15e72-12dd-756d-86fd-d5396d5ab9d1"
-}
-```
-
-Response `200 OK` (application/json):
-
-```json
-{
-  "success": true,
-  "data": {
-    "createdAt": 1792586044439,
-    "updatedAt": 1792586044627,
-    "isDeleted": false,
-    "deletedAt": null,
-    "id": "01a15e74-541b-7b43-a4cd-f76b3288f820",
-    "name": "Store Auditor",
-    "description": "Reads geography, audit and analytics data for store reviews",
-    "isActive": true,
-    "isSystem": false,
-    "parentId": "01a15e72-12dd-756d-86fd-d5396d5ab9d1"
-  },
-  "meta": {
-    "correlationId": "cNkKU8fyKNvVIPrdLbtl2",
-    "timestamp": 1792586044652
+    "correlationId": "5RYjAnh1l8hsWkgslBi_R",
+    "timestamp": 1793190874253
   }
 }
 ```
@@ -606,7 +472,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/roles/01a15e74-541b-7b43-a4cd-f76b3288f820/permissions
+POST /api/v1/admin/roles/01a18281-4aee-763a-bba6-e9d25c590423/permissions
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -614,7 +480,7 @@ Content-Type: application/json
 
 {
   "permissionIds": [
-    "01a15e72-12a9-72ab-9aab-cb81480bd141"
+    "01a1827f-3dca-7779-86bc-9da9624f54ac"
   ]
 }
 ```
@@ -628,8 +494,8 @@ Response `201 Created` (application/json):
     "message": "Role permissions synced successfully"
   },
   "meta": {
-    "correlationId": "uqOYzzbvUvlSLs4pR8HVo",
-    "timestamp": 1792586044750
+    "correlationId": "DnTARoqMhniT0pxAW6bXv",
+    "timestamp": 1793190874004
   }
 }
 ```
@@ -656,10 +522,6 @@ Response `201 Created` (application/json):
 | `data._count` | object | no |  |
 | `data._count.rolePermissions` | number | yes |  |
 | `data._count.userRoles` | number | yes |  |
-| `data.children` | object[] | no |  |
-| `data.children[].id` | string | yes |  |
-| `data.children[].isActive` | boolean | yes |  |
-| `data.children[].name` | string | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string \| null | yes |  |
@@ -668,10 +530,6 @@ Response `201 Created` (application/json):
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | no |  |
 | `data.name` | string | yes |  |
-| `data.parent` | object \| null | no |  |
-| `data.parent.id` | string | yes |  |
-| `data.parent.name` | string | yes |  |
-| `data.parentId` | string \| null | yes |  |
 | `data.rolePermissions` | object[] | no |  |
 | `data.rolePermissions[].permission` | object | yes |  |
 | `data.rolePermissions[].permission.action` | string | yes |  |
@@ -698,7 +556,7 @@ Response `201 Created` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/roles/01a15e74-541b-7b43-a4cd-f76b3288f820/restore
+POST /api/v1/admin/roles/01a18281-4aee-763a-bba6-e9d25c590423/restore
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -710,20 +568,19 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792586044439,
-    "updatedAt": 1792586045404,
+    "createdAt": 1793190873832,
+    "updatedAt": 1793190874278,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15e74-541b-7b43-a4cd-f76b3288f820",
+    "id": "01a18281-4aee-763a-bba6-e9d25c590423",
     "name": "Store Auditor",
     "description": "Reads geography, audit and analytics data for store reviews",
     "isActive": true,
-    "isSystem": false,
-    "parentId": "01a15e72-12dd-756d-86fd-d5396d5ab9d1"
+    "isSystem": false
   },
   "meta": {
-    "correlationId": "gFwEQU06qUUMUcT4KR0_Q",
-    "timestamp": 1792586045440
+    "correlationId": "JLpoDYC89pam5MUDUsZHa",
+    "timestamp": 1793190874298
   }
 }
 ```
@@ -769,16 +626,16 @@ Response `201 Created` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/roles/01a15e74-541b-7b43-a4cd-f76b3288f820/validate-assignment
+POST /api/v1/admin/roles/01a18281-4aee-763a-bba6-e9d25c590423/validate-assignment
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a15e72-1863-71ec-a23d-27e9f3d5e687",
+  "userId": "01a1827f-4385-71c6-8700-5468cf8e851b",
   "roleIds": [
-    "01a15e74-541b-7b43-a4cd-f76b3288f820"
+    "01a18281-4aee-763a-bba6-e9d25c590423"
   ]
 }
 ```
@@ -793,8 +650,8 @@ Response `201 Created` (application/json):
     "message": "No conflicts detected"
   },
   "meta": {
-    "correlationId": "9LQylKlm9j79MyBSsAzrx",
-    "timestamp": 1792586044826
+    "correlationId": "mbhHSBzzqhqDfsCUJJQQU",
+    "timestamp": 1793190874032
   }
 }
 ```
@@ -845,10 +702,10 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a15e72-1863-71ec-a23d-27e9f3d5e687",
+  "userId": "01a1827f-4385-71c6-8700-5468cf8e851b",
   "roleIds": [
-    "01a15e72-12e1-759c-b594-26a0a071f259",
-    "01a15e74-541b-7b43-a4cd-f76b3288f820"
+    "01a1827f-3e0a-715a-a7b4-c46bb0b36e4d",
+    "01a18281-4aee-763a-bba6-e9d25c590423"
   ]
 }
 ```
@@ -871,14 +728,13 @@ Response `201 Created` (application/json):
     ],
     "roleRemoved": [],
     "permissionsGained": [
-      "READ:GEO",
-      "READ:USER"
+      "READ:GEO"
     ],
     "permissionsLost": []
   },
   "meta": {
-    "correlationId": "Qwiy2FahX2AAbQQMIsER0",
-    "timestamp": 1792586044892
+    "correlationId": "vHVWdqyDJIUGmhI2vVFgw",
+    "timestamp": 1793190874077
   }
 }
 ```
@@ -887,6 +743,7 @@ Response `201 Created` (application/json):
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **Permission** `UPDATE:ROLE`.
+- **Permission** `UPDATE:USER`.
 - **Policy** `UPDATE:USER` — Assign role to user.
 - Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
 - Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
@@ -925,8 +782,8 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a15e72-1863-71ec-a23d-27e9f3d5e687",
-  "roleId": "01a15e74-541b-7b43-a4cd-f76b3288f820"
+  "userId": "01a1827f-4385-71c6-8700-5468cf8e851b",
+  "roleId": "01a18281-4aee-763a-bba6-e9d25c590423"
 }
 ```
 
@@ -939,8 +796,8 @@ Response `201 Created` (application/json):
     "message": "Role assigned to user successfully"
   },
   "meta": {
-    "correlationId": "bmJIvdY-a2sCBit8c3xmI",
-    "timestamp": 1792586044994
+    "correlationId": "kP0DNpP93ntpL-ZmpiVqJ",
+    "timestamp": 1793190874114
   }
 }
 ```
@@ -986,8 +843,8 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a15e72-1863-71ec-a23d-27e9f3d5e687",
-  "roleId": "01a15e74-541b-7b43-a4cd-f76b3288f820"
+  "userId": "01a1827f-4385-71c6-8700-5468cf8e851b",
+  "roleId": "01a18281-4aee-763a-bba6-e9d25c590423"
 }
 ```
 
@@ -1000,8 +857,8 @@ Response `201 Created` (application/json):
     "message": "Role removed from user successfully"
   },
   "meta": {
-    "correlationId": "NCg7ykk4MaANs2r7EfKF0",
-    "timestamp": 1792586045121
+    "correlationId": "NZI7vndtTej4jWeujIypB",
+    "timestamp": 1793190874152
   }
 }
 ```
@@ -1047,9 +904,9 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a15e72-1863-71ec-a23d-27e9f3d5e687",
+  "userId": "01a1827f-4385-71c6-8700-5468cf8e851b",
   "roleIds": [
-    "01a15e72-12e1-759c-b594-26a0a071f259"
+    "01a1827f-3e0a-715a-a7b4-c46bb0b36e4d"
   ]
 }
 ```
@@ -1063,8 +920,8 @@ Response `201 Created` (application/json):
     "message": "User roles synced successfully"
   },
   "meta": {
-    "correlationId": "utMkbxXUFxKKe9vUNhTMw",
-    "timestamp": 1792586045247
+    "correlationId": "e8FnCK4_MNhonweF19-xe",
+    "timestamp": 1793190874201
   }
 }
 ```
@@ -1094,12 +951,12 @@ Response `201 Created` (application/json):
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data` | object[] | yes |  |
-| `data[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
+| `data[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
 | `data[].description` | string \| null | yes |  |
 | `data[].group` | string \| null | yes |  |
 | `data[].id` | string | yes |  |
 | `data[].isSystem` | boolean | yes |  |
-| `data[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
+| `data[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
 | `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
 | `meta.limit` | integer | yes | Items per page; range 1–100 |
@@ -1132,7 +989,7 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "01a15e72-12a9-72ab-9aab-8065369f3de0",
+      "id": "01a1827f-3dca-7779-86bc-6ffee5c8163d",
       "action": "READ",
       "resource": "ADMIN_DASHBOARD",
       "description": "Access admin dashboard",
@@ -1140,24 +997,24 @@ Response `200 OK` (application/json):
       "isSystem": false
     },
     {
-      "id": "01a15e72-12a9-72ab-9aab-85854be1b03c",
-      "action": "MANAGE",
-      "resource": "ADMIN_DASHBOARD",
-      "description": "Full admin dashboard access",
-      "group": "Admin Dashboard",
+      "id": "01a1827f-3dca-7779-86bc-80b34a484280",
+      "action": "READ",
+      "resource": "ANALYTICS",
+      "description": "View analytics data",
+      "group": "Analytics",
       "isSystem": false
     }
   ],
   "meta": {
     "limit": 3,
-    "total": 96,
+    "total": 118,
     "page": 1,
-    "totalPages": 32,
+    "totalPages": 40,
     "nextCursor": null,
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "Pv3LLYiXV2yGzQ3QBjCa5",
-    "timestamp": 1792586043617
+    "correlationId": "sbq2dIMSqU8lc3uRLHMKB",
+    "timestamp": 1793190873222
   }
 }
 ```
@@ -1176,17 +1033,16 @@ Response `200 OK` (application/json):
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes | The action this permission grants |
+| `action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes | The action this permission grants |
 | `description` | string | no | Permission description |
 | `group` | string | no | Permission group/category |
-| `resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes | The resource this permission applies to |
+| `resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes | The resource this permission applies to |
 
 **Response 201 Created** (`application/json`) — Created permission
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `data.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
-| `data.conditions` | any JSON \| null | yes |  |
+| `data.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string \| null | yes |  |
@@ -1194,7 +1050,7 @@ Response `200 OK` (application/json):
 | `data.id` | string | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
-| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
+| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
 | `data.scope` | "GLOBAL" \| "TENANT" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
@@ -1217,10 +1073,10 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "action": "MANAGE",
+  "action": "DELETE",
   "resource": "INVENTORY",
   "group": "Reports",
-  "description": "Manage inventory records"
+  "description": "Delete inventory records"
 }
 ```
 
@@ -1230,22 +1086,21 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792586043806,
-    "updatedAt": 1792586043806,
+    "createdAt": 1793190873407,
+    "updatedAt": 1793190873407,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15e74-51a4-77b9-ac92-7fe13663de5f",
-    "action": "MANAGE",
+    "id": "01a18281-4941-7fbd-952e-017351b53118",
+    "action": "DELETE",
     "resource": "INVENTORY",
-    "description": "Manage inventory records",
+    "description": "Delete inventory records",
     "group": "Reports",
     "isSystem": false,
-    "scope": "GLOBAL",
-    "conditions": null
+    "scope": "GLOBAL"
   },
   "meta": {
-    "correlationId": "X74k6ekteX4Is-7pKAsFO",
-    "timestamp": 1792586043824
+    "correlationId": "E4fjX4Qt1Qit__E285Hol",
+    "timestamp": 1793190873424
   }
 }
 ```
@@ -1267,8 +1122,7 @@ Response `201 Created` (application/json):
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `data.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
-| `data.conditions` | any JSON \| null | yes |  |
+| `data.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string \| null | yes |  |
@@ -1276,7 +1130,7 @@ Response `201 Created` (application/json):
 | `data.id` | string | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
-| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
+| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
 | `data.scope` | "GLOBAL" \| "TENANT" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
@@ -1292,7 +1146,7 @@ Response `201 Created` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/admin/permissions/01a15e72-12a9-72ab-9aab-cb81480bd141
+GET /api/v1/admin/permissions/01a1827f-3dca-7779-86bc-9da9624f54ac
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -1303,22 +1157,21 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792585896575,
-    "updatedAt": 1792585896575,
+    "createdAt": 1793190739358,
+    "updatedAt": 1793190739358,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15e72-12a9-72ab-9aab-cb81480bd141",
+    "id": "01a1827f-3dca-7779-86bc-9da9624f54ac",
     "action": "READ",
     "resource": "GEO",
     "description": "View geographic data (regions, countries, states, cities)",
     "group": "Geo",
     "isSystem": false,
-    "scope": "GLOBAL",
-    "conditions": null
+    "scope": "GLOBAL"
   },
   "meta": {
-    "correlationId": "-yPaneHwsDTnYbipKAYs4",
-    "timestamp": 1792586043705
+    "correlationId": "XxNCCwwtsoJz7EKjTXIIR",
+    "timestamp": 1793190873288
   }
 }
 ```
@@ -1350,8 +1203,7 @@ Response `200 OK` (application/json):
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `data.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
-| `data.conditions` | any JSON \| null | yes |  |
+| `data.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string \| null | yes |  |
@@ -1359,7 +1211,7 @@ Response `200 OK` (application/json):
 | `data.id` | string | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
-| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
+| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
 | `data.scope` | "GLOBAL" \| "TENANT" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
@@ -1375,14 +1227,14 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-PATCH /api/v1/admin/permissions/01a15e74-51a4-77b9-ac92-7fe13663de5f
+PATCH /api/v1/admin/permissions/01a18281-4941-7fbd-952e-017351b53118
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "description": "Manage every inventory record"
+  "description": "Delete any inventory record"
 }
 ```
 
@@ -1392,22 +1244,21 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792586043806,
-    "updatedAt": 1792586043862,
+    "createdAt": 1793190873407,
+    "updatedAt": 1793190873452,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15e74-51a4-77b9-ac92-7fe13663de5f",
-    "action": "MANAGE",
+    "id": "01a18281-4941-7fbd-952e-017351b53118",
+    "action": "DELETE",
     "resource": "INVENTORY",
-    "description": "Manage every inventory record",
+    "description": "Delete any inventory record",
     "group": "Reports",
     "isSystem": false,
-    "scope": "GLOBAL",
-    "conditions": null
+    "scope": "GLOBAL"
   },
   "meta": {
-    "correlationId": "3L3wSek5Esiyz7nfIWuzk",
-    "timestamp": 1792586043877
+    "correlationId": "CVupvOPIM2zuBgwdbQEzt",
+    "timestamp": 1793190873464
   }
 }
 ```
@@ -1445,7 +1296,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-DELETE /api/v1/admin/permissions/01a15e74-51a4-77b9-ac92-7fe13663de5f
+DELETE /api/v1/admin/permissions/01a18281-4941-7fbd-952e-017351b53118
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1460,8 +1311,8 @@ Response `200 OK` (application/json):
     "message": "Permission deleted successfully"
   },
   "meta": {
-    "correlationId": "0fE49m0ixGvRfgilXAyC1",
-    "timestamp": 1792586043923
+    "correlationId": "kcA3R1JI6X36lpf-FHt__",
+    "timestamp": 1793190873522
   }
 }
 ```
@@ -1485,8 +1336,7 @@ Response `200 OK` (application/json):
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `data.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
-| `data.conditions` | any JSON \| null | yes |  |
+| `data.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string \| null | yes |  |
@@ -1494,7 +1344,7 @@ Response `200 OK` (application/json):
 | `data.id` | string | yes |  |
 | `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
 | `data.isSystem` | boolean | yes |  |
-| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
+| `data.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
 | `data.scope` | "GLOBAL" \| "TENANT" \| "LOCATION" \| "RESOURCE" \| "OWN" | yes |  |
 | `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
 
@@ -1510,7 +1360,7 @@ Response `200 OK` (application/json):
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/admin/permissions/01a15e74-51a4-77b9-ac92-7fe13663de5f/restore
+POST /api/v1/admin/permissions/01a18281-4941-7fbd-952e-017351b53118/restore
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -1522,22 +1372,21 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "createdAt": 1792586043806,
-    "updatedAt": 1792586043951,
+    "createdAt": 1793190873407,
+    "updatedAt": 1793190873544,
     "isDeleted": false,
     "deletedAt": null,
-    "id": "01a15e74-51a4-77b9-ac92-7fe13663de5f",
-    "action": "MANAGE",
+    "id": "01a18281-4941-7fbd-952e-017351b53118",
+    "action": "DELETE",
     "resource": "INVENTORY",
-    "description": "Manage every inventory record",
+    "description": "Delete any inventory record",
     "group": "Reports",
     "isSystem": false,
-    "scope": "GLOBAL",
-    "conditions": null
+    "scope": "GLOBAL"
   },
   "meta": {
-    "correlationId": "3YfNUYEVDsvbN3BYO1wvt",
-    "timestamp": 1792586043969
+    "correlationId": "yG0I4f0S2xzccmdE1knwa",
+    "timestamp": 1793190873565
   }
 }
 ```
@@ -1555,8 +1404,8 @@ Response `201 Created` (application/json):
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes | The action to check |
-| `resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes | The resource to check against |
+| `action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes | The action to check |
+| `resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes | The resource to check against |
 | `userId` | string (uuid) | yes | User ID to check permissions for |
 
 **Response 201 Created** (`application/json`) — Permission check result with grant provenance
@@ -1587,7 +1436,7 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a15e72-1814-7450-a1e4-9b936ab02184",
+  "userId": "01a1827f-4353-705c-94eb-387f9c3967f8",
   "action": "READ",
   "resource": "GEO"
 }
@@ -1599,12 +1448,17 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "allowed": false,
-    "grants": []
+    "allowed": true,
+    "grants": [
+      {
+        "via": "role",
+        "detail": "Assigned role: Admin"
+      }
+    ]
   },
   "meta": {
-    "correlationId": "bFRJ_uabDlaEid_DEpPbw",
-    "timestamp": 1792586043774
+    "correlationId": "zDCCL4ejR6-tQ1dMrUqe2",
+    "timestamp": 1793190873372
   }
 }
 ```
@@ -1650,8 +1504,8 @@ Response `200 OK` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "djYxCUSDfHGy-M30Kpb2V",
-    "timestamp": 1792586043732
+    "correlationId": "s5WoH2pUGdZDlZD2kVjlD",
+    "timestamp": 1793190873316
   }
 }
 ```
@@ -1699,8 +1553,8 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a15e72-1814-7450-a1e4-9b936ab02184",
-  "permissionId": "01a15e72-12a9-72ab-9aab-cb81480bd141",
+  "userId": "01a1827f-4353-705c-94eb-387f9c3967f8",
+  "permissionId": "01a1827f-3dca-7779-86bc-9da9624f54ac",
   "effect": "ALLOW"
 }
 ```
@@ -1714,8 +1568,8 @@ Response `201 Created` (application/json):
     "message": "Permission granted to user successfully"
   },
   "meta": {
-    "correlationId": "RiHmKzWAdtR_shmhV3J5g",
-    "timestamp": 1792586044042
+    "correlationId": "IC2hkd1J6owLJjZZF2ede",
+    "timestamp": 1793190873611
   }
 }
 ```
@@ -1763,8 +1617,8 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a15e72-1814-7450-a1e4-9b936ab02184",
-  "permissionId": "01a15e72-12a9-72ab-9aab-cb81480bd141"
+  "userId": "01a1827f-4353-705c-94eb-387f9c3967f8",
+  "permissionId": "01a1827f-3dca-7779-86bc-9da9624f54ac"
 }
 ```
 
@@ -1777,8 +1631,8 @@ Response `201 Created` (application/json):
     "message": "Permission revoked from user"
   },
   "meta": {
-    "correlationId": "cKu1em_u1RhilCJODlRac",
-    "timestamp": 1792586044118
+    "correlationId": "hHZYkUyV78Hagj25P7Me6",
+    "timestamp": 1793190873654
   }
 }
 ```
@@ -1824,9 +1678,9 @@ Cookie: <session cookies from POST /api/v1/auth/login>
 Content-Type: application/json
 
 {
-  "userId": "01a15e72-1814-7450-a1e4-9b936ab02184",
+  "userId": "01a1827f-4353-705c-94eb-387f9c3967f8",
   "permissionIds": [
-    "01a15e72-12a9-72ab-9aab-cb81480bd141"
+    "01a1827f-3dca-7779-86bc-9da9624f54ac"
   ]
 }
 ```
@@ -1840,8 +1694,8 @@ Response `201 Created` (application/json):
     "message": "User permissions synced successfully"
   },
   "meta": {
-    "correlationId": "7xKDJZT1U0YYvJneas2QG",
-    "timestamp": 1792586044260
+    "correlationId": "MJjGW4NKC-MxkLGtQMWm5",
+    "timestamp": 1793190873712
   }
 }
 ```
@@ -1863,8 +1717,8 @@ Evaluate capability checks for the current user (UI hints — the API re-authori
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `checks` | object[] | yes | 1–50 items |
-| `checks[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
-| `checks[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
+| `checks[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
+| `checks[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
 | `checks[].resourceId` | string | no | length 1–64 |
 
 **Response 200 OK** (`application/json`) — One decision per requested check, in request order
@@ -1872,9 +1726,9 @@ Evaluate capability checks for the current user (UI hints — the API re-authori
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data.results` | object[] | yes |  |
-| `data.results[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
+| `data.results[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
 | `data.results[].allowed` | boolean | yes |  |
-| `data.results[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
+| `data.results[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
 | `data.results[].resourceId` | string | no | length 1–64 |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -1928,8 +1782,8 @@ Response `200 OK` (application/json):
     ]
   },
   "meta": {
-    "correlationId": "pBeOXyxH4mSRPMrtGHNXb",
-    "timestamp": 1792586045473
+    "correlationId": "MMp9FvgLOvmd4IeA-OCW4",
+    "timestamp": 1793190874314
   }
 }
 ```
@@ -1947,8 +1801,8 @@ Admin: step-by-step explanation of an authorization decision
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `action` | query | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "MANAGE" | yes |  |
-| `resource` | query | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+15 more) | yes |  |
+| `action` | query | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
+| `resource` | query | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+27 more) | yes |  |
 | `resourceId` | query | string | no |  |
 | `userId` | query | string | no |  |
 | `tenantId` | query | string | no |  |
@@ -1964,7 +1818,7 @@ Admin: step-by-step explanation of an authorization decision
 | `data.evaluation[].details` | object | no |  |
 | `data.evaluation[].effect` | "ALLOW" \| "DENY" \| "NO_MATCH" | yes |  |
 | `data.evaluation[].reason` | string | no |  |
-| `data.evaluation[].source` | "superadmin" \| "validation" \| "tenant" \| "override" \| "acl" \| "role" \| "scope" \| "policy" \| "ownership" \| "relationship" \| … (+1 more) | yes |  |
+| `data.evaluation[].source` | "superadmin" \| "validation" \| "tenant" \| "override" \| "acl" \| "role" \| "grant" \| "share" \| "scope" \| "policy" \| … (+3 more) | yes |  |
 | `data.request` | object | yes |  |
 | `data.request.action` | string | yes |  |
 | `data.request.resource` | string | yes |  |
@@ -1990,7 +1844,7 @@ Admin: step-by-step explanation of an authorization decision
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/authorization/decisions/explain?action=READ&resource=GEO&userId=01a15e72-1814-7450-a1e4-9b936ab02184
+GET /api/v1/authorization/decisions/explain?action=READ&resource=GEO&userId=01a1827f-4353-705c-94eb-387f9c3967f8
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -2004,7 +1858,7 @@ Response `200 OK` (application/json):
     "decision": "ALLOW",
     "request": {
       "subject": {
-        "userId": "01a15e72-1814-7450-a1e4-9b936ab02184",
+        "userId": "01a1827f-4353-705c-94eb-387f9c3967f8",
         "isSuperAdmin": false
       },
       "action": "READ",
@@ -2012,264 +1866,16 @@ Response `200 OK` (application/json):
     },
     "evaluation": [
       {
-        "source": "acl",
-        "effect": "NO_MATCH",
-        "reason": "No explicit ACL entry"
-      },
-      {
-        "source": "scope",
+        "source": "role",
         "effect": "ALLOW",
-        "reason": "GLOBAL grant",
-        "details": {
-          "grantSource": "override",
-          "grantScope": "GLOBAL"
-        }
+        "reason": "Allowed by role"
       }
     ],
-    "durationMs": 54
+    "durationMs": 29
   },
   "meta": {
-    "correlationId": "wLjpzIM-pjTdRro-Hu8PK",
-    "timestamp": 1792586045587
-  }
-}
-```
-
-## Authorization Policies
-
-### POST /api/v1/policies/drafts
-
-- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **SuperAdmin only.**
-- **Permission** `MANAGE:SYSTEM_SETTINGS`.
-- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
-- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
-- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `PolicyControlPlaneController_createDraft` · [source](../../../apps/api/src/contexts/authorization/presentation/http/policy-control-plane.controller.ts)
-
-**Request body** (`application/json`, required)
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `builderPayload` | object | yes |  |
-| `builderPayload.parameters` | object | yes |  |
-| `builderPayload.templateId` | string | yes |  |
-| `description` | string | no | at most 2000 characters |
-| `name` | string | yes | length 1–120 |
-| `scope` | "PLATFORM_GUARDRAIL" \| "PLATFORM" \| "TENANT" | yes |  |
-| `tenantId` | string (uuid) | no |  |
-
-**Response 201 Created** (`application/json`) — Policy draft created
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `data.draftId` | string (uuid) | yes |  |
-
-**Errors** (standard envelope, branch on `error.code`)
-
-| Status | Code | When |
-| --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
-| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
-| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
-| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
-
-**Example** — called as superadmin@example.com (admin panel).
-
-```http
-POST /api/v1/policies/drafts
-X-Client-Type: admin
-X-Mutation-Intent: same-origin
-Cookie: <session cookies from POST /api/v1/auth/login>
-Content-Type: application/json
-
-{
-  "name": "Brew & Bean KL — owners and admins manage rewards",
-  "description": "Tenant role-capability policy for Brew & Bean KL",
-  "scope": "TENANT",
-  "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-  "builderPayload": {
-    "templateId": "tenant.role_capability",
-    "parameters": {
-      "allowedRoles": [
-        "OWNER",
-        "ADMIN"
-      ]
-    }
-  }
-}
-```
-
-Response `201 Created` (application/json):
-
-```json
-{
-  "success": true,
-  "data": {
-    "draftId": "01a15e74-5961-7fd7-841d-d45dc1e3b4b8"
-  },
-  "meta": {
-    "correlationId": "f0R4tysIHJe2B_dMSr2WG",
-    "timestamp": 1792586045809
-  }
-}
-```
-
-### POST /api/v1/policies/drafts/{draftId}/simulate
-
-- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **SuperAdmin only.**
-- **Permission** `MANAGE:SYSTEM_SETTINGS`.
-- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
-- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
-- Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `PolicyControlPlaneController_simulate` · [source](../../../apps/api/src/contexts/authorization/presentation/http/policy-control-plane.controller.ts)
-
-**Parameters**
-
-| Name | In | Type | Required | Notes |
-| --- | --- | --- | --- | --- |
-| `draftId` | path | string (uuid) | yes |  |
-
-**Response 201 Created** (`application/json`) — Policy simulation result
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `data.affectedPrincipalCount` | integer | yes |  |
-| `data.decisionChanges` | object[] | yes |  |
-| `data.decisionChanges[].action` | string | yes |  |
-| `data.decisionChanges[].after` | "Allow" \| "Deny" | yes |  |
-| `data.decisionChanges[].before` | "Allow" \| "Deny" | yes |  |
-| `data.decisionChanges[].membershipRole` | "OWNER" \| "ADMIN" \| "MEMBER" \| "POLICY_ADMIN" \| "CASHIER" | yes |  |
-| `data.decisionChanges[].tenantId` | string (uuid) | yes |  |
-| `data.decisionChanges[].userId` | string (uuid) | yes |  |
-| `data.decisionChangesTruncated` | boolean | yes |  |
-| `data.errors` | string[] | yes |  |
-| `data.evaluatedPrincipalCount` | integer | yes |  |
-| `data.passed` | boolean | yes |  |
-| `data.simulationId` | string (uuid) | yes |  |
-| `data.warnings` | string[] | yes |  |
-| `data.wouldLockOutOwners` | boolean | yes |  |
-
-**Errors** (standard envelope, branch on `error.code`)
-
-| Status | Code | When |
-| --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
-| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
-| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
-| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
-
-**Example** — called as superadmin@example.com (admin panel).
-
-```http
-POST /api/v1/policies/drafts/01a15e74-5961-7fd7-841d-d45dc1e3b4b8/simulate
-X-Client-Type: admin
-X-Mutation-Intent: same-origin
-Cookie: <session cookies from POST /api/v1/auth/login>
-```
-
-Response `201 Created` (application/json):
-
-```json
-{
-  "success": true,
-  "data": {
-    "simulationId": "01a15e74-59b2-7b1f-87a7-1bad8c41bd2e",
-    "passed": true,
-    "warnings": [
-      "2 principal(s) would get at least one different decision"
-    ],
-    "errors": [],
-    "evaluatedPrincipalCount": 3,
-    "affectedPrincipalCount": 2,
-    "wouldLockOutOwners": false,
-    "decisionChanges": [
-      {
-        "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-        "userId": "019b76da-a800-7965-b8a4-624b6c755c16",
-        "membershipRole": "CASHIER",
-        "action": "tenant:view_rewards",
-        "before": "Allow",
-        "after": "Deny"
-      },
-      {
-        "tenantId": "019b76da-a800-7a94-a198-23ad1b4cfdd9",
-        "userId": "019b76da-a800-7965-b8a4-624b6c755c16",
-        "membershipRole": "CASHIER",
-        "action": "tenant:manage_rewards",
-        "before": "Allow",
-        "after": "Deny"
-      }
-    ],
-    "decisionChangesTruncated": false
-  },
-  "meta": {
-    "correlationId": "LwnU9LlCr1zp1_S3VmypA",
-    "timestamp": 1792586045889
-  }
-}
-```
-
-### POST /api/v1/policies/publish
-
-- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- **SuperAdmin only.**
-- **Permission** `MANAGE:SYSTEM_SETTINGS`.
-- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
-- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
-- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `PolicyControlPlaneController_publish` · [source](../../../apps/api/src/contexts/authorization/presentation/http/policy-control-plane.controller.ts)
-
-**Request body** (`application/json`, required)
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `approvalNote` | string | no | at most 500 characters |
-| `draftId` | string (uuid) | yes |  |
-
-**Response 201 Created** (`application/json`) — Published policy version (approved by a second SuperAdmin)
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `data.version` | integer | yes |  |
-
-**Errors** (standard envelope, branch on `error.code`)
-
-| Status | Code | When |
-| --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
-| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
-| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
-| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
-
-**Example** — called as superadmin@example.com (admin panel). Four-eyes rule: a draft is published by a SECOND SuperAdmin. The seed has one SuperAdmin, so this sample shows the author being refused; a different SuperAdmin gets 201 with the published policy.
-
-```http
-POST /api/v1/policies/publish
-X-Client-Type: admin
-X-Mutation-Intent: same-origin
-Cookie: <session cookies from POST /api/v1/auth/login>
-Content-Type: application/json
-
-{
-  "draftId": "01a15e74-5961-7fd7-841d-d45dc1e3b4b8",
-  "approvalNote": "Reviewed against the tenant guardrails"
-}
-```
-
-Response `403 Forbidden` (application/json):
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "POLICY_SELF_APPROVAL_FORBIDDEN",
-    "message": "A policy draft must be approved by a SuperAdmin other than its author"
-  },
-  "meta": {
-    "correlationId": "zS_gcKYhnllcRNuVt1B-T",
-    "timestamp": 1792586045923
+    "correlationId": "Ny0aoCZCdo_oTI2HHK1_T",
+    "timestamp": 1793190874369
   }
 }
 ```
@@ -2327,7 +1933,7 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "id": "01a15e72-13b0-77f1-93a2-f4edf0b4157d",
+      "id": "01a1827f-3f1b-7670-b196-48666cfbd5c6",
       "slug": "merchant:view_dashboard",
       "scope": "MERCHANT",
       "label": "View dashboard",
@@ -2337,19 +1943,19 @@ Response `200 OK` (application/json):
       "isSystem": true
     },
     {
-      "id": "01a15e72-1341-77db-8f78-b8fd0fa6675b",
-      "slug": "platform:admin_dashboard.manage",
+      "id": "01a1827f-3ed4-738c-8829-d4ca8d7fdcb0",
+      "slug": "platform:access_request.approve",
       "scope": "PLATFORM",
-      "label": "Full admin dashboard access",
-      "description": "Full admin dashboard access",
-      "groupName": "Admin Dashboard",
+      "label": "Tenant permission access_request.approve",
+      "description": "Tenant permission access_request.approve",
+      "groupName": "Tenant",
       "sortOrder": 0,
       "isSystem": false
     }
   ],
   "meta": {
-    "correlationId": "zlug8qo42WBT9FvdcmtoJ",
-    "timestamp": 1792586045650
+    "correlationId": "a4wupV8FNPC4IDStW0AWd",
+    "timestamp": 1793190874385
   }
 }
 ```
@@ -2424,12 +2030,12 @@ Response `200 OK` (application/json):
   "success": true,
   "data": [
     {
-      "createdAt": 1792586045713,
-      "updatedAt": 1792586045713,
-      "id": "01a15e74-5911-77aa-9a1c-8a79abc01d5a",
+      "createdAt": 1793190874428,
+      "updatedAt": 1793190874428,
+      "id": "01a18281-4d3c-7679-813f-e123b5369e67",
       "actor": {
         "kind": "USER",
-        "userId": "01a15e72-17fb-723a-bb91-d4b541411c4e",
+        "userId": "01a1827f-433b-7236-8894-c37cafdb5f34",
         "impersonatorId": null
       },
       "targetUserId": null,
@@ -2439,31 +2045,31 @@ Response `200 OK` (application/json):
       "detail": "Bypassed authorization for list at GET /api/v1/admin/audit?limit=2"
     },
     {
-      "createdAt": 1792586045513,
-      "updatedAt": 1792586045513,
-      "id": "01a15e74-5849-718a-9489-27d1766c482d",
+      "createdAt": 1793190874334,
+      "updatedAt": 1793190874334,
+      "id": "01a18281-4cde-7789-8125-f844a486921c",
       "actor": {
         "kind": "USER",
-        "userId": "01a15e72-17fb-723a-bb91-d4b541411c4e",
+        "userId": "01a1827f-433b-7236-8894-c37cafdb5f34",
         "impersonatorId": null
       },
       "targetUserId": null,
       "targetRoleId": null,
       "permissionId": null,
       "action": "SUPER_ADMIN_BYPASS",
-      "detail": "Bypassed authorization for explain at GET /api/v1/authorization/decisions/explain?action=READ&resource=GEO&userId=01a15e72-1814-7450-a1e4-9b936ab02184"
+      "detail": "Bypassed authorization for explain at GET /api/v1/authorization/decisions/explain?action=READ&resource=GEO&userId=01a1827f-4353-705c-94eb-387f9c3967f8"
     }
   ],
   "meta": {
     "limit": 2,
-    "total": 110,
+    "total": 107,
     "page": 1,
-    "totalPages": 55,
-    "nextCursor": "eyJhdCI6MTc5MjU4NjA0NTUxMywiaWQiOiIwMWExNWU3NC01ODQ5LTcxOGEtOTQ4OS0yN2QxNzY2YzQ4MmQifQ",
+    "totalPages": 54,
+    "nextCursor": "eyJhdCI6MTc5MzE5MDg3NDMzNCwiaWQiOiIwMWExODI4MS00Y2RlLTc3ODktODEyNS1mODQ0YTQ4NjkyMWMifQ",
     "hasNext": true,
     "hasPrevious": false,
-    "correlationId": "ltKMDZiIvfQAj4jUZQD1s",
-    "timestamp": 1792586045727
+    "correlationId": "pbL8naiM1_1e9cs9Bxc4Y",
+    "timestamp": 1793190874442
   }
 }
 ```

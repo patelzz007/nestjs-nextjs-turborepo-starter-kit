@@ -64,12 +64,12 @@ export class RbacMutationGuard {
 		return role;
 	}
 
-	/** Reject edits to a role the actor holds, directly or by inheritance, whatever the role's state. */
+	/** Reject edits to a role the actor holds, whatever the role's state. */
 	public async assertNotHoldingRole(scope: AuthorizationScope, actor: RbacActor, roleId: string): Promise<void> {
 		if (!needsReachCheck(actor)) {
 			return;
 		}
-		const held: ReadonlySet<string> = await scope.rbacGraph.withAllAncestors(await scope.rbacGraph.assignedRoleIds(actor.userId));
+		const held: ReadonlySet<string> = new Set<string>(await scope.rbacGraph.assignedRoleIds(actor.userId));
 		assertNotHoldingRole(actor, held, roleId);
 	}
 
@@ -90,19 +90,18 @@ export class RbacMutationGuard {
 		assertHoldsEveryPermission(actor, required, await this.reach.heldGlobally(actor.userId, required));
 	}
 
-	/** Every permission the roles confer (their own and every ancestor's, deleted and inactive ones included) must already be held. */
+	/** Every permission the roles confer (deleted and inactive roles included) must already be held. */
 	public async assertCanGrantRoles(scope: AuthorizationScope, actor: RbacActor, roleIds: readonly string[]): Promise<void> {
 		if (!needsReachCheck(actor) || roleIds.length === 0) {
 			return;
 		}
-		const lineage: ReadonlySet<string> = await scope.rbacGraph.withAllAncestors(roleIds);
-		await this.assertHoldsPairs(actor, await scope.rbacGraph.permissionPairsConferredBy([...lineage]));
+		await this.assertHoldsPairs(actor, await scope.rbacGraph.permissionPairsConferredBy(roleIds));
 	}
 
 	/** Post-write check: every user in `userIds` holds a conflict-free effective role set. */
 	public async assertUsersHaveNoConflicts(scope: AuthorizationScope, userIds: readonly string[]): Promise<void> {
 		for (const userId of new Set<string>(userIds)) {
-			assertSeparationOfDuties(await scope.rbacGraph.effectiveRoleNames(await scope.rbacGraph.assignedRoleIds(userId)));
+			assertSeparationOfDuties(await scope.rbacGraph.activeRoleNames(await scope.rbacGraph.assignedRoleIds(userId)));
 		}
 	}
 

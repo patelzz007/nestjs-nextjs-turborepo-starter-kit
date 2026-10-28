@@ -23,7 +23,6 @@ export class TenantAuditService implements TenantAuditPort<TenantAuditTransactio
 				resourceType: entry.resourceType,
 				resourceId: entry.resourceId,
 				decision: entry.decision ?? null,
-				policyVersion: entry.policyVersion,
 				correlationId: entry.correlationId ?? null,
 				...(entry.metadata === undefined ? {} : { metadata: { ...entry.metadata } }),
 			},

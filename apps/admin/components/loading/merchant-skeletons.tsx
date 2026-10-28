@@ -193,7 +193,7 @@ export function KybMerchantCardSkeleton(): React.JSX.Element {
  */
 export function KybReviewPageSkeleton(): React.JSX.Element {
 	return (
-		<SkeletonRegion labels={KYB_REVIEW_LOADING_LABELS} className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-6">
+		<SkeletonRegion labels={KYB_REVIEW_LOADING_LABELS} className="mx-auto flex w-full max-w-10xl min-w-0 flex-col gap-6">
 			<PageHeaderSkeleton actions={1} />
 			<div className="grid min-w-0 gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">
 				<Card className="h-fit">
@@ -233,7 +233,7 @@ const MERCHANT_SUMMARY_FIELDS = 6;
 /** `/merchants/[id]`: header (name + slug), the summary card, then the lifecycle card (state, action, appeals). */
 export function MerchantDetailPageSkeleton(): React.JSX.Element {
 	return (
-		<SkeletonRegion labels={MERCHANT_DETAIL_LOADING_LABELS} className="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-6">
+		<SkeletonRegion labels={MERCHANT_DETAIL_LOADING_LABELS} className="mx-auto flex w-full max-w-10xl min-w-0 flex-col gap-6">
 			<PageHeaderSkeleton actions={1} />
 			<Card data-skeleton="merchant-summary">
 				<CardHeader>

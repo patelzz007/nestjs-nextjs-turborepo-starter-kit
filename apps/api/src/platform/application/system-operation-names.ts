@@ -143,15 +143,10 @@ export const SystemOperationNameSchema = z.enum([
 	"authorization.rbac.catalog.read",
 	"authorization.health.system_roles",
 	"authorization.audit_log.read",
-	"authorization.policy.match",
-	"authorization.acl.match",
-	"authorization.acl.write",
+	"authorization.access.facts",
+	"authorization.tenant_access.write",
 	"authorization.superadmin_bypass.audit",
 	// ── Authorization policy control plane ───────────────────────────────
-	"policy.draft.create",
-	"policy.draft.simulate",
-	"policy.publish",
-	"policy.bundle.load",
 	// ── Domain reads that RLS cannot express for the caller ──────────────
 	"rewards.sales.merchant_summary",
 	"pos.terminal.pair",

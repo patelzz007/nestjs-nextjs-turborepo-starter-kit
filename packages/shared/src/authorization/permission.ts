@@ -33,7 +33,15 @@ function actionSlugs(resource: PermissionResource): PermissionActionSlugs {
 		UPDATE: toPlatformCapabilitySlug("UPDATE", resource),
 		DELETE: toPlatformCapabilitySlug("DELETE", resource),
 		LIST: toPlatformCapabilitySlug("LIST", resource),
-		MANAGE: toPlatformCapabilitySlug("MANAGE", resource),
+		PUBLISH: toPlatformCapabilitySlug("PUBLISH", resource),
+		APPROVE: toPlatformCapabilitySlug("APPROVE", resource),
+		REJECT: toPlatformCapabilitySlug("REJECT", resource),
+		SUSPEND: toPlatformCapabilitySlug("SUSPEND", resource),
+		BAN: toPlatformCapabilitySlug("BAN", resource),
+		UNBAN: toPlatformCapabilitySlug("UNBAN", resource),
+		REACTIVATE: toPlatformCapabilitySlug("REACTIVATE", resource),
+		UNLOCK: toPlatformCapabilitySlug("UNLOCK", resource),
+		REDEEM: toPlatformCapabilitySlug("REDEEM", resource),
 	};
 }
 
@@ -63,6 +71,18 @@ export const PERMISSION: PermissionRegistry = {
 	GITHUB: actionSlugs("GITHUB"),
 	GITHUB_PULL_REQUEST: actionSlugs("GITHUB_PULL_REQUEST"),
 	KANBAN_TASK: actionSlugs("KANBAN_TASK"),
+	KANBAN_BOARD: actionSlugs("KANBAN_BOARD"),
+	MEMBER: actionSlugs("MEMBER"),
+	KYB: actionSlugs("KYB"),
+	ACCESS_REQUEST: actionSlugs("ACCESS_REQUEST"),
+	SUPPORT_ACCESS: actionSlugs("SUPPORT_ACCESS"),
+	API_KEY: actionSlugs("API_KEY"),
+	INVITE: actionSlugs("INVITE"),
+	SESSION: actionSlugs("SESSION"),
+	CUSTOMER_BAN: actionSlugs("CUSTOMER_BAN"),
+	SHARE: actionSlugs("SHARE"),
+	CLAIM: actionSlugs("CLAIM"),
+	TERMINAL: actionSlugs("TERMINAL"),
 };
 
 /**
@@ -140,44 +160,6 @@ export const MERCHANT_CAPABILITY_CEDAR_ACTIONS: Readonly<Record<MerchantCapabili
 	"merchant:manage_verification": "tenant:manage_verification",
 };
 
-/**
- * Baseline merchant capabilities per tenant membership role — the single
- * table both the API (before tenant Cedar policies, which may only narrow it)
- * and the merchant app derive from.
- *
- * - OWNER runs the business: everything, including business verification (KYB)
- * - ADMIN runs operations: everything except business verification
- * - CASHIER operates the counter: view rewards, redemptions, analytics, locations — no management
- * - POLICY_ADMIN administers tenant policies, not day-to-day operations
- * - MEMBER sees the dashboard and the store locations only
- */
-const ALL_MERCHANT_CAPABILITIES: readonly MerchantCapability[] = MerchantCapabilitySchema.options;
-
-/** KYB holds the business's legal and identity details — owner-only. */
-const OWNER_ONLY_MERCHANT_CAPABILITIES: readonly MerchantCapability[] = [MERCHANT_CAPABILITY.manageVerification];
-
-const MEMBER_MERCHANT_CAPABILITIES: readonly MerchantCapability[] = [MERCHANT_CAPABILITY.viewDashboard, MERCHANT_CAPABILITY.viewLocations];
-
-export const MERCHANT_ROLE_CAPABILITIES: Readonly<Record<MembershipRole, readonly MerchantCapability[]>> = {
-	OWNER: ALL_MERCHANT_CAPABILITIES,
-	ADMIN: ALL_MERCHANT_CAPABILITIES.filter((capability) => !OWNER_ONLY_MERCHANT_CAPABILITIES.includes(capability)),
-	CASHIER: [
-		MERCHANT_CAPABILITY.viewDashboard,
-		MERCHANT_CAPABILITY.viewRewards,
-		MERCHANT_CAPABILITY.viewRedemptions,
-		MERCHANT_CAPABILITY.viewAnalytics,
-		MERCHANT_CAPABILITY.viewLocations,
-	],
-	POLICY_ADMIN: MEMBER_MERCHANT_CAPABILITIES,
-	MEMBER: MEMBER_MERCHANT_CAPABILITIES,
-};
-
-/** Whether a membership role holds a merchant capability (fails closed on unknown slugs). */
-export function merchantRoleHasCapability(role: MembershipRole, capability: string): boolean {
-	const parsed = MerchantCapabilitySchema.safeParse(capability);
-	return parsed.success && MERCHANT_ROLE_CAPABILITIES[role].includes(parsed.data);
-}
-
 export const PermissionPairSchema = z
 	.object({
 		action: PermissionActionSchema,
@@ -186,6 +168,116 @@ export const PermissionPairSchema = z
 	.strict();
 
 export type PermissionPair = z.output<typeof PermissionPairSchema>;
+
+/** `noun.verb` shorthand for the tables below. */
+function pair(resource: PermissionResource, action: PermissionAction): PermissionPair {
+	return { action, resource };
+}
+
+/**
+ * The permissions a tenant can grant at all (ADR 067): every role, grant and share inside a tenant
+ * draws from this list. The Owner template holds all of it; a platform permission never leaks into
+ * a tenant role.
+ */
+export const TENANT_PERMISSIONS: readonly PermissionPair[] = [
+	pair("TENANT", "READ"),
+	pair("TENANT", "UPDATE"),
+	pair("REWARD", "CREATE"),
+	pair("REWARD", "READ"),
+	pair("REWARD", "UPDATE"),
+	pair("REWARD", "DELETE"),
+	pair("REWARD", "PUBLISH"),
+	pair("REDEMPTION", "READ"),
+	pair("CLAIM", "READ"),
+	pair("CLAIM", "REDEEM"),
+	pair("ANALYTICS", "READ"),
+	pair("LOCATION", "READ"),
+	pair("LOCATION", "UPDATE"),
+	pair("MEMBER", "READ"),
+	pair("MEMBER", "UPDATE"),
+	pair("MEMBER", "DELETE"),
+	pair("INVITE", "CREATE"),
+	pair("INVITE", "DELETE"),
+	pair("ROLE", "CREATE"),
+	pair("ROLE", "READ"),
+	pair("ROLE", "UPDATE"),
+	pair("ROLE", "DELETE"),
+	pair("SHARE", "DELETE"),
+	pair("API_KEY", "CREATE"),
+	pair("API_KEY", "READ"),
+	pair("API_KEY", "DELETE"),
+	pair("TERMINAL", "CREATE"),
+	pair("TERMINAL", "READ"),
+	pair("TERMINAL", "DELETE"),
+	pair("CUSTOMER_BAN", "CREATE"),
+	pair("CUSTOMER_BAN", "READ"),
+	pair("CUSTOMER_BAN", "DELETE"),
+	pair("ACCESS_REQUEST", "APPROVE"),
+	pair("ACCESS_REQUEST", "REJECT"),
+	pair("KYB", "READ"),
+	pair("KYB", "UPDATE"),
+	pair("SUPPORT_ACCESS", "APPROVE"),
+];
+
+/** Whether a permission is one a tenant may hold (see {@link TENANT_PERMISSIONS}). */
+export function isTenantPermission(permission: PermissionPair): boolean {
+	return TENANT_PERMISSIONS.some((candidate) => candidate.action === permission.action && candidate.resource === permission.resource);
+}
+
+/** Permissions only the Owner template holds: the business's legal identity and who may reach its data. */
+const OWNER_ONLY_TENANT_PERMISSIONS: readonly PermissionPair[] = [pair("KYB", "UPDATE"), pair("SUPPORT_ACCESS", "APPROVE"), pair("TENANT", "UPDATE")];
+
+function excluding(all: readonly PermissionPair[], removed: readonly PermissionPair[]): readonly PermissionPair[] {
+	return all.filter((candidate) => !removed.some((gone) => gone.action === candidate.action && gone.resource === candidate.resource));
+}
+
+/**
+ * The tenant-role templates (ADR 067). Each tenant gets its own editable copy when it is created; a
+ * template change reaches new tenants only (and a tenant that resets a role to its template).
+ *
+ * - **Owner** runs the business: every tenant permission. Its copy can never be edited or deleted.
+ * - **Manager** runs operations: everything except the Owner-only permissions.
+ * - **Cashier** works the counter: reads what the till needs and redeems claims — no analytics,
+ *   no team, no management.
+ */
+export const TENANT_ROLE_TEMPLATES: Readonly<Record<MembershipRole, readonly PermissionPair[]>> = {
+	OWNER: TENANT_PERMISSIONS,
+	MANAGER: excluding(TENANT_PERMISSIONS, OWNER_ONLY_TENANT_PERMISSIONS),
+	CASHIER: [pair("TENANT", "READ"), pair("REWARD", "READ"), pair("REDEMPTION", "READ"), pair("CLAIM", "READ"), pair("CLAIM", "REDEEM"), pair("LOCATION", "READ")],
+};
+
+/** The display name of each template (and of a tenant's copy until it is renamed). */
+export const TENANT_ROLE_TEMPLATE_NAMES: Readonly<Record<MembershipRole, string>> = {
+	OWNER: "Owner",
+	MANAGER: "Manager",
+	CASHIER: "Cashier",
+};
+
+/**
+ * The `noun.verb` permission behind each merchant-app capability slug. A bridge while the merchant
+ * app still speaks capability slugs (ADR 067 Phase 3 moves it to `noun.verb`): the API checks the
+ * permission, and the app shows what the member's effective permissions allow.
+ */
+export const MERCHANT_CAPABILITY_PERMISSION: Readonly<Record<MerchantCapability, PermissionPair>> = {
+	"merchant:view_dashboard": pair("TENANT", "READ"),
+	"merchant:view_rewards": pair("REWARD", "READ"),
+	"merchant:manage_rewards": pair("REWARD", "UPDATE"),
+	"merchant:view_redemptions": pair("REDEMPTION", "READ"),
+	"merchant:manage_api_keys": pair("API_KEY", "CREATE"),
+	"merchant:view_analytics": pair("ANALYTICS", "READ"),
+	"merchant:manage_team": pair("MEMBER", "UPDATE"),
+	"merchant:view_locations": pair("LOCATION", "READ"),
+	"merchant:manage_locations": pair("LOCATION", "UPDATE"),
+	"merchant:manage_verification": pair("KYB", "UPDATE"),
+};
+
+/** The merchant capability slugs a set of effective permissions satisfies (what the merchant app shows). */
+export function merchantCapabilitiesOf(permissions: readonly PermissionPair[]): readonly MerchantCapability[] {
+	return MerchantCapabilitySchema.options.filter((capability) => {
+		const required = MERCHANT_CAPABILITY_PERMISSION[capability];
+		return permissions.some((held) => held.action === required.action && held.resource === required.resource);
+	});
+}
 
 const PLATFORM_SLUG_PATTERN = /^platform:([a-z0-9_]+)\.([a-z0-9_]+)$/;
 
@@ -208,14 +300,11 @@ export function parsePermissionSlug(slug: string): PermissionPair | null {
 }
 
 /**
- * Whether a held permission satisfies a required one. `MANAGE` on a resource
- * implies every action on that resource.
+ * Whether a held permission satisfies a required one: the same action on the same resource. There is
+ * no catch-all action (ADR 067 retired `MANAGE`), so a role holds each verb it may use.
  */
 export function permissionSatisfies(held: PermissionPair, required: PermissionPair): boolean {
-	if (held.resource !== required.resource) {
-		return false;
-	}
-	return held.action === required.action || held.action === "MANAGE";
+	return held.resource === required.resource && held.action === required.action;
 }
 
 /**
@@ -230,65 +319,3 @@ export const IMPLICIT_SELF_GRANTS: readonly PermissionPair[] = [
 	{ action: "READ", resource: "PROFILE" },
 	{ action: "UPDATE", resource: "PROFILE" },
 ];
-
-/**
- * Server-evaluated capabilities attached to a single resource payload
- * (`order.authorization.can.delete`). Produced by the backend kernel so the
- * browser never re-implements scope, ACL, ownership, or policy rules.
- */
-export const ResourceCapabilityMapSchema = z
-	.object({
-		create: z.boolean().optional(),
-		read: z.boolean().optional(),
-		update: z.boolean().optional(),
-		delete: z.boolean().optional(),
-		list: z.boolean().optional(),
-		manage: z.boolean().optional(),
-	})
-	.strict();
-
-export type ResourceCapabilityMap = z.output<typeof ResourceCapabilityMapSchema>;
-
-export const ResourceAuthorizationSchema = z
-	.object({
-		can: ResourceCapabilityMapSchema,
-	})
-	.strict();
-
-export type ResourceAuthorization = z.output<typeof ResourceAuthorizationSchema>;
-
-/** Read one action from a server-provided capability map. */
-export function readResourceCapability(capabilities: ResourceCapabilityMap, action: PermissionAction): boolean | undefined {
-	switch (action) {
-		case "CREATE":
-			return capabilities.create;
-		case "READ":
-			return capabilities.read;
-		case "UPDATE":
-			return capabilities.update;
-		case "DELETE":
-			return capabilities.delete;
-		case "LIST":
-			return capabilities.list;
-		case "MANAGE":
-			return capabilities.manage;
-	}
-}
-
-/** Build a capability map entry for one action. */
-export function withResourceCapability(capabilities: ResourceCapabilityMap, action: PermissionAction, allowed: boolean): ResourceCapabilityMap {
-	switch (action) {
-		case "CREATE":
-			return { ...capabilities, create: allowed };
-		case "READ":
-			return { ...capabilities, read: allowed };
-		case "UPDATE":
-			return { ...capabilities, update: allowed };
-		case "DELETE":
-			return { ...capabilities, delete: allowed };
-		case "LIST":
-			return { ...capabilities, list: allowed };
-		case "MANAGE":
-			return { ...capabilities, manage: allowed };
-	}
-}

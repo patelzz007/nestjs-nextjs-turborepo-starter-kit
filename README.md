@@ -90,7 +90,7 @@ packages/
 
 ## Quick start
 
-**Prerequisites:** Node 24.22.1 (`nvm use` reads `.nvmrc`; CI runs the same release), pnpm 12, PostgreSQL 18 (installed natively — the `postgres` service in `compose.yml` is commented out) Docker for the rest of the local stack (`pnpm docker:up` starts Redis, Kafka, RabbitMQ and Bull Board — see [local infrastructure](./docs/technical/operations/local-infrastructure.md)), and a native Mailpit for local email (`brew install mailpit`, then `pnpm mailpit` — see [local email with Mailpit](./docs/technical/email/mailpit-local-inbox.md)).
+**Prerequisites:** Node 24.22.1 (`nvm use` reads `.nvmrc`; CI runs the same release), pnpm 12, PostgreSQL 18 (installed natively — the `postgres` service in `compose.yml` is commented out) and Docker for the rest of the local stack (`pnpm docker:up` starts Redis, Kafka, RabbitMQ, Bull Board and the Mailpit email inbox — see [local infrastructure](./docs/technical/operations/local-infrastructure.md) and [local email with Mailpit](./docs/technical/email/mailpit-local-inbox.md)).
 
 ```bash
 # Install dependencies + build shared workspace package
@@ -157,7 +157,7 @@ Run these from the repository root, with the dev servers stopped. The GitHub tok
 ```bash
 pnpm kill:all                                   # 1. stop the dev servers (ports 3000–3003, 8080)
 
-pnpm db:carry-github-link -- export             # 2. save the superadmin's GitHub link to ~/.starter-kit/github-link.json
+pnpm tools db:carry-github-link -- export             # 2. save the superadmin's GitHub link to ~/.starter-kit/github-link.json
                                                 #    (skip when no token is linked yet)
 
 # 3. drop and rebuild — pick ONE:
@@ -166,7 +166,7 @@ pnpm db:reset                                   #    a. drop every table, re-app
 # dropdb <db-name> && createdb <db-name>        #    b. <db-name> is the database in DATABASE_URL (apps/api/.env)
 # pnpm setup:db                                 #       then build shared → generate → deploy → RLS → seed
 
-pnpm db:carry-github-link -- import --in ~/.starter-kit/github-link.json
+pnpm tools db:carry-github-link -- import --in ~/.starter-kit/github-link.json
                                                 # 4. put the GitHub link back on the superadmin (matched by email)
 
 pnpm dev                                        # 5. start everything again
@@ -182,23 +182,33 @@ pnpm dev                                        # 5. start everything again
 
 ## Commands
 
-| Command | What it does |
+The root `package.json` holds only what you run day to day. Everything else is one entry away:
+`pnpm tools` lists the occasional commands, grouped and described, and `pnpm tools <name>` runs one.
+
+| Everyday command | What it does |
 | ------- | ------------ |
 | `pnpm setup` | Install dependencies and build `@workspace/shared` |
-| `pnpm setup:db` | Build shared package, generate Prisma client, deploy migrations, apply RLS, and seed |
-| `pnpm build:shared` | Build `@workspace/shared` manually |
-| `pnpm dev` | Start dev servers (Turbo) |
-| `pnpm dev:web` / `pnpm dev:admin` / `pnpm dev:merchant` / `pnpm dev:api` / `pnpm dev:mobile` | Start individual apps |
-| `pnpm build` | Build all workspaces |
-| `pnpm lint` / `pnpm format` / `pnpm typecheck` / `pnpm test` | Quality gates across the monorepo |
-| `pnpm db:all` / `db:migrate` / `db:generate` / `db:seed` / `db:studio` / `db:reset` | Database — see [docs/technical/database.md](./docs/technical/database.md) |
-| `pnpm db:carry-github-link -- export` / `-- import --in <file>` | Carry the superadmin's GitHub link across a database rebuild — see [Rebuild the dev database](#rebuild-the-dev-database-and-keep-your-github-token) |
+| `pnpm setup:db` | First-time database: build shared, generate the Prisma client, deploy migrations, apply RLS, seed |
+| `pnpm dev` | Start every dev server (Turbo) |
+| `pnpm dev:web` / `dev:admin` / `dev:merchant` / `dev:api` / `dev:mobile` | Start one app |
+| `pnpm build` | Build every workspace |
+| `pnpm lint` / `format` / `typecheck` / `test` | Quality gates across the monorepo |
+| `pnpm test:e2e` | The API and analytics-consumer end-to-end suites |
+| `pnpm ci:local` | Run what CI runs, locally |
+| `pnpm db:migrate` / `db:migrate:create` / `db:generate` / `db:seed` / `db:studio` / `db:reset` | Database — see [docs/technical/database.md](./docs/technical/database.md) |
 | `pnpm db:seed -- --scenario empty\|development\|enterprise [--seed <n>]` | Seed a specific dataset — see [seed data](./docs/technical/database.md#seed-data) |
-| `pnpm docker:up` / `docker:down` / `docker:ps` / `docker:logs` | Local infrastructure — see [docs/technical/operations/local-infrastructure.md](./docs/technical/operations/local-infrastructure.md) |
-| `pnpm test:e2e` / `db:check-rls-manifest` / `docs:check-links` / `secrets:scan` | The extra checks CI runs — see [docs/technical/operations/ci.md](./docs/technical/operations/ci.md) |
-| `pnpm docs:api` | Re-render the generated API reference from `docs/generated/` (see [API conventions](./docs/technical/api/README.md#how-the-reference-is-generated)) |
-| `pnpm deps:check` / `deps:fix` / `deps:list` | Shared dependency version hygiene (syncpack) |
+| `pnpm docker:up` / `docker:down` | Local infrastructure — see [docs/technical/operations/local-infrastructure.md](./docs/technical/operations/local-infrastructure.md) |
+| `pnpm mailpit` / `mail:latest` | Start the local inbox (Docker) alone, and print the newest email in it |
+| `pnpm tools` | List the occasional commands: database checks, tunnels, code generators, dependency hygiene, freeing ports |
+
+A few `pnpm tools` commands you may want:
+
+| Command | What it does |
+| ------- | ------------ |
 | `pnpm kill:all` | Free dev ports 3000–3003 and 8080 |
+| `pnpm tools db:carry-github-link -- export` / `-- import --in <file>` | Carry the superadmin's GitHub link across a database rebuild — see [Rebuild the dev database](#rebuild-the-dev-database-and-keep-your-github-token) |
+| `pnpm tools tokens:generate` | Regenerate the theme CSS and brand assets after editing `packages/tokens` |
+| `pnpm tools deps:check` | Shared dependency version hygiene (syncpack) |
 | `pnpm dlx shadcn@latest add <component> -c apps/web` | Add a shadcn component to `packages/ui` |
 
 ---

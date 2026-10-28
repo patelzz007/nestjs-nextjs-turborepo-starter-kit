@@ -2,6 +2,7 @@ import type { Permission, PermissionAction, PermissionResource, Role, User } fro
 import * as bcrypt from "bcrypt";
 
 import { prisma } from "./client";
+import { upsertSeedGrant } from "./tenant-roles";
 import { assignSeedRole } from "./rbac-audit";
 import { requireRow } from "./require-row";
 
@@ -173,13 +174,14 @@ export async function assignRolesToUsers(users: User[], roles: Role[]): Promise<
 	const assignments = [
 		{ user: get("superadmin@example.com"), role: role("SuperAdmin") },
 		{ user: get("admin@example.com"), role: role("Admin") },
-		{ user: get("manager@example.com"), role: role("Manager") },
+		// The platform Manager role was retired (ADR 067): its holders are Admins.
+		{ user: get("manager@example.com"), role: role("Admin") },
 		{ user: get("user@example.com"), role: role("User") },
 		{ user: get("bishenpatel123@gmail.com"), role: role("User") },
 		{ user: get("alice.johnson@example.com"), role: role("User") },
 		{ user: get("bob.smith@example.com"), role: role("User") },
 		{ user: get("carol.white@example.com"), role: role("User") },
-		{ user: get("david.lee@example.com"), role: role("Manager") },
+		{ user: get("david.lee@example.com"), role: role("Admin") },
 		{ user: get("eve.davis@example.com"), role: role("User") },
 		{ user: get("frank.miller@example.com"), role: role("Admin") },
 		{ user: get("grace.wilson@example.com"), role: role("User") },
@@ -211,23 +213,17 @@ export async function assignAdditionalPermissions(users: User[], permissions: Pe
 	const overrides = [
 		// admin@ — role lacks DELETE:USER; demonstrates a direct permission grant.
 		{ user: get("admin@example.com"), permission: perm("DELETE", "USER") },
-		// frank.miller@ — role lacks MANAGE:SYSTEM_SETTINGS; demonstrates elevated direct grant.
-		{ user: get("frank.miller@example.com"), permission: perm("MANAGE", "SYSTEM_SETTINGS") },
+		// frank.miller@ — role lacks UPDATE:PROFILE (editing anyone's profile); demonstrates an elevated direct grant.
+		{ user: get("frank.miller@example.com"), permission: perm("UPDATE", "PROFILE") },
 	];
 
 	for (const o of overrides) {
-		await prisma.userPermission.upsert({
-			where: {
-				userId_permissionId: {
-					userId: o.user.id,
-					permissionId: o.permission.id,
-				},
-			},
-			update: {},
-			create: {
-				user: { connect: { id: o.user.id } },
-				permission: { connect: { id: o.permission.id } },
-			},
+		// A platform grant (no tenant): permanent, from no one in particular (seeded).
+		await upsertSeedGrant(prisma, {
+			userId: o.user.id,
+			permissionId: o.permission.id,
+			tenantId: null,
+			data: { effect: "ALLOW", locationId: null, expiresAt: null, grantedVia: null },
 		});
 	}
 }

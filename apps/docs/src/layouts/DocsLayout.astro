@@ -1,4 +1,5 @@
 ---
+import PageCover from "@/components/PageCover.astro";
 import Sidebar from "@/components/Sidebar.astro";
 import TableOfContents from "@/components/TableOfContents.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
@@ -17,19 +18,24 @@ interface Props {
 	readonly image?: string | undefined;
 	/** Wider content column. */
 	readonly wide?: boolean;
+	/** The page's cover art, drawn edge to edge above the page (as a Notion page's cover). */
+	readonly cover?: string | undefined;
 }
 
-const { title, description, sections, activeId, toc, editUrl, image, wide = false } = Astro.props;
+const { title, description, sections, activeId, toc, editUrl, image, wide = false, cover } = Astro.props;
 ---
 
 <BaseLayout title={title} description={description} activeId={activeId} showFooter={false} image={image} type={activeId === null ? "website" : "article"}>
 	<div class="docs-shell">
 		<Sidebar sections={sections} activeId={activeId} />
-		<main id="main-content" class="docs-main">
-			<article class:list={["docs-article", { "docs-article--wide": wide }]}>
-				<slot />
-			</article>
-			{toc !== undefined && <TableOfContents items={toc} editUrl={editUrl} />}
+		<main id="main-content" class="docs-page">
+			<PageCover src={cover} />
+			<div class="docs-main">
+				<article class:list={["docs-article", { "docs-article--wide": wide }]}>
+					<slot />
+				</article>
+				{toc !== undefined && <TableOfContents items={toc} editUrl={editUrl} />}
+			</div>
 		</main>
 	</div>
 </BaseLayout>

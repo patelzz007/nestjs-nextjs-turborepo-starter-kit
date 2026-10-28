@@ -5,7 +5,6 @@ export interface TenantDatabaseContext {
 	readonly userId: string;
 	readonly tenantId: string;
 	readonly purpose: string;
-	readonly policyVersion: number;
 }
 
 /**

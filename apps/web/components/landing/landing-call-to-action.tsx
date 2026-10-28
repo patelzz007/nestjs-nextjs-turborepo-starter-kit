@@ -13,7 +13,7 @@ export interface LandingCallToActionProps {
 export function LandingCallToAction({ heading, description, action }: LandingCallToActionProps): React.JSX.Element {
 	return (
 		<section aria-labelledby="landing-cta-heading" className="bg-muted/30 pb-16 sm:pb-20">
-			<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+			<div className="mx-auto max-w-10xl px-4 sm:px-6 lg:px-8">
 				<div className="relative isolate overflow-hidden rounded-3xl bg-primary px-6 py-12 text-center text-primary-foreground shadow-lg shadow-primary/20 sm:px-12 sm:py-14">
 					<div
 						aria-hidden="true"

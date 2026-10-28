@@ -97,7 +97,7 @@ sequenceDiagram
     participant I as Interceptors
     C->>F: request (cookies or Bearer / X-API-Key)
     F->>F: request context + correlation id, CORS, helmet, rate limit
-    F->>G: auth (JWT / API key), mutation intent (CSRF), throttler, permissions / Cedar
+    F->>G: auth (JWT / API key), mutation intent (CSRF), throttler, permissions / access decisions
     G->>P: validate params, query, body with the shared zod schema
     P->>H: typed input
     H->>DB: transaction with app.* RLS settings (user, org, store scope)
@@ -112,7 +112,7 @@ sequenceDiagram
 - **Responses:** `@ZodResponse` documents *and* enforces the response shape; Swagger and
   `docs/generated/openapi.json` are generated from it ([Response contracts](./api/response-contracts.md)).
 - **Errors:** one envelope from one global filter ([Errors](./api/errors.md)).
-- **Authorization:** permissions, ACL / store scope, Cedar policies, then PostgreSQL RLS as the
+- **Authorization:** permissions (role, grant, share, ownership), store scope, then PostgreSQL RLS as the
   last line of defence ([Authorization](./authorization/overview.md),
   [Database security](./security/database-security.md)).
 - **Audit:** every state-changing request writes one append-only `AuditLog` row

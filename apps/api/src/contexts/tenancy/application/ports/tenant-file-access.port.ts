@@ -29,9 +29,7 @@ export interface MembershipRoleLookupPort {
 	activeRole(userId: string, tenantId: string): Promise<MembershipRole | null>;
 }
 
-/** The merchant role table, then the tenant Cedar policy, audited (the same `authorize.*` rows as every merchant check). */
+/** The member's capability, decided by the access-control service and audited (the same `authorize.*` rows as every merchant check). */
 export interface MerchantCapabilityGatePort {
-	/** True when the capability is the membership itself (no Cedar action): the role table is the whole rule. */
-	isMembershipOnly(capability: MerchantCapability): boolean;
 	requireMembershipCapability(subject: { readonly userId: string; readonly tenantId: string; readonly role: MembershipRole }, capability: MerchantCapability): Promise<void>;
 }

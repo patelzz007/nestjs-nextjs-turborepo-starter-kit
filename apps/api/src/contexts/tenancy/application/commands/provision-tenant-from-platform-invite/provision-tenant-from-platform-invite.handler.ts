@@ -52,11 +52,9 @@ export class ProvisionTenantFromPlatformInviteHandler implements ICommandHandler
 			await scope.tenants.add(tenant);
 			const invite = Invitation.issueOnboardingInvite(scope.invitations.nextId(), tenant.id, input.email, input.intendedRole, token.tokenHash, adminUserId, now);
 			await scope.invitations.add(invite);
-			await scope.tenantPolicies.seedDefaultPolicies(tenant.id, adminUserId);
 			await scope.audit.record({
 				tenantId: tenant.id,
 				actorUserId: adminUserId,
-				policyVersion: await scope.tenantPolicies.activePolicyVersion(tenant.id),
 				action: "tenant.provisioned",
 				resourceType: "Tenant",
 				resourceId: tenant.id,

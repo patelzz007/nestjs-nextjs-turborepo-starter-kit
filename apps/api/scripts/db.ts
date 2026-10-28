@@ -2,8 +2,8 @@
 // scripts/db.ts — the database tooling, one command each (run through the `db:*` package scripts)
 // ============================================
 //   schema [--check]                    pnpm db:schema — write (or verify) the base model's managed blocks
-//   apply-security                      pnpm db:apply-security — RLS, grants, capture + audit triggers
-//   check-rls-manifest                  pnpm db:check-rls-manifest — schema ⇄ manifest ⇄ RLS SQL drift
+//   apply-security                      pnpm tools db:apply-security — RLS, grants, capture + audit triggers
+//   check-rls-manifest                  pnpm tools db:check-rls-manifest — schema ⇄ manifest ⇄ RLS SQL drift
 //   generate-system-operation-scopes    pnpm db:generate-system-operation-scopes — render the scopes SQL
 //   check-drift                         pnpm db:check-drift — prisma/migrations reproduce schema.prisma
 //   check-seed-coverage                 pnpm db:check-seed-coverage — every table and column seeded

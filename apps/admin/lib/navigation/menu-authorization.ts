@@ -28,10 +28,10 @@ export const ADMIN_MENU_AUTHORIZATION: ReadonlyMap<string, SidebarAuthorization>
 	// GET /admin/merchants (LIST MERCHANT_ORG). The "Merchants" section shares
 	// this URL with its "All merchants" index child, so both carry it.
 	[ROUTES.merchants.list, { permissions: [PERMISSION.MERCHANT_ORG.LIST] }],
-	// GET /admin/rewards/pending (MANAGE REWARD)
-	[ROUTES.rewards.review, { permissions: [PERMISSION.REWARD.MANAGE] }],
-	// GET /admin/invites/preview-email (live preview), POST /admin/invites (MANAGE MERCHANT_ORG)
-	[ROUTES.merchants.invites, { permissions: [PERMISSION.MERCHANT_ORG.MANAGE] }],
+	// GET /admin/rewards/pending (APPROVE REWARD — the moderation queue)
+	[ROUTES.rewards.review, { permissions: [PERMISSION.REWARD.APPROVE] }],
+	// GET /admin/invites/preview-email (live preview), POST /admin/invites (CREATE MERCHANT_ORG)
+	[ROUTES.merchants.invites, { permissions: [PERMISSION.MERCHANT_ORG.CREATE] }],
 	// GET /admin/merchants/:id (LIST MERCHANT_ORG)
 	[ROUTES.merchants.verification, { permissions: [PERMISSION.MERCHANT_ORG.LIST] }],
 	// GET /admin/location-requests (LIST MERCHANT_ORG)

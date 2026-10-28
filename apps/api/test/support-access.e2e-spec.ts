@@ -25,7 +25,7 @@ const OWNER_EMAIL = "owner@sunrise-kopitiam.demo";
 const IdRowSchema = z.object({ id: z.string() });
 const MembershipRowSchema = z.object({ tenantId: z.string() });
 const GrantRowSchema = z.object({ status: z.string(), tenantApprovedById: z.string().nullable() });
-const AuditRowSchema = z.object({ action: z.string(), policyVersion: z.number(), actorUserId: z.string() });
+const AuditRowSchema = z.object({ action: z.string(), actorUserId: z.string() });
 
 describe("Support access (e2e)", () => {
 	let app: NestFastifyApplication;
@@ -73,10 +73,9 @@ describe("Support access (e2e)", () => {
 	}
 
 	async function auditRows(grantId: string): Promise<z.output<typeof AuditRowSchema>[]> {
-		const result = await pool.query(
-			`SELECT action, "policyVersion" AS "policyVersion", "actorUserId" AS "actorUserId" FROM public."TenantAuditLog" WHERE "resourceId" = $1 ORDER BY "createdAt", action`,
-			[grantId],
-		);
+		const result = await pool.query(`SELECT action, "actorUserId" AS "actorUserId" FROM public."TenantAuditLog" WHERE "resourceId" = $1 ORDER BY "createdAt", action`, [
+			grantId,
+		]);
 		return z.array(AuditRowSchema).parse(result.rows);
 	}
 
@@ -95,7 +94,7 @@ describe("Support access (e2e)", () => {
 
 		const audits = await auditRows(requested.id);
 		expect(audits.map((audit) => audit.action).sort()).toEqual(["support.grant_approved", "support.grant_requested", "support.grant_revoked"]);
-		expect(audits.every((audit) => audit.policyVersion > 0)).toBe(true);
+		expect(audits.every((audit) => audit.actorUserId.length > 0)).toBe(true);
 	});
 
 	it("refuses an approval by someone who does not own the tenant, writing nothing", async () => {

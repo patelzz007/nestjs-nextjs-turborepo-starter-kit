@@ -41,7 +41,6 @@ export class LiftCustomerBanHandler implements ICommandHandler<LiftCustomerBanCo
 			await scope.audit.record({
 				tenantId: member.tenantId,
 				actorUserId: staff.userId,
-				policyVersion: member.policyVersion,
 				action: "tenant.customer_ban_lifted",
 				resourceType: "TenantCustomerBan",
 				resourceId: ban.id,

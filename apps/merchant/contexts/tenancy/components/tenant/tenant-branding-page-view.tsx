@@ -3,7 +3,7 @@
 import { useMerchantAuthorizationStatus } from "@/contexts/tenancy/components/access/merchant-authorization-provider";
 import { MerchantReadOnlyNotice } from "@/contexts/tenancy/components/access/merchant-capability-gate";
 import { StoreLogoSkeleton, MERCHANT_BRANDING_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
-import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
+import { SettingsSectionHeader } from "@workspace/ui/components/settings-shell";
 import { STORE_LOGO_FILE_RULES, STORE_LOGO_HINT, STORE_LOGO_IMAGE_RULES, useRemoveStoreLogo, useUploadStoreLogo } from "@/contexts/tenancy/lib/tenant/use-store-logo";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { useAuthorization } from "@workspace/client/lib/contexts/authorization";
@@ -133,7 +133,7 @@ export function TenantBrandingPageView({ tenantSlug }: TenantBrandingPageViewPro
 
 	return (
 		<div className="space-y-8">
-			<MerchantPageHeader title="Store branding" description="How your store appears to customers." />
+			<SettingsSectionHeader title="Store branding" description="How your store appears to customers." />
 
 			{canManage || isAuthorizationLoading ? null : <MerchantReadOnlyNotice>Your role can see the store logo but not change it.</MerchantReadOnlyNotice>}
 

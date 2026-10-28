@@ -64,7 +64,7 @@ export function DataChangeDrawerSkeleton(): React.JSX.Element {
 /** `/audit-logs/changes/[id]`: the "Back to audit log" button over the full-page record. */
 export function DataChangeDetailPageSkeleton(): React.JSX.Element {
 	return (
-		<SkeletonRegion labels={DATA_CHANGE_RECORD_LOADING_LABELS} className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+		<SkeletonRegion labels={DATA_CHANGE_RECORD_LOADING_LABELS} className="mx-auto flex w-full max-w-10xl flex-col gap-6">
 			<Skeleton className="h-8 w-44" />
 			<DataChangeRecordSkeleton layout="page" />
 		</SkeletonRegion>

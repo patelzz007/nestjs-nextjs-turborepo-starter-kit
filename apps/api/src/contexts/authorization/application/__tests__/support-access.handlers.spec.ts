@@ -20,7 +20,7 @@ import { RevokeSupportAccessCommand } from "../commands/revoke-support-access/re
 import { RevokeSupportAccessHandler } from "../commands/revoke-support-access/revoke-support-access.handler";
 import { SUPPORT_ACCESS_AUDIT_ACTIONS } from "../services/support-access-audit";
 import { SupportAccessGrantLocator } from "../services/support-access-grant-locator";
-import { FixedPolicyVersion, InMemoryAuthorizationStore, NOW, adminActor, anonymousActor } from "./fakes/authorization.fakes";
+import { InMemoryAuthorizationStore, NOW, adminActor, anonymousActor } from "./fakes/authorization.fakes";
 
 const ORG = "11111111-1111-4111-8111-111111111111";
 const SUPPORT = "support-1";
@@ -28,7 +28,6 @@ const OWNER = "owner-1";
 const MINUTE_MS = 60_000;
 
 let store: InMemoryAuthorizationStore;
-const cedar = new FixedPolicyVersion(7);
 
 beforeEach(() => {
 	store = new InMemoryAuthorizationStore();
@@ -36,7 +35,7 @@ beforeEach(() => {
 });
 
 async function request(tenantId: string = ORG): Promise<string> {
-	const grant = await new RequestSupportAccessHandler(store.uow, cedar, store.clock).execute(
+	const grant = await new RequestSupportAccessHandler(store.uow, store.clock).execute(
 		new RequestSupportAccessCommand(adminActor(SUPPORT, { isSuperAdmin: true }), {
 			tenantId,
 			reason: "investigating ticket",
@@ -49,13 +48,13 @@ async function request(tenantId: string = ORG): Promise<string> {
 }
 
 function approve(userId: string, grantId: string): Promise<void> {
-	return new ApproveSupportAccessHandler(store.uow, new SupportAccessGrantLocator(store.uow), cedar, store.clock).execute(
+	return new ApproveSupportAccessHandler(store.uow, new SupportAccessGrantLocator(store.uow), store.clock).execute(
 		new ApproveSupportAccessCommand(adminActor(userId), grantId),
 	);
 }
 
 function revoke(grantId: string): Promise<void> {
-	return new RevokeSupportAccessHandler(store.uow, new SupportAccessGrantLocator(store.uow), cedar, store.clock).execute(
+	return new RevokeSupportAccessHandler(store.uow, new SupportAccessGrantLocator(store.uow), store.clock).execute(
 		new RevokeSupportAccessCommand(adminActor(SUPPORT, { isSuperAdmin: true }), grantId),
 	);
 }
@@ -65,15 +64,13 @@ describe("Support access", () => {
 		const grantId = await request();
 
 		expect(store.supportGrants.rows.get(grantId)).toMatchObject({ status: "PENDING_TENANT_APPROVAL", supportUserId: SUPPORT, expiresAt: NOW + 30 * MINUTE_MS });
-		expect(store.tenants.audits).toEqual([
-			expect.objectContaining({ action: SUPPORT_ACCESS_AUDIT_ACTIONS.requested, policyVersion: 7, resourceId: grantId, actorUserId: SUPPORT }),
-		]);
+		expect(store.tenants.audits).toEqual([expect.objectContaining({ action: SUPPORT_ACCESS_AUDIT_ACTIONS.requested, resourceId: grantId, actorUserId: SUPPORT })]);
 	});
 
 	it("refuses a grant for a tenant that does not exist, and an actor who is not signed in", async () => {
 		await expect(request("22222222-2222-4222-8222-222222222222")).rejects.toBeInstanceOf(SupportAccessTenantNotFoundError);
 		await expect(
-			new RequestSupportAccessHandler(store.uow, cedar, store.clock).execute(
+			new RequestSupportAccessHandler(store.uow, store.clock).execute(
 				new RequestSupportAccessCommand(anonymousActor(), { tenantId: ORG, reason: "investigating ticket", mode: "READ_ONLY", durationMinutes: 30 }),
 			),
 		).rejects.toBeInstanceOf(AccessDeniedError);

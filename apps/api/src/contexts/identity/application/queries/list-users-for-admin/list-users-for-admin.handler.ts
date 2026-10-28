@@ -11,7 +11,7 @@ import { isEmailVerifiedAt } from "../../services/user-response.assembler";
 import { ListUsersForAdminQuery } from "./list-users-for-admin.query";
 
 /** Roles whose holders the admin list shows as having admin access. */
-const ADMIN_ACCESS_ROLE_NAMES: readonly string[] = ["SuperAdmin", "Admin", "Manager"];
+const ADMIN_ACCESS_ROLE_NAMES: readonly string[] = ["SuperAdmin", "Admin"];
 
 /** SuperAdmin user list: one page query, then ONE batched read each for roles and referral facts (no N+1). */
 @QueryHandler(ListUsersForAdminQuery)

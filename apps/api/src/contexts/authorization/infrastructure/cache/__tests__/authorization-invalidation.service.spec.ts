@@ -7,12 +7,7 @@ import { z } from "zod";
 import type { AccessTokenStatePort } from "../../../../../platform/application/ports/access-token.port";
 import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
 import { AuthorizationCacheService, type CachedAuthorization } from "../authorization-cache.service";
-import {
-	AUTHORIZATION_INVALIDATION_CHANNEL,
-	AuthorizationInvalidationService,
-	MAX_USER_IDS_PER_INVALIDATION_MESSAGE,
-	type PolicyBundleCacheTarget,
-} from "../authorization-invalidation.service";
+import { AUTHORIZATION_INVALIDATION_CHANNEL, AuthorizationInvalidationService, MAX_USER_IDS_PER_INVALIDATION_MESSAGE } from "../authorization-invalidation.service";
 
 /**
  * A real ioredis client that never connects (`lazyConnect`), with its network
@@ -46,21 +41,6 @@ class FakeRedis {
 
 	public emit(channel: string, payload: string): void {
 		this.client.emit("message", channel, payload);
-	}
-}
-
-const MessageTypeSchema = z.object({ type: z.string() });
-
-/** A policy-bundle cache that records what it was told to drop (`*` = everything). */
-class RecordingBundleCache implements PolicyBundleCacheTarget {
-	public readonly dropped: string[] = [];
-
-	public invalidateTenant(tenantId: string): void {
-		this.dropped.push(tenantId);
-	}
-
-	public invalidateAll(): void {
-		this.dropped.push("*");
 	}
 }
 
@@ -168,6 +148,8 @@ describe("AuthorizationInvalidationService", () => {
 
 		subscriber.emit(CHANNEL, "{not json");
 		subscriber.emit(CHANNEL, JSON.stringify({ type: "users", origin: "x", userIds: [] }));
+		// The retired policy-bundle message (ADR 067 Phase 4) is no longer a known type.
+		subscriber.emit(CHANNEL, JSON.stringify({ type: "policy_bundles", origin: "x", tenantId: null }));
 
 		expect(receiver.cache.get("user-1")).not.toBeNull();
 	});
@@ -209,38 +191,6 @@ describe("AuthorizationInvalidationService", () => {
 
 		expect(publisher.published).toEqual([]);
 		expect(subscriber.subscriptions).toEqual([]);
-	});
-
-	it("drops registered policy-bundle caches locally and on every other instance after a policy publish", async () => {
-		const sender = instance(publisher, subscriber);
-		const receiver = instance(publisher, subscriber);
-		await receiver.service.onModuleInit();
-		const senderBundles = new RecordingBundleCache();
-		const receiverBundles = new RecordingBundleCache();
-		sender.service.registerPolicyBundleCache(senderBundles);
-		receiver.service.registerPolicyBundleCache(receiverBundles);
-
-		await sender.service.invalidatePolicyBundles({ kind: "tenant", tenantId: "org-1" });
-		await sender.service.invalidatePolicyBundles({ kind: "all" });
-		for (const message of publisher.published) {
-			subscriber.emit(CHANNEL, message.payload);
-		}
-
-		expect(senderBundles.dropped).toEqual(["org-1", "*"]);
-		expect(receiverBundles.dropped).toEqual(["org-1", "*"]);
-		// A policy publish leaves the per-user authorization cache alone.
-		expect(publisher.published.map((message) => MessageTypeSchema.parse(JSON.parse(message.payload)).type)).toEqual(["policy_bundles", "policy_bundles"]);
-	});
-
-	it("rejects a policy-bundle message without a tenant field", async () => {
-		const receiver = instance(publisher, subscriber);
-		await receiver.service.onModuleInit();
-		const bundles = new RecordingBundleCache();
-		receiver.service.registerPolicyBundleCache(bundles);
-
-		subscriber.emit(CHANNEL, JSON.stringify({ type: "policy_bundles", origin: "other" }));
-
-		expect(bundles.dropped).toEqual([]);
 	});
 
 	it("logs at debug which users, the trigger and the originating instance — locally and on the receiving instance", async () => {

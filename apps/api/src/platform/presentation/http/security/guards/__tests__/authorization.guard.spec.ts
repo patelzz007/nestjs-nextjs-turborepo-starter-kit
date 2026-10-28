@@ -3,20 +3,19 @@ import { UnauthorizedException, type ExecutionContext } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { NotFoundError } from "../../../../../application/errors/app-error";
 import { Reflector } from "@nestjs/core";
-import type { AccessTokenPayload, AuthorizationRequest, AuthorizationResult } from "@workspace/shared";
+import type { AccessTokenPayload, AuthorizationRequest } from "@workspace/shared";
 
 import { accessToken, createHttpContext, testRequest, type TestHttpRequest, type TestRouteMetadata } from "../../../../../../../test/support/http-execution-context";
 
 import {
 	AuthorizationException,
-	type AuthorizationDecisionAuditPort,
 	type AuthorizationKernelPort,
 	type RequestTenantContext,
 	type RequestTenantResolverPort,
 	type SuperAdminBypassAuditPort,
 } from "../../../../../../contexts/authorization/public-api";
-import { REQUIRED_PERMISSION_KEY, REQUIRED_PERMISSIONS_KEY, REQUIRED_ROLES_KEY } from "../../decorators/route-requirements.metadata";
-import { AUTHORIZE_KEY, self, type AuthorizationRequirement } from "../../decorators/authorize.decorator";
+import { REQUIRED_PERMISSION_KEY, type RequiredPermission } from "../../decorators/route-requirements.metadata";
+import { self } from "../../decorators/permission-target";
 import { AuthorizationGuard } from "../authorization.guard";
 import { RequestContextService, type RequestTenant } from "../../../../../infrastructure/context/request-context";
 import { MembershipInactiveError, TENANT_LIFECYCLE_ROUTE_KEY, TenantBannedError, TenantSuspendedError } from "../../../../../../contexts/tenancy/public-api";
@@ -24,12 +23,9 @@ import { createTestPrisma } from "../../../../../../../test/support/test-service
 import type { SystemDatabaseContext } from "../../../../../../prisma/tenant-context";
 
 const mocks = vi.hoisted(() => ({
-	authorize: vi.fn(),
+	authorize: vi.fn<(request: AuthorizationRequest) => Promise<void>>(),
 	explain: vi.fn(),
 	can: vi.fn(),
-	hasRoles: vi.fn(),
-	filter: vi.fn(),
-	auditResult: vi.fn(),
 	recordBypass: vi.fn(),
 	resolve: vi.fn(),
 	userFindUnique: vi.fn(),
@@ -44,14 +40,13 @@ vi.mock("../../../../../../prisma/prisma.service", () => ({
 const requestContext = new RequestContextService();
 
 /** Recording implementations of the authorization ports the guard depends on (the guard itself is real). */
-const kernel: AuthorizationKernelPort = { authorize: mocks.authorize, explain: mocks.explain, can: mocks.can, hasRoles: mocks.hasRoles, filter: mocks.filter };
-const decisionAudit: AuthorizationDecisionAuditPort = { auditResult: mocks.auditResult };
+const kernel: AuthorizationKernelPort = { authorize: mocks.authorize, explain: mocks.explain, can: mocks.can };
 const bypassAudit: SuperAdminBypassAuditPort = { recordBypass: mocks.recordBypass };
 const tenantResolver: RequestTenantResolverPort = { resolve: mocks.resolve };
 
 function createGuard(): AuthorizationGuard {
 	const prisma = createTestPrisma();
-	return new AuthorizationGuard(new Reflector(), kernel, decisionAudit, bypassAudit, tenantResolver, requestContext, {
+	return new AuthorizationGuard(new Reflector(), kernel, bypassAudit, tenantResolver, requestContext, {
 		withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
 	});
 }
@@ -67,10 +62,6 @@ function contextFor(
 
 const noTenant: RequestTenantContext = { verified: {}, requested: {}, target: null };
 
-function result(decision: "ALLOW" | "DENY", request: AuthorizationRequest): AuthorizationResult {
-	return { decision, request, evaluation: [] };
-}
-
 describe("AuthorizationGuard", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -78,7 +69,6 @@ describe("AuthorizationGuard", () => {
 		mocks.userFindUnique.mockResolvedValue({ tokenVersion: 1 });
 		mocks.authorize.mockResolvedValue(undefined);
 		mocks.can.mockResolvedValue("DENY");
-		mocks.auditResult.mockResolvedValue(undefined);
 		mocks.recordBypass.mockResolvedValue(undefined);
 	});
 
@@ -88,7 +78,7 @@ describe("AuthorizationGuard", () => {
 	});
 
 	it("rejects anonymous requests to protected routes with 401", async () => {
-		const { context } = contextFor(undefined, { [REQUIRED_PERMISSION_KEY]: { action: "READ", resource: "USER" } });
+		const { context } = contextFor(undefined, { [REQUIRED_PERMISSION_KEY]: [{ action: "READ", resource: "USER" }] });
 
 		await expect(createGuard().canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
 	});
@@ -201,7 +191,7 @@ describe("AuthorizationGuard", () => {
 	});
 
 	it("audits decisions with the request context's correlation id, not a raw header", async () => {
-		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: { action: "READ", resource: "ORDER" } });
+		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: [{ action: "READ", resource: "ORDER" }] });
 
 		await requestContext.run({ correlationId: "corr-from-context", ip: undefined, userAgent: undefined, edgeLocation: undefined }, () => createGuard().canActivate(context));
 
@@ -220,7 +210,7 @@ describe("AuthorizationGuard", () => {
 			requested: { tenantId: "org-a" },
 			target: { tenantId: "org-a", lifecycleState: "ACTIVE", membershipStatus: "ACTIVE" },
 		});
-		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: { action: "READ", resource: "ORDER" } });
+		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: [{ action: "READ", resource: "ORDER" }] });
 
 		await createGuard().canActivate(context);
 
@@ -232,22 +222,22 @@ describe("AuthorizationGuard", () => {
 
 	it("denies when the kernel denies", async () => {
 		mocks.authorize.mockRejectedValue(new AuthorizationException());
-		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: { action: "DELETE", resource: "USER" } });
+		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: [{ action: "DELETE", resource: "USER" }] });
 
 		await expect(createGuard().canActivate(context)).rejects.toBeInstanceOf(AuthorizationException);
 	});
 
 	it("rejects stale tokens on protected routes", async () => {
 		mocks.userFindUnique.mockResolvedValue({ tokenVersion: 2 });
-		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: { action: "READ", resource: "USER" } });
+		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: [{ action: "READ", resource: "USER" }] });
 
 		await expect(createGuard().canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
 	});
 
-	describe("@Authorize", () => {
+	describe("@RequirePermission with a record target", () => {
 		it("is enforced with the resource id read from the named route param", async () => {
-			const requirement: AuthorizationRequirement = { action: "UPDATE", resource: "PERMISSION", resourceId: "id" };
-			const { context } = contextFor(accessToken(), { [AUTHORIZE_KEY]: requirement }, { id: "perm-9" });
+			const requirement: RequiredPermission = { action: "UPDATE", resource: "PERMISSION", resourceId: "id" };
+			const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: [requirement] }, { id: "perm-9" });
 
 			await createGuard().canActivate(context);
 
@@ -255,86 +245,54 @@ describe("AuthorizationGuard", () => {
 		});
 
 		it("resolves self() to the caller for self-service routes", async () => {
-			const requirement: AuthorizationRequirement = { action: "UPDATE", resource: "USER", resourceId: self() };
+			const requirement: RequiredPermission = { action: "UPDATE", resource: "USER", resourceId: self() };
 
-			await createGuard().canActivate(contextFor(accessToken(), { [AUTHORIZE_KEY]: requirement }).context);
+			await createGuard().canActivate(contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: [requirement] }).context);
 
 			expect(mocks.authorize).toHaveBeenCalledWith(expect.objectContaining({ resource: "USER", resourceId: "user-1" }), expect.anything());
 		});
 
 		it("fails closed when the declared resource id cannot be resolved", async () => {
-			const requirement: AuthorizationRequirement = { action: "DELETE", resource: "ORDER", resourceId: "id" };
+			const requirement: RequiredPermission = { action: "DELETE", resource: "ORDER", resourceId: "id" };
 
-			await expect(createGuard().canActivate(contextFor(accessToken(), { [AUTHORIZE_KEY]: requirement }).context)).rejects.toBeInstanceOf(AuthorizationException);
+			await expect(createGuard().canActivate(contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: [requirement] }).context)).rejects.toBeInstanceOf(AuthorizationException);
 			expect(mocks.authorize).not.toHaveBeenCalled();
 		});
 
 		it("never lets declared attributes override the routed tenant", async () => {
 			mocks.resolve.mockResolvedValue({ verified: {}, requested: { tenantId: "org-a" }, target: { tenantId: "org-a", lifecycleState: "ACTIVE", membershipStatus: "none" } });
-			const requirement: AuthorizationRequirement = { action: "UPDATE", resource: "ORDER", attributes: { tenantId: "org-evil", status: "PENDING" } };
+			const requirement: RequiredPermission = { action: "UPDATE", resource: "ORDER", attributes: { tenantId: "org-evil", status: "PENDING" } };
 
-			await createGuard().canActivate(contextFor(accessToken(), { [AUTHORIZE_KEY]: requirement }).context);
+			await createGuard().canActivate(contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: [requirement] }).context);
 
 			expect(mocks.authorize).toHaveBeenCalledWith(expect.objectContaining({ resourceAttributes: { tenantId: "org-a", status: "PENDING" } }), expect.anything());
 		});
 	});
 
-	describe("multi-permission and role requirements", () => {
-		const anyOf = {
-			[REQUIRED_PERMISSIONS_KEY]: {
-				mode: "any",
-				permissions: [
-					["UPDATE", "ROLE"],
-					["UPDATE", "PERMISSION"],
-				],
-			},
-		};
+	describe("stacked requirements", () => {
+		const collectionAndRecord: readonly RequiredPermission[] = [
+			{ action: "DELETE", resource: "USER" },
+			{ action: "DELETE", resource: "USER", resourceId: "userId" },
+		];
 
-		it("ANY mode allows when one permission is allowed and audits it", async () => {
-			mocks.explain.mockImplementation((request: AuthorizationRequest) => Promise.resolve(result(request.resource === "PERMISSION" ? "ALLOW" : "DENY", request)));
+		it("checks every requirement, in the order they are written", async () => {
+			await createGuard().canActivate(contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: collectionAndRecord }, { userId: "user-7" }).context);
 
-			await expect(createGuard().canActivate(contextFor(accessToken(), anyOf).context)).resolves.toBe(true);
-			expect(mocks.auditResult).toHaveBeenCalledWith(expect.objectContaining({ decision: "ALLOW" }), expect.anything());
+			expect(mocks.authorize.mock.calls.map(([request]) => request.resourceId)).toEqual([undefined, "user-7"]);
 		});
 
-		it("ANY mode denies and audits every denial when nothing is allowed", async () => {
-			mocks.explain.mockImplementation((request: AuthorizationRequest) => Promise.resolve(result("DENY", request)));
+		it("denies when any one of them denies", async () => {
+			mocks.authorize.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new AuthorizationException());
 
-			await expect(createGuard().canActivate(contextFor(accessToken(), anyOf).context)).rejects.toBeInstanceOf(AuthorizationException);
-			expect(mocks.auditResult).toHaveBeenCalledTimes(2);
-		});
-
-		it("ALL mode authorizes each permission", async () => {
-			const { context } = contextFor(accessToken(), {
-				[REQUIRED_PERMISSIONS_KEY]: {
-					mode: "all",
-					permissions: [
-						["READ", "ROLE"],
-						["READ", "PERMISSION"],
-					],
-				},
-			});
-
-			await createGuard().canActivate(context);
-
-			expect(mocks.authorize).toHaveBeenCalledTimes(2);
-		});
-
-		it("evaluates role requirements natively (no pseudo ASSUME action)", async () => {
-			const roles = { [REQUIRED_ROLES_KEY]: { mode: "any", roles: ["Admin"] } };
-			mocks.hasRoles.mockResolvedValue(false);
-
-			await expect(createGuard().canActivate(contextFor(accessToken(), roles).context)).rejects.toBeInstanceOf(AuthorizationException);
-			expect(mocks.hasRoles).toHaveBeenCalledWith("user-1", ["Admin"], "any");
-
-			mocks.hasRoles.mockResolvedValue(true);
-			await expect(createGuard().canActivate(contextFor(accessToken(), roles).context)).resolves.toBe(true);
+			await expect(
+				createGuard().canActivate(contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: collectionAndRecord }, { userId: "user-7" }).context),
+			).rejects.toBeInstanceOf(AuthorizationException);
 		});
 	});
 
 	it("audits the SuperAdmin bypass on protected routes", async () => {
 		const superAdmin = accessToken({ isSuperAdmin: true });
-		const { context } = contextFor(superAdmin, { [REQUIRED_PERMISSION_KEY]: { action: "DELETE", resource: "USER" } });
+		const { context } = contextFor(superAdmin, { [REQUIRED_PERMISSION_KEY]: [{ action: "DELETE", resource: "USER" }] });
 
 		await expect(createGuard().canActivate(context)).resolves.toBe(true);
 		expect(mocks.authorize).not.toHaveBeenCalled();

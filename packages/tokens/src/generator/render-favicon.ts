@@ -91,7 +91,7 @@ export function renderFaviconSvg(source: TokenSource, variant: FaviconVariant): 
 	const offset = formatNumber(tile.markOffset);
 	return [
 		`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" role="img" aria-label="Brand mark">`,
-		"  <!-- GENERATED FILE: do not edit by hand. Source: packages/tokens/src/brand.ts (ADR 040); regenerate with `pnpm tokens:generate`. -->",
+		"  <!-- GENERATED FILE: do not edit by hand. Source: packages/tokens/src/brand.ts (ADR 040); regenerate with `pnpm tools tokens:generate`. -->",
 		`  <rect width="${size}" height="${size}" rx="${formatNumber(tile.radius)}" fill="${tile.tileColor}"/>`,
 		`  <g transform="translate(${offset} ${offset}) scale(${formatNumber(tile.markScale)})">`,
 		...BRAND_MARK_FACETS.map((facet: BrandMarkFacet): string => facetElement(facet, tile.markColor)),

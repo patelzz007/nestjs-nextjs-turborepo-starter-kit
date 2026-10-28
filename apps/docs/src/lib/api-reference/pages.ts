@@ -24,10 +24,10 @@ export const REFERENCE_PAGES: readonly ReferencePage[] = [
 	},
 	{
 		slug: "access-control",
-		title: "Roles, permissions, policies and audit",
-		description: "Platform RBAC administration, authorization decisions, Cedar policy drafts, the capability catalog and the HTTP audit log.",
+		title: "Roles, permissions and audit",
+		description: "Platform RBAC administration, authorization decisions, the capability catalog and the HTTP audit log.",
 		guide: { label: "Authorization overview", href: "../authorization/overview.md" },
-		tags: ["Roles", "Permissions", "Authorization", "Authorization Policies", "Capabilities", "Audit Log"],
+		tags: ["Roles", "Permissions", "Authorization", "Capabilities", "Audit Log"],
 	},
 	{
 		slug: "platform-admin",
@@ -52,6 +52,7 @@ export const REFERENCE_PAGES: readonly ReferencePage[] = [
 			"Tenant API Keys",
 			"Tenant Redemptions",
 			"Tenant Customer Bans",
+			"Tenant Access",
 			"Tenant Analytics",
 		],
 	},

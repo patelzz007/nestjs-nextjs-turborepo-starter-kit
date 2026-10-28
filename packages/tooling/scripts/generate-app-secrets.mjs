@@ -2,8 +2,8 @@
 /**
  * Generate the API's locally owned secrets.
  *
- *   pnpm secrets:generate                 print a fresh block for a NEW env file
- *   pnpm secrets:generate apps/api/.env   update an existing env file in place
+ *   pnpm tools secrets:generate                 print a fresh block for a NEW env file
+ *   pnpm tools secrets:generate apps/api/.env   update an existing env file in place
  *
  * Rotation rules (signing secrets replaced, MFA key ring appended to, tenant
  * master key write-once) live in ./lib/app-secrets.mjs. External credentials
@@ -20,7 +20,7 @@ function main() {
 
 	if (writeTarget === undefined) {
 		console.log(formatFreshEnvBlock(values));
-		console.log("\n# Paste into a NEW apps/api/.env. To update an existing file (keeps MFA keys): pnpm secrets:generate apps/api/.env");
+		console.log("\n# Paste into a NEW apps/api/.env. To update an existing file (keeps MFA keys): pnpm tools secrets:generate apps/api/.env");
 		return;
 	}
 

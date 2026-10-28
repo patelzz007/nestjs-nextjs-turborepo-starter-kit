@@ -40,7 +40,6 @@ export async function acceptTeamInviteInScope(scope: TenantsScope, invite: Invit
 	await scope.audit.record({
 		tenantId,
 		actorUserId: userId,
-		policyVersion: await scope.tenantPolicies.activePolicyVersion(tenantId),
 		action: "membership.invite_accepted",
 		resourceType: "TenantInvitation",
 		resourceId: invite.id,

@@ -21,7 +21,7 @@ export interface ApiReferenceInputs {
 
 const COVER_IMAGE = "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop";
 const GENERATED_NOTICE =
-	"<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm docs:api -->";
+	"<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm tools docs:api -->";
 const HTTP_STATUS_TEXT: Readonly<Record<string, string>> = {
 	"200": "OK",
 	"201": "Created",
@@ -367,7 +367,7 @@ function renderIndex(byPage: ReadonlyMap<ReferencePage, readonly Endpoint[]>, in
 		`**Content type.** Every endpoint takes and returns ${code(JSON_MEDIA_TYPE)} unless its *Content type* line names another (a file upload, a download, a live stream). Errors are always ${code(JSON_MEDIA_TYPE)}.`,
 		"",
 		"> [!NOTE]",
-		"> This folder is generated. Edit the controllers / zod contracts (or the capture script), then run `pnpm docs:api` — see [how the reference is generated](../api/README.md#how-the-reference-is-generated).",
+		"> This folder is generated. Edit the controllers / zod contracts (or the capture script), then run `pnpm tools docs:api` — see [how the reference is generated](../api/README.md#how-the-reference-is-generated).",
 		"",
 		"## Pages",
 		"",

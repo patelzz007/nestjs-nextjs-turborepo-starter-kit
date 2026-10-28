@@ -72,14 +72,14 @@ describe("AuditTrailController authorization", () => {
 	});
 
 	it("needs LIST AUDIT_LOG, and answers one page of timeline entries", () => {
-		expect(reflector.get<object>(REQUIRED_PERMISSION_METADATA_KEY, handlerOf("list"))).toEqual({ action: "LIST", resource: "AUDIT_LOG" });
+		expect(reflector.get<readonly object[]>(REQUIRED_PERMISSION_METADATA_KEY, handlerOf("list"))).toEqual([{ action: "LIST", resource: "AUDIT_LOG" }]);
 		expect(getResponseContract(handlerOf("list"))).toMatchObject({ kind: "paginated", schema: AuditTrailEntrySchema, status: 200 });
 	});
 
 	it("streams live updates under the same permission as the list, with no response contract", () => {
 		expect(reflector.get<string>(PATH_METADATA, handlerOf("stream"))).toBe("events");
 		expect(reflector.get<boolean>(SSE_METADATA, handlerOf("stream"))).toBe(true);
-		expect(reflector.get<object>(REQUIRED_PERMISSION_METADATA_KEY, handlerOf("stream"))).toEqual({ action: "LIST", resource: "AUDIT_LOG" });
+		expect(reflector.get<readonly object[]>(REQUIRED_PERMISSION_METADATA_KEY, handlerOf("stream"))).toEqual([{ action: "LIST", resource: "AUDIT_LOG" }]);
 		expect(getResponseContract(handlerOf("stream"))).toBeUndefined();
 	});
 });

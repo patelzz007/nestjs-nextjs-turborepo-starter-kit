@@ -53,8 +53,8 @@ describe("WebRouteAccessGuard", () => {
 		expect(screen.getByText("page-content")).toBeDefined();
 	});
 
-	it("renders a gated page when the capability is held (MANAGE implies LIST)", () => {
-		renderGuard(ORDERS_PATH, signedInSession({ capabilities: [PERMISSION.ORDER.MANAGE] }));
+	it("renders a gated page when the capability is held", () => {
+		renderGuard(ORDERS_PATH, signedInSession({ capabilities: [PERMISSION.ORDER.LIST] }));
 
 		expect(screen.getByText("page-content")).toBeDefined();
 	});

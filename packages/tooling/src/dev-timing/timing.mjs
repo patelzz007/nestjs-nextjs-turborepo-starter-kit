@@ -1,5 +1,5 @@
 /**
- * Timer maths behind `pnpm dev:timing` (plan §19.1): elapsed time between two
+ * Timer maths behind `pnpm tools dev:timing` (plan §19.1): elapsed time between two
  * clock readings, the median of repeated runs, and the per-measurement summary
  * across runs. Pure functions, so they are unit-tested without a clock.
  */

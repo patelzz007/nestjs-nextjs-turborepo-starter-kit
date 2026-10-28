@@ -31,7 +31,7 @@ export class SyncRolePermissionsHandler implements ICommandHandler<SyncRolePermi
 			if ((await scope.permissions.countLive(unique)) !== unique.length) {
 				throw new PermissionsNotFoundError();
 			}
-			const affectedUserIds: string[] = await scope.rbacGraph.holdersOfLineage(roleId);
+			const affectedUserIds: string[] = await scope.rbacGraph.holdersOfRole(roleId);
 			role.syncPermissions(unique, actor.userId, this.clock.now());
 			await scope.roles.save(role);
 			return {

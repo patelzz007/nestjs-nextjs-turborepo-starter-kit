@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { Pool } from "pg";
 import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -11,7 +13,7 @@ import {
 } from "@workspace/shared";
 
 import { TENANT_SEED_IDS, TENANT_SEED_SLUGS } from "../prisma/seed/tenants";
-import { createE2eApp, extractCookie, login, mutationHeaders, parseSuccessEnvelope, type LoginResult } from "./e2e-helpers";
+import { createE2eApp, createTestPlatformRole, dropTestPlatformRole, extractCookie, login, mutationHeaders, parseSuccessEnvelope, type LoginResult } from "./e2e-helpers";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
 
@@ -30,7 +32,7 @@ async function idFor(pool: Pool, sql: string, value: string): Promise<string> {
 
 /**
  * End-to-end coverage for the authorization kernel hardening: forged tenant
- * ids, privilege escalation, enforced @Authorize self-service routes, scoped
+ * ids, privilege escalation, enforced self-service routes (`@RequirePermission` with `self()`), scoped
  * RLS for refresh-token routes, and the capability decisions endpoint.
  */
 describe("Authorization hardening (e2e)", () => {
@@ -40,7 +42,9 @@ describe("Authorization hardening (e2e)", () => {
 	let managerId: string;
 	let targetUserId: string;
 	let superAdminRoleId: string;
-	let managerRoleId: string;
+	let adminRoleId: string;
+	/** A platform role made only of permissions the lesser admin holds (Admin's admin-dashboard read). */
+	const readerRoleId = randomUUID();
 	let updateRolePermissionId: string;
 
 	beforeAll(async () => {
@@ -49,8 +53,9 @@ describe("Authorization hardening (e2e)", () => {
 		userId = await idFor(pool, `SELECT id FROM public."User" WHERE email = $1`, "user@example.com");
 		managerId = await idFor(pool, `SELECT id FROM public."User" WHERE email = $1`, "manager@example.com");
 		targetUserId = await idFor(pool, `SELECT id FROM public."User" WHERE email = $1`, "user-01@example.com");
-		superAdminRoleId = await idFor(pool, `SELECT id FROM public."Role" WHERE name = $1`, "SuperAdmin");
-		managerRoleId = await idFor(pool, `SELECT id FROM public."Role" WHERE name = $1`, "Manager");
+		superAdminRoleId = await idFor(pool, `SELECT id FROM public."Role" WHERE name = $1 AND "tenantId" IS NULL`, "SuperAdmin");
+		// The platform Admin role (tenants' roles share template names, so only tenantless rows).
+		adminRoleId = await idFor(pool, `SELECT id FROM public."Role" WHERE name = $1 AND "tenantId" IS NULL`, "Admin");
 		updateRolePermissionId = await idFor(pool, `SELECT id FROM public."Permission" WHERE action = 'UPDATE' AND resource = 'ROLE' AND scope = $1`, "GLOBAL");
 
 		// Full (non-restricted) sessions: verified email and an MFA enrollment deadline in the future.
@@ -60,18 +65,19 @@ describe("Authorization hardening (e2e)", () => {
 			["user@example.com", "manager@example.com", "bob.smith@example.com", "admin@example.com"],
 		]);
 
-		// The manager may manage role assignments (UPDATE:ROLE) but holds far fewer permissions than SuperAdmin.
-		await pool.query(
-			`INSERT INTO public."UserPermission" (id, "userId", "permissionId", effect)
-       VALUES (uuidv7(), $1, $2, 'ALLOW')
-       ON CONFLICT ("userId", "permissionId") DO UPDATE SET "isDeleted" = false, "deletedAt" = NULL, effect = 'ALLOW'`,
-			[managerId, updateRolePermissionId],
-		);
+		await createTestPlatformRole(pool, { id: readerRoleId, label: "dashboard reader", permissions: [["READ", "ADMIN_DASHBOARD"]] });
+		// The lesser admin (manager@, an Admin since ADR 067 retired the platform Manager role) may manage
+		// role assignments (a platform UPDATE:ROLE grant) but holds far fewer permissions than SuperAdmin.
+		await pool.query(`INSERT INTO public."UserPermission" (id, "userId", "permissionId", effect, "tenantId") VALUES (uuidv7(), $1, $2, 'ALLOW', NULL)`, [
+			managerId,
+			updateRolePermissionId,
+		]);
 	});
 
 	afterAll(async () => {
+		await dropTestPlatformRole(pool, readerRoleId);
 		await pool.query(`DELETE FROM public."UserPermission" WHERE "userId" = $1 AND "permissionId" = $2`, [managerId, updateRolePermissionId]);
-		await pool.query(`DELETE FROM public."UserRole" WHERE "userId" = $1 AND "roleId" = $2`, [targetUserId, managerRoleId]);
+		await pool.query(`DELETE FROM public."UserRole" WHERE "userId" = $1 AND "roleId" = $2`, [targetUserId, adminRoleId]);
 		await pool.end();
 		await app.close();
 	});
@@ -116,20 +122,21 @@ describe("Authorization hardening (e2e)", () => {
 		});
 	});
 
-	describe("location roles", () => {
-		/** A location where the member's live location scope carries a location role (seeded: Location Staff for a cashier). */
-		async function roleLocationFor(email: string): Promise<string> {
+	describe("a member's role applies at their own stores only (ADR 067)", () => {
+		/** A store the member's location scope names explicitly (seeded: each cashier's own store). */
+		async function ownStoreOf(email: string): Promise<string> {
 			return idFor(
 				pool,
 				`SELECT s."locationId" AS id FROM public."MembershipLocationScope" s
          JOIN public."Membership" m ON m.id = s."membershipId"
          JOIN public."User" u ON u.id = m."userId"
-         WHERE u.email = $1 AND s."isDeleted" = false AND s."locationId" IS NOT NULL AND s."roleId" IS NOT NULL
+         WHERE u.email = $1 AND m."isDeleted" = false AND s."isDeleted" = false AND s."scopeType" = 'SELECTED' AND s."locationId" IS NOT NULL
          ORDER BY s."locationId" LIMIT 1`,
 				email,
 			);
 		}
 
+		/** [redeem a claim, update the store] at `locationId` — the Cashier template holds the first only. */
 		async function decide(session: Awaited<ReturnType<typeof login>>, locationId: string): Promise<readonly boolean[]> {
 			const response = await app.inject({
 				method: "POST",
@@ -137,7 +144,7 @@ describe("Authorization hardening (e2e)", () => {
 				headers: mutationHeaders({ cookie: cookieHeader(session) }),
 				payload: {
 					checks: [
-						{ action: "CREATE", resource: "REDEMPTION" },
+						{ action: "REDEEM", resource: "CLAIM" },
 						{ action: "UPDATE", resource: "LOCATION" },
 					],
 				},
@@ -146,8 +153,8 @@ describe("Authorization hardening (e2e)", () => {
 			return parseSuccessEnvelope(response, AuthorizationDecisionsResponseSchema).data.results.map((result) => result.allowed);
 		}
 
-		it("grants a location role's permissions only at the member's own location", async () => {
-			const klLocationId = await roleLocationFor("brew.cashier@kl-rewards.demo");
+		it("allows what the cashier's role gives at the cashier's own store, and nothing it does not give", async () => {
+			const klLocationId = await ownStoreOf("brew.cashier@kl-rewards.demo");
 			await pool.query(`UPDATE public."User" SET "emailVerifiedAt" = $1, "mfaEnrollmentDeadline" = $2 WHERE email = $3`, [
 				Date.now(),
 				Date.now() + 86_400_000,
@@ -158,8 +165,8 @@ describe("Authorization hardening (e2e)", () => {
 			expect(await decide(cashier, klLocationId)).toEqual([true, false]);
 		});
 
-		it("grants nothing at another tenant's location", async () => {
-			const mlkLocationId = await roleLocationFor("jonker.cashier@melaka-rewards.demo");
+		it("grants nothing at another tenant's store", async () => {
+			const mlkLocationId = await ownStoreOf("jonker.cashier@melaka-rewards.demo");
 			const cashier = await login(app, "brew.cashier@kl-rewards.demo", "BrewCashier@123");
 
 			expect(await decide(cashier, mlkLocationId)).toEqual([false, false]);
@@ -187,7 +194,7 @@ describe("Authorization hardening (e2e)", () => {
 						{ action: "UPDATE", resource: "USER", resourceId: userId },
 						{ action: "DELETE", resource: "USER", resourceId: userId },
 						{ action: "UPDATE", resource: "USER", resourceId: targetUserId },
-						{ action: "MANAGE", resource: "ROLE" },
+						{ action: "UPDATE", resource: "ROLE" },
 					],
 				},
 			});
@@ -217,7 +224,7 @@ describe("Authorization hardening (e2e)", () => {
 		});
 	});
 
-	describe("self-service routes enforce @Authorize with self()", () => {
+	describe("self-service routes enforce @RequirePermission with self()", () => {
 		it("lets a user reach their own change-password flow (fails on credentials, not authorization)", async () => {
 			const session = await login(app, "user@example.com", "User@123");
 
@@ -269,7 +276,7 @@ describe("Authorization hardening (e2e)", () => {
 				method: "POST",
 				url: `${API_VERSION_PREFIX}/admin/roles/user/assign`,
 				headers: mutationHeaders({ cookie: cookieHeader(manager) }),
-				payload: { userId: targetUserId, roleId: managerRoleId },
+				payload: { userId: targetUserId, roleId: readerRoleId },
 			});
 
 			expect(response.statusCode, response.body).toBe(201);
@@ -278,7 +285,7 @@ describe("Authorization hardening (e2e)", () => {
 		it("records the assignment in permission_audit_logs with the real actor, readable through the audit viewer", async () => {
 			const audited = await pool.query<{ actorId: string }>(
 				`SELECT "actorId" AS "actorId" FROM public."PermissionAuditLog" WHERE action = 'ROLE_ASSIGNED' AND "targetUserId" = $1 AND "targetRoleId" = $2 ORDER BY "createdAt" DESC LIMIT 1`,
-				[targetUserId, managerRoleId],
+				[targetUserId, readerRoleId],
 			);
 			expect(audited.rows.at(0)?.actorId).toBe(managerId);
 
@@ -311,7 +318,7 @@ describe("Authorization hardening (e2e)", () => {
 
 			const response = await app.inject({
 				method: "DELETE",
-				url: `${API_VERSION_PREFIX}/admin/roles/${managerRoleId}`,
+				url: `${API_VERSION_PREFIX}/admin/roles/${adminRoleId}`,
 				headers: mutationHeaders({ cookie: cookieHeader(superAdmin) }),
 			});
 

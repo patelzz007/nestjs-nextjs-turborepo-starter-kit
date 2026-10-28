@@ -13,8 +13,8 @@ function merchantAuthRequired(): UnauthorizedException {
 
 /**
  * `MerchantAccessPort` over the tenant's capability check: membership
- * (uniform 404 for a non-member), the role table, then the tenant Cedar action
- * with its `authorize.<action>` tenant audit row; for an API key, its
+ * (uniform 404 for a non-member), then the access-control decision (role, live grant —
+ * ADR 067) with its `authorize.<capability>` tenant audit row; for an API key, its
  * scope's capability table. The grant is the caller's store scope; a
  * `locationId` must be a live ACTIVE store inside it (404 / 403).
  */

@@ -1,5 +1,5 @@
 /**
- * The budget rules of `pnpm bundle:check` (plan §19.6, decision #57): the
+ * The budget rules of `pnpm tools bundle:check` (plan §19.6, decision #57): the
  * shape of `bundle-budgets.json`, the baseline it is generated from, and the
  * comparison that fails CI.
  */

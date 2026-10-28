@@ -42,7 +42,7 @@ export class RewardsAdminRewardsController {
 		private readonly queryBus: QueryBus,
 	) {}
 
-	@RequirePermission("MANAGE", "REWARD")
+	@RequirePermission("APPROVE", "REWARD")
 	@Get("pending")
 	@ApiOperation({ summary: "List rewards pending moderation (oldest first, paginated)" })
 	@ZodPaginatedResponse(RewardResponseSchema, { description: "One page of pending rewards" })
@@ -54,7 +54,7 @@ export class RewardsAdminRewardsController {
 	}
 
 	// Fastify matches the static `pending` segment before `:rewardId`, whatever the declaration order.
-	@RequirePermission("MANAGE", "REWARD")
+	@RequirePermission("APPROVE", "REWARD")
 	@Get(":rewardId")
 	@ApiOperation({ summary: "Get one reward in full, whatever its status (moderation detail)" })
 	@ZodResponse(RewardResponseSchema, { description: "The reward" })
@@ -66,7 +66,7 @@ export class RewardsAdminRewardsController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
-	@RequirePermission("MANAGE", "REWARD")
+	@RequirePermission("APPROVE", "REWARD")
 	@Post(":rewardId/approve")
 	@ApiOperation({ summary: "Approve a pending reward (no body required)" })
 	@ApiBody({ type: RewardsEmptyBodyDto, required: false })
@@ -76,7 +76,7 @@ export class RewardsAdminRewardsController {
 	}
 
 	/** Reviewers check a reward's photos at full resolution; the URL downloads the original upload and expires. */
-	@RequirePermission("MANAGE", "REWARD")
+	@RequirePermission("APPROVE", "REWARD")
 	@Get(":rewardId/images/:fileId/download")
 	@ApiOperation({ summary: "Get a short-lived signed URL that downloads one of a reward's images (the original upload)" })
 	@ZodResponse(AdminRewardImageDownloadResponseSchema, { description: "Signed download URL of the image" })
@@ -88,7 +88,7 @@ export class RewardsAdminRewardsController {
 	}
 
 	/** Reviewers save every photo of a reward at once: one ZIP of the original uploads, streamed. */
-	@RequirePermission("MANAGE", "REWARD")
+	@RequirePermission("APPROVE", "REWARD")
 	@Get(":rewardId/images/archive")
 	@ApiOperation({ summary: "Download every image of a reward as one ZIP of the original uploads, in display order" })
 	@ZodFileResponse(apiContract.rewardsAdmin.downloadRewardImagesArchive.response, { description: "The ZIP archive (Content-Disposition: attachment)" })
@@ -102,7 +102,7 @@ export class RewardsAdminRewardsController {
 	}
 
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
-	@RequirePermission("MANAGE", "REWARD")
+	@RequirePermission("REJECT", "REWARD")
 	@Post(":rewardId/reject")
 	@ApiOperation({ summary: "Reject a pending reward" })
 	@ZodResponse(RewardResponseSchema, { status: HttpStatus.CREATED, description: "Reward returned to draft" })

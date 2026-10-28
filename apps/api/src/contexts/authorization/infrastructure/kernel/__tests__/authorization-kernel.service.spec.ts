@@ -1,50 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ResourceAcl } from "@prisma/client";
-import {
-	LIST_SLOT_INDEX,
-	AuthorizationRowFilterSchema,
-	type AuthorizationContext,
-	type AuthorizationRequest,
-	type PermissionAction,
-	type PermissionResource,
-	type PermissionScope,
-} from "@workspace/shared";
+import { epochMs, type AuthorizationContext, type AuthorizationRequest, type PermissionPair } from "@workspace/shared";
 
 import { createTestAuthorizationKernel } from "../../../../../../test/support/test-service-graph";
+import type { AccessFacts } from "../../../domain/access/access-facts";
+import { StoreScope } from "../../../domain/access/store-scope";
 import { AccessDeniedError } from "../../../domain/errors/authorization.errors";
 import type { AuthorizationKernelService } from "../authorization-kernel.service";
-import type { PolicyEvaluation } from "../policy-engine.service";
-import type { OwnershipLookup } from "../resource-ownership.resolver";
-import type { GrantSource, SubjectGrant, SubjectGrants } from "../subject-grants.loader";
 import type { TenantVerification } from "../tenant-membership.service";
-import { LIVE_ROW_FIELDS } from "../../../../../platform/infrastructure/persistence/__tests__/base-row-fields";
 
 /**
- * Collaborator mocks, hoisted so the `vi.mock` class factories can reference
- * them. Each collaborator is replaced by a fake class exposing the members the
- * kernel calls; the kernel is built through its real constructor graph
- * (test/support/test-service-graph.ts) — no casts anywhere.
+ * The kernel is a FACADE (ADR 067): tenant verification → `AccessControlService` → an audited result.
+ * Its I/O collaborators are faked — the tenant verification, the caller's standing (facts) and the
+ * record-owner lookup — while the decision service and every allow path run for real, built through
+ * the real constructor graph (test/support/test-service-graph.ts).
  */
 const mocks = vi.hoisted(() => ({
-	load: vi.fn(),
 	verify: vi.fn(),
-	resolveOwner: vi.fn(),
-	findApplicable: vi.fn(),
-	evaluatePolicies: vi.fn(),
-	hasUnconditionalDeny: vi.fn(),
-	matchesStoredConditions: vi.fn(),
+	readFacts: vi.fn(),
+	ownerOf: vi.fn(),
 	auditResult: vi.fn(),
 }));
-
-vi.mock("../subject-grants.loader", async (importOriginal) => {
-	const original = await importOriginal<typeof import("../subject-grants.loader")>();
-	return {
-		...original,
-		SubjectGrantsLoader: class {
-			public readonly load = mocks.load;
-		},
-	};
-});
 
 vi.mock("../tenant-membership.service", () => ({
 	TenantMembershipService: class {
@@ -52,23 +27,15 @@ vi.mock("../tenant-membership.service", () => ({
 	},
 }));
 
-vi.mock("../resource-ownership.resolver", () => ({
-	ResourceOwnershipResolver: class {
-		public readonly resolve = mocks.resolveOwner;
+vi.mock("../../access/prisma-access-facts.reader", () => ({
+	PrismaAccessFactsReader: class {
+		public readonly read = mocks.readFacts;
 	},
 }));
 
-vi.mock("../acl.service", () => ({
-	AclService: class {
-		public readonly findApplicable = mocks.findApplicable;
-	},
-}));
-
-vi.mock("../policy-engine.service", () => ({
-	PolicyEngineService: class {
-		public readonly evaluate = mocks.evaluatePolicies;
-		public readonly hasUnconditionalDeny = mocks.hasUnconditionalDeny;
-		public readonly matchesStoredConditions = mocks.matchesStoredConditions;
+vi.mock("../../access/prisma-record-ownership", () => ({
+	PrismaRecordOwnership: class {
+		public readonly ownerOf = mocks.ownerOf;
 	},
 }));
 
@@ -80,58 +47,36 @@ vi.mock("../authorization-audit-kernel.service", () => ({
 
 const USER_ID = "user-123";
 const ORG_A = "org-a";
-const ORG_B = "org-b";
-const LOCATION_A1 = "loc-a1";
+const STORE_1 = "store-1";
+const STORE_2 = "store-2";
+/** `FixedClock`'s default now (the test graph's clock). */
+const NOW = 1_800_000_000_000;
+const HOUR_MS = 3_600_000;
 
-function grant(action: PermissionAction, resource: PermissionResource, scope: PermissionScope = "GLOBAL", source: GrantSource = "role"): SubjectGrant {
-	return { action, resource, scope, source, sourceId: `${source}-1`, conditions: null };
-}
+const READ_REWARD: PermissionPair = { action: "READ", resource: "REWARD" };
 
-/** A location-role grant; `locationId: null` is an ALL_LOCATIONS scope. */
-function locationGrant(action: PermissionAction, resource: PermissionResource, locationId: string | null): SubjectGrant {
-	return { action, resource, scope: "LOCATION", source: "location", sourceId: "scope-1", location: { tenantId: ORG_A, locationId }, conditions: null };
-}
-
-function subjectGrants(overrides: Partial<SubjectGrants> = {}): SubjectGrants {
-	return { roleIds: ["role-1"], roleNames: ["Manager"], grants: [], denials: [], ...overrides };
+function facts(overrides: Partial<AccessFacts> = {}): AccessFacts {
+	return { rolePermissions: [], stores: StoreScope.all(), grants: [], shares: [], ...overrides };
 }
 
 function tenant(overrides: Partial<TenantVerification> = {}): TenantVerification {
 	return { context: {}, target: null, tenantRejected: false, locationRejected: false, ...overrides };
 }
 
-function acl(effect: "ALLOW" | "DENY", resourceId: string | null, id = `acl-${effect}`): ResourceAcl {
-	return {
-		...LIVE_ROW_FIELDS,
-		id,
-		subjectType: "USER",
-		subjectId: USER_ID,
-		action: "DELETE",
-		resourceType: "ORDER",
-		resourceId,
-		effect,
-		scope: null,
-		tenantId: null,
-		locationId: null,
-		conditions: null,
-		expiresAt: null,
-		assignedBy: null,
-		reason: null,
-		isDeleted: false,
-		deletedAt: null,
-		createdAt: BigInt(0),
-		updatedAt: BigInt(0),
-	};
+function memberOf(tenantId: string): TenantVerification {
+	return tenant({ context: { tenantId }, target: { tenantId, lifecycleState: "ACTIVE", membershipStatus: "ACTIVE" } });
 }
-
-const notApplicable: PolicyEvaluation = { decision: "NOT_APPLICABLE", evaluation: [] };
 
 function subject(overrides: Partial<AuthorizationContext> = {}): AuthorizationContext {
 	return { userId: USER_ID, isSuperAdmin: false, ...overrides };
 }
 
 function request(overrides: Partial<AuthorizationRequest> = {}): AuthorizationRequest {
-	return { subject: subject(), action: "READ", resource: "ORDER", ...overrides };
+	return { subject: subject(), action: "READ", resource: "REWARD", ...overrides };
+}
+
+function tenantRequest(overrides: Partial<AuthorizationRequest> = {}): AuthorizationRequest {
+	return request({ subject: subject({ tenantId: ORG_A }), ...overrides });
 }
 
 function createKernel(): AuthorizationKernelService {
@@ -141,310 +86,130 @@ function createKernel(): AuthorizationKernelService {
 describe("AuthorizationKernelService", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mocks.load.mockResolvedValue(subjectGrants());
 		mocks.verify.mockResolvedValue(tenant());
-		mocks.resolveOwner.mockResolvedValue({ kind: "unsupported" });
-		mocks.findApplicable.mockResolvedValue({ denies: [], allows: [] });
-		mocks.evaluatePolicies.mockResolvedValue(notApplicable);
-		mocks.hasUnconditionalDeny.mockResolvedValue(false);
-		mocks.matchesStoredConditions.mockReturnValue(true);
+		mocks.readFacts.mockResolvedValue(facts());
+		mocks.ownerOf.mockResolvedValue(null);
 		mocks.auditResult.mockResolvedValue(undefined);
 	});
 
-	describe("precedence", () => {
-		it("denies by default when the subject holds no grant", async () => {
+	describe("deny by default, then the four allow paths", () => {
+		it("denies by default when nothing allows, naming the default step", async () => {
 			const result = await createKernel().explain(request());
 
 			expect(result.decision).toBe("DENY");
-			expect(result.evaluation.at(-1)).toEqual(expect.objectContaining({ source: "default", effect: "DENY" }));
+			expect(result.evaluation.at(-1)).toMatchObject({ source: "default", effect: "DENY" });
 		});
 
-		it("allows a SuperAdmin before any other evaluation", async () => {
-			const result = await createKernel().explain(request({ subject: subject({ isSuperAdmin: true }) }));
+		it("allows a SuperAdmin with no tenant before any other evaluation", async () => {
+			expect(await createKernel().can(request({ subject: subject({ isSuperAdmin: true }), action: "DELETE" }))).toBe("ALLOW");
+			expect(mocks.readFacts).not.toHaveBeenCalled();
+		});
+
+		it("does not bypass a SuperAdmin who names a tenant: the tenant decides", async () => {
+			mocks.verify.mockResolvedValue(tenant({ tenantRejected: true }));
+
+			expect(await createKernel().can(request({ subject: subject({ isSuperAdmin: true, tenantId: ORG_A }) }))).toBe("DENY");
+		});
+
+		it("fails closed on an unknown action or resource", async () => {
+			expect(await createKernel().can(request({ action: "FROBNICATE" }))).toBe("DENY");
+			expect(mocks.readFacts).not.toHaveBeenCalled();
+		});
+
+		it("allows through the role and records the path", async () => {
+			mocks.verify.mockResolvedValue(memberOf(ORG_A));
+			mocks.readFacts.mockResolvedValue(facts({ rolePermissions: [READ_REWARD] }));
+
+			const result = await createKernel().explain(tenantRequest());
 
 			expect(result.decision).toBe("ALLOW");
-			expect(mocks.load).not.toHaveBeenCalled();
-			expect(mocks.verify).not.toHaveBeenCalled();
+			expect(result.evaluation.at(-1)).toMatchObject({ source: "role", effect: "ALLOW" });
+			expect(mocks.readFacts).toHaveBeenCalledWith(USER_ID, ORG_A);
 		});
 
-		it("does not bypass a SuperAdmin who named a tenant they do not belong to", async () => {
+		it("allows through a live grant on top of the role, and not once it has expired", async () => {
+			mocks.verify.mockResolvedValue(memberOf(ORG_A));
+			mocks.readFacts.mockResolvedValueOnce(facts({ grants: [{ permission: READ_REWARD, locationId: null, expiresAt: epochMs(NOW + 48 * HOUR_MS) }] }));
+			mocks.readFacts.mockResolvedValueOnce(facts({ grants: [{ permission: READ_REWARD, locationId: null, expiresAt: epochMs(NOW - HOUR_MS) }] }));
+			const kernel = createKernel();
+
+			expect((await kernel.explain(tenantRequest())).evaluation.at(-1)).toMatchObject({ source: "grant", effect: "ALLOW" });
+			expect(await kernel.can(tenantRequest())).toBe("DENY");
+		});
+
+		it("allows through a share for that one record only", async () => {
+			mocks.verify.mockResolvedValue(memberOf(ORG_A));
+			mocks.readFacts.mockResolvedValue(facts({ shares: [{ resource: "REWARD", resourceId: "reward-1", level: "VIEW", expiresAt: null }] }));
+			const kernel = createKernel();
+
+			expect((await kernel.explain(tenantRequest({ resourceId: "reward-1" }))).evaluation.at(-1)).toMatchObject({ source: "share", effect: "ALLOW" });
+			expect(await kernel.can(tenantRequest({ resourceId: "reward-2" }))).toBe("DENY");
+			expect(await kernel.can(tenantRequest({ action: "UPDATE", resourceId: "reward-1" }))).toBe("DENY");
+		});
+
+		it("allows the owner to read and update their own record, never delete it", async () => {
+			mocks.ownerOf.mockResolvedValue(USER_ID);
+			const kernel = createKernel();
+
+			expect((await kernel.explain(request({ resource: "PROFILE", resourceId: "profile-1" }))).evaluation.at(-1)).toMatchObject({ source: "ownership" });
+			expect(await kernel.can(request({ action: "UPDATE", resource: "PROFILE", resourceId: "profile-1" }))).toBe("ALLOW");
+			expect(await kernel.can(request({ action: "DELETE", resource: "PROFILE", resourceId: "profile-1" }))).toBe("DENY");
+		});
+
+		it("never lets user A reach user B's record", async () => {
+			mocks.ownerOf.mockResolvedValue("user-b");
+
+			expect(await createKernel().can(request({ resource: "PROFILE", resourceId: "profile-b" }))).toBe("DENY");
+		});
+	});
+
+	describe("tenant isolation and stores", () => {
+		it("rejects a claimed tenant the subject is not a member of (a forged tenant id) before any decision", async () => {
 			mocks.verify.mockResolvedValue(tenant({ tenantRejected: true }));
 
-			const result = await createKernel().explain(request({ subject: subject({ isSuperAdmin: true, tenantId: ORG_A }) }));
+			const result = await createKernel().explain(tenantRequest());
 
 			expect(result.decision).toBe("DENY");
-			expect(mocks.verify).toHaveBeenCalled();
-			expect(result.evaluation.at(-1)?.source).toBe("tenant");
+			expect(result.evaluation).toEqual([expect.objectContaining({ source: "tenant", effect: "DENY" })]);
+			expect(mocks.readFacts).not.toHaveBeenCalled();
 		});
 
-		it("fails closed on unknown actions or resources", async () => {
-			const result = await createKernel().explain(request({ action: "ASSUME" }));
+		it("rejects a location outside the membership's stores", async () => {
+			mocks.verify.mockResolvedValue(tenant({ locationRejected: true }));
 
-			expect(result.decision).toBe("DENY");
-			expect(result.evaluation[LIST_SLOT_INDEX.first]).toEqual(expect.objectContaining({ source: "validation" }));
+			expect(await createKernel().can(request({ subject: subject({ locationId: STORE_2 }) }))).toBe("DENY");
 		});
 
-		it("allows a GLOBAL role grant", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER")] }));
+		it("never grants a permission for membership alone", async () => {
+			mocks.verify.mockResolvedValue(memberOf(ORG_A));
 
-			expect(await createKernel().can(request())).toBe("ALLOW");
+			expect(await createKernel().can(tenantRequest())).toBe("DENY");
 		});
 
-		it("treats MANAGE as every action on the same resource only", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("MANAGE", "ORDER")] }));
+		it("decides a tenant request with no active membership as denied (no standing)", async () => {
+			mocks.verify.mockResolvedValue(memberOf(ORG_A));
+			mocks.readFacts.mockResolvedValue(null);
+
+			expect(await createKernel().can(tenantRequest())).toBe("DENY");
+		});
+
+		it("limits a role to the member's stores, read from the record's server-side store attribute", async () => {
+			mocks.verify.mockResolvedValue(memberOf(ORG_A));
+			mocks.readFacts.mockResolvedValue(facts({ rolePermissions: [READ_REWARD], stores: StoreScope.of([STORE_1]) }));
 			const kernel = createKernel();
 
-			expect(await kernel.can(request({ action: "DELETE" }))).toBe("ALLOW");
-			expect(await kernel.can(request({ action: "DELETE", resource: "PAYMENT" }))).toBe("DENY");
+			expect(await kernel.can(tenantRequest({ resourceId: "r-1", resourceAttributes: { locationId: STORE_1 } }))).toBe("ALLOW");
+			expect(await kernel.can(tenantRequest({ resourceId: "r-2", resourceAttributes: { locationId: STORE_2 } }))).toBe("DENY");
 		});
 
-		it("a per-user DENY override beats a role grant", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("DELETE", "ORDER")], denials: [grant("DELETE", "ORDER", "GLOBAL", "override")] }));
-
-			const result = await createKernel().explain(request({ action: "DELETE" }));
-
-			expect(result.decision).toBe("DENY");
-			expect(result.evaluation.at(-1)).toEqual(expect.objectContaining({ source: "override", effect: "DENY" }));
-		});
-
-		it("a DENY override on MANAGE revokes every action on the resource", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER")], denials: [grant("MANAGE", "ORDER", "GLOBAL", "override")] }));
-
-			expect(await createKernel().can(request())).toBe("DENY");
-		});
-
-		it("ACL DENY beats a role ALLOW", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("DELETE", "ORDER")] }));
-			mocks.findApplicable.mockResolvedValue({ denies: [acl("DENY", "order-1")], allows: [] });
-
-			expect(await createKernel().can(request({ action: "DELETE", resourceId: "order-1" }))).toBe("DENY");
-		});
-
-		it("ACL DENY beats ownership", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("UPDATE", "PROFILE", "OWN")] }));
-			mocks.resolveOwner.mockResolvedValue({ kind: "owned", ownerUserId: USER_ID });
-			mocks.findApplicable.mockResolvedValue({ denies: [acl("DENY", "profile-1")], allows: [] });
-
-			expect(await createKernel().can(request({ action: "UPDATE", resource: "PROFILE", resourceId: "profile-1" }))).toBe("DENY");
-		});
-
-		it("ACL ALLOW grants even without a role permission", async () => {
-			mocks.findApplicable.mockResolvedValue({ denies: [], allows: [acl("ALLOW", "order-1")] });
-
-			expect(await createKernel().can(request({ action: "DELETE", resourceId: "order-1" }))).toBe("ALLOW");
-		});
-
-		it("passes the verified tenant and role ids to the ACL lookup", async () => {
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A } }));
-
-			await createKernel().can(request({ subject: subject({ tenantId: ORG_A }), resourceId: "order-1" }));
-			expect(mocks.verify).toHaveBeenCalledWith(USER_ID, { tenantId: ORG_A });
-
-			expect(mocks.findApplicable).toHaveBeenCalledWith(
-				expect.objectContaining({ userId: USER_ID, roleIds: ["role-1"], resourceScope: { kind: "resource", id: "order-1" }, tenantId: ORG_A }),
-				expect.objectContaining({ action: "READ" }),
-			);
-		});
-
-		it("a matching DENY policy overrides a satisfied grant", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("UPDATE", "ORDER")] }));
-			mocks.evaluatePolicies.mockResolvedValue({ decision: "DENY", evaluation: [{ source: "policy", effect: "DENY", reason: "completed" }] });
-
-			expect(await createKernel().can(request({ action: "UPDATE" }))).toBe("DENY");
-		});
-
-		it("unmet permission conditions do not grant", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER")] }));
-			mocks.matchesStoredConditions.mockReturnValue(false);
-
-			expect(await createKernel().can(request())).toBe("DENY");
-		});
-	});
-
-	describe("tenant isolation and relationships", () => {
-		it("rejects a claimed tenant the subject is not a member of (forged tenant id)", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER")] }));
-			mocks.verify.mockResolvedValue(tenant({ tenantRejected: true }));
-
-			const result = await createKernel().explain(request({ subject: subject({ tenantId: ORG_B }) }));
-
-			expect(result.decision).toBe("DENY");
-			expect(result.evaluation.at(-1)).toEqual(expect.objectContaining({ source: "tenant", effect: "DENY" }));
-			expect(mocks.load).not.toHaveBeenCalled();
-		});
-
-		it("rejects a location outside the membership scope", async () => {
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A }, locationRejected: true }));
-
-			expect(await createKernel().can(request({ subject: subject({ tenantId: ORG_A, locationId: "loc-x" }) }))).toBe("DENY");
-		});
-
-		it("tenant membership alone never grants a permission", async () => {
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A } }));
-
-			for (const action of ["READ", "UPDATE", "DELETE", "MANAGE"] satisfies PermissionAction[]) {
-				expect(await createKernel().can(request({ action, subject: subject({ tenantId: ORG_A }) }))).toBe("DENY");
-			}
-		});
-
-		it("TENANT grants require a verified tenant", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "TENANT")] }));
-
-			expect(await createKernel().can(request())).toBe("DENY");
-		});
-
-		it("TENANT grants allow same-tenant resources", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("UPDATE", "ORDER", "TENANT")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A } }));
-
-			const decision = await createKernel().can(
-				request({ action: "UPDATE", subject: subject({ tenantId: ORG_A }), resourceId: "order-1", resourceAttributes: { tenantId: ORG_A } }),
-			);
-
-			expect(decision).toBe("ALLOW");
-		});
-
-		it.each(["READ", "UPDATE", "DELETE", "LIST", "CREATE"] satisfies PermissionAction[])("TENANT grants deny cross-tenant %s", async (action) => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant(action, "ORDER", "TENANT")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A } }));
-
-			const decision = await createKernel().can(request({ action, subject: subject({ tenantId: ORG_A }), resourceId: "order-b", resourceAttributes: { tenantId: ORG_B } }));
-
-			expect(decision).toBe("DENY");
-		});
-
-		it("TENANT grants deny a specific resource whose tenant is unknown", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "TENANT")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A } }));
-
-			expect(await createKernel().can(request({ subject: subject({ tenantId: ORG_A }), resourceId: "order-1" }))).toBe("DENY");
-		});
-
-		it("LOCATION grants apply only inside the verified location", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "LOCATION")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, locationId: LOCATION_A1 } }));
-			const kernel = createKernel();
-			const scoped = subject({ tenantId: ORG_A, locationId: LOCATION_A1 });
-
-			expect(await kernel.can(request({ subject: scoped, resourceId: "o1", resourceAttributes: { tenantId: ORG_A, locationId: LOCATION_A1 } }))).toBe("ALLOW");
-			expect(await kernel.can(request({ subject: scoped, resourceId: "o2", resourceAttributes: { tenantId: ORG_A, locationId: "loc-a2" } }))).toBe("DENY");
-		});
-	});
-
-	describe("location roles (LOCATION scope from a member's location scope)", () => {
-		const atLocation = (locationId: string): AuthorizationContext => subject({ tenantId: ORG_A, locationId });
-
-		it("forwards the requested location to tenant verification and rejects a location outside the scope", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [locationGrant("READ", "REWARD", "loc-1")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A }, locationRejected: true }));
-
-			const result = await createKernel().explain(request({ resource: "REWARD", subject: atLocation("loc-9") }));
-
-			expect(mocks.verify).toHaveBeenCalledWith(USER_ID, { tenantId: ORG_A, locationId: "loc-9" });
-			expect(result.decision).toBe("DENY");
-			expect(result.evaluation.at(-1)).toEqual(expect.objectContaining({ source: "tenant" }));
-		});
-
-		it("allows a location-role grant only at its own location", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [locationGrant("CREATE", "REDEMPTION", "loc-1")] }));
+		it("lets a store-limited grant reach only that store (grant ∩ membership)", async () => {
+			mocks.verify.mockResolvedValue(memberOf(ORG_A));
+			mocks.readFacts.mockResolvedValue(facts({ grants: [{ permission: READ_REWARD, locationId: STORE_1, expiresAt: null }] }));
 			const kernel = createKernel();
 
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, locationId: "loc-1" } }));
-			expect(await kernel.can(request({ action: "CREATE", resource: "REDEMPTION", subject: atLocation("loc-1") }))).toBe("ALLOW");
-
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, locationId: "loc-2" } }));
-			expect(await kernel.can(request({ action: "CREATE", resource: "REDEMPTION", subject: atLocation("loc-2") }))).toBe("DENY");
-		});
-
-		it("applies an ALL_LOCATIONS location role at every location of its tenant, and never in another tenant", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [locationGrant("CREATE", "REDEMPTION", null)] }));
-			const kernel = createKernel();
-
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, locationId: "loc-2" } }));
-			expect(await kernel.can(request({ action: "CREATE", resource: "REDEMPTION", subject: atLocation("loc-2") }))).toBe("ALLOW");
-
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_B, locationId: "loc-b" } }));
-			expect(await kernel.can(request({ action: "CREATE", resource: "REDEMPTION", subject: subject({ tenantId: ORG_B, locationId: "loc-b" }) }))).toBe("DENY");
-		});
-
-		it("never applies a location role without a verified location context", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [locationGrant("READ", "REWARD", "loc-1")] }));
-
-			expect(await createKernel().can(request({ resource: "REWARD" }))).toBe("DENY");
-		});
-
-		it("denies a resource at another location", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [locationGrant("READ", "REWARD", "loc-1")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, locationId: "loc-1" } }));
-			const kernel = createKernel();
-
-			expect(await kernel.can(request({ resource: "REWARD", subject: atLocation("loc-1"), resourceId: "r1", resourceAttributes: { locationId: "loc-1" } }))).toBe("ALLOW");
-			expect(await kernel.can(request({ resource: "REWARD", subject: atLocation("loc-1"), resourceId: "r2", resourceAttributes: { locationId: "loc-2" } }))).toBe("DENY");
-			expect(await kernel.can(request({ resource: "REWARD", subject: atLocation("loc-1"), resourceId: "r3" }))).toBe("DENY");
-		});
-
-		it("filters rows to the member's locations", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [locationGrant("LIST", "REDEMPTION", "loc-1"), locationGrant("LIST", "REDEMPTION", "loc-2")] }));
-			const kernel = createKernel();
-
-			const everyLocation = await kernel.filter(subject(), "LIST", "REDEMPTION");
-			expect(everyLocation).toEqual({
-				OR: [
-					{ tenantId: ORG_A, locationId: "loc-1" },
-					{ tenantId: ORG_A, locationId: "loc-2" },
-				],
-			});
-			expect(AuthorizationRowFilterSchema.safeParse(everyLocation).success).toBe(true);
-
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A, locationId: "loc-2" } }));
-			expect(await kernel.filter(atLocation("loc-2"), "LIST", "REDEMPTION")).toEqual({ tenantId: ORG_A, locationId: "loc-2" });
-		});
-
-		it("filters an ALL_LOCATIONS location role to its whole tenant", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [locationGrant("LIST", "REDEMPTION", null)] }));
-
-			expect(await createKernel().filter(subject(), "LIST", "REDEMPTION")).toEqual({ tenantId: ORG_A });
-		});
-	});
-
-	describe("ownership (OWN scope)", () => {
-		it("allows the owner", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("UPDATE", "PROFILE", "OWN")] }));
-			mocks.resolveOwner.mockResolvedValue({ kind: "owned", ownerUserId: USER_ID });
-
-			expect(await createKernel().can(request({ action: "UPDATE", resource: "PROFILE", resourceId: "profile-1" }))).toBe("ALLOW");
-		});
-
-		it.each<[string, OwnershipLookup]>([
-			["another owner", { kind: "owned", ownerUserId: "someone-else" }],
-			["a missing resource", { kind: "missing" }],
-			["a type without ownership", { kind: "unsupported" }],
-		])("denies %s", async (_label, lookup) => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("UPDATE", "PROFILE", "OWN")] }));
-			mocks.resolveOwner.mockResolvedValue(lookup);
-
-			expect(await createKernel().can(request({ action: "UPDATE", resource: "PROFILE", resourceId: "profile-1" }))).toBe("DENY");
-		});
-
-		it("OWN grants never satisfy a collection-level check", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "PROFILE", "OWN")] }));
-
-			expect(await createKernel().can(request({ resource: "PROFILE" }))).toBe("DENY");
-		});
-
-		it("ownership only grants the actions of the OWN grant (owners cannot DELETE by default)", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("UPDATE", "USER", "OWN", "implicit")] }));
-			mocks.resolveOwner.mockResolvedValue({ kind: "owned", ownerUserId: USER_ID });
-			const kernel = createKernel();
-
-			expect(await kernel.can(request({ action: "UPDATE", resource: "USER", resourceId: USER_ID }))).toBe("ALLOW");
-			expect(await kernel.can(request({ action: "DELETE", resource: "USER", resourceId: USER_ID }))).toBe("DENY");
-		});
-
-		it("RESOURCE-scoped grants only apply through ACL entries", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "RESOURCE")] }));
-
-			expect(await createKernel().can(request({ resourceId: "order-1" }))).toBe("DENY");
+			expect(await kernel.can(tenantRequest({ resourceId: "r-1", resourceAttributes: { locationId: STORE_1 } }))).toBe("ALLOW");
+			expect(await kernel.can(tenantRequest({ resourceId: "r-2", resourceAttributes: { locationId: STORE_2 } }))).toBe("DENY");
+			expect(await kernel.can(tenantRequest())).toBe("DENY");
 		});
 	});
 
@@ -455,109 +220,10 @@ describe("AuthorizationKernelService", () => {
 		});
 
 		it("resolves and audits allowed decisions", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("DELETE", "ORDER")] }));
+			mocks.readFacts.mockResolvedValue(facts({ rolePermissions: [{ action: "DELETE", resource: "REWARD" }] }));
 
 			await expect(createKernel().authorize(request({ action: "DELETE" }))).resolves.toBeUndefined();
 			expect(mocks.auditResult).toHaveBeenCalledWith(expect.objectContaining({ decision: "ALLOW" }), undefined);
-		});
-	});
-
-	describe("filter()", () => {
-		const context = subject({ tenantId: ORG_A });
-
-		it("returns no restriction for SuperAdmin", async () => {
-			expect(await createKernel().filter(subject({ isSuperAdmin: true }), "READ", "ORDER")).toEqual({});
-		});
-
-		it("matches no rows without a grant (default deny)", async () => {
-			const filter = await createKernel().filter(context, "READ", "ORDER");
-
-			expect(filter).toEqual({ id: { in: [] } });
-			expect(AuthorizationRowFilterSchema.safeParse(filter).success).toBe(true);
-		});
-
-		it("matches no rows for a forged tenant", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER")] }));
-			mocks.verify.mockResolvedValue(tenant({ tenantRejected: true }));
-
-			expect(await createKernel().filter(context, "READ", "ORDER")).toEqual({ id: { in: [] } });
-		});
-
-		it("is unrestricted for a GLOBAL grant", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER")] }));
-
-			expect(await createKernel().filter(context, "READ", "ORDER")).toEqual({});
-		});
-
-		it("scopes TENANT grants to the verified tenant", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "TENANT")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A } }));
-
-			expect(await createKernel().filter(context, "READ", "ORDER")).toEqual({ tenantId: ORG_A });
-		});
-
-		it("combines tenant and ownership alternatives with OR", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "TENANT"), grant("READ", "ORDER", "OWN")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A } }));
-
-			const filter = await createKernel().filter(context, "READ", "ORDER");
-
-			expect(filter).toEqual({ OR: [{ tenantId: ORG_A }, { userId: USER_ID }] });
-			expect(AuthorizationRowFilterSchema.safeParse(filter).success).toBe(true);
-		});
-
-		it("uses the primary key for implicit own-user grants", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "USER", "OWN", "implicit")] }));
-
-			expect(await createKernel().filter(subject(), "READ", "USER")).toEqual({ id: { in: [USER_ID] } });
-		});
-
-		it("applies ACL allow-lists and explicit resource denials", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER", "TENANT")] }));
-			mocks.verify.mockResolvedValue(tenant({ context: { tenantId: ORG_A } }));
-			mocks.findApplicable.mockResolvedValue({ denies: [acl("DENY", "order-9")], allows: [acl("ALLOW", "order-7")] });
-
-			const filter = await createKernel().filter(context, "READ", "ORDER");
-
-			expect(filter).toEqual({ AND: [{ OR: [{ tenantId: ORG_A }, { id: { in: ["order-7"] } }] }, { NOT: { id: { in: ["order-9"] } } }] });
-			expect(AuthorizationRowFilterSchema.safeParse(filter).success).toBe(true);
-		});
-
-		it("a type-wide ACL DENY or DENY override removes every row", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER")] }));
-			mocks.findApplicable.mockResolvedValue({ denies: [acl("DENY", null)], allows: [] });
-			expect(await createKernel().filter(context, "READ", "ORDER")).toEqual({ id: { in: [] } });
-
-			mocks.findApplicable.mockResolvedValue({ denies: [], allows: [] });
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER")], denials: [grant("READ", "ORDER", "GLOBAL", "override")] }));
-			expect(await createKernel().filter(context, "READ", "ORDER")).toEqual({ id: { in: [] } });
-		});
-
-		it("an unconditional DENY policy removes every row", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER")] }));
-			mocks.hasUnconditionalDeny.mockResolvedValue(true);
-
-			expect(await createKernel().filter(context, "READ", "ORDER")).toEqual({ id: { in: [] } });
-		});
-	});
-
-	describe("resourceCapabilities() and hasRoles()", () => {
-		it("maps each action to a server-evaluated boolean", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ grants: [grant("READ", "ORDER"), grant("UPDATE", "ORDER")] }));
-
-			const capabilities = await createKernel().resourceCapabilities(subject(), "ORDER", "order-1", undefined, ["READ", "UPDATE", "DELETE"]);
-
-			expect(capabilities).toEqual({ can: { read: true, update: true, delete: false } });
-		});
-
-		it("evaluates role requirements with all/any semantics", async () => {
-			mocks.load.mockResolvedValue(subjectGrants({ roleNames: ["Manager", "Auditor"] }));
-			const kernel = createKernel();
-
-			expect(await kernel.hasRoles(USER_ID, ["Manager", "Auditor"], "all")).toBe(true);
-			expect(await kernel.hasRoles(USER_ID, ["Manager", "Admin"], "all")).toBe(false);
-			expect(await kernel.hasRoles(USER_ID, ["Admin", "Auditor"], "any")).toBe(true);
-			expect(await kernel.hasRoles(USER_ID, [], "any")).toBe(false);
 		});
 	});
 });

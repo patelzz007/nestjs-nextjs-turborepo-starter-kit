@@ -20,38 +20,21 @@ export class PrismaRbacMutationLock implements RbacMutationLock {
 	}
 }
 
-/** Hierarchy and holder reads of an RBAC mutation, on its transaction. */
+/** Holder and role reads of an RBAC mutation, on its transaction. */
 export class PrismaRbacGraphReader implements RbacGraphReader {
 	public constructor(private readonly db: Prisma.TransactionClient) {}
 
-	public async withAllAncestors(roleIds: readonly string[]): Promise<ReadonlySet<string>> {
-		const collected = new Set<string>();
-		let frontier: string[] = [...new Set<string>(roleIds)];
-		while (frontier.length > 0) {
-			for (const id of frontier) {
-				collected.add(id);
-			}
-			const links = await this.db.role.findMany({ where: { id: { in: frontier } }, select: { id: true, parentId: true } });
-			frontier = links.flatMap((link): string[] => (link.parentId !== null && !collected.has(link.parentId) ? [link.parentId] : []));
-		}
-		return collected;
+	public async holdersOfRole(roleId: string): Promise<string[]> {
+		return this.activeHolderIds([roleId]);
 	}
 
-	public async holdersOfLineage(roleId: string): Promise<string[]> {
-		return this.activeHolderIds([...(await this.withAllDescendants([roleId]))]);
-	}
-
-	/**
-	 * Direct holders of the permission plus every holder of a role that confers it, including holders of
-	 * descendant roles (a child role inherits its ancestors' permissions, so they lose it too).
-	 */
+	/** Direct holders of the permission plus every holder of a role that confers it. */
 	public async holdersOfPermission(permissionId: string): Promise<string[]> {
 		const [rolePermissions, directPermissions] = await Promise.all([
 			this.db.rolePermission.findMany({ where: { permissionId, isDeleted: false }, select: { roleId: true } }),
 			this.db.userPermission.findMany({ where: { permissionId, isDeleted: false }, select: { userId: true } }),
 		]);
-		const conferring: ReadonlySet<string> = await this.withAllDescendants(rolePermissions.map((row): string => row.roleId));
-		const holders: string[] = await this.activeHolderIds([...conferring]);
+		const holders: string[] = await this.activeHolderIds([...new Set<string>(rolePermissions.map((row): string => row.roleId))]);
 		return [...new Set<string>([...directPermissions.map((row): string => row.userId), ...holders])];
 	}
 
@@ -71,20 +54,11 @@ export class PrismaRbacGraphReader implements RbacGraphReader {
 		return rows.map((row): string => row.roleId);
 	}
 
-	public async effectiveRoleNames(roleIds: readonly string[]): Promise<ReadonlySet<string>> {
-		const collected = new Set<string>();
-		let frontier: string[] = [...new Set<string>(roleIds)];
-		while (frontier.length > 0) {
-			const links = await this.db.role.findMany({ where: { id: { in: frontier }, isDeleted: false, isActive: true }, select: { id: true, parentId: true } });
-			for (const link of links) {
-				collected.add(link.id);
-			}
-			frontier = links.flatMap((link): string[] => (link.parentId !== null && !collected.has(link.parentId) ? [link.parentId] : []));
-		}
-		if (collected.size === 0) {
+	public async activeRoleNames(roleIds: readonly string[]): Promise<ReadonlySet<string>> {
+		if (roleIds.length === 0) {
 			return new Set<string>();
 		}
-		const rows = await this.db.role.findMany({ where: { id: { in: [...collected] }, isDeleted: false, isActive: true }, select: { name: true } });
+		const rows = await this.db.role.findMany({ where: { id: { in: [...roleIds] }, isDeleted: false, isActive: true }, select: { name: true } });
 		return new Set<string>(rows.map((row): string => row.name));
 	}
 
@@ -96,20 +70,6 @@ export class PrismaRbacGraphReader implements RbacGraphReader {
 			holders.push({ roleId: role.id, roleName: role.name, activeHolders });
 		}
 		return holders;
-	}
-
-	/** The roles and every role below them in the hierarchy (children, grandchildren, …). */
-	private async withAllDescendants(roleIds: readonly string[]): Promise<ReadonlySet<string>> {
-		const lineage = new Set<string>(roleIds);
-		let frontier: string[] = [...lineage];
-		while (frontier.length > 0) {
-			const children = await this.db.role.findMany({ where: { parentId: { in: frontier } }, select: { id: true } });
-			frontier = children.map((row): string => row.id).filter((id: string): boolean => !lineage.has(id));
-			for (const id of frontier) {
-				lineage.add(id);
-			}
-		}
-		return lineage;
 	}
 
 	/** Users holding any of `roleIds`: directly (`UserRole`) or as the location role of a live location scope. */

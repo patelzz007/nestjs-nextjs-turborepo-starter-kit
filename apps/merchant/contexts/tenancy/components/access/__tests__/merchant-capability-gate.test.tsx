@@ -6,7 +6,7 @@ import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { MerchantCapabilityGate } from "@/contexts/tenancy/components/access/merchant-capability-gate";
-import { renderWithAuthorization } from "@/test/authorization";
+import { CASHIER_GRANTED_ANALYTICS, renderWithAuthorization } from "@/test/authorization";
 import { MERCHANT_ACCESS_LOADING_LABELS } from "@/components/loading/merchant-page-skeletons";
 import { busyRegionAnnouncements } from "@/test/skeleton";
 
@@ -48,7 +48,7 @@ describe("MerchantCapabilityGate", () => {
 			<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageRewards} fallback={<p>custom denied</p>}>
 				<p>editor</p>
 			</MerchantCapabilityGate>,
-			{ role: "MEMBER" },
+			{ role: "CASHIER" },
 		);
 
 		expect(screen.getByText("custom denied")).toBeTruthy();
@@ -112,7 +112,7 @@ describe("shared authorization API", () => {
 					<p>analytics</p>
 				</Can>
 			</>,
-			{ role: "CASHIER" },
+			{ role: "CASHIER", capabilities: CASHIER_GRANTED_ANALYTICS },
 		);
 
 		expect(screen.getByText("read-only")).toBeTruthy();
@@ -120,7 +120,7 @@ describe("shared authorization API", () => {
 	});
 
 	it("grants manage capabilities to owners", () => {
-		renderWithAuthorization(<ManageRewardsProbe />, { role: "ADMIN" });
+		renderWithAuthorization(<ManageRewardsProbe />, { role: "MANAGER" });
 
 		expect(screen.getByText("can-manage")).toBeTruthy();
 	});
@@ -143,7 +143,7 @@ describe("MerchantCapabilityGate for tenant management", () => {
 			<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageVerification} fallback={<p>owner only</p>}>
 				<p>kyb form</p>
 			</MerchantCapabilityGate>,
-			{ role: "ADMIN" },
+			{ role: "MANAGER" },
 		);
 
 		expect(screen.queryByText("kyb form")).toBeNull();

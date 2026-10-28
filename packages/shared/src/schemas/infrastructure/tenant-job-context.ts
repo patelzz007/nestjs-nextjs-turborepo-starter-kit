@@ -6,7 +6,6 @@ export const TenantJobContextSchema = z
 		tenantId: z.uuid(),
 		initiatingActorId: z.uuid().nullable(),
 		purpose: z.string().min(1).max(120),
-		policyVersion: z.number().int().nonnegative(),
 		correlationId: z.string().max(64),
 		issuedAt: z.number().int().nonnegative(),
 		expiresAt: z.number().int().nonnegative(),

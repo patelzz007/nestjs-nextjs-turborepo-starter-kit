@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="Brand mark">
-  <!-- GENERATED FILE: do not edit by hand. Source: packages/tokens/src/brand.ts (ADR 040); regenerate with `pnpm tokens:generate`. -->
+  <!-- GENERATED FILE: do not edit by hand. Source: packages/tokens/src/brand.ts (ADR 040); regenerate with `pnpm tools tokens:generate`. -->
   <rect width="24" height="24" rx="6.6" fill="#3986e4"/>
   <g transform="translate(6 6) scale(0.5)">
     <path d="M12 2.13 L20 6.75 L12 11.37 L4 6.75 Z" fill="#ffffff" fill-opacity="1"/>

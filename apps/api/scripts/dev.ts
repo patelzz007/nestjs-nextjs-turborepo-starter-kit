@@ -1,7 +1,7 @@
 // ============================================
 // scripts/dev.ts — local development tooling, one command each (never for production)
 // ============================================
-//   tunnel                       pnpm dev:tunnel — detached Cloudflare quick tunnel to the API, webhooks re-pointed
+//   tunnel                       pnpm tools dev:tunnel — detached Cloudflare quick tunnel to the API, webhooks re-pointed
 //   github-webhook <tunnel-url>  pnpm --filter @workspace/api github:webhook-tunnel — re-point GitHub live updates only
 //   mail [--to <email>] [--code] pnpm mail:latest — the newest email in the local Mailpit
 //   webhook-signature            pnpm --filter @workspace/api webhook:test-signature — a signed + a tampered Resend event
@@ -248,7 +248,7 @@ async function requestMailpit(url: string): Promise<Response> {
 	try {
 		return await fetch(url);
 	} catch (error: unknown) {
-		throw new Error(`No Mailpit answers at ${url} — start it with \`pnpm mailpit\` (install: \`brew install mailpit\`)`, { cause: error });
+		throw new Error(`No Mailpit answers at ${url} — start it with \`pnpm mailpit\` (the Docker service, also started by \`pnpm docker:up\`)`, { cause: error });
 	}
 }
 

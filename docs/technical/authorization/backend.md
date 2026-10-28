@@ -1,7 +1,7 @@
 ---
 title: "Backend: the Authorization Kernel"
 tags: ["authorization", "nestjs", "kernel", "rbac", "acl", "abac", "audit"]
-description: "How the API decides allow or deny: the guard, the kernel's precedence, scopes, overrides, ACLs, ownership, policies, list filters, explain, audit, and privilege-escalation protection."
+description: "How the API decides allow or deny: the guard and @RequirePermission, the kernel's precedence, scopes, overrides, ACLs, ownership, policies, explain, audit, privilege-escalation protection, and the roles, permissions and caches behind it."
 order: 21
 author: "Platform Team"
 lastUpdated: 1790899200000
@@ -46,36 +46,40 @@ The guard is **global** (`APP_GUARD` in `app.module.ts`). You never add it by ha
 
 | Decorator | Use it when | Example |
 |---|---|---|
-| `@RequirePermission(action, resource)` | One permission, no specific record | `@RequirePermission("LIST", "ROLE")` |
-| `@RequireAllPermissions([a, r], …)` | Every listed permission is needed | `@RequireAllPermissions(["READ", "ROLE"], ["READ", "PERMISSION"])` |
-| `@RequireAnyPermission([a, r], …)` | Any one of them is enough | `@RequireAnyPermission(["UPDATE", "ROLE"], ["UPDATE", "PERMISSION"])` |
-| `@RequireAllRoles(...names)` / `@RequireAnyRole(...names)` | Rare. Prefer permissions (spec §110 "do not hardcode roles") | `@RequireAnyRole("Auditor")` |
-| `@Authorize({ action, resource, resourceId?, attributes? })` | The decision depends on **a specific record** (ownership, ACL, scope, policy) | see below |
+| `@RequirePermission(action, resource)` | The route acts on a whole collection, or on no record | `@RequirePermission("LIST", "ROLE")` |
+| `@RequirePermission(action, resource, { resourceId })` | The decision depends on **one record** (ownership, ACL, scope, policy) | see below |
 | `@SuperAdminOnly()` | Platform-operator-only operations | impersonation, MFA recovery review |
 | `@Public()` | No authentication at all (health, login, public reward pages) | — |
 
-`@RequirePermission` lives in `modules/auth/decorators/require-permission.decorator.ts`; the
-others in `modules/authorization/decorators/`. When a route has several decorators, **all**
-of them must pass.
-
-### 2.2 `@Authorize` in detail
+`@RequirePermission` lives in `platform/presentation/http/security/decorators/require-permission.decorator.ts`.
+A route may stack several, and **every one must pass**. An admin acting on someone else's record
+declares the permission and the record, so a self-only grant (everyone may update their own user)
+can never satisfy it:
 
 ```ts
-import { Authorize, fromParam, self, attributesFromBody } from "../authorization/decorators/authorize.decorator";
-
-// The record id is a route param name:
-@Authorize({ action: "DELETE", resource: "ORDER", resourceId: "id" })          // DELETE /orders/:id
-
-// The caller acts on their own account (self-service):
-@Authorize({ action: "UPDATE", resource: "USER", resourceId: self() })          // POST /auth/change-password
-
-// Explicit extractor + policy attributes from the body:
-@Authorize({ action: "UPDATE", resource: "ORDER", resourceId: fromParam("orderId"), attributes: attributesFromBody(["status"]) })
+@RequirePermission("DELETE", "USER")
+@RequirePermission("DELETE", "USER", { resourceId: "userId", description: "A platform admin bans an account" })
 ```
 
-Rules the guard applies (see `guards/authorization.guard.ts`):
+### 2.2 Record targets
 
-- **Fail closed:** if you declare `resourceId` and it cannot be resolved (missing param, anonymous caller for `self()`), the request is **denied**. It is never silently turned into a global check.
+```ts
+import { attributesFromBody, fromParam, self } from "../../../../platform/presentation/http/security/decorators/permission-target";
+
+// The record id is a route param name:
+@RequirePermission("UPDATE", "PERMISSION", { resourceId: "id" })                     // PATCH /permissions/:id
+
+// The caller acts on their own account (self-service):
+@RequirePermission("UPDATE", "USER", { resourceId: self() })                          // POST /auth/change-password
+
+// Explicit extractor + policy attributes from the body:
+@RequirePermission("UPDATE", "REWARD", { resourceId: fromParam("rewardId"), attributes: attributesFromBody(["status"]) })
+```
+
+`description` is optional and only documents the route (audits and docs show it). Rules the guard
+applies (`platform/presentation/http/security/guards/authorization.guard.ts`):
+
+- **Fail closed:** if you declare `resourceId` and it cannot be resolved (missing param, anonymous caller for `self()`), the request is **denied**. It is never silently turned into a collection check.
 - **Tenant attributes win:** the tenant / store / location the request targets are added to the resource attributes **after** your `attributes`, so a body cannot override the routed tenant.
 - `attributesFromBody` only keeps policy-safe scalar values (string, number, boolean, null, lists).
 
@@ -96,16 +100,14 @@ Missing or invalid authentication is `401`, not `403` (spec §99).
 
 ## 3. The Kernel's public API
 
-`AuthorizationKernelService` (`modules/authorization/kernel/authorization-kernel.service.ts`):
+`AuthorizationKernelService` (`contexts/authorization/infrastructure/kernel/authorization-kernel.service.ts`),
+reached through the `AuthorizationKernelPort`:
 
 | Method | Returns | Use it for |
 |---|---|---|
 | `can(request)` | `"ALLOW" \| "DENY"` | Conditional logic inside services, tests |
 | `authorize(request, auditMetadata?)` | `void`, throws 403 | **Security boundaries.** Audits the decision. |
 | `explain(request)` | full `AuthorizationResult` with ordered steps | Debugging, admin tooling, tests |
-| `filter(context, action, resource)` | a Prisma `where` fragment | **List endpoints** |
-| `resourceCapabilities(subject, resource, id, attrs, actions?)` | `{ can: { read, update, delete, … } }` | Per-record UI hints in API responses (spec §12 option C) |
-| `hasRoles(userId, names, mode)` | `boolean` | Role decorators only |
 
 An `AuthorizationRequest` looks like:
 
@@ -135,29 +137,23 @@ The kernel evaluates in this exact order (spec §39, §65). The first step that 
  2. Unknown action or resource              → DENY    (fail closed)
  3. Tenant verification                     → DENY if the claimed tenant / store /
                                                         location is not proven by membership
- 4. Explicit DENY — per-user override       → DENY
- 5. Explicit DENY — ACL entry               → DENY
- 6. Explicit ALLOW — ACL entry              → ALLOW
- 7. Grants: does the subject hold the permission (MANAGE counts) …
-      … AND does at least one grant's SCOPE fit this request?
-      … AND do that grant's stored conditions hold?
-                                            → if no grant fits: DENY
- 8. Policies (ABAC)                         → DENY if a DENY policy matches, or if
-                                              conditional ALLOW policies exist and none match
- 9. Otherwise                               → ALLOW
-    (nothing matched at step 7)             → DENY  (default deny)
+ 4. AccessControlService (ADR 067), the first allow path that says yes wins:
+      a. role       — the member's role holds the `noun.verb` permission (in the store asked about)
+      b. grant      — a live extra permission (timed or permanent) on top of the role
+      c. share      — this one record was shared with the member (view / edit), still in force
+      d. ownership  — the record is the caller's own (the ownership registry)
+ 5. Otherwise                               → DENY    (default deny; nothing ever says "deny")
 ```
 
 ### Worked examples
 
 | Situation | Result | Deciding step |
 |---|---|---|
-| Manager role grants `ORDER:DELETE`, user has a `DENY` override for it | **DENY** | 4 |
-| Role grants `ORDER:DELETE`, ACL `DENY` on order #9 for this user | **DENY** on #9, ALLOW elsewhere | 5 |
-| No role permission, ACL `ALLOW` on order #7 | **ALLOW** on #7 only | 6 |
-| Member of Org A with no roles asks to `DELETE TENANT` | **DENY** — membership alone grants nothing | 7 |
-| `UPDATE:ORDER:TENANT` grant, order belongs to Org B | **DENY** — wrong tenant | 7 |
-| Grant OK, policy "completed orders are immutable" matches | **DENY** | 8 |
+| Role grants `REWARD:DELETE`; a leftover `DENY` row exists for it | **ALLOW** — there is no explicit DENY (ADR 067) | role |
+| No role permission; a live grant of `ANALYTICS:READ` until tomorrow | **ALLOW** until it ends, then DENY | grant |
+| No role permission; reward #7 shared with the member to view | **ALLOW** to read #7 only | share |
+| Member of Org A with no roles asks to `DELETE TENANT` | **DENY** — membership alone grants nothing | 5 |
+| `UPDATE:ORDER:TENANT` grant, order belongs to Org B | **DENY** — wrong tenant | 3 |
 | `/tenants/:tenantSlug` of a tenant you're not in | **404** before the kernel even runs | guard |
 
 ---
@@ -171,7 +167,7 @@ batched queries (no N+1, spec §58):
 
 | Source | Scope used |
 |---|---|
-| Role permissions (`UserRole` → `RolePermission`), **including parent roles** | the permission row's scope |
+| Role permissions (`UserRole` → `RolePermission`; roles are flat, nothing is inherited) | the permission row's scope |
 | Location roles (`MembershipLocationScope.roleId`) | **always `LOCATION`, bound to that location** — a location role can never grant tenant- or platform-wide access |
 | User `ALLOW` overrides (`user_permissions.effect = ALLOW`) | the permission row's scope |
 | Implicit self grants | `OWN` — see below |
@@ -209,8 +205,7 @@ grants on them never match. To add one, extend the resolver's `switch` (see
 `UserPermission` rows have an `effect` column:
 
 - `ALLOW` — adds a permission on top of the user's roles.
-- `DENY` — removes it even if a role grants it (spec §40). A `DENY` on `MANAGE` removes
-  every action on that resource.
+- `DENY` — removes that exact permission even if a role grants it (spec §40).
 
 Admin API: `POST /admin/permissions/user/grant` with `{ userId, permissionId, effect?: "ALLOW" | "DENY", expiresAt? }`.
 Overrides can expire (`expiresAt`); expired rows are ignored.
@@ -224,8 +219,8 @@ resource Z". Use them **only for exceptions** (spec §124), not for ordinary acc
 
 | Column | Meaning |
 |---|---|
-| `subjectType` + `subjectId` | a `USER` id, or a `ROLE` id (applies to everyone holding that role, including inherited roles) |
-| `action` | exact action; an entry with `MANAGE` covers every action |
+| `subjectType` + `subjectId` | a `USER` id, or a `ROLE` id (applies to everyone holding that role) |
+| `action` | the exact action |
 | `resourceType` + `resourceId` | `resourceId = null` means **every** resource of that type |
 | `effect` | `ALLOW` or `DENY` (DENY always wins) |
 | `tenantId` / `locationId` | optional: the entry only applies inside that verified tenant |
@@ -234,42 +229,17 @@ resource Z". Use them **only for exceptions** (spec §124), not for ordinary acc
 
 ---
 
-## 7. Policies (ABAC) — the safe rule language
+## 7. Conditional rules — removed
 
-Policies live in `PolicyDefinition`. Their `conditions` use a **validated JSON rule
-language** (`PolicyConditionsSchema` in `packages/shared/src/authorization/policy-dsl.schema.ts`).
-There is **no** `eval`, no stored JavaScript (spec §43).
+There is no policy language any more. Cedar (tenant and platform policies, drafts, simulation,
+publishing) and the JSON condition engine (`PolicyDefinition`, `Permission.conditions`,
+`ResourceAcl.conditions`) were removed in ADR 067 Phase 4: every job they did is covered by roles,
+grants, shares, ownership, store scope and the guardrails in `tenant-access.policy.ts`. A rule that
+really depends on a record's state ("a completed order is read-only") is a plain check in that
+record's command handler, with a test, where the next reader will find it.
 
-```json
-{
-  "all": [
-    { "condition": { "field": "order.tenantId", "operator": "equals", "valueRef": "$user.tenantId" } },
-    { "condition": { "field": "order.status", "operator": "not_equals", "value": "COMPLETED" } }
-  ]
-}
-```
-
-- A rule node has **exactly one** of `all`, `any`, `condition`. Unknown keys are rejected.
-- **Operators:** `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`,
-  `starts_with`, `ends_with`, `greater_than`, `greater_than_or_equals`, `less_than`,
-  `less_than_or_equals`, `exists`, `not_exists`.
-- **Fields:** `$user.<key>` (subject: `userId`, `tenantId`, `locationId`,
-  `Role`, `isSuperAdmin`, or custom attributes), `$resource.<key>`, `<resource>.<key>`
-  (e.g. `order.status`), or a bare key (resource attribute).
-- `value` is a literal; `valueRef` points at another field.
-
-How policies combine:
-
-| Situation | Outcome |
-|---|---|
-| No active policy targets this action + resource | policy layer **abstains** |
-| A `DENY` policy's conditions match | **DENY** |
-| `ALLOW` policies exist, none match | **DENY** (conditional grant not met) |
-| An `ALLOW` policy matches and no `DENY` matched | **ALLOW** |
-| Stored conditions fail validation | treated as **matching** for DENY policies, **not matching** for ALLOW (fail closed) |
-
-The same language is used for **permission conditions** (`Permission.conditions`) and **ACL
-conditions**.
+Older `AuthorizationAudit` rows can still name `source: "policy"` and carry `policyIds`: they
+record decisions made before the removal and are kept as history.
 
 ---
 
@@ -297,30 +267,12 @@ GET /api/v1/authorization/decisions/explain?action=UPDATE&resource=ORDER&resourc
 
 ---
 
-## 9. `filter()` — list endpoints
+## 9. List endpoints
 
-Never load everything and filter in JavaScript (spec §32, §57). Ask the kernel for a
-`where` fragment:
-
-```ts
-const where = await kernel.filter({ userId, tenantId, locationId }, "LIST", "REDEMPTION");
-return prisma.rewardRedemption.findMany({ where: { AND: [where, { /* your own filters */ }] } });
-```
-
-| Subject holds | `filter()` returns |
-|---|---|
-| SuperAdmin, a `GLOBAL` grant, or a type-wide ACL `ALLOW` | `{}` (no restriction — RLS still applies) |
-| `TENANT` grant + verified org | `{ tenantId }` |
-| `LOCATION` grants (location roles, location-scoped members) | `{ tenantId, locationId }` per location (only the selected location when one is named) |
-| `OWN` grant | `{ userId }` (`{ id: { in: [userId] } }` for `USER` / `PROFILE`) |
-| resource-specific ACL `ALLOW`s | `{ id: { in: [...] } }` |
-| several of the above | `{ OR: [...] }` |
-| resource-specific ACL `DENY`s | wrapped as `{ AND: [base, { NOT: { id: { in: [...] } } }] }` |
-| nothing / DENY override / type-wide ACL DENY / unconditional DENY policy / forged tenant | `{ id: { in: [] } }` → **no rows** |
-
-> Your table must use these column names (`tenantId`, `locationId`,
-> `userId`, `id`) for the filter to apply. Row-level **conditions** (e.g. "status must be
-> PAID") are enforced per operation with `authorize()`, not in the filter.
+Never load everything and filter in JavaScript. A list endpoint narrows its query in the
+database: the route's `@RequirePermission("LIST", …)` decides whether the caller may list at all,
+the repository's `where` clause narrows to what the screen asks for (tenant, store, owner), and
+[RLS](./tenancy-and-rls.md) hides every other tenant's rows underneath, even if the `where` forgets.
 
 ---
 
@@ -331,7 +283,7 @@ return prisma.rewardRedemption.findMany({ where: { AND: [where, { /* your own fi
 | Decision | Logged? |
 |---|---|
 | Any `DENY` | ✅ always |
-| `CREATE`, `UPDATE`, `DELETE`, `MANAGE` (allowed) | ✅ always |
+| `CREATE`, `UPDATE`, `DELETE` and the lifecycle verbs (`APPROVE`, `REJECT`, `SUSPEND`, `BAN`, …) (allowed) | ✅ always |
 | `READ` / `LIST` of `USER`, `ROLE`, `PERMISSION`, `AUDIT_LOG`, `SYSTEM_SETTINGS` | ✅ (sensitive reads) |
 | Other reads | ❌ |
 
@@ -352,8 +304,8 @@ SuperAdmin bypasses are recorded separately in `PermissionAuditLog`
 
 | Rule | Blocks |
 |---|---|
-| **No self-escalation** | changing your own role assignments or direct permissions; editing, re-parenting, re-activating a role you hold (directly or via inheritance) |
-| **Subset rule** | granting, assigning or making inheritable any permission you do not yourself hold with `GLOBAL` reach |
+| **No self-escalation** | changing your own role assignments or direct permissions; editing or re-activating a role you hold |
+| **Subset rule** | granting or assigning any permission you do not yourself hold with `GLOBAL` reach |
 | Revoking an override counts as granting | revoking a `DENY` override lifts a restriction |
 | `DENY` overrides are allowed without holding the permission | they only restrict |
 
@@ -374,7 +326,7 @@ await this.permissions.giveToUser(actor, { userId, permissionId, effect: "ALLOW"
 
 Account provisioning (signup, merchant onboarding, invite registration) is the only other path: it
 assigns the default `User` role with the new account as its own audited actor — see
-[RBAC internals](./rbac.md#automatic-role-provisioning).
+[automatic role provisioning](#automatic-role-provisioning).
 
 1. **One transaction** (`RbacMutationRunner`, system operation `authorization.rbac.mutate`): RBAC
    advisory lock → privilege-escalation checks → the write → post-write invariants → refresh-token
@@ -415,36 +367,29 @@ keys, analytics, KYB) or directly (team, store locations). It checks, in order:
    verification, other keys or terminals. (A till *gets* its key by pairing:
    `POST /integration/terminals/pair` exchanges a one-time code a member issued for a key bound to
    that terminal — see [POS integration](../pos-integration.md).)
-2. **The role table** `MERCHANT_ROLE_CAPABILITIES` (`packages/shared/src/authorization/permission.ts`,
-   shared with the merchant app, so the UI hides exactly what the API denies). Denial:
-   `403 TENANT_ROLE_CAPABILITY_REQUIRED`.
+2. **The access decision** (ADR 067): each capability is one `noun.verb` permission
+   (`MERCHANT_CAPABILITY_PERMISSION`, `packages/shared/src/authorization/permission.ts`), decided by
+   `AccessControlService` — the member's tenant role, then a live grant; deny by default — and
+   audited (`authorize.<capability>` in `TenantAuditLog`, with `allowedBy`). The merchant app reads the
+   same answer (`membership.capabilities`), so the UI hides exactly what the API denies. Denial:
+   `403 TENANT_ROLE_CAPABILITY_REQUIRED`; a slug no permission backs fails closed
+   (`403 TENANT_CAPABILITY_UNKNOWN`).
 
-   | Capability | `OWNER` | `ADMIN` | `CASHIER` | `POLICY_ADMIN` | `MEMBER` | API rule it guards |
-   |---|:-:|:-:|:-:|:-:|:-:|---|
-   | `merchant:view_dashboard` | ✅ | ✅ | ✅ | ✅ | ✅ | none — membership context (UX only) |
-   | `merchant:view_rewards` | ✅ | ✅ | ✅ | — | — | `GET /tenants/:tenantSlug/rewards` |
-   | `merchant:manage_rewards` | ✅ | ✅ | — | — | — | create / update / publish rewards |
-   | `merchant:view_redemptions` | ✅ | ✅ | ✅ | — | — | `GET /tenants/:tenantSlug/redemptions` |
-   | `merchant:manage_api_keys` | ✅ | ✅ | — | — | — | `/tenants/:tenantSlug/api-keys`, `/tenants/:tenantSlug/terminals` (POS terminal registration and pairing) |
-   | `merchant:view_analytics` | ✅ | ✅ | ✅ | — | — | `GET /tenants/:tenantSlug/analytics` |
-   | `merchant:manage_team` | ✅ | ✅ | — | — | — | `GET /tenants/:tenantSlug/members[/invites]`, `POST …/members/invite`, `POST …/invites/:id/revoke` |
-   | `merchant:view_locations` | ✅ | ✅ | ✅ | ✅ | ✅ | none — locations come from the member-wide `GET /tenants/:tenantSlug/context` (UX only) |
-   | `merchant:manage_locations` | ✅ | ✅ | — | — | — | `POST /tenants/:tenantSlug/locations`, `PATCH …/locations/:id`; store logo / banner uploads |
-   | `merchant:manage_verification` | ✅ | — | — | — | — | `GET` / `PATCH /tenants/:tenantSlug/kyb`, KYB document download and upload |
+   What each tenant role's **template** gives (`TENANT_ROLE_TEMPLATES`); a tenant edits its own copies
+   on `/tenants/:tenantSlug/access/roles`, and grants add to them per member:
 
-3. **Tenant Cedar policies** — the capability's Cedar action
-   (`MERCHANT_CAPABILITY_CEDAR_ACTIONS`, `modules/tenant/constants/merchant-capability-cedar-actions.ts`,
-   e.g. `merchant:manage_team` → `tenant:manage_team`) is evaluated against the
-   tenant's published policy and audited (`authorize.<action>` in
-   `TenantAuditLog`). Cedar may only **narrow** the table; the default tenant policy
-   (`DEFAULT_TENANT_CEDAR`) permits `OWNER` / `ADMIN` / `CASHIER` for every action, so
-   it never denies what the table grants (a unit test proves the two agree). Denial:
-   `403 TENANT_ACTION_FORBIDDEN`.
-
-Capabilities mapped to `null` in `MERCHANT_CAPABILITY_CEDAR_ACTIONS` (`view_dashboard`,
-`view_locations`) guard no API action; asking the API to enforce one fails closed
-(`403 TENANT_CAPABILITY_UNKNOWN`). The map is a `Record` over the shared vocabulary, so a
-new capability does not compile until it is mapped.
+   | Capability | Permission | Owner | Manager | Cashier | API rule it guards |
+   |---|---|:-:|:-:|:-:|---|
+   | `merchant:view_dashboard` | `tenant.read` | ✅ | ✅ | ✅ | none — membership context (UX only) |
+   | `merchant:view_rewards` | `reward.read` | ✅ | ✅ | ✅ | `GET /tenants/:tenantSlug/rewards` |
+   | `merchant:manage_rewards` | `reward.update` | ✅ | ✅ | — | create / update / publish rewards |
+   | `merchant:view_redemptions` | `redemption.read` | ✅ | ✅ | ✅ | `GET /tenants/:tenantSlug/redemptions` |
+   | `merchant:manage_api_keys` | `api_key.create` | ✅ | ✅ | — | `/tenants/:tenantSlug/api-keys`, `/tenants/:tenantSlug/terminals` |
+   | `merchant:view_analytics` | `analytics.read` | ✅ | ✅ | grant | `GET /tenants/:tenantSlug/analytics` |
+   | `merchant:manage_team` | `member.update` | ✅ | ✅ | — | the team roster, invitations, `…/access/*` |
+   | `merchant:view_locations` | `location.read` | ✅ | ✅ | ✅ | none — locations come from `GET /tenants/:tenantSlug/context` (UX only) |
+   | `merchant:manage_locations` | `location.update` | ✅ | ✅ | — | store create / update; store logo / banner uploads |
+   | `merchant:manage_verification` | `kyb.update` | ✅ | — | — | KYB read, update, documents |
 
 > [!NOTE]
 > Team, store-location and KYB endpoints used to check hard-coded role lists
@@ -466,15 +411,14 @@ the tenant is the one the route resolved and the guard verified, never a body fi
 |---|---|---|
 | `USER_AVATAR` | upload: own account only; afterwards the uploader | the uploader |
 | `PRODUCT_IMAGE` | upload: `PRODUCT:UPDATE` on that product (kernel); afterwards the uploader | the uploader |
-| `STORE_LOGO`, `STORE_BANNER` | `merchant:manage_locations` (`OWNER`, `ADMIN`) | any active member (`merchant:view_locations`) |
+| `STORE_LOGO`, `STORE_BANNER` | `merchant:manage_locations` (Owner, Manager) | any active member (`merchant:view_locations`) |
 | `MERCHANT_KYB` | `merchant:manage_verification` (`OWNER`) | `merchant:manage_verification` (`OWNER`) |
 | `REWARD_IMAGE` | `merchant:manage_rewards` | `merchant:view_rewards` (the published copy and its renditions are public); reviewers open the reward (`GET /admin/rewards/:rewardId`, any status) and download the original through `GET /admin/rewards/:rewardId/images/:fileId/download`, or all of a reward's originals as one ZIP through `GET /admin/rewards/:rewardId/images/archive` (`MANAGE REWARD`) |
 | SuperAdmin | any | any |
 
 - **Same check as the rest of the merchant API.** Tenant capabilities that guard an action go
-  through `TenantRewardAuthService.requireMembershipCapability`: the shared role table, then the
-  tenant Cedar policy, with an audited decision. Membership-only capabilities (Cedar action `null`,
-  e.g. reading store branding) use the role table alone.
+  through `TenantRewardAuthService.requireMembershipCapability`: the access decision (role, then
+  grant), with an audited decision that records the allow path.
 - **Re-checked at completion.** Completing a branding upload rebinds the tenant's logo or banner,
   so a member demoted after requesting the ticket cannot finish it.
 - **Tenant files belong to the tenant.** Whoever holds the capability *now* may delete
@@ -489,7 +433,7 @@ Merchant onboarding uploads use their own invite-token endpoints and never reach
 
 ```http
 POST /api/v1/authorization/decisions
-{ "checks": [ { "action": "UPDATE", "resource": "USER", "resourceId": "<id>" }, { "action": "MANAGE", "resource": "ROLE" } ] }
+{ "checks": [ { "action": "UPDATE", "resource": "USER", "resourceId": "<id>" }, { "action": "UPDATE", "resource": "ROLE" } ] }
 → { "results": [ { …, "allowed": true }, { …, "allowed": false } ] }
 ```
 
@@ -517,3 +461,77 @@ Permission rows are defined in code in `PERMISSION_DEFINITIONS`
 (`packages/shared/src/schemas/domain/rbac/permissions-registry.ts`), one row per
 `(action, resource, scope)`. **Roles are data** — admins create them at runtime; a new role
 never needs a deployment or a new RLS policy (spec §49, §50).
+
+---
+
+## 16. Roles, permissions and caches (RBAC internals)
+
+The model in one sentence: **roles are groups of permissions; permissions are what authorize
+actions** ([ADR 001](../../adr/001-permission-first-rbac.md)). Controllers ask for a permission
+(`@RequirePermission("CREATE", "USER")`), never for a role name. Paths below are relative to
+`apps/api/src/contexts/authorization/`.
+
+### The permission registry
+
+`PERMISSION_DEFINITIONS` (`packages/shared/src/schemas/domain/rbac/permissions-registry.ts`) is the
+code catalogue: one row per `(action, resource, scope)`, with a description and a group.
+
+- **Registry → database, one direction.** On every API start
+  `presentation/jobs/authorization-catalog-sync.bootstrap.ts` runs the `sync-permission-registry`
+  command: missing rows are inserted, stale descriptions and groups are updated, and the caches are
+  cleared when anything changed. The seed and `db:sync-reference-data` use the same list.
+- **Nothing is written back to TypeScript.** Rows that are not in the registry (created in the admin
+  panel) are reported as orphaned, never deleted.
+- A permission created in the admin panel exists only in the database. It does nothing until code
+  checks that `action:resource`, or a role holding it is assigned. A new protected route needs a
+  registry row **and** a `@RequirePermission` ([recipe](./recipes.md#1-add-a-new-permission)).
+
+### No wildcard action, no role inheritance (ADR 067)
+
+- **Every route names the verb it performs** (`APPROVE REWARD` for moderation, `SUSPEND MERCHANT_ORG`,
+  `UPDATE KANBAN_BOARD` for the board's columns, …) and a role holds each verb it may use. There is no
+  `MANAGE` that stands in for every action: what a role can do is the list of its permissions, nothing
+  more.
+- **Roles are flat.** No role inherits another's permissions; a role that should hold another's
+  permissions lists them itself (the seeded *Support Agent* lists *Support Viewer*'s permissions plus
+  `UPDATE USER`). A change to a role reaches exactly its holders.
+
+### Two readers of the same data
+
+| Reader | File | Used for |
+| --- | --- | --- |
+| **Authorization kernel** | `infrastructure/kernel/authorization-kernel.service.ts` | Every security decision (this page) |
+| **`AuthorizationCheckerService`** | `infrastructure/read/authorization-checker.service.ts` | The session payload, not decisions: the capability slugs the UIs receive (`/auth/me`, `/auth/permissions`, login) and the admin "why does this user have it?" check |
+
+`hasAdminAccess` on `request.user` is recomputed by `AuthorizationGuard` on every request through
+the kernel (`READ:ADMIN_DASHBOARD`, or SuperAdmin). Never trust the JWT's copy on a protected route.
+
+### Caches and invalidation
+
+| Cache | Holds | Setting (default) |
+| --- | --- | --- |
+| Authorization cache | user id → roles, permissions, capabilities | `AUTHORIZATION_CACHE_TTL_MS` (5 min), `AUTHORIZATION_CACHE_MAX_ENTRIES`; `AUTHORIZATION_CACHE_BACKEND` decides whether invalidations are broadcast over Redis |
+| User session cache | the `/auth/me` and `/auth/permissions` payloads | `USER_SESSION_CACHE_TTL_MS` (30 min), `USER_SESSION_CACHE_BACKEND` (memory or Redis) |
+| Access-token state | user id → token version, active, deleted | `ACCESS_TOKEN_STATE_CACHE_TTL_MS` (30 s) |
+
+Reads stay in-process; Redis only tells the other API instances what to drop
+([ADR 004](../../adr/004-authorization-caching.md)). After an RBAC change commits, the affected users
+are dropped locally and announced on the `authz:invalidate` channel. A lost message is bounded by
+the TTLs above. Nobody invalidates by hand: change roles and permissions through the authorization
+commands ([mutation contract](#111-the-rbac-mutation-contract)). A user's next request with an old
+token gets `401 TOKEN_VERSION_MISMATCH` and refreshes.
+
+### Background jobs (`presentation/jobs/`)
+
+| Job | Schedule | Does |
+| --- | --- | --- |
+| `permission-expiry.cron.ts` | hourly | Soft-deletes expired per-user overrides (they are already ignored at read time) |
+| `audit-log-retention.cron.ts` | hourly | Soft-deletes authorization audit rows older than 90 days |
+| `support-access-expiry.cron.ts` | every 5 min | Expires support-access grants |
+
+### Automatic role provisioning
+
+New accounts get their platform role when they are created, never by hand: signup, merchant
+onboarding and a team invite's new account all get the default `User` role (`application/services/provisioning-role-assigner.ts`,
+the `assign-default-role` command), with the new account as its own audited actor. A missing `User`
+role is a deployment error (500), not a client error.

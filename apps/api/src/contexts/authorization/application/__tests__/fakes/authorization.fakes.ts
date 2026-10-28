@@ -1,4 +1,4 @@
-import { epochMs, type CedarAuthorizationDecision, type EpochMs, type PermissionDefinition } from "@workspace/shared";
+import { epochMs, type EpochMs, type PermissionDefinition } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import type { Clock } from "../../../../../platform/application/clock.port";
@@ -6,41 +6,21 @@ import { TransactionalEventCollector } from "../../../../../platform/application
 import type { IdentitySessionsPort, SessionRevocationActor } from "../../../../../platform/application/ports/identity-sessions.port";
 import type { SystemOperationName } from "../../../../../platform/application/system-operation-names";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
-import {
-	AuthorizationPolicyDraftAggregate,
-	type PolicyDraftState,
-	type PolicySimulationSnapshot,
-	type PolicySlot,
-} from "../../../domain/aggregates/authorization-policy-draft.aggregate";
 import { PermissionAggregate, type PermissionState } from "../../../domain/aggregates/permission.aggregate";
 import { RoleAggregate, type RoleState } from "../../../domain/aggregates/role.aggregate";
 import { SupportAccessGrantAggregate, type SupportAccessGrantState } from "../../../domain/aggregates/support-access-grant.aggregate";
 import { UserAuthorizationAggregate, type DirectPermissionOverride, type UserAuthorizationState } from "../../../domain/aggregates/user-authorization.aggregate";
-import { PolicyPublished } from "../../../domain/events/policy-published.event";
 import type { ProtectedRoleHolders } from "../../../domain/policies/protected-role-holder.policy";
 import type { RbacPermissionPair } from "../../../domain/policies/rbac-escalation.policy";
 import type { PermissionRepository } from "../../../domain/repositories/permission.repository";
-import type { PolicyDraftRepository } from "../../../domain/repositories/policy-draft.repository";
 import type { RoleRepository } from "../../../domain/repositories/role.repository";
 import type { SupportAccessGrantRepository } from "../../../domain/repositories/support-access-grant.repository";
 import type { UserAuthorizationRepository } from "../../../domain/repositories/user-authorization.repository";
 import { permissionKeyOf } from "../../../domain/rbac-catalog";
 import type { AuthorizationScope } from "../../authorization-scope";
-import type { CedarPolicyEvaluatorPort } from "../../ports/cedar-policy-evaluator.port";
 import type { AuthorizationCatalogStore, CapabilityCatalogSyncResult, PermissionRegistrySyncResult } from "../../ports/catalog-sync.port";
 import type { PermissionAuditEntry, PermissionAuditWriter } from "../../ports/permission-audit.port";
 import type { PermissionReachPort } from "../../ports/permission-reach.port";
-import type {
-	ActivePolicyVersion,
-	NewPolicySimulation,
-	NewPolicyVersion,
-	PolicyAuditRecord,
-	PolicyAuditWriter,
-	PolicyPrincipalReader,
-	PolicySimulationStore,
-	PolicyVersionStore,
-	SimulationPrincipal,
-} from "../../ports/policy-control-plane.port";
 import type { RbacGraphReader, RbacMutationLock } from "../../ports/rbac-graph.port";
 import type { TenantAuditRecord, TenantAuditWriter, SupportAccessTenantReader } from "../../ports/support-access.port";
 
@@ -79,7 +59,6 @@ export class InMemoryRbacStore {
 			description: null,
 			isActive: true,
 			isSystem: false,
-			parentId: null,
 			isDeleted: false,
 			deletedAt: null,
 			createdAt: NOW,
@@ -95,7 +74,6 @@ export class InMemoryRbacStore {
 			description: null,
 			group: null,
 			isSystem: false,
-			conditions: null,
 			isDeleted: false,
 			deletedAt: null,
 			createdAt: NOW,
@@ -118,35 +96,6 @@ export class InMemoryRbacStore {
 		return `override-${String(this.overrideIds)}`;
 	}
 
-	public ancestorsOf(roleIds: readonly string[]): Set<string> {
-		const collected = new Set<string>();
-		let frontier: string[] = [...new Set<string>(roleIds)];
-		while (frontier.length > 0) {
-			for (const id of frontier) {
-				collected.add(id);
-			}
-			frontier = frontier.flatMap((id: string): string[] => {
-				const parentId: string | null = this.roles.get(id)?.parentId ?? null;
-				return parentId !== null && !collected.has(parentId) ? [parentId] : [];
-			});
-		}
-		return collected;
-	}
-
-	public descendantsOf(roleIds: readonly string[]): Set<string> {
-		const lineage = new Set<string>(roleIds);
-		let frontier: string[] = [...lineage];
-		while (frontier.length > 0) {
-			frontier = [...this.roles.values()]
-				.filter((role: RoleState): boolean => role.parentId !== null && frontier.includes(role.parentId) && !lineage.has(role.id))
-				.map((role: RoleState): string => role.id);
-			for (const id of frontier) {
-				lineage.add(id);
-			}
-		}
-		return lineage;
-	}
-
 	public holdersOf(roleIds: ReadonlySet<string>): string[] {
 		return [...this.users.values()]
 			.filter((user: StoredUser): boolean => user.roleIds.some((roleId: string): boolean => roleIds.has(roleId)))
@@ -159,7 +108,7 @@ export class InMemoryRbacStore {
 		if (user === undefined) {
 			return new Set<string>();
 		}
-		const effectiveRoles: string[] = [...this.ancestorsOf(user.roleIds)].filter((roleId: string): boolean => this.roles.get(roleId)?.isDeleted === false);
+		const effectiveRoles: string[] = user.roleIds.filter((roleId: string): boolean => this.roles.get(roleId)?.isDeleted === false);
 		const fromRoles: string[] = effectiveRoles.flatMap((roleId: string): readonly string[] => this.rolePermissions.get(roleId) ?? []);
 		const allowed: string[] = user.overrides.filter((override): boolean => override.effect === "ALLOW").map((override): string => override.permissionId);
 		const denied = new Set<string>(user.overrides.filter((override): boolean => override.effect === "DENY").map((override): string => override.permissionId));
@@ -285,12 +234,8 @@ class InMemoryUserAuthorizations implements UserAuthorizationRepository {
 class InMemoryRbacGraph implements RbacGraphReader {
 	public constructor(private readonly store: InMemoryRbacStore) {}
 
-	public withAllAncestors(roleIds: readonly string[]): Promise<ReadonlySet<string>> {
-		return Promise.resolve(this.store.ancestorsOf(roleIds));
-	}
-
-	public holdersOfLineage(roleId: string): Promise<string[]> {
-		return Promise.resolve(this.store.holdersOf(this.store.descendantsOf([roleId])));
+	public holdersOfRole(roleId: string): Promise<string[]> {
+		return Promise.resolve(this.store.holdersOf(new Set<string>([roleId])));
 	}
 
 	public holdersOfPermission(permissionId: string): Promise<string[]> {
@@ -300,7 +245,7 @@ class InMemoryRbacGraph implements RbacGraphReader {
 		const direct: string[] = [...this.store.users.values()]
 			.filter((user: StoredUser): boolean => user.overrides.some((override): boolean => override.permissionId === permissionId))
 			.map((user: StoredUser): string => user.userId);
-		return Promise.resolve([...new Set<string>([...direct, ...this.store.holdersOf(this.store.descendantsOf(conferring))])]);
+		return Promise.resolve([...new Set<string>([...direct, ...this.store.holdersOf(new Set<string>(conferring))])]);
 	}
 
 	public permissionPairsConferredBy(roleIds: readonly string[]): Promise<RbacPermissionPair[]> {
@@ -318,10 +263,10 @@ class InMemoryRbacGraph implements RbacGraphReader {
 		return Promise.resolve([...(this.store.users.get(userId)?.roleIds ?? [])]);
 	}
 
-	public effectiveRoleNames(roleIds: readonly string[]): Promise<ReadonlySet<string>> {
+	public activeRoleNames(roleIds: readonly string[]): Promise<ReadonlySet<string>> {
 		return Promise.resolve(
 			new Set<string>(
-				[...this.store.ancestorsOf(roleIds)].flatMap((roleId: string): string[] => {
+				roleIds.flatMap((roleId: string): string[] => {
 					const role: RoleState | undefined = this.store.roles.get(roleId);
 					return role === undefined || role.isDeleted || !role.isActive ? [] : [role.name];
 				}),
@@ -398,131 +343,6 @@ export class ScriptedCatalog implements AuthorizationCatalogStore {
 	}
 }
 
-export class InMemoryPolicyDrafts implements PolicyDraftRepository {
-	public readonly rows = new Map<string, PolicyDraftState>();
-	public readonly published: AuthorizationPolicyDraftAggregate[] = [];
-
-	public findById(draftId: string): Promise<AuthorizationPolicyDraftAggregate | null> {
-		const row: PolicyDraftState | undefined = this.rows.get(draftId);
-		return Promise.resolve(row === undefined ? null : AuthorizationPolicyDraftAggregate.rehydrate(row));
-	}
-
-	public add(draft: AuthorizationPolicyDraftAggregate): Promise<void> {
-		this.rows.set(draft.id, draft.snapshot());
-		return Promise.resolve();
-	}
-
-	public savePublished(draft: AuthorizationPolicyDraftAggregate): Promise<void> {
-		this.rows.set(draft.id, draft.snapshot());
-		this.published.push(draft);
-		return Promise.resolve();
-	}
-}
-
-export class InMemoryPolicyVersions implements PolicyVersionStore {
-	public readonly versions: (NewPolicyVersion & { readonly id: string; readonly supersededAt: EpochMs | null })[] = [];
-	public readonly lockedSlots: PolicySlot[] = [];
-
-	public lockSlotForPublish(slot: PolicySlot): Promise<void> {
-		this.lockedSlots.push(slot);
-		return Promise.resolve();
-	}
-
-	public maxVersion(slot: PolicySlot): Promise<number> {
-		return Promise.resolve(Math.max(0, ...this.inSlot(slot).map((version): number => version.version)));
-	}
-
-	public supersedeActive(slot: PolicySlot, now: EpochMs): Promise<void> {
-		for (const [index, version] of this.versions.entries()) {
-			if (version.tenantId === slot.tenantId && version.scope === slot.scope && version.supersededAt === null) {
-				this.versions.splice(index, 1, { ...version, supersededAt: now });
-			}
-		}
-		return Promise.resolve();
-	}
-
-	public create(version: NewPolicyVersion): Promise<{ readonly id: string; readonly version: number }> {
-		const id = `version-${String(this.versions.length + 1)}`;
-		this.versions.push({ ...version, id, supersededAt: null });
-		return Promise.resolve({ id, version: version.version });
-	}
-
-	public baselineVersionIds(tenantId: string | null): Promise<string[]> {
-		return Promise.resolve(
-			this.versions
-				.filter((version): boolean => version.supersededAt === null && (version.tenantId === null || version.tenantId === tenantId))
-				.map((version): string => version.id),
-		);
-	}
-
-	public activeVersionsForTenants(tenantIds: readonly string[]): Promise<ActivePolicyVersion[]> {
-		return Promise.resolve(
-			this.versions
-				.filter((version): boolean => version.supersededAt === null && version.tenantId !== null && tenantIds.includes(version.tenantId))
-				.map((version): ActivePolicyVersion => ({
-					id: version.id,
-					tenantId: version.tenantId,
-					scope: version.scope,
-					version: version.version,
-					cedarSource: version.cedarSource,
-				})),
-		);
-	}
-
-	private inSlot(slot: PolicySlot): NewPolicyVersion[] {
-		return this.versions.filter((version): boolean => version.tenantId === slot.tenantId && version.scope === slot.scope);
-	}
-}
-
-export class InMemoryPolicySimulations implements PolicySimulationStore {
-	public readonly recorded: NewPolicySimulation[] = [];
-	public readonly createdAt = new Map<string, EpochMs>();
-
-	public constructor(private readonly clock: Clock) {}
-
-	public record(simulation: NewPolicySimulation): Promise<void> {
-		this.recorded.push(simulation);
-		this.createdAt.set(simulation.id, this.clock.now());
-		return Promise.resolve();
-	}
-
-	public latestFor(draftId: string): Promise<PolicySimulationSnapshot | null> {
-		const latest: NewPolicySimulation | undefined = this.recorded.filter((simulation): boolean => simulation.draftId === draftId).at(-1);
-		if (latest === undefined) {
-			return Promise.resolve(null);
-		}
-		return Promise.resolve({ passed: latest.result.passed, createdAt: this.createdAt.get(latest.id) ?? NOW, baselineFingerprint: latest.baselineFingerprint });
-	}
-}
-
-export class FixedPrincipals implements PolicyPrincipalReader {
-	public constructor(private readonly principals: readonly SimulationPrincipal[] = []) {}
-
-	public countActive(tenantId: string | null): Promise<number> {
-		return Promise.resolve(this.of(tenantId).length);
-	}
-
-	public listActive(tenantId: string | null, afterMembershipId: string | null, take: number): Promise<SimulationPrincipal[]> {
-		const all: SimulationPrincipal[] = this.of(tenantId);
-		const start: number = afterMembershipId === null ? 0 : all.findIndex((principal): boolean => principal.id === afterMembershipId) + 1;
-		return Promise.resolve(all.slice(start, start + take));
-	}
-
-	private of(tenantId: string | null): SimulationPrincipal[] {
-		return this.principals.filter((principal): boolean => tenantId === null || principal.tenantId === tenantId);
-	}
-}
-
-export class RecordingPolicyAudit implements PolicyAuditWriter {
-	public readonly records: PolicyAuditRecord[] = [];
-
-	public append(record: PolicyAuditRecord): Promise<void> {
-		this.records.push(record);
-		return Promise.resolve();
-	}
-}
-
-/** Support-access grants as stored rows; `save` is a compare-and-set on the loaded status, as in Postgres. */
 export class InMemorySupportGrants implements SupportAccessGrantRepository {
 	public readonly rows = new Map<string, SupportAccessGrantState>();
 
@@ -619,19 +439,13 @@ export class InMemoryAuthorizationStore {
 	public readonly permissionAudit = new RecordingPermissionAudit();
 	public readonly identitySessions = new RecordingIdentitySessions();
 	public readonly catalog = new ScriptedCatalog();
-	public readonly policyDrafts = new InMemoryPolicyDrafts();
-	public readonly policyVersions = new InMemoryPolicyVersions();
-	public readonly policySimulations: InMemoryPolicySimulations;
-	public readonly policyAudit = new RecordingPolicyAudit();
 	public readonly supportGrants = new InMemorySupportGrants();
 	public readonly tenants = new InMemoryTenants();
 	public readonly events = new TransactionalEventCollector();
-	public principals: PolicyPrincipalReader = new FixedPrincipals();
 	public readonly uow: InMemoryAuthorizationUnitOfWork;
 
 	public constructor(clock: FixedClock = new FixedClock()) {
 		this.clock = clock;
-		this.policySimulations = new InMemoryPolicySimulations(clock);
 		this.uow = new InMemoryAuthorizationUnitOfWork(this);
 	}
 
@@ -645,11 +459,6 @@ export class InMemoryAuthorizationStore {
 			permissionAudit: this.permissionAudit,
 			identitySessions: this.identitySessions,
 			catalog: this.catalog,
-			policyDrafts: this.policyDrafts,
-			policyVersions: this.policyVersions,
-			policySimulations: this.policySimulations,
-			policyPrincipals: this.principals,
-			policyAudit: this.policyAudit,
 			supportGrants: this.supportGrants,
 			supportTenants: this.tenants,
 			tenantAudit: this.tenants,
@@ -664,13 +473,9 @@ export class InMemoryAuthorizationStore {
 			restorableMap(this.rbac.rolePermissions),
 			restorableMap(this.rbac.permissions),
 			restorableMap(this.rbac.users),
-			restorableMap(this.policyDrafts.rows),
 			restorableMap(this.supportGrants.rows),
 			restorableArray(this.permissionAudit.entries),
 			restorableArray(this.identitySessions.revocations),
-			restorableArray(this.policyVersions.versions),
-			restorableArray(this.policySimulations.recorded),
-			restorableArray(this.policyAudit.records),
 			restorableArray(this.tenants.audits),
 		];
 		const pendingEvents: number = this.events.pendingCount();
@@ -688,11 +493,6 @@ export class InMemoryAuthorizationStore {
 	/** Names of the events collected so far, in order (and clears them). */
 	public eventNames(): readonly string[] {
 		return this.events.take().map((event): string => event.eventName);
-	}
-
-	/** The policy-published events collected so far. */
-	public publishedEvents(): readonly PolicyPublished[] {
-		return this.events.take().flatMap((event): PolicyPublished[] => (event instanceof PolicyPublished ? [event] : []));
 	}
 }
 
@@ -742,17 +542,4 @@ export function adminActor(userId: string, overrides: { readonly isSuperAdmin?: 
 
 export function anonymousActor(): ActorContext {
 	return { kind: "anonymous", tenantId: null, request: REQUEST };
-}
-
-/** The tenant's active Cedar policy version is fixed; evaluation is not part of these tests. */
-export class FixedPolicyVersion implements CedarPolicyEvaluatorPort {
-	public constructor(private readonly version = 7) {}
-
-	public getActivePolicyVersion(): Promise<number> {
-		return Promise.resolve(this.version);
-	}
-
-	public evaluate(): Promise<CedarAuthorizationDecision> {
-		return Promise.reject(new Error("Cedar evaluation is not scripted in this test"));
-	}
 }

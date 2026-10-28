@@ -35,8 +35,8 @@ generated/            COMMITTED output — never edit by hand
 
 | Task | Command |
 |---|---|
-| Change a token | Edit the TypeScript in `src/`, then run `pnpm tokens:generate` from the repo root and commit `generated/` |
-| Regenerate only | `pnpm tokens:generate` (or `pnpm --filter @workspace/tokens generate`) |
+| Change a token | Edit the TypeScript in `src/`, then run `pnpm tools tokens:generate` from the repo root and commit `generated/` |
+| Regenerate only | `pnpm tools tokens:generate` (or `pnpm --filter @workspace/tokens generate`) |
 | Test | `pnpm --filter @workspace/tokens test` |
 
 Consumers import the generated CSS:

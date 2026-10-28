@@ -139,7 +139,7 @@ describe("Admin user reads", () => {
 
 	it("lists users with dashboard access derived from their roles, in one batched read each", async () => {
 		reads.accounts.set("user-2", adminAccountView({ id: "user-2", email: "manager@example.com" }));
-		grants.rolesByUser.set("user-2", [{ id: "role-1", name: "Manager", description: null }]);
+		grants.rolesByUser.set("user-2", [{ id: "role-1", name: "Admin", description: null }]);
 
 		const page = await new ListUsersForAdminHandler(reads, grants, referrals, clock).execute(new ListUsersForAdminQuery(actor, { query: { page: 1, limit: 20 } }));
 

@@ -193,7 +193,7 @@ describe("storeSwitcherStores", () => {
 	});
 
 	it("puts an active store from a later page first, so the selected value has its option", () => {
-		const later: SwitcherStore = { slug: "store-thirty", displayName: "Store Thirty", role: "ADMIN" };
+		const later: SwitcherStore = { slug: "store-thirty", displayName: "Store Thirty", role: "MANAGER" };
 		expect(storeSwitcherStores([first, second], later)).toEqual([
 			later,
 			{ slug: "store-one", displayName: "Store One", role: "OWNER" },

@@ -101,7 +101,11 @@ vi.mock("@workspace/client/lib/contexts/identity", async (importOriginal) => {
 		api: {
 			admin: {
 				roles: {
-					list: listOf("roles", [{ id: "role-viewer", name: "Viewer", description: null, isActive: true, parentId: null }]),
+					list: listOf("roles", [
+						{ id: "role-viewer", name: "Viewer", description: null, isActive: true, parentId: null, kind: "PLATFORM" },
+						// A tenant-role template is never offered for assignment to staff (ADR 067).
+						{ id: "role-cashier-template", name: "Cashier", description: null, isActive: true, parentId: null, kind: "TEMPLATE" },
+					]),
 					userAssign: mutation,
 					userRemove: mutation,
 				},
@@ -170,11 +174,11 @@ describe("UserAccessPanel authorization", () => {
 		expect(screen.queryByRole("note")).toBeNull();
 	});
 
-	it("treats MANAGE as implying the update actions", () => {
-		renderPanel([PERMISSION.ROLE.MANAGE, PERMISSION.PERMISSION.MANAGE]);
+	it("needs the exact update permission: reading or listing roles never lets an admin assign one", () => {
+		renderPanel([PERMISSION.ROLE.READ, PERMISSION.ROLE.LIST]);
 
-		expect(screen.getByRole("button", { name: "Assign role" })).toBeDefined();
-		expect(screen.getByText("Permission checker")).toBeDefined();
+		expect(screen.queryByRole("button", { name: "Assign role" })).toBeNull();
+		expect(screen.getByText("Assigning or removing roles requires the role update permission.")).toBeDefined();
 	});
 
 	it("renders roles read-only with a notice and hides the checker without the permissions", () => {

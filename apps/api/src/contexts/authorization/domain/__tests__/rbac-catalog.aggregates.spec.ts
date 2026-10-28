@@ -3,13 +3,7 @@ import { epochMs, type EpochMs } from "@workspace/shared";
 
 import { PermissionAggregate, type PermissionState } from "../aggregates/permission.aggregate";
 import { RoleAggregate, ROLE_NAME_MAX_LENGTH, type RoleState } from "../aggregates/role.aggregate";
-import {
-	DeletedPermissionNotFoundError,
-	DeletedRoleNotFoundError,
-	RoleHierarchyCycleError,
-	SystemPermissionImmutableError,
-	SystemRoleImmutableError,
-} from "../errors/authorization.errors";
+import { DeletedPermissionNotFoundError, DeletedRoleNotFoundError, SystemPermissionImmutableError, SystemRoleImmutableError } from "../errors/authorization.errors";
 import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
 const NOW: EpochMs = epochMs(1_800_000_000_000);
@@ -22,7 +16,6 @@ function role(overrides: Partial<RoleState> = {}): RoleAggregate {
 		description: null,
 		isActive: true,
 		isSystem: false,
-		parentId: null,
 		isDeleted: false,
 		deletedAt: null,
 		createdAt: NOW,
@@ -40,7 +33,6 @@ function permission(overrides: Partial<PermissionState> = {}): PermissionAggrega
 		description: null,
 		group: null,
 		isSystem: false,
-		conditions: null,
 		isDeleted: false,
 		deletedAt: null,
 		createdAt: NOW,
@@ -51,7 +43,7 @@ function permission(overrides: Partial<PermissionState> = {}): PermissionAggrega
 
 describe("RoleAggregate", () => {
 	it("creates an active custom role and records the creation", () => {
-		const created = RoleAggregate.create({ id: "role-2", name: "Auditor", description: "reads", parentId: null }, NOW);
+		const created = RoleAggregate.create({ id: "role-2", name: "Auditor", description: "reads" }, NOW);
 
 		expect(created.snapshot()).toMatchObject({ isActive: true, isSystem: false, isDeleted: false, createdAt: NOW });
 		expect(created.pullChanges()).toEqual([{ kind: "created" }]);
@@ -81,9 +73,6 @@ describe("RoleAggregate", () => {
 			system.remove(LATER);
 		}).toThrow(SystemRoleImmutableError);
 		expect(() => {
-			system.reparent(null, new Set(), LATER);
-		}).toThrow(SystemRoleImmutableError);
-		expect(() => {
 			system.syncPermissions([], "admin-1", LATER);
 		}).toThrow(SystemRoleImmutableError);
 	});
@@ -98,16 +87,6 @@ describe("RoleAggregate", () => {
 		expect(() => {
 			subject.restore(LATER);
 		}).toThrow(DeletedRoleNotFoundError);
-	});
-
-	it("refuses a parent whose ancestry contains the role (a cycle)", () => {
-		const subject = role();
-
-		expect(() => {
-			subject.reparent({ id: "role-9", name: "Child" }, new Set(["role-9", "role-1"]), LATER);
-		}).toThrow(RoleHierarchyCycleError);
-		subject.reparent({ id: "role-8", name: "Parent" }, new Set(["role-8"]), LATER);
-		expect(subject.parentId).toBe("role-8");
 	});
 
 	it("syncs a de-duplicated permission set", () => {

@@ -5,7 +5,6 @@ import { getApiConfig } from "../../../config/api-config";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
-import { createCedarPolicyEvaluator } from "../../../contexts/authorization/public-api";
 import { createTenantAuditPort } from "../../../contexts/tenancy/public-api";
 import { createTenantKeyManagement } from "./kms/tenant-key-management.factory";
 import { TenantEncryptionKeyRepository } from "./tenant-encryption-key.repository";
@@ -62,14 +61,7 @@ export async function runTenantKeyRewrap(argv: readonly string[], log: (line: st
 	try {
 		const requestContext = new RequestContextService();
 		const tenantTx = new TenantTransactionService(prisma, requestContext);
-		const service = new TenantEncryptionService(
-			tenantTx,
-			new TenantEncryptionKeyRepository(),
-			createTenantAuditPort(),
-			createCedarPolicyEvaluator(tenantTx),
-			requestContext,
-			createTenantKeyManagement(config),
-		);
+		const service = new TenantEncryptionService(tenantTx, new TenantEncryptionKeyRepository(), createTenantAuditPort(), requestContext, createTenantKeyManagement(config));
 		const summary: TenantKeyRewrapSummary = await service.rewrapToCurrentKek(args.actorUserId);
 		log(formatRewrapSummary(summary));
 		return summary.failures.length === 0 ? REWRAP_EXIT_CODES.success : REWRAP_EXIT_CODES.keysFailed;

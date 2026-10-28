@@ -17,9 +17,32 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { GITHUB_FETCH, type GithubFetch } from "../src/contexts/integrations-github/infrastructure/github-api/github-http.transport";
 import { GITHUB_TOKEN_EXPIRATION_HEADER } from "../src/contexts/integrations-github/infrastructure/github-api/github-pull-request.client";
-import { createE2eApp, login, markSeedUserEmailVerified, mutationHeaders, parseSuccessEnvelope, uniqueClientIp, type InjectResponse, type LoginResult } from "./e2e-helpers";
+import {
+	createE2eApp,
+	createTestPlatformRole,
+	dropTestPlatformRole,
+	login,
+	markSeedUserEmailVerified,
+	mutationHeaders,
+	parseSuccessEnvelope,
+	uniqueClientIp,
+	type InjectResponse,
+	type LoginResult,
+	type TestPermissionPairs,
+} from "./e2e-helpers";
+
 import { AVATAR_PNG_BYTES } from "./support/avatar-png-fixture";
 import { restoreGithubAccountLinks, snapshotGithubAccountLinks, type GithubAccountLinkSnapshot } from "./support/github-account-link-snapshots";
+
+/**
+ * Staff without GitHub pull requests: a seed account given, for this spec only, a platform role with the
+ * admin panel and GitHub reads but no pull-request permission (ADR 067 retired the seeded Manager).
+ */
+const STAFF_EMAIL = "jack.anderson@example.com";
+const STAFF_PERMISSIONS: TestPermissionPairs = [
+	["READ", "ADMIN_DASHBOARD"],
+	["READ", "GITHUB"],
+];
 
 // A picture attached to a GitHub comment from the app (ADR 052): uploaded through
 // the file pipeline (private — a staging copy); attaching answers where it will
@@ -126,6 +149,7 @@ describe("GitHub comment pictures kept in the repository (e2e)", () => {
 	let manager: LoginResult;
 	let adminId: string;
 	let managerId: string;
+	const staffRoleId = randomUUID();
 	let linksBefore: readonly GithubAccountLinkSnapshot[] = [];
 
 	async function send(options: {
@@ -216,13 +240,14 @@ describe("GitHub comment pictures kept in the repository (e2e)", () => {
 		app = await createE2eApp((builder: TestingModuleBuilder): TestingModuleBuilder => builder.overrideProvider(GITHUB_FETCH).useValue(FAKE_GITHUB));
 		pool = new Pool({ connectionString: DATABASE_URL });
 		adminId = await userIdOf("admin@example.com");
-		managerId = await userIdOf("manager@example.com");
+		await createTestPlatformRole(pool, { id: staffRoleId, label: "github reader", permissions: STAFF_PERMISSIONS, holderEmail: STAFF_EMAIL });
+		managerId = await userIdOf(STAFF_EMAIL);
 		linksBefore = await snapshotGithubAccountLinks(pool, [adminId]);
-		for (const email of ["admin@example.com", "manager@example.com"]) {
+		for (const email of ["admin@example.com", STAFF_EMAIL]) {
 			await markSeedUserEmailVerified(pool, email);
 		}
 		admin = await login(app, "admin@example.com", "Admin@123");
-		manager = await login(app, "manager@example.com", "Manager@123");
+		manager = await login(app, STAFF_EMAIL, "Jack@123");
 		const linked = await send({
 			method: "PUT",
 			url: `${API_VERSION_PREFIX}/github/account`,
@@ -235,6 +260,7 @@ describe("GitHub comment pictures kept in the repository (e2e)", () => {
 	afterAll(async () => {
 		// Put back exactly what was there before, so running the suite never replaces a developer's own link.
 		await restoreGithubAccountLinks(pool, linksBefore);
+		await dropTestPlatformRole(pool, staffRoleId);
 		await pool.end();
 		await app.close();
 	});

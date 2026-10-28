@@ -419,13 +419,14 @@ describe("authorization + feature flags", () => {
 		expect(filterSidebarMenuData(menu, ONLY_B).sections).toHaveLength(0);
 	});
 
-	it("treats MANAGE on a resource as satisfying other actions on it", () => {
+	it("needs the exact action: another action on the same resource does not satisfy it", () => {
 		const menu = rawMenu({
 			sections: [{ title: "Main", items: [{ title: "Orders", url: "/orders", authorization: { permissions: [PERMISSION.ORDER.READ] } }] }],
 		});
 
-		expect(filterSidebarMenuData(menu, [PERMISSION.ORDER.MANAGE]).sections).toHaveLength(1);
-		expect(filterSidebarMenuData(menu, [PERMISSION.PRODUCT.MANAGE]).sections).toHaveLength(0);
+		expect(filterSidebarMenuData(menu, [PERMISSION.ORDER.READ]).sections).toHaveLength(1);
+		expect(filterSidebarMenuData(menu, [PERMISSION.ORDER.UPDATE]).sections).toHaveLength(0);
+		expect(filterSidebarMenuData(menu, [PERMISSION.PRODUCT.READ]).sections).toHaveLength(0);
 	});
 
 	it("filters compiled menus with the same feature-flag rules", () => {

@@ -49,7 +49,6 @@ export class ProposeLocationHandler implements ICommandHandler<ProposeLocationCo
 			await scope.audit.record({
 				tenantId: member.tenantId,
 				actorUserId: user.userId,
-				policyVersion: member.policyVersion,
 				action: "tenant.location.requested",
 				resourceType: "Location",
 				resourceId: stored.id,

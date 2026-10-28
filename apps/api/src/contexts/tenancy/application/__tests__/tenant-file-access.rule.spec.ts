@@ -28,19 +28,15 @@ class Memberships implements MembershipRoleLookupPort {
 	}
 }
 
-/** Records the Cedar calls and can deny them; `view_locations` is the membership-only capability. */
+/** Records the capability checks (the member's role and grants decide them, ADR 067) and can deny them. */
 class RecordingGate implements MerchantCapabilityGatePort {
-	public readonly cedarChecks: { readonly role: MembershipRole; readonly capability: MerchantCapability }[] = [];
+	public readonly checks: { readonly role: MembershipRole; readonly capability: MerchantCapability }[] = [];
 
-	public constructor(private readonly cedarDenies = false) {}
-
-	public isMembershipOnly(capability: MerchantCapability): boolean {
-		return capability === "merchant:view_locations";
-	}
+	public constructor(private readonly denies = false) {}
 
 	public requireMembershipCapability(subject: { readonly role: MembershipRole }, capability: MerchantCapability): Promise<void> {
-		this.cedarChecks.push({ role: subject.role, capability });
-		return this.cedarDenies ? Promise.reject(new AuthorizationError({ message: "cedar denied" })) : Promise.resolve();
+		this.checks.push({ role: subject.role, capability });
+		return this.denies ? Promise.reject(new AuthorizationError({ message: "capability denied" })) : Promise.resolve();
 	}
 }
 
@@ -49,11 +45,11 @@ function branding(role: MembershipRole | null, gate = new RecordingGate()): Tena
 }
 
 describe("TenantFileAccessRule", () => {
-	it("checks store branding against the tenant Cedar policy after the role table", async () => {
+	it("checks store branding uploads against the manage capability", async () => {
 		const gate = new RecordingGate();
 
-		await expect(branding("ADMIN", gate).assertCanUpload(ACTOR, { ...BASE, category: "STORE_LOGO", tenantId: "org-1", assetType: "LOGO" })).resolves.toBeUndefined();
-		expect(gate.cedarChecks).toEqual([{ role: "ADMIN", capability: "merchant:manage_locations" }]);
+		await expect(branding("MANAGER", gate).assertCanUpload(ACTOR, { ...BASE, category: "STORE_LOGO", tenantId: "org-1", assetType: "LOGO" })).resolves.toBeUndefined();
+		expect(gate.checks).toEqual([{ role: "MANAGER", capability: "merchant:manage_locations" }]);
 	});
 
 	it("denies non-members and requests without a tenant with the action's code", async () => {
@@ -65,17 +61,17 @@ describe("TenantFileAccessRule", () => {
 		await expect(branding(null).assertCanAct(ACTOR, file("STORE_LOGO"), "read")).rejects.toMatchObject({ code: "FILE_VIEW_FORBIDDEN" });
 	});
 
-	it("lets any member read store branding (membership only, no Cedar action)", async () => {
+	it("reads store branding with the view capability, like every other capability check", async () => {
 		const gate = new RecordingGate();
 
-		await expect(branding("MEMBER", gate).assertCanAct({ userId: "someone-else", isSuperAdmin: false }, file("STORE_LOGO"), "read")).resolves.toBeUndefined();
-		expect(gate.cedarChecks).toEqual([]);
+		await expect(branding("CASHIER", gate).assertCanAct({ userId: "someone-else", isSuperAdmin: false }, file("STORE_LOGO"), "read")).resolves.toBeUndefined();
+		expect(gate.checks).toEqual([{ role: "CASHIER", capability: "merchant:view_locations" }]);
 	});
 
-	it("propagates the tenant Cedar denial", async () => {
+	it("propagates the capability denial", async () => {
 		const rule = new TenantFileAccessRule(["MERCHANT_KYB"], KYB_EVIDENCE_CAPABILITIES, new Memberships("OWNER"), new RecordingGate(true));
 
-		await expect(rule.assertCanAct(ACTOR, file("MERCHANT_KYB"), "read")).rejects.toThrow("cedar denied");
+		await expect(rule.assertCanAct(ACTOR, file("MERCHANT_KYB"), "read")).rejects.toThrow("capability denied");
 	});
 
 	it("needs manage_verification for every KYB action, read included", async () => {
@@ -85,12 +81,12 @@ describe("TenantFileAccessRule", () => {
 		await rule.assertCanAct(ACTOR, file("MERCHANT_KYB"), "read");
 		await rule.assertCanAct(ACTOR, file("MERCHANT_KYB"), "delete");
 
-		expect(gate.cedarChecks.map((check) => check.capability)).toEqual(["merchant:manage_verification", "merchant:manage_verification"]);
+		expect(gate.checks.map((check) => check.capability)).toEqual(["merchant:manage_verification", "merchant:manage_verification"]);
 	});
 
 	it("decides by the CURRENT capability, never by who uploaded: a former member who uploaded cannot delete", async () => {
 		await expect(branding(null).assertCanAct(ACTOR, file("STORE_BANNER", { uploadedById: ACTOR.userId }), "delete")).rejects.toMatchObject({ code: "FILE_DELETE_FORBIDDEN" });
-		await expect(branding("ADMIN").assertCanAct({ userId: "admin-2", isSuperAdmin: false }, file("STORE_BANNER"), "delete")).resolves.toBeUndefined();
+		await expect(branding("MANAGER").assertCanAct({ userId: "manager-2", isSuperAdmin: false }, file("STORE_BANNER"), "delete")).resolves.toBeUndefined();
 	});
 
 	it("uses the read capability to read and the manage capability to complete", async () => {
@@ -105,6 +101,6 @@ describe("TenantFileAccessRule", () => {
 		await rule.assertCanAct(ACTOR, file("REWARD_IMAGE"), "read");
 		await rule.assertCanAct(ACTOR, file("REWARD_IMAGE"), "complete");
 
-		expect(gate.cedarChecks.map((check) => check.capability)).toEqual(["merchant:view_rewards", "merchant:manage_rewards"]);
+		expect(gate.checks.map((check) => check.capability)).toEqual(["merchant:view_rewards", "merchant:manage_rewards"]);
 	});
 });

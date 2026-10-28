@@ -144,11 +144,11 @@ const EXPECTED_PAGE_ACCESS: ReadonlyMap<string, ExpectedAccess> = new Map<string
 	["/geography", needs(PERMISSION.GEO.READ)],
 	["/merchants", needs(PERMISSION.MERCHANT_ORG.LIST)],
 	["/merchants/[id]", needs(PERMISSION.MERCHANT_ORG.LIST)],
-	["/merchants/invites", needs(PERMISSION.MERCHANT_ORG.MANAGE)],
+	["/merchants/invites", needs(PERMISSION.MERCHANT_ORG.CREATE)],
 	["/merchants/verification", needs(PERMISSION.MERCHANT_ORG.LIST)],
 	["/merchants/store-requests", needs(PERMISSION.MERCHANT_ORG.LIST)],
-	["/rewards/review", needs(PERMISSION.REWARD.MANAGE)],
-	["/rewards/review/[id]", needs(PERMISSION.REWARD.MANAGE)],
+	["/rewards/review", needs(PERMISSION.REWARD.APPROVE)],
+	["/rewards/review/[id]", needs(PERMISSION.REWARD.APPROVE)],
 	["/settings/access", needs(PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ)],
 ]);
 

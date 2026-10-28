@@ -23,7 +23,7 @@ Tenant  (the tenant — e.g. "Brew & Bean KL")
 │
 ├── Location  (an operational site: terminals, rewards, redemptions happen here; also the authorization unit for location staff)
 │
-└── Membership  (user ↔ tenant, role OWNER / ADMIN / MEMBER / POLICY_ADMIN / CASHIER)
+└── Membership  (user ↔ tenant, one tenant role: the tenant's copy of Owner / Manager / Cashier, or its own)
       └── MembershipLocationScope  (ALL_LOCATIONS, or one SELECTED location, optionally with a dynamic RBAC Role such as "Location Manager")
 ```
 
@@ -177,7 +177,7 @@ name is written in a second file.
 | Domain reads RLS cannot express                                    | `claims.otp.request`, `claims.reward.claim`, `rewards.sales.merchant_summary`, `rewards.referral_credit.deliver` (claims requests a credited referrer's email after the checkout and from the sweeper: the till's key may not read the referrer's address), `files.authorization`, `files.delete`, `files.local_object.read`, `files.local_variant.read`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | Catalog                                                            | `catalog.product_catalog.read`, `catalog.product_catalog.write` (bypass-only `Product` and `SampleCategory` tables, after the permission check)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | Kanban boards                                                      | `kanban.board.read`, `kanban.board.write` (bypass-only `KanbanPlanningColumn`, `KanbanExecutionColumn`, `KanbanLevelCounter` (write only), `KanbanTask`, `KanbanTaskComment`, `KanbanTaskAttachment`, `KanbanChecklistItem`, `KanbanTaskWatcher`, `KanbanTaskLink`, `KanbanTaskActivity`, plus `User` names and the attached `StoredFile` rows, after the KANBAN_TASK permission check); CLI only, `kanban.board.convert` (`pnpm db:kanban-convert`: the retired `KanbanColumn` and the conversion's `KanbanConversionStage` too); `files.delete` also reaches `KanbanTaskAttachment` to release an attached file's row and `KanbanTaskActivity` (+ `User`) to record it; the assignable people come from `authorization.permission_holders.read` (the RBAC tables, read by the authorization context)                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| CLI only                                                           | `seed.demo_dataset` (every `pnpm db:seed` connection, as `app_runtime`), `seed.test_fixture` (the two-tenant e2e fixture), `seed.github_link.carry`, `tenancy.data_check` (read-only, `pnpm db:check-tenant-integrity`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| CLI only                                                           | `seed.demo_dataset` (every `pnpm db:seed` connection, as `app_runtime`), `seed.test_fixture` (the two-tenant e2e fixture), `seed.github_link.carry`, `tenancy.data_check` (read-only, `pnpm tools db:check-tenant-integrity`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 The registry spec fails when an entry is unused, so dead allowlist entries cannot accumulate.
 
@@ -228,6 +228,27 @@ registry, so no API code path can borrow them.
 | `TenantSuspensionAppeal` | bypass, or members of the tenant                                                        | bypass only — the `tenant.lifecycle.*` system operations                                                                                                                                                                                     |
 | `TenantCustomerBan`      | bypass, members of the tenant, or an API key of the tenant (`40-api-key-principal.sql`) | bypass only — `tenant.customer_ban.create` / `.lift` after the `merchant:manage_rewards` check. Claims (`claims.reward.claim`) and the tills read it to refuse a banned customer; the redemption log reads it under the member's own session |
 
+### 4.0 Roles, grants and shares in Postgres (ADR 067)
+
+RLS is the primary enforcer, and it decides with the same rules as the API's `AccessControlService`.
+`prisma/rls/02-access-model.sql` defines two helpers, read by the policies in `prisma/rls.sql`:
+
+- `app_has_permission(resource, action, tenant, store)` — the caller's **active** membership in the
+  tenant whose tenant role holds `resource.action` (role path), or a live grant of it (grant path, a
+  store-limited grant only at that store and never for a tenant-level record); either way only inside
+  the membership's stores. `store` NULL is a tenant-level record. A session bound to tenant A never
+  reaches tenant B.
+- `app_shared(resource, id, level)` — one record shared with the caller's active membership, unexpired,
+  at `level` or higher (EDIT includes VIEW).
+
+| Table | Read | Write |
+| --- | --- | --- |
+| `Reward` | `reward.read`, a VIEW share of that reward, published consumer rewards, a claim holder's own reward | insert `reward.create`; update `reward.update` / `reward.publish` or an EDIT share; delete `reward.delete` |
+| `RewardClaim` | the customer's own claims; merchant members with `claim.read` | the customer's own claim, or system flows |
+| `RewardRedemption` | the customer's own; members with `redemption.read` **at the redemption's store** | system flows only |
+| `ResourceAcl` (shares) | the shares made to the caller; everyone's with `member.read` | system operation only |
+| `Role`, `RolePermission` | the platform catalogue and templates; a tenant's own roles to its members only | system operation only (`authorization.tenant_access.write`) |
+
 ### 4.1 The merchant API key principal
 
 An API-key request is a **machine principal**, not anonymous and not a bypass. The guard verifies
@@ -257,8 +278,9 @@ Every new tenant table must be added to `prisma/rls/manifest-index.ts` and get p
 `prisma/rls.sql`. `pnpm --filter @workspace/api db:check-rls-manifest` fails if a table is
 missing. See [recipes → add a tenant table](./recipes.md#7-add-a-new-tenant-table-with-rls).
 
-**Dynamic roles never create RLS policies** (spec §50). RLS protects stable concepts —
-tenant, location, user — while roles and permissions live in the kernel.
+**Dynamic roles never create RLS policies** (spec §50). RLS protects stable concepts — tenant,
+location, user — and reads roles, grants and shares as *data* through the two helpers above, so a role
+a tenant creates or edits needs no new policy.
 
 ---
 
@@ -285,12 +307,12 @@ The SQL is idempotent, so retries are safe.
 ```bash
 # 1. stop `pnpm dev` (API, workers)
 # 2. the seed imports @workspace/shared from its build output
-pnpm build:shared
+pnpm tools build:shared
 # 3. reset, seed, apply RLS
 cd apps/api
 pnpm db:reset          # drops + migrates (+ runs the bootstrap seed)
 pnpm db:seed           # full demo seed (permissions, roles, users, tenants, locations, …)
-pnpm db:apply-security # RLS helpers, policies, grants
+pnpm tools db:apply-security # RLS helpers, policies, grants
 ```
 
 You do **not** need `npx prisma migrate reset`, `prisma migrate dev` **and** `pnpm db:reset`
@@ -300,8 +322,7 @@ together — `db:reset` already resets and migrates.
 
 ## 6. Migrations added by the authorization work
 
-The authorization tables (`UserPermission.effect`, `ResourceAcl`, `PolicyDefinition`,
-`AuthorizationAudit`) are part of the single baseline migration `20261004152638_init`
+The authorization tables (`UserPermission`, `ResourceAcl`, `AuthorizationAudit`) are part of the single baseline migration `20261004152638_init`
 (`apps/api/prisma/migrations-baseline.json` records why the history was regenerated). New changes are
 generated forward from `schema.prisma` ([Database](../database.md)). The Store → Location merge,
 user bans and suspension appeals are `20261020224859_merge_store_into_location_bans_and_appeals`.

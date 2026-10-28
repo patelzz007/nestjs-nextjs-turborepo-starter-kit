@@ -3,6 +3,7 @@ import { z } from "zod";
 import { BaseResponseSchema } from "../../../schemas/api/common";
 import { defineListQuery, listFilter, ListSearchSchema } from "../../../schemas/api/list-query";
 import { PermissionDetailsSchema } from "../../identity/schemas/user";
+import { RoleKindSchema } from "./permission-enums";
 
 export const CreateRoleSchema = z
 	.object({
@@ -18,15 +19,6 @@ export const CreateRoleSchema = z
 	.strict();
 
 export type CreateRoleInput = z.output<typeof CreateRoleSchema>;
-
-/** CreateRole with optional parentId */
-export const CreateRoleExtendedSchema = CreateRoleSchema.extend({
-	parentId: z.uuid().optional().meta({
-		description: "Parent role ID for role hierarchy",
-	}),
-}).strict();
-
-export type CreateRoleExtendedInput = z.output<typeof CreateRoleExtendedSchema>;
 
 /** Update role metadata (PATCH). */
 export const UpdateRoleSchema = z
@@ -44,16 +36,6 @@ export const UpdateRoleSchema = z
 	.strict();
 
 export type UpdateRoleInput = z.output<typeof UpdateRoleSchema>;
-
-export const SetRoleParentSchema = z
-	.object({
-		parentId: z.uuid().nullable().meta({
-			description: "New parent role ID (null to remove parent)",
-		}),
-	})
-	.strict();
-
-export type SetRoleParentInput = z.output<typeof SetRoleParentSchema>;
 
 export const RoleFilterSchema = z
 	.object({
@@ -86,7 +68,8 @@ export const RoleListItemSchema = z.object({
 	name: z.string(),
 	description: z.string().nullable(),
 	isActive: z.boolean(),
-	parentId: z.string().nullable(),
+	/** `PLATFORM` (assignable to staff) or `TEMPLATE` (the code-defined start of every tenant's role, read-only here). */
+	kind: RoleKindSchema,
 });
 
 export type RoleListItem = z.output<typeof RoleListItemSchema>;
@@ -110,12 +93,6 @@ export type RoleListQuery = z.output<typeof RoleListQuerySchema>;
 
 export type RoleListSortField = (typeof roleListQuery.sortable)[number];
 
-/** Slim role reference (id + name only). */
-const RoleRefSchema = z.object({
-	id: z.string(),
-	name: z.string(),
-});
-
 /** Slim user reference for RBAC responses. */
 const UserRefSchema = z.object({
 	id: z.string(),
@@ -131,9 +108,6 @@ export const RoleResponseSchema = z.object({
 	description: z.string().nullable(),
 	isActive: z.boolean(),
 	isSystem: z.boolean().optional(),
-	parentId: z.string().nullable(),
-	parent: RoleRefSchema.nullable().optional(),
-	children: z.array(RoleRefSchema.extend({ isActive: z.boolean() })).optional(),
 	rolePermissions: z.array(z.object({ permission: z.object(PermissionDetailsSchema.shape) })).optional(),
 	userRoles: z.array(z.object({ user: UserRefSchema })).optional(),
 	_count: z.object({ userRoles: z.number(), rolePermissions: z.number() }).optional(),
@@ -147,7 +121,6 @@ export const RoleCreatedResponseSchema = z.object({
 	id: z.string(),
 	name: z.string(),
 	description: z.string().nullable(),
-	parentId: z.string().nullable(),
 	isActive: z.boolean(),
 });
 

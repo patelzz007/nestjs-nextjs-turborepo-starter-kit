@@ -53,7 +53,6 @@ export class BanCustomerHandler implements ICommandHandler<BanCustomerCommand, T
 			await scope.audit.record({
 				tenantId: member.tenantId,
 				actorUserId: staff.userId,
-				policyVersion: member.policyVersion,
 				action: "tenant.customer_banned",
 				resourceType: "TenantCustomerBan",
 				resourceId: ban.id,

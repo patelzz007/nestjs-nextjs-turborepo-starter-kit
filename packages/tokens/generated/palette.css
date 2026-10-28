@@ -1,10 +1,11 @@
 /*
  * GENERATED FILE: do not edit by hand.
  * Source: packages/tokens/src, the one design token source (ADR 030).
- * Regenerate with `pnpm tokens:generate`; a test fails while this file is stale.
+ * Regenerate with `pnpm tools tokens:generate`; a test fails while this file is stale.
  *
  * The palette primitives (--palette-<scale>-<step>) on their own, for a surface
- * that maps its own semantic names onto the shared scales (apps/docs).
+ * that maps its own semantic names onto the shared scales (apps/docs), plus the
+ * page widths every surface shares (--max-width-8xl / 9xl / 10xl; pages use 10xl).
  * Components never read these directly; they read the semantic tokens in web.css.
  */
 
@@ -97,4 +98,7 @@
 	--palette-vivid-8: oklch(0.795 0.118 217.5);
 	--palette-vivid-9: oklch(0.717 0.112 248.7);
 	--palette-vivid-14: oklch(0.788 0.142 131.1);
+	--max-width-8xl: 88rem;
+	--max-width-9xl: 96rem;
+	--max-width-10xl: 104rem;
 }

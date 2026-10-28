@@ -5,7 +5,6 @@ import type { TenantEncryptionKey } from "@prisma/client";
 import { getApiConfig } from "../../src/config/api-config";
 import type { TenantKmsProvider } from "../../src/config/api-env.fields";
 import { TypedConfigService } from "../../src/config/typed-config.service";
-import { NO_PUBLISHED_POLICY_VERSION } from "../../src/contexts/authorization/infrastructure/cedar/policy-bundle";
 import { AES_256_KEY_BYTES, formatGcmEnvelope, gcmEncrypt } from "../../src/platform/infrastructure/encryption/aes-256-gcm";
 import { LEGACY_PILOT_KEK_ID } from "../../src/platform/infrastructure/encryption/kms/local-development-key-management.service";
 import { createTenantKeyManagement } from "../../src/platform/infrastructure/encryption/kms/tenant-key-management.factory";
@@ -63,10 +62,6 @@ async function rewrapFromLegacyPilot(kms: TenantKeyManagementPort, config: Typed
 	if (!(await kms.unwrapDataKey(next)).equals(dataKey)) {
 		throw new Error(`Seed re-wrap of tenant key ${key.id} does not round-trip`);
 	}
-	const policy = await prisma.authorizationPolicyVersion.findFirst({
-		where: { tenantId: key.tenantId, scope: "TENANT", supersededAt: null },
-		select: { version: true },
-	});
 	await prisma.$transaction(async (tx) => {
 		const swapped = await tx.tenantEncryptionKey.updateMany({
 			where: { id: key.id, kmsKeyId: key.kmsKeyId, wrappedKey: key.wrappedKey, rotatedAt: null },
@@ -82,7 +77,6 @@ async function rewrapFromLegacyPilot(kms: TenantKeyManagementPort, config: Typed
 				action: TENANT_KEY_AUDIT_ACTIONS.rewrapped,
 				resourceType: "TenantEncryptionKey",
 				resourceId: key.id,
-				policyVersion: policy?.version ?? NO_PUBLISHED_POLICY_VERSION,
 				metadata: { fromKmsKeyId: legacy.kmsKeyId, toKmsKeyId: next.kmsKeyId, keyVersion: key.keyVersion },
 			},
 		});
@@ -117,10 +111,6 @@ export async function seedTenantEncryptionKeys(targets: readonly TenantKeySeedTa
 		if (!(await kms.unwrapDataKey(wrapped)).equals(dataKey)) {
 			throw new Error(`Seed tenant key for ${target.tenantId} does not round-trip`);
 		}
-		const policy = await prisma.authorizationPolicyVersion.findFirst({
-			where: { tenantId: target.tenantId, scope: "TENANT", supersededAt: null },
-			select: { version: true },
-		});
 		await prisma.$transaction(async (tx) => {
 			const key = await tx.tenantEncryptionKey.create({
 				data: { tenantId: target.tenantId, keyVersion: INITIAL_DATA_KEY_VERSION, wrappedKey: wrapped.wrappedKey, kmsKeyId: wrapped.kmsKeyId, status: "ACTIVE" },
@@ -132,7 +122,6 @@ export async function seedTenantEncryptionKeys(targets: readonly TenantKeySeedTa
 					action: TENANT_KEY_AUDIT_ACTIONS.created,
 					resourceType: "TenantEncryptionKey",
 					resourceId: key.id,
-					policyVersion: policy?.version ?? NO_PUBLISHED_POLICY_VERSION,
 					metadata: { kmsKeyId: key.kmsKeyId, keyVersion: key.keyVersion },
 				},
 			});

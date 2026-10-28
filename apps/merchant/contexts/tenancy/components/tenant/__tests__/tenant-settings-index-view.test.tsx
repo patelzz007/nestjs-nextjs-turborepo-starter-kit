@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 import { cleanup, screen } from "@testing-library/react";
-import type { MembershipRole } from "@workspace/shared";
+import type { MembershipRole, TenantContextResponse } from "@workspace/shared";
 import type * as React from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TenantSettingsIndexView } from "@/contexts/tenancy/components/tenant/tenant-settings-index-view";
 import { tenantRoutes } from "@/lib/routes";
 import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
+import { contextQueryState, TWO_STORE_CONTEXT } from "@/test/tenant-context";
 
 // The card reads the tenant context through the API; it has its own test (leave-tenant-card.test.tsx).
 vi.mock("@/contexts/tenancy/components/lifecycle/leave-tenant-card", () => ({
@@ -20,6 +21,25 @@ vi.mock("@/contexts/tenancy/components/support-access/support-access-approvals-c
 
 const routes = tenantRoutes(TEST_ORG_SLUG);
 
+const { contextQuery } = vi.hoisted(() => ({ contextQuery: vi.fn() }));
+
+vi.mock("@workspace/client/lib/contexts/identity", () => ({
+	useAuth: (): object => ({ api: { tenants: { context: { useQuery: contextQuery } } } }),
+}));
+
+const VERIFIED_CONTEXT: TenantContextResponse = {
+	...TWO_STORE_CONTEXT,
+	merchantProfile: {
+		tenantId: TWO_STORE_CONTEXT.tenant.id,
+		legalName: "Acme Coffee Sdn Bhd",
+		category: "cafe",
+		city: TWO_STORE_CONTEXT.merchantProfile?.city ?? "KUALA_LUMPUR",
+		kybStatus: "APPROVED",
+		contactEmail: "owner@acme.example",
+		contactPhone: null,
+	},
+};
+
 function hrefOf(name: string): string | null {
 	return screen.getByRole("link", { name }).getAttribute("href");
 }
@@ -28,46 +48,41 @@ function renderAs(role: MembershipRole | undefined): void {
 	renderWithAuthorization(<TenantSettingsIndexView tenantSlug={TEST_ORG_SLUG} />, { role });
 }
 
-afterEach((): void => {
-	cleanup();
+beforeEach((): void => {
+	contextQuery.mockReturnValue(contextQueryState(VERIFIED_CONTEXT));
 });
 
-describe("TenantSettingsIndexView", () => {
-	it("links owners to team, locations, branding, verification, and their personal account", () => {
+afterEach((): void => {
+	cleanup();
+	contextQuery.mockReset();
+});
+
+describe("TenantSettingsIndexView (Business profile)", () => {
+	it("shows how the business appears and where it stands", () => {
 		renderAs("OWNER");
 
-		expect(hrefOf("Manage team")).toBe(routes.settings.team);
-		expect(hrefOf("View locations")).toBe(routes.settings.locations);
-		expect(hrefOf("View branding")).toBe(routes.settings.branding);
-		expect(hrefOf("View verification")).toBe(routes.settings.verification);
-		expect(hrefOf("Account")).toBe(routes.account);
+		expect(screen.getByRole("heading", { level: 2, name: "Business profile" })).toBeTruthy();
+		expect(screen.getByRole("heading", { name: "Acme Coffee" })).toBeTruthy();
+		expect(screen.getByText("Active")).toBeTruthy();
+		expect(screen.getByText("Verified")).toBeTruthy();
+		expect(screen.getByText("Acme Coffee Sdn Bhd")).toBeTruthy();
+		expect(screen.getByText("owner@acme.example")).toBeTruthy();
+		// Absent details say so rather than leaving a gap.
+		expect(screen.getByText("Not given")).toBeTruthy();
 	});
 
-	it("hides business verification from admins (owner-only on the API)", () => {
-		renderAs("ADMIN");
+	it("links an owner to the logo and the verification details", () => {
+		renderAs("OWNER");
 
-		expect(hrefOf("Manage team")).toBe(routes.settings.team);
-		expect(screen.queryByRole("link", { name: "View verification" })).toBeNull();
+		expect(hrefOf("Change logo")).toBe(routes.settings.branding);
+		expect(hrefOf("Verification details")).toBe(routes.settings.verification);
 	});
 
-	it("shows cashiers only the locations and branding cards", () => {
-		renderAs("CASHIER");
+	it("keeps business verification from managers (owner-only on the API)", () => {
+		renderAs("MANAGER");
 
-		expect(screen.queryByRole("link", { name: "Manage team" })).toBeNull();
-		expect(screen.queryByRole("link", { name: "View verification" })).toBeNull();
-		expect(hrefOf("View locations")).toBe(routes.settings.locations);
-		expect(hrefOf("View branding")).toBe(routes.settings.branding);
-	});
-
-	it("shows policy admins and members only the locations card", () => {
-		for (const role of ["POLICY_ADMIN", "MEMBER"] satisfies MembershipRole[]) {
-			renderAs(role);
-
-			expect(screen.queryByRole("link", { name: "Manage team" })).toBeNull();
-			expect(screen.queryByRole("link", { name: "View verification" })).toBeNull();
-			expect(hrefOf("View locations")).toBe(routes.settings.locations);
-			cleanup();
-		}
+		expect(hrefOf("Change logo")).toBe(routes.settings.branding);
+		expect(screen.queryByRole("link", { name: "Verification details" })).toBeNull();
 	});
 
 	it("places the leave-tenant card for the tenant", () => {
@@ -76,12 +91,11 @@ describe("TenantSettingsIndexView", () => {
 		expect(screen.getByTestId("leave-tenant-card").textContent).toBe(TEST_ORG_SLUG);
 	});
 
-	it("hides every tenant card without a membership", () => {
-		renderAs(undefined);
+	it("waits for the tenant context before drawing the profile", () => {
+		contextQuery.mockReturnValue(contextQueryState(undefined));
+		renderAs("OWNER");
 
-		expect(screen.queryByRole("link", { name: "Manage team" })).toBeNull();
-		expect(screen.queryByRole("link", { name: "View verification" })).toBeNull();
-		expect(screen.queryByRole("link", { name: "View locations" })).toBeNull();
-		expect(screen.queryByRole("link", { name: "View branding" })).toBeNull();
+		expect(screen.getByLabelText("Loading business profile")).toBeTruthy();
+		expect(screen.queryByRole("heading", { name: "Acme Coffee" })).toBeNull();
 	});
 });

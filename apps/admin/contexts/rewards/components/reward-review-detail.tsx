@@ -2,10 +2,11 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
+import { Can } from "@workspace/client/lib/contexts/authorization";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
 import { formatRewardOffer, rewardTypeLabel } from "@workspace/client/lib/contexts/rewards/reward-offer";
-import type { Envelope, RewardResponse } from "@workspace/shared";
+import { PERMISSION, type Envelope, type RewardResponse } from "@workspace/shared";
 import { Button, buttonVariants } from "@workspace/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@workspace/ui/components/dialog";
@@ -118,7 +119,7 @@ export default function RewardReviewDetailView({ rewardId, initialReward }: Rewa
 	const router = useRouter();
 	const queryClient = useQueryClient();
 	const [isRejectOpen, setIsRejectOpen] = React.useState(false);
-	// GET /admin/rewards/:rewardId needs MANAGE REWARD, which the route guard enforces for this page.
+	// GET /admin/rewards/:rewardId needs APPROVE REWARD, which the route guard enforces for this page.
 	const rewardQuery = api.rewardsAdmin.getReward.useQuery({ rewardId }, initialDataOption(initialReward));
 	const reward: RewardResponse | undefined = rewardQuery.data?.data;
 
@@ -187,7 +188,7 @@ export default function RewardReviewDetailView({ rewardId, initialReward }: Rewa
 	const merchantName = reward.tenantName ?? "Merchant";
 
 	return (
-		<div className="mx-auto w-full max-w-6xl space-y-6">
+		<div className="mx-auto w-full max-w-10xl space-y-6">
 			<Link href={ROUTES.rewards.review} className={buttonVariants({ variant: "outline", size: "sm" })}>
 				Back to queue
 			</Link>
@@ -201,17 +202,19 @@ export default function RewardReviewDetailView({ rewardId, initialReward }: Rewa
 						<span>{merchantName}</span>
 					</div>
 				</div>
-				{/* `POST /admin/rewards/:id/{approve,reject}` require MANAGE on REWARD — this page's own route rule, enforced by the route guard. */}
+				{/* `POST /admin/rewards/:id/approve` needs APPROVE on REWARD (this page's own route rule); `/reject` needs REJECT, checked here. */}
 				{isAwaitingReview ? (
 					<div className="flex shrink-0 gap-2">
 						<Button type="button" disabled={isBusy} onClick={handleApprove}>
 							<Check className="size-4" aria-hidden="true" />
 							Approve
 						</Button>
-						<Button type="button" variant="outline" disabled={isBusy} onClick={handleOpenReject}>
-							<X className="size-4" aria-hidden="true" />
-							Reject
-						</Button>
+						<Can permission={PERMISSION.REWARD.REJECT}>
+							<Button type="button" variant="outline" disabled={isBusy} onClick={handleOpenReject}>
+								<X className="size-4" aria-hidden="true" />
+								Reject
+							</Button>
+						</Can>
 					</div>
 				) : null}
 			</header>

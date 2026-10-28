@@ -13,7 +13,8 @@ import { AdminMfaRecoveryRequestSchema, apiContract, apiPath, MfaRecoveryStatusR
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
-import { Authorize, self } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
+import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
+import { self } from "../../../../platform/presentation/http/security/decorators/permission-target";
 import { GetUser } from "../../../../platform/presentation/http/security/decorators/get-user.decorator";
 import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { SuperAdminOnly } from "../../../../platform/presentation/http/security/decorators/super-admin.decorator";
@@ -38,7 +39,7 @@ export class MfaRecoveryController {
 	@RateLimit(RATE_LIMIT_POLICY.credential)
 	@ApiBearerAuth()
 	@Post("/mfa/recovery")
-	@Authorize({ action: "UPDATE", resource: "USER", resourceId: self(), description: "User can initiate MFA recovery for their own account" })
+	@RequirePermission("UPDATE", "USER", { resourceId: self(), description: "User can initiate MFA recovery for their own account" })
 	@ApiOperation({ summary: "Initiate an admin-reviewed MFA recovery request" })
 	@ZodResponse(MfaRecoveryStatusResponseSchema, { description: "Recovery request status" })
 	public async initiateRecovery(
@@ -76,11 +77,7 @@ export class MfaRecoveryController {
 	@SuperAdminOnly()
 	@PlatformOperation(MFA_RECOVERY_REVIEW_OPERATION)
 	@Post("/admin/mfa/recovery/review")
-	@Authorize({
-		action: "UPDATE",
-		resource: "USER",
-		description: "SuperAdmin can review MFA recovery requests",
-	})
+	@RequirePermission("UPDATE", "USER", { description: "SuperAdmin can review MFA recovery requests" })
 	@ApiOperation({ summary: "SuperAdmin: approve or deny an MFA recovery request" })
 	@ZodResponse(MfaRecoveryStatusResponseSchema, { description: "Reviewed recovery request status" })
 	public async reviewRecovery(

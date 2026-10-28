@@ -3,7 +3,7 @@
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { Can } from "@workspace/client/lib/contexts/authorization";
 import { useAuth } from "@workspace/client/lib/contexts/identity";
-import { PERMISSION, TENANT_LIFECYCLE_TEXT_MAX_LENGTH, type TenantLifecycleResponse, type TenantSuspensionAppealResponse } from "@workspace/shared";
+import { PERMISSION, TENANT_LIFECYCLE_TEXT_MAX_LENGTH, type CapabilitySlug, type TenantLifecycleResponse, type TenantSuspensionAppealResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
@@ -54,6 +54,12 @@ const ACTION_COPY: Readonly<Record<Exclude<MerchantLifecycleAction, null>, { rea
 	reinstate: { label: "Reinstate merchant", field: "Why is this merchant reinstated? (the merchant's pending appeal gets this answer)", success: "Merchant reinstated" },
 };
 
+/** The permission each lifecycle action's route requires (`POST /admin/merchants/:id/{suspend,reinstate}`). */
+const ACTION_PERMISSION: Readonly<Record<Exclude<MerchantLifecycleAction, null>, CapabilitySlug>> = {
+	suspend: PERMISSION.MERCHANT_ORG.SUSPEND,
+	reinstate: PERMISSION.MERCHANT_ORG.REACTIVATE,
+};
+
 interface AppealRowProps {
 	readonly tenantId: string;
 	readonly appeal: TenantSuspensionAppealResponse;
@@ -99,7 +105,7 @@ function AppealRow({ tenantId, appeal }: AppealRowProps): React.JSX.Element {
 				</p>
 			) : null}
 			{appeal.status === "PENDING" ? (
-				<Can permission={PERMISSION.MERCHANT_ORG.MANAGE}>
+				<Can permission={PERMISSION.MERCHANT_ORG.REJECT}>
 					<div className="space-y-2">
 						<Label htmlFor={`appeal-note-${appeal.id}`}>Rejection note</Label>
 						<Textarea id={`appeal-note-${appeal.id}`} value={note} onChange={handleNoteChange} maxLength={TENANT_LIFECYCLE_TEXT_MAX_LENGTH} />
@@ -176,7 +182,7 @@ export interface MerchantLifecyclePanelProps {
 
 /**
  * The merchant's lifecycle: its state, current suspension or ban, the suspend / reinstate action its
- * state allows (`MANAGE MERCHANT_ORG`), the ban / lift-ban action (super admin only), and its
+ * state allows (`SUSPEND` / `REACTIVATE MERCHANT_ORG`), the ban / lift-ban action (super admin only), and its
  * suspension appeals.
  */
 export const MerchantLifecyclePanel = React.forwardRef<HTMLDivElement, MerchantLifecyclePanelProps>(function MerchantLifecyclePanel({ lifecycle }, ref): React.JSX.Element {
@@ -259,7 +265,7 @@ export const MerchantLifecyclePanel = React.forwardRef<HTMLDivElement, MerchantL
 					) : null}
 
 					{action !== null ? (
-						<Can permission={PERMISSION.MERCHANT_ORG.MANAGE}>
+						<Can permission={ACTION_PERMISSION[action]}>
 							<div className="space-y-2">
 								<Label htmlFor="merchant-lifecycle-reason">{ACTION_COPY[action].field}</Label>
 								<Textarea id="merchant-lifecycle-reason" value={reason} onChange={handleReasonChange} maxLength={TENANT_LIFECYCLE_TEXT_MAX_LENGTH} />

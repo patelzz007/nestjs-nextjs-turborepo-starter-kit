@@ -13,8 +13,8 @@ export interface MerchantCapabilitiesState {
 }
 
 /**
- * Client hook — capabilities derived from the role of the member's own membership in the tenant the URL
- * names (the tenant context; Cedar-backed on the API). Fails closed: outside tenant routes, or for an
+ * Client hook — the capabilities the member holds in the tenant the URL names, as the API computed them
+ * from their role and live grants (ADR 067). Fails closed: outside tenant routes, or for an
  * tenant the user does not belong to (the context answers 404), there is no membership and no capability —
  * another tenant's role is never borrowed. Feeds `MerchantAuthorizationProvider`; UI checks go through
  * `useAuthorization().can(MERCHANT_CAPABILITY.x)` / `<Can>`.

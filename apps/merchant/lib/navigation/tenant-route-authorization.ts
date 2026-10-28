@@ -24,6 +24,12 @@ export const TenantPageRouteSchema = z.enum([
 	"/api-keys",
 	"/settings",
 	"/settings/team",
+	"/settings/team/roles",
+	"/settings/team/roles/new",
+	"/settings/team/roles/[roleId]",
+	"/settings/team/roles/[roleId]/edit",
+	"/settings/team/members/[membershipId]",
+	"/settings/integrations",
 	"/settings/locations",
 	"/settings/branding",
 	"/settings/verification",
@@ -112,6 +118,15 @@ export const ORG_PAGE_RULES: Readonly<Record<TenantPageRoute, TenantPageRule>> =
 	},
 	// GET /t/:tenantSlug/members[/invites], POST …/members/invite (merchant:manage_team).
 	"/settings/team": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] }, denial: TEAM_DENIAL },
+	// /t/:tenantSlug/access/roles… (role.read / role.create / role.update — the API decides each).
+	"/settings/team/roles": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] }, denial: TEAM_DENIAL },
+	"/settings/team/roles/new": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] }, denial: TEAM_DENIAL },
+	"/settings/team/roles/[roleId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] }, denial: TEAM_DENIAL },
+	"/settings/team/roles/[roleId]/edit": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] }, denial: TEAM_DENIAL },
+	// Counts of GET /t/:tenantSlug/terminals and …/api-keys (merchant:manage_api_keys), with links to manage them.
+	"/settings/integrations": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageApiKeys] } },
+	// /t/:tenantSlug/access/members/:membershipId… (member.read / member.update).
+	"/settings/team/members/[membershipId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageTeam] }, denial: TEAM_DENIAL },
 	// Reads the member-wide tenant context; requesting stores needs merchant:manage_locations in-page.
 	"/settings/locations": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewLocations] } },
 	// Reads the logo from the member-wide tenant context; uploading or removing it (POST /files, DELETE /files/:id) needs merchant:manage_locations in-page.

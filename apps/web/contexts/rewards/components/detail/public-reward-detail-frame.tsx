@@ -13,7 +13,7 @@ export interface PublicRewardDetailFrameProps {
 export function PublicRewardDetailFrame({ children }: PublicRewardDetailFrameProps): React.JSX.Element {
 	return (
 		<LandingShell>
-			<div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+			<div className="mx-auto max-w-10xl px-4 py-8 sm:px-6 lg:px-8">
 				<Link href={landingSectionPath(LANDING_SECTION_IDS.rewards)} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "mb-6 -ml-2")}>
 					Back to offers
 				</Link>

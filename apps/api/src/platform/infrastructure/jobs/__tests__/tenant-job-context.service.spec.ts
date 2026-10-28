@@ -17,7 +17,6 @@ function unsignedContext(expiresAt: number): Omit<TenantJobContext, "signature">
 		tenantId: "00000000-0000-4000-8000-000000000001",
 		initiatingActorId: null,
 		purpose: "rewards.auto_publish",
-		policyVersion: 1,
 		correlationId: "test",
 		issuedAt: expiresAt - ONE_MINUTE_MS,
 		expiresAt,

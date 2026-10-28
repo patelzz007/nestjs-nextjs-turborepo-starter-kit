@@ -44,12 +44,10 @@ export const ENTERPRISE_DATASET_SIZES: EnterpriseDatasetSizes = {
 	products: 500,
 };
 
-/** Every Nth member (after the owner and policy admin) is a tenant ADMIN covering all locations. */
-const ADMIN_EVERY_NTH_MEMBER = 25;
-/** Every Nth remaining member is a back-office MEMBER; the rest are CASHIERs. */
-const BACK_OFFICE_EVERY_NTH_MEMBER = 4;
-/** Member index 1 holds the POLICY_ADMIN role. */
-const POLICY_ADMIN_MEMBER_INDEX = 1;
+/** Every Nth member (after the owner) is a MANAGER covering all locations; the rest are CASHIERs. */
+const MANAGER_EVERY_NTH_MEMBER = 25;
+/** Member index 1 is always a MANAGER, so even a small dataset has one. */
+const FIRST_MANAGER_MEMBER_INDEX = 1;
 /** Every Nth location (1-based) is still awaiting approval, to exercise non-ACTIVE stores. */
 const PENDING_LOCATION_EVERY_NTH = 10;
 
@@ -291,13 +289,11 @@ function buildLocations(seed: number, count: number): EnterpriseLocationRow[] {
 /** Role by member index — structural (see determinism contract above). */
 export function enterpriseMemberRoleAt(memberIndex: number): MembershipRole {
 	if (memberIndex === 0) return "OWNER";
-	if (memberIndex === POLICY_ADMIN_MEMBER_INDEX) return "POLICY_ADMIN";
-	if (memberIndex % ADMIN_EVERY_NTH_MEMBER === 0) return "ADMIN";
-	if (memberIndex % BACK_OFFICE_EVERY_NTH_MEMBER === 0) return "MEMBER";
+	if (memberIndex === FIRST_MANAGER_MEMBER_INDEX || memberIndex % MANAGER_EVERY_NTH_MEMBER === 0) return "MANAGER";
 	return "CASHIER";
 }
 
-const ALL_LOCATION_ROLES: ReadonlySet<MembershipRole> = new Set<MembershipRole>(["OWNER", "ADMIN", "POLICY_ADMIN"]);
+const ALL_LOCATION_ROLES: ReadonlySet<MembershipRole> = new Set<MembershipRole>(["OWNER", "MANAGER"]);
 
 function memberScope(memberIndex: number, role: MembershipRole, locations: readonly EnterpriseLocationRow[]): EnterpriseMemberScope {
 	const id = enterpriseId(`membership-scope:${String(memberIndex)}`);

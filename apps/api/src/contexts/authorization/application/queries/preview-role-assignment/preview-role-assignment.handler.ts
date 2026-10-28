@@ -6,15 +6,14 @@ import { RBAC_INSPECTION_READ } from "../../ports/authorization.tokens";
 import type { DirectOverrideKeys, EffectiveRoleSet, RbacInspectionReader, RbacInspectionReadPort } from "../../ports/rbac-read.port";
 import { PreviewRoleAssignmentQuery } from "./preview-role-assignment.query";
 
-/** Effective permission keys: role-conferred (incl. inherited) ∪ direct ALLOW − direct DENY. */
+/** Effective permission keys: role-conferred ∪ direct ALLOW − direct DENY. */
 export function effectivePermissionKeys(roles: EffectiveRoleSet, overrides: DirectOverrideKeys): ReadonlySet<string> {
 	const denied: ReadonlySet<string> = new Set<string>(overrides.deny);
 	return new Set<string>([...roles.permissionKeys, ...overrides.allow].filter((key: string): boolean => !denied.has(key)));
 }
 
 /**
- * Both sides use the model the kernel evaluates, so the diff is exact: inherited permissions count,
- * direct ALLOW grants survive a role sync (never "lost"), and DENY overrides are subtracted (a denied
+ * Both sides use the model the kernel evaluates, so the diff is exact: direct ALLOW grants survive a role sync (never "lost"), and DENY overrides are subtracted (a denied
  * permission is never "gained"). Read-only.
  */
 @QueryHandler(PreviewRoleAssignmentQuery)

@@ -21,7 +21,7 @@ Import global styles once in your app layout:
 import "@workspace/ui/globals.css";
 ```
 
-Design tokens (colour primitives, semantic colours, radii, type sizes, z-index layers and the Tailwind `@theme` mapping) come from `packages/tokens`: `globals.css` imports its generated `@workspace/tokens/web.css`, which is never edited by hand (change the TypeScript source, then run `pnpm tokens:generate`) — see "Palette", "Reward tiers", "Elevation and radius" and "Typography" in `rules/07-ui-system.md`. Z-index layers:
+Design tokens (colour primitives, semantic colours, radii, type sizes, z-index layers and the Tailwind `@theme` mapping) come from `packages/tokens`: `globals.css` imports its generated `@workspace/tokens/web.css`, which is never edited by hand (change the TypeScript source, then run `pnpm tools tokens:generate`) — see "Palette", "Reward tiers", "Elevation and radius" and "Typography" in `rules/07-ui-system.md`. Z-index layers:
 
 - `z-overlay` — modal / dialog / sheet backdrops
 - `z-popover` — dropdowns, selects, tooltips

@@ -1,26 +1,19 @@
 import type { Prisma } from "@prisma/client";
-import { PolicyConditionsSchema, type PolicyConditions, DAY_MS } from "@workspace/shared";
+import { DAY_MS } from "@workspace/shared";
 
-import { parsePrismaInputJson } from "../../src/platform/infrastructure/utils/prisma-json";
 import { deterministicUuid } from "./deterministic-uuid";
 import { TENANT_SEED_IDS } from "./tenant-seed-ids";
 import { buildProductSeedId } from "./products";
 import { REWARD_SEED_IDS } from "./rewards";
 
 const ACL_NAMESPACE = "kernel-seed-acl";
-const POLICY_NAMESPACE = "kernel-seed-policy";
 /** The seeded product the location-scoped ACL targets (a `PRODUCT` / `UPDATE` check is what `FileAuthorizationService` runs for product images). */
 const ACL_TARGET_PRODUCT_SEQUENCE = 1;
-const BERUANG_REFUND_CAP_V1 = 100;
-const BERUANG_REFUND_CAP_V2 = 200;
 
 /** Fixed ids of the kernel seed rows the unit test (and docs) refer to. */
 export const KERNEL_SEED_IDS = Object.freeze({
 	productScopedAcl: deterministicUuid(ACL_NAMESPACE, "mlk-cashier-archived-product-update"),
 	retiredAcl: deterministicUuid(ACL_NAMESPACE, "retired-kl-owner-payment-read"),
-	policyV1Superseded: deterministicUuid(POLICY_NAMESPACE, "beruang-payment-cap-v1"),
-	policyV2Published: deterministicUuid(POLICY_NAMESPACE, "beruang-payment-cap-v2"),
-	policyDeleted: deterministicUuid(POLICY_NAMESPACE, "legacy-payment-freeze"),
 	productTarget: buildProductSeedId(ACL_TARGET_PRODUCT_SEQUENCE),
 });
 
@@ -36,17 +29,13 @@ export type WithId<TInput extends { id?: string }> = Omit<TInput, "id"> & { read
 
 export interface KernelSeedRows {
 	readonly acls: readonly WithId<Prisma.ResourceAclUncheckedCreateInput>[];
-	readonly policies: readonly WithId<Prisma.PolicyDefinitionUncheckedCreateInput>[];
-}
-
-function conditions(rule: PolicyConditions): Prisma.InputJsonValue {
-	return parsePrismaInputJson(PolicyConditionsSchema.parse(rule));
 }
 
 /**
- * Every `ResourceAcl` and `PolicyDefinition` seed row, deterministic ids so
- * the seed upserts (idempotent). Conditions use the validated policy DSL; the
- * tenant-bound rows use the Jonker Street Kitchen tenant / Bukit Beruang
+ * Every legacy `ResourceAcl` seed row, deterministic ids so the seed upserts
+ * (idempotent). Nothing decides with these rows any more (ADR 067: shares are
+ * the per-record path); they keep every column of the table seeded until the
+ * legacy ACL columns are dropped. The tenant-bound rows use the Jonker Street Kitchen tenant / Bukit Beruang
  * location, so they only apply inside that server-verified tenant.
  */
 export function buildKernelSeedRows(actors: KernelSeedActors, now: number): KernelSeedRows {
@@ -54,22 +43,6 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 		id: deterministicUuid(ACL_NAMESPACE, key),
 		...row,
 	});
-	const policy = (key: string, row: Omit<Prisma.PolicyDefinitionUncheckedCreateInput, "id">): WithId<Prisma.PolicyDefinitionUncheckedCreateInput> => ({
-		id: deterministicUuid(POLICY_NAMESPACE, key),
-		...row,
-	});
-	const archivedProduct: PolicyConditions = { condition: { field: "product.status", operator: "equals", value: "ARCHIVED" } };
-	const completedOrderLock: PolicyConditions = { condition: { field: "order.status", operator: "equals", value: "COMPLETED" } };
-	const refundLimit: PolicyConditions = {
-		all: [
-			{ condition: { field: "payment.status", operator: "equals", value: "PAID" } },
-			{ condition: { field: "payment.amount", operator: "less_than_or_equals", value: 500 } },
-		],
-	};
-	const sameTenantInventory: PolicyConditions = { condition: { field: "inventory.tenantId", operator: "equals", valueRef: "$user.tenantId" } };
-	const paymentCap = (limit: number): PolicyConditions => ({ condition: { field: "payment.amount", operator: "less_than_or_equals", value: limit } });
-	const publishedAt = now - 30 * DAY_MS;
-	const supersededPublishedAt = now - 90 * DAY_MS;
 
 	const acls: WithId<Prisma.ResourceAclUncheckedCreateInput>[] = [
 		acl("admin-delete-users", {
@@ -128,7 +101,6 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 			tenantId: TENANT_SEED_IDS.mlkTenant,
 			locationId: TENANT_SEED_IDS.mlkLocationBeruang,
 			effect: "DENY",
-			conditions: conditions(archivedProduct),
 			reason: "The Bukit Beruang cashier may not edit this product (or its images) once it is archived",
 			assignedBy: actors.adminUserId,
 			expiresAt: now + 180 * DAY_MS,
@@ -150,89 +122,5 @@ export function buildKernelSeedRows(actors: KernelSeedActors, now: number): Kern
 		},
 	];
 
-	const policies: WithId<Prisma.PolicyDefinitionUncheckedCreateInput>[] = [
-		policy("completed-orders-are-immutable", {
-			name: "completed-orders-are-immutable",
-			description: "Completed orders cannot be updated or deleted",
-			scope: "GLOBAL",
-			actions: ["UPDATE", "DELETE"],
-			resources: ["ORDER"],
-			effect: "DENY",
-			conditions: conditions(completedOrderLock),
-			isActive: true,
-			version: 1,
-		}),
-		policy("payment-update-limit", {
-			name: "payment-update-limit",
-			description: "Payments may only be updated while PAID and at most 500",
-			scope: "TENANT",
-			actions: ["UPDATE"],
-			resources: ["PAYMENT"],
-			effect: "ALLOW",
-			conditions: conditions(refundLimit),
-			isActive: true,
-			version: 1,
-		}),
-		policy("inventory-same-tenant", {
-			name: "inventory-same-tenant",
-			description: "Inventory changes are limited to the caller's verified tenant",
-			scope: "TENANT",
-			actions: ["UPDATE", "DELETE"],
-			resources: ["INVENTORY"],
-			effect: "ALLOW",
-			conditions: conditions(sameTenantInventory),
-			isActive: true,
-			version: 1,
-		}),
-		{
-			id: KERNEL_SEED_IDS.policyV1Superseded,
-			name: "beruang-payment-cap",
-			description: "Bukit Beruang payment cap, first revision (superseded by v2)",
-			scope: "LOCATION",
-			actions: ["UPDATE"],
-			resources: ["PAYMENT"],
-			effect: "ALLOW",
-			tenantId: TENANT_SEED_IDS.mlkTenant,
-			locationId: TENANT_SEED_IDS.mlkLocationBeruang,
-			conditions: conditions(paymentCap(BERUANG_REFUND_CAP_V1)),
-			isActive: false,
-			version: 1,
-			publishedAt: supersededPublishedAt,
-			publishedBy: actors.adminUserId,
-			supersededBy: KERNEL_SEED_IDS.policyV2Published,
-		},
-		{
-			id: KERNEL_SEED_IDS.policyV2Published,
-			name: "beruang-payment-cap",
-			description: "Bukit Beruang may only update payments up to MYR 200",
-			scope: "LOCATION",
-			actions: ["UPDATE"],
-			resources: ["PAYMENT"],
-			effect: "ALLOW",
-			tenantId: TENANT_SEED_IDS.mlkTenant,
-			locationId: TENANT_SEED_IDS.mlkLocationBeruang,
-			conditions: conditions(paymentCap(BERUANG_REFUND_CAP_V2)),
-			isActive: true,
-			version: 2,
-			publishedAt,
-			publishedBy: actors.adminUserId,
-		},
-		{
-			id: KERNEL_SEED_IDS.policyDeleted,
-			name: "legacy-payment-freeze",
-			description: "Retired policy: froze every payment update during the pilot",
-			scope: "GLOBAL",
-			actions: ["UPDATE"],
-			resources: ["PAYMENT"],
-			effect: "DENY",
-			isActive: false,
-			version: 1,
-			publishedAt: supersededPublishedAt,
-			publishedBy: actors.adminUserId,
-			isDeleted: true,
-			deletedAt: now - 14 * DAY_MS,
-		},
-	];
-
-	return { acls, policies };
+	return { acls };
 }

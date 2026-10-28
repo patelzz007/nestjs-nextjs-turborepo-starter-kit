@@ -52,7 +52,7 @@ export function evaluateRuntimeRoleProof(facts: RuntimeRoleProofFacts): readonly
 	const failures: RuntimeRoleProofFailure[] = [];
 	const { role } = facts;
 	if (!role.exists) {
-		failures.push({ subject: `role ${role.role}`, problem: "does not exist (run pnpm db:apply-security)" });
+		failures.push({ subject: `role ${role.role}`, problem: "does not exist (run pnpm tools db:apply-security)" });
 	}
 	if (role.isSuperuser) {
 		failures.push({ subject: `role ${role.role}`, problem: "is SUPERUSER, which ignores every RLS policy" });

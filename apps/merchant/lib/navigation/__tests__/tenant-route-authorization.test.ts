@@ -41,7 +41,8 @@ function collectTenantPages(directory: string): readonly TenantPageFile[] {
 		}
 		const segments = relative(ORG_APP_DIR, directory)
 			.split(sep)
-			.filter((segment) => segment.length > 0);
+			// A route group, `(settings)`, shares a layout but is not part of the URL.
+			.filter((segment) => segment.length > 0 && !(segment.startsWith("(") && segment.endsWith(")")));
 		pages.push({ route: `/${segments.join("/")}`, source: readFileSync(entryPath, "utf8") });
 	}
 	return pages;
@@ -166,10 +167,8 @@ describe("tenant page rules per membership role", () => {
 	const EXPECTED_SETTINGS_ACCESS: readonly [MembershipRole | undefined, boolean, boolean, boolean, boolean][] = [
 		// role,         settings index, team,  locations, verification
 		["OWNER", true, true, true, true],
-		["ADMIN", true, true, true, false],
+		["MANAGER", true, true, true, false],
 		["CASHIER", true, false, true, false],
-		["POLICY_ADMIN", true, false, true, false],
-		["MEMBER", true, false, true, false],
 		[undefined, false, false, false, false],
 	];
 
@@ -248,7 +247,7 @@ describe("merchant sidebar ↔ tenant route map", () => {
 	});
 
 	it("hides only Verification from admins", () => {
-		const visible = visibleSidebarUrls("ADMIN");
+		const visible = visibleSidebarUrls("MANAGER");
 
 		expect(visible).toContain("/settings/team");
 		expect(visible).toContain("/settings/locations");

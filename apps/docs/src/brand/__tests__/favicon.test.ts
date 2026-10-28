@@ -14,7 +14,7 @@ const ICONS: readonly (readonly [string, string])[] = [
 ];
 
 describe("the docs site's icons", () => {
-	it.each(ICONS)("%s is the generated %s — run `pnpm tokens:generate`, which writes it", (committedPath, generatedName) => {
+	it.each(ICONS)("%s is the generated %s — run `pnpm tools tokens:generate`, which writes it", (committedPath, generatedName) => {
 		const generated = readFileSync(require.resolve(`@workspace/tokens/icons/${generatedName}`));
 		const committed = readFileSync(new URL(`../../../public/${committedPath}`, import.meta.url));
 

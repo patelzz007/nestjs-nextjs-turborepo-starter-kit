@@ -6,7 +6,6 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createTestPrisma } from "../../../../../test/support/test-service-graph";
 import { RequestContextService } from "../../context/request-context";
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
-import { createCedarPolicyEvaluator } from "../../../../contexts/authorization/public-api";
 import { createTenantAuditPort } from "../../../../contexts/tenancy/public-api";
 import { AES_256_KEY_BYTES, formatGcmEnvelope, gcmEncrypt } from "../aes-256-gcm";
 import { LEGACY_PILOT_KEK_ID, LocalDevelopmentKeyManagementService, localKekId } from "../kms/local-development-key-management.service";
@@ -16,7 +15,7 @@ import { TENANT_KEY_AUDIT_ACTIONS, TenantEncryptionService, TenantKeyMaintenance
 import { LIVE_ROW_FIELDS } from "../../persistence/__tests__/base-row-fields";
 
 interface AuditRow {
-	readonly data: { readonly tenantId: string; readonly actorUserId: string; readonly action: string; readonly policyVersion: number; readonly metadata?: object };
+	readonly data: { readonly tenantId: string; readonly actorUserId: string; readonly action: string; readonly metadata?: object };
 }
 
 const db = vi.hoisted(() => {
@@ -45,7 +44,6 @@ vi.mock("../../../../prisma/tenant-transaction.service", () => ({
 const ORG = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const ACTOR = "11111111-1111-4111-8111-111111111111";
 const NOT_SUPERADMIN = "22222222-2222-4222-8222-222222222222";
-const POLICY_VERSION = 3;
 const KEK_V1 = Buffer.alloc(32, 1);
 const KEK_V2 = Buffer.alloc(32, 2);
 
@@ -105,9 +103,7 @@ let keys: InMemoryKeyRepository;
 
 function service(kms: LocalDevelopmentKeyManagementService): TenantEncryptionService {
 	const tenantTx = new TenantTransactionService(createTestPrisma(), new RequestContextService());
-	const cedar = createCedarPolicyEvaluator(tenantTx);
-	vi.spyOn(cedar, "getActivePolicyVersion").mockResolvedValue(POLICY_VERSION);
-	return new TenantEncryptionService(tenantTx, keys, createTenantAuditPort(), cedar, new RequestContextService(), kms);
+	return new TenantEncryptionService(tenantTx, keys, createTenantAuditPort(), new RequestContextService(), kms);
 }
 
 const kekV1 = (): LocalDevelopmentKeyManagementService => new LocalDevelopmentKeyManagementService(1, KEK_V1, new Map());
@@ -141,7 +137,6 @@ describe("TenantEncryptionService", () => {
 		expect(db.auditRows[LIST_SLOT_INDEX.first]?.data).toMatchObject({
 			tenantId: ORG,
 			actorUserId: ACTOR,
-			policyVersion: POLICY_VERSION,
 			metadata: { kmsKeyId: localKekId(1), keyVersion: 1 },
 		});
 	});

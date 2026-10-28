@@ -35,7 +35,6 @@ import { ZodPaginatedResponse, ZodResponse } from "../../../../platform/presenta
 import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
 import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
 import { SuperAdminOnly } from "../../../../platform/presentation/http/security/decorators/super-admin.decorator";
-import { Authorize } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
@@ -84,8 +83,7 @@ export class GeoController {
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@PlatformOperation(GEO_WRITE_OPERATION)
 	@SuperAdminOnly()
-	@RequirePermission("CREATE", "GEO")
-	@Authorize({ action: "CREATE", resource: "GEO", description: "Import geo data" })
+	@RequirePermission("CREATE", "GEO", { description: "Import geo data" })
 	@Post("import")
 	@ApiOperation({ summary: "Bulk import geo data" })
 	@ZodResponse(GeoImportResultSchema, { status: HttpStatus.CREATED, description: "Import result with created/updated/skipped counts" })

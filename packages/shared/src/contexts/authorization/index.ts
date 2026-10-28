@@ -4,7 +4,6 @@
 
 export * from "./contract";
 export * from "./routes";
-export * from "./schemas/authorization-policy";
 export * from "./schemas/capabilities";
 export * from "./schemas/permission-enums";
 export * from "./schemas/permissions-registry";
@@ -15,3 +14,4 @@ export * from "./schemas/rbac-inspection";
 export * from "./schemas/rbac-permissions";
 export * from "./schemas/rbac-roles";
 export * from "./schemas/rbac";
+export * from "./schemas/tenant-access";

@@ -1,5 +1,5 @@
 /**
- * The printed table of `pnpm dev:timing` (plan §19.1). Pure formatting, so it
+ * The printed table of `pnpm tools dev:timing` (plan §19.1). Pure formatting, so it
  * is unit-tested; the JSON file carries the same numbers for tools.
  */
 import { PHASES } from "./dev-timing-plan.mjs";

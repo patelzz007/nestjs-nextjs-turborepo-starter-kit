@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * `pnpm dev:timing [--mode warm|cold] [--runs <n>] [--cwd <repo root>]`
+ * `pnpm tools dev:timing [--mode warm|cold] [--runs <n>] [--cwd <repo root>]`
  *
  * Measures local startup in four phases (plan §19.1, decision #53): A. `pnpm
  * dev` until every port answers, B. API process spawned until `/health/ready`

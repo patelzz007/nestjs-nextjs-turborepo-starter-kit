@@ -1,6 +1,7 @@
-import type { Prisma } from "@prisma/client";
+import type { MembershipRole, Prisma } from "@prisma/client";
 import { Prisma as PrismaNamespace } from "@prisma/client";
 
+import { TenantRoleCopies } from "../../src/contexts/authorization/public-api";
 import { RequestContextService } from "../../src/platform/infrastructure/context/request-context";
 import type { PrismaService } from "../../src/prisma/prisma.service";
 import { TenantTransactionService } from "../../src/prisma/tenant-transaction.service";
@@ -139,13 +140,20 @@ export async function seedTwoTenantFixture(prisma: PrismaService): Promise<void>
 			await tx.location.upsert({ where: { id: row.id }, create: row, update: row });
 		}
 
+		// Every tenant's Owner / Manager / Cashier, copied from the templates as provisioning does (ADR 067).
+		const copies = new TenantRoleCopies(tx);
+		for (const row of tenants) {
+			await copies.provision(row.id, null);
+		}
+		const roleOf = (tenantId: string, role: MembershipRole): Promise<string> => copies.roleIdFor(tenantId, role);
+
 		const memberships = [
-			membership(ids.membershipAOwner, ids.tenantA, ids.userAOwner, "OWNER", "ACTIVE"),
-			membership(ids.membershipAKlManager, ids.tenantA, ids.userAKlManager, "ADMIN", "ACTIVE"),
-			membership(ids.membershipACashier, ids.tenantA, ids.userACashier, "CASHIER", "ACTIVE"),
-			membership(ids.membershipASuspended, ids.tenantA, ids.userASuspended, "MEMBER", "SUSPENDED"),
-			membership(ids.membershipBOwner, ids.tenantB, ids.userBOwner, "OWNER", "ACTIVE"),
-			membership(ids.membershipSOwner, ids.tenantS, ids.userSOwner, "OWNER", "ACTIVE"),
+			membership(ids.membershipAOwner, ids.tenantA, ids.userAOwner, "OWNER", await roleOf(ids.tenantA, "OWNER"), "ACTIVE"),
+			membership(ids.membershipAKlManager, ids.tenantA, ids.userAKlManager, "MANAGER", await roleOf(ids.tenantA, "MANAGER"), "ACTIVE"),
+			membership(ids.membershipACashier, ids.tenantA, ids.userACashier, "CASHIER", await roleOf(ids.tenantA, "CASHIER"), "ACTIVE"),
+			membership(ids.membershipASuspended, ids.tenantA, ids.userASuspended, "CASHIER", await roleOf(ids.tenantA, "CASHIER"), "SUSPENDED"),
+			membership(ids.membershipBOwner, ids.tenantB, ids.userBOwner, "OWNER", await roleOf(ids.tenantB, "OWNER"), "ACTIVE"),
+			membership(ids.membershipSOwner, ids.tenantS, ids.userSOwner, "OWNER", await roleOf(ids.tenantS, "OWNER"), "ACTIVE"),
 		];
 		for (const row of memberships) {
 			await tx.membership.upsert({ where: { id: row.id }, create: row, update: row });
@@ -279,10 +287,11 @@ function membership(
 	id: string,
 	tenantId: string,
 	userId: string,
-	role: "OWNER" | "ADMIN" | "CASHIER" | "MEMBER",
+	role: MembershipRole,
+	roleId: string,
 	status: "ACTIVE" | "SUSPENDED",
 ): Prisma.MembershipUncheckedCreateInput & { readonly id: string } {
-	return { ...BASE, id, tenantId, userId, role, status, displayName: null };
+	return { ...BASE, id, tenantId, userId, role, roleId, status, displayName: null };
 }
 
 function scope(

@@ -22,7 +22,17 @@ import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
 import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
 import { sha256Hex } from "../src/platform/infrastructure/crypto/sha256";
-import { createE2eApp, login, mutationHeaders, parsePaginatedEnvelope, parseSuccessEnvelope, type InjectResponse, type LoginResult } from "./e2e-helpers";
+import {
+	createE2eApp,
+	grantTenantPermission,
+	login,
+	mutationHeaders,
+	parsePaginatedEnvelope,
+	parseSuccessEnvelope,
+	revokeTenantGrant,
+	type InjectResponse,
+	type LoginResult,
+} from "./e2e-helpers";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
 
@@ -52,6 +62,7 @@ describe("Merchant store scope (e2e)", () => {
 	let pool: Pool;
 	let owner: LoginResult;
 	let cashier: LoginResult;
+	let analyticsGrantId: string;
 	let storeAdmin: LoginResult;
 	let storeAdminId: string;
 	let aliceId: string;
@@ -133,12 +144,13 @@ describe("Merchant store scope (e2e)", () => {
 		aliceId = await userIdFor("alice.johnson@example.com");
 		storeAdminId = await userIdFor("alice.kl@kl-rewards.demo");
 
-		// A store-limited ADMIN (may manage API keys and terminals, but only at Bukit Beruang).
-		await query(`INSERT INTO public."Membership" (id, "tenantId", "userId", role, status) VALUES ($1, $2, $3, 'ADMIN', 'ACTIVE')`, [
-			adminMembershipId,
-			TENANT_SEED_IDS.mlkTenant,
-			storeAdminId,
-		]);
+		// A store-limited MANAGER (may manage API keys and terminals, but only at Bukit Beruang), holding the
+		// tenant's copy of the Manager role (ADR 067).
+		await query(
+			`INSERT INTO public."Membership" (id, "tenantId", "userId", role, "roleId", status)
+			 SELECT $1, $2, $3, 'MANAGER', r.id, 'ACTIVE' FROM public."Role" r WHERE r."tenantId" = $2 AND r."templateKey" = 'MANAGER' AND r."isDeleted" = false`,
+			[adminMembershipId, TENANT_SEED_IDS.mlkTenant, storeAdminId],
+		);
 		await query(`INSERT INTO public."MembershipLocationScope" (id, "tenantId", "membershipId", "scopeType", "locationId") VALUES ($1, $2, $3, 'SELECTED', $4)`, [
 			randomUUID(),
 			TENANT_SEED_IDS.mlkTenant,
@@ -157,10 +169,17 @@ describe("Merchant store scope (e2e)", () => {
 
 		owner = await login(app, "jonker.owner@melaka-rewards.demo", "JonkerOwner@123", "merchant");
 		cashier = await login(app, "jonker.cashier@melaka-rewards.demo", "JonkerCashier@123", "merchant");
+		// A Cashier reads analytics only through a grant (ADR 067, edge cases 4–5).
+		analyticsGrantId = await grantTenantPermission(app, owner, {
+			tenantSlug: TENANT_SEED_SLUGS.mlk,
+			membershipId: TENANT_SEED_IDS.mlkCashierMembership,
+			permission: { action: "READ", resource: "ANALYTICS" },
+		});
 		storeAdmin = await login(app, "alice.kl@kl-rewards.demo", "AliceKl@123", "merchant");
 	});
 
 	afterAll(async () => {
+		await revokeTenantGrant(app, owner, TENANT_SEED_SLUGS.mlk, analyticsGrantId);
 		await query(`DELETE FROM public."RewardRedemption" WHERE id = ANY($1::text[])`, [`{${katilRedemptionId},${beruangRedemptionId}}`]);
 		await query(`DELETE FROM public."RewardSale" WHERE id = ANY($1::text[])`, [`{${saleIds.join(",")}}`]);
 		await query(`DELETE FROM public."RewardClaim" WHERE id = ANY($1::text[])`, [`{${claimIds.join(",")}}`]);

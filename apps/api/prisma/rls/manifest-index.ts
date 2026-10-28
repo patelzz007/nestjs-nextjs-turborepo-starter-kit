@@ -15,8 +15,7 @@ export type RlsManifestProfile =
 	| "file_derived"
 	| "product_catalog"
 	| "kanban_board"
-	| "reward_user"
-	| "authorization_simulation";
+	| "reward_user";
 
 export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly string[]>> = {
 	ownership: [
@@ -31,7 +30,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"GithubAccountLink",
 		"UserPreference",
 	],
-	rbac_catalog: ["Role", "Permission", "CapabilityDefinition", "RolePermission", "UserRole", "UserPermission", "PolicyDefinition"],
+	rbac_catalog: ["Role", "Permission", "CapabilityDefinition", "RolePermission", "UserRole", "UserPermission"],
 	tenant: [
 		"Tenant",
 		"TenantSlugHistory",
@@ -47,8 +46,6 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"TenantAuditLog",
 		"TenantLifecycleEvent",
 		"TenantPlacement",
-		"AuthorizationPolicyDraft",
-		"AuthorizationPolicyVersion",
 		"SupportAccessGrant",
 		"TenantEncryptionKey",
 		"StoredFile",
@@ -108,7 +105,6 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"RewardLegalAcceptance",
 		"RewardNotification",
 	],
-	authorization_simulation: ["AuthorizationPolicySimulation"],
 };
 
 /** @deprecated Use `RLS_MANIFEST_PROFILES.ownership` — kept for existing imports. */

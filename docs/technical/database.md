@@ -33,20 +33,19 @@ Run from the repo root (`pnpm db:*` forwards to `apps/api`).
 
 | Command | Does | Destructive |
 | --- | --- | --- |
-| `pnpm setup:db` | Build shared → `db:all` (generate + deploy → seed) | Rewrites demo rows |
-| `pnpm db:all` | `turbo run db:seed` (its `dependsOn` runs `db:generate` + `db:deploy` first) | Rewrites demo rows |
+| `pnpm setup:db` | Build shared → `turbo run db:seed` (generate + deploy → seed) | Rewrites demo rows |
 | `pnpm --filter @workspace/api db:schema` | Write the base model's fields into every model's managed block of `schema.prisma` (`--check`: fail when a block is missing or stale). Every `db:*` script below that reads the schema runs it first | No |
 | `pnpm db:migrate` | `prisma migrate dev` then RLS — create + apply a migration for a schema change | Dev only |
 | `pnpm db:migrate:create --name <change>` | Generate a migration without applying it (review the SQL first) | No |
-| `pnpm db:deploy` | `prisma migrate deploy` then RLS — the only command for shared/deployed databases | No |
-| `pnpm db:migrate:status` | Which migrations are applied | No |
-| `pnpm db:apply-security` (`db:rls`) | Re-apply RLS policies, roles, grants and withheld privileges (idempotent) | No |
-| `pnpm db:check-rls-manifest` | Prisma models ↔ RLS manifest ↔ SQL agree (no database needed) | No |
+| `pnpm tools db:deploy` | `prisma migrate deploy` then RLS — the only command for shared/deployed databases | No |
+| `pnpm tools db:migrate:status` | Which migrations are applied | No |
+| `pnpm tools db:apply-security` | Re-apply RLS policies, roles, grants and withheld privileges (idempotent) | No |
+| `pnpm tools db:check-rls-manifest` | Prisma models ↔ RLS manifest ↔ SQL agree (no database needed) | No |
 | `pnpm --filter @workspace/api db:check-drift` | Replays migrations into `SHADOW_DATABASE_URL` and compares with `schema.prisma` | Wipes the shadow DB |
 | `pnpm --filter @workspace/api db:check-seed-coverage` | Read-only audit of a seeded database ([below](#seed-coverage--every-table-every-column)) | No |
 | `pnpm db:seed` | Seed (`--scenario`, `--seed`, `--allow-destructive`) | Rewrites seed rows |
 | `pnpm db:reset` | Drop everything, replay migrations, generate, RLS, seed | **Wipes the DB** |
-| `pnpm db:push` | Push the schema without a migration (throwaway experiments only) | Can drop data |
+| `pnpm tools db:push` | Push the schema without a migration (throwaway experiments only) | Can drop data |
 | `pnpm db:studio` | Prisma Studio | — |
 | `pnpm --filter @workspace/api db:rewrap-tenant-keys -- --actor-user-id <id>` | Re-wrap tenant data keys after a KEK rotation ([encryption](./security/encryption-and-kms.md)) | No |
 | `pnpm --filter @workspace/api db:sync-reference-data` | Load or converge the platform reference data (permissions, system roles + grants, merchant capabilities); production-safe, idempotent, audited ([runbook](./operations/superadmin-bootstrap.md#loading-the-reference-data)) | Writes only differences; nothing if up to date |
@@ -61,7 +60,7 @@ flowchart LR
     C -- no --> D[Schema drift: fix the drift,<br/>never strip the SQL by hand]
     D --> B
     C -- yes --> E[pnpm db:migrate<br/>applies + RLS]
-    E --> F[Update RLS manifest/SQL if a table was added<br/>pnpm db:check-rls-manifest]
+    E --> F[Update RLS manifest/SQL if a table was added<br/>pnpm tools db:check-rls-manifest]
     F --> G[Update the seed so every new<br/>table/column has data]
     G --> H[Zod schema in packages/shared,<br/>contract, API, client]
 ```
@@ -135,7 +134,7 @@ Enterprise accounts (in addition to the development platform accounts):
 | Email | Password | Tenant role |
 | --- | --- | --- |
 | `owner@enterprise.example.com` | `EnterpriseOwner@123` | OWNER (all locations) |
-| `member.0001@enterprise.example.com` … `member.0249@enterprise.example.com` | `EnterpriseMember@123` | `0001` POLICY_ADMIN; every 25th ADMIN (all locations); every 4th MEMBER; the rest CASHIER at one location |
+| `member.0001@enterprise.example.com` … `member.0249@enterprise.example.com` | `EnterpriseMember@123` | `0001` and every 25th MANAGER (all locations); the rest CASHIER at one location |
 
 - **Deterministic:** demo data comes from a seeded PRNG (`--seed`), and fixed ids live in
   `apps/api/prisma/seed/tenant-seed-ids.ts` (the commented `DEFAULT_TENANT_ID` in `.env.example`, for single-tenant mode, is

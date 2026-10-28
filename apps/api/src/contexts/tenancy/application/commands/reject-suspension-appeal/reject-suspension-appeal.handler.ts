@@ -11,11 +11,11 @@ import { auditActorId, notFound } from "../../tenant-actor";
 import type { TenantsScope } from "../../tenants-scope";
 import { RejectSuspensionAppealCommand } from "./reject-suspension-appeal.command";
 
-/** The appeal (locked) PENDING → REJECTED with the admin's note, compare-and-set, audited. Authorization: `MANAGE MERCHANT_ORG`. */
+/** The appeal (locked) PENDING → REJECTED with the admin's note, compare-and-set, audited. Authorization: `REJECT MERCHANT_ORG`. */
 @CommandHandler(RejectSuspensionAppealCommand)
 export class RejectSuspensionAppealHandler implements ICommandHandler<RejectSuspensionAppealCommand, TenantLifecycleResponse> {
 	public constructor(
-		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<Pick<TenantsScope, "appeals" | "audit" | "tenantPolicies">>,
+		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<Pick<TenantsScope, "appeals" | "audit">>,
 		@Inject(TENANT_LIFECYCLE_READ) private readonly reads: TenantLifecycleReadPort,
 		@Inject(CLOCK) private readonly clock: Clock,
 	) {}
@@ -33,7 +33,6 @@ export class RejectSuspensionAppealHandler implements ICommandHandler<RejectSusp
 			await scope.audit.record({
 				tenantId: input.tenantId,
 				actorUserId: adminUserId,
-				policyVersion: await scope.tenantPolicies.activePolicyVersion(input.tenantId),
 				action: "tenant.suspension_appeal.rejected",
 				resourceType: "TenantSuspensionAppeal",
 				resourceId: appeal.id,

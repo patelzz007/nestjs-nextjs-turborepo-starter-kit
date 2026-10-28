@@ -346,7 +346,7 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 	);
 
 	return (
-		<div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-6">
+		<div className="mx-auto flex w-full max-w-10xl min-w-0 flex-col gap-6">
 			<header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
 				<div>
 					<h1 className="text-2xl font-semibold tracking-tight">KYB review</h1>
@@ -558,9 +558,9 @@ export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPan
 								</CardContent>
 							</Card>
 
-							{/* `PATCH /admin/merchants/:id/kyb` requires MANAGE on MERCHANT_ORG; viewing needs only LIST. */}
+							{/* `PATCH /admin/merchants/:id/kyb` requires APPROVE on MERCHANT_ORG; viewing needs only LIST. */}
 							<Can
-								permission={PERMISSION.MERCHANT_ORG.MANAGE}
+								permission={PERMISSION.MERCHANT_ORG.APPROVE}
 								fallback={<AccessRestrictedNotice description="Updating a merchant's KYB status requires the merchant tenant manage permission." />}>
 								<KybReviewDecisionForm
 									key={`${merchant.id}-${String(merchant.updatedAt)}`}

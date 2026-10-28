@@ -15,8 +15,8 @@ order: 3
 
 ```bash
 pnpm docker:up       # docker compose up -d
-pnpm docker:ps       # status + health
-pnpm docker:logs     # follow logs
+pnpm tools docker:ps       # status + health
+pnpm tools docker:logs     # follow logs
 pnpm docker:down     # stop and remove containers (data volumes are kept)
 ```
 
@@ -28,6 +28,7 @@ pnpm docker:down     # stop and remove containers (data volumes are kept)
 | `kafka` | `apache/kafka:4.3.1` | `127.0.0.1:9092` (use the IPv4 literal, not `localhost`) | none | analytics events |
 | `rabbitmq` | `rabbitmq:4.3.5` | `localhost:5672`, UI `http://localhost:15672` | `rabbit` / `rabbit` | messaging |
 | `bull-board` | `venatum/bull-board:3.4.14` | `http://localhost:3030` | none | BullMQ dashboard |
+| `mailpit` | `axllent/mailpit:v1.31.3` | inbox + API `http://localhost:8025`, SMTP `localhost:1025` | none | local email (`EMAIL_PROVIDER=mailpit`, [Local email with Mailpit](../email/mailpit-local-inbox.md)) |
 
 **PostgreSQL is not started by default.** The `postgres` service (`postgres:18.6`, the same image
 CI uses) is commented out in `compose.yml`; use a native PostgreSQL 18 (Homebrew, apt, Postgres.app)
@@ -39,12 +40,6 @@ bucket ([AWS S3](../storage/aws-s3.md) / [Firebase](../storage/firebase.md)).
 Every service binds to `127.0.0.1` only, so the default passwords are not reachable from other
 machines on your network.
 
-> [!NOTE] Mailpit, the local email inbox, runs natively rather than in Docker:
-> `brew install mailpit`, then `pnpm mailpit` (inbox at `http://localhost:8025`, bound to
-> `127.0.0.1`). The API delivers into it with `EMAIL_PROVIDER=mailpit` — see
-> [Local email with Mailpit](../email/mailpit-local-inbox.md). If you still have the old
-> `hello-world-mailpit` container, remove it (`docker compose up -d --remove-orphans`), since it
-> holds the same port.
 
 ## Overriding ports and credentials
 
@@ -55,6 +50,7 @@ The newer services read these variables (shell environment, or a git-ignored `.e
 | --- | --- | --- |
 | `REDIS_PORT` / `KAFKA_PORT` | `6379` / `9092` | host ports (Kafka advertises `127.0.0.1:${KAFKA_PORT}`, so changing `KAFKA_PORT` only needs the same port in `KAFKA_BROKERS`) |
 | `RABBITMQ_AMQP_PORT` / `RABBITMQ_UI_PORT` / `BULL_BOARD_PORT` | `5672` / `15672` / `3030` | host ports |
+| `MAILPIT_UI_PORT` / `MAILPIT_SMTP_PORT` | `8025` / `1025` | host ports (set `MAILPIT_URL` in `apps/api/.env` to match a changed UI port) |
 | `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` | `rabbit` / `rabbit` | applied only when the volume is first created |
 
 If you uncomment the `postgres` service, it also reads `POSTGRES_PORT` (5432), `POSTGRES_USER` /
@@ -66,14 +62,14 @@ its volume is first created.
 ```bash
 pnpm docker:up
 cp apps/api/.env.example apps/api/.env      # if you have not already
-pnpm db:deploy                               # migrations + RLS (db:apply-security)
+pnpm tools db:deploy                               # migrations + RLS (db:apply-security)
 pnpm db:seed                                 # development scenario — see Database → Seed data
 ```
 
 ### Fresh clusters and the `app_runtime` role
 
 The API reaches tenant data through the `app_runtime` role (`SET ROLE`), which is subject to RLS.
-`pnpm db:apply-security` creates it in `prisma/rls/00-app-helpers.sql`, the first file it applies,
+`pnpm tools db:apply-security` creates it in `prisma/rls/00-app-helpers.sql`, the first file it applies,
 so a brand-new cluster needs no manual bootstrap. The apply plan
 (`apps/api/prisma/rls/apply-plan.ts`) refuses to run if any file uses a role before the file that
 creates it, so this can't regress unnoticed on long-lived dev clusters, where roles already exist
@@ -86,11 +82,11 @@ producer and consumer also set `allowAutoTopicCreation: false`), so the topics m
 before anything publishes or consumes. On a fresh machine, in this order:
 
 1. `pnpm docker:up` — Kafka and the other services (PostgreSQL running natively or via the uncommented service).
-2. `pnpm db:deploy` — migrations + RLS; this also creates the `analytics_consumer` role.
+2. `pnpm tools db:deploy` — migrations + RLS; this also creates the `analytics_consumer` role.
 3. `cp apps/analytics-consumer/.env.example apps/analytics-consumer/.env` and fill in the consumer's own login.
 4. `pnpm --filter @workspace/analytics-consumer db:provision-login` — creates that least-privilege login.
 5. `pnpm --filter @workspace/analytics-consumer kafka:provision-topics` — creates the topics explicitly.
-6. `pnpm dev:analytics-consumer` (and `pnpm dev:api`).
+6. `pnpm tools dev:analytics-consumer` (and `pnpm dev:api`).
 
 ## Troubleshooting
 

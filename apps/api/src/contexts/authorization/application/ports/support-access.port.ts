@@ -13,7 +13,6 @@ export interface SupportAccessTenantReader {
 export interface TenantAuditRecord {
 	readonly tenantId: string;
 	readonly actorUserId: string;
-	readonly policyVersion: number;
 	readonly action: string;
 	readonly resourceType: string;
 	readonly resourceId: string;

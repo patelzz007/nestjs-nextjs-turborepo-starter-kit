@@ -28,6 +28,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import {
+	createTestPlatformRole,
+	dropTestPlatformRole,
 	createE2eApp,
 	login,
 	grantSeedUsersFullSession,
@@ -37,6 +39,7 @@ import {
 	uniqueClientIp,
 	type InjectResponse,
 	type LoginResult,
+	type TestPermissionPairs,
 } from "./e2e-helpers";
 import { countStatements } from "./support/sql-statement-counter";
 
@@ -55,7 +58,19 @@ const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:
 const KANBAN = `${API_VERSION_PREFIX}/admin/kanban`;
 const FILES = `${API_VERSION_PREFIX}/files`;
 const ADMIN = { email: "admin@example.com", password: "Admin@123" };
-const MANAGER = { email: "manager@example.com", password: "Manager@123" };
+/**
+ * Board staff with every board action except deleting tasks and rearranging columns: a seeded
+ * customer given, for this spec only, a platform role holding exactly those permissions (plus the
+ * admin panel). Proves the board checks each action's own permission, not a role name.
+ */
+const WORKER = { email: "jack.anderson@example.com", password: "Jack@123" };
+const WORKER_PERMISSIONS: TestPermissionPairs = [
+	["READ", "ADMIN_DASHBOARD"],
+	["LIST", "KANBAN_TASK"],
+	["READ", "KANBAN_TASK"],
+	["CREATE", "KANBAN_TASK"],
+	["UPDATE", "KANBAN_TASK"],
+];
 const CONSUMER = { email: "user@example.com", password: "User@123" };
 /** Far past any seeded column, so the fixtures sit at the right end of the board. */
 const FIXTURE_COLUMN_POSITION = 100;
@@ -113,7 +128,8 @@ describe("Kanban board (e2e, real Postgres)", () => {
 	let app: NestFastifyApplication;
 	let pool: Pool;
 	let admin: LoginResult;
-	let manager: LoginResult;
+	let worker: LoginResult;
+	const workerRoleId = randomUUID();
 	let consumer: LoginResult;
 	let adminId = "";
 
@@ -244,10 +260,11 @@ describe("Kanban board (e2e, real Postgres)", () => {
 		app = await createE2eApp();
 		pool = new Pool({ connectionString: DATABASE_URL });
 		// Full sessions for everyone the spec signs in as: the admin panel's routes need a verified
-		// email (the seed leaves the manager unverified) and an MFA enrollment that is not yet due.
-		await grantSeedUsersFullSession(pool, [ADMIN.email, MANAGER.email, CONSUMER.email]);
+		// email (the seed leaves the worker unverified) and an MFA enrollment that is not yet due.
+		await grantSeedUsersFullSession(pool, [ADMIN.email, WORKER.email, CONSUMER.email]);
+		await createTestPlatformRole(pool, { id: workerRoleId, label: "board worker", permissions: WORKER_PERMISSIONS, holderEmail: WORKER.email });
 		admin = await login(app, ADMIN.email, ADMIN.password);
-		manager = await login(app, MANAGER.email, MANAGER.password);
+		worker = await login(app, WORKER.email, WORKER.password);
 		consumer = await login(app, CONSUMER.email, CONSUMER.password);
 		const result = await pool.query('SELECT id FROM public."User" WHERE email = $1', [ADMIN.email]);
 		adminId = z.object({ id: z.string() }).parse(result.rows.at(0)).id;
@@ -280,6 +297,7 @@ describe("Kanban board (e2e, real Postgres)", () => {
 		await pool.query('DELETE FROM public."KanbanPlanningColumn" WHERE id = $1', [columnP]);
 		await pool.query('DELETE FROM public."FileVariant" WHERE "fileId" = ANY($1::text[])', [uploadedFileIds]);
 		await pool.query('DELETE FROM public."StoredFile" WHERE id = ANY($1::text[])', [uploadedFileIds]);
+		await dropTestPlatformRole(pool, workerRoleId);
 		await pool.end();
 		await app.close();
 	});
@@ -290,11 +308,11 @@ describe("Kanban board (e2e, real Postgres)", () => {
 			expect((await send({ method: "GET", url: `${KANBAN}/board?board=EXECUTION`, session: consumer })).statusCode).toBe(403);
 		});
 
-		it("lets a manager work the board but neither delete a task nor rearrange columns", async () => {
-			const task = await createTask("manager task", columnA, manager);
+		it("lets staff whose role gives every board action but two work the board, refusing exactly those two", async () => {
+			const task = await createTask("worker task", columnA, worker);
 
-			expect((await send({ method: "DELETE", url: `${KANBAN}/tasks/${task.id}`, session: manager })).statusCode).toBe(403);
-			expect((await send({ method: "POST", url: `${KANBAN}/columns/${columnB}/move`, session: manager, payload: { afterColumnId: null, version: 0 } })).statusCode).toBe(403);
+			expect((await send({ method: "DELETE", url: `${KANBAN}/tasks/${task.id}`, session: worker })).statusCode).toBe(403);
+			expect((await send({ method: "POST", url: `${KANBAN}/columns/${columnB}/move`, session: worker, payload: { afterColumnId: null, version: 0 } })).statusCode).toBe(403);
 			expect((await send({ method: "DELETE", url: `${KANBAN}/tasks/${task.id}`, session: admin })).statusCode).toBe(200);
 		});
 
@@ -462,7 +480,7 @@ describe("Kanban board (e2e, real Postgres)", () => {
 		it("lists a task's comments newest first, and counts them on the card", async () => {
 			const task = await createTask("discussed");
 			for (const body of ["first thought", "second thought"]) {
-				const response = await send({ method: "POST", url: `${KANBAN}/tasks/${task.id}/comments`, session: manager, payload: { body } });
+				const response = await send({ method: "POST", url: `${KANBAN}/tasks/${task.id}/comments`, session: worker, payload: { body } });
 				expect(response.statusCode, response.body).toBe(201);
 			}
 
@@ -497,11 +515,11 @@ describe("Kanban board (e2e, real Postgres)", () => {
 			expect(again.statusCode).toBe(400);
 			expect(errorCode(again)).toBe("KANBAN_ATTACHMENT_FILE_INVALID");
 
-			const download = await send({ method: "GET", url: `${KANBAN}/tasks/${task.id}/attachments/${attachment.id}/download`, session: manager });
+			const download = await send({ method: "GET", url: `${KANBAN}/tasks/${task.id}/attachments/${attachment.id}/download`, session: worker });
 			expect(download.statusCode, download.body).toBe(200);
 			expect(parseSuccessEnvelope(download, KanbanAttachmentDownloadSchema).data.fileName).toBe("plan.pdf");
 
-			const removed = await send({ method: "DELETE", url: `${KANBAN}/tasks/${task.id}/attachments/${attachment.id}`, session: manager });
+			const removed = await send({ method: "DELETE", url: `${KANBAN}/tasks/${task.id}/attachments/${attachment.id}`, session: worker });
 			expect(removed.statusCode, removed.body).toBe(200);
 			const rows = await pool.query(
 				'SELECT a."isDeleted" AS "attachmentDeleted", f."isDeleted" AS "fileDeleted" FROM public."KanbanTaskAttachment" a JOIN public."StoredFile" f ON f.id = a."fileId" WHERE a.id = $1',
@@ -520,7 +538,7 @@ describe("Kanban board (e2e, real Postgres)", () => {
 			const comment = parseSuccessEnvelope(posted, KanbanCommentSchema).data;
 			expect(comment.attachments.map((attachment) => [attachment.fileId, attachment.commentId, attachment.kind])).toEqual([[fileId, comment.id, "DOCUMENT"]]);
 
-			const page = await send({ method: "GET", url: `${KANBAN}/tasks/${task.id}/comments`, session: manager });
+			const page = await send({ method: "GET", url: `${KANBAN}/tasks/${task.id}/comments`, session: worker });
 			expect(
 				parsePaginatedEnvelope(page, KanbanCommentSchema)
 					.data.at(LIST_SLOT_INDEX.first)
@@ -539,7 +557,7 @@ describe("Kanban board (e2e, real Postgres)", () => {
 			const task = await createTask("not yours");
 			const fileId = await uploadPdf();
 
-			const response = await send({ method: "POST", url: `${KANBAN}/tasks/${task.id}/attachments`, session: manager, payload: { fileId } });
+			const response = await send({ method: "POST", url: `${KANBAN}/tasks/${task.id}/attachments`, session: worker, payload: { fileId } });
 			expect(response.statusCode).toBe(400);
 			expect(errorCode(response)).toBe("KANBAN_ATTACHMENT_FILE_INVALID");
 		});
@@ -595,7 +613,7 @@ describe("Kanban board (e2e, real Postgres)", () => {
 		it("looks items up by type and title for the pickers", async () => {
 			await createTask("picker feature", columnP, admin, { type: "FEATURE" });
 
-			const response = await send({ method: "GET", url: `${KANBAN}/items?filter[type]=FEATURE&search=${encodeURIComponent(`${marker} picker`)}`, session: manager });
+			const response = await send({ method: "GET", url: `${KANBAN}/items?filter[type]=FEATURE&search=${encodeURIComponent(`${marker} picker`)}`, session: worker });
 			expect(response.statusCode, response.body).toBe(200);
 			expect(parsePaginatedEnvelope(response, KanbanItemSummarySchema).data.map((item) => item.title)).toEqual([`${marker} picker feature`]);
 		});
@@ -603,16 +621,16 @@ describe("Kanban board (e2e, real Postgres)", () => {
 
 	describe("assignees", () => {
 		it("offers and accepts the staff who hold the board's permission, and refuses anyone else", async () => {
-			const people = await send({ method: "GET", url: `${KANBAN}/people`, session: manager });
+			const people = await send({ method: "GET", url: `${KANBAN}/people`, session: worker });
 			expect(people.statusCode, people.body).toBe(200);
 			const ids = parseSuccessEnvelope(people, KanbanPeopleSchema).data.people.map((person) => person.id);
-			const managerId = z.object({ id: z.string() }).parse((await pool.query('SELECT id FROM public."User" WHERE email = $1', [MANAGER.email])).rows.at(0)).id;
+			const workerId = z.object({ id: z.string() }).parse((await pool.query('SELECT id FROM public."User" WHERE email = $1', [WORKER.email])).rows.at(0)).id;
 			const consumerId = z.object({ id: z.string() }).parse((await pool.query('SELECT id FROM public."User" WHERE email = $1', [CONSUMER.email])).rows.at(0)).id;
-			expect(ids).toEqual(expect.arrayContaining([adminId, managerId]));
+			expect(ids).toEqual(expect.arrayContaining([adminId, workerId]));
 			expect(ids).not.toContain(consumerId);
 
-			const assigned = await createTask("assigned", columnA, admin, { assigneeId: managerId });
-			expect(assigned.assignee?.id).toBe(managerId);
+			const assigned = await createTask("assigned", columnA, admin, { assigneeId: workerId });
+			expect(assigned.assignee?.id).toBe(workerId);
 			const refused = await createItem("refused", columnA, { assigneeId: consumerId });
 			expect(refused.statusCode).toBe(400);
 			expect(errorCode(refused)).toBe("KANBAN_ASSIGNEE_INVALID");
@@ -652,7 +670,7 @@ describe("Kanban board (e2e, real Postgres)", () => {
 				throw new Error("the step was not saved");
 			}
 
-			const ticked = await send({ method: "PATCH", url: `${KANBAN}/tasks/${subtask.id}/checklist/${design.id}`, session: manager, payload: { isDone: true } });
+			const ticked = await send({ method: "PATCH", url: `${KANBAN}/tasks/${subtask.id}/checklist/${design.id}`, session: worker, payload: { isDone: true } });
 			expect(ticked.statusCode, ticked.body).toBe(200);
 			expect(parseSuccessEnvelope(ticked, KanbanTaskDetailSchema).data).toMatchObject({ steps: { done: 1, total: 3 }, version: saved.version + 1 });
 			expect((await detail(task.id)).rollup.children).toEqual({ done: 0, total: 1 });
@@ -672,20 +690,20 @@ describe("Kanban board (e2e, real Postgres)", () => {
 			const to = await createTask("move to", columnP, admin, { type: "FEATURE", parentId: epic.id });
 			const story = await createTask("moving story", columnA, admin, { parentId: from.id });
 
-			const moved = await send({ method: "POST", url: `${KANBAN}/tasks/${story.id}/parent`, session: manager, payload: { parentId: to.id, version: story.version } });
+			const moved = await send({ method: "POST", url: `${KANBAN}/tasks/${story.id}/parent`, session: worker, payload: { parentId: to.id, version: story.version } });
 			expect(moved.statusCode, moved.body).toBe(201);
 			const after = parseSuccessEnvelope(moved, KanbanTaskDetailSchema).data;
 			expect(after).toMatchObject({ parentId: to.id, columnId: columnA });
 
-			const wrongLevel = await send({ method: "POST", url: `${KANBAN}/tasks/${story.id}/parent`, session: manager, payload: { parentId: epic.id, version: after.version } });
+			const wrongLevel = await send({ method: "POST", url: `${KANBAN}/tasks/${story.id}/parent`, session: worker, payload: { parentId: epic.id, version: after.version } });
 			expect(wrongLevel.statusCode).toBe(400);
 			expect(errorCode(wrongLevel)).toBe("KANBAN_PARENT_INVALID");
-			const stale = await send({ method: "POST", url: `${KANBAN}/tasks/${story.id}/parent`, session: manager, payload: { parentId: from.id, version: story.version } });
+			const stale = await send({ method: "POST", url: `${KANBAN}/tasks/${story.id}/parent`, session: worker, payload: { parentId: from.id, version: story.version } });
 			expect(stale.statusCode).toBe(409);
 			const editingParent = await send({ method: "PATCH", url: `${KANBAN}/tasks/${story.id}`, session: admin, payload: { parentId: from.id, version: after.version } });
 			expect(editingParent.statusCode).toBe(400);
 
-			const undone = await send({ method: "POST", url: `${KANBAN}/tasks/${story.id}/parent`, session: manager, payload: { parentId: from.id, version: after.version } });
+			const undone = await send({ method: "POST", url: `${KANBAN}/tasks/${story.id}/parent`, session: worker, payload: { parentId: from.id, version: after.version } });
 			expect(undone.statusCode, undone.body).toBe(201);
 			const history = await send({ method: "GET", url: `${KANBAN}/tasks/${story.id}/activity`, session: admin });
 			expect(
@@ -702,14 +720,14 @@ describe("Kanban board (e2e, real Postgres)", () => {
 			const story = await createTask("searchable story", columnA);
 			const key = story.key ?? "";
 
-			const exact = await send({ method: "GET", url: `${KANBAN}/search?q=${encodeURIComponent(key.toLowerCase())}`, session: manager });
+			const exact = await send({ method: "GET", url: `${KANBAN}/search?q=${encodeURIComponent(key.toLowerCase())}`, session: worker });
 			expect(exact.statusCode, exact.body).toBe(200);
 			const [best] = parseSuccessEnvelope(exact, KanbanSearchResultsSchema).data.results;
 			expect(best).toMatchObject({ id: story.id, match: "KEY" });
 
-			const titled = await send({ method: "GET", url: `${KANBAN}/search?q=${encodeURIComponent(`${marker} searchable`)}&type=STORY`, session: manager });
+			const titled = await send({ method: "GET", url: `${KANBAN}/search?q=${encodeURIComponent(`${marker} searchable`)}&type=STORY`, session: worker });
 			expect(parseSuccessEnvelope(titled, KanbanSearchResultsSchema).data.results.map((result) => [result.id, result.match])).toEqual([[story.id, "TITLE"]]);
-			const otherLevel = await send({ method: "GET", url: `${KANBAN}/search?q=${encodeURIComponent(`${marker} searchable`)}&type=EPIC`, session: manager });
+			const otherLevel = await send({ method: "GET", url: `${KANBAN}/search?q=${encodeURIComponent(`${marker} searchable`)}&type=EPIC`, session: worker });
 			expect(parseSuccessEnvelope(otherLevel, KanbanSearchResultsSchema).data.results).toEqual([]);
 		});
 
@@ -750,7 +768,7 @@ describe("Kanban board (e2e, real Postgres)", () => {
 		it("sets a column's WIP limit for an admin only", async () => {
 			const column = columnOf(await board(), columnB);
 
-			expect((await send({ method: "PATCH", url: `${KANBAN}/columns/${columnB}`, session: manager, payload: { wipLimit: 2, version: column.version } })).statusCode).toBe(403);
+			expect((await send({ method: "PATCH", url: `${KANBAN}/columns/${columnB}`, session: worker, payload: { wipLimit: 2, version: column.version } })).statusCode).toBe(403);
 			const limited = await send({ method: "PATCH", url: `${KANBAN}/columns/${columnB}`, session: admin, payload: { wipLimit: 2, version: column.version } });
 			expect(limited.statusCode, limited.body).toBe(200);
 			expect(columnOf(parseSuccessEnvelope(limited, KanbanBoardSchema).data, columnB)).toMatchObject({ board: "EXECUTION", wipLimit: 2 });

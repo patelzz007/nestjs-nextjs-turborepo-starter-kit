@@ -5,9 +5,9 @@ import { AuditController } from "./audit.controller";
 import { AuthorizationDecisionsController } from "./authorization-decisions.controller";
 import { CapabilitiesCatalogController } from "./capabilities-catalog.controller";
 import { PermissionsController } from "./permissions.controller";
-import { PolicyControlPlaneController } from "./policy-control-plane.controller";
 import { RolesController } from "./roles.controller";
 import { SupportAccessController, TenantSupportAccessController } from "./support-access.controller";
+import { TenantAccessController } from "./tenant-access.controller";
 
 /**
  * The authorization HTTP surface and the boot-time catalog sync. Not global: its
@@ -21,9 +21,9 @@ import { SupportAccessController, TenantSupportAccessController } from "./suppor
 		AuditController,
 		CapabilitiesCatalogController,
 		AuthorizationDecisionsController,
-		PolicyControlPlaneController,
 		SupportAccessController,
 		TenantSupportAccessController,
+		TenantAccessController,
 	],
 	providers: [AuthorizationCatalogSyncBootstrap],
 })

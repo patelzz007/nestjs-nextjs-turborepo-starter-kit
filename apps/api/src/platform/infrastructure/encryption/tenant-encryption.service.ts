@@ -6,7 +6,6 @@ import { randomBytes } from "node:crypto";
 import { RequestContextService } from "../context/request-context";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import type { SystemOperation } from "../../../prisma/system-operation.registry";
-import { CEDAR_POLICY_EVALUATOR, type CedarPolicyEvaluatorPort } from "../../../contexts/authorization/public-api";
 import { TENANT_AUDIT, type TenantAuditEntry, type TenantAuditPort, type TenantAuditTransaction } from "../../../contexts/tenancy/public-api";
 import { AES_256_KEY_BYTES } from "./aes-256-gcm";
 import { TENANT_KEY_MANAGEMENT, type TenantKeyManagementPort, type WrappedDataKey } from "./kms/tenant-key-management.port";
@@ -70,7 +69,6 @@ export class TenantEncryptionService {
 		private readonly tenantTx: TenantTransactionService,
 		private readonly keys: TenantEncryptionKeyRepository,
 		@Inject(TENANT_AUDIT) private readonly audit: TenantAuditPort<TenantAuditTransaction>,
-		@Inject(CEDAR_POLICY_EVALUATOR) private readonly cedar: CedarPolicyEvaluatorPort,
 		private readonly requestContext: RequestContextService,
 		@Inject(TENANT_KEY_MANAGEMENT) private readonly kms: TenantKeyManagementPort,
 	) {}
@@ -85,7 +83,6 @@ export class TenantEncryptionService {
 		}
 
 		const wrapped: WrappedDataKey = await this.kms.wrapDataKey(randomBytes(AES_256_KEY_BYTES));
-		const policyVersion: number = await this.cedar.getActivePolicyVersion(tenantId);
 		const created: { readonly row: TenantEncryptionKey; readonly inserted: boolean } = await this.system(
 			"encryption.tenant_key.provision",
 			"Create the tenant key",
@@ -97,7 +94,7 @@ export class TenantEncryptionService {
 					throw new TenantKeyNotFoundError(tenantId, INITIAL_DATA_KEY_VERSION);
 				}
 				if (inserted === 1) {
-					await this.audit.recordInTx(db, this.auditEntry(row, actorUserId, policyVersion, TENANT_KEY_AUDIT_ACTIONS.created, { kmsKeyId: row.kmsKeyId }));
+					await this.audit.recordInTx(db, this.auditEntry(row, actorUserId, TENANT_KEY_AUDIT_ACTIONS.created, { kmsKeyId: row.kmsKeyId }));
 				}
 				return { row, inserted: inserted === 1 };
 			},
@@ -162,16 +159,12 @@ export class TenantEncryptionService {
 			}
 			throw error;
 		}
-		const policyVersion: number = await this.cedar.getActivePolicyVersion(row.tenantId);
 		return this.system("encryption.tenant_key.rewrap", "Swap in the re-wrapped tenant key", actorUserId, async (db) => {
 			const swapped: number = await this.keys.swapWrappedKey(row.id, row, next, nowEpochMs(), db);
 			if (swapped !== 1) {
 				return "concurrently-updated";
 			}
-			await this.audit.recordInTx(
-				db,
-				this.auditEntry(row, actorUserId, policyVersion, TENANT_KEY_AUDIT_ACTIONS.rewrapped, { fromKmsKeyId: row.kmsKeyId, toKmsKeyId: next.kmsKeyId }),
-			);
+			await this.audit.recordInTx(db, this.auditEntry(row, actorUserId, TENANT_KEY_AUDIT_ACTIONS.rewrapped, { fromKmsKeyId: row.kmsKeyId, toKmsKeyId: next.kmsKeyId }));
 			return "rewrapped";
 		});
 	}
@@ -185,12 +178,11 @@ export class TenantEncryptionService {
 		return this.tenantTx.withSystemOperation({ operation, reason, actorUserId }, work);
 	}
 
-	private auditEntry(row: TenantEncryptionKey, actorUserId: string, policyVersion: number, action: string, metadata: Readonly<Record<string, string>>): TenantAuditEntry {
+	private auditEntry(row: TenantEncryptionKey, actorUserId: string, action: string, metadata: Readonly<Record<string, string>>): TenantAuditEntry {
 		const correlationId: string | undefined = this.requestContext.correlationId();
 		return {
 			tenantId: row.tenantId,
 			actorUserId,
-			policyVersion,
 			action,
 			resourceType: AUDIT_RESOURCE_TYPE,
 			resourceId: row.id,

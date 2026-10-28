@@ -2,13 +2,11 @@ import type { TransactionalEventCollector } from "../../../platform/application/
 import type { IdentitySessionsPort } from "../../../platform/application/ports/identity-sessions.port";
 
 import type { PermissionRepository } from "../domain/repositories/permission.repository";
-import type { PolicyDraftRepository } from "../domain/repositories/policy-draft.repository";
 import type { RoleRepository } from "../domain/repositories/role.repository";
 import type { SupportAccessGrantRepository } from "../domain/repositories/support-access-grant.repository";
 import type { UserAuthorizationRepository } from "../domain/repositories/user-authorization.repository";
 import type { AuthorizationCatalogStore } from "./ports/catalog-sync.port";
 import type { PermissionAuditWriter } from "./ports/permission-audit.port";
-import type { PolicyAuditWriter, PolicyPrincipalReader, PolicySimulationStore, PolicyVersionStore } from "./ports/policy-control-plane.port";
 import type { RbacGraphReader, RbacMutationLock } from "./ports/rbac-graph.port";
 import type { TenantAuditWriter, SupportAccessTenantReader } from "./ports/support-access.port";
 
@@ -29,12 +27,6 @@ export interface AuthorizationScope {
 	readonly identitySessions: IdentitySessionsPort;
 	// ── Boot-time catalog sync ──────────────────────────────────────────
 	readonly catalog: AuthorizationCatalogStore;
-	// ── Policy control plane ────────────────────────────────────────────
-	readonly policyDrafts: PolicyDraftRepository;
-	readonly policyVersions: PolicyVersionStore;
-	readonly policySimulations: PolicySimulationStore;
-	readonly policyPrincipals: PolicyPrincipalReader;
-	readonly policyAudit: PolicyAuditWriter;
 	// ── Support access ──────────────────────────────────────────────────
 	readonly supportGrants: SupportAccessGrantRepository;
 	readonly supportTenants: SupportAccessTenantReader;

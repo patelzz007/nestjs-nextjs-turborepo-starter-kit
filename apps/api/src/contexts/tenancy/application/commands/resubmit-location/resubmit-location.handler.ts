@@ -39,7 +39,6 @@ export class ResubmitLocationHandler implements ICommandHandler<ResubmitLocation
 			await scope.audit.record({
 				tenantId: member.tenantId,
 				actorUserId: user.userId,
-				policyVersion: member.policyVersion,
 				action: "tenant.location.resubmitted",
 				resourceType: "Location",
 				resourceId: stored.id,

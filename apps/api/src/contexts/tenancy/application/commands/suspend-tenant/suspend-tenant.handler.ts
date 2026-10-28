@@ -14,12 +14,12 @@ import { SuspendTenantCommand } from "./suspend-tenant.command";
 /**
  * ACTIVE/RESTRICTED → SUSPENDED: compare-and-set on the loaded state, the lifecycle event and the
  * tenant audit row in one transaction. From then on only the tenant's lifecycle routes work (C1).
- * Authorization: the route's `MANAGE MERCHANT_ORG` permission.
+ * Authorization: the route's `SUSPEND MERCHANT_ORG` permission.
  */
 @CommandHandler(SuspendTenantCommand)
 export class SuspendTenantHandler implements ICommandHandler<SuspendTenantCommand, TenantLifecycleResponse> {
 	public constructor(
-		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<Pick<TenantsScope, "tenants" | "audit" | "tenantPolicies" | "events">>,
+		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<Pick<TenantsScope, "tenants" | "audit" | "events">>,
 		@Inject(TENANT_LIFECYCLE_READ) private readonly reads: TenantLifecycleReadPort,
 		@Inject(CLOCK) private readonly clock: Clock,
 	) {}
@@ -38,7 +38,6 @@ export class SuspendTenantHandler implements ICommandHandler<SuspendTenantComman
 			await scope.audit.record({
 				tenantId: tenant.id,
 				actorUserId: adminUserId,
-				policyVersion: await scope.tenantPolicies.activePolicyVersion(tenant.id),
 				action: "tenant.suspended",
 				resourceType: "Tenant",
 				resourceId: tenant.id,

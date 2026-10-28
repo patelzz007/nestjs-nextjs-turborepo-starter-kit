@@ -50,7 +50,7 @@ function userActor(userId: string): ActorContext {
 	};
 }
 
-type LifecycleScope = Pick<TenantsScope, "tenants" | "appeals" | "memberships" | "audit" | "tenantPolicies" | "events">;
+type LifecycleScope = Pick<TenantsScope, "tenants" | "appeals" | "memberships" | "audit" | "events">;
 
 /** One tenant, its memberships and appeals as stored rows; a throwing unit of work leaves them untouched. */
 class LifecycleStore implements UnitOfWork<LifecycleScope> {
@@ -150,7 +150,6 @@ class LifecycleStore implements UnitOfWork<LifecycleScope> {
 					return Promise.resolve();
 				},
 			},
-			tenantPolicies: { seedDefaultPolicies: () => Promise.resolve(), activePolicyVersion: () => Promise.resolve(1) },
 			events: new TransactionalEventCollector(),
 		};
 	}
@@ -301,10 +300,10 @@ describe("super admin ban commands", () => {
 describe("tenant-side lifecycle commands", () => {
 	it("reactivates a tenant pending deletion for its owner only", async () => {
 		store.tenant = { ...store.tenant, lifecycleState: "PENDING_DELETION", deletionGraceEndsAt: epochMs(NOW + 1) };
-		member("m-admin", "admin-member", "ADMIN");
+		member("m-manager", "manager-member", "MANAGER");
 
 		await expect(
-			new ReactivateTenantHandler(store, reads, CLOCK).execute(new ReactivateTenantCommand(userActor("admin-member"), { tenantSlug: "brew" })),
+			new ReactivateTenantHandler(store, reads, CLOCK).execute(new ReactivateTenantCommand(userActor("manager-member"), { tenantSlug: "brew" })),
 		).rejects.toBeInstanceOf(TenantOwnerRequiredError);
 		await new ReactivateTenantHandler(store, reads, CLOCK).execute(new ReactivateTenantCommand(userActor(OWNER_ID), { tenantSlug: "brew" }));
 

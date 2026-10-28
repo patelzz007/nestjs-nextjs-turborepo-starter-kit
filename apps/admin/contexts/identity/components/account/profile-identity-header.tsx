@@ -45,7 +45,7 @@ export function ProfileIdentityHeader({ profile, roles, permissionCount, isImper
 					fallbackClassName="bg-primary text-2xl font-semibold text-primary-foreground"
 				/>
 				<div className="flex min-w-0 flex-col gap-2">
-					<h1 className="font-heading text-3xl font-semibold tracking-tight break-words sm:text-4xl">{profile.fullName}</h1>
+					<h2 className="font-heading text-2xl font-semibold tracking-tight break-words sm:text-3xl">{profile.fullName}</h2>
 					<p className="truncate text-sm text-muted-foreground">{profile.email}</p>
 					<ul className="flex flex-wrap gap-1.5" aria-label="Your roles">
 						{roles.map((role: SlimRoleResponse): React.JSX.Element => (

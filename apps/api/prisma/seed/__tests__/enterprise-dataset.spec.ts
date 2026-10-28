@@ -138,13 +138,13 @@ describe("buildEnterpriseDataset", () => {
 describe("enterpriseMemberRoleAt", () => {
 	it.each([
 		[0, "OWNER"],
-		[1, "POLICY_ADMIN"],
+		[1, "MANAGER"],
 		[2, "CASHIER"],
-		[4, "MEMBER"],
-		[25, "ADMIN"],
-		[50, "ADMIN"],
-		[100, "ADMIN"],
-		[8, "MEMBER"],
+		[4, "CASHIER"],
+		[25, "MANAGER"],
+		[50, "MANAGER"],
+		[100, "MANAGER"],
+		[8, "CASHIER"],
 		[9, "CASHIER"],
 	])("member %i → %s", (index, role) => {
 		expect(enterpriseMemberRoleAt(index)).toBe(role);

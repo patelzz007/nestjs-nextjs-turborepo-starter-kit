@@ -1,5 +1,6 @@
 "use client";
 
+import { SettingsSectionHeader } from "@workspace/ui/components/settings-shell";
 import { keepPreviousData } from "@tanstack/react-query";
 import { initialDataOption, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
 import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
@@ -116,10 +117,7 @@ export default function AccessControlPanel({ initialRoles, initialPermissions }:
 
 	return (
 		<div className="space-y-6">
-			<header>
-				<h1 className="text-2xl font-semibold tracking-tight">Access control</h1>
-				<p className="text-sm text-muted-foreground">Browse roles and permissions. Assign per-user access from a user profile.</p>
-			</header>
+			<SettingsSectionHeader title="Access control" description="Browse roles and permissions. Assign per-user access from a user profile." />
 
 			<Tabs defaultValue={defaultTab}>
 				<TabsList>
@@ -147,7 +145,14 @@ export default function AccessControlPanel({ initialRoles, initialPermissions }:
 											<p className="font-medium">{role.name}</p>
 											{role.description !== null ? <p className="text-xs text-muted-foreground">{role.description}</p> : null}
 										</div>
-										<Badge variant={role.isActive ? "outline" : "destructive-light"}>{role.isActive ? "Active" : "Inactive"}</Badge>
+										<div className="flex flex-wrap items-center justify-end gap-2">
+											{role.kind === "TEMPLATE" ? (
+												<Badge variant="secondary" title="Every business starts its own role from this template; change it in code (ADR 067).">
+													Tenant template
+												</Badge>
+											) : null}
+											<Badge variant={role.isActive ? "outline" : "destructive-light"}>{role.isActive ? "Active" : "Inactive"}</Badge>
+										</div>
 									</div>
 								))}
 								{rolesPager.isPaged ? (

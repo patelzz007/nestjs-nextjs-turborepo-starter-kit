@@ -8,6 +8,7 @@ import type { TenantRepository } from "../../domain/repositories/tenant.reposito
 import { readTransactionCorrelationId } from "../../../../prisma/transaction-correlation";
 import type { TenantsDb } from "./tenant-db";
 import { allocateUniqueTenantSlug } from "./tenant-slug";
+import { TenantRoleCopies } from "../../../authorization/public-api";
 import { withUniqueViolationAs } from "./unique-violation";
 
 const TENANT_SELECT = { id: true, slug: true, displayName: true, lifecycleState: true, deletionGraceEndsAt: true } satisfies Prisma.TenantSelect;
@@ -49,6 +50,8 @@ export class PrismaTenantRepository implements TenantRepository {
 				}),
 			() => new TenantSlugTakenError(),
 		);
+		// The tenant's own Owner / Manager / Cashier, copied from the templates in the same transaction (ADR 067).
+		await new TenantRoleCopies(this.db).provision(tenant.id, null);
 		await this.appendLifecycleEvents(tenant);
 	}
 

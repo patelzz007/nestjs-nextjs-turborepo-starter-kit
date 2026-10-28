@@ -1,12 +1,4 @@
-import type {
-	AuthorizationContext,
-	AuthorizationDecision,
-	AuthorizationRequest,
-	AuthorizationResult,
-	AuthorizationRowFilter,
-	PermissionAction,
-	PermissionResource,
-} from "@workspace/shared";
+import type { AuthorizationDecision, AuthorizationRequest, AuthorizationResult } from "@workspace/shared";
 
 /** Request metadata recorded alongside an audited decision. */
 export interface AuthorizationAuditMetadata {
@@ -24,13 +16,6 @@ export interface AuthorizationKernelPort {
 	/** Audited (DENY, writes, sensitive reads); throws on DENY. */
 	authorize(request: AuthorizationRequest, metadata?: AuthorizationAuditMetadata): Promise<void>;
 	explain(request: AuthorizationRequest): Promise<AuthorizationResult>;
-	filter(context: AuthorizationContext, action: PermissionAction, resource: PermissionResource): Promise<AuthorizationRowFilter>;
-	hasRoles(userId: string, roleNames: readonly string[], mode: "all" | "any"): Promise<boolean>;
-}
-
-/** Records an already-evaluated decision on the decision audit trail (`AnyPermission` routes evaluate with `explain`). */
-export interface AuthorizationDecisionAuditPort {
-	auditResult(result: AuthorizationResult, metadata?: AuthorizationAuditMetadata): Promise<void>;
 }
 
 /** The explicit, audited platform bypass a SuperAdmin takes on a protected route (`SUPER_ADMIN_BYPASS`). */

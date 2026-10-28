@@ -131,7 +131,7 @@ describe("ProfileView", () => {
 	it("shows the profile's identity", () => {
 		render(<ProfileView />, { wrapper: UiKitTestProviders });
 
-		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(screen.getByLabelText("Full name").getAttribute("value"));
+		expect(screen.getByRole("heading", { level: 2, name: screen.getByLabelText("Full name").getAttribute("value") ?? "" })).toBeTruthy();
 		expect(screen.getByText("superadmin@example.com")).toBeTruthy();
 		// The initials stand in for the missing picture in the header and in the photo editor.
 		expect(screen.getAllByText("SA")).toHaveLength(2);

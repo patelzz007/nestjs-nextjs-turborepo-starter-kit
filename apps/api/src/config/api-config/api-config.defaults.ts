@@ -54,7 +54,7 @@ export const MAX_EMAIL_ATTEMPTS = 10;
 export const DEFAULT_EMAIL_ATTEMPTS = 3;
 export const MIN_EMAIL_TIMEOUT_MS = 100;
 export const DEFAULT_EMAIL_TIMEOUT_MS = 10 * MS_PER_SECOND;
-/** Where a native `mailpit` listens by default (`pnpm mailpit`): web inbox + HTTP API. */
+/** Where the `mailpit` Docker service listens by default (`pnpm mailpit`): web inbox + HTTP API. */
 export const DEFAULT_MAILPIT_URL = "http://localhost:8025";
 export const DEFAULT_WEBHOOK_RATE_LIMIT_PER_MINUTE = 120;
 

@@ -25,7 +25,7 @@ export interface RbacCatalogReadPort {
 	findRole(actor: ActorContext, roleId: string): Promise<RoleResponse | null>;
 }
 
-/** A role set's effective names and `ACTION:RESOURCE` keys (inherited permissions included). */
+/** A role set's active names and the `ACTION:RESOURCE` keys its roles confer. */
 export interface EffectiveRoleSet {
 	/** Names of the directly listed roles that are live and active (what the user "has"). */
 	readonly roleNames: readonly string[];
@@ -48,7 +48,7 @@ export interface RbacInspectionReadPort {
 
 export interface RbacInspectionReader {
 	assignedRoleIds(userId: string): Promise<string[]>;
-	effectiveRoleNames(roleIds: readonly string[]): Promise<ReadonlySet<string>>;
+	activeRoleNames(roleIds: readonly string[]): Promise<ReadonlySet<string>>;
 	effectiveRoleSet(roleIds: readonly string[]): Promise<EffectiveRoleSet>;
 	directOverrideKeys(userId: string): Promise<DirectOverrideKeys>;
 }

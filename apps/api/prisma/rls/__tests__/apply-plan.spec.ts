@@ -15,6 +15,7 @@ describe("RLS apply plan", () => {
 			"prisma/rls/00-app-helpers.sql",
 			"prisma/rls/00-system-operation-scopes.sql",
 			"prisma/rls/01-acl-location-access.sql",
+			"prisma/rls/02-access-model.sql",
 			"prisma/rls.sql",
 			"prisma/rls/30-authorization-change-stamp.sql",
 			"prisma/rls/40-api-key-principal.sql",

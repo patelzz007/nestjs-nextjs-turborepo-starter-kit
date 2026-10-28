@@ -13,7 +13,9 @@ import {
 	MUTATION_INTENT_VALUE,
 	ApiPaginatedMetaSchema,
 	ApiSuccessResponseSchema,
+	TenantGrantResponseSchema,
 	type ApiPaginatedMeta,
+	type PermissionPair,
 	type ApiResponseMeta,
 } from "@workspace/shared";
 import { z } from "zod";
@@ -255,4 +257,71 @@ export async function login(app: NestFastifyApplication, email: string, password
 	}
 
 	return { accessToken, refreshToken };
+}
+
+function merchantSessionHeaders(session: LoginResult): Record<string, string> {
+	return { cookie: `merchantAccessToken=${session.accessToken}; merchantRefreshToken=${session.refreshToken}`, "x-client-type": "merchant" };
+}
+
+/**
+ * A tenant administrator gives a member one extra permission through the tenant access API (ADR 067),
+ * permanent unless `expiresAt` is given; returns the grant's id for {@link revokeTenantGrant}.
+ */
+export async function grantTenantPermission(
+	app: NestFastifyApplication,
+	granter: LoginResult,
+	grant: { readonly tenantSlug: string; readonly membershipId: string; readonly permission: PermissionPair; readonly expiresAt?: number },
+): Promise<string> {
+	const response = await app.inject({
+		method: "POST",
+		url: `${API_VERSION_PREFIX}/tenants/${grant.tenantSlug}/access/members/${grant.membershipId}/grants`,
+		headers: mutationHeaders(merchantSessionHeaders(granter)),
+		payload: { permission: grant.permission, ...(grant.expiresAt === undefined ? {} : { expiresAt: grant.expiresAt }) },
+	});
+	return parseSuccessEnvelope(response, TenantGrantResponseSchema).data.id;
+}
+
+/** Takes a grant made by {@link grantTenantPermission} back (its granter always may). */
+export async function revokeTenantGrant(app: NestFastifyApplication, granter: LoginResult, tenantSlug: string, grantId: string): Promise<void> {
+	const response = await app.inject({
+		method: "DELETE",
+		url: `${API_VERSION_PREFIX}/tenants/${tenantSlug}/access/grants/${grantId}`,
+		headers: mutationHeaders(merchantSessionHeaders(granter)),
+	});
+	parseSuccessEnvelope(response, z.object({ ok: z.literal(true) }));
+}
+
+/** `[ACTION, RESOURCE]` pairs of GLOBAL catalogue permissions. */
+export type TestPermissionPairs = readonly (readonly [string, string])[];
+
+/**
+ * A narrow platform role for one spec (ADR 067 retired the seeded platform Manager, the old "lesser
+ * staff" persona): exactly `permissions`, optionally held by the seed account `holderEmail`. Remove
+ * it with {@link dropTestPlatformRole} in the spec's `afterAll`.
+ */
+export async function createTestPlatformRole(
+	pool: Pool,
+	role: { readonly id: string; readonly label: string; readonly permissions: TestPermissionPairs; readonly holderEmail?: string },
+): Promise<void> {
+	await pool.query(`INSERT INTO public."Role" (id, name, description, kind, "isSystem") VALUES ($1, $2, 'e2e test role', 'PLATFORM', false)`, [
+		role.id,
+		`e2e ${role.label} ${role.id}`,
+	]);
+	for (const [action, resource] of role.permissions) {
+		await pool.query(
+			`INSERT INTO public."RolePermission" (id, "roleId", "permissionId")
+			 SELECT uuidv7(), $1, p.id FROM public."Permission" p WHERE p.action::text = $2 AND p.resource::text = $3 AND p.scope = 'GLOBAL' AND p."isDeleted" = false`,
+			[role.id, action, resource],
+		);
+	}
+	if (role.holderEmail !== undefined) {
+		await pool.query(`INSERT INTO public."UserRole" (id, "userId", "roleId") SELECT uuidv7(), u.id, $1 FROM public."User" u WHERE u.email = $2`, [role.id, role.holderEmail]);
+	}
+}
+
+/** Removes a {@link createTestPlatformRole} role with its permissions and assignments. */
+export async function dropTestPlatformRole(pool: Pool, roleId: string): Promise<void> {
+	await pool.query(`DELETE FROM public."UserRole" WHERE "roleId" = $1`, [roleId]);
+	await pool.query(`DELETE FROM public."RolePermission" WHERE "roleId" = $1`, [roleId]);
+	await pool.query(`DELETE FROM public."Role" WHERE id = $1`, [roleId]);
 }

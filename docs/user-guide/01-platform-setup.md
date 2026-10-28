@@ -28,12 +28,12 @@ flowchart LR
 
 1. **Install and configure.** An engineer follows [Getting started](../technical/getting-started.md):
    installs dependencies, copies the `.env.example` files and fills in the secrets
-   (`pnpm secrets:generate apps/api/.env`).
+   (`pnpm tools secrets:generate apps/api/.env`).
 2. **Create the database.** `pnpm setup:db` applies the migrations, the row-level security
    policies and the `development` seed (demo accounts, merchants, rewards). The seed refuses to
    run unless the database is local and `NODE_ENV` is `development` or `test`
    ([Database](../technical/database.md#seed-data)). A deployed environment runs only
-   `pnpm db:deploy` (migrations + RLS) and, for reference data, `pnpm db:seed -- --scenario empty`.
+   `pnpm tools db:deploy` (migrations + RLS) and, for reference data, `pnpm db:seed -- --scenario empty`.
    There is no built-in command yet to create the **first SuperAdmin** on a non-demo database —
    see [known gaps](../technical/README.md#known-gaps).
 3. **Choose the delivery services.** Before real users arrive, configure

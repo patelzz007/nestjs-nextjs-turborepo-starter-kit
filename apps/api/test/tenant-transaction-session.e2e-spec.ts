@@ -15,7 +15,6 @@ import { TenantTransactionService } from "../src/prisma/tenant-transaction.servi
 
 /** Brew & Bean KL owner (seeded). */
 const KL_OWNER_USER_ID = "019b76da-a800-763a-b64a-fd037629f93f";
-const POLICY_VERSION = 7;
 
 const SessionRowSchema = z.object({
 	role: z.string(),
@@ -26,7 +25,6 @@ const SessionRowSchema = z.object({
 	apiKeyId: z.string(),
 	api_key_location_id: z.string(),
 	actorPurpose: z.string(),
-	policyVersion: z.string(),
 	correlationId: z.string(),
 });
 
@@ -45,7 +43,6 @@ async function readSession(tx: Prisma.TransactionClient): Promise<SessionRow> {
 		current_setting('app.current_api_key_id', true) AS "apiKeyId",
 		current_setting('app.current_api_key_location_id', true) AS api_key_location_id,
 		current_setting('app.actor_purpose', true) AS "actorPurpose",
-		COALESCE(current_setting('app.policy_version', true), '') AS "policyVersion",
 		current_setting('app.correlation_id', true) AS "correlationId"`;
 	const [row] = SessionRowsSchema.parse(rows);
 	return row;
@@ -94,7 +91,6 @@ describe("TenantTransactionService session stamping (e2e)", () => {
 			apiKeyId: "",
 			api_key_location_id: "",
 			actorPurpose: "",
-			policyVersion: "",
 		});
 		expect(session.correlationId.length).toBeGreaterThan(0);
 	});
@@ -104,7 +100,7 @@ describe("TenantTransactionService session stamping (e2e)", () => {
 
 		const session = await transactions.withRlsContext(scope, readSession);
 
-		expect(session).toMatchObject({ userId: "", apiKeyId: "key-1", api_key_location_id: "store-1", rls_bypass: "false", policyVersion: "" });
+		expect(session).toMatchObject({ userId: "", apiKeyId: "key-1", api_key_location_id: "store-1", rls_bypass: "false" });
 	});
 
 	it("stamps a system scope with its operation's role, the bypass, the acting user and the audit reason", async () => {
@@ -118,7 +114,6 @@ describe("TenantTransactionService session stamping (e2e)", () => {
 			rls_bypass: "true",
 			systemOperation: "outbox.enqueue",
 			actorPurpose: "e2e session stamp",
-			policyVersion: "",
 		});
 	});
 
@@ -141,13 +136,10 @@ describe("TenantTransactionService session stamping (e2e)", () => {
 		expect(session).toMatchObject({ userId: KL_OWNER_USER_ID, tenantId: "", rls_bypass: "false" });
 	});
 
-	it("stamps the encryption session's purpose and policy version on a tenant transaction", async () => {
-		const session = await transactions.withTenantTransaction(
-			{ userId: KL_OWNER_USER_ID, tenantId: TENANT_SEED_IDS.klTenant, purpose: "e2e-purpose", policyVersion: POLICY_VERSION },
-			readSession,
-		);
+	it("stamps the encryption session's purpose on a tenant transaction", async () => {
+		const session = await transactions.withTenantTransaction({ userId: KL_OWNER_USER_ID, tenantId: TENANT_SEED_IDS.klTenant, purpose: "e2e-purpose" }, readSession);
 
-		expect(session).toMatchObject({ actorPurpose: "e2e-purpose", policyVersion: String(POLICY_VERSION), rls_bypass: "false" });
+		expect(session).toMatchObject({ actorPurpose: "e2e-purpose", rls_bypass: "false" });
 	});
 
 	it("runs a system operation for a tenant user without a tenant (multi-tenant audit write), checked out under its own scope", async () => {

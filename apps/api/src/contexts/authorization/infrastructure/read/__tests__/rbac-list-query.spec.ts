@@ -2,9 +2,10 @@ import { buildPermissionListOrder, buildPermissionListWhere, buildRoleListOrder,
 
 describe("role list query → Prisma", () => {
 	it("lists live roles, narrowed by isActive and the name search", () => {
-		expect(buildRoleListWhere({ page: 1, limit: 20 })).toEqual({ AND: [{ isDeleted: false }] });
+		// Platform roles and templates only: a tenant's own roles are its data (ADR 067).
+		expect(buildRoleListWhere({ page: 1, limit: 20 })).toEqual({ AND: [{ isDeleted: false, tenantId: null }] });
 		expect(buildRoleListWhere({ page: 1, limit: 20, search: "edit", filter: { isActive: { eq: true } } })).toEqual({
-			AND: [{ isDeleted: false }, { isActive: { equals: true } }, { name: { contains: "edit", mode: "insensitive" } }],
+			AND: [{ isDeleted: false, tenantId: null }, { isActive: { equals: true } }, { name: { contains: "edit", mode: "insensitive" } }],
 		});
 	});
 

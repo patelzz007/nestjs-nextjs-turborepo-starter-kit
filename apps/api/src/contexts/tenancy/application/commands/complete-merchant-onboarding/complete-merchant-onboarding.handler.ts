@@ -102,7 +102,6 @@ export class CompleteMerchantOnboardingHandler implements ICommandHandler<Comple
 		await scope.audit.record({
 			tenantId,
 			actorUserId: userId,
-			policyVersion: await scope.tenantPolicies.activePolicyVersion(tenantId),
 			action: "membership.owner_created",
 			resourceType: "Membership",
 			resourceId: owner.id,
@@ -142,7 +141,6 @@ export class CompleteMerchantOnboardingHandler implements ICommandHandler<Comple
 		now: EpochMs,
 	): Promise<void> {
 		const { tenantId } = invite;
-		const policyVersion = await scope.tenantPolicies.activePolicyVersion(tenantId);
 		await scope.locations.lockTenant(tenantId);
 		const primaryDetails = { name: input.primaryLocation.name, addressText: input.primaryLocation.addressText, contactPhone: input.primaryLocation.contactPhone };
 		const existingPrimary = await scope.locations.findLivePrimary(tenantId);
@@ -156,7 +154,7 @@ export class CompleteMerchantOnboardingHandler implements ICommandHandler<Comple
 			primaryId = (await scope.locations.save(existingPrimary)).id;
 			scope.events.collectFrom(existingPrimary);
 		}
-		const auditBase = { tenantId, actorUserId: userId, policyVersion, resourceType: "Location" };
+		const auditBase = { tenantId, actorUserId: userId, resourceType: "Location" };
 		await scope.audit.record({ ...auditBase, action: "tenant.location.primary_finalized", resourceId: primaryId });
 
 		for (const draft of input.additionalLocations) {
@@ -183,8 +181,7 @@ export class CompleteMerchantOnboardingHandler implements ICommandHandler<Comple
 		tenant.renameAtOnboarding(invite.businessName);
 		tenant.activate(userId, now);
 		await scope.tenants.save(tenant);
-		const policyVersion = await scope.tenantPolicies.activePolicyVersion(invite.tenantId);
-		const auditBase = { tenantId: invite.tenantId, actorUserId: userId, policyVersion, resourceType: "Tenant", resourceId: invite.tenantId };
+		const auditBase = { tenantId: invite.tenantId, actorUserId: userId, resourceType: "Tenant", resourceId: invite.tenantId };
 		await scope.audit.record({ ...auditBase, action: "tenant.activated" });
 		await scope.audit.record({ ...auditBase, action: "merchant.onboarding_completed", metadata: { inviteId: invite.id, userId } });
 		scope.events.collectFrom(tenant);

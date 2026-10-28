@@ -3,12 +3,12 @@ title: "API reference — Files and object storage"
 description: "Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback."
 order: 8
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792540800000
+lastUpdated: 1793145600000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
 
-<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm docs:api -->
+<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm tools docs:api -->
 
 # API reference — Files and object storage
 
@@ -59,7 +59,7 @@ Get file metadata
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/files/01a15e74-65f3-72b2-9b47-dc2b68df560b
+GET /api/v1/files/01a18281-553f-7423-9d14-a888a76e5315
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -71,7 +71,7 @@ Response `200 OK` (application/json):
   "success": true,
   "data": {
     "file": {
-      "id": "01a15e74-65f3-72b2-9b47-dc2b68df560b",
+      "id": "01a18281-553f-7423-9d14-a888a76e5315",
       "category": "USER_AVATAR",
       "visibility": "PUBLIC",
       "originalName": "sample.png",
@@ -79,13 +79,13 @@ Response `200 OK` (application/json):
       "sizeBytes": 2004,
       "status": "READY",
       "scanStatus": "NOT_SCANNED",
-      "publicUrl": "http://192.168.100.23:8097/api/v1/files/01a15e74-65f3-72b2-9b47-dc2b68df560b/local-public",
-      "uploadedAt": 1792586049019
+      "publicUrl": "http://10.117.81.236:8097/api/v1/files/01a18281-553f-7423-9d14-a888a76e5315/local-public",
+      "uploadedAt": 1793190876481
     }
   },
   "meta": {
-    "correlationId": "uJXH39CVAYv7WaW7oWAlD",
-    "timestamp": 1792586050834
+    "correlationId": "q-2Xt704WmafIaVrNEE5E",
+    "timestamp": 1793190878177
   }
 }
 ```
@@ -123,7 +123,7 @@ Soft-delete a file and queue physical deletion
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-DELETE /api/v1/files/01a15e74-6daf-7588-9cd9-de687eaf77f1
+DELETE /api/v1/files/01a18281-5c6b-7c98-9b59-8da065fd4521
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -138,8 +138,8 @@ Response `200 OK` (application/json):
     "success": true
   },
   "meta": {
-    "correlationId": "4M_BoordRXXZIKdNGwWWl",
-    "timestamp": 1792586052972
+    "correlationId": "JjvhdneqUURu-C2OMz7TB",
+    "timestamp": 1793190880222
   }
 }
 ```
@@ -193,7 +193,7 @@ Complete a direct upload after browser upload
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-POST /api/v1/files/01a15e74-65f3-72b2-9b47-dc2b68df560b/complete
+POST /api/v1/files/01a18281-553f-7423-9d14-a888a76e5315/complete
 X-Client-Type: admin
 X-Mutation-Intent: same-origin
 Cookie: <session cookies from POST /api/v1/auth/login>
@@ -211,7 +211,7 @@ Response `201 Created` (application/json):
   "success": true,
   "data": {
     "file": {
-      "id": "01a15e74-65f3-72b2-9b47-dc2b68df560b",
+      "id": "01a18281-553f-7423-9d14-a888a76e5315",
       "category": "USER_AVATAR",
       "visibility": "PUBLIC",
       "originalName": "sample.png",
@@ -220,12 +220,12 @@ Response `201 Created` (application/json):
       "status": "SCANNING",
       "scanStatus": "SCANNING",
       "publicUrl": null,
-      "uploadedAt": 1792586049019
+      "uploadedAt": 1793190876481
     }
   },
   "meta": {
-    "correlationId": "5PaZNe6jc30HVgZ9i7ZVT",
-    "timestamp": 1792586049255
+    "correlationId": "0hoAwBTdkuJXjZu7yDnvM",
+    "timestamp": 1793190876624
   }
 }
 ```
@@ -264,7 +264,7 @@ Get a short-lived download URL for a private file
 **Example** — called as superadmin@example.com (admin panel).
 
 ```http
-GET /api/v1/files/01a15e74-65f3-72b2-9b47-dc2b68df560b/download-url
+GET /api/v1/files/01a18281-553f-7423-9d14-a888a76e5315/download-url
 X-Client-Type: admin
 Cookie: <session cookies from POST /api/v1/auth/login>
 ```
@@ -275,14 +275,14 @@ Response `200 OK` (application/json):
 {
   "success": true,
   "data": {
-    "fileId": "01a15e74-65f3-72b2-9b47-dc2b68df560b",
+    "fileId": "01a18281-553f-7423-9d14-a888a76e5315",
     "status": "READY",
-    "downloadUrl": "http://192.168.100.23:8097/api/v1/files/local-download?token=<redacted>",
-    "expiresAt": 1792586350887
+    "downloadUrl": "http://10.117.81.236:8097/api/v1/files/local-download?token=<redacted>",
+    "expiresAt": 1793191178227
   },
   "meta": {
-    "correlationId": "7vlUyXHqDyIfAVBwOkWCH",
-    "timestamp": 1792586050887
+    "correlationId": "K2Vv1G4G3CYTi0BzUxI33",
+    "timestamp": 1793190878227
   }
 }
 ```
@@ -313,7 +313,7 @@ Serve a READY public asset from local storage (development only)
 **Example** — called as no session.
 
 ```http
-GET /api/v1/files/01a15e74-6daf-7588-9cd9-de687eaf77f1/local-public
+GET /api/v1/files/01a18281-5c6b-7c98-9b59-8da065fd4521/local-public
 X-Client-Type: web
 ```
 
@@ -354,12 +354,12 @@ Receive a browser multipart upload for a signed local-storage ticket (developmen
 **Example** — called as the browser, posting to the upload ticket (no session needed).
 
 ```http
-POST /api/v1/files/01a15e74-65f3-72b2-9b47-dc2b68df560b/local-upload
+POST /api/v1/files/01a18281-553f-7423-9d14-a888a76e5315/local-upload
 Content-Type: multipart/form-data
 
 {
   "multipart/form-data": {
-    "key": "staging/users/01a15e72-17fb-723a-bb91-d4b541411c4e/avatar/01a15e74-65f3-72b2-9b47-dc2b68df560b-sample.png",
+    "key": "staging/users/01a1827f-433b-7236-8894-c37cafdb5f34/avatar/01a18281-553f-7423-9d14-a888a76e5315-sample.png",
     "token": "<redacted: one-time secret>",
     "file": "<the image bytes: sample.png, image/png>"
   }
@@ -375,8 +375,8 @@ Response `201 Created` (application/json):
     "success": true
   },
   "meta": {
-    "correlationId": "t74RpBtyXuMeOlbSMv_zX",
-    "timestamp": 1792586049094
+    "correlationId": "bd4r-SxhMcoGhTLgQQoj-",
+    "timestamp": 1793190876542
   }
 }
 ```
@@ -490,7 +490,7 @@ POST /api/v1/files/processing-callback
 Content-Type: application/json
 
 {
-  "fileId": "01a15e74-6daf-7588-9cd9-de687eaf77f1",
+  "fileId": "01a18281-5c6b-7c98-9b59-8da065fd4521",
   "status": "READY",
   "scanStatus": "CLEAN"
 }
@@ -506,8 +506,8 @@ Response `401 Unauthorized` (application/json):
     "message": "Invalid processing callback secret"
   },
   "meta": {
-    "correlationId": "90sEazRTBcq0msPgL2szH",
-    "timestamp": 1792586052753
+    "correlationId": "VIrE-CGy_8KTxcZiCHwzB",
+    "timestamp": 1793190880008
   }
 }
 ```
@@ -569,7 +569,7 @@ Content-Type: application/json
   "mimeType": "image/png",
   "sizeBytes": 2004,
   "checksumSha256": "79dc184da4077faf9a1025d14d8cc30faceea511c4fee4ba4deb4de2d486a8a2",
-  "userId": "01a15e72-17fb-723a-bb91-d4b541411c4e"
+  "userId": "01a1827f-433b-7236-8894-c37cafdb5f34"
 }
 ```
 
@@ -579,19 +579,19 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "fileId": "01a15e74-65f3-72b2-9b47-dc2b68df560b",
-    "objectPath": "staging/users/01a15e72-17fb-723a-bb91-d4b541411c4e/avatar/01a15e74-65f3-72b2-9b47-dc2b68df560b-sample.png",
+    "fileId": "01a18281-553f-7423-9d14-a888a76e5315",
+    "objectPath": "staging/users/01a1827f-433b-7236-8894-c37cafdb5f34/avatar/01a18281-553f-7423-9d14-a888a76e5315-sample.png",
     "expiresIn": 300,
     "method": "POST_MULTIPART",
-    "uploadUrl": "http://192.168.100.23:8097/api/v1/files/01a15e74-65f3-72b2-9b47-dc2b68df560b/local-upload",
+    "uploadUrl": "http://10.117.81.236:8097/api/v1/files/01a18281-553f-7423-9d14-a888a76e5315/local-upload",
     "fields": {
-      "key": "staging/users/01a15e72-17fb-723a-bb91-d4b541411c4e/avatar/01a15e74-65f3-72b2-9b47-dc2b68df560b-sample.png",
+      "key": "staging/users/01a1827f-433b-7236-8894-c37cafdb5f34/avatar/01a18281-553f-7423-9d14-a888a76e5315-sample.png",
       "token": "<redacted: one-time secret>"
     }
   },
   "meta": {
-    "correlationId": "wqEOyDfO1gHDKfzmmqNV5",
-    "timestamp": 1792586049029
+    "correlationId": "5LYJZF1NPErhu6Be15MtL",
+    "timestamp": 1793190876494
   }
 }
 ```
@@ -668,19 +668,19 @@ Response `201 Created` (application/json):
 {
   "success": true,
   "data": {
-    "fileId": "01a15e74-c81e-78e9-9c75-6c80102ffff1",
-    "objectPath": "staging/stores/019b76da-a800-7a94-a198-23ad1b4cfdd9/reward-images/01a15e74-c81e-78e9-9c75-6c80102ffff1-reward.png",
+    "fileId": "01a18281-a96e-778c-841a-e2ce89936492",
+    "objectPath": "staging/stores/019b76da-a800-7a94-a198-23ad1b4cfdd9/reward-images/01a18281-a96e-778c-841a-e2ce89936492-reward.png",
     "expiresIn": 300,
     "method": "POST_MULTIPART",
-    "uploadUrl": "http://192.168.100.23:8097/api/v1/files/01a15e74-c81e-78e9-9c75-6c80102ffff1/local-upload",
+    "uploadUrl": "http://10.117.81.236:8097/api/v1/files/01a18281-a96e-778c-841a-e2ce89936492/local-upload",
     "fields": {
-      "key": "staging/stores/019b76da-a800-7a94-a198-23ad1b4cfdd9/reward-images/01a15e74-c81e-78e9-9c75-6c80102ffff1-reward.png",
+      "key": "staging/stores/019b76da-a800-7a94-a198-23ad1b4cfdd9/reward-images/01a18281-a96e-778c-841a-e2ce89936492-reward.png",
       "token": "<redacted: one-time secret>"
     }
   },
   "meta": {
-    "correlationId": "DaVg_zEPb85yIL-1F2I9G",
-    "timestamp": 1792586074146
+    "correlationId": "kQKMVj0BehbR_t7LpE_TP",
+    "timestamp": 1793190898034
   }
 }
 ```

@@ -72,7 +72,7 @@ export default async function LandingPage({ searchParams }: { readonly searchPar
 			<LandingHero featuredOffers={featuredOffers} liveOfferCount={readLiveOfferCount(defaultResult)} secondaryAction={actions.hero} />
 			<LandingMerchants merchantNames={merchantNames} />
 			{/* The browse view owns the `#rewards` heading; offset it below the sticky header when jumped to. */}
-			<section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 [&_#rewards]:scroll-mt-24">
+			<section className="mx-auto max-w-10xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 [&_#rewards]:scroll-mt-24">
 				<DashboardBrowseView variant="landing" detailPathPrefix={ROUTE_PREFIXES.publicRewards} initialPage={toPrefetchedQuery(catalogStateKey, catalogResult)} />
 			</section>
 			<LandingHowItWorks />

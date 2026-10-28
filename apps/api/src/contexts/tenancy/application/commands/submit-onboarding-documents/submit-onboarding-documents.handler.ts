@@ -9,8 +9,7 @@ import { resolveDocumentsWindowInvite } from "../../onboarding-documents";
 import type { TenantsScope } from "../../tenants-scope";
 import type { InviteTokenPort } from "../../ports/invite-tokens.port";
 import type { KybReadPort } from "../../ports/kyb-read.port";
-import { TENANT_INVITATION_SUBMIT_ONBOARDING_DOCUMENTS_OPERATION, INVITE_TOKENS, KYB_READ, TENANTS_UNIT_OF_WORK, TENANT_POLICY } from "../../ports/tenants.tokens";
-import type { TenantPolicyPort } from "../../ports/tenant-policy.port";
+import { TENANT_INVITATION_SUBMIT_ONBOARDING_DOCUMENTS_OPERATION, INVITE_TOKENS, KYB_READ, TENANTS_UNIT_OF_WORK } from "../../ports/tenants.tokens";
 import { SubmitOnboardingDocumentsCommand, type OnboardingDocumentsSubmitted } from "./submit-onboarding-documents.command";
 
 /**
@@ -24,7 +23,6 @@ export class SubmitOnboardingDocumentsHandler implements ICommandHandler<SubmitO
 	public constructor(
 		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<TenantsScope>,
 		@Inject(KYB_READ) private readonly kyb: KybReadPort,
-		@Inject(TENANT_POLICY) private readonly tenantPolicy: TenantPolicyPort,
 		@Inject(INVITE_TOKENS) private readonly tokens: InviteTokenPort,
 		@Inject(CLOCK) private readonly clock: Clock,
 	) {}
@@ -33,7 +31,6 @@ export class SubmitOnboardingDocumentsHandler implements ICommandHandler<SubmitO
 		const { actor, input } = command;
 		const tokenHash = this.tokens.hash(input.token);
 		const window = await resolveDocumentsWindowInvite(this.kyb, tokenHash, this.clock.now());
-		const policyVersion = await this.tenantPolicy.activePolicyVersion(window.tenantId);
 
 		await this.uow.runSystemOperation(TENANT_INVITATION_SUBMIT_ONBOARDING_DOCUMENTS_OPERATION, actor, async (scope): Promise<void> => {
 			const invite = await scope.invitations.findAcceptedOnboardingInviteByTokenHash(tokenHash);
@@ -52,7 +49,6 @@ export class SubmitOnboardingDocumentsHandler implements ICommandHandler<SubmitO
 			await scope.audit.record({
 				tenantId: window.tenantId,
 				actorUserId: window.acceptedByUserId,
-				policyVersion,
 				action: "merchant.kyb_submitted",
 				resourceType: "TenantMerchantProfile",
 				resourceId: window.tenantId,

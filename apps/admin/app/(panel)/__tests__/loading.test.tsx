@@ -4,9 +4,9 @@ import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers"
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import AccountLoading from "../account/loading";
-import AccountProfileLoading from "../account/profile/loading";
-import AccountSecurityLoading from "../account/security/loading";
+import AccountLoading from "../(settings)/account/loading";
+import AccountProfileLoading from "../(settings)/account/profile/loading";
+import AccountSecurityLoading from "../(settings)/account/security/loading";
 import AnalyticsLoading from "../analytics/loading";
 import AuditLogDetailLoading from "../audit-logs/[id]/loading";
 import AuditLogsLoading from "../audit-logs/loading";
@@ -35,8 +35,8 @@ import MerchantVerificationLoading from "../merchants/verification/loading";
 import RewardsLoading from "../rewards/loading";
 import RewardsReviewLoading from "../rewards/review/loading";
 import RewardReviewDetailLoading from "../rewards/review/[id]/loading";
-import AccessControlLoading from "../settings/access/loading";
-import SettingsLoading from "../settings/loading";
+import AccessControlLoading from "../(settings)/settings/access/loading";
+import SettingsLoading from "../(settings)/settings/loading";
 import PanelCatchAllLoading from "../[...slug]/loading";
 import UserDetailLoading from "../users/[id]/loading";
 import UsersLoading from "../users/loading";
@@ -58,6 +58,8 @@ interface RouteLoadingCase {
 }
 
 const PAGE_HEADER = '[data-slot="page-header-skeleton"]';
+/** A settings section's header (`/settings/*`, `/account/*`): drawn inside the settings page that stays mounted. */
+const SECTION_HEADER = '[data-slot="settings-section-header-skeleton"]';
 const TABLE = '[data-slot="table-skeleton"]';
 
 const ROUTE_CASES: readonly RouteLoadingCase[] = [
@@ -165,8 +167,8 @@ const ROUTE_CASES: readonly RouteLoadingCase[] = [
 		announcement: "Loading reward…",
 		landmarks: ['[data-skeleton="reward-review-header"]', '[data-skeleton="reward-review-photo"]', '[data-skeleton="reward-review-details"]'],
 	},
-	{ route: "/settings", loadingView: SettingsLoading, announcement: "Loading access control…", landmarks: [PAGE_HEADER, '[data-skeleton="role-row"]'] },
-	{ route: "/settings/access", loadingView: AccessControlLoading, announcement: "Loading access control…", landmarks: [PAGE_HEADER, '[data-skeleton="role-row"]'] },
+	{ route: "/settings", loadingView: SettingsLoading, announcement: "Loading access control…", landmarks: [SECTION_HEADER, '[data-skeleton="role-row"]'] },
+	{ route: "/settings/access", loadingView: AccessControlLoading, announcement: "Loading access control…", landmarks: [SECTION_HEADER, '[data-skeleton="role-row"]'] },
 	{ route: "/users", loadingView: UsersLoading, announcement: "Loading users…", landmarks: [PAGE_HEADER, TABLE] },
 	{
 		route: "/users/[id]",
@@ -180,7 +182,7 @@ const ROUTE_CASES: readonly RouteLoadingCase[] = [
 		route: "/account",
 		loadingView: AccountLoading,
 		announcement: "Loading security settings…",
-		landmarks: [PAGE_HEADER, '[data-skeleton="security-section"]', '[data-slot="form-skeleton"]'],
+		landmarks: [SECTION_HEADER, '[data-skeleton="security-section"]', '[data-slot="form-skeleton"]'],
 	},
 	{
 		route: "/account/profile",
@@ -193,7 +195,7 @@ const ROUTE_CASES: readonly RouteLoadingCase[] = [
 		route: "/account/security",
 		loadingView: AccountSecurityLoading,
 		announcement: "Loading security settings…",
-		landmarks: [PAGE_HEADER, '[data-skeleton="security-section"]', '[data-slot="form-skeleton"]'],
+		landmarks: [SECTION_HEADER, '[data-skeleton="security-section"]', '[data-slot="form-skeleton"]'],
 	},
 ];
 

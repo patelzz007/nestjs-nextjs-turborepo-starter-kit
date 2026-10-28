@@ -37,7 +37,7 @@ flowchart LR
 2. **Database** (`apps/api/prisma`)
    - Model in `schema.prisma` with `isDeleted` / `deletedAt` / `deletedBy`, epoch-ms timestamps,
      indexes for every filter and sort; `pnpm db:migrate:create --name <change>` ([Database](./database.md)).
-   - RLS: manifest entry in `prisma/rls/manifest-index.ts` and policies; `pnpm db:check-rls-manifest`.
+   - RLS: manifest entry in `prisma/rls/manifest-index.ts` and policies; `pnpm tools db:check-rls-manifest`.
    - Seed rows for every new table and column (`db:check-seed-coverage` fails otherwise).
 3. **Authorization**
    - New permission(s) in `packages/shared/src/authorization/permission.ts` and the seed's permission
@@ -56,7 +56,7 @@ flowchart LR
 8. **Generated artifacts and docs**
    - `pnpm --filter @workspace/api openapi:export` (commits `docs/generated/openapi.json`).
    - Capture samples for the new endpoints (`apps/docs/scripts/capture-api-samples.mjs`) and run
-     `pnpm docs:api` ([how](./api/README.md#how-the-reference-is-generated)).
+     `pnpm tools docs:api` ([how](./api/README.md#how-the-reference-is-generated)).
    - User-guide page if operators see it; ADR if you made an architectural decision.
 9. **Gate** — `pnpm run lint` and `pnpm run test` (plus `pnpm run typecheck`) after your last edit.
 

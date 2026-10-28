@@ -23,9 +23,5 @@ export class CreatePermissionDto extends createZodDto(CreatePermissionExtendedSc
 /** Body for POST /admin/roles/:id/permissions */
 export class SyncRolePermissionsDto extends createZodDto(BulkAssignPermissionsSchema) {}
 
-/**
- * Body for PATCH /admin/permissions/:id. `conditions` is omitted: the endpoint
- * only edits metadata (policy conditions change through the policy workflow),
- * so the strict schema rejects it instead of silently ignoring it.
- */
-export class UpdatePermissionDto extends createZodDto(PermissionUpdateSchema.omit({ conditions: true })) {}
+/** Body for PATCH /admin/permissions/:id: the permission's metadata (description, group). */
+export class UpdatePermissionDto extends createZodDto(PermissionUpdateSchema) {}

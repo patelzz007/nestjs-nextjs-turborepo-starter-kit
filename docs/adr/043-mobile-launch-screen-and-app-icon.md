@@ -25,7 +25,7 @@ repository has no image tooling.
 
 - **Two shared colour tokens**, `splash` (slate, brand 800) and `splash-foreground` (white). They
   are the same in every theme, so launching looks the same in light and dark.
-- **Native assets generated from the token source.** `pnpm tokens:generate` renders, and copies to
+- **Native assets generated from the token source.** `pnpm tools tokens:generate` renders, and copies to
   `apps/mobile/assets/`:
   - `app-icon.png`: 1024 px, the white mark on a full `splash` square. iOS and Android apply their
     own masks.
@@ -63,4 +63,4 @@ repository has no image tooling.
   and the icon appear as configured in development and store builds, and the in-app launch screen
   appears everywhere, Expo Go included.
 - Changing the mark or the `splash` colour means editing the token source and running
-  `pnpm tokens:generate`. A store build is needed for new native assets, not an OTA update.
+  `pnpm tools tokens:generate`. A store build is needed for new native assets, not an OTA update.

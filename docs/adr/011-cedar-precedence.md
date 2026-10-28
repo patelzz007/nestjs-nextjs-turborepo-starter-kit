@@ -10,7 +10,7 @@ order: 11
 
 # ADR 011: Cedar ABAC Precedence and Policy Governance
 
-**Status:** Accepted  
+**Status:** Superseded by [ADR 067](./067-unified-authorization-model.md) (Cedar removed in Phase 4, 2026-10-28)  
 **Date:** 2026-09-13  
 **Deciders:** Backend Team
 

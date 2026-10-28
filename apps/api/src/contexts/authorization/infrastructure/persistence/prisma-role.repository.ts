@@ -17,26 +17,32 @@ function revisionData(revision: RoleRevision, updatedAt: number): Prisma.RoleUpd
  * `Role` and `RolePermission` on the RBAC transaction. Soft delete only: a removed role, and a
  * permission dropped from a role, keep their rows with `is_deleted = true`.
  */
+/**
+ * The platform's role set: platform roles and the tenant-role templates (no tenant). A tenant's own roles
+ * are administered by the tenant (`TenantAccessService`, ADR 067), never through the platform RBAC routes.
+ */
+const PLATFORM_SET = { tenantId: null } satisfies Prisma.RoleWhereInput;
+
 export class PrismaRoleRepository implements RoleRepository {
 	public constructor(private readonly db: Prisma.TransactionClient) {}
 
 	public async findLive(roleId: string): Promise<RoleAggregate | null> {
-		const row: Role | null = await this.db.role.findFirst({ where: { id: roleId, isDeleted: false } });
+		const row: Role | null = await this.db.role.findFirst({ where: { id: roleId, isDeleted: false, ...PLATFORM_SET } });
 		return row === null ? null : roleAggregateOf(row);
 	}
 
 	public async findIncludingDeleted(roleId: string): Promise<RoleAggregate | null> {
-		const row: Role | null = await this.db.role.findFirst({ where: { id: roleId } });
+		const row: Role | null = await this.db.role.findFirst({ where: { id: roleId, ...PLATFORM_SET } });
 		return row === null ? null : roleAggregateOf(row);
 	}
 
 	public async findLiveByName(name: string): Promise<RoleAggregate | null> {
-		const row: Role | null = await this.db.role.findFirst({ where: { name, isDeleted: false } });
+		const row: Role | null = await this.db.role.findFirst({ where: { name, isDeleted: false, ...PLATFORM_SET } });
 		return row === null ? null : roleAggregateOf(row);
 	}
 
 	public async isNameTaken(name: string): Promise<boolean> {
-		return (await this.db.role.count({ where: { name } })) > 0;
+		return (await this.db.role.count({ where: { name, ...PLATFORM_SET } })) > 0;
 	}
 
 	public async save(role: RoleAggregate): Promise<RoleState> {
@@ -56,7 +62,6 @@ export class PrismaRoleRepository implements RoleRepository {
 						name: state.name,
 						description: state.description,
 						isSystem: false,
-						...(state.parentId === null ? {} : { parent: { connect: { id: state.parentId } } }),
 					},
 				});
 				return;
@@ -68,9 +73,6 @@ export class PrismaRoleRepository implements RoleRepository {
 				return;
 			case "restored":
 				await this.db.role.update({ where: { id: state.id }, data: { isDeleted: false, deletedAt: null, isActive: true, updatedAt: state.updatedAt } });
-				return;
-			case "reparented":
-				await this.db.role.update({ where: { id: state.id }, data: { parentId: change.parentId, updatedAt: state.updatedAt } });
 				return;
 			case "permissions_synced":
 				await this.syncRolePermissions(state.id, change.permissionIds, change.assignedBy, state.updatedAt);

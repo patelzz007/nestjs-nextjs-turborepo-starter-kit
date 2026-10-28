@@ -117,7 +117,7 @@ Register `https://<random>.trycloudflare.com/notifications/email-webhook` in Res
 run: recreating the webhook in Resend issues a **new** signing secret — update `.env` and restart.
 For a stable URL create a named Cloudflare tunnel (below).
 
-**Quick tunnel that survives the terminal — `pnpm dev:tunnel`.** Run it from the repo root (it is the
+**Quick tunnel that survives the terminal — `pnpm tools dev:tunnel`.** Run it from the repo root (it is the
 `tunnel` command of `apps/api/scripts/dev.ts`). It starts `cloudflared` fully detached (its own
 session, logging to `cloudflared.log` in the system temp directory), waits up to 30 seconds for the
 URL, prints it, and — when `RESEND_API_KEY` is in `apps/api/.env` — **re-points the existing Resend

@@ -45,7 +45,7 @@ const SKELETON_PROPERTY_COUNT = 8;
 /** The page's shape while the item loads. */
 export function KanbanTaskDetailSkeleton(): React.JSX.Element {
 	return (
-		<div className="mx-auto flex w-full max-w-7xl flex-col gap-6" aria-hidden>
+		<div className="mx-auto flex w-full max-w-10xl flex-col gap-6" aria-hidden>
 			<Skeleton className="h-4 w-72" />
 			<div className="mt-6 flex flex-col gap-4">
 				<Skeleton className="size-11 rounded-lg" />
@@ -253,7 +253,7 @@ export function KanbanTaskDetailView({ taskId, initialTask }: KanbanTaskDetailVi
 	const typeLabel = KANBAN_TYPE_DISPLAY[task.type].label;
 
 	return (
-		<div className="mx-auto flex w-full max-w-7xl flex-col pb-16">
+		<div className="mx-auto flex w-full max-w-10xl flex-col pb-16">
 			<DetailBreadcrumb label={task.title} />
 			<header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 				<HierarchyTrail task={task} />

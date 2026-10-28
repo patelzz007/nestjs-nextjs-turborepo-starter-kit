@@ -14,7 +14,7 @@ Tenant isolation rests on database facts the API cannot see from its own code (m
 
 | Login | Used by | Privileges |
 | --- | --- | --- |
-| **Migration login** (owns the tables) | `pnpm db:deploy` (`prisma migrate deploy` + `db:apply-security`), `pnpm db:seed` | Owns the schema. `NOSUPERUSER`, `NOBYPASSRLS`. Member of `app_runtime` and `analytics_consumer` (granted by `db:apply-security`). |
+| **Migration login** (owns the tables) | `pnpm tools db:deploy` (`prisma migrate deploy` + `db:apply-security`), `pnpm db:seed` | Owns the schema. `NOSUPERUSER`, `NOBYPASSRLS`. Member of `app_runtime` and `analytics_consumer` (granted by `db:apply-security`). |
 | **Runtime login** (the API's `DATABASE_URL`) | the API, its jobs and crons | `NOSUPERUSER`, `NOBYPASSRLS`, member of `app_runtime` only. Never the table owner. |
 
 Every request, job and seed reaches the data as the `app_runtime` role (`NOLOGIN NOSUPERUSER NOINHERIT NOBYPASSRLS`, reached with `SET ROLE`). Every table **forces** RLS, so even the owner is filtered: the seed passes a policy only through its `seed.demo_dataset` system operation.
@@ -22,7 +22,7 @@ Every request, job and seed reaches the data as the `app_runtime` role (`NOLOGIN
 ## Set up
 
 1. Create the migration login as the database owner, without `SUPERUSER` or `BYPASSRLS`.
-2. Run `pnpm db:deploy` with the migration login. It creates `app_runtime`, `app_enumerator` and `analytics_consumer` and grants them to the applying login.
+2. Run `pnpm tools db:deploy` with the migration login. It creates `app_runtime`, `app_enumerator` and `analytics_consumer` and grants them to the applying login.
 3. Create the runtime login and `GRANT app_runtime TO <runtime login>`. Grant it nothing else.
 4. Point the API's `DATABASE_URL` at the runtime login.
 5. Start the API. Boot runs `RuntimeRoleProof`: it refuses to start when `app_runtime` is a superuser or has `BYPASSRLS`, or when any application table does not enable **and** force RLS. `GET /health/ready` reports the same check as `tenant-isolation` (critical).

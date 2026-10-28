@@ -15,3 +15,9 @@ export const FILES_AUTHORIZATION_OPERATION: SystemOperationName = "files.authori
 
 /** Reads an approved support grant: the authorization kernel (verify a request) and identity (start impersonation). */
 export const SUPPORT_ACCESS_VERIFY_OPERATION: SystemOperationName = "support_access.verify";
+
+/** Read the caller's role permissions, stores, grants and shares for one access decision (ADR 067). */
+export const ACCESS_FACTS_OPERATION: SystemOperationName = "authorization.access.facts";
+
+/** Write a tenant's own access (roles, member roles, grants, shares) after the decision service allowed it (ADR 067). */
+export const TENANT_ACCESS_WRITE_OPERATION: SystemOperationName = "authorization.tenant_access.write";

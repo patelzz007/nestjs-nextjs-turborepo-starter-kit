@@ -116,7 +116,7 @@ jobs:
       # Per-route first-load JS of the Next apps and the mobile Hermes bundles against
       # bundle-budgets.json (baseline + 10%, decision #57). Raising a budget is a reviewed edit.
       - name: Bundle budgets
-        run: pnpm bundle:check
+        run: pnpm tools bundle:check
 
   rls-manifest:
     name: RLS manifest drift
@@ -280,7 +280,7 @@ jobs:
         run: pnpm turbo run build --filter=@workspace/api^...
 
       - name: Apply migrations + RLS (prisma migrate deploy → db:apply-security)
-        run: pnpm db:deploy
+        run: pnpm tools db:deploy
 
       - name: Schema drift (prisma/migrations must reproduce prisma/schema.prisma)
         # `prisma migrate diff --from-migrations` replays the history into a
@@ -361,7 +361,7 @@ jobs:
         run: pnpm turbo run build --filter=@workspace/api^...
 
       - name: Apply migrations + RLS (prisma migrate deploy → db:apply-security)
-        run: pnpm db:deploy
+        run: pnpm tools db:deploy
 
       - name: Tenancy single-mode suite (ST-001…005)
         run: pnpm --filter @workspace/api test:e2e:tenancy:single
@@ -430,7 +430,7 @@ jobs:
 
       - name: Apply migrations + RLS, seed the development scenario
         run: |
-          pnpm db:deploy
+          pnpm tools db:deploy
           pnpm db:seed -- --scenario development
 
       - name: Start the API, web and admin (background, logs kept)
@@ -539,7 +539,7 @@ jobs:
         run: pnpm turbo run build --filter=@workspace/analytics-consumer^...
 
       - name: Apply migrations + RLS (creates the analytics_consumer role)
-        run: pnpm db:deploy
+        run: pnpm tools db:deploy
 
       - name: Analytics consumer e2e tests
         run: pnpm --filter @workspace/analytics-consumer test:e2e

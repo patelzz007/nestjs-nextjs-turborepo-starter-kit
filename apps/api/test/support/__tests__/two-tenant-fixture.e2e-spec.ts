@@ -40,7 +40,7 @@ describe("two-tenant fixture", () => {
 			expect(customer.isSuperAdmin).toBe(false);
 			expect(platform.isSuperAdmin).toBe(true);
 			expect(memberships).toEqual([]);
-			expect(suspended).toMatchObject({ tenantId: ids.tenantA, userId: ids.userASuspended, role: "MEMBER", status: "SUSPENDED", isDeleted: false });
+			expect(suspended).toMatchObject({ tenantId: ids.tenantA, userId: ids.userASuspended, role: "CASHIER", status: "SUSPENDED", isDeleted: false });
 			expect(claim).toMatchObject({ userId: ids.userCustomerC, rewardId: ids.rewardA, status: "PENDING" });
 			expect(redemption).toMatchObject({ tenantId: ids.tenantA, locationId: ids.locationAKl, claimId: ids.claimARedeemed });
 			expect(terminal).toMatchObject({ tenantId: ids.tenantA, locationId: ids.locationAKl, apiKeyId: ids.apiKeyA, terminalId: "FIXTURE-A-KL" });

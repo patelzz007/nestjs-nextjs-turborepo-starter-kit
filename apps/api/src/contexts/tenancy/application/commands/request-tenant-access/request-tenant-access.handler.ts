@@ -9,8 +9,7 @@ import { requireUserActor } from "../../tenant-actor";
 import { toAccessRequestResponse } from "../../tenant-responses";
 import type { TenantsScope } from "../../tenants-scope";
 import type { TenantDirectoryPort } from "../../ports/tenant-directory.port";
-import { TENANT_DIRECTORY, TENANTS_UNIT_OF_WORK, TENANT_POLICY } from "../../ports/tenants.tokens";
-import type { TenantPolicyPort } from "../../ports/tenant-policy.port";
+import { TENANT_DIRECTORY, TENANTS_UNIT_OF_WORK } from "../../ports/tenants.tokens";
 import { RequestTenantAccessCommand } from "./request-tenant-access.command";
 
 @CommandHandler(RequestTenantAccessCommand)
@@ -18,7 +17,6 @@ export class RequestTenantAccessHandler implements ICommandHandler<RequestTenant
 	public constructor(
 		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<TenantsScope>,
 		@Inject(TENANT_DIRECTORY) private readonly directory: TenantDirectoryPort,
-		@Inject(TENANT_POLICY) private readonly tenantPolicy: TenantPolicyPort,
 		@Inject(CLOCK) private readonly clock: Clock,
 	) {}
 
@@ -26,7 +24,6 @@ export class RequestTenantAccessHandler implements ICommandHandler<RequestTenant
 		const { actor, input } = command;
 		const user = requireUserActor(actor);
 		const tenantId = await this.directory.resolveTenantId(input.tenantSlug);
-		const policyVersion = await this.tenantPolicy.activePolicyVersion(tenantId);
 
 		return this.uow.runSystemOperation("tenant.access_request.create", actor, async (scope): Promise<TenantAccessRequestResponse> => {
 			const preconditions = {
@@ -38,7 +35,6 @@ export class RequestTenantAccessHandler implements ICommandHandler<RequestTenant
 			await scope.audit.record({
 				tenantId,
 				actorUserId: user.userId,
-				policyVersion,
 				action: "membership.access_request_created",
 				resourceType: "TenantAccessRequest",
 				resourceId: stored.id,

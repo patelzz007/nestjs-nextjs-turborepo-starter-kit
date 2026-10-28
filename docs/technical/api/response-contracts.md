@@ -90,7 +90,7 @@ monitors key on the HTTP status only, so they keep the standard envelope. Errors
    type fits the schema's input. A Prisma row with `bigint` epochs, `Date`, `Decimal` or `Json`
    columns is mapped to the DTO in the repository / service (`epochMs(Number(row.createdAt))`).
    Never cast to make it compile.
-5. **Artifact** — `pnpm openapi:export` and commit `docs/generated/openapi.json` with the change.
+5. **Artifact** — `pnpm tools openapi:export` and commit `docs/generated/openapi.json` with the change.
 
 ## 3. What the API enforces at runtime
 
@@ -177,7 +177,7 @@ SSR prefetches classify it as `{ kind: "schema", message: "<path>: <issue>" }`.
 sorted keys, two-space indent and a trailing newline — byte-for-byte reproducible.
 
 ```bash
-pnpm openapi:export   # turbo run openapi:export --filter=@workspace/api — needs Postgres + Redis, like test:e2e
+pnpm tools openapi:export   # turbo run openapi:export --filter=@workspace/api — needs Postgres + Redis, like test:e2e
 ```
 
 `test/openapi-artifact.e2e-spec.ts` (in `pnpm --filter @workspace/api test:e2e`) fails while the
@@ -189,5 +189,5 @@ committed file differs from what the API builds; `openapi:export` is that spec w
 - [ ] Contract leaf has `response: singleResponse(...)` / `paginatedResponse(...)`
 - [ ] Handler has exactly one `@ZodResponse` / `@ZodPaginatedResponse` / `@ZodRawResponse` with the same schema and the right `status`
 - [ ] No Prisma types, `bigint` or `Date` in the handler's return type; no casts
-- [ ] `pnpm openapi:export` run and `docs/generated/openapi.json` committed
+- [ ] `pnpm tools openapi:export` run and `docs/generated/openapi.json` committed
 - [ ] `pnpm --filter @workspace/api test:e2e` green (OpenAPI + artifact + response-contract specs)

@@ -99,7 +99,7 @@ describe("MerchantRedemptionsPageView authorization", () => {
 	});
 
 	it("denies the page and skips the redemptions query without the capability", () => {
-		renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "MEMBER" });
+		renderWithAuthorization(<MerchantRedemptionsPageView tenantSlug={TEST_ORG_SLUG} today={TODAY} />, { role: "CASHIER", capabilities: [] });
 
 		expect(screen.getByText("You don't have access to this page")).toBeTruthy();
 		expect(redemptionsQuery).not.toHaveBeenCalled();

@@ -41,13 +41,13 @@ function RoleActions(): React.JSX.Element {
 
 | Function | Meaning |
 |---|---|
-| `can(permission, resource?)` | true when allowed |
-| `cannot(permission, resource?)` | `!can(...)` — reads better for `disabled={cannot(...)}` |
-| `canAll(permissions, resource?)` | every permission is allowed (AND) |
-| `canAny(permissions, resource?)` | at least one is allowed (OR) |
+| `can(permission)` | true when allowed |
+| `cannot(permission)` | `!can(...)` — reads better for `disabled={cannot(...)}` |
+| `canAll(permissions)` | every permission is allowed (AND) |
+| `canAny(permissions)` | at least one is allowed (OR) |
 
-- `MANAGE` implies every action on the **same** resource:
-  holding `PERMISSION.ORDER.MANAGE` makes `can(PERMISSION.ORDER.DELETE)` true.
+- A check needs **that exact** capability: there is no catch-all action (ADR 067 retired `MANAGE`), so
+  holding `PERMISSION.USER.UPDATE` never makes `can(PERMISSION.USER.DELETE)` true.
 - `useCan()` is an alias kept for older code. Prefer `useAuthorization()`.
 - **Without a provider every check returns `false`** (deny by default).
 
@@ -69,33 +69,15 @@ import { Can } from "@workspace/client/lib/contexts/authorization";
 |---|---|
 | `permission` | one required capability |
 | `Permission` + `mode` | several; `"any"` (default) or `"all"` |
-| `resource` | a record carrying server-evaluated capabilities (see §1.3) |
 | `fallback` | what to render when denied (default: nothing) |
 
-### 1.3 Resource-aware checks (per record)
+### 1.3 Decisions about one record
 
-Some decisions depend on the **record** (ownership, store, ACL, status). The browser must not
-re-implement those rules (spec §9, §12). Instead the API can attach server-evaluated
-capabilities to a record:
-
-```json
-{ "id": "order-123", "status": "PENDING", "authorization": { "can": { "read": true, "update": true, "delete": false } } }
-```
-
-Then:
-
-```tsx
-{can(PERMISSION.ORDER.DELETE, order) && <DeleteButton />}
-<Can permission={PERMISSION.ORDER.UPDATE} resource={order}><EditButton /></Can>
-```
-
-| Record has `authorization`? | `can(permission, record)` uses |
-|---|---|
-| **yes** | the server's answer for that action (a missing entry = `false`). It already includes scope, ownership, ACL and policy — and may even be `true` without the global permission (e.g. an ACL grant). |
-| **no** | the global capability, same as `can(permission)` |
-
-On the backend, produce the map with `kernel.resourceCapabilities(...)`, or ask for several
-checks at once with `POST /api/v1/authorization/decisions`.
+`can()` answers from the session's capabilities: "may this person delete users at all?". Whether
+they may act on **one** record (their own store, a reward in review) depends on rules the browser
+must not re-implement. Show the action when the capability is held, and let the API decide on the
+record: it answers `403` when the rule says no. For several checks at once, ask
+`POST /api/v1/authorization/decisions` ([backend §14](./backend.md#14-the-decisions-endpoint-for-uis)).
 
 ### 1.4 Vocabulary — never type slugs by hand
 
@@ -118,7 +100,7 @@ MERCHANT_CAPABILITY.manageRewards  // "merchant:manage_rewards"
 |---|---|---|
 | Admin | `GET /auth/permissions`, preloaded on the server in `app/(panel)/layout.tsx`, then `useSessionPermissionsQuery()` (`lib/session/capabilities.ts`) | refetch on window focus + every 60 s; **live data wins even when empty** (a user whose permissions were all revoked immediately sees nothing) |
 | Web | same endpoint, in `WebAuthorizationProvider` (`components/auth/web-authorization-provider.tsx`) mounted in `app/layout.tsx` | same rules; **guests never call the endpoint** and get an empty set |
-| Merchant | the active tenant membership (`api.tenants.membershipsBootstrap`) → role → `MERCHANT_ROLE_CAPABILITIES`, in `MerchantAuthorizationProvider`; the server page guard reads the same memberships per request | refetched with the memberships query |
+| Merchant | the active tenant membership (`api.tenants.membershipsBootstrap`) → its `capabilities` (the API's answer: role plus live grants, ADR 067), in `MerchantAuthorizationProvider`; the server page guard reads the same memberships per request | refetched with the memberships query |
 
 Platform SuperAdmins receive **every** platform capability from `/auth/permissions`, because
 the backend lets them do everything.
@@ -170,9 +152,9 @@ What is gated (each maps to the permission of the API route it calls):
 | User access panel | assign / remove roles `ROLE.UPDATE`; direct grants `PERMISSION.UPDATE`; permission checker `PERMISSION.READ` | read-only notice, checker hidden |
 | Users pages, MFA recovery review | SuperAdmin | hidden / denied |
 | Impersonate | SuperAdmin and not already impersonating | hidden |
-| Merchants / KYB / locations | `MERCHANT_ORG.LIST`; decisions and reviews `MERCHANT_ORG.MANAGE` | read-only notice |
-| Pending rewards review, approve / reject | `REWARD.MANAGE` (the page's own rule, so the actions are not re-checked) | page denied |
-| Invites | `MERCHANT_ORG.MANAGE` | page denied |
+| Merchants / KYB / locations | `MERCHANT_ORG.LIST`; KYB and store-request decisions `MERCHANT_ORG.APPROVE`; suspend / reinstate / reject an appeal `MERCHANT_ORG.SUSPEND` / `REACTIVATE` / `REJECT` | read-only notice |
+| Pending rewards review, approve / reject | `REWARD.APPROVE` (the page's own rule); the Reject button also needs `REWARD.REJECT` | page denied |
+| Invites | `MERCHANT_ORG.CREATE` | page denied |
 | Emails / email log / send test email | `EMAIL.READ` / `EMAIL.LIST` / `EMAIL.CREATE` | page denied / disabled button with reason |
 | Geo | `GEO.READ` | page denied |
 | Sales analytics page (`GET /admin/analytics/sales`) | `ANALYTICS.READ` | page denied |
@@ -184,8 +166,9 @@ What is gated (each maps to the permission of the API route it calls):
 ## 5. Merchant app (`apps/merchant`)
 
 Every merchant gate checks a **`merchant:*` capability** (`MERCHANT_CAPABILITY.*`) — never a
-membership role name. Capabilities come from the active membership's role through
-`MERCHANT_ROLE_CAPABILITIES`, the same table the API enforces first (see the
+membership role name. Capabilities come from the active membership's `capabilities` — what the API
+decided the member holds (their tenant role plus live grants); `resolveMerchantCapabilities` falls back
+to the role's template only when a membership carries none (see the
 [backend role table](./backend.md#12-merchant-capabilities)).
 
 | Building block | File |
@@ -233,7 +216,7 @@ export default async function TenantTeamPage({ params }: Props): Promise<React.J
 | `/terminals` | `manageApiKeys` (a paired till receives an API key) | denied page (no query is sent) |
 | `/api-keys` | `manageApiKeys` | denied page |
 | `/settings` | any of `manageTeam`, `viewLocations`, `manageVerification` | denied page; each card shows only with its page's capability |
-| `/settings/team` | `manageTeam` (`OWNER`, `ADMIN`) | "Team access required" |
+| `/settings/team` | `manageTeam` (Owner, Manager) | "Team access required" |
 | `/settings/locations` | `viewLocations` (every member); add / resubmit store needs `manageLocations` | denied page; action hidden + read-only notice |
 | `/settings/branding` | `viewLocations` (every member); uploading or removing the logo needs `manageLocations` (the API's `STORE_LOGO` rule) | denied page; controls disabled + read-only notice |
 | `/settings/verification` | `manageVerification` (`OWNER` only — the API enforces the same) | "Owner access required" |
@@ -321,5 +304,5 @@ page never shows up in search. Tests cover six levels of nesting.
 3. Gate in the **container** component; keep presentational components data-agnostic (spec §82).
 4. Choose the UX from §3 (hide / disabled with reason / fallback).
 5. Handle loading so allowed users never see a denial flash.
-6. Add a test with and without the capability (see [testing](./testing.md#4-frontend-tests)).
+6. Add a test with and without the capability (see [testing](./recipes.md#frontend-tests)).
 7. Remember: the API must still enforce it. If it does not, fix the API first.

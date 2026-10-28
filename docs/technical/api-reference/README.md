@@ -1,32 +1,32 @@
 ---
 title: "API reference"
-description: "Every endpoint of the API (319 operations), generated from the OpenAPI export with real seed-data samples."
+description: "Every endpoint of the API (331 operations), generated from the OpenAPI export with real seed-data samples."
 order: 1
 author: "Generated from the OpenAPI export"
-lastUpdated: 1792540800000
+lastUpdated: 1793145600000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
 tags: ["api", "reference", "generated"]
 ---
 
-<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm docs:api -->
+<!-- GENERATED FILE — do not edit. Source: docs/generated/openapi.json + apps/api controller decorators + docs/generated/api-samples.json. Regenerate: pnpm tools docs:api -->
 
 # API reference
 
-Every endpoint of `apps/api` — 319 operations, 232 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+Every endpoint of `apps/api` — 331 operations, 229 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
 
 **Content type.** Every endpoint takes and returns `application/json` unless its *Content type* line names another (a file upload, a download, a live stream). Errors are always `application/json`.
 
 > [!NOTE]
-> This folder is generated. Edit the controllers / zod contracts (or the capture script), then run `pnpm docs:api` — see [how the reference is generated](../api/README.md#how-the-reference-is-generated).
+> This folder is generated. Edit the controllers / zod contracts (or the capture script), then run `pnpm tools docs:api` — see [how the reference is generated](../api/README.md#how-the-reference-is-generated).
 
 ## Pages
 
 | Page | Endpoints | Covers |
 | --- | --- | --- |
 | [Auth, sessions and account security](./auth-and-sessions.md) | 47 | Login, signup, email verification, password reset, two-factor authentication, MFA recovery, sessions, impersonation and support access. |
-| [Roles, permissions, policies and audit](./access-control.md) | 37 | Platform RBAC administration, authorization decisions, Cedar policy drafts, the capability catalog and the HTTP audit log. |
+| [Roles, permissions and audit](./access-control.md) | 33 | Platform RBAC administration, authorization decisions, the capability catalog and the HTTP audit log. |
 | [Platform administration (merchants, rewards review, analytics)](./platform-admin.md) | 25 | What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales. |
-| [Merchant tenants (portal API)](./merchant-tenants.md) | 56 | Everything the merchant portal calls under /tenants/{tenantSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
+| [Merchant tenants (portal API)](./merchant-tenants.md) | 72 | Everything the merchant portal calls under /tenants/{tenantSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
 | [Customer rewards and claims](./customer-rewards.md) | 15 | The consumer app's API: browse rewards, share them with friends, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics. |
 | [Point of sale and integrations (machine-to-machine)](./pos.md) | 13 | Terminal pairing, validating a customer's QR / backup code and recording the paid bill, plus the integration API (`/integration/*`: rewards, analytics, redemption history). Authenticated with a merchant API key, which names its own tenant. |
 | [Files and object storage](./files.md) | 11 | Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback. |
@@ -112,7 +112,6 @@ Every endpoint of `apps/api` — 319 operations, 232 with a sample captured from
 | GET | [`/api/v1/admin/roles/{id}`](./access-control.md#get-apiv1adminrolesid) |  |
 | PATCH | [`/api/v1/admin/roles/{id}`](./access-control.md#patch-apiv1adminrolesid) |  |
 | DELETE | [`/api/v1/admin/roles/{id}`](./access-control.md#delete-apiv1adminrolesid) |  |
-| PATCH | [`/api/v1/admin/roles/{id}/parent`](./access-control.md#patch-apiv1adminrolesidparent) |  |
 | POST | [`/api/v1/admin/roles/{id}/permissions`](./access-control.md#post-apiv1adminrolesidpermissions) |  |
 | POST | [`/api/v1/admin/roles/{id}/restore`](./access-control.md#post-apiv1adminrolesidrestore) |  |
 | POST | [`/api/v1/admin/roles/{id}/validate-assignment`](./access-control.md#post-apiv1adminrolesidvalidate-assignment) |  |
@@ -123,9 +122,6 @@ Every endpoint of `apps/api` — 319 operations, 232 with a sample captured from
 | POST | [`/api/v1/authorization/decisions`](./access-control.md#post-apiv1authorizationdecisions) | Evaluate capability checks for the current user (UI hints — the API re-authorizes every operation) |
 | GET | [`/api/v1/authorization/decisions/explain`](./access-control.md#get-apiv1authorizationdecisionsexplain) | Admin: step-by-step explanation of an authorization decision |
 | GET | [`/api/v1/capabilities/catalog`](./access-control.md#get-apiv1capabilitiescatalog) | List capability catalog entries (optionally filtered by scope) |
-| POST | [`/api/v1/policies/drafts`](./access-control.md#post-apiv1policiesdrafts) |  |
-| POST | [`/api/v1/policies/drafts/{draftId}/simulate`](./access-control.md#post-apiv1policiesdraftsdraftidsimulate) |  |
-| POST | [`/api/v1/policies/publish`](./access-control.md#post-apiv1policiespublish) |  |
 | GET | [`/api/v1/admin/analytics/dashboard`](./platform-admin.md#get-apiv1adminanalyticsdashboard) | Platform analytics dashboard: custom range + interval, compared totals, series, top merchants, categories, cities, new vs returning customers |
 | GET | [`/api/v1/admin/analytics/export`](./platform-admin.md#get-apiv1adminanalyticsexport) | Download the platform analytics report (csv \| xlsx \| pdf) for a date range |
 | GET | [`/api/v1/admin/analytics/sales`](./platform-admin.md#get-apiv1adminanalyticssales) | Platform-wide sales: paid POS bills, compared with the previous period, plus top merchants |
@@ -154,6 +150,22 @@ Every endpoint of `apps/api` — 319 operations, 232 with a sample captured from
 | POST | [`/api/v1/admin/tenants/invites`](./merchant-tenants.md#post-apiv1admintenantsinvites) |  |
 | POST | [`/api/v1/tenants/{tenantSlug}/access-requests`](./merchant-tenants.md#post-apiv1tenantstenantslugaccess-requests) |  |
 | POST | [`/api/v1/tenants/{tenantSlug}/access-requests/{requestId}/review`](./merchant-tenants.md#post-apiv1tenantstenantslugaccess-requestsrequestidreview) |  |
+| DELETE | [`/api/v1/tenants/{tenantSlug}/access/grants/{grantId}`](./merchant-tenants.md#delete-apiv1tenantstenantslugaccessgrantsgrantid) | Take an extra permission back (its granter always may) |
+| GET | [`/api/v1/tenants/{tenantSlug}/access/members/{membershipId}`](./merchant-tenants.md#get-apiv1tenantstenantslugaccessmembersmembershipid) | One member's access: their role and stores |
+| DELETE | [`/api/v1/tenants/{tenantSlug}/access/members/{membershipId}`](./merchant-tenants.md#delete-apiv1tenantstenantslugaccessmembersmembershipid) | Remove a member: their role, grants and shares stop at once |
+| GET | [`/api/v1/tenants/{tenantSlug}/access/members/{membershipId}/grants`](./merchant-tenants.md#get-apiv1tenantstenantslugaccessmembersmembershipidgrants) | A member's extra permissions still in force, newest first, with their end time |
+| POST | [`/api/v1/tenants/{tenantSlug}/access/members/{membershipId}/grants`](./merchant-tenants.md#post-apiv1tenantstenantslugaccessmembersmembershipidgrants) | Give a member an extra permission, permanent or until `expiresAt` |
+| PUT | [`/api/v1/tenants/{tenantSlug}/access/members/{membershipId}/role`](./merchant-tenants.md#put-apiv1tenantstenantslugaccessmembersmembershipidrole) | Change a member's role |
+| GET | [`/api/v1/tenants/{tenantSlug}/access/roles`](./merchant-tenants.md#get-apiv1tenantstenantslugaccessroles) | The tenant's roles, with their permissions and how many members hold each |
+| POST | [`/api/v1/tenants/{tenantSlug}/access/roles`](./merchant-tenants.md#post-apiv1tenantstenantslugaccessroles) | Create a role from tenant permissions the caller's own role holds |
+| PATCH | [`/api/v1/tenants/{tenantSlug}/access/roles/{roleId}`](./merchant-tenants.md#patch-apiv1tenantstenantslugaccessrolesroleid) | Rename a role or replace its permissions (never the Owner role) |
+| DELETE | [`/api/v1/tenants/{tenantSlug}/access/roles/{roleId}`](./merchant-tenants.md#delete-apiv1tenantstenantslugaccessrolesroleid) | Delete a role no member holds |
+| GET | [`/api/v1/tenants/{tenantSlug}/access/roles/{roleId}/holders`](./merchant-tenants.md#get-apiv1tenantstenantslugaccessrolesroleidholders) | The members holding a role, and the version of that list to quote when reassigning them |
+| POST | [`/api/v1/tenants/{tenantSlug}/access/roles/{roleId}/reassign`](./merchant-tenants.md#post-apiv1tenantstenantslugaccessrolesroleidreassign) | Move every holder of a role to a new role in one step |
+| POST | [`/api/v1/tenants/{tenantSlug}/access/roles/{roleId}/reset`](./merchant-tenants.md#post-apiv1tenantstenantslugaccessrolesroleidreset) | Make a role equal the template it was copied from again |
+| GET | [`/api/v1/tenants/{tenantSlug}/access/shares`](./merchant-tenants.md#get-apiv1tenantstenantslugaccessshares) | The records shared with single members, newest first |
+| POST | [`/api/v1/tenants/{tenantSlug}/access/shares`](./merchant-tenants.md#post-apiv1tenantstenantslugaccessshares) | Share one record with one member, to view or edit, permanent or until `expiresAt` |
+| DELETE | [`/api/v1/tenants/{tenantSlug}/access/shares/{shareId}`](./merchant-tenants.md#delete-apiv1tenantstenantslugaccesssharesshareid) | Stop sharing a record (its sharer always may) |
 | GET | [`/api/v1/tenants/{tenantSlug}/analytics`](./merchant-tenants.md#get-apiv1tenantstenantsluganalytics) | Tenant reward performance analytics |
 | GET | [`/api/v1/tenants/{tenantSlug}/analytics/dashboard`](./merchant-tenants.md#get-apiv1tenantstenantsluganalyticsdashboard) | Merchant analytics dashboard: custom range + interval, compared totals, series, store / reward / redemption-method breakdowns |
 | GET | [`/api/v1/tenants/{tenantSlug}/analytics/export`](./merchant-tenants.md#get-apiv1tenantstenantsluganalyticsexport) | Download the merchant analytics report (csv \| xlsx \| pdf) for a date range |

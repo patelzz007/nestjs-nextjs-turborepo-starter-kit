@@ -1,6 +1,5 @@
 import type { User } from "@prisma/client";
 
-import { seedPlatformGuardrails } from "../tenants";
 import type { ReferenceData } from "../reference-data";
 import { requireRow } from "../require-row";
 import { seedSignupReferralCodes } from "../signup-referrals";
@@ -17,8 +16,7 @@ export interface PlatformAccounts {
 
 /**
  * The documented platform test accounts (superadmin/admin/manager/user + demo
- * users), their platform roles and direct grants, and the platform guardrail
- * Cedar policy. Used by scenarios that need a working admin panel without the
+ * users), their platform roles and direct grants. Used by scenarios that need a working admin panel without the
  * full development dataset.
  */
 export async function seedPlatformAccounts(reference: ReferenceData): Promise<PlatformAccounts> {
@@ -34,15 +32,6 @@ export async function seedPlatformAccounts(reference: ReferenceData): Promise<Pl
 		`user ${PLATFORM_ADMIN_EMAIL}`,
 	);
 
-	seedLog("Seeding platform guardrail policies...");
-	// Four-eyes: drafted by the platform admin, approved and published by the SuperAdmin.
-	const superAdminUser = requireRow(
-		users.find((user) => user.email === PLATFORM_SUPERADMIN_EMAIL),
-		`user ${PLATFORM_SUPERADMIN_EMAIL}`,
-	);
-	await seedPlatformGuardrails(adminUser, superAdminUser);
-	seedLog("✅ Platform guardrails seeded");
-
 	return { users, adminUser };
 }
 
@@ -51,12 +40,12 @@ export function printPlatformAccountCredentials(): void {
 ──────────────────────────────────────────────
 superadmin@example.com    /  SuperAdmin@123  (isSuperAdmin · ENTERPRISE · email verified)
 admin@example.com         /  Admin@123       (Admin role  · ENTERPRISE · email verified)
-manager@example.com       /  Manager@123     (Manager role · PRO)
+manager@example.com       /  Manager@123     (Admin role · PRO)
 user@example.com          /  User@123        (User role · FREE)
 alice.johnson@example.com /  Alice@123       (User role · PRO)
 bob.smith@example.com     /  Bob@123         (User role · PRO)
 carol.white@example.com   /  Carol@123       (User role · FREE)
-david.lee@example.com     /  David@123       (Manager role · PRO)
+david.lee@example.com     /  David@123       (Admin role · PRO)
 eve.davis@example.com     /  Eve@123         (User role · FREE · INACTIVE)
 frank.miller@example.com  /  Frank@123       (Admin role · ENTERPRISE)
 grace.wilson@example.com  /  Grace@123       (User role · FREE)

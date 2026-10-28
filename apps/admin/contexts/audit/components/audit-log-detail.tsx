@@ -45,7 +45,7 @@ export default function AuditLogDetailView({ id, initialRecord }: AuditLogDetail
 	}
 
 	return (
-		<div className="mx-auto w-full max-w-7xl space-y-6">
+		<div className="mx-auto w-full max-w-10xl space-y-6">
 			<Link href={ROUTES.auditLogs.list} className={buttonVariants({ variant: "outline", size: "sm" })}>
 				Back to audit log
 			</Link>

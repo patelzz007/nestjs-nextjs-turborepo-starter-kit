@@ -10,7 +10,7 @@ order: 2
 
 # RLS Coverage Matrix
 
-One row per table that carries a `tenantId` (plus `Tenant` itself), read from the PostgreSQL catalog (`pg_class`, `pg_policies`) of a freshly migrated database with `pnpm db:apply-security` applied. Multi-tenancy plan MT-71.
+One row per table that carries a `tenantId` (plus `Tenant` itself), read from the PostgreSQL catalog (`pg_class`, `pg_policies`) of a freshly migrated database with `pnpm tools db:apply-security` applied. Multi-tenancy plan MT-71.
 
 - **RLS / Forced**: `relrowsecurity` / `relforcerowsecurity`. Every application table must have both, or the API refuses to boot (`RuntimeRoleProof`, D9) — so a `no` here cannot ship.
 - **Read / Insert / Update / Delete**: whether a policy admits that command for the runtime role. A policy admits a system operation only through `app_rls_bypass_on('<table>')`, which lists the tables each operation may reach (`src/prisma/system-operation.registry.ts`).
@@ -21,13 +21,10 @@ One row per table that carries a `tenantId` (plus `Tenant` itself), read from th
 |---|---|---|---|---|---|---|---|
 | `AuditLog` | yes | yes | policy | policy | no policy (append-only) | no policy (never hard-deleted) | DB-006, DB-002, DB-003 |
 | `AuthorizationAudit` | yes | yes | policy | policy | policy | bypass / policy | DB-006, DB-002, DB-003, DB-004 |
-| `AuthorizationPolicyDraft` | yes | yes | policy | policy | policy | bypass / policy | DB-006, DB-002, DB-003, DB-004 |
-| `AuthorizationPolicyVersion` | yes | yes | policy | policy | policy | bypass / policy | DB-006, DB-002, DB-003, DB-004 |
 | `DataChangeLog` | yes | yes | policy | policy | no policy (append-only) | no policy (never hard-deleted) | DB-006, DB-002, DB-003 |
 | `Location` | yes | yes | policy | policy | policy | bypass / policy | DB-006, DB-002, DB-003, DB-004, MT-001, LOC-001…004, MT-007, MT-006 (composite FK) |
 | `Membership` | yes | yes | policy | policy | policy | bypass / policy | DB-006, DB-002, DB-003, DB-004, MT-001, LOC-001…004, MT-007, MT-006 (composite FK) |
 | `MembershipLocationScope` | yes | yes | policy | policy | policy | bypass / policy | DB-006, DB-002, DB-003, DB-004, MT-001, LOC-001…004, MT-007, MT-006 (composite FK) |
-| `PolicyDefinition` | yes | yes | policy | policy | policy | bypass / policy | DB-006, DB-002, DB-003, DB-004 |
 | `ResourceAcl` | yes | yes | policy | policy | policy | bypass / policy | DB-006, DB-002, DB-003, DB-004 |
 | `Reward` | yes | yes | policy | policy | policy | bypass / policy | DB-006, DB-002, DB-003, DB-004, MT-002, DB-007, MACH-003, MT-006 (composite FK) |
 | `RewardAuditLog` | yes | yes | policy | policy | no policy (append-only) | no policy (never hard-deleted) | DB-006, DB-002, DB-003 |
@@ -56,7 +53,7 @@ One row per table that carries a `tenantId` (plus `Tenant` itself), read from th
 
 ## Regenerating this table
 
-Against a throwaway database after `pnpm db:deploy` (never the `.env` database):
+Against a throwaway database after `pnpm tools db:deploy` (never the `.env` database):
 
 ```sql
 SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity,

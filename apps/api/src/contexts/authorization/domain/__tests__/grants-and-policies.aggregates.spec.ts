@@ -1,25 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { epochMs, type EpochMs } from "@workspace/shared";
 
-import { AuthorizationPolicyDraftAggregate, SIMULATION_VALIDITY_MS, type NewPolicyDraft } from "../aggregates/authorization-policy-draft.aggregate";
 import { SupportAccessGrantAggregate } from "../aggregates/support-access-grant.aggregate";
 import { UserAuthorizationAggregate, type UserAuthorizationState } from "../aggregates/user-authorization.aggregate";
 import {
 	AllowDenyConflictError,
 	PermissionOverrideNotFoundError,
-	PolicyDraftNotPublishableError,
-	PolicyImpersonationForbiddenError,
-	PolicySelfApprovalForbiddenError,
-	PolicySimulationFailedError,
-	PolicySimulationRequiredError,
-	PolicySimulationStaleError,
 	RoleAssignmentNotFoundError,
 	RoleLimitExceededError,
 	SupportAccessGrantNotPendingError,
 	SupportAccessGrantNotRevocableError,
-	TenantPolicyDraftTenantRequiredError,
 } from "../errors/authorization.errors";
-import { PolicyPublished } from "../events/policy-published.event";
 import { MAX_ROLES_PER_USER } from "../rbac-catalog";
 import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
 
@@ -160,69 +151,5 @@ describe("SupportAccessGrantAggregate", () => {
 		expect(() => {
 			grant.revoke(NOW);
 		}).toThrow(SupportAccessGrantNotRevocableError);
-	});
-});
-
-describe("AuthorizationPolicyDraftAggregate", () => {
-	const DRAFT: NewPolicyDraft = {
-		id: "draft-1",
-		scope: "TENANT",
-		tenantId: "org-1",
-		name: "Managers approve refunds",
-		description: null,
-		builderPayload: { rules: [] },
-		cedarSource: "permit(principal, action, resource);",
-		sqlPredicate: null,
-		createdById: "author-1",
-	};
-	const PASSED = { passed: true, createdAt: NOW, baselineFingerprint: "baseline-1" };
-
-	it("binds a TENANT draft to its tenant and drops the tenant of a platform draft", () => {
-		expect(AuthorizationPolicyDraftAggregate.create(DRAFT, NOW).slot).toEqual({ tenantId: "org-1", scope: "TENANT" });
-		expect(AuthorizationPolicyDraftAggregate.create({ ...DRAFT, scope: "PLATFORM" }, NOW).slot).toEqual({ tenantId: null, scope: "PLATFORM" });
-		expect(() => AuthorizationPolicyDraftAggregate.create({ ...DRAFT, tenantId: null }, NOW)).toThrow(TenantPolicyDraftTenantRequiredError);
-	});
-
-	it("refuses policy changes from an impersonation session", () => {
-		expect(() => {
-			AuthorizationPolicyDraftAggregate.assertActorMayChangePolicies({ userId: "admin-1", isImpersonating: true });
-		}).toThrow(PolicyImpersonationForbiddenError);
-	});
-
-	it("publishes with a second person's approval and a fresh, passing simulation on the current baseline", () => {
-		const draft = AuthorizationPolicyDraftAggregate.create(DRAFT, NOW);
-
-		draft.publish("approver-1", 3, PASSED, "baseline-1", NOW);
-
-		expect(draft.snapshot()).toMatchObject({ status: "PUBLISHED", approvedById: "approver-1" });
-		expect(draft.pullEvents()).toEqual([expect.any(PolicyPublished)]);
-		expect(() => {
-			draft.publish("approver-1", 4, PASSED, "baseline-1", NOW);
-		}).toThrow(PolicyDraftNotPublishableError);
-		expect(() => {
-			draft.assertSimulatable();
-		}).toThrow(PolicyDraftNotPublishableError);
-	});
-
-	it("refuses four-eyes violations and missing, failed or stale simulations", () => {
-		const publish = (approver: string, simulation: typeof PASSED | null, baseline: string, at: EpochMs): void => {
-			AuthorizationPolicyDraftAggregate.create(DRAFT, NOW).publish(approver, 1, simulation, baseline, at);
-		};
-
-		expect(() => {
-			publish("author-1", PASSED, "baseline-1", NOW);
-		}).toThrow(PolicySelfApprovalForbiddenError);
-		expect(() => {
-			publish("approver-1", null, "baseline-1", NOW);
-		}).toThrow(PolicySimulationRequiredError);
-		expect(() => {
-			publish("approver-1", { ...PASSED, passed: false }, "baseline-1", NOW);
-		}).toThrow(PolicySimulationFailedError);
-		expect(() => {
-			publish("approver-1", PASSED, "baseline-2", NOW);
-		}).toThrow(PolicySimulationStaleError);
-		expect(() => {
-			publish("approver-1", PASSED, "baseline-1", epochMs(NOW + SIMULATION_VALIDITY_MS + 1));
-		}).toThrow(PolicySimulationStaleError);
 	});
 });

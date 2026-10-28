@@ -137,7 +137,7 @@ afterEach(() => {
 describe("LocationRequestsPanel loading", () => {
 	it("shows request-row skeletons in the pending queue while it loads", () => {
 		queueLoad.loading = true;
-		renderPanel([PERMISSION.MERCHANT_ORG.MANAGE]);
+		renderPanel([PERMISSION.MERCHANT_ORG.LIST, PERMISSION.MERCHANT_ORG.APPROVE]);
 
 		const status = screen.getByRole("status");
 		expect(status.getAttribute("aria-busy")).toBe("true");
@@ -154,7 +154,7 @@ describe("LocationRequestsPanel authorization", () => {
 	});
 
 	it("shows the review form with MERCHANT_ORG manage", () => {
-		renderPanel([PERMISSION.MERCHANT_ORG.MANAGE]);
+		renderPanel([PERMISSION.MERCHANT_ORG.LIST, PERMISSION.MERCHANT_ORG.APPROVE]);
 		expect(screen.getByRole("button", { name: "Approve store" })).toBeDefined();
 		expect(screen.getByRole("button", { name: "Reject" })).toBeDefined();
 		expect(screen.queryByRole("note")).toBeNull();
@@ -214,27 +214,27 @@ describe("LocationRequestsPanel review form", () => {
 
 	it("approves the selected request", async () => {
 		window.history.replaceState(null, "", `${PATH}?requestId=${FIRST_REQUEST_ID}`);
-		renderPanel([PERMISSION.MERCHANT_ORG.MANAGE]);
+		renderPanel([PERMISSION.MERCHANT_ORG.LIST, PERMISSION.MERCHANT_ORG.APPROVE]);
 		await clickAndSettle(screen.getByRole("button", { name: "Approve store" }));
 		expect(reviewMutate).toHaveBeenCalledWith({ tenantId: "org-1", locationId: FIRST_REQUEST_ID, approve: true });
 	});
 
 	it("refuses a rejection without a reason, by the shared contract's rule", async () => {
 		window.history.replaceState(null, "", `${PATH}?requestId=${FIRST_REQUEST_ID}`);
-		renderPanel([PERMISSION.MERCHANT_ORG.MANAGE]);
+		renderPanel([PERMISSION.MERCHANT_ORG.LIST, PERMISSION.MERCHANT_ORG.APPROVE]);
 		await clickAndSettle(screen.getByRole("button", { name: "Reject" }));
 		expect(reviewMutate).not.toHaveBeenCalled();
 		expect(screen.getByText("Rejection reason is required when declining a store request")).toBeDefined();
 	});
 
 	it("does not carry a draft reason over to another request", () => {
-		const view = render(panel([PERMISSION.MERCHANT_ORG.MANAGE]), { wrapper: ClientTestProviders });
+		const view = render(panel([PERMISSION.MERCHANT_ORG.LIST, PERMISSION.MERCHANT_ORG.APPROVE]), { wrapper: ClientTestProviders });
 		window.history.replaceState(null, "", `${PATH}?requestId=${FIRST_REQUEST_ID}`);
-		view.rerender(panel([PERMISSION.MERCHANT_ORG.MANAGE]));
+		view.rerender(panel([PERMISSION.MERCHANT_ORG.LIST, PERMISSION.MERCHANT_ORG.APPROVE]));
 		fireEvent.change(screen.getByLabelText("Rejection reason"), { target: { value: "Wrong address" } });
 
 		window.history.replaceState(null, "", `${PATH}?requestId=${SECOND_REQUEST_ID}`);
-		view.rerender(panel([PERMISSION.MERCHANT_ORG.MANAGE]));
+		view.rerender(panel([PERMISSION.MERCHANT_ORG.LIST, PERMISSION.MERCHANT_ORG.APPROVE]));
 		expect(screen.getByLabelText("Rejection reason")).toHaveProperty("value", "");
 	});
 });
@@ -258,7 +258,7 @@ describe("LocationRequestsPanel review invalidation", () => {
 	it("invalidates the queue, the reviewed tenant and the merchant list — and nothing else", async () => {
 		const queryClient = new QueryClient();
 		seed(queryClient);
-		render(panel([PERMISSION.MERCHANT_ORG.MANAGE], queryClient), { wrapper: ClientTestProviders });
+		render(panel([PERMISSION.MERCHANT_ORG.LIST, PERMISSION.MERCHANT_ORG.APPROVE], queryClient), { wrapper: ClientTestProviders });
 
 		const options: ReviewMutationOptionsStub | undefined = reviewOptions.mock.lastCall?.at(0);
 		await options?.onSuccess?.(null, { tenantId: REVIEWED_TENANT_ID, locationId: FIRST_REQUEST_ID, approve: true });

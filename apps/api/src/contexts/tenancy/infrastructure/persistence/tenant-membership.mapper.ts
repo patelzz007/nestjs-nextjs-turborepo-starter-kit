@@ -46,6 +46,7 @@ export function mapMembershipToRosterResponse(membership: MembershipWithUser): T
 
 	return {
 		...base,
+		roleId: membership.roleId,
 		email: membership.user.email,
 		fullName: membership.user.fullName,
 	};

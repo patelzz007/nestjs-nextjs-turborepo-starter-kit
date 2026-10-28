@@ -24,7 +24,7 @@ export function LandingMerchants({ merchantNames }: LandingMerchantsProps): Reac
 
 	return (
 		<section aria-labelledby="landing-merchants-heading" className="border-b border-border/80 py-10">
-			<div className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-4 sm:px-6 lg:flex-row lg:gap-8 lg:px-8">
+			<div className="mx-auto flex max-w-10xl flex-col items-center gap-5 px-4 sm:px-6 lg:flex-row lg:gap-8 lg:px-8">
 				<h2 id="landing-merchants-heading" className="flex shrink-0 items-center gap-2 text-sm font-medium text-muted-foreground">
 					<Store className="size-4 text-primary" aria-hidden="true" />
 					Offers from local favourites

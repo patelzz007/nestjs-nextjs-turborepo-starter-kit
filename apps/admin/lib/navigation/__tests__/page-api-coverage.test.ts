@@ -100,12 +100,12 @@ const PAGE_API_CALLS: ReadonlyMap<string, readonly PageApiCall[]> = new Map<stri
 			{ endpoint: "GET /admin/merchants/:tenantId/lifecycle", permission: PERMISSION.MERCHANT_ORG.LIST },
 		],
 	],
-	// The live email preview renders on load; the send (POST /admin/invites) needs the same MANAGE.
-	[ROUTES.merchants.invites, [{ endpoint: "GET /admin/invites/preview-email", permission: PERMISSION.MERCHANT_ORG.MANAGE }]],
+	// The live email preview renders on load; the send (POST /admin/invites) needs the same CREATE.
+	[ROUTES.merchants.invites, [{ endpoint: "GET /admin/invites/preview-email", permission: PERMISSION.MERCHANT_ORG.CREATE }]],
 	[ROUTES.merchants.verification, [{ endpoint: "GET /admin/tenants", permission: PERMISSION.MERCHANT_ORG.LIST }]],
 	[ROUTES.merchants.storeRequests, [{ endpoint: "GET /admin/tenants/location-requests", permission: PERMISSION.MERCHANT_ORG.LIST }]],
-	[ROUTES.rewards.review, [{ endpoint: "GET /admin/rewards/pending", permission: PERMISSION.REWARD.MANAGE }]],
-	[ROUTE_PATTERNS.rewards.reviewDetail, [{ endpoint: "GET /admin/rewards/:rewardId", permission: PERMISSION.REWARD.MANAGE }]],
+	[ROUTES.rewards.review, [{ endpoint: "GET /admin/rewards/pending", permission: PERMISSION.REWARD.APPROVE }]],
+	[ROUTE_PATTERNS.rewards.reviewDetail, [{ endpoint: "GET /admin/rewards/:rewardId", permission: PERMISSION.REWARD.APPROVE }]],
 	// Each tab (roles list, permissions list, checker) is shown and queried only with its own permission.
 	[ROUTES.settings.access, []],
 	// Any signed-in admin: the page reads (and edits) only the caller's own profile.

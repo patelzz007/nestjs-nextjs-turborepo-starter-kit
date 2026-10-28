@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, Inject, Injectable, UnauthorizedExceptio
 import { Reflector } from "@nestjs/core";
 import type { Prisma } from "@prisma/client";
 import type { FastifyRequest } from "fastify";
-import type { AuthorizationAttributes, AuthorizationContext, AuthorizationRequest, AuthorizationResult, PermissionAction, PermissionResource } from "@workspace/shared";
+import type { AuthorizationAttributes, AuthorizationContext, AuthorizationRequest, PermissionAction, PermissionResource } from "@workspace/shared";
 import { isFunctionValue, isStringPrimitive } from "@workspace/shared";
 
 import { NotFoundError } from "../../../../application/errors/app-error";
@@ -23,43 +23,23 @@ import { TenantTransactionService } from "../../../../../prisma/tenant-transacti
 import type { AuthenticatedUser } from "../../../../../types/authenticated-user";
 import { isAuthenticatedUser } from "../../../../../types/authenticated-user";
 import {
-	AUTHORIZATION_DECISION_AUDIT,
 	AUTHORIZATION_KERNEL,
 	AuthorizationException,
 	REQUEST_TENANT_RESOLVER,
 	SUPER_ADMIN_BYPASS_AUDIT,
 	type AuthorizationAuditMetadata,
-	type AuthorizationDecisionAuditPort,
 	type AuthorizationKernelPort,
 	type RequestTenantContext,
 	type RequestTenantResolverPort,
 	type SuperAdminBypassAuditPort,
 } from "../../../../../contexts/authorization/public-api";
-import { AUTHORIZE_KEY, readRouteParam, type AuthorizationRequirement, type ResourceAttributesExtractor } from "../decorators/authorize.decorator";
-import {
-	REQUIRED_PERMISSION_KEY,
-	REQUIRED_PERMISSIONS_KEY,
-	REQUIRED_ROLES_KEY,
-	type RequiredPermission,
-	type RequiredPermissionsMetadata,
-	type RequiredRolesMetadata,
-} from "../decorators/route-requirements.metadata";
+import { readRouteParam, type ResourceAttributesExtractor } from "../decorators/permission-target";
+import { REQUIRED_PERMISSION_KEY, type RequiredPermission } from "../decorators/route-requirements.metadata";
 import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../application/shared-system-operations";
-
-interface RouteRequirements {
-	readonly permission?: RequiredPermission | undefined;
-	readonly permissions?: RequiredPermissionsMetadata | undefined;
-	readonly roles?: RequiredRolesMetadata | undefined;
-	readonly authorize?: AuthorizationRequirement | undefined;
-}
 
 /** A requirement's `attributes` is either static values or an extractor called per request. */
 function isAttributesExtractor(attributes: AuthorizationAttributes | ResourceAttributesExtractor): attributes is ResourceAttributesExtractor {
 	return isFunctionValue(attributes);
-}
-
-function hasRequirements(requirements: RouteRequirements): boolean {
-	return requirements.permission !== undefined || requirements.permissions !== undefined || requirements.roles !== undefined || requirements.authorize !== undefined;
 }
 
 /** Principal reads the guard makes before the handler's RLS scope exists. */
@@ -71,12 +51,8 @@ interface GuardPrincipalLookup {
  * **Kernel-first Authorization Guard** (global `APP_GUARD`).
  *
  * Every protected route goes through the Authorization Kernel — there is no
- * second authorization path. Supported declarations (all enforced, AND-ed):
- *
- * - `@RequirePermission(action, resource)`
- * - `@RequireAllPermissions(...)` / `@RequireAnyPermission(...)`
- * - `@RequireAllRoles(...)` / `@RequireAnyRole(...)`
- * - `@Authorize({ action, resource, resourceId, attributes })`
+ * second authorization path. A route declares what it needs with one or more
+ * `@RequirePermission(action, resource, { resourceId?, attributes? })`; every one must pass.
  *
  * Flow:
  * 1. Authenticated requests: validate token version, then resolve and verify the
@@ -92,7 +68,6 @@ export class AuthorizationGuard implements CanActivate {
 	public constructor(
 		private readonly reflector: Reflector,
 		@Inject(AUTHORIZATION_KERNEL) private readonly kernel: AuthorizationKernelPort,
-		@Inject(AUTHORIZATION_DECISION_AUDIT) private readonly decisionAudit: AuthorizationDecisionAuditPort,
 		@Inject(SUPER_ADMIN_BYPASS_AUDIT) private readonly bypassAudit: SuperAdminBypassAuditPort,
 		@Inject(REQUEST_TENANT_RESOLVER) private readonly contextResolver: RequestTenantResolverPort,
 		private readonly requestContext: RequestContextService,
@@ -103,7 +78,7 @@ export class AuthorizationGuard implements CanActivate {
 		const request = context.switchToHttp().getRequest<FastifyRequest>();
 		const user = request.user;
 		const requirements = this.readRequirements(context);
-		const protectedRoute = hasRequirements(requirements);
+		const protectedRoute = requirements.length > 0;
 
 		if (!isAuthenticatedUser(user)) {
 			if (protectedRoute) {
@@ -128,8 +103,8 @@ export class AuthorizationGuard implements CanActivate {
 			return true;
 		}
 
-		if (protectedRoute) {
-			await this.enforce(context, request, user, tenant, requirements);
+		for (const requirement of requirements) {
+			await this.enforce(context, request, user, tenant, requirement);
 		}
 
 		this.setAdminAccess(user, await this.hasAdminDashboardAccess(user, tenant));
@@ -172,14 +147,9 @@ export class AuthorizationGuard implements CanActivate {
 		throw new TenantRouteNotActiveError();
 	}
 
-	private readRequirements(context: ExecutionContext): RouteRequirements {
-		const targets = [context.getHandler(), context.getClass()];
-		return {
-			permission: this.reflector.getAllAndOverride<RequiredPermission | undefined>(REQUIRED_PERMISSION_KEY, targets),
-			permissions: this.reflector.getAllAndOverride<RequiredPermissionsMetadata | undefined>(REQUIRED_PERMISSIONS_KEY, targets),
-			roles: this.reflector.getAllAndOverride<RequiredRolesMetadata | undefined>(REQUIRED_ROLES_KEY, targets),
-			authorize: this.reflector.getAllAndOverride<AuthorizationRequirement | undefined>(AUTHORIZE_KEY, targets),
-		};
+	/** Every `@RequirePermission` on the route's method (none: an unprotected route). */
+	private readRequirements(context: ExecutionContext): readonly RequiredPermission[] {
+		return this.reflector.get<readonly RequiredPermission[] | undefined>(REQUIRED_PERMISSION_KEY, context.getHandler()) ?? [];
 	}
 
 	private async enforce(
@@ -187,69 +157,7 @@ export class AuthorizationGuard implements CanActivate {
 		request: FastifyRequest,
 		user: AuthenticatedUser,
 		tenant: RequestTenantContext,
-		requirements: RouteRequirements,
-	): Promise<void> {
-		const subject = this.buildSubject(user, tenant);
-		const tenantAttributes = this.tenantAttributes(tenant);
-		const metadata = this.auditMetadata(request);
-
-		if (requirements.permission !== undefined) {
-			await this.kernel.authorize(this.buildRequest(subject, requirements.permission.action, requirements.permission.resource, undefined, tenantAttributes), metadata);
-		}
-
-		if (requirements.permissions !== undefined) {
-			await this.enforcePermissions(subject, requirements.permissions, tenantAttributes, metadata);
-		}
-
-		if (requirements.roles !== undefined) {
-			const granted = await this.kernel.hasRoles(user.id, requirements.roles.roles, requirements.roles.mode);
-			if (!granted) {
-				throw new AuthorizationException();
-			}
-		}
-
-		if (requirements.authorize !== undefined) {
-			await this.enforceAuthorize(context, subject, requirements.authorize, tenantAttributes, metadata);
-		}
-	}
-
-	private async enforcePermissions(
-		subject: AuthorizationContext,
-		meta: RequiredPermissionsMetadata,
-		attributes: AuthorizationAttributes,
-		metadata: AuthorizationAuditMetadata,
-	): Promise<void> {
-		if (meta.permissions.length === 0) {
-			throw new AuthorizationException();
-		}
-
-		if (meta.mode === "all") {
-			for (const [action, resource] of meta.permissions) {
-				await this.kernel.authorize(this.buildRequest(subject, action, resource, undefined, attributes), metadata);
-			}
-			return;
-		}
-
-		const results: AuthorizationResult[] = await Promise.all(
-			meta.permissions.map(([action, resource]) => this.kernel.explain(this.buildRequest(subject, action, resource, undefined, attributes))),
-		);
-		const allowed = results.find((result) => result.decision === "ALLOW");
-		if (allowed !== undefined) {
-			await this.decisionAudit.auditResult(allowed, metadata);
-			return;
-		}
-		for (const denied of results) {
-			await this.decisionAudit.auditResult(denied, metadata);
-		}
-		throw new AuthorizationException();
-	}
-
-	private async enforceAuthorize(
-		context: ExecutionContext,
-		subject: AuthorizationContext,
-		requirement: AuthorizationRequirement,
-		tenantAttributes: AuthorizationAttributes,
-		metadata: AuthorizationAuditMetadata,
+		requirement: RequiredPermission,
 	): Promise<void> {
 		let resourceId: string | undefined;
 		if (requirement.resourceId !== undefined) {
@@ -263,9 +171,12 @@ export class AuthorizationGuard implements CanActivate {
 
 		const declared = requirement.attributes === undefined ? {} : isAttributesExtractor(requirement.attributes) ? requirement.attributes(context) : requirement.attributes;
 		// Tenant attributes come last so a body-supplied value can never override the routed tenant.
-		const attributes: AuthorizationAttributes = { ...declared, ...tenantAttributes };
+		const attributes: AuthorizationAttributes = { ...declared, ...this.tenantAttributes(tenant) };
 
-		await this.kernel.authorize(this.buildRequest(subject, requirement.action, requirement.resource, resourceId, attributes), metadata);
+		await this.kernel.authorize(
+			this.buildRequest(this.buildSubject(user, tenant), requirement.action, requirement.resource, resourceId, attributes),
+			this.auditMetadata(request),
+		);
 	}
 
 	private buildSubject(user: AuthenticatedUser, tenant: RequestTenantContext): AuthorizationContext {

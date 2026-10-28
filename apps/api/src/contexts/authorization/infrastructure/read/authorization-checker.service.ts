@@ -18,7 +18,6 @@ import {
 
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import { AuthorizationCacheService, type CachedAuthorization, type CachedPermission } from "../cache/authorization-cache.service";
-import { collectRoleHierarchy } from "../kernel/subject-grants.loader";
 import type { SubjectAuthorizationReadPort } from "../../application/ports/subject-authorization-read.port";
 import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../platform/application/shared-system-operations";
 
@@ -28,9 +27,7 @@ import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../platform/application/sha
 const GRANT_PERMISSION_SELECT = { id: true, action: true, resource: true, description: true, group: true } satisfies Prisma.PermissionSelect;
 
 interface GrantRows {
-	readonly userRoles: Prisma.UserRoleGetPayload<{ include: { role: { select: { id: true; name: true; description: true; parentId: true } } } }>[];
-	/** Directly assigned + inherited (ancestor) active role ids. */
-	readonly roleIds: string[];
+	readonly userRoles: Prisma.UserRoleGetPayload<{ include: { role: { select: { id: true; name: true; description: true } } } }>[];
 	readonly rolePermissions: Prisma.RolePermissionGetPayload<{ include: { permission: { select: typeof GRANT_PERMISSION_SELECT } } }>[];
 	readonly userPermissions: Prisma.UserPermissionGetPayload<{ include: { permission: { select: typeof GRANT_PERMISSION_SELECT } } }>[];
 }
@@ -43,11 +40,8 @@ interface GrantRows {
  * Resolves a user's effective permissions from the cache (falling back to
  * a full DB query on miss) and evaluates whether a requirement is met.
  *
- * ## Wildcard semantics
- *
- * `MANAGE` on a resource grants every action on that resource.
- * A future extension could support `users.*` string patterns; for now the
- * enum-based model handles this natively via the `MANAGE` action.
+ * A requirement is met by the same action on the same resource only: there is no wildcard action
+ * (ADR 067 retired `MANAGE`).
  */
 
 @Injectable()
@@ -166,7 +160,7 @@ export class AuthorizationCheckerService implements SubjectAuthorizationReadPort
 			grants.push(detail !== undefined ? { via, detail } : { via });
 		};
 
-		const { userRoles, roleIds, rolePermissions, userPermissions } = await this.loadGrantRows(db, userId, nowEpochMs());
+		const { userRoles, rolePermissions, userPermissions } = await this.loadGrantRows(db, userId, nowEpochMs());
 
 		for (const up of userPermissions) {
 			if (matchesPermission([{ action: up.permission.action, resource: up.permission.resource }], action, resource)) {
@@ -175,27 +169,13 @@ export class AuthorizationCheckerService implements SubjectAuthorizationReadPort
 			}
 		}
 
-		const directRoleIds: Set<string> = new Set<string>(userRoles.map((ur) => ur.role.id));
-		const directRoleNames: string[] = userRoles.map((ur) => ur.role.name);
-
-		const rolesById = await db.role.findMany({
-			where: { id: { in: roleIds }, isDeleted: false },
-			select: { id: true, name: true },
-		});
-
-		const roleNameById: Map<string, string> = new Map<string, string>(rolesById.map((r) => [r.id, r.name]));
+		const roleNameById: Map<string, string> = new Map<string, string>(userRoles.map((ur) => [ur.role.id, ur.role.name]));
 
 		for (const rp of rolePermissions) {
 			if (!matchesPermission([{ action: rp.permission.action, resource: rp.permission.resource }], action, resource)) {
 				continue;
 			}
-			const roleName: string = roleNameById.get(rp.roleId) ?? rp.roleId;
-			if (directRoleIds.has(rp.roleId)) {
-				pushGrant("role", `Assigned role: ${roleName}`);
-			} else {
-				const assignedLabel: string = directRoleNames.length > 0 ? directRoleNames.join(", ") : "assigned role";
-				pushGrant("role", `Parent role in hierarchy: ${roleName} (via ${assignedLabel})`);
-			}
+			pushGrant("role", `Assigned role: ${roleNameById.get(rp.roleId) ?? rp.roleId}`);
 		}
 
 		return { allowed: grants.length > 0, grants };
@@ -207,7 +187,7 @@ export class AuthorizationCheckerService implements SubjectAuthorizationReadPort
 	 * Resolve the full authorization state for a user.
 	 *
 	 * 1. Check cache → return on hit.
-	 * 2. Query DB (roles + role-permissions + direct permissions + role hierarchy).
+	 * 2. Query DB (roles + role-permissions + direct permissions).
 	 * 3. Populate cache.
 	 * 4. Return.
 	 */
@@ -226,22 +206,16 @@ export class AuthorizationCheckerService implements SubjectAuthorizationReadPort
 	}
 
 	/**
-	 * The user's active direct roles, every role id in their hierarchy, the
-	 * live permissions of those roles, and the user's live direct ALLOW grants.
+	 * The user's active roles, the live permissions of those roles, and the user's live direct ALLOW grants.
 	 */
 	private async loadGrantRows(db: Prisma.TransactionClient, userId: string, nowMs: EpochMs): Promise<GrantRows> {
 		const userRoles = await db.userRole.findMany({
 			where: { userId, isDeleted: false, role: { isDeleted: false, isActive: true } },
-			include: { role: { select: { id: true, name: true, description: true, parentId: true } } },
+			include: { role: { select: { id: true, name: true, description: true } } },
 		});
 
-		const roleIds: string[] = await collectRoleHierarchy(
-			db,
-			userRoles.map((ur) => ({ id: ur.role.id, parentId: ur.role.parentId })),
-		);
-
 		const rolePermissions = await db.rolePermission.findMany({
-			where: { roleId: { in: roleIds }, isDeleted: false, permission: { isDeleted: false } },
+			where: { roleId: { in: userRoles.map((ur) => ur.role.id) }, isDeleted: false, permission: { isDeleted: false } },
 			include: { permission: { select: GRANT_PERMISSION_SELECT } },
 		});
 
@@ -250,14 +224,13 @@ export class AuthorizationCheckerService implements SubjectAuthorizationReadPort
 			include: { permission: { select: GRANT_PERMISSION_SELECT } },
 		});
 
-		return { userRoles, roleIds, rolePermissions, userPermissions };
+		return { userRoles, rolePermissions, userPermissions };
 	}
 
 	/**
 	 * Load authorization state from the database.
 	 *
-	 * Walks the role hierarchy to collect inherited permissions, merges
-	 * direct user permissions, and deduplicates by action+resource.
+	 * Collects the roles' permissions, merges direct user permissions, and deduplicates by action+resource.
 	 */
 	private async loadFromDatabase(db: Prisma.TransactionClient, userId: string): Promise<CachedAuthorization> {
 		const nowMs: EpochMs = nowEpochMs();
@@ -269,15 +242,13 @@ export class AuthorizationCheckerService implements SubjectAuthorizationReadPort
 			permissionMap.set(`${permission.action}:${permission.resource}`, { action: permission.action, resource: permission.resource });
 		}
 
-		// Explicit DENY overrides remove the permission (DENY on MANAGE removes the whole resource).
+		// Explicit DENY overrides remove the permission.
 		const deniedOverrides = await db.userPermission.findMany({
 			where: liveUserPermissionWhere(userId, "DENY", nowMs),
 			select: { permission: { select: { action: true, resource: true } } },
 		});
 		for (const [key, permission] of permissionMap) {
-			const denied = deniedOverrides.some(
-				(override) => override.permission.resource === permission.resource && (override.permission.action === permission.action || override.permission.action === "MANAGE"),
-			);
+			const denied = deniedOverrides.some((override) => override.permission.resource === permission.resource && override.permission.action === permission.action);
 			if (denied) {
 				permissionMap.delete(key);
 			}
@@ -331,29 +302,7 @@ function allPlatformCapabilitySlugs(): CapabilitySlug[] {
 	return PermissionResourceSchema.options.flatMap((resource) => PermissionActionSchema.options.map((action) => toPlatformCapabilitySlug(action, resource)));
 }
 
-/**
- * Evaluate whether a set of cached permissions satisfies a requirement.
- *
- * ## Wildcard semantics
- *
- * 1. `MANAGE` on the same resource grants every action on that resource.
- * 2. `READ:USERS` satisfies `READ:USER` (resource prefix match).
- *    A user with `READ:USERS` can access any `USER` resource.
- *    This supports the `users.*` pattern from the permission registry.
- */
+/** Whether a set of cached permissions holds the required action on the resource (an exact match). */
 function matchesPermission(permissions: readonly CachedPermission[], action: PermissionAction, resource: PermissionResource): boolean {
-	return permissions.some((p) => {
-		if (p.action === "MANAGE" && p.resource === resource) {
-			return true;
-		}
-		// Direct match
-		if (p.action === action && p.resource === resource) {
-			return true;
-		}
-		// Plural resource prefix match: READ:USERS satisfies READ:USER
-		if (p.action === action && p.resource === `${resource}S`) {
-			return true;
-		}
-		return false;
-	});
+	return permissions.some((p) => p.action === action && p.resource === resource);
 }

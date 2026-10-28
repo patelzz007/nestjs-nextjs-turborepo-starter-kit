@@ -96,11 +96,11 @@ describe("RLS as the runtime role", () => {
 		try {
 			await client.query("BEGIN");
 			// Arranged as the owner, rolled back: A-Owner also holds an ACTIVE membership in tenant B.
-			await client.query(`INSERT INTO public."Membership" (id, "tenantId", "userId", role, status) VALUES ($1, $2, $3, 'OWNER', 'ACTIVE')`, [
-				randomUUID(),
-				TWO_TENANT_FIXTURE.tenantB,
-				TWO_TENANT_FIXTURE.userAOwner,
-			]);
+			await client.query(
+				`INSERT INTO public."Membership" (id, "tenantId", "userId", role, "roleId", status)
+				 SELECT $1, $2, $3, 'OWNER', r.id, 'ACTIVE' FROM public."Role" r WHERE r."tenantId" = $2 AND r."templateKey" = 'OWNER' AND r."isDeleted" = false`,
+				[randomUUID(), TWO_TENANT_FIXTURE.tenantB, TWO_TENANT_FIXTURE.userAOwner],
+			);
 			await client.query(`SET LOCAL ROLE ${DEFAULT_DATABASE_ROLE}`);
 			await client.query("SELECT set_config('app.rls_bypass', 'false', true), set_config('app.current_tenant_id', $1, true), set_config('app.current_user_id', $2, true)", [
 				TWO_TENANT_FIXTURE.tenantA,

@@ -482,10 +482,10 @@ export type {
 } from "../contexts/notifications/schemas/email-templates";
 export { AudienceTypeSchema, DeviceTypeSchema } from "../contexts/identity/schemas/identity-enums";
 export { IpAddressScopeSchema } from "../contexts/audit/schemas/audit-enums";
-export { PermissionActionSchema, PermissionResourceSchema } from "../contexts/authorization/schemas/permission-enums";
+export { PermissionActionSchema, PermissionResourceSchema, RoleKindSchema, ShareLevelSchema } from "../contexts/authorization/schemas/permission-enums";
 export type { AudienceType, DeviceType } from "../contexts/identity/schemas/identity-enums";
 export type { IpAddressScope } from "../contexts/audit/schemas/audit-enums";
-export type { PermissionAction, PermissionResource } from "../contexts/authorization/schemas/permission-enums";
+export type { PermissionAction, PermissionResource, RoleKind, ShareLevel } from "../contexts/authorization/schemas/permission-enums";
 export { EmailTemplateKeyParamSchema, UuidParamSchema, VerifyEmailTokenParamSchema } from "./domain/platform/param-schemas";
 export type { EmailTemplateKeyParam, UuidParam, VerifyEmailTokenParam } from "./domain/platform/param-schemas";
 
@@ -665,7 +665,6 @@ export {
 	CreateGroupSchema,
 	CreatePermissionExtendedSchema,
 	CreatePermissionSchema,
-	CreateRoleExtendedSchema,
 	CreateRoleSchema,
 	FindPermissionOwnersResponseSchema,
 	GroupListEntrySchema,
@@ -694,7 +693,6 @@ export {
 	RoleListQuerySchema,
 	roleListQuery,
 	RoleResponseSchema,
-	SetRoleParentSchema,
 	SyncUserPermissionsSchema,
 	SyncUserRolesSchema,
 	UpdateRoleSchema,
@@ -717,7 +715,6 @@ export type {
 	CreateGroupInput,
 	CreatePermissionExtendedInput,
 	CreatePermissionInput,
-	CreateRoleExtendedInput,
 	CreateRoleInput,
 	FindPermissionOwnersResponse,
 	GroupListEntry,
@@ -747,7 +744,6 @@ export type {
 	RoleListQuery,
 	RoleListSortField,
 	RoleResponse,
-	SetRoleParentInput,
 	SyncUserPermissionsInput,
 	SyncUserRolesInput,
 	UpdateRoleInput,
@@ -1728,9 +1724,6 @@ export {
 } from "../contexts/tenancy/schemas/customer-bans";
 export {
 	AdminCreateTenantInviteSchema,
-	AuthorizationPolicyDraftResponseSchema,
-	AuthorizationPolicyScopeSchema,
-	AuthorizationPolicyStatusSchema,
 	TenantAccessRequestCreateSchema,
 	TenantAccessRequestResponseSchema,
 	TenantAccessRequestStatusSchema,
@@ -1787,7 +1780,6 @@ export {
 	TenantAccessRequestParamSchema,
 	TenantSlugSchema,
 	TenantSummaryResponseSchema,
-	PolicyBuilderPayloadSchema,
 	ReviewTenantAccessRequestSchema,
 	TenantTeamGrantableRoleSchema,
 	TENANT_SCOPE_MAX_LOCATION_IDS,
@@ -1809,9 +1801,6 @@ export {
 } from "../contexts/tenancy/schemas/tenant";
 export type {
 	AdminCreateTenantInviteInput,
-	AuthorizationPolicyDraftResponse,
-	AuthorizationPolicyScope,
-	AuthorizationPolicyStatus,
 	TenantAccessRequestCreateInput,
 	TenantAccessRequestResponse,
 	TenantAccessRequestStatus,
@@ -1868,7 +1857,6 @@ export type {
 	TenantAccessRequestParam,
 	TenantSummaryResponse,
 	AdminTenantInviteCreatedResponse,
-	PolicyBuilderPayload,
 	ReviewTenantAccessRequestInput,
 	TenantTeamGrantableRole,
 	SupportAccessGrantMode,
@@ -1880,30 +1868,6 @@ export type {
 	SupportAccessGrantStatus,
 	TenantPlacementKind,
 } from "../contexts/tenancy/schemas/tenant";
-export {
-	CedarAuthorizationDecisionSchema,
-	CedarAuthorizationRequestSchema,
-	CedarDecisionSchema,
-	CreatePolicyDraftSchema,
-	PolicyDecisionChangeSchema,
-	PolicyDraftCreatedResponseSchema,
-	PolicyPublishRequestSchema,
-	PolicyPublishResponseSchema,
-	PolicySimulationResultSchema,
-	PublishedPolicyBundleSchema,
-} from "../contexts/authorization/schemas/authorization-policy";
-export type {
-	CedarAuthorizationDecision,
-	CedarAuthorizationRequest,
-	CedarDecision,
-	CreatePolicyDraftInput,
-	PolicyDecisionChange,
-	PolicyDraftCreatedResponse,
-	PolicyPublishRequestInput,
-	PolicyPublishResponse,
-	PolicySimulationResult,
-	PublishedPolicyBundle,
-} from "../contexts/authorization/schemas/authorization-policy";
 export { SystemOperationContextSchema, TenantJobContextSchema } from "./infrastructure/tenant-job-context";
 export type { SystemOperationContext, TenantJobContext } from "./infrastructure/tenant-job-context";
 export {
@@ -2185,3 +2149,6 @@ export type {
 	UpdateKanbanColumnInput,
 	UpdateKanbanTaskInput,
 } from "../contexts/kanban/schemas/kanban";
+
+// Tenant access administration (ADR 067): tenant roles, grants and shares.
+export * from "../contexts/authorization/schemas/tenant-access";

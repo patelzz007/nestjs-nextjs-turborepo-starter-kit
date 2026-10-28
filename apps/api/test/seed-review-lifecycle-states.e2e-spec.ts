@@ -1,5 +1,4 @@
 import { Pool } from "pg";
-import { LIST_SLOT_INDEX } from "@workspace/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
@@ -11,10 +10,9 @@ const DELETION_GRACE_DAYS = 30;
 
 /**
  * The review / lifecycle states `pnpm db:seed` leaves behind obey the same invariants the services
- * write them with (`prisma/seed/tenant-review-states.ts`, `tenant-policy-revision.ts`,
- * `tenant-encryption.ts`): a reviewed request names its reviewer, a pending-deletion tenant
- * carries its grace deadline, a superseded policy version has exactly one live successor, and a
- * re-wrapped data key is stamped and audited.
+ * write them with (`prisma/seed/tenant-review-states.ts`, `tenant-encryption.ts`): a reviewed request
+ * names its reviewer, a pending-deletion tenant carries its grace deadline, and a re-wrapped data key
+ * is stamped and audited.
  */
 describe("Seeded review and lifecycle states (integration)", () => {
 	let pool: Pool;
@@ -86,27 +84,6 @@ describe("Seeded review and lifecycle states (integration)", () => {
 		const ids = active.rows.map((row) => row.id);
 		expect(ids).toContain(TENANT_SEED_IDS.klTenant);
 		expect(ids).toContain(TENANT_SEED_IDS.mlkTenant);
-	});
-
-	it("has exactly one live version per policy slot, and a four-eyes revision that supersedes version 1 and carries its SQL predicate", async () => {
-		const slots = await pool.query<{ live: string }>(
-			`SELECT count(*) FILTER (WHERE "supersededAt" IS NULL)::text AS live
-			   FROM public."AuthorizationPolicyVersion" WHERE "tenantId" IS NOT NULL GROUP BY "tenantId"`,
-		);
-		for (const slot of slots.rows) {
-			expect(slot.live).toBe("1");
-		}
-		const revised = await pool.query<{ version: number; sqlPredicate: string | null; supersededAt: string | null; approvedById: string | null }>(
-			`SELECT v.version, v."sqlPredicate" AS "sqlPredicate", v."supersededAt"::text AS "supersededAt", d."approvedById" AS "approvedById"
-			   FROM public."AuthorizationPolicyVersion" v JOIN public."AuthorizationPolicyDraft" d ON d.id = v."draftId"
-			  WHERE v."tenantId" = $1 AND v.scope = 'TENANT' ORDER BY v.version`,
-			[TENANT_SEED_IDS.mlkTenant],
-		);
-		expect(revised.rows.map((row) => row.version)).toEqual([1, 2]);
-		expect(revised.rows[LIST_SLOT_INDEX.first]?.supersededAt).not.toBeNull();
-		expect(revised.rows[LIST_SLOT_INDEX.second]?.supersededAt).toBeNull();
-		expect(revised.rows[LIST_SLOT_INDEX.second]?.sqlPredicate).toContain(TENANT_SEED_IDS.mlkTenant);
-		expect(revised.rows[LIST_SLOT_INDEX.second]?.approvedById).not.toBeNull();
 	});
 
 	it("stamps and audits a re-wrapped tenant data key", async () => {

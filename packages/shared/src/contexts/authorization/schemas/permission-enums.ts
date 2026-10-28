@@ -15,7 +15,23 @@ import { z } from "zod";
 
 // ── Permission Action ─────────────────────────────────────────────────────
 
-export const PermissionActionSchema = z.enum(["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"]);
+/** CRUD plus the closed lifecycle verbs of ADR 067. There is no catch-all action: a route names the verb it performs. */
+export const PermissionActionSchema = z.enum([
+	"CREATE",
+	"READ",
+	"UPDATE",
+	"DELETE",
+	"LIST",
+	"PUBLISH",
+	"APPROVE",
+	"REJECT",
+	"SUSPEND",
+	"BAN",
+	"UNBAN",
+	"REACTIVATE",
+	"UNLOCK",
+	"REDEEM",
+]);
 export type PermissionAction = z.output<typeof PermissionActionSchema>;
 
 // ── Permission Resource ───────────────────────────────────────────────────
@@ -46,5 +62,27 @@ export const PermissionResourceSchema = z.enum([
 	"GITHUB",
 	"GITHUB_PULL_REQUEST",
 	"KANBAN_TASK",
+	"KANBAN_BOARD",
+	"MEMBER",
+	"KYB",
+	"ACCESS_REQUEST",
+	"SUPPORT_ACCESS",
+	"API_KEY",
+	"INVITE",
+	"SESSION",
+	"CUSTOMER_BAN",
+	"SHARE",
+	"CLAIM",
+	"TERMINAL",
 ]);
 export type PermissionResource = z.output<typeof PermissionResourceSchema>;
+
+// ── Roles and shares (ADR 067) ────────────────────────────────────────────
+
+/** Where a role applies: the platform, a tenant-role template, or one tenant's own copy. */
+export const RoleKindSchema = z.enum(["PLATFORM", "TEMPLATE", "TENANT"]);
+export type RoleKind = z.output<typeof RoleKindSchema>;
+
+/** What a per-record share gives: VIEW (read) or EDIT (read + update). */
+export const ShareLevelSchema = z.enum(["VIEW", "EDIT"]);
+export type ShareLevel = z.output<typeof ShareLevelSchema>;

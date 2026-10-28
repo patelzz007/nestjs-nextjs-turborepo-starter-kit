@@ -5,7 +5,7 @@ import { API_VERSION_PREFIX } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { Idempotent } from "../../../../../platform/presentation/http/idempotency/idempotent.decorator";
-import { RequirePermission } from "../../../../../platform/presentation/http/security/decorators/require-permission.decorator";
+import { REQUIRED_PERMISSION_KEY } from "../../../../../platform/presentation/http/security/decorators/route-requirements.metadata";
 import { ResponseContract } from "../../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { AdminAccessGuard } from "../../../../../platform/presentation/http/security/guards/admin-access.guard";
 import { IS_PUBLIC_KEY } from "../../../../../platform/presentation/http/security/decorators/public.decorator";
@@ -21,7 +21,6 @@ import { handlerOf, metadataKeyOf } from "./route-metadata";
 const reflector = new Reflector();
 
 /** The keys the decorators store their options under, named through the decorators themselves. */
-const REQUIRED_PERMISSION_KEY = RequirePermission("READ", "GITHUB").KEY;
 const IDEMPOTENT_OPTIONS_METADATA = metadataKeyOf(Idempotent({ required: true }), { required: true });
 
 type ControllerClass =
@@ -100,7 +99,7 @@ describe("pull-request controllers", () => {
 
 	it.each(ROUTES)("routes %s to %j and requires %s GITHUB_PULL_REQUEST", (_name: string, metadata: RouteMetadata, path: string, action: "READ" | "UPDATE") => {
 		expect(metadata.path).toBe(path);
-		expect(metadata.permission).toEqual({ action, resource: "GITHUB_PULL_REQUEST" });
+		expect(metadata.permission).toEqual([{ action, resource: "GITHUB_PULL_REQUEST" }]);
 	});
 
 	it.each(ROUTES.filter(([name]) => !name.startsWith("GithubPicturesController") && name !== "GithubLiveUpdatesController.stream"))(

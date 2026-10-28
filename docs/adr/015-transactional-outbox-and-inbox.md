@@ -78,7 +78,7 @@ Messages that can never be applied (empty value, invalid UTF-8 / JSON, schema vi
 
 ### Rollout
 
-The wire message now requires `eventId`, and both sides use strict schemas. Deploy the API and `analytics-consumer` together: stop the consumer, run `pnpm db:deploy` (migration + RLS), start the new API, then the new consumer. Messages produced before the switch carry no `eventId`; the new consumer parks them as `SCHEMA_VIOLATION` (raw value kept for replay) instead of crashing on them. Existing `PENDING` outbox rows need nothing — the row id becomes their `eventId` at publish time.
+The wire message now requires `eventId`, and both sides use strict schemas. Deploy the API and `analytics-consumer` together: stop the consumer, run `pnpm tools db:deploy` (migration + RLS), start the new API, then the new consumer. Messages produced before the switch carry no `eventId`; the new consumer parks them as `SCHEMA_VIOLATION` (raw value kept for replay) instead of crashing on them. Existing `PENDING` outbox rows need nothing — the row id becomes their `eventId` at publish time.
 
 ## References
 

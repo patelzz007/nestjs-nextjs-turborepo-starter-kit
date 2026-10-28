@@ -102,8 +102,8 @@ export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProp
 	const impersonation = useImpersonation({ onIdentityChanged: handleIdentityChanged });
 	const { requestStart: requestImpersonation } = impersonation;
 
-	// `PATCH /admin/merchants/:id/kyb` needs MANAGE; viewing the KYB page only LIST.
-	const canManageKyb = can(PERMISSION.MERCHANT_ORG.MANAGE);
+	// `PATCH /admin/merchants/:id/kyb` needs APPROVE; viewing the KYB page only LIST.
+	const canManageKyb = can(PERMISSION.MERCHANT_ORG.APPROVE);
 	// `POST /auth/impersonate/:userId` is `@SuperAdminOnly`.
 	const canImpersonateOwner = useCanStartImpersonation();
 

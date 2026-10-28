@@ -59,7 +59,7 @@ import type { ActorContext } from "../../../../platform/application/actor-contex
 import { AUTH_FLOW_RECORDER, type AuthFlowRecorder } from "../../../../platform/application/ports/access-token.port";
 import { ApiErrorResponseDto } from "../../../../platform/presentation/http/dto/api-response.dto";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
-import { Authorize, self } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
+import { self } from "../../../../platform/presentation/http/security/decorators/permission-target";
 import { EmailVerified } from "../../../../platform/presentation/http/security/decorators/email-verified.decorator";
 import { GetUser } from "../../../../platform/presentation/http/security/decorators/get-user.decorator";
 import { PlatformOperation } from "../../../../platform/presentation/http/security/decorators/platform-operation.decorator";
@@ -271,7 +271,7 @@ export class AuthController {
 	@RateLimit(RATE_LIMIT_POLICY.credential)
 	@ApiBearerAuth()
 	@Post("/change-password")
-	@Authorize({ action: "UPDATE", resource: "USER", resourceId: self(), description: "User can only change their own password" })
+	@RequirePermission("UPDATE", "USER", { resourceId: self(), description: "User can only change their own password" })
 	@ApiOperation({ summary: "Change password for the authenticated user" })
 	@ZodResponse(ChangePasswordResponseSchema, { description: "Password changed successfully" })
 	@TrackAuthFlow({ flow: "change-password" })
@@ -361,7 +361,7 @@ export class AuthController {
 	@EmailVerified()
 	@RequirePermission("UPDATE", "USER")
 	@PlatformOperation(ADMIN_USERS_UNLOCK_OPERATION)
-	@Authorize({ action: "UPDATE", resource: "USER", resourceId: "userId", description: "SuperAdmin can unlock any user account" })
+	@RequirePermission("UPDATE", "USER", { resourceId: "userId", description: "SuperAdmin can unlock any user account" })
 	@RateLimit(RATE_LIMIT_POLICY.authenticatedMutation)
 	@Patch("/admin/users/:userId/unlock")
 	@ApiOperation({ summary: "SuperAdmin: unlock a locked user account" })
@@ -376,7 +376,7 @@ export class AuthController {
 	@EmailVerified()
 	@RequirePermission("DELETE", "USER")
 	@PlatformOperation(ADMIN_USERS_BAN_OPERATION)
-	@Authorize({ action: "DELETE", resource: "USER", resourceId: "userId", description: "A platform admin bans an account" })
+	@RequirePermission("DELETE", "USER", { resourceId: "userId", description: "A platform admin bans an account" })
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
 	@Post("/admin/users/:userId/ban")
 	@ApiOperation({ summary: "SuperAdmin: ban an account — it can no longer sign in, and every session it has is revoked" })
@@ -398,7 +398,7 @@ export class AuthController {
 	@EmailVerified()
 	@RequirePermission("DELETE", "USER")
 	@PlatformOperation(ADMIN_USERS_UNBAN_OPERATION)
-	@Authorize({ action: "DELETE", resource: "USER", resourceId: "userId", description: "A platform admin lifts an account's ban" })
+	@RequirePermission("DELETE", "USER", { resourceId: "userId", description: "A platform admin lifts an account's ban" })
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
 	@Post("/admin/users/:userId/unban")
 	@ApiOperation({ summary: "SuperAdmin: lift an account's ban — it may sign in again" })

@@ -1,7 +1,7 @@
 "use client";
 
 import { MerchantRewardDetailPageSkeleton } from "@/components/loading/merchant-page-skeletons";
-import { MerchantCapabilityGate } from "@/contexts/tenancy";
+import { MerchantCapabilityGate, RecordSharesCard } from "@/contexts/tenancy";
 import { MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
 import { RewardPageBackLink } from "@/contexts/rewards/components/merchant-reward-editor-layout";
 import { MerchantRewardUnavailable } from "@/contexts/rewards/components/merchant-reward-unavailable";
@@ -104,6 +104,8 @@ function MerchantRewardDetail({ tenantSlug, reward }: MerchantRewardDetailProps)
 	const canSubmit = canManageRewards && reward.status === "DRAFT";
 	const ended = isRewardEnded(reward.status);
 	const stores = describeRewardStores(reward);
+	// The tenant's zone, for share end dates (the context is the member-wide, already-cached tenant read).
+	const timeZone = api.tenants.context.useQuery({ tenantSlug }).data?.data.tenant.timeZone;
 
 	const images = React.useMemo(
 		(): readonly ImageCarouselImage[] =>
@@ -230,6 +232,8 @@ function MerchantRewardDetail({ tenantSlug, reward }: MerchantRewardDetailProps)
 					</Card>
 				</section>
 			</div>
+
+			{canManageRewards && timeZone !== undefined ? <RecordSharesCard tenantSlug={tenantSlug} resource="REWARD" resourceId={reward.id} timeZone={timeZone} /> : null}
 		</div>
 	);
 }

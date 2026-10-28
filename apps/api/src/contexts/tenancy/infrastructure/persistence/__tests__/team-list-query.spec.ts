@@ -5,8 +5,8 @@ const TENANT_ID = "0199a1b2-0000-7000-8000-000000000001";
 describe("member roster list query → Prisma", () => {
 	it("scopes to the tenant's live memberships and adds the role filter", () => {
 		expect(buildMemberListWhere(TENANT_ID, { page: 1, limit: 20 })).toEqual({ AND: [{ tenantId: TENANT_ID, isDeleted: false }] });
-		expect(buildMemberListWhere(TENANT_ID, { page: 1, limit: 20, filter: { role: { in: ["ADMIN", "CASHIER"] } } })).toEqual({
-			AND: [{ tenantId: TENANT_ID, isDeleted: false }, { role: { in: ["ADMIN", "CASHIER"] } }],
+		expect(buildMemberListWhere(TENANT_ID, { page: 1, limit: 20, filter: { role: { in: ["MANAGER", "CASHIER"] } } })).toEqual({
+			AND: [{ tenantId: TENANT_ID, isDeleted: false }, { role: { in: ["MANAGER", "CASHIER"] } }],
 		});
 	});
 

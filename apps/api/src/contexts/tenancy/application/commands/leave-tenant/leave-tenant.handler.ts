@@ -17,7 +17,7 @@ import { LeaveTenantCommand } from "./leave-tenant.command";
 @CommandHandler(LeaveTenantCommand)
 export class LeaveTenantHandler implements ICommandHandler<LeaveTenantCommand, TenantMembershipLeaveResponse> {
 	public constructor(
-		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<Pick<TenantsScope, "tenants" | "memberships" | "audit" | "tenantPolicies" | "events">>,
+		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<Pick<TenantsScope, "tenants" | "memberships" | "audit" | "events">>,
 		@Inject(CLOCK) private readonly clock: Clock,
 	) {}
 
@@ -36,7 +36,6 @@ export class LeaveTenantHandler implements ICommandHandler<LeaveTenantCommand, T
 			await scope.audit.record({
 				tenantId: tenant.id,
 				actorUserId: user.userId,
-				policyVersion: await scope.tenantPolicies.activePolicyVersion(tenant.id),
 				action: "membership.left",
 				resourceType: "Membership",
 				resourceId: membership.id,

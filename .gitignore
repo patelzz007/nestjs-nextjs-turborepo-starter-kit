@@ -27,7 +27,7 @@ dist
 # turbo
 .turbo
 
-# `pnpm dev:timing` results and dev logs (packages/tooling/src/dev-timing)
+# `pnpm tools dev:timing` results and dev logs (packages/tooling/src/dev-timing)
 .dev-timing/
 
 # misc

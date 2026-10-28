@@ -56,7 +56,7 @@ The exact package list can evolve as the product grows, but ownership of each pa
 | Shared lint/tsconfig | `packages/oxlint-config`, `packages/typescript-config` | Config consistency across apps |
 | An API endpoint's client leaf, request/response handling, session transport, or a TanStack Query hook over the router | `packages/api-client` (core in `src/`, hooks in `src/react/`) | One client for web and mobile; it must stay free of Next, DOM and Node code |
 | Web-only API glue (Next server prefetch, route proxy refresh, cookie names, auth forms) | `packages/client` | Depends on `next` / `react-dom` / `server-only`, which the mobile app must never pull in |
-| A design token (colour, radius, type size, z-index, easing) | `packages/tokens/src` — then `pnpm tokens:generate` | One source for web and mobile (ADR 030); generated CSS is never hand-edited |
+| A design token (colour, radius, type size, z-index, easing) | `packages/tokens/src` — then `pnpm tools tokens:generate` | One source for web and mobile (ADR 030); generated CSS is never hand-edited |
 
 ### Worked example
 
@@ -143,7 +143,7 @@ package, so any app or package may depend on it. It is consumed two ways:
 
 - **Generated CSS** (the normal path): `@workspace/tokens/web.css` (imported by `packages/ui`'s
   `globals.css`), `@workspace/tokens/palette.css` (the docs site) and `@workspace/tokens/mobile.css`
-  (`apps/mobile`). These files are committed, produced only by `pnpm tokens:generate`, and a test
+  (`apps/mobile`). These files are committed, produced only by `pnpm tools tokens:generate`, and a test
   fails while they are stale — never edit them by hand.
 - **TypeScript** (`@workspace/tokens`): the typed token data and `resolveColorToken`, for code that
   needs a value in JavaScript (a chart, a native API). It must stay platform-neutral: no React,

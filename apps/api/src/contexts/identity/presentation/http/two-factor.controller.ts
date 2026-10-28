@@ -29,7 +29,8 @@ import type { FastifyRequest } from "fastify";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { CurrentActor } from "../../../../platform/presentation/http/security/current-actor.decorator";
-import { Authorize, self } from "../../../../platform/presentation/http/security/decorators/authorize.decorator";
+import { RequirePermission } from "../../../../platform/presentation/http/security/decorators/require-permission.decorator";
+import { self } from "../../../../platform/presentation/http/security/decorators/permission-target";
 import { GetUser } from "../../../../platform/presentation/http/security/decorators/get-user.decorator";
 import { PublicOperation } from "../../../../platform/presentation/http/security/decorators/public-operation.decorator";
 import { Public } from "../../../../platform/presentation/http/security/decorators/public.decorator";
@@ -67,7 +68,7 @@ export class TwoFactorController {
 	@RateLimit(RATE_LIMIT_POLICY.login)
 	@ApiBearerAuth()
 	@Post("/2fa/setup")
-	@Authorize({ action: "UPDATE", resource: "USER", resourceId: self(), description: "User can start their own 2FA enrollment" })
+	@RequirePermission("UPDATE", "USER", { resourceId: self(), description: "User can start their own 2FA enrollment" })
 	@ApiOperation({ summary: "Start 2FA enrollment: generate a pending TOTP secret, QR code and backup codes" })
 	@ZodResponse(TwoFactorSetupResponseSchema, {
 		status: HttpStatus.CREATED,
@@ -84,7 +85,7 @@ export class TwoFactorController {
 	@RateLimit(RATE_LIMIT_POLICY.login)
 	@ApiBearerAuth()
 	@Post("/2fa/enable")
-	@Authorize({ action: "UPDATE", resource: "USER", resourceId: self(), description: "User can enable their own 2FA" })
+	@RequirePermission("UPDATE", "USER", { resourceId: self(), description: "User can enable their own 2FA" })
 	@ApiOperation({ summary: "Confirm 2FA enrollment with a TOTP code" })
 	@ZodResponse(TwoFactorMessageResponseSchema, { description: "2FA enabled" })
 	public async enableTwoFactor(
@@ -98,7 +99,7 @@ export class TwoFactorController {
 	@RateLimit(RATE_LIMIT_POLICY.login)
 	@ApiBearerAuth()
 	@Post("/2fa/rotate")
-	@Authorize({ action: "UPDATE", resource: "USER", resourceId: self(), description: "User can rotate their own 2FA" })
+	@RequirePermission("UPDATE", "USER", { resourceId: self(), description: "User can rotate their own 2FA" })
 	@ApiOperation({ summary: "Rotate 2FA after confirming password and current TOTP or backup code" })
 	@ZodResponse(TwoFactorSetupResponseSchema, { description: "New TOTP secret, QR code, otpauth:// key URI and backup codes" })
 	public async rotateTwoFactor(

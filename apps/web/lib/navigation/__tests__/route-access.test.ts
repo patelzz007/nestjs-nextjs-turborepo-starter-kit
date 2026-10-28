@@ -125,9 +125,9 @@ describe("isWebRouteAllowed", () => {
 		expect(isWebRouteAllowed(rule, GUEST)).toBe(false);
 	});
 
-	it("allows a capability-gated page only with the capability (MANAGE implies LIST)", () => {
+	it("allows a capability-gated page only with that exact capability", () => {
 		expect(isWebRouteAllowed(gated, session(true, [PERMISSION.ORDER.LIST]))).toBe(true);
-		expect(isWebRouteAllowed(gated, session(true, [PERMISSION.ORDER.MANAGE]))).toBe(true);
+		expect(isWebRouteAllowed(gated, session(true, [PERMISSION.ORDER.UPDATE]))).toBe(false);
 		expect(isWebRouteAllowed(gated, session(true, [PERMISSION.PRODUCT.LIST]))).toBe(false);
 		expect(isWebRouteAllowed(gated, MEMBER)).toBe(false);
 	});
@@ -171,7 +171,7 @@ function visibleUrls(menu: CompiledSidebarMenuData, capabilities: readonly Capab
 const SAMPLE_CAPABILITY_SETS: readonly (readonly CapabilitySlug[])[] = [
 	[],
 	[PERMISSION.ORDER.LIST],
-	[PERMISSION.ORDER.MANAGE],
+	[PERMISSION.ORDER.UPDATE],
 	[PERMISSION.PRODUCT.LIST],
 	[PERMISSION.ANALYTICS.READ],
 ];

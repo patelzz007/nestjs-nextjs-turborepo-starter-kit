@@ -6,39 +6,21 @@ import type {
 	AuthorizationEvaluationStep,
 	AuthorizationRequest,
 	AuthorizationResult,
-	AuthorizationRowFilter,
-	BaseRowFilter,
-	PermissionAction,
-	PermissionPair,
-	PermissionResource,
-	ResourceAuthorization,
-	ResourceCapabilityMap,
-	RowScopeAlternative,
 } from "@workspace/shared";
-import { isStringPrimitive, PermissionPairSchema, withResourceCapability } from "@workspace/shared";
+import { isStringPrimitive, PermissionPairSchema } from "@workspace/shared";
 
 import type { AuthorizationKernelPort } from "../../application/ports/authorization-kernel.port";
+import { AccessControlService } from "../../application/services/access-control.service";
+import type { AccessTarget } from "../../domain/access/access-request";
 import { AccessDeniedError } from "../../domain/errors/authorization.errors";
-import { AclService } from "./acl.service";
 import { AuthorizationAuditKernelService, type AuthorizationAuditMetadata } from "./authorization-audit-kernel.service";
-import { PolicyEngineService } from "./policy-engine.service";
-import { ResourceOwnershipResolver, type OwnershipLookup } from "./resource-ownership.resolver";
-import { grantsFor, SubjectGrantsLoader, type SubjectGrant } from "./subject-grants.loader";
-import { TenantMembershipService, type RequestedTenant, type TenantVerification, type VerifiedTenantContext } from "./tenant-membership.service";
+import { TenantMembershipService, type RequestedTenant, type TenantVerification } from "./tenant-membership.service";
 
-const ALL_ACTIONS: readonly PermissionAction[] = ["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"];
-
-/** Tenant ids the subject claims — verified by `TenantMembershipService` before any use. */
 function requestedTenant(subject: AuthorizationContext): RequestedTenant {
 	return {
 		...(subject.tenantId === undefined ? {} : { tenantId: subject.tenantId }),
 		...(subject.locationId === undefined ? {} : { locationId: subject.locationId }),
 	};
-}
-
-/** Replace claimed tenant ids with the verified ones (unverified ids are dropped). */
-function withVerifiedTenant(subject: AuthorizationContext, verified: VerifiedTenantContext): AuthorizationContext {
-	return { ...subject, tenantId: verified.tenantId, locationId: verified.locationId };
 }
 
 function tenantRejectionReason(tenant: TenantVerification): string | null {
@@ -51,99 +33,50 @@ function tenantRejectionReason(tenant: TenantVerification): string | null {
 	return null;
 }
 
-function grantSourceReason(source: SubjectGrant["source"]): string {
-	switch (source) {
-		case "role":
-			return "Granted via role";
-		case "location":
-			return "Granted via location role";
-		case "override":
-			return "Granted via user override";
-		case "implicit":
-			return "Implicit self grant";
-	}
-}
-
-/** Matches no rows — used whenever a list request holds no applicable grant. */
-function denyAllRows(): AuthorizationRowFilter {
-	return { id: { in: [] } };
-}
-
-/**
- * The rows a LOCATION grant widens a list to. A location role reaches its own location (every
- * location of its tenant for an ALL_LOCATIONS scope) and, when the request selected a location, only
- * that one. A LOCATION permission held another way needs a verified location context.
- */
-function locationRowAlternative(grant: SubjectGrant, context: VerifiedTenantContext): RowScopeAlternative | null {
-	const binding = grant.location;
-	if (binding === undefined) {
-		return context.tenantId !== undefined && context.locationId !== undefined ? { tenantId: context.tenantId, locationId: context.locationId } : null;
-	}
-	if (context.tenantId !== undefined && context.tenantId !== binding.tenantId) {
-		return null;
-	}
-	if (context.locationId !== undefined) {
-		return binding.locationId === null || binding.locationId === context.locationId ? { tenantId: binding.tenantId, locationId: context.locationId } : null;
-	}
-	return binding.locationId === null ? { tenantId: binding.tenantId } : { tenantId: binding.tenantId, locationId: binding.locationId };
-}
-
 function readStringAttribute(attributes: AuthorizationAttributes | undefined, key: string): string | undefined {
 	const value = attributes?.[key];
 	return isStringPrimitive(value) ? value : undefined;
 }
 
-interface ScopeOutcome {
-	readonly satisfied: boolean;
-	readonly reason: string;
+/**
+ * The record the request is about: its id, and the store it sits in — read from server-side attributes,
+ * or else the store the request was verified for (acting "at store X" is decided for store X).
+ */
+function targetOf(request: AuthorizationRequest, resource: AccessTarget["resource"], verifiedLocationId: string | undefined): AccessTarget | undefined {
+	const locationId = readStringAttribute(request.resourceAttributes, "locationId") ?? verifiedLocationId;
+	if (request.resourceId === undefined && locationId === undefined) {
+		return undefined;
+	}
+	return {
+		resource,
+		...(request.resourceId === undefined ? {} : { resourceId: request.resourceId }),
+		...(locationId === undefined ? {} : { locationId }),
+	};
 }
 
 /**
- * Authorization Kernel — the single decision point for backend authorization.
- *
- * Public API: `can()`, `authorize()`, `explain()`, `filter()`,
- * `resourceCapabilities()`, `hasRoles()`.
- *
- * Decision precedence (spec §65, default deny):
- *
- *  1. SuperAdmin platform bypass (explicit, audited by the guard)
- *  2. Unknown action/resource → DENY (fail closed)
- *  3. Tenant verification — a claimed tenant/location the subject is not an
- *     active member of → DENY (forged tenant ids never reach later steps)
- *  4. Explicit DENY — per-user override or ACL entry → DENY
- *  5. Explicit ACL ALLOW → ALLOW
- *  6. Grants (roles incl. hierarchy, user ALLOW overrides, implicit self grants)
- *     must match the action (MANAGE implies all) **and** satisfy their scope:
- *       GLOBAL · TENANT (verified membership, same-org resource)
- *       · LOCATION (verified location scope) · OWN (DB-resolved owner) · RESOURCE (ACL only)
- *  7. Conditional policies (ABAC) — a matching DENY or unmet conditional ALLOW → DENY
- *  8. Default → DENY
- *
- * Tenant membership (ReBAC) never grants permissions on its own; it only
- * satisfies the TENANT / LOCATION scope of a permission the subject holds.
- * PostgreSQL RLS remains the final row boundary beneath every decision.
+ * The authorization kernel port, kept as a FACADE (ADR 067): it verifies the tenant a request claims
+ * (ReBAC: user → active member → tenant → store), hands the decision to `AccessControlService` — the
+ * one decision service, deny by default, allowed by role, grant, share or ownership — and records it
+ * as an `AuthorizationResult` naming the path that allowed it. SuperAdmin keeps its audited platform
+ * bypass. PostgreSQL RLS remains the row boundary beneath every decision.
  */
 @Injectable()
 export class AuthorizationKernelService implements AuthorizationKernelPort {
 	public constructor(
-		private readonly grantsLoader: SubjectGrantsLoader,
 		private readonly tenantMembership: TenantMembershipService,
-		private readonly ownership: ResourceOwnershipResolver,
-		private readonly aclService: AclService,
-		private readonly policyEngine: PolicyEngineService,
+		private readonly accessControl: AccessControlService,
 		private readonly audit: AuthorizationAuditKernelService,
 	) {}
 
 	/** Boolean decision, no side effects. */
 	public async can(request: AuthorizationRequest): Promise<AuthorizationDecision> {
-		const result = await this.explain(request);
-		return result.decision;
+		return (await this.explain(request)).decision;
 	}
 
 	/**
-	 * Security-boundary check: audits the decision (DENY / writes / sensitive
-	 * reads) and throws the structured 403 when denied. The exception never
-	 * reveals which rule failed — use `explain()` for internal debugging.
+	 * Security-boundary check: audits the decision (DENY / writes / sensitive reads) and throws the
+	 * uniform 403 when denied. The exception never reveals which rule failed — use `explain()`.
 	 */
 	public async authorize(request: AuthorizationRequest, metadata?: AuthorizationAuditMetadata): Promise<void> {
 		const result = await this.explain(request);
@@ -153,7 +86,7 @@ export class AuthorizationKernelService implements AuthorizationKernelPort {
 		}
 	}
 
-	/** Full decision with ordered evaluation steps. */
+	/** The decision with its steps: tenant verification, then the allow path (or the default deny). */
 	public async explain(request: AuthorizationRequest): Promise<AuthorizationResult> {
 		const startedAt = Date.now();
 		const evaluation: AuthorizationEvaluationStep[] = [];
@@ -169,318 +102,41 @@ export class AuthorizationKernelService implements AuthorizationKernelPort {
 			return finish("ALLOW", request);
 		}
 
-		const pair = PermissionPairSchema.safeParse({ action: request.action, resource: request.resource });
-		if (!pair.success) {
+		const permission = PermissionPairSchema.safeParse({ action: request.action, resource: request.resource });
+		if (!permission.success) {
 			evaluation.push({ source: "validation", effect: "DENY", reason: "Unknown action or resource" });
 			return finish("DENY", request);
 		}
-		const required: PermissionPair = pair.data;
 
-		// ── Tenant verification (relationship: user → member → tenant → location) ──
 		const tenant = await this.tenantMembership.verify(request.subject.userId, requestedTenant(request.subject));
 		const rejection = tenantRejectionReason(tenant);
 		if (rejection !== null) {
 			evaluation.push({ source: "tenant", effect: "DENY", reason: rejection });
 			return finish("DENY", request);
 		}
-		const evaluated: AuthorizationRequest = { ...request, subject: withVerifiedTenant(request.subject, tenant.context) };
-		if (tenant.context.tenantId !== undefined) {
+		const tenantId = tenant.context.tenantId;
+		const evaluated: AuthorizationRequest = { ...request, subject: { ...request.subject, tenantId, locationId: tenant.context.locationId } };
+		if (tenantId !== undefined) {
 			evaluation.push({
 				source: "relationship",
 				effect: "NO_MATCH",
 				reason: tenant.supportAccessGrantId === undefined ? "Verified active tenant membership" : "Verified an approved support grant",
-				details: { tenantId: tenant.context.tenantId, ...(tenant.supportAccessGrantId === undefined ? {} : { supportAccessGrantId: tenant.supportAccessGrantId }) },
+				details: { tenantId },
 			});
 		}
 
-		const subjectGrants = await this.grantsLoader.load(request.subject.userId);
-
-		// ── Explicit DENY: user overrides ──
-		const deniedBy = grantsFor(subjectGrants.denials, required);
-		const denial = deniedBy.at(0);
-		if (denial !== undefined) {
-			evaluation.push({ source: "override", effect: "DENY", reason: "Explicit per-user DENY override", details: { overrideId: denial.sourceId } });
-			return finish("DENY", evaluated);
-		}
-
-		// ── Explicit ACL DENY / ALLOW ──
-		const acl = await this.aclService.findApplicable(
-			{
-				userId: request.subject.userId,
-				roleIds: subjectGrants.roleIds,
-				action: required.action,
-				resource: required.resource,
-				resourceScope: request.resourceId === undefined ? { kind: "typeWide" } : { kind: "resource", id: request.resourceId },
-				tenantId: tenant.context.tenantId,
-				locationId: tenant.context.locationId,
-			},
-			evaluated,
-		);
-		const aclDeny = acl.denies.at(0);
-		if (aclDeny !== undefined) {
-			evaluation.push({ source: "acl", effect: "DENY", reason: `Explicit ACL DENY${aclDeny.reason === null ? "" : `: ${aclDeny.reason}`}`, details: { aclId: aclDeny.id } });
-			return finish("DENY", evaluated);
-		}
-		const aclAllow = acl.allows.at(0);
-		if (aclAllow !== undefined) {
-			evaluation.push({
-				source: "acl",
-				effect: "ALLOW",
-				reason: `Explicit ACL ALLOW${aclAllow.reason === null ? "" : `: ${aclAllow.reason}`}`,
-				details: { aclId: aclAllow.id },
-			});
-			return finish("ALLOW", evaluated);
-		}
-		evaluation.push({ source: "acl", effect: "NO_MATCH", reason: "No explicit ACL entry" });
-
-		// ── Grants + scope ──
-		const candidates = grantsFor(subjectGrants.grants, required);
-		if (candidates.length === 0) {
-			evaluation.push({ source: "role", effect: "NO_MATCH", reason: "Subject holds no grant for this permission" });
-			evaluation.push({ source: "default", effect: "DENY", reason: "No authorization rule matched — default deny" });
-			return finish("DENY", evaluated);
-		}
-
-		let ownershipLookup: OwnershipLookup | undefined;
-		const resolveOwnership = async (): Promise<OwnershipLookup> => {
-			ownershipLookup ??= request.resourceId === undefined ? { kind: "missing" } : await this.ownership.resolve(required.resource, request.resourceId);
-			return ownershipLookup;
-		};
-
-		let satisfiedBy: SubjectGrant | undefined;
-		const scopeReasons: string[] = [];
-		for (const grant of candidates) {
-			const scopeOutcome = await this.evaluateScope(grant, evaluated, resolveOwnership);
-			const outcome: ScopeOutcome =
-				scopeOutcome.satisfied && !this.policyEngine.matchesStoredConditions(grant.conditions, evaluated, false)
-					? { satisfied: false, reason: "Permission conditions not met" }
-					: scopeOutcome;
-			if (outcome.satisfied) {
-				satisfiedBy = grant;
-				evaluation.push({
-					source: grant.scope === "OWN" ? "ownership" : "scope",
-					effect: "ALLOW",
-					reason: outcome.reason,
-					details: { grantSource: grant.source, grantScope: grant.scope },
-				});
-				break;
-			}
-			scopeReasons.push(outcome.reason);
-		}
-
-		if (satisfiedBy === undefined) {
-			evaluation.push({ source: "scope", effect: "DENY", reason: scopeReasons.join("; ") });
-			evaluation.push({ source: "default", effect: "DENY", reason: "No grant applies in this scope — default deny" });
-			return finish("DENY", evaluated);
-		}
-		evaluation.push({
-			source: "role",
-			effect: "ALLOW",
-			reason: grantSourceReason(satisfiedBy.source),
+		const target = targetOf(request, permission.data.resource, tenant.context.locationId);
+		const decision = await this.accessControl.decide({
+			userId: request.subject.userId,
+			...(tenantId === undefined ? {} : { tenantId }),
+			permission: permission.data,
+			...(target === undefined ? {} : { target }),
 		});
-
-		// ── Conditional policies ──
-		const policy = await this.policyEngine.evaluate(evaluated);
-		evaluation.push(...policy.evaluation);
-		if (policy.decision === "DENY") {
+		if (decision.path === null) {
+			evaluation.push({ source: "default", effect: "DENY", reason: "No role, grant, share or ownership allows this (deny by default)" });
 			return finish("DENY", evaluated);
 		}
-
+		evaluation.push({ source: decision.path, effect: "ALLOW", reason: `Allowed by ${decision.path}` });
 		return finish("ALLOW", evaluated);
-	}
-
-	/**
-	 * Translate the subject's grants into a Prisma WHERE fragment for list
-	 * endpoints (spec §32, §57). Conventions: tenant rows expose
-	 * `tenantId` / `locationId`, owned rows expose `userId` (the USER /
-	 * PROFILE resources use their primary key). Row-level ABAC conditions are
-	 * enforced per operation via `authorize()`; an unconditional DENY policy
-	 * yields no rows. RLS still applies beneath this filter.
-	 */
-	public async filter(context: AuthorizationContext, action: PermissionAction, resource: PermissionResource): Promise<AuthorizationRowFilter> {
-		if (context.isSuperAdmin === true) {
-			return {};
-		}
-
-		const tenant = await this.tenantMembership.verify(context.userId, requestedTenant(context));
-		if (tenantRejectionReason(tenant) !== null) {
-			return denyAllRows();
-		}
-		const verified: AuthorizationContext = withVerifiedTenant(context, tenant.context);
-		const required: PermissionPair = { action, resource };
-		const request: AuthorizationRequest = { subject: verified, action, resource };
-
-		const subjectGrants = await this.grantsLoader.load(context.userId);
-		if (grantsFor(subjectGrants.denials, required).length > 0) {
-			return denyAllRows();
-		}
-
-		if (await this.policyEngine.hasUnconditionalDeny(request)) {
-			return denyAllRows();
-		}
-
-		const acl = await this.aclService.findApplicable(
-			{
-				userId: context.userId,
-				roleIds: subjectGrants.roleIds,
-				action,
-				resource,
-				resourceScope: { kind: "everyResource" },
-				tenantId: tenant.context.tenantId,
-				locationId: tenant.context.locationId,
-			},
-			request,
-		);
-		if (acl.denies.some((entry) => entry.resourceId === null)) {
-			return denyAllRows();
-		}
-
-		const alternatives: RowScopeAlternative[] = [];
-		let unrestricted = acl.allows.some((entry) => entry.resourceId === null);
-
-		for (const grant of grantsFor(subjectGrants.grants, required)) {
-			// Conditional grants only widen the filter when their subject-level conditions hold.
-			if (!this.policyEngine.matchesStoredConditions(grant.conditions, request, false)) {
-				continue;
-			}
-			switch (grant.scope) {
-				case "GLOBAL":
-					unrestricted = true;
-					break;
-				case "TENANT":
-					if (tenant.context.tenantId !== undefined) {
-						alternatives.push({ tenantId: tenant.context.tenantId });
-					}
-					break;
-				case "LOCATION": {
-					const alternative = locationRowAlternative(grant, tenant.context);
-					if (alternative !== null) {
-						alternatives.push(alternative);
-					}
-					break;
-				}
-				case "OWN":
-					alternatives.push(resource === "USER" || resource === "PROFILE" ? { id: { in: [context.userId] } } : { userId: context.userId });
-					break;
-				case "RESOURCE":
-					break;
-			}
-		}
-
-		const allowedIds = acl.allows.flatMap((entry) => (entry.resourceId === null ? [] : [entry.resourceId]));
-		if (allowedIds.length > 0) {
-			alternatives.push({ id: { in: allowedIds } });
-		}
-
-		const base = this.combineAlternatives(unrestricted, alternatives);
-		if (base === null) {
-			return denyAllRows();
-		}
-
-		const deniedIds = acl.denies.flatMap((entry) => (entry.resourceId === null ? [] : [entry.resourceId]));
-		if (deniedIds.length === 0) {
-			return base;
-		}
-		return { AND: [base, { NOT: { id: { in: deniedIds } } }] };
-	}
-
-	/**
-	 * Server-evaluated per-resource capabilities for UI payloads
-	 * (`order.authorization.can.delete`, spec §12 option C).
-	 */
-	public async resourceCapabilities(
-		subject: AuthorizationContext,
-		resource: PermissionResource,
-		resourceId: string | undefined,
-		resourceAttributes: AuthorizationAttributes | undefined,
-		actions: readonly PermissionAction[] = ALL_ACTIONS,
-	): Promise<ResourceAuthorization> {
-		const decisions = await Promise.all(
-			actions.map(async (action): Promise<[PermissionAction, boolean]> => {
-				const decision = await this.can({ subject, action, resource, resourceId, resourceAttributes });
-				return [action, decision === "ALLOW"];
-			}),
-		);
-		let can: ResourceCapabilityMap = {};
-		for (const [action, allowed] of decisions) {
-			can = withResourceCapability(can, action, allowed);
-		}
-		return { can };
-	}
-
-	/** Role-name requirement check (for `@RequireAnyRole` / `@RequireAllRoles`). */
-	public async hasRoles(userId: string, roleNames: readonly string[], mode: "all" | "any"): Promise<boolean> {
-		if (roleNames.length === 0) {
-			return false;
-		}
-		const subjectGrants = await this.grantsLoader.load(userId);
-		const held = new Set(subjectGrants.roleNames);
-		return mode === "all" ? roleNames.every((name) => held.has(name)) : roleNames.some((name) => held.has(name));
-	}
-
-	private combineAlternatives(unrestricted: boolean, alternatives: readonly RowScopeAlternative[]): BaseRowFilter | null {
-		if (unrestricted) {
-			return {};
-		}
-		const only = alternatives.length === 1 ? alternatives.at(0) : undefined;
-		if (only !== undefined) {
-			return only;
-		}
-		return alternatives.length === 0 ? null : { OR: [...alternatives] };
-	}
-
-	private async evaluateScope(grant: SubjectGrant, request: AuthorizationRequest, resolveOwnership: () => Promise<OwnershipLookup>): Promise<ScopeOutcome> {
-		const tenantId = request.subject.tenantId;
-		const locationId = request.subject.locationId;
-		const resourceTenantId = readStringAttribute(request.resourceAttributes, "tenantId");
-		const resourceLocationId = readStringAttribute(request.resourceAttributes, "locationId");
-		const targetsResource = request.resourceId !== undefined;
-
-		switch (grant.scope) {
-			case "GLOBAL":
-				return { satisfied: true, reason: "GLOBAL grant" };
-			case "TENANT": {
-				if (tenantId === undefined) {
-					return { satisfied: false, reason: "TENANT grant requires a verified tenant context" };
-				}
-				if (targetsResource && resourceTenantId === undefined) {
-					return { satisfied: false, reason: "TENANT grant requires the resource's tenant" };
-				}
-				if (resourceTenantId !== undefined && resourceTenantId !== tenantId) {
-					return { satisfied: false, reason: "Resource belongs to another tenant" };
-				}
-				return { satisfied: true, reason: "TENANT grant within verified tenant" };
-			}
-			case "LOCATION": {
-				if (tenantId === undefined || locationId === undefined) {
-					return { satisfied: false, reason: "LOCATION grant requires a verified location context" };
-				}
-				if (grant.location !== undefined && (grant.location.tenantId !== tenantId || (grant.location.locationId !== null && grant.location.locationId !== locationId))) {
-					return { satisfied: false, reason: "Location role applies to another location" };
-				}
-				if (targetsResource && resourceLocationId === undefined) {
-					return { satisfied: false, reason: "LOCATION grant requires the resource's location" };
-				}
-				if ((resourceLocationId !== undefined && resourceLocationId !== locationId) || (resourceTenantId !== undefined && resourceTenantId !== tenantId)) {
-					return { satisfied: false, reason: "Resource belongs to another location" };
-				}
-				return { satisfied: true, reason: "LOCATION grant within verified location" };
-			}
-			case "OWN": {
-				if (!targetsResource) {
-					return { satisfied: false, reason: "OWN grant requires a specific resource" };
-				}
-				const lookup = await resolveOwnership();
-				if (lookup.kind === "unsupported") {
-					return { satisfied: false, reason: "Resource type has no ownership model" };
-				}
-				if (lookup.kind === "missing" || lookup.ownerUserId !== request.subject.userId) {
-					return { satisfied: false, reason: "Subject does not own the resource" };
-				}
-				return { satisfied: true, reason: "Subject owns the resource" };
-			}
-			case "RESOURCE":
-				return { satisfied: false, reason: "RESOURCE-scoped grants apply only through explicit ACL entries" };
-		}
 	}
 }

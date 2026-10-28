@@ -2,11 +2,9 @@ import type { Prisma, Role, User } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 import { PILOT_CITY_TIME_ZONES } from "@workspace/shared";
 
-import { seedDefaultTenantPolicies } from "../../../src/contexts/authorization/public-api";
 import { seedAccountSecurity } from "../account-security";
 import { prisma } from "../client";
 import { upsertLiveSeedMembership } from "../memberships";
-import { defaultTenantPolicySeedIds } from "../policy-seed-ids";
 import { assignSeedRole } from "../rbac-audit";
 import {
 	buildEnterpriseDataset,
@@ -226,9 +224,6 @@ async function persistEnterpriseDataset(dataset: EnterpriseDataset, roles: reado
 		await upsertMembership(dataset.tenant.id, member, user.id);
 	}
 
-	seedLog("Publishing default tenant Cedar policies...");
-	await seedDefaultTenantPolicies(prisma, dataset.tenant.id, ownerUser.id, defaultTenantPolicySeedIds(dataset.tenant.id));
-
 	seedLog(`Upserting ${String(dataset.products.length)} products...`);
 	await upsertProducts(dataset.products);
 
@@ -288,7 +283,7 @@ Products         : ${String(summary.products)}
 ──────────────────────────────────────────────
 ${ENTERPRISE_OWNER_EMAIL}               /  ${ENTERPRISE_OWNER_PASSWORD}   (OWNER · all locations)
 member.0001@… through ${lastMember.email}  /  ${ENTERPRISE_MEMBER_PASSWORD}
-  (roles by index: POLICY_ADMIN, ADMIN, MEMBER, CASHIER)
+  (roles by index: MANAGER at #1 and every 25th, CASHIER otherwise)
 `);
 	printPlatformAccountCredentials();
 }

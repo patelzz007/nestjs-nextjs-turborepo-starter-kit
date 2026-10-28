@@ -291,7 +291,7 @@ packages/tokens/
 
 ### 5.5 The generator
 
-`pnpm tokens:generate` (a root script delegating to the package) writes both files:
+`pnpm tools tokens:generate` (a root script delegating to the package) writes both files:
 
 | Output                 | Wrapper                                                                             | Consumed by                             |
 | ---------------------- | ----------------------------------------------------------------------------------- | --------------------------------------- |
@@ -1632,7 +1632,7 @@ automatically. `turbo.json` gains the `expo export` output folder in `build.outp
 
 | Script                 | Purpose                                                                |
 | ---------------------- | ---------------------------------------------------------------------- |
-| `pnpm tokens:generate` | regenerate token CSS (piece 1)                                         |
+| `pnpm tools tokens:generate` | regenerate token CSS (piece 1)                                         |
 | `pnpm dev:mobile`      | start Expo for the mobile app (`turbo dev --filter @workspace/mobile`) |
 
 ### 14.3 Dependency hygiene
@@ -1752,7 +1752,7 @@ touches shared packages.
 ### Piece 1: `packages/tokens`
 
 - [x] Token data reproduces today's `palette.css` and `tokens.css` values exactly (diff attached to the PR).
-- [x] `pnpm tokens:generate` writes `generated/web.css` and `generated/mobile.css` deterministically.
+- [x] `pnpm tools tokens:generate` writes `generated/web.css` and `generated/mobile.css` deterministically.
 - [x] The generator fails when a theme lacks a variable another theme defines.
 - [x] The staleness test fails on a hand edit and on an un-regenerated token change.
 - [x] `packages/ui` consumes the generated CSS; hand-written values removed.
@@ -1795,7 +1795,7 @@ touches shared packages.
 ### Piece 5: `apps/mobile`
 
 - [x] SDK 58 (was 57; §9.11), Expo-managed packages installed with `npx expo install`; `--check` passes in tests.
-- [x] syncpack version group for mobile; `deps:check` passes. (The `apps/mobile` groups pin React 19.2.3, `@types/react`, React Native / `@react-native/*`, Metro and Jest. Note: `pnpm deps:check` runs `syncpack lint` inside `packages/tooling`, where it only reads that package; run from the repo root, the mobile groups leave no mobile mismatch, and the 8 remaining root-level findings predate this work.)
+- [x] syncpack version group for mobile; `deps:check` passes. (The `apps/mobile` groups pin React 19.2.3, `@types/react`, React Native / `@react-native/*`, Metro and Jest. Note: `pnpm tools deps:check` runs `syncpack lint` inside `packages/tooling`, where it only reads that package; run from the repo root, the mobile groups leave no mobile mismatch, and the 8 remaining root-level findings predate this work.)
 - [ ] Uniwind configured (`withUniwindConfig` outermost, CSS imported in the root layout); generated tokens imported; System / Light / Dark works from the first frame. (Configuration, token compilation and "theme applied before the navigator renders" are verified by `expo export` and tests; the visual check on a phone is NOT VERIFIED ON DEVICE.)
 - [x] All screens in section 10 implemented with shared zod schemas.
 - [x] Root guard enforces the route table in 9.6; route params parsed with zod.

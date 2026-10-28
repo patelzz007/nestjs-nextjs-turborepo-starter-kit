@@ -54,7 +54,7 @@ export class MailpitEmailTransport extends EmailTransport implements OnApplicati
 		}
 		if (!(await this.isReachable())) {
 			this.logService.warn(
-				`EMAIL_PROVIDER=mailpit but no Mailpit answers at ${this.config.mailpitUrl} — emails will fail until it runs. Start it with \`pnpm mailpit\` (install: \`brew install mailpit\`), or set EMAIL_PROVIDER=resend.`,
+				`EMAIL_PROVIDER=mailpit but no Mailpit answers at ${this.config.mailpitUrl} — emails will fail until it runs. Start it with \`pnpm mailpit\` (the Docker service, also started by \`pnpm docker:up\`), or set EMAIL_PROVIDER=resend.`,
 				{ context: "MailpitEmailTransport" },
 			);
 		}

@@ -49,7 +49,6 @@ export class RenameOwnMembershipHandler implements ICommandHandler<RenameOwnMemb
 			await scope.audit.record({
 				tenantId: member.tenantId,
 				actorUserId: user.userId,
-				policyVersion: member.policyVersion,
 				action: OWN_DISPLAY_NAME_UPDATED_AUDIT_ACTION,
 				resourceType: "Membership",
 				resourceId: membership.id,

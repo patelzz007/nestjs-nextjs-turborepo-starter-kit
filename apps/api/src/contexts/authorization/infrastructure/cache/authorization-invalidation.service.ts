@@ -11,7 +11,6 @@ import { REDIS_PUBLISHER, REDIS_SUBSCRIBER } from "../../../../platform/infrastr
 import {
 	UserInvalidationTriggerSchema,
 	type AuthorizationCacheInvalidationPort,
-	type PolicyBundleInvalidationScope,
 	type UserInvalidationScope,
 	type UserInvalidationTrigger,
 } from "../../application/ports/authorization-cache-invalidation.port";
@@ -19,7 +18,7 @@ import { ACCESS_TOKEN_STATE, type AccessTokenStatePort } from "../../../../platf
 import { AuthorizationCacheService } from "./authorization-cache.service";
 
 export { UserInvalidationTriggerSchema };
-export type { PolicyBundleInvalidationScope, UserInvalidationScope };
+export type { UserInvalidationScope };
 export type { UserInvalidationTrigger } from "../../application/ports/authorization-cache-invalidation.port";
 
 /**
@@ -49,28 +48,9 @@ const InvalidationMessageSchema = z.discriminatedUnion("type", [
 		})
 		.strict(),
 	z.object({ type: z.literal("clear"), origin: z.string().max(MAX_ID_LENGTH) }).strict(),
-	z
-		.object({
-			type: z.literal("policy_bundles"),
-			origin: z.string().max(MAX_ID_LENGTH),
-			/** The tenant whose bundle changed; `null` = every bundle (a platform-scope policy changed). */
-			tenantId: z.string().min(1).max(MAX_ID_LENGTH).nullable(),
-		})
-		.strict(),
 ]);
 
 type InvalidationMessage = z.output<typeof InvalidationMessageSchema>;
-
-/**
- * A per-process cache of compiled policy bundles that must be dropped when a
- * policy is published on ANY instance. Registered at module init by the
- * module that owns the cache (dependency inversion: this service never
- * imports the policy engine).
- */
-export interface PolicyBundleCacheTarget {
-	invalidateTenant(tenantId: string): void;
-	invalidateAll(): void;
-}
 
 /** Where an applied invalidation came from: this process, or another API process on the same Redis. */
 type InvalidationOrigin = { readonly kind: "local" } | { readonly kind: "remote"; readonly instanceId: string };
@@ -90,8 +70,7 @@ const LOCAL_ORIGIN: InvalidationOrigin = { kind: "local" };
  * Delivery is at-most-once (Redis pub/sub). A publish that fails after the
  * database committed cannot be rolled back; it is logged at error level and
  * the other instances converge when their entries expire
- * (`ACCESS_TOKEN_STATE_CACHE_TTL_MS`, `AUTHORIZATION_CACHE_TTL_MS`,
- * `POLICY_BUNDLE_CACHE_TTL_MS` for registered policy-bundle caches). The
+ * (`ACCESS_TOKEN_STATE_CACHE_TTL_MS`, `AUTHORIZATION_CACHE_TTL_MS`). The
  * revoked refresh tokens and bumped tokenVersion are already durable, so a
  * missed message only delays — never undoes — a revocation.
  */
@@ -104,7 +83,6 @@ export class AuthorizationInvalidationService implements AuthorizationCacheInval
 	/** `<REDIS_NAMESPACE>:authz:invalidate` — only instances sharing the namespace hear each other. */
 	private readonly channel: string;
 	private isSubscribed = false;
-	private readonly policyBundleCaches: Set<PolicyBundleCacheTarget> = new Set<PolicyBundleCacheTarget>();
 
 	public constructor(
 		private readonly cache: AuthorizationCacheService,
@@ -180,28 +158,6 @@ export class AuthorizationInvalidationService implements AuthorizationCacheInval
 		await this.publish({ type: "clear", origin: this.instanceId });
 	}
 
-	/** Registers a per-process policy-bundle cache to drop on local and remote policy publishes. */
-	public registerPolicyBundleCache(target: PolicyBundleCacheTarget): void {
-		this.policyBundleCaches.add(target);
-	}
-
-	/** Drop stale compiled policy bundles on every instance — call AFTER the publish transaction committed. */
-	public async invalidatePolicyBundles(scope: PolicyBundleInvalidationScope): Promise<void> {
-		const tenantId: string | null = scope.kind === "tenant" ? scope.tenantId : null;
-		this.applyPolicyBundles(tenantId);
-		await this.publish({ type: "policy_bundles", origin: this.instanceId, tenantId });
-	}
-
-	private applyPolicyBundles(tenantId: string | null): void {
-		for (const target of this.policyBundleCaches) {
-			if (tenantId === null) {
-				target.invalidateAll();
-			} else {
-				target.invalidateTenant(tenantId);
-			}
-		}
-	}
-
 	private applyUsers(userIds: readonly string[], scope: UserInvalidationScope, origin: InvalidationOrigin): void {
 		this.cache.invalidateUsers(userIds);
 		if (scope.accessTokenState) {
@@ -249,10 +205,6 @@ export class AuthorizationInvalidationService implements AuthorizationCacheInval
 		const origin: InvalidationOrigin = { kind: "remote", instanceId: message.origin };
 		if (message.type === "users") {
 			this.applyUsers(message.userIds, { accessTokenState: message.accessTokenState, trigger: message.trigger }, origin);
-			return;
-		}
-		if (message.type === "policy_bundles") {
-			this.applyPolicyBundles(message.tenantId);
 			return;
 		}
 		this.applyClear(origin);

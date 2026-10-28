@@ -8,23 +8,20 @@ import { Location } from "../../../domain/aggregates/location.aggregate";
 import { auditActorId, notFound } from "../../tenant-actor";
 import { toLocationResponse } from "../../tenant-responses";
 import type { TenantsScope } from "../../tenants-scope";
-import { TENANTS_UNIT_OF_WORK, TENANT_POLICY, LOCATION_ADMIN_CREATE_OPERATION } from "../../ports/tenants.tokens";
-import type { TenantPolicyPort } from "../../ports/tenant-policy.port";
+import { TENANTS_UNIT_OF_WORK, LOCATION_ADMIN_CREATE_OPERATION } from "../../ports/tenants.tokens";
 import { CreateLocationAsAdminCommand } from "./create-location-as-admin.command";
 
-/** Authorization: the route's `MANAGE MERCHANT_ORG` permission (platform admins). Inserted under the tenant's location lock. */
+/** Authorization: the route's `UPDATE MERCHANT_ORG` permission (platform admins). Inserted under the tenant's location lock. */
 @CommandHandler(CreateLocationAsAdminCommand)
 export class CreateLocationAsAdminHandler implements ICommandHandler<CreateLocationAsAdminCommand, LocationResponse> {
 	public constructor(
 		@Inject(TENANTS_UNIT_OF_WORK) private readonly uow: UnitOfWork<TenantsScope>,
-		@Inject(TENANT_POLICY) private readonly tenantPolicy: TenantPolicyPort,
 		@Inject(CLOCK) private readonly clock: Clock,
 	) {}
 
 	public async execute(command: CreateLocationAsAdminCommand): Promise<LocationResponse> {
 		const { actor, input } = command;
 		const adminUserId = auditActorId(actor);
-		const policyVersion = await this.tenantPolicy.activePolicyVersion(input.tenantId);
 
 		return this.uow.runSystemOperation(LOCATION_ADMIN_CREATE_OPERATION, actor, async (scope): Promise<LocationResponse> => {
 			const merchantCity = await scope.tenants.findMerchantCity(input.tenantId);
@@ -44,7 +41,6 @@ export class CreateLocationAsAdminHandler implements ICommandHandler<CreateLocat
 			await scope.audit.record({
 				tenantId: input.tenantId,
 				actorUserId: adminUserId,
-				policyVersion,
 				action: "tenant.location.admin_created",
 				resourceType: "Location",
 				resourceId: stored.id,

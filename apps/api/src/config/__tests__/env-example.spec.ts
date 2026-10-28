@@ -44,7 +44,7 @@ describe("apps/api/.env.example", () => {
 		}
 	});
 
-	it("boots once the secrets are filled in (pnpm secrets:generate)", () => {
+	it("boots once the secrets are filled in (pnpm tools secrets:generate)", () => {
 		const active: Record<string, string> = parseDotenv(exampleText);
 		const withSecrets = { ...active, ...TEST_API_SECRETS, ...TEST_API_DATA_KEYS };
 
