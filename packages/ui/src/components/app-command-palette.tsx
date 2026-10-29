@@ -58,7 +58,7 @@ export interface AppCommandPaletteProps {
 	readonly renderIcon: (iconName: string | undefined, className: string) => React.ReactNode;
 	readonly aliasMap?: Readonly<Record<string, readonly string[]>>;
 	/**
-	 * The app's own result groups (cmdk `CommandGroup`s: records found by the
+	 * The app's own result groups (`CommandGroup`s: records found by the
 	 * search text, actions for the page in focus), listed first. `hasExtraResults`
 	 * says whether they hold anything, so the empty state and the suggestion only
 	 * show when nothing at all matched.

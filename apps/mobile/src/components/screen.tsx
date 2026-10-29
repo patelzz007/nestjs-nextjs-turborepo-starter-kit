@@ -2,19 +2,23 @@
 // keyboard avoidance and an optional title.
 //
 // Inside the app shell (ADR 046) the page header is laid over the top of the
-// screen: the content starts below it, and the header — not the screen — shows
-// the title (it comes from the route, features/navigation/app-screens.ts), so
-// a screen there passes no `title`. Outside it (the lock screen, a forced
-// update) the screen draws its own title at the top of the content.
+// screen: the content starts below it, on a sheet with a curved top (the auth
+// pages' curve), and the header — not the screen — shows the title (it comes
+// from the route, features/navigation/app-screens.ts), so a screen there passes
+// no `title`. The screen feeds the header its scrolling, so the header collapses
+// with the content (src/lib/page-header-scroll.tsx). Outside it (the lock
+// screen, a forced update) the screen draws its own title at the top of the content.
 
 import * as React from "react";
-import { RefreshControl, ScrollView, View } from "react-native";
+import { RefreshControl, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
 
 import { KeyboardAvoidingView } from "@workspace/ui-native/components/keyboard-avoiding-view";
 
 import { usePageHeaderClearance } from "../lib/page-header-clearance";
+import { usePageHeaderScrollHandler } from "../lib/page-header-scroll";
 import { useKeyboardVisible } from "../lib/use-keyboard-visible";
 import { useTabBarClearance } from "../lib/use-tab-bar-clearance";
 import { Heading, MutedText } from "@workspace/ui-native/components/text";
@@ -43,6 +47,11 @@ export interface ScreenProps {
  * collapses to zero height, and the whole screen renders blank.
  */
 const StyledSafeAreaView = withUniwind(SafeAreaView);
+/** Reanimated's scroll view, so the page header can follow the scrolling on the UI thread (wrapped, or its classes are dropped). */
+const StyledScrollView = withUniwind(Animated.ScrollView);
+
+/** How often the scroll view reports its position, in ms: once a frame, so the header follows finger for finger. */
+const SCROLL_EVENT_THROTTLE_MS = 16;
 
 export function Screen({ title, description, children, refreshing = false, onRefresh, scrollable = true, testID }: ScreenProps): React.JSX.Element {
 	// Inside the tabs, the floating tab bar covers the bottom of the screen: the content ends above it.
@@ -53,6 +62,7 @@ export function Screen({ title, description, children, refreshing = false, onRef
 	const clearanceStyle = React.useMemo((): { readonly height: number } => ({ height: tabBarClearance }), [tabBarClearance]);
 	// Inside the app shell the header covers the top (status bar included): the content starts below it.
 	const headerClearance = usePageHeaderClearance();
+	const onScroll = usePageHeaderScrollHandler();
 	const hasHeader = headerClearance !== null;
 	const headerClearanceStyle = React.useMemo(
 		(): { readonly paddingTop: number } | undefined => (headerClearance === null ? undefined : { paddingTop: headerClearance }),
@@ -76,17 +86,28 @@ export function Screen({ title, description, children, refreshing = false, onRef
 			{tabBarClearance > 0 ? <View style={clearanceStyle} testID="tab-bar-clearance" /> : null}
 		</>
 	);
+	// Inside the shell the content sits on a sheet with a curved top, right under the header — the
+	// same curve as the auth pages'. Outside it, the content sits on the page.
+	const page = hasHeader ? (
+		<View className="grow gap-5 rounded-t-4xl bg-card px-5 py-6" testID={testID === undefined ? undefined : `${testID}-sheet`}>
+			{content}
+		</View>
+	) : (
+		content
+	);
 
 	return (
 		<StyledSafeAreaView edges={hasHeader ? ["left", "right"] : ["top", "left", "right"]} className="flex-1 bg-background" testID={testID}>
 			<View className="flex-1">
 				<KeyboardAvoidingView className="flex-1">
 					{scrollable ? (
-						<ScrollView
+						<StyledScrollView
+							onScroll={onScroll}
+							scrollEventThrottle={SCROLL_EVENT_THROTTLE_MS}
 							testID={testID === undefined ? undefined : `${testID}-content`}
 							keyboardShouldPersistTaps="handled"
 							scrollIndicatorInsets={scrollIndicatorInsets}
-							contentContainerClassName="grow gap-5 px-5 py-6"
+							contentContainerClassName={hasHeader ? "grow" : "grow gap-5 px-5 py-6"}
 							contentContainerStyle={headerClearanceStyle}
 							refreshControl={
 								onRefresh === undefined ? undefined : (
@@ -98,11 +119,11 @@ export function Screen({ title, description, children, refreshing = false, onRef
 									/>
 								)
 							}>
-							{content}
-						</ScrollView>
+							{page}
+						</StyledScrollView>
 					) : (
-						<View testID={testID === undefined ? undefined : `${testID}-content`} className="flex-1 gap-5 px-5 py-6" style={headerClearanceStyle}>
-							{content}
+						<View testID={testID === undefined ? undefined : `${testID}-content`} className={hasHeader ? "flex-1" : "flex-1 gap-5 px-5 py-6"} style={headerClearanceStyle}>
+							{page}
 						</View>
 					)}
 				</KeyboardAvoidingView>

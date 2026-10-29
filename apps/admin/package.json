@@ -24,7 +24,6 @@
 		"@workspace/shared": "workspace:*",
 		"@workspace/tokens": "workspace:*",
 		"@workspace/ui": "workspace:*",
-		"cmdk": "^1.1.1",
 		"date-fns": "^4.4.0",
 		"framer-motion": "^14.7.1",
 		"lucide-react": "^1.62.0",

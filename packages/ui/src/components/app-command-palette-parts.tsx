@@ -1,11 +1,10 @@
 "use client";
 
-import { Command as CommandPrimitive } from "cmdk";
 import { ChevronDown, ChevronRight, Clock, FileText, Pin, Search, SearchX, X, Zap } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@workspace/ui/components/button";
-import { CommandEmpty, CommandGroup, CommandItem } from "@workspace/ui/components/command";
+import { CommandEmpty, CommandGroup, CommandInputPrimitive, CommandItem } from "@workspace/ui/components/command";
 import { highlightText } from "@workspace/ui/lib/core/highlight-text";
 import type { AppCommandPaletteLabels } from "@workspace/ui/lib/palette/labels";
 import type { ScopeType } from "@workspace/ui/lib/palette/search";
@@ -41,7 +40,7 @@ const FOOTER_KBD_CLASS =
 const FOOTER_HINT_CLASS = "flex items-center gap-1.5 text-(length:--text-overline) text-muted-foreground";
 
 const LIST_ITEM_CLASS =
-	"slide-in-from-bottom-0.5 flex animate-in items-center justify-between rounded-xl px-4 py-2.5 transition-all duration-75 fill-mode-both fade-in data-selected:bg-muted data-selected:text-foreground";
+	"slide-in-from-bottom-0.5 flex animate-in items-center justify-between rounded-xl px-4 py-2.5 transition-all duration-75 fill-mode-both fade-in data-highlighted:bg-muted data-highlighted:text-foreground";
 
 const CHIP_CLASS = "gap-1.5 rounded-lg border-border/50 px-2.5 py-1.5 text-xs text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground";
 
@@ -100,7 +99,7 @@ export const AppCommandPaletteSearchInput = React.forwardRef<HTMLDivElement, App
 					</Button>
 				) : null}
 
-				<CommandPrimitive.Input
+				<CommandInputPrimitive
 					ref={inputRef}
 					placeholder={placeholder}
 					value={searchText}
@@ -353,7 +352,10 @@ export const AppCommandPaletteNavigationSection = React.forwardRef<HTMLDivElemen
 														size="icon-xs"
 														data-url={item.url}
 														onClick={onTogglePin}
-														className={cn("size-5 opacity-0 transition-all group-hover/command-item:opacity-100 data-selected:opacity-100", isPinned && "opacity-100")}
+														className={cn(
+															"size-5 opacity-0 transition-all group-hover/command-item:opacity-100 group-data-highlighted/command-item:opacity-100",
+															isPinned && "opacity-100",
+														)}
 														aria-label={isPinned ? labels.unpinItemAriaLabel(item.title) : labels.pinItemAriaLabel(item.title)}>
 														<Pin className={cn("size-3 transition-colors", isPinned ? "text-primary" : "text-muted-foreground")} />
 													</Button>

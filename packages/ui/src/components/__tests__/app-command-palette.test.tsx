@@ -10,7 +10,7 @@ import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
 import { AppCommandPalette, type AppCommandPaletteProps } from "../app-command-palette";
 import { UiKitLabelsProvider } from "../ui-kit-labels-provider";
 
-/** cmdk measures its list and scrolls the active item into view — jsdom implements neither. */
+/** Base UI measures the command list and scrolls the highlighted item into view — jsdom implements neither. */
 class NoopResizeObserver {
 	public observe(): void {
 		return undefined;

@@ -5,6 +5,11 @@
 // `KeyboardProvider` wraps everything, the configuration-error screen
 // included: every keyboard-avoiding view (components/keyboard-avoiding-view.tsx)
 // reads the keyboard from it, in the app's window and in every sheet's.
+//
+// The app draws edge to edge (Expo SDK 58 makes it mandatory on Android), so the provider is told
+// the system bars are translucent. Its own edge-to-edge detection reads a React Native constant that
+// Expo Go does not set: left to itself it pads the whole app away from the status bar and the
+// navigation bar, leaving page-coloured strips that nothing (the header, the drawer, its scrim) can cover.
 
 import "../../global.css";
 
@@ -41,7 +46,7 @@ export default function RootLayout(): React.JSX.Element | null {
 			return null;
 		}
 		return (
-			<KeyboardProvider>
+			<KeyboardProvider statusBarTranslucent navigationBarTranslucent>
 				<ConfigIssueProvider issue={runtime.issue}>
 					<RootStack route="config-error" />
 				</ConfigIssueProvider>
@@ -49,7 +54,7 @@ export default function RootLayout(): React.JSX.Element | null {
 		);
 	}
 	return (
-		<KeyboardProvider>
+		<KeyboardProvider statusBarTranslucent navigationBarTranslucent>
 			<AppShell runtime={runtime} fontsReady={fontsReady} />
 		</KeyboardProvider>
 	);

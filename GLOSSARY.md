@@ -115,3 +115,59 @@ _Avoid_: Login, device registration
 **Store closure** (tenants):
 Closing a location so it can no longer sell. Tenants owns the location lifecycle.
 _Avoid_: Delete store, deactivate
+
+### Platform operations
+
+What the platform's own operators see and do about the platform itself, as opposed to anything a merchant or customer does.
+
+**Server** (operations):
+One machine the platform runs on, such as a DigitalOcean droplet. Its health is the machine's own CPU, memory, disk and network.
+_Avoid_: Host, box, node, VPS
+
+**Server agent** (operations):
+The small program installed on a server that reports that server's health to the platform. On a developer's laptop, the laptop is the server.
+_Avoid_: Daemon, collector, exporter
+
+**Instance** (operations):
+One running copy of a platform process (the API, a worker, the analytics consumer) on a server. One server can run several instances.
+_Avoid_: Server, container, pod, replica
+
+**Dependency** (operations):
+A service the instances need but do not run themselves: PostgreSQL, Redis, Kafka, RabbitMQ and the job queues.
+_Avoid_: Service, integration, backend
+
+**Alert** (operations):
+One incident in which a server, instance or dependency crossed a threshold or went silent. It is open until the condition clears, and it is resolved after that.
+_Avoid_: Notification, alarm, warning
+
+**Backup** (operations):
+A complete, downloadable copy of the platform's database at one moment.
+_Avoid_: Snapshot, dump, export
+
+**Pinned backup** (operations):
+A backup that the retention period never removes.
+_Avoid_: Kept, locked, archived
+
+**Load test** (operations):
+One run of synthetic traffic against the platform, with a fixed rate, a fixed duration and recorded results.
+_Avoid_: Stress test, benchmark, performance test
+
+**Scenario** (operations):
+A named user journey, such as claiming a reward, replayed as synthetic traffic in a load test.
+_Avoid_: Script, test case, flow
+
+**Traffic mix** (operations):
+A load test of the whole platform: every scenario at once, each with a weight.
+_Avoid_: Full test, platform test, blend
+
+**Load Test tenant** (operations):
+The dedicated tenant, with its own seeded users, that every load test acts inside, so that no real tenant's data is touched.
+_Avoid_: Test tenant, sandbox
+
+**Load-test user** (operations):
+A user who exists only inside the Load Test tenant, so that scenarios can act as it. It can never hold a platform role or join another tenant.
+_Avoid_: Bot, fake user, virtual user
+
+**Load-test purge** (operations):
+Permanently removing everything the Load Test tenant and its load-test users created. It is the one removal in the platform that is not a soft delete.
+_Avoid_: Reset, cleanup, wipe

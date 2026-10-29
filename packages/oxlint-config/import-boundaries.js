@@ -199,7 +199,7 @@ export const MOBILE_RESTRICTED_IMPORT_PATTERNS = [
 	{
 		regex: "^@workspace/(client|ui)(/|$)",
 		message:
-			"@workspace/client and @workspace/ui are web-only (react-dom, Next, Radix). The mobile app talks to the API through @workspace/api-client and builds its own React Native components in src/components.",
+			"@workspace/client and @workspace/ui are web-only (react-dom, Next, Base UI). The mobile app talks to the API through @workspace/api-client and builds its own React Native components in src/components.",
 	},
 	{
 		regex: NODE_BUILTIN_PATTERN,

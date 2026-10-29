@@ -190,9 +190,10 @@ Details: [ADR 056](../../docs/adr/056-in-house-pdf-viewer.md) and
 - App shell ([ADR 046](../../docs/adr/046-mobile-app-shell-and-page-header.md)): every signed-in screen sits in
   `src/features/app-shell/app-shell.tsx` — status, drawer and a page header rendered once (never
   re-mounted). The header leads with the menu on a tab's first screen and back deeper in, shows the
-  title from `src/features/navigation/app-screens.ts` (add a new screen's title there; `Screen` inside
-  the shell takes no `title`), and the status pills. It is not a bar: no band, divider or shadow, and
-  content scrolls up into a fade under it.
+  title and subtitle from `src/features/navigation/app-screens.ts` (add a new screen's heading there;
+  `Screen` inside the shell takes no `title`), the status pills and notifications. It is on the page's
+  colour and collapses with the page's scrolling into a slim bar (`src/lib/page-header-scroll.tsx`);
+  content sits on a curved sheet under it.
 - Feedback ([ADR 047](../../docs/adr/047-mobile-action-feedback-toasts.md)): every action reports its outcome
   with `useToast().success(…)` / `.error(…)` (`src/features/toast`), shown under the header by the
   app shell. Keep inline only what belongs to a step in front of the person (a dialog's failure,

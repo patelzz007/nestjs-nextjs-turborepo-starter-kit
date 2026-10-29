@@ -1,8 +1,9 @@
 // What the app header calls each signed-in screen — one entry per route of the
-// (app) group, in the screens' own words. The header resolves the title from
-// the path the moment it changes, so the new title moves in step with the
-// page instead of a frame after it. A screen whose title depends on its params
-// (two-factor: turn on, or new backup codes) resolves it from them.
+// (app) group, in the screens' own words: the title, and the one line under it
+// saying what the page is for. The header resolves both from the path the
+// moment it changes, so the new heading moves in step with the page instead of
+// a frame after it. A screen whose title depends on its params (two-factor:
+// turn on, or new backup codes; a commit's SHA) resolves it from them.
 
 import { GithubCommitShaSchema, GithubPullRequestNumberSchema, GithubRepositoryNameSchema } from "@workspace/shared";
 import { z } from "zod";
@@ -18,11 +19,33 @@ import { APP_TABS, type AppTab } from "./app-tabs";
 /** The current route's search params, as Expo Router reports them (untrusted: parsed per screen). */
 export type ScreenParams = Readonly<Record<string, string | string[] | undefined>>;
 
+/** What the header shows for a screen: its title, and one line under it saying what the page is for. */
+export interface ScreenHeading {
+	readonly title: string;
+	readonly subtitle: string;
+}
+
 /** Every title is resolved from the params, even a fixed one: one shape, no runtime type checks. */
 type ScreenTitle = (params: ScreenParams) => string;
 
+/** A screen's title (fixed or from its params) and its subtitle. */
+interface ScreenEntry {
+	readonly title: ScreenTitle;
+	readonly subtitle: string;
+}
+
 function fixed(title: string): ScreenTitle {
 	return (): string => title;
+}
+
+/** A screen with a fixed title. */
+function entry(title: string, subtitle: string): ScreenEntry {
+	return { title: fixed(title), subtitle };
+}
+
+/** A screen whose title is resolved from its params. */
+function paramEntry(title: ScreenTitle, subtitle: string): ScreenEntry {
+	return { title, subtitle };
 }
 
 /** `?mode=` of the two-factor screen; anything else is the default, turning it on. */
@@ -49,33 +72,47 @@ function pullRequestTitle(params: ScreenParams): string {
 	return pullRequestScreenTitle(parsed.repository, parsed.number);
 }
 
-const SUB_SCREEN_TITLES: ReadonlyMap<AppRoute, ScreenTitle> = new Map<AppRoute, ScreenTitle>([
-	[ROUTES.security, fixed("Security")],
-	[ROUTES.devices, fixed(DEVICES_COPY.title)],
-	[ROUTES.appearance, fixed("Appearance")],
-	[ROUTES.appLock, fixed("App lock")],
-	[ROUTES.components, fixed("Components")],
-	[ROUTES.till, fixed(TILL_TITLE)],
-	[ROUTES.pdfViewer, fixed(PDF_VIEWER_TITLE)],
-	[ROUTES.twoFactorSetup, (params: ScreenParams): string => twoFactorEnrollmentTitleOf(TwoFactorTitleParamsSchema.parse(params).mode)],
-	[ROUTES.githubCommit, commitTitle],
-	[ROUTES.pullRequests, fixed(PULL_REQUESTS_TITLE)],
-	[ROUTES.pullRequest, pullRequestTitle],
-	[ROUTES.pullRequestFiles, fixed(FILES_CHANGED_TITLE)],
-	[ROUTES.pullRequestCommits, fixed(COMMITS_TITLE)],
-	[ROUTES.pullRequestCommit, commitTitle],
-	[ROUTES.githubAccount, fixed(GITHUB_ACCOUNT_TITLE)],
-	[ROUTES.servers, fixed(SERVERS_TITLE)],
-	[ROUTES.server, fixed(SERVER_TITLE)],
+/** Each tab's subtitle; the tab's title comes from APP_TABS. */
+const TAB_SUBTITLES: Readonly<Record<AppTab["name"], string>> = {
+	index: "Your account at a glance",
+	analytics: "Your activity over time",
+	search: "Find anything in the app",
+	profile: "Your personal details",
+	settings: "Manage your preferences and account",
+};
+
+const SUB_SCREENS: ReadonlyMap<AppRoute, ScreenEntry> = new Map<AppRoute, ScreenEntry>([
+	[ROUTES.security, entry("Security", "Your password and sign-in")],
+	[ROUTES.devices, entry(DEVICES_COPY.title, "Where your account is signed in")],
+	[ROUTES.appearance, entry("Appearance", "Choose how the app looks")],
+	[ROUTES.appLock, entry("App lock", "Lock the app when you leave it")],
+	[ROUTES.components, entry("Components", "The UI kit, live")],
+	[ROUTES.till, entry(TILL_TITLE, "Scan and redeem customers' rewards")],
+	[ROUTES.pdfViewer, entry(PDF_VIEWER_TITLE, "Read a document")],
+	[
+		ROUTES.twoFactorSetup,
+		paramEntry((params: ScreenParams): string => twoFactorEnrollmentTitleOf(TwoFactorTitleParamsSchema.parse(params).mode), "A second step when you sign in"),
+	],
+	[ROUTES.githubCommit, paramEntry(commitTitle, "What changed in this commit")],
+	[ROUTES.pullRequests, entry(PULL_REQUESTS_TITLE, "Your open and recent pull requests")],
+	[ROUTES.pullRequest, paramEntry(pullRequestTitle, "Its description, checks and reviews")],
+	[ROUTES.pullRequestFiles, entry(FILES_CHANGED_TITLE, "Every changed file, with its diff")],
+	[ROUTES.pullRequestCommits, entry(COMMITS_TITLE, "The pull request's commits")],
+	[ROUTES.pullRequestCommit, paramEntry(commitTitle, "What changed in this commit")],
+	[ROUTES.githubAccount, entry(GITHUB_ACCOUNT_TITLE, "The token the app reads GitHub with")],
+	[ROUTES.servers, entry(SERVERS_TITLE, "Every machine the platform runs on")],
+	[ROUTES.server, entry(SERVER_TITLE, "Its history and its spec")],
 ]);
 
-const TITLES: ReadonlyMap<string, ScreenTitle> = new Map<string, ScreenTitle>([
-	...APP_TABS.map((tab: AppTab): [string, ScreenTitle] => [tab.route, fixed(tab.title)]),
-	...SUB_SCREEN_TITLES,
+const SCREENS: ReadonlyMap<string, ScreenEntry> = new Map<string, ScreenEntry>([
+	...APP_TABS.map((tab: AppTab): [string, ScreenEntry] => [tab.route, entry(tab.title, TAB_SUBTITLES[tab.name])]),
+	...SUB_SCREENS,
 ]);
 
-/** The title of the screen at `pathname`; empty for a path the app does not have. */
-export function screenTitleOf(pathname: string, params: ScreenParams): string {
-	const title = TITLES.get(pathname);
-	return title === undefined ? "" : title(params);
+const NO_HEADING: ScreenHeading = { title: "", subtitle: "" };
+
+/** The heading of the screen at `pathname`; empty for a path the app does not have. */
+export function screenHeadingOf(pathname: string, params: ScreenParams): ScreenHeading {
+	const screen = SCREENS.get(pathname);
+	return screen === undefined ? NO_HEADING : { title: screen.title(params), subtitle: screen.subtitle };
 }

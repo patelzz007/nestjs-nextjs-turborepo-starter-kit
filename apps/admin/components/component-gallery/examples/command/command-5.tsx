@@ -34,13 +34,13 @@ export function Command5Example(): React.JSX.Element {
 				<Kbd className="ml-auto">⌘K</Kbd>
 			</Button>
 			<CommandDialog title="Command palette" description="Search for a command to run" open={open} onOpenChange={setOpen}>
-				<Command className="**:data-[selected=true]:bg-muted **:data-selected:bg-transparent">
+				<Command>
 					<CommandInput placeholder="Search files by name..." />
 					<CommandList>
 						<CommandEmpty>No files found.</CommandEmpty>
 						<CommandGroup heading="Files">
 							{files.map((file) => (
-								<CommandItem key={file.path} className="gap-2.5">
+								<CommandItem key={file.path} value={file.path} keywords={[file.name]} className="gap-2.5">
 									<FileIcon className="size-4 shrink-0" />
 									<div className="flex flex-1 items-center gap-2">
 										<span className="font-medium">{file.name}</span>

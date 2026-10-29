@@ -19,37 +19,37 @@ export function Command8Example(): React.JSX.Element {
 				Search Everything
 			</Button>
 			<CommandDialog title="Command palette" description="Search for a command to run" open={open} onOpenChange={setOpen}>
-				<Command className="**:data-[selected=true]:bg-muted **:data-selected:bg-transparent">
+				<Command>
 					<CommandInput placeholder="Search or jump to..." />
 					<CommandList>
 						<CommandEmpty>No results found.</CommandEmpty>
 						<CommandGroup heading="Favorites">
-							<CommandItem>
+							<CommandItem value="Design System">
 								<StarIcon className="text-tone-yellow" />
 								<span>Design System</span>
 							</CommandItem>
-							<CommandItem>
+							<CommandItem value="API Documentation">
 								<StarIcon className="text-tone-yellow" />
 								<span>API Documentation</span>
 							</CommandItem>
 						</CommandGroup>
 						<CommandSeparator />
 						<CommandGroup heading="Recent">
-							<CommandItem>
+							<CommandItem value="Dashboard Analytics">
 								<ClockIcon className="text-muted-foreground" />
 								<span>Dashboard Analytics</span>
 								<div className="ml-auto" data-slot="command-shortcut">
 									<span>2m ago</span>
 								</div>
 							</CommandItem>
-							<CommandItem>
+							<CommandItem value="User Settings">
 								<ClockIcon className="text-muted-foreground" />
 								<span>User Settings</span>
 								<div className="ml-auto" data-slot="command-shortcut">
 									<span>15m ago</span>
 								</div>
 							</CommandItem>
-							<CommandItem>
+							<CommandItem value="Team Members">
 								<ClockIcon className="text-muted-foreground" />
 								<div className="flex flex-1 items-center justify-between">
 									<span>Team Members</span>
@@ -58,7 +58,7 @@ export function Command8Example(): React.JSX.Element {
 									</div>
 								</div>
 							</CommandItem>
-							<CommandItem>
+							<CommandItem value="Billing & Plans">
 								<ClockIcon className="text-muted-foreground" />
 								<span>Billing & Plans</span>
 								<div className="ml-auto" data-slot="command-shortcut">
@@ -68,15 +68,15 @@ export function Command8Example(): React.JSX.Element {
 						</CommandGroup>
 						<CommandSeparator />
 						<CommandGroup heading="Quick Links">
-							<CommandItem>
+							<CommandItem value="Documentation">
 								<BookOpenIcon />
 								<span>Documentation</span>
 							</CommandItem>
-							<CommandItem>
+							<CommandItem value="Help & Support">
 								<LifeBuoyIcon />
 								<span>Help & Support</span>
 							</CommandItem>
-							<CommandItem>
+							<CommandItem value="Contact Us">
 								<MessageSquareIcon />
 								<span>Contact Us</span>
 							</CommandItem>

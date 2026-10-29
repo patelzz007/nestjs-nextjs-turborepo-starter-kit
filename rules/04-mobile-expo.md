@@ -59,7 +59,7 @@ apps/mobile/src/
   __tests__/app/       # the route screens' tests — NEVER inside app/: Expo Router bundles every file there
 ```
 
-Screen components are the smart/application layer here — they fetch, transform, and decide, same as a Next.js `page.tsx`. Reusable controls in `components/` stay data-agnostic — same smart/dumb rules as `03-web-nextjs.md`/`07-ui-system.md` apply, just without shadcn (it's web/Radix-only): variant maps of token utilities (Uniwind), `forwardRef`, standard `onChange`/`onBlur`/`onFocus` event contract mapped to RN's `onChangeText`/`onBlur`/`onFocus`.
+Screen components are the smart/application layer here — they fetch, transform, and decide, same as a Next.js `page.tsx`. Reusable controls in `components/` stay data-agnostic — same smart/dumb rules as `03-web-nextjs.md`/`07-ui-system.md` apply, just without shadcn (it's web/Base UI-only): variant maps of token utilities (Uniwind), `forwardRef`, standard `onChange`/`onBlur`/`onFocus` event contract mapped to RN's `onChangeText`/`onBlur`/`onFocus`.
 
 ```tsx
 // ❌ DON'T — screen component with hardcoded, mobile-specific business logic

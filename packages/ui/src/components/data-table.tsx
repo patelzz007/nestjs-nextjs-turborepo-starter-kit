@@ -561,12 +561,15 @@ const RowActionsMenu = memoGeneric(function RowActionsMenu<TData extends RowData
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-64 p-2">
 					<div className="mb-2 px-2 text-xs font-medium text-muted-foreground">{labels.actionsMenuTitle}</div>
+					{/* Each row carries its own emphasis (an icon tile and a description), so the highlight is the soft wash, never the inverted pill. */}
 					{actions.map((action) => (
 						<DropdownMenuItem
 							key={action.key}
 							data-action-key={action.key}
 							onClick={handleActionClick}
-							className={cn("flex cursor-pointer items-center gap-3 rounded-md p-3", action.className ?? "hover:bg-info-soft dark:hover:bg-info-soft")}>
+							highlight="soft"
+							variant={action.isDestructive === true ? "destructive" : "default"}
+							className={cn("flex cursor-pointer items-center gap-3 rounded-md p-3", action.className)}>
 							<div className={cn("flex h-8 w-8 items-center justify-center rounded-full", action.iconBgColor ?? "bg-info-soft dark:bg-info-soft")}>{action.icon}</div>
 							<div className="flex flex-col">
 								<span className={cn("font-medium", action.isDestructive === true ? "text-destructive" : "text-foreground")}>{action.label}</span>

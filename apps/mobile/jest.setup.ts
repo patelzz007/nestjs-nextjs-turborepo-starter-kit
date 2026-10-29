@@ -7,7 +7,8 @@
 // runs on the JS thread. Files and uploads (expo-file-system) and the photo
 // library (expo-image-picker) are fakes each test can fill, as are the file
 // picker (expo-document-picker) and the share sheet (expo-sharing); the camera
-// (expo-camera) reads whatever QR code a test hands it. Every query client a test creates is disposed after
+// (expo-camera) reads whatever QR code a test hands it. React Native's idle callbacks run on the next
+// timer tick (test/idle-callbacks.ts). Every query client a test creates is disposed after
 // the test, so no cache timer keeps the worker alive.
 
 import "@testing-library/react-native/matchers";
@@ -24,9 +25,12 @@ import * as mockFileSystem from "./test/expo-file-system-fake";
 import * as mockImagePicker from "./test/expo-image-picker-fake";
 import * as mockSharing from "./test/expo-sharing-fake";
 import * as mockNetwork from "./test/network-fake";
+import { installIdleCallbacks } from "./test/idle-callbacks";
 import { disposeTrackedQueryClients } from "./test/query-clients";
 import { memorySecureStore as mockSecureStore } from "./test/secure-store-memory";
 import * as mockUniwind from "./test/uniwind-mock";
+
+installIdleCallbacks();
 
 jest.mock("expo-secure-store", () => mockSecureStore);
 // The OS network state (test/network-fake.ts): online unless a test switches it.

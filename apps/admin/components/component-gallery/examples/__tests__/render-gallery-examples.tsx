@@ -12,8 +12,8 @@ import type { GalleryExample } from "@/components/component-gallery/examples/gal
 
 // ── jsdom fidelity shims ────────────────────────────────────────────────────
 // jsdom has no layout engine and no animation timeline. Popups and scroll areas
-// observe element sizes, lazy media and scrollspies observe visibility, cmdk
-// scrolls the active item into view, responsive hooks read media queries and
+// observe element sizes, lazy media and scrollspies observe visibility, the command
+// list scrolls its highlighted item into view, responsive hooks read media queries and
 // base-ui waits on `getAnimations()` before unmounting. Give them inert,
 // spec-shaped stand-ins: sizes never change, everything is on screen, no media
 // query matches and no animation is running.

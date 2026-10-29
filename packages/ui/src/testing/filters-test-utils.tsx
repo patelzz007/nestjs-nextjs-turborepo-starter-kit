@@ -1,6 +1,6 @@
 "use client";
 
-// Test-only helpers for the filters family: jsdom stubs base-ui and cmdk need,
+// Test-only helpers for the filters family: jsdom stubs base-ui needs,
 // a field schema fixture, and a CONTROLLED harness (the bar holds no query).
 
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
@@ -27,7 +27,7 @@ function scrollIntoViewStub(): void {
 	return;
 }
 
-/** base-ui measures popups (ResizeObserver); cmdk scrolls its active row into view. Undo with `vi.unstubAllGlobals()`. */
+/** base-ui measures popups (ResizeObserver) and scrolls the highlighted row into view. Undo with `vi.unstubAllGlobals()`. */
 export function stubFiltersDom(): void {
 	vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 	Object.defineProperty(Element.prototype, "scrollIntoView", { configurable: true, writable: true, value: scrollIntoViewStub });

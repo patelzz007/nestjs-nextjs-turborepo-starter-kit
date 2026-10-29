@@ -91,6 +91,8 @@ Don't create a distinct variant prop for every possible CSS property — that's 
 
 ## shadcn
 
+The web kit's interactive primitives are **Base UI** (`@base-ui/react`) — only Base UI. Never add Radix UI (`@radix-ui/*`, `radix-ui`) or a package that bundles it (cmdk did: `Command` is now built on Base UI's inline `Autocomplete`). When pulling a shadcn or ReUI component, take its Base UI variant (shadcn's `base-*` styles); if a component exists only for Radix, port it to the matching Base UI part instead of installing Radix. Check with `pnpm why -r @radix-ui/react-primitive` — the only Radix left in the lockfile is bundled inside third-party tools we don't render on the web (`expo-router`'s web tab bar, Prisma Studio).
+
 shadcn components are starting points, not permission to skip architecture. Generated code gets reviewed and adapted to this doc's conventions (tokens, CVA, ref forwarding, event contract) before it's treated as done. Don't blindly regenerate a component and overwrite deliberate repository-specific changes — check git diff before running a regeneration command, or you'll silently lose fixes someone made.
 
 ## Low-level data rule
@@ -428,7 +430,7 @@ function Modal({ children }: Props) {
   return <div role="dialog">{children}</div>; // focus is never moved into it, never trapped
 }
 
-// ✅ DO — use the design system's underlying primitive (Radix/shadcn's
+// ✅ DO — use the design system's underlying primitive (Base UI's
 // Dialog already handles this correctly) rather than a hand-rolled
 // modal; if a custom one is genuinely necessary, focus is moved into it
 // on open, trapped within it while open, and restored to the triggering

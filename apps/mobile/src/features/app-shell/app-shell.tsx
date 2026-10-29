@@ -1,17 +1,18 @@
-// The frame of every signed-in screen (ADR 046): the app status (connection and
-// session, derived once), the app drawer (ADR 038), the toasts confirming what
-// actions did (ADR 047) and, laid over the screens, the page header — menu or
-// back, the page's title, the status pills. All of
-// it is rendered once for the whole (app) group and never re-mounts as screens
-// change; the screens learn the header's height from PageHeaderClearance and
-// start their content below it.
+// The frame of every signed-in screen (ADR 046): the app status (connection and session, derived
+// once — the drawer shows it), the app drawer (ADR 038), the toasts confirming what actions did
+// (ADR 047) and, laid over the screens, the shared page header — menu or back, notifications, and
+// the page's title and subtitle. All of it is rendered once for the whole (app) group and never
+// re-mounts as screens change; the screens learn the header's height from PageHeaderClearance and
+// start their content below it, and feed it their scrolling through PageHeaderScroll.
 
 import * as React from "react";
 import { View } from "react-native";
+import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { PAGE_HEADER_FADE_HEIGHT, PAGE_HEADER_ROW_HEIGHT } from "../../components/page-header";
+import { PAGE_HEADER_ESTIMATED_HEIGHT } from "../../components/page-header";
 import { PageHeaderClearanceProvider } from "../../lib/page-header-clearance";
+import { PageHeaderScrollProvider, type PageHeaderScroll } from "../../lib/page-header-scroll";
 import { AppDrawerStoreProvider } from "../app-drawer/facade";
 import { createAppDrawerStore } from "../app-drawer/store";
 import { AppStatusProvider } from "../app-status/facade";
@@ -31,18 +32,32 @@ export function AppShell({ children }: AppShellProps): React.JSX.Element {
 	const [drawerStore] = React.useState(createAppDrawerStore);
 	const [toastStore] = React.useState(createToastStore);
 	const insets = useSafeAreaInsets();
-	const headerRowBottom = insets.top + PAGE_HEADER_ROW_HEIGHT;
+	// The header's measured height (status bar included); estimated until its first layout.
+	const [headerHeight, setHeaderHeight] = React.useState<number | null>(null);
+	const headerBottom = headerHeight ?? insets.top + PAGE_HEADER_ESTIMATED_HEIGHT;
+	// The header's scroll link (src/lib/page-header-scroll.tsx): the focused page's scroll position and how far the header collapses over it.
+	const scrollY = useSharedValue(0);
+	const collapseDistance = useSharedValue(0);
+	const headerScroll = React.useMemo((): PageHeaderScroll => ({ scrollY, collapseDistance }), [scrollY, collapseDistance]);
+	const reportCollapseDistance = React.useCallback(
+		(distance: number): void => {
+			collapseDistance.set(distance);
+		},
+		[collapseDistance],
+	);
 	return (
 		<AppStatusProvider>
 			<AppDrawerStoreProvider store={drawerStore}>
 				<ToastStoreProvider store={toastStore}>
 					<AppDrawer>
-						<PageHeaderClearanceProvider value={headerRowBottom + PAGE_HEADER_FADE_HEIGHT}>
-							<View className="flex-1">
-								{children}
-								<AppHeader />
-								<ToastHost top={headerRowBottom} />
-							</View>
+						<PageHeaderClearanceProvider value={headerBottom}>
+							<PageHeaderScrollProvider value={headerScroll}>
+								<View className="flex-1">
+									{children}
+									<AppHeader scroll={headerScroll} onHeightChange={setHeaderHeight} onCollapseDistanceChange={reportCollapseDistance} />
+									<ToastHost top={headerBottom} />
+								</View>
+							</PageHeaderScrollProvider>
 						</PageHeaderClearanceProvider>
 					</AppDrawer>
 				</ToastStoreProvider>

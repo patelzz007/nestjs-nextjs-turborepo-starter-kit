@@ -2,7 +2,8 @@
 // presentational FloatingTabBar. It decides which tab is selected, what a press
 // does (React Navigation's tab-press contract, so a re-press still pops a
 // nested stack to its root), when to give haptic feedback, and hides the bar
-// while the keyboard is open.
+// while the keyboard is open. Once the app is idle it preloads every tab, so
+// even the first switch to each one is smooth (use-preloaded-tabs.ts).
 
 import { BottomTabBarHeightCallbackContext, type BottomTabBarProps } from "expo-router/tabs";
 import * as React from "react";
@@ -11,9 +12,11 @@ import { FloatingTabBar, type FloatingTabBarItem } from "../../components/floati
 import { playSelectionFeedback } from "@workspace/ui-native/lib/haptics";
 import { useKeyboardVisible } from "../../lib/use-keyboard-visible";
 import { appTabOf } from "./app-tabs";
+import { usePreloadedTabs } from "./use-preloaded-tabs";
 
 export function AppTabBar({ state, emitter, navigateToTab, insets }: BottomTabBarProps): React.JSX.Element | null {
 	const keyboardVisible = useKeyboardVisible();
+	usePreloadedTabs();
 	// Set by the navigator: what it reports to screens as the tab bar's height (src/components/screen.tsx).
 	const reportHeight = React.use(BottomTabBarHeightCallbackContext);
 

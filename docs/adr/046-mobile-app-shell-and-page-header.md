@@ -12,7 +12,9 @@ order: 46
 
 ## Status
 
-Accepted (2026-10-12). Implemented (2026-10-12). Supersedes the "no top bar / corner button" parts
+Accepted (2026-10-12). Implemented (2026-10-12). Amended 2026-10-29 (a collapsing, page-coloured
+header with a subtitle — see [the amendment](#amendment-2026-10-29--a-collapsing-header-with-a-subtitle)).
+Supersedes the "no top bar / corner button" parts
 of [ADR 038](./038-mobile-app-drawer.md) and the corner controls of
 [ADR 044](./044-mobile-motion-and-navigation-theme.md).
 
@@ -80,3 +82,38 @@ the page — designed so that it does not look like a top bar.
   returns an empty title otherwise).
 - The gradient fade needs the new architecture (React Native's `experimental_backgroundImage`),
   which Expo Go provides. Jest renders no styles, so the fade's look is checked on a device.
+
+## Amendment (2026-10-29) — a collapsing header with a subtitle
+
+The header keeps its place (rendered once by the shell, menu or back, the page's title moving with the
+page) but changes shape. Where this section and the Decision above disagree, this section wins.
+
+- **A page-coloured band with a subtitle.** The header is on the page's own colour (`bg-background`),
+  running up behind the status bar; the title is centred, with one line under it saying what the page
+  is for. Titles and subtitles both come from `src/features/navigation/app-screens.ts`
+  (`screenHeadingOf(pathname, params)`, which replaces `screenTitleOf`; parameterised titles — two-factor,
+  commits, pull requests — still resolve from the params). The 20 pt fade is gone.
+- **Notifications and status on the right.** A notifications button (until there is an inbox it
+  says notifications are coming soon) and, before it, the compact connection and session pills, as
+  before — shown in full in the drawer too.
+- **It collapses with the page, scroll-linked.** `src/lib/page-header-scroll.tsx`: the shell owns two
+  shared values (the focused page's scroll position and the subtitle line's height); every `Screen`
+  feeds them from its own scroll view while it is focused, and hands the header its own position when
+  it gains focus (eased over 220 ms), so switching pages never leaves a stale header. `progress` =
+  scroll ÷ subtitle height, clamped to 0…1: the band moves up by `progress × height` while the pinned
+  row (menu, title, status, notifications) moves down by as much, so it never moves; the subtitle fades
+  out by 60 %. Transforms only, on the UI thread. A pull to refresh keeps the header expanded.
+- **Measured clearance.** The shell measures the header (`onLayout`) and gives `Screen` that height
+  (`PAGE_HEADER_ESTIMATED_HEIGHT` until the first layout) instead of a fixed row + fade sum.
+- **A curved content sheet.** Inside the shell, `Screen` puts its content on a `bg-card` sheet with the
+  auth pages' `rounded-t-4xl` curve, starting right under the header.
+- **Status bar icons follow the app's theme** (`isDarkTheme`), since the header is the page's colour.
+- **Android edge to edge in Expo Go.** `KeyboardProvider` is told the system bars are translucent
+  (`statusBarTranslucent`, `navigationBarTranslucent`): its own detection reads a React Native constant
+  Expo Go does not set and otherwise pads the whole app away from both bars.
+- **Tabs are preloaded when idle** (`src/features/navigation/use-preloaded-tabs.ts`, one tab per idle
+  callback via `router.prefetch`), so even the first switch to a heavy tab is smooth.
+- **Testing.** `Screen` reads its focus from the router, so a test renders it inside a route
+  (`renderRouter`); Jest's React Native environment has no idle callbacks, so `test/idle-callbacks.ts`
+  supplies them (next timer tick).
+

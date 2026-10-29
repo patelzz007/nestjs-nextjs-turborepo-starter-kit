@@ -518,7 +518,7 @@ const { data: status } = useQuery({
 
 ## Keyboard interaction reference (accessibility)
 
-Every custom interactive widget must match the platform's expected keyboard behavior. If you use the shadcn/Radix primitive, this is handled — verify it, don't assume it after customizing.
+Every custom interactive widget must match the platform's expected keyboard behavior. If you use the kit's Base UI primitive, this is handled — verify it, don't assume it after customizing.
 
 | Widget | Must support |
 |---|---|

@@ -17,7 +17,7 @@ import { SelectionFamily } from "@/components/component-gallery/selection-family
 // ── jsdom fidelity shims ────────────────────────────────────────────────────
 // jsdom has no layout engine. The carousels (embla) and base-ui popups observe
 // element sizes, the gallery's `LazySection`s and the image components observe
-// visibility, and cmdk scrolls the active command into view. Give them the
+// visibility, and the command list scrolls its highlighted command into view. Give them the
 // browser APIs they expect: sizes never change, and every observed element is
 // reported on screen at once — so each section mounts its demos immediately.
 

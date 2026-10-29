@@ -1,8 +1,14 @@
 import { ROUTES } from "../../../runtime/routes";
 import { DEVICES_COPY } from "../../../contexts/identity";
-import { screenTitleOf } from "../app-screens";
+import type { AppRoute } from "../../../runtime/routes";
+import { screenHeadingOf, type ScreenParams } from "../app-screens";
 
-describe("screenTitleOf", () => {
+/** The heading's title, the part these title cases check. */
+function screenTitleOf(pathname: string, params: ScreenParams): string {
+	return screenHeadingOf(pathname, params).title;
+}
+
+describe("screenHeadingOf — titles", () => {
 	it("names the tabs as the tab bar does", () => {
 		expect([ROUTES.home, ROUTES.analytics, ROUTES.search, ROUTES.profile, ROUTES.settings].map((route) => screenTitleOf(route, {}))).toEqual([
 			"Home",
@@ -62,5 +68,25 @@ describe("screenTitleOf", () => {
 
 	it("has no title for a path the app does not have", () => {
 		expect(screenTitleOf("/nowhere", {})).toBe("");
+	});
+});
+
+describe("screenHeadingOf — subtitles", () => {
+	const routes: readonly AppRoute[] = Object.values(ROUTES).filter((route: AppRoute): boolean => screenHeadingOf(route, {}).title !== "");
+
+	it("gives every signed-in screen one line saying what the page is for", () => {
+		expect(routes.length).toBeGreaterThan(10);
+		for (const route of routes) {
+			expect(screenHeadingOf(route, {}).subtitle.length).toBeGreaterThan(0);
+		}
+	});
+
+	it("keeps a screen's subtitle whatever its params", () => {
+		expect(screenHeadingOf(ROUTES.twoFactorSetup, { mode: "rotate" })).toEqual({ title: "New backup codes", subtitle: "A second step when you sign in" });
+		expect(screenHeadingOf(ROUTES.home, {})).toEqual({ title: "Home", subtitle: "Your account at a glance" });
+	});
+
+	it("has no heading for a path the app does not have", () => {
+		expect(screenHeadingOf("/nowhere", {})).toEqual({ title: "", subtitle: "" });
 	});
 });

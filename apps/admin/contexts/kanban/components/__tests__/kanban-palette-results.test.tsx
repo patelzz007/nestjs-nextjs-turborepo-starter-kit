@@ -25,7 +25,7 @@ const RESULT: KanbanSearchResult = {
 	match: "KEY",
 };
 
-/** cmdk measures its list and scrolls the active item into view — jsdom implements neither. */
+/** Base UI measures the command list and scrolls the highlighted item into view — jsdom implements neither. */
 class NoopResizeObserver {
 	public observe(): void {
 		return undefined;
@@ -92,6 +92,6 @@ describe("KanbanPaletteResults", () => {
 			wrapper: UiKitTestProviders,
 		});
 
-		expect(container.querySelector("[cmdk-group]")).toBeNull();
+		expect(container.querySelector('[data-slot="command-group"]')).toBeNull();
 	});
 });

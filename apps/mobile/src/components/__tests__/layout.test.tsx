@@ -1,4 +1,5 @@
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, within } from "@testing-library/react-native";
+import { renderRouter } from "expo-router/testing-library";
 import { BottomTabBarHeightContext } from "expo-router/tabs";
 import * as React from "react";
 import { DeviceEventEmitter } from "react-native";
@@ -27,9 +28,17 @@ const KEYBOARD_EVENT = { endCoordinates: { screenX: 0, screenY: 500, width: 390,
 /** A phone-sized frame: SafeAreaProvider renders nothing until it knows the metrics. */
 const METRICS: Metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 47, left: 0, right: 0, bottom: 34 } };
 
+/**
+ * Every Screen is a route in the app, and it reads the router (its focus feeds the page header's
+ * scroll link, src/lib/page-header-scroll.tsx), so these tests render it as one.
+ */
+async function renderScreen(element: React.JSX.Element): Promise<void> {
+	await renderRouter({ index: (): React.JSX.Element => element }, { initialUrl: "/" });
+}
+
 describe("Screen", () => {
 	it("shows its title as a header, a description and its content", async () => {
-		await render(
+		await renderScreen(
 			<SafeAreaProvider initialMetrics={METRICS}>
 				<Screen title="Settings" description="Your preferences">
 					<BodyText>Content</BodyText>
@@ -42,7 +51,7 @@ describe("Screen", () => {
 	});
 
 	it("adds no tab-bar clearance outside the tabs", async () => {
-		await render(
+		await renderScreen(
 			<SafeAreaProvider initialMetrics={METRICS}>
 				<Screen title="Sign in">
 					<BodyText>Content</BodyText>
@@ -53,7 +62,7 @@ describe("Screen", () => {
 	});
 
 	it("ends its content above the floating tab bar inside the tabs", async () => {
-		await render(
+		await renderScreen(
 			<SafeAreaProvider initialMetrics={METRICS}>
 				<BottomTabBarHeightContext value={106}>
 					<Screen title="Home">
@@ -66,7 +75,7 @@ describe("Screen", () => {
 	});
 
 	it("drops the room for the tab bar while the keyboard covers it, so nothing empty sits above the keyboard", async () => {
-		await render(
+		await renderScreen(
 			<SafeAreaProvider initialMetrics={METRICS}>
 				<BottomTabBarHeightContext value={106}>
 					<Screen title="Home">
@@ -88,7 +97,7 @@ describe("Screen", () => {
 	});
 
 	it("under the app shell's header, leaves the title to the header and starts its content below it", async () => {
-		await render(
+		await renderScreen(
 			<SafeAreaProvider initialMetrics={METRICS}>
 				<PageHeaderClearanceProvider value={123}>
 					<Screen title="Home" description="Your account at a glance" testID="screen">
@@ -104,8 +113,36 @@ describe("Screen", () => {
 		expect(screen.getByTestId("screen-content")).toHaveProp("scrollIndicatorInsets", { top: 123, bottom: 0 });
 	});
 
+	it("under the app shell's header, sits its content on a sheet with a curved top, and follows the scrolling", async () => {
+		await renderScreen(
+			<SafeAreaProvider initialMetrics={METRICS}>
+				<PageHeaderClearanceProvider value={123}>
+					<Screen testID="screen">
+						<BodyText>Content</BodyText>
+					</Screen>
+				</PageHeaderClearanceProvider>
+			</SafeAreaProvider>,
+		);
+
+		expect(within(screen.getByTestId("screen-sheet")).getByText("Content")).toBeOnTheScreen();
+		expect(screen.getByTestId("screen-content")).toHaveProp("scrollEventThrottle", 16);
+	});
+
+	it("keeps its content on the page, with no sheet, outside the shell", async () => {
+		await renderScreen(
+			<SafeAreaProvider initialMetrics={METRICS}>
+				<Screen title="Locked" testID="screen">
+					<BodyText>Content</BodyText>
+				</Screen>
+			</SafeAreaProvider>,
+		);
+
+		expect(screen.queryByTestId("screen-sheet")).toBeNull();
+		expect(screen.getByText("Content")).toBeOnTheScreen();
+	});
+
 	it("without scrolling, fills the screen below the app shell's header with its content", async () => {
-		await render(
+		await renderScreen(
 			<SafeAreaProvider initialMetrics={METRICS}>
 				<PageHeaderClearanceProvider value={123}>
 					<Screen scrollable={false} description="A document" testID="screen">
@@ -124,7 +161,7 @@ describe("Screen", () => {
 	});
 
 	it("drops the pull-to-refresh spinner below the app shell's header, where the content starts", async () => {
-		await render(
+		await renderScreen(
 			<SafeAreaProvider initialMetrics={METRICS}>
 				<PageHeaderClearanceProvider value={123}>
 					<Screen onRefresh={jest.fn()} testID="screen">
@@ -138,7 +175,7 @@ describe("Screen", () => {
 	});
 
 	it("leaves the spinner at the top outside the shell", async () => {
-		await render(
+		await renderScreen(
 			<SafeAreaProvider initialMetrics={METRICS}>
 				<Screen onRefresh={jest.fn()} testID="screen">
 					<BodyText>Content</BodyText>
@@ -150,7 +187,7 @@ describe("Screen", () => {
 	});
 
 	it("renders without a title", async () => {
-		await render(
+		await renderScreen(
 			<SafeAreaProvider initialMetrics={METRICS}>
 				<Screen onRefresh={jest.fn()} refreshing>
 					<BodyText>Only content</BodyText>

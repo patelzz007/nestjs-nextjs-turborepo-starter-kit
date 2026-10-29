@@ -70,7 +70,7 @@ describe("FilterFieldPicker", () => {
 		render(<PickerHarness onSelect={onSelect} />);
 		fireEvent.click(screen.getByRole("option", { name: /Owner/u }));
 		expect(screen.getByText("Owner")).toBeTruthy();
-		fireEvent.keyDown(screen.getByRole("combobox", { name: "Attributes" }), { key: "Backspace" });
+		fireEvent.keyDown(screen.getByRole("combobox", { name: "Search attributes…" }), { key: "Backspace" });
 		expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
 		fireEvent.click(screen.getByRole("option", { name: "Age" }));
 		expect(onSelect).toHaveBeenCalledWith(["age"], "eq");
@@ -79,7 +79,7 @@ describe("FilterFieldPicker", () => {
 	it("searches every depth and announces the count", (): void => {
 		const onSelect = vi.fn<(path: readonly string[], defaultOperator: string | null) => void>();
 		render(<PickerHarness onSelect={onSelect} />);
-		fireEvent.change(screen.getByRole("combobox", { name: "Attributes" }), { target: { value: "mail" } });
+		fireEvent.change(screen.getByRole("combobox", { name: "Search attributes…" }), { target: { value: "mail" } });
 		expect(screen.getByRole("status").textContent).toBe("1 result");
 		fireEvent.click(screen.getByRole("option", { name: /Email/u }));
 		expect(onSelect).toHaveBeenCalledWith(["owner", "email"], "contains");

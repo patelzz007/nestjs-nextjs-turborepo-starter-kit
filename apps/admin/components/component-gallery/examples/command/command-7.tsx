@@ -29,22 +29,22 @@ export function Command7Example(): React.JSX.Element {
 				Quick Actions
 			</Button>
 			<CommandDialog title="Command palette" description="Search for a command to run" open={open} onOpenChange={setOpen}>
-				<Command className="**:data-[selected=true]:bg-muted **:data-selected:bg-transparent">
+				<Command>
 					<CommandInput placeholder="What do you need?" />
 					<CommandList>
 						<CommandEmpty>No actions found.</CommandEmpty>
 						<CommandGroup heading="Create">
-							<CommandItem>
+							<CommandItem value="New Project">
 								<PlusIcon />
 								<span>New Project</span>
 								<CommandShortcut>⌘N</CommandShortcut>
 							</CommandItem>
-							<CommandItem>
+							<CommandItem value="New Document">
 								<FileTextIcon />
 								<span>New Document</span>
 								<CommandShortcut>⌘⇧N</CommandShortcut>
 							</CommandItem>
-							<CommandItem>
+							<CommandItem value="Invite Member">
 								<UserPlusIcon />
 								<span>Invite Member</span>
 								<CommandShortcut>⌘I</CommandShortcut>
@@ -52,12 +52,12 @@ export function Command7Example(): React.JSX.Element {
 						</CommandGroup>
 						<CommandSeparator />
 						<CommandGroup heading="Navigate">
-							<CommandItem>
+							<CommandItem value="Go to Dashboard">
 								<HouseIcon />
 								<span>Go to Dashboard</span>
 								<CommandShortcut>⌘D</CommandShortcut>
 							</CommandItem>
-							<CommandItem>
+							<CommandItem value="Go to Inbox">
 								<InboxIcon />
 								<span>Go to Inbox</span>
 								<CommandShortcut>⌘⇧I</CommandShortcut>
@@ -65,12 +65,12 @@ export function Command7Example(): React.JSX.Element {
 						</CommandGroup>
 						<CommandSeparator />
 						<CommandGroup heading="System">
-							<CommandItem>
+							<CommandItem value="Toggle Dark Mode">
 								<MoonIcon />
 								<span>Toggle Dark Mode</span>
 								<CommandShortcut>⌘⇧D</CommandShortcut>
 							</CommandItem>
-							<CommandItem>
+							<CommandItem value="Sign Out">
 								<LogOutIcon />
 								<span>Sign Out</span>
 								<CommandShortcut>⌘Q</CommandShortcut>

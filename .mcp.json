@@ -4,6 +4,10 @@
     "reui": {
       "type": "http",
       "url": "https://mcp.reui.io"
+    },
+    "my-mcp-server-d0bd17d7": {
+      "url": "https://mcp.reui.io",
+      "type": "http"
     }
   }
 }

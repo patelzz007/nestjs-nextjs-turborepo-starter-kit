@@ -53,13 +53,13 @@ export function Command6Example(): React.JSX.Element {
 				Search Users
 			</Button>
 			<CommandDialog title="Command palette" description="Search for a command to run" open={open} onOpenChange={setOpen}>
-				<Command className="**:data-[selected=true]:bg-muted **:data-selected:bg-transparent">
+				<Command>
 					<CommandInput placeholder="Search by name or email..." />
 					<CommandList>
 						<CommandEmpty>No users found.</CommandEmpty>
 						<CommandGroup heading="Team Members">
 							{users.map((user) => (
-								<CommandItem key={user.email} className="gap-2 py-2">
+								<CommandItem key={user.email} value={user.name} keywords={[user.email]} className="gap-2 py-2">
 									<Avatar className="size-6 shrink-0">
 										<AvatarImage src={user.avatar} alt={user.name} />
 										<AvatarFallback className="text-xs">
