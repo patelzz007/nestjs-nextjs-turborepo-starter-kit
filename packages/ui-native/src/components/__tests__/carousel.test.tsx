@@ -1,8 +1,17 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { Text, type ViewInstance } from "react-native";
+import { AccessibilityInfo, Text, type ViewInstance } from "react-native";
 
-import { Carousel, clampCarouselIndex, defaultCarouselSlideLabel } from "../carousel";
+import {
+	Carousel,
+	carouselGapOf,
+	carouselSlideMetrics,
+	clampCarouselIndex,
+	DEFAULT_CAROUSEL_GAP,
+	defaultCarouselSlideLabel,
+	nextCarouselIndex,
+	type CarouselProps,
+} from "../carousel";
 
 const PAGE_WIDTH = 300;
 const SECOND_SLIDE = 1;
@@ -165,5 +174,179 @@ describe("Carousel", () => {
 			</Carousel>,
 		);
 		expect(ref.current).not.toBeNull();
+	});
+});
+
+const PEEK = 24;
+const GAP = 12;
+const AUTO_PLAY_MS = 4000;
+/** Long enough for any pending timer to have fired. */
+const LONG_WAIT_MS = AUTO_PLAY_MS * 3;
+
+/** A screen that owns the carousel's slide, shows which one is current and lets the carousel change it. */
+function OwnedCarousel(props: Partial<CarouselProps>): React.JSX.Element {
+	const [index, setIndex] = React.useState(0);
+	return (
+		<>
+			<Text>{`Showing ${String(index)}`}</Text>
+			<Carousel index={index} onChange={setIndex} testID="carousel" {...props}>
+				{slides()}
+			</Carousel>
+		</>
+	);
+}
+
+async function wait(ms: number): Promise<void> {
+	await act((): void => {
+		jest.advanceTimersByTime(ms);
+	});
+}
+
+async function layOut(): Promise<void> {
+	await fireEvent(screen.getByTestId("carousel"), "layout", { nativeEvent: { layout: { width: PAGE_WIDTH, height: PAGE_WIDTH, x: 0, y: 0 } } });
+}
+
+describe("Carousel peek", () => {
+	it("narrows each slide so the next one shows, and snaps slide by slide", async () => {
+		await render(
+			<Carousel index={0} onChange={jest.fn()} peek={PEEK} gap={GAP} testID="carousel">
+				{slides()}
+			</Carousel>,
+		);
+		await layOut();
+
+		const pager = screen.getByTestId("carousel-pager");
+		expect(pager).toHaveProp("snapToInterval", PAGE_WIDTH - PEEK);
+		expect(pager).not.toHaveProp("pagingEnabled");
+	});
+
+	it("settles on the slide a swipe snapped to", async () => {
+		const onChange = jest.fn();
+		await render(
+			<Carousel index={0} onChange={onChange} peek={PEEK} gap={GAP} testID="carousel">
+				{slides()}
+			</Carousel>,
+		);
+		await layOut();
+
+		await fireEvent(screen.getByTestId("carousel-pager"), "momentumScrollEnd", { nativeEvent: { contentOffset: { x: THIRD_SLIDE * (PAGE_WIDTH - PEEK), y: 0 } } });
+
+		expect(onChange).toHaveBeenCalledWith(THIRD_SLIDE);
+	});
+
+	it("pages full-width slides without a peek, as before: pages touch", async () => {
+		await render(
+			<Carousel index={0} onChange={jest.fn()} testID="carousel">
+				{slides()}
+			</Carousel>,
+		);
+		await layOut();
+		const pager = screen.getByTestId("carousel-pager");
+		expect(pager).toHaveProp("pagingEnabled", true);
+		expect(pager).not.toHaveProp("snapToInterval");
+		expect(pager).toHaveProp("contentContainerStyle", undefined);
+	});
+
+	it("keeps full-width slides a gap apart when asked, settling one per page", async () => {
+		const onChange = jest.fn();
+		await render(
+			<Carousel index={0} onChange={onChange} gap={GAP} testID="carousel">
+				{slides()}
+			</Carousel>,
+		);
+		await layOut();
+
+		const pager = screen.getByTestId("carousel-pager");
+		expect(pager).toHaveProp("snapToInterval", PAGE_WIDTH + GAP);
+		expect(pager).toHaveProp("contentContainerStyle", { gap: GAP });
+		expect(pager).not.toHaveProp("pagingEnabled");
+		await fireEvent(pager, "momentumScrollEnd", { nativeEvent: { contentOffset: { x: SECOND_SLIDE * (PAGE_WIDTH + GAP), y: 0 } } });
+		expect(onChange).toHaveBeenCalledWith(SECOND_SLIDE);
+	});
+});
+
+describe("carouselSlideMetrics", () => {
+	it("is the whole width per slide without a peek, stepping a page plus any gap", () => {
+		expect(carouselSlideMetrics(PAGE_WIDTH, 0, 0)).toEqual({ slideWidth: PAGE_WIDTH, interval: PAGE_WIDTH });
+		expect(carouselSlideMetrics(PAGE_WIDTH, 0, GAP)).toEqual({ slideWidth: PAGE_WIDTH, interval: PAGE_WIDTH + GAP });
+	});
+
+	it("leaves room for the peek and the gap, and steps a slide plus a gap", () => {
+		expect(carouselSlideMetrics(PAGE_WIDTH, PEEK, DEFAULT_CAROUSEL_GAP)).toEqual({ slideWidth: PAGE_WIDTH - PEEK - DEFAULT_CAROUSEL_GAP, interval: PAGE_WIDTH - PEEK });
+	});
+
+	it("never goes below zero before the carousel is measured", () => {
+		expect(carouselSlideMetrics(0, PEEK, GAP).slideWidth).toBe(0);
+	});
+});
+
+describe("carouselGapOf", () => {
+	it("takes the caller's gap, else the default between peeking slides, else none", () => {
+		expect(carouselGapOf(0, GAP)).toBe(GAP);
+		expect(carouselGapOf(PEEK, undefined)).toBe(DEFAULT_CAROUSEL_GAP);
+		expect(carouselGapOf(0, undefined)).toBe(0);
+	});
+});
+
+describe("nextCarouselIndex", () => {
+	it("moves on one slide, back to the first after the last", () => {
+		expect(nextCarouselIndex(0, SLIDE_TITLES.length)).toBe(SECOND_SLIDE);
+		expect(nextCarouselIndex(THIRD_SLIDE, SLIDE_TITLES.length)).toBe(0);
+	});
+});
+
+describe("Carousel auto-play", () => {
+	beforeEach(() => {
+		jest.useFakeTimers();
+	});
+	afterEach(() => {
+		jest.useRealTimers();
+		jest.restoreAllMocks();
+	});
+
+	it("moves on every interval and wraps to the first slide", async () => {
+		await render(<OwnedCarousel autoPlayIntervalMs={AUTO_PLAY_MS} />);
+
+		await wait(AUTO_PLAY_MS);
+		expect(screen.getByText("Showing 1")).toBeOnTheScreen();
+		await wait(AUTO_PLAY_MS);
+		expect(screen.getByText("Showing 2")).toBeOnTheScreen();
+		await wait(AUTO_PLAY_MS);
+		expect(screen.getByText("Showing 0")).toBeOnTheScreen();
+	});
+
+	it("never moves on its own without an interval", async () => {
+		await render(<OwnedCarousel />);
+
+		await wait(LONG_WAIT_MS);
+
+		expect(screen.getByText("Showing 0")).toBeOnTheScreen();
+	});
+
+	it("stops for good once the person swipes", async () => {
+		await render(<OwnedCarousel autoPlayIntervalMs={AUTO_PLAY_MS} />);
+
+		await fireEvent(screen.getByTestId("carousel-pager"), "scrollBeginDrag");
+		await wait(LONG_WAIT_MS);
+
+		expect(screen.getByText("Showing 0")).toBeOnTheScreen();
+	});
+
+	it("stops for good once the person picks a slide", async () => {
+		await render(<OwnedCarousel autoPlayIntervalMs={AUTO_PLAY_MS} />);
+
+		await fireEvent.press(screen.getByRole("button", { name: "Slide 3 of 3" }));
+		await wait(LONG_WAIT_MS);
+
+		expect(screen.getByText("Showing 2")).toBeOnTheScreen();
+	});
+
+	it("stays still with Reduce Motion on", async () => {
+		jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+		await render(<OwnedCarousel autoPlayIntervalMs={AUTO_PLAY_MS} />);
+
+		await wait(LONG_WAIT_MS);
+
+		expect(screen.getByText("Showing 0")).toBeOnTheScreen();
 	});
 });

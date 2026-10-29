@@ -1692,6 +1692,8 @@ automatically. `turbo.json` gains the `expo export` output folder in `build.outp
 When a product needs native modules, Face ID during development, or push: switch to
 **development builds** (`npx expo run:ios` / `run:android` locally, or EAS). Native folders stay
 generated (`npx expo prebuild`), not committed, so the switch does not change the repo layout.
+Building an APK, an AAB or an iOS release, locally or with EAS, is a step-by-step guide of its own:
+[Building the mobile app](./building-release-apps.md).
 
 ---
 

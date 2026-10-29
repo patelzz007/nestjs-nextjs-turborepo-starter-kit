@@ -61,7 +61,9 @@ export function headerProgressOf(scrollY: number, collapseDistance: number): num
 
 /** 0 expanded … 1 collapsed, following the focused page's scrolling. */
 export function usePageHeaderProgress(scroll: PageHeaderScroll): SharedValue<number> {
-	return useDerivedValue((): number => headerProgressOf(scroll.scrollY.get(), scroll.collapseDistance.get()), [scroll]);
+	// No dependency array: on native Reanimated tracks the worklet's captured values itself (an array
+	// is web-only, and warns on a phone).
+	return useDerivedValue((): number => headerProgressOf(scroll.scrollY.get(), scroll.collapseDistance.get()));
 }
 
 /** A pull to refresh pulls past the top: the header stays expanded. */

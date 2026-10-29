@@ -2,6 +2,11 @@
 .expo/
 # `expo export` output (the `build` task's bundle check)
 dist/
-# Native projects are generated (`npx expo prebuild`), never committed (docs/technical/mobile/mobile-app.md §15.5)
-ios/
-android/
+# Native projects are generated (`npx expo prebuild`), never committed (docs/technical/mobile/mobile-app.md §15.5).
+# Anchored to the app's root: a bare `ios/` would also hide the local Expo modules' own native sources
+# (modules/pdf-renderer/ios and /android, ADR 056), leaving a development build without them.
+/ios/
+/android/
+# What Gradle builds inside a local module's Android sources.
+modules/*/android/build/
+modules/*/android/.gradle/

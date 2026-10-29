@@ -6,12 +6,17 @@ import {
 	formatQueryString,
 	InvalidUrlStateDefinitionError,
 	isSameQuery,
+	isSameRawUrlParams,
 	optionalBooleanUrlParam,
 	optionalUrlParam,
+	pageUrlParam,
+	rawUrlParamsToSearch,
 	readSearchParam,
 	toUrlSearchParams,
 	urlParamWithDefault,
+	urlStateToRawParams,
 } from "../url-state";
+import { LIST_FIRST_PAGE } from "../../schemas/api/list-query";
 
 const StatusSchema = z.enum(["active", "locked"]);
 const DEFAULT_WEEKS = 8;
@@ -152,5 +157,33 @@ describe("param builders", () => {
 		expect(schema.parse("false")).toBe(false);
 		expect(schema.parse("1")).toBeUndefined();
 		expect(schema.parse(undefined)).toBeUndefined();
+	});
+
+	it("pageUrlParam: a whole page number from 1, otherwise the first page", () => {
+		const schema = pageUrlParam();
+		expect(schema.parse("3")).toBe(3);
+		expect(schema.parse("0")).toBe(LIST_FIRST_PAGE);
+		expect(schema.parse("02")).toBe(LIST_FIRST_PAGE);
+		expect(schema.parse("2.5")).toBe(LIST_FIRST_PAGE);
+		expect(schema.parse("abc")).toBe(LIST_FIRST_PAGE);
+		expect(schema.parse(undefined)).toBe(LIST_FIRST_PAGE);
+	});
+});
+
+describe("raw URL params", () => {
+	const RAW_URL_STATE = defineUrlState({ page: pageUrlParam(), status: optionalUrlParam(StatusSchema) }, { urlKeys: { status: "filter[status]" } });
+
+	it("turns raw values into search params, leaving absent keys out", () => {
+		expect(rawUrlParamsToSearch({ page: "2", sort: null }).toString()).toBe("page=2");
+	});
+
+	it("serializes a state into the raw value of every owned key (defaults as null)", () => {
+		expect(urlStateToRawParams(RAW_URL_STATE, { page: 2, status: "locked" })).toEqual({ page: "2", "filter[status]": "locked" });
+		expect(urlStateToRawParams(RAW_URL_STATE, RAW_URL_STATE.defaults)).toEqual({ page: null, "filter[status]": null });
+	});
+
+	it("compares the keys of the next values only (a missing current key is null)", () => {
+		expect(isSameRawUrlParams({ page: "2" }, { page: "2", sort: null })).toBe(true);
+		expect(isSameRawUrlParams({ page: "2" }, { page: "3" })).toBe(false);
 	});
 });

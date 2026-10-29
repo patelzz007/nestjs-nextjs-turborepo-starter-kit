@@ -3,7 +3,7 @@ title: "ADR 056: An In-House PDF Viewer on Each Platform's Own PDF Engine"
 tags: ["adr", "pdf", "ui", "mobile", "docs", "dependencies"]
 description: "PDFs are shown by the kit's own viewer around the PDF engine each platform ships (the browser, PDFKit, PdfRenderer). No PDF library is installed; the mobile engine is a local Expo module with an Expo Go fallback."
 author: "Platform Team"
-lastUpdated: 1792195200000
+lastUpdated: 1793232000000
 coverImage: "https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&w=1600&q=80"
 order: 56
 ---
@@ -12,7 +12,8 @@ order: 56
 
 ## Status
 
-Accepted (2026-10-17).
+Accepted (2026-10-17). Amended 2026-10-29: the module's native sources are now in the repository
+(see [the amendment](#amendment-2026-10-29--the-native-sources-are-committed)).
 
 ## Context
 
@@ -79,3 +80,31 @@ Every platform we target already ships a mature PDF engine: every desktop browse
 - **Fetching signed URLs into `blob:` URLs on the web** (to check the header before showing).
   Rejected: it needs a CORS rule on the storage bucket for reads; the API already validated the
   file type at upload.
+
+## Amendment (2026-10-29) — the native sources are committed
+
+**What was wrong.** The module has four hand-written native files:
+
+| File | What it is |
+| --- | --- |
+| `modules/pdf-renderer/ios/PdfRendererModule.swift` | The iOS module, on PDFKit |
+| `modules/pdf-renderer/ios/PdfRenderer.podspec` | Declares the iOS module to CocoaPods |
+| `modules/pdf-renderer/android/build.gradle` | Declares the Android module to Gradle |
+| `modules/pdf-renderer/android/src/main/java/expo/modules/pdfrenderer/PdfRendererModule.kt` | The Android module, on `PdfRenderer` |
+
+They were written with this ADR on 2026-10-17, and the Android one was compiled locally that day.
+None of them was ever committed: `apps/mobile/.gitignore` ignored the generated native projects with
+the bare patterns `ios/` and `android/`. Git applies a bare pattern at every depth, so it also hid
+these two folders. The repository held only `modules/pdf-renderer/expo-module.config.json`. A fresh
+clone's development or store build would therefore have had no PDF engine, and in-app pages would not
+appear. Expo Go was unaffected, because it always uses the system-viewer fallback.
+
+**The fix.** The patterns are anchored to the app's root (`/ios/`, `/android/`), so they ignore only
+the projects `npx expo prebuild` generates. Gradle's output inside a local module
+(`modules/*/android/build/`, `modules/*/android/.gradle/`) is ignored explicitly instead. The four
+files above now show as new and go in with the next commit. Their content is unchanged.
+
+**For the future.** A local Expo module's `ios/` and `android/` folders are source and are committed.
+Check `git ls-files apps/mobile/modules/<name>` after adding one. The same class of bug, an unanchored
+ignore rule hiding source, was found and fixed for the operations backup commands in commit
+`0f2c2f43`.

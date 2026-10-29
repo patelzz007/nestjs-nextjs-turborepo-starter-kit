@@ -90,3 +90,20 @@ with a `replace` write (the same entry, nothing added to history). When nuqs alr
 written. Unit tests: `use-url-state.test.tsx` ("follows the address bar after a Back the router never
 reported…", "writes nothing after a Back the state already follows"). Remove this if nuqs fixes it
 upstream (the unit test above then still holds without it).
+
+## Amendment (2026-10-29) — the mobile app on the same codec
+
+The Expo app gets `useUrlState` too (`apps/mobile/src/lib/url-state/`), with the same API. So that the two
+platforms cannot drift, the router-free half moved into `@workspace/shared` (`lib/url-state.ts`):
+`defineUrlState`, the param builders (with a new `pageUrlParam()`), and the raw-param conversions both
+hooks use (`rawUrlParamsToSearch`, `urlStateToRawParams`, `isSameRawUrlParams`, and the update types).
+`@workspace/client/lib/url-state` re-exports them, so web imports are unchanged.
+
+nuqs has no Expo Router adapter, so the app builds one on nuqs's custom-adapter API
+(`nuqs/adapters/custom`, still `unstable_`, which is why nuqs stays pinned at 2.10.2). Each hook speaks
+for its own screen: it reads `useLocalSearchParams()`, writes with that screen's
+`navigation.replaceParams` (`setParams` merges, and would leave `?page=undefined` behind), and gives nuqs
+the pathname and a synchronous params snapshot (without them nuqs reads `location`, which React Native
+does not have). Expo Router has no shallow history push, so on a phone `"push"` and `"replace"` both
+write in place, and Back leaves the screen. Component tests use the app's own in-memory
+`UrlStateTestProvider`, because nuqs's testing adapter also reads `location`.

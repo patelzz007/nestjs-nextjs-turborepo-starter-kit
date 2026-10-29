@@ -15,8 +15,10 @@
 //   │  [ Password       👁 ]    │
 //
 // While the keyboard is open the brand folds into one compact row, giving the
-// form the room.
+// form the room. The panel is dark in every theme, so the status bar's icons are
+// always light here (the launch screen and the app header set their own).
 
+import { StatusBar } from "expo-status-bar";
 import * as React from "react";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -46,6 +48,7 @@ export interface AuthShellProps {
 export function AuthShell({ brandName, tagline, compact = false, children, testID }: AuthShellProps): React.JSX.Element {
 	return (
 		<StyledSafeAreaView edges={["top", "left", "right"]} className="flex-1 bg-auth-panel" testID={testID}>
+			<StatusBar style="light" />
 			{/* Quiet outlines echo the web panel's decoration; decorative only. */}
 			<View
 				className="absolute top-10 -right-6 size-28 rotate-45 rounded-3xl border border-auth-panel-foreground/10"

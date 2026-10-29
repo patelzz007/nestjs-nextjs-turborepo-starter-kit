@@ -61,6 +61,25 @@ hears every change through `onChange`, whether it came from a swipe, a dot or an
 `clampCarouselIndex(index, total)` keeps an index within the slides. Only the slide being shown is
 exposed to screen readers. See them under **Settings → Components → Media**.
 
+Three optional props turn the native `Carousel` into a content carousel (a row of cards). Without them
+it pages full-width slides that touch, exactly as before, and `ImageCarousel` is unchanged.
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `peek` | `0` | Points of the next slide shown at the edge. Each slide is `width − peek − gap` wide. |
+| `gap` | `12` when peeking, otherwise none | Points between slides. Without a peek, full-width slides sit `gap` apart while swiped and still fill the width when they settle (Home's Discover cards use 16). |
+| `autoPlayIntervalMs` | off | Moves on every N ms, wrapping to the first slide. It needs two slides or more. |
+
+- **Snapping.** Slides that peek or sit apart snap slide by slide (`snapToInterval = slideWidth + gap`,
+  `decelerationRate="fast"`, `disableIntervalMomentum`, so one fling moves one slide) instead of
+  `pagingEnabled`. The settled slide is `round(offsetX / interval)`. The arithmetic is exported and
+  tested: `carouselSlideMetrics`, `carouselGapOf`, `nextCarouselIndex`.
+- **Auto-play stops for good** once the person takes over: a drag, a dot or an arrow. It never runs with
+  Reduce Motion on (WCAG 2.2.2: moving content must be stoppable). It runs one timer per slide shown, so
+  a manual change restarts the interval. The kit cannot know whether its screen is in front, so the
+  caller passes `undefined` while it is not (`useIsFocused()`). See
+  `apps/mobile/src/features/home-highlights`.
+
 ## In the docs
 
 A ```` ```carousel ```` fence lists two to twelve images, one `![alt](url)` per line. Repo-relative

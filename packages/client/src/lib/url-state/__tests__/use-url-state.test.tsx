@@ -7,7 +7,7 @@ import { z } from "zod";
 import { listFilterKey, listUrlParams } from "../list-url-state";
 import { defineUrlState, optionalUrlParam } from "../url-state";
 import { UrlStateTestProvider } from "../url-state-test-provider";
-import { isSameRawUrlParams, rawUrlParamsFromSearch, rawUrlParamsToSearch, urlStateToRawParams, useUrlState } from "../use-url-state";
+import { rawUrlParamsFromSearch, useUrlState } from "../use-url-state";
 
 const PATH = "/users";
 /** Longer than nuqs's URL-write throttle (50 ms), so a write that was going to happen has happened. */
@@ -208,27 +208,9 @@ describe("useUrlState", () => {
 	});
 });
 
+// The raw-param conversions shared with the mobile app are tested where they live (@workspace/shared, lib/url-state).
 describe("raw URL params", () => {
 	it("reads the given keys from a search string, null when absent", () => {
 		expect(rawUrlParamsFromSearch(["page", "sort"], "?page=3&other=x")).toEqual({ page: "3", sort: null });
-	});
-
-	it("turns raw values into search params, leaving absent keys out", () => {
-		expect(rawUrlParamsToSearch({ page: "2", sort: null }).toString()).toBe("page=2");
-	});
-
-	it("serializes a state into the raw value of every owned key (defaults as null)", () => {
-		expect(urlStateToRawParams(TABLE_URL_STATE, { ...TABLE_URL_STATE.defaults, page: 2, status: "locked" })).toEqual({
-			page: "2",
-			limit: null,
-			cursor: null,
-			sort: null,
-			"filter[status]": "locked",
-		});
-	});
-
-	it("compares the keys of the next values only (a missing current key is null)", () => {
-		expect(isSameRawUrlParams({ page: "2" }, { page: "2", sort: null })).toBe(true);
-		expect(isSameRawUrlParams({ page: "2" }, { page: "3" })).toBe(false);
 	});
 });

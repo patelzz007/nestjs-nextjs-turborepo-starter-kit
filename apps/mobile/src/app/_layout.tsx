@@ -10,6 +10,9 @@
 // the system bars are translucent. Its own edge-to-edge detection reads a React Native constant that
 // Expo Go does not set: left to itself it pads the whole app away from the status bar and the
 // navigation bar, leaving page-coloured strips that nothing (the header, the drawer, its scrim) can cover.
+//
+// `UrlStateProvider` is the URL-state engine (lib/url-state: nuqs on Expo Router), mounted once for
+// every screen.
 
 import "../../global.css";
 
@@ -18,6 +21,7 @@ import * as React from "react";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { useAppFonts } from "../lib/fonts";
+import { UrlStateProvider } from "../lib/url-state/url-state-provider";
 import { createDeviceAppRuntime } from "../runtime/device-runtime";
 import { AppShell } from "../runtime/app-shell";
 import { RootStack } from "../runtime/root-navigator";
@@ -55,7 +59,9 @@ export default function RootLayout(): React.JSX.Element | null {
 	}
 	return (
 		<KeyboardProvider statusBarTranslucent navigationBarTranslucent>
-			<AppShell runtime={runtime} fontsReady={fontsReady} />
+			<UrlStateProvider>
+				<AppShell runtime={runtime} fontsReady={fontsReady} />
+			</UrlStateProvider>
 		</KeyboardProvider>
 	);
 }

@@ -100,9 +100,23 @@ page) but changes shape. Where this section and the Decision above disagree, thi
   shared values (the focused page's scroll position and the subtitle line's height); every `Screen`
   feeds them from its own scroll view while it is focused, and hands the header its own position when
   it gains focus (eased over 220 ms), so switching pages never leaves a stale header. `progress` =
-  scroll ÷ subtitle height, clamped to 0…1: the band moves up by `progress × height` while the pinned
-  row (menu, title, status, notifications) moves down by as much, so it never moves; the subtitle fades
-  out by 60 %. Transforms only, on the UI thread. A pull to refresh keeps the header expanded.
+  scroll ÷ subtitle height, clamped to 0…1. The header **shrinks in place**: only its background layer
+  moves, its bottom edge rising by `progress × height`, so the content's curved top stays attached to
+  it. The pinned row (menu, title, status, notifications) never moves. The subtitle line's frame rises
+  with the edge and clips the text, which an equal and opposite shift holds still, while it fades on an
+  ease (`Easing.inOut(Easing.quad)`) over the whole collapse. Moving the whole header with the content
+  made the subtitle read as part of the page. Transforms only, on the UI thread, and no dependency
+  array on `useDerivedValue` (on native it is web-only and warns). A pull to refresh keeps the header
+  expanded.
+- **The collapsed bar takes on the content's surface.** Inside the moving background, a `bg-card` layer
+  fades in with `progress`, and a `bg-border` hairline fades in over the last quarter of the collapse,
+  so the bar is never a darker band over a lighter page (the dark and Nord themes, where `--background`
+  and `--card` are far apart). These are opacity cross-fades of token-coloured layers, because
+  Reanimated cannot interpolate the tokens' `oklch()` colours, so every theme gets this without
+  per-theme code.
+- **Toasts drop in under the controls row** (`pageHeaderControlsBottom`: the status bar plus
+  `PAGE_HEADER_ROW_HEIGHT`, kept in step with the row's `h-14` by a test), the same place expanded or
+  collapsed, rather than under the subtitle line.
 - **Measured clearance.** The shell measures the header (`onLayout`) and gives `Screen` that height
   (`PAGE_HEADER_ESTIMATED_HEIGHT` until the first layout) instead of a fixed row + fade sum.
 - **A curved content sheet.** Inside the shell, `Screen` puts its content on a `bg-card` sheet with the

@@ -1,0 +1,17 @@
+// The app's own PDF page renderer (apps/mobile/modules/pdf-renderer, ADR 056):
+// android.graphics.pdf.PdfRenderer, which Android ships — no third-party PDF library.
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.pdfrenderer'
+version = '1.0.0'
+
+android {
+  namespace "expo.modules.pdfrenderer"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}

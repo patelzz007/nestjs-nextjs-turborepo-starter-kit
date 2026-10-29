@@ -42,45 +42,30 @@
 import { parseAsString, useQueryStates } from "nuqs";
 import { useCallback, useEffect, useMemo } from "react";
 
-import type { UrlState, UrlStateCodec, UrlStateShape } from "./url-state";
+import {
+	isSameRawUrlParams,
+	rawUrlParamsToSearch,
+	urlStateToRawParams,
+	type RawUrlParams,
+	type UrlState,
+	type UrlStateCodec,
+	type UrlStateShape,
+	type UrlStateUpdate,
+	type UrlStateUpdateOptions,
+} from "@workspace/shared";
 
 import { useHistoryTraversalCount } from "./use-history-traversal";
 
-/** How an update is recorded in browser history. */
-export type UrlHistoryMode = "push" | "replace";
-
-export interface UrlStateUpdateOptions {
-	/** `"push"` (default) adds a history entry; `"replace"` overwrites the current one. */
-	readonly history?: UrlHistoryMode;
-}
-
-/** Merges `patch` into the current URL state and navigates; a patch that changes nothing is a no-op. */
-export type UrlStateUpdate<TState> = (patch: Partial<TState>, options?: UrlStateUpdateOptions) => void;
-
-/** Each URL key a codec owns → its raw value (`null` when absent). */
-export type RawUrlParams = Readonly<Record<string, string | null>>;
-
-/** The raw values as search params (absent keys left out), for `codec.parse`. */
-export function rawUrlParamsToSearch(raw: RawUrlParams): URLSearchParams {
-	const params = new URLSearchParams();
-	for (const [key, value] of Object.entries(raw)) {
-		if (value !== null) {
-			params.set(key, value);
-		}
-	}
-	return params;
-}
-
-/** `state` as the raw value of each URL key the codec owns (`null` for a param serialized away as its default). */
-export function urlStateToRawParams<TShape extends UrlStateShape>(codec: UrlStateCodec<TShape>, state: UrlState<TShape>): RawUrlParams {
-	const params = new URLSearchParams(codec.serialize(state));
-	return Object.fromEntries(codec.urlKeys.map((key: string): [string, string | null] => [key, params.get(key)]));
-}
-
-/** The two raw value sets carry the same value for every key of `next`. */
-export function isSameRawUrlParams(current: RawUrlParams, next: RawUrlParams): boolean {
-	return Object.entries(next).every(([key, value]): boolean => (current[key] ?? null) === value);
-}
+// The update contract and the raw-param helpers are router-free and shared with the mobile app's twin.
+export {
+	isSameRawUrlParams,
+	rawUrlParamsToSearch,
+	urlStateToRawParams,
+	type RawUrlParams,
+	type UrlHistoryMode,
+	type UrlStateUpdate,
+	type UrlStateUpdateOptions,
+} from "@workspace/shared";
 
 /** The raw value of each of `urlKeys` in `search` (a `location.search`), `null` when absent. */
 export function rawUrlParamsFromSearch(urlKeys: readonly string[], search: string): RawUrlParams {

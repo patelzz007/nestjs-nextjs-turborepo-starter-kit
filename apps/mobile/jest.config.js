@@ -8,7 +8,7 @@ const { transformIgnorePatterns: EXPO_TRANSFORM_IGNORE_PATTERNS } = require("jes
  * Packages published as ES modules only. Metro bundles them as they are; Jest
  * runs CommonJS, so Babel compiles them like React Native's own packages.
  */
-const ES_MODULE_ONLY_PACKAGES = ["marked"];
+const ES_MODULE_ONLY_PACKAGES = ["marked", "nuqs"];
 
 /** jest-expo's first pattern: skip node_modules except an allow-list, `(?!(a|b|…))`. */
 const ALLOW_LIST_START = "/node_modules/(?!(";

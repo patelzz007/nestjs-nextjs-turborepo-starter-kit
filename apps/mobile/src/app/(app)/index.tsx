@@ -1,7 +1,8 @@
 // ============================================
 // Home (§10.7) — the starter shell's placeholder dashboard
 // ============================================
-// Shows who is signed in. Products replace this screen with their own.
+// Shows who is signed in, and "Discover": a carousel of cards pointing to parts of the app worth a
+// first look (features/home-highlights). Products replace this screen with their own.
 
 import * as React from "react";
 import { View } from "react-native";
@@ -14,6 +15,7 @@ import { Skeleton, SkeletonGroup, SkeletonText } from "@workspace/ui-native/comp
 import { ErrorState } from "@workspace/ui-native/components/empty";
 import { BodyText, MutedText, Subheading } from "@workspace/ui-native/components/text";
 import { backupCodesNotice } from "../../contexts/identity";
+import { HomeHighlights } from "../../features/home-highlights/home-highlights";
 import { useApi } from "../../lib/api-context";
 import { errorMessageOf } from "../../lib/error-messages";
 
@@ -48,6 +50,7 @@ export default function HomeScreen(): React.JSX.Element {
 				</Card>
 			)}
 			{notice === null ? null : <Alert tone="warning" message={notice} />}
+			<HomeHighlights />
 			<Card title="This is the starter shell">
 				<BodyText>Sign-in, profile, settings, security and devices work end to end. Build your product&apos;s screens on top of it.</BodyText>
 				<MutedText>See apps/mobile/README.md for how the app is put together and where new features go.</MutedText>

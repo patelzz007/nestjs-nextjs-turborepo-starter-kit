@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
-import { Text } from "react-native";
+import { StatusBar, Text } from "react-native";
 import { SafeAreaProvider, type Metrics } from "react-native-safe-area-context";
 
 import { AuthPage } from "../auth-page";
@@ -43,6 +43,22 @@ describe("AuthShell", () => {
 		expect(screen.queryByTestId("shell-brand")).toBeNull();
 		expect(screen.getByRole("header", { name: "Starter" })).toBeOnTheScreen();
 		expect(screen.queryByText("Sign in to pick up where you left off.")).toBeNull();
+	});
+
+	it("asks for light status-bar icons, since the panel behind them is dark in every theme", async () => {
+		// React Native's StatusBar renders nothing: the style it asks for is what the test reads.
+		const pushStatusBarStyle = jest.spyOn(StatusBar, "pushStackEntry");
+
+		await render(
+			inFrame(
+				<AuthShell brandName="Starter" tagline="Sign in to pick up where you left off.">
+					<Text>sign-in form</Text>
+				</AuthShell>,
+			),
+		);
+
+		expect(pushStatusBarStyle).toHaveBeenCalledWith(expect.objectContaining({ barStyle: "light-content" }));
+		pushStatusBarStyle.mockRestore();
 	});
 });
 

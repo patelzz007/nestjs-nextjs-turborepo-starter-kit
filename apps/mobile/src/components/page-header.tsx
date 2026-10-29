@@ -8,8 +8,17 @@
 //
 // As the page scrolls (`progress` 0 → 1, src/lib/page-header-scroll.tsx) the header shrinks in place:
 // its background pulls up from the bottom edge, so the content's curved top stays attached to it, and
-// the subtitle fades out where it is. Nothing in the header slides with the content: what is left is
-// one slim bar with the menu, the title and notifications, exactly where they were.
+// the subtitle stays where it is, fading gently while the rising edge tucks it away. Nothing in the
+// header slides with the content: what is left is one slim bar with the menu, the title and
+// notifications, exactly where they were.
+//
+// The bar takes on the content's surface as it collapses: at the top the header is the page's colour
+// (`bg-background`) and the content a raised sheet (`bg-card`) under it; collapsed, the content runs
+// under the bar, so the bar becomes that same surface, with a hairline (`bg-border`) to mark where
+// the content passes beneath — not a darker band over a lighter page, which the dark and Nord themes
+// (where the two colours are far apart) made look broken. Both are token-coloured layers whose
+// opacity cross-fades (Reanimated cannot interpolate the tokens' `oklch()` colours), so every theme,
+// including ones added later, gets it for free.
 //
 // It is rendered once by the app shell for every signed-in screen — screens never draw their own
 // header. Presentational and controlled: the caller gives the title, subtitle, which control leads
@@ -23,6 +32,7 @@ import MenuIcon from "lucide-react-native/icons/menu";
 import * as React from "react";
 import { Pressable, Text, View, type LayoutChangeEvent } from "react-native";
 import Animated, {
+	Easing,
 	Extrapolation,
 	FadeIn,
 	FadeOut,
@@ -60,12 +70,16 @@ export function pageHeaderControlsBottom(topInset: number): number {
 const HIDDEN = 0;
 const VISIBLE = 1;
 const AT_REST = 0;
-const EXPANDED = 0;
 /**
- * The subtitle is gone by the time the header is this far collapsed: before the background's rising
- * edge reaches the text (the line's bottom padding is ~45% of the collapse), so it never shows over content.
+ * How the subtitle fades across the collapse: slowly at first, then away — an ease, not a straight
+ * line, so the first few points of a scroll barely touch it. It runs over the whole collapse: the
+ * rising background edge clips the line as it goes, so the text never shows over the content.
  */
-const SUBTITLE_FADE_END = 0.4;
+const SUBTITLE_FADE = Easing.inOut(Easing.quad);
+
+/** The hairline under the collapsed bar appears over the last part of the collapse, as the content reaches it. */
+const HAIRLINE_FADE_START = 0.75;
+const FULLY_COLLAPSED = 1;
 
 export type PageHeaderLeading = "menu" | "back";
 
@@ -184,18 +198,33 @@ export function PageHeader({
 	// Only the background moves: its bottom edge rises by the subtitle line's height as the header
 	// collapses (a transform, so the header's layout — and the content's clearance — never change).
 	const backgroundStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -progress.get() * collapseDistance.get() }] }));
-	const subtitleStyle = useAnimatedStyle(() => ({ opacity: interpolate(progress.get(), [EXPANDED, SUBTITLE_FADE_END], [VISIBLE, HIDDEN], Extrapolation.CLAMP) }));
+	// The bar turns into the content's surface as the content slides under it.
+	const surfaceStyle = useAnimatedStyle(() => ({ opacity: progress.get() }));
+	const hairlineStyle = useAnimatedStyle(() => ({
+		opacity: interpolate(progress.get(), [HAIRLINE_FADE_START, FULLY_COLLAPSED], [HIDDEN, VISIBLE], Extrapolation.CLAMP),
+	}));
+	// The subtitle line's frame rises with the background's edge and clips the text, which is held in
+	// place by an equal and opposite shift: the edge passes over a still line, tucking it away.
+	const subtitleClipStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -progress.get() * collapseDistance.get() }] }));
+	const subtitleStyle = useAnimatedStyle(() => ({
+		opacity: VISIBLE - SUBTITLE_FADE(progress.get()),
+		transform: [{ translateY: progress.get() * collapseDistance.get() }],
+	}));
 	const animates = slots.drift !== AT_REST;
 
 	return (
 		<View pointerEvents="box-none" onLayout={reportHeight} className="absolute inset-x-0 top-0" style={topInsetStyle} testID={testID}>
-			{/* The header's colour, status bar included: it rises from below as the header collapses. */}
+			{/* The header's colour, status bar included: it rises from below as the header collapses, and
+			    turns into the content's surface, with a hairline along its bottom edge, as it does. Both stay
+			    inside the moving layer, so they rise with its edge. */}
 			<StyledAnimatedView
 				pointerEvents="none"
 				className="absolute inset-0 bg-background"
 				style={backgroundStyle}
-				testID={testID === undefined ? undefined : `${testID}-background`}
-			/>
+				testID={testID === undefined ? undefined : `${testID}-background`}>
+				<StyledAnimatedView className="absolute inset-0 bg-card" style={surfaceStyle} testID={testID === undefined ? undefined : `${testID}-surface`} />
+				<StyledAnimatedView className="absolute inset-x-0 bottom-0 h-px bg-border" style={hairlineStyle} testID={testID === undefined ? undefined : `${testID}-hairline`} />
+			</StyledAnimatedView>
 			<View pointerEvents="box-none" className="px-3">
 				<View pointerEvents="box-none" className="h-14 flex-row items-center gap-2" testID={testID === undefined ? undefined : `${testID}-controls`}>
 					<View className="size-11">
@@ -238,15 +267,20 @@ export function PageHeader({
 				</View>
 			</View>
 			{/* Indented by the buttons' width, so the subtitle sits between them, under the title. */}
-			<View pointerEvents="none" onLayout={reportCollapseDistance} className="px-16 pb-4" testID={testID === undefined ? undefined : `${testID}-subtitle-line`}>
-				<StyledAnimatedView style={subtitleStyle}>
+			<StyledAnimatedView
+				pointerEvents="none"
+				onLayout={reportCollapseDistance}
+				className="overflow-hidden px-16 pb-4"
+				style={subtitleClipStyle}
+				testID={testID === undefined ? undefined : `${testID}-subtitle-clip`}>
+				<StyledAnimatedView style={subtitleStyle} testID={testID === undefined ? undefined : `${testID}-subtitle-text`}>
 					<StyledAnimatedView key={slots.current.key} {...(animates ? { entering: CONTROL_IN } : {})}>
 						<Text numberOfLines={1} className="text-center font-sans text-sm text-muted-foreground" testID={testID === undefined ? undefined : `${testID}-subtitle`}>
 							{slots.current.subtitle}
 						</Text>
 					</StyledAnimatedView>
 				</StyledAnimatedView>
-			</View>
+			</StyledAnimatedView>
 		</View>
 	);
 }

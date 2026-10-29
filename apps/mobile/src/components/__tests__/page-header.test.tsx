@@ -19,6 +19,9 @@ function handlers(): Handlers {
 
 type HeaderOverrides = Partial<Omit<PageHeaderProps, keyof Handlers | "progress" | "collapseDistance">> & { readonly progressValue?: number };
 
+/** Points per Tailwind spacing step (`h-14` = 56). */
+const TAILWIND_SPACING_UNIT = 4;
+
 /** Expanded: at the top of the page. */
 const AT_TOP = 0;
 
@@ -89,7 +92,7 @@ describe("PageHeader", () => {
 		await render(header(actions));
 
 		await fireEvent(screen.getByTestId("header"), "layout", layout(138.4));
-		await fireEvent(screen.getByTestId("header-subtitle-line"), "layout", layout(35.2));
+		await fireEvent(screen.getByTestId("header-subtitle-clip"), "layout", layout(35.2));
 
 		expect(actions.onHeightChange).toHaveBeenCalledWith(139);
 		expect(actions.onCollapseDistanceChange).toHaveBeenCalledWith(36);
@@ -101,13 +104,48 @@ describe("PageHeader", () => {
 		expect(screen.getByTestId("header-background")).toHaveStyle({ transform: [{ translateY: -36 }] });
 		expect(screen.getByTestId("header-controls")).not.toHaveStyle({ transform: [{ translateY: 36 }] });
 		expect(screen.getByTestId("header")).not.toHaveStyle({ transform: [{ translateY: -36 }] });
-		expect(screen.getByText("Your account at a glance", { includeHiddenElements: true })).toBeOnTheScreen();
+		// The clip rises with the edge while the text inside it is held in place, fully faded at the end.
+		expect(screen.getByTestId("header-subtitle-clip")).toHaveStyle({ transform: [{ translateY: -36 }] });
+		expect(screen.getByTestId("header-subtitle-text")).toHaveStyle({ opacity: 0, transform: [{ translateY: 36 }] });
 	});
 
-	it("starts expanded: the background in place", async () => {
+	it("fades the subtitle on an ease, barely at first and halfway at the midpoint", async () => {
+		const early = await render(header(handlers(), { progressValue: 0.1 }));
+		expect(screen.getByTestId("header-subtitle-text")).toHaveStyle({ opacity: 0.98 });
+		await early.unmount();
+
+		await render(header(handlers(), { progressValue: 0.5 }));
+		expect(screen.getByTestId("header-subtitle-text")).toHaveStyle({ opacity: 0.5 });
+	});
+
+	it("starts expanded: the background in place, on the page's colour with no hairline", async () => {
 		await render(header(handlers()));
 
 		expect(screen.getByTestId("header-background")).toHaveStyle({ transform: [{ translateY: -0 }] });
+		expect(screen.getByTestId("header-surface")).toHaveStyle({ opacity: 0 });
+		expect(screen.getByTestId("header-hairline")).toHaveStyle({ opacity: 0 });
+	});
+
+	it("turns the bar into the content's surface, edged by a hairline, as it collapses", async () => {
+		await render(header(handlers(), { progressValue: 1 }));
+
+		expect(screen.getByTestId("header-surface")).toHaveStyle({ opacity: 1 });
+		expect(screen.getByTestId("header-hairline")).toHaveStyle({ opacity: 1 });
+	});
+
+	it("blends part-way into the surface, with no hairline yet, half-way through the collapse", async () => {
+		await render(header(handlers(), { progressValue: 0.5 }));
+
+		expect(screen.getByTestId("header-surface")).toHaveStyle({ opacity: 0.5 });
+		expect(screen.getByTestId("header-hairline")).toHaveStyle({ opacity: 0 });
+	});
+
+	it("draws its controls row exactly PAGE_HEADER_ROW_HEIGHT tall, where the toasts are anchored", async () => {
+		await render(header(handlers()));
+
+		const steps = /\bh-(?<steps>\d+)\b/.exec(String(screen.getByTestId("header-controls").props.className))?.groups?.steps;
+
+		expect(Number(steps) * TAILWIND_SPACING_UNIT).toBe(PAGE_HEADER_ROW_HEIGHT);
 	});
 
 	it("moves to a new page's title, leaving the old one hidden from screen readers while it goes", async () => {

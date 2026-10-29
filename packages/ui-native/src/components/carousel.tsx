@@ -10,6 +10,22 @@
 //   │          slide           │   swipe left / right
 //   └──────────────────────────┘
 //          ‹  ━━ • • •  ›            dots: the current one a pill; arrows on request
+//
+// Two options for content carousels (a row of cards on a dashboard):
+//   - `peek`: each slide is narrower than the carousel, so the start of the next one shows at the edge
+//     (a cue that there is more to swipe); slides sit `gap` apart and snap into place.
+//
+//       ┌────────────────────┐ ┌───
+//       │       slide        │ │ ne…      ← `peek` points of the next slide
+//       └────────────────────┘ └───
+//
+//   - `gap` without a peek: full-width slides that sit `gap` apart while they are swiped (cards whose
+//     borders should never touch) and still settle one per page. Without it, pages touch as before.
+//
+//   - `autoPlayIntervalMs`: moves on to the next slide on its own, back to the first after the last. It
+//     stops for good the moment the person takes over (a swipe, a dot or an arrow), and never runs with
+//     the OS "Reduce Motion" setting on — moving content must be stoppable (WCAG 2.2.2). The caller turns
+//     it off while the screen is out of sight (pass `undefined`).
 
 import { cva, type VariantProps } from "class-variance-authority";
 import ChevronLeftIcon from "lucide-react-native/icons/chevron-left";
@@ -73,6 +89,31 @@ export type CarouselSize = NonNullable<CarouselVariantProps["size"]>;
 /** A slide's position counts from one for people ("Slide 1 of 5"); indexes count from zero. */
 const POSITION_OFFSET = 1;
 const FIRST_INDEX = 0;
+/** No peek: one full-width slide per page. */
+const NO_PEEK = 0;
+/** Full-width pages touch unless the caller asks for a gap. */
+const NO_GAP = 0;
+/** Points between slides when they peek, unless the caller says otherwise. */
+export const DEFAULT_CAROUSEL_GAP = 12;
+
+/** The gap the carousel uses: the caller's, else the default between peeking slides, else none (pages touch). */
+export function carouselGapOf(peek: number, gap: number | undefined): number {
+	return gap ?? (peek > NO_PEEK ? DEFAULT_CAROUSEL_GAP : NO_GAP);
+}
+
+/**
+ * One slide's width and the distance from one slide's start to the next's, for a carousel `width` wide:
+ * a peeking slide leaves room for the peek and the gap; a full-width one is the whole width, `gap` apart.
+ */
+export function carouselSlideMetrics(width: number, peek: number, gap: number): { readonly slideWidth: number; readonly interval: number } {
+	const slideWidth = peek > NO_PEEK ? Math.max(width - peek - gap, NO_PEEK) : width;
+	return { slideWidth, interval: slideWidth + gap };
+}
+
+/** The slide after `index`, back to the first after the last (auto-play's order). */
+export function nextCarouselIndex(index: number, total: number): number {
+	return index >= total - POSITION_OFFSET ? FIRST_INDEX : index + POSITION_OFFSET;
+}
 
 /** The default accessible names of the arrows (the web kit's `previousSlide` / `nextSlide`); generic and overridable. */
 export const DEFAULT_CAROUSEL_PREVIOUS_LABEL = "Previous slide";
@@ -104,6 +145,19 @@ export interface CarouselProps {
 	/** The arrows' accessible names. */
 	readonly previousLabel?: string | undefined;
 	readonly nextLabel?: string | undefined;
+	/** Points of the next slide that show at the edge (0, the default: one full-width slide per page). */
+	readonly peek?: number | undefined;
+	/**
+	 * Points between slides: 12 by default when they peek; with full-width slides, none unless given
+	 * (then each still fills the width when it settles, `gap` apart while swiped).
+	 */
+	readonly gap?: number | undefined;
+	/**
+	 * Move on to the next slide every this many milliseconds, wrapping to the first; `undefined` (the
+	 * default) never does. Stops for good once the person swipes or taps a dot or arrow; off with Reduce
+	 * Motion. Pass `undefined` while the screen is out of sight.
+	 */
+	readonly autoPlayIntervalMs?: number | undefined;
 	readonly variant?: CarouselVariant | undefined;
 	readonly size?: CarouselSize | undefined;
 	/** Extra classes for the container, merged last (layout: `mt-4`). */
@@ -122,6 +176,9 @@ export const Carousel = React.memo(
 			showControls = false,
 			previousLabel = DEFAULT_CAROUSEL_PREVIOUS_LABEL,
 			nextLabel = DEFAULT_CAROUSEL_NEXT_LABEL,
+			peek = NO_PEEK,
+			gap: requestedGap,
+			autoPlayIntervalMs,
 			variant = "plain",
 			size = "md",
 			className,
@@ -133,9 +190,16 @@ export const Carousel = React.memo(
 		const scrollRef = React.useRef<ScrollViewInstance>(null);
 		// Display state only: the page width, measured once the carousel is laid out.
 		const [pageWidth, setPageWidth] = React.useState(FIRST_INDEX);
+		// The person swiped or tapped: auto-play stops for good (display state only).
+		const [tookOver, setTookOver] = React.useState(false);
 		const slides = React.Children.toArray(children);
 		const total = slides.length;
-		const pageStyle = React.useMemo((): { readonly width: number } => ({ width: pageWidth }), [pageWidth]);
+		const gap = carouselGapOf(peek, requestedGap);
+		// Slides that peek or sit apart snap slide by slide; full-width pages that touch page.
+		const snaps = peek > NO_PEEK || gap > NO_GAP;
+		const { slideWidth, interval } = carouselSlideMetrics(pageWidth, peek, gap);
+		const pageStyle = React.useMemo((): { readonly width: number } => ({ width: slideWidth }), [slideWidth]);
+		const trackStyle = React.useMemo((): { readonly gap: number } | undefined => (snaps ? { gap } : undefined), [gap, snaps]);
 
 		const measure = React.useCallback((event: LayoutChangeEvent): void => {
 			setPageWidth(event.nativeEvent.layout.width);
@@ -143,38 +207,66 @@ export const Carousel = React.memo(
 
 		// The caller moved `index` (a dot, or its own control): bring that page into view.
 		React.useEffect((): void => {
-			if (pageWidth > FIRST_INDEX) {
-				scrollRef.current?.scrollTo({ x: index * pageWidth, animated: !reduceMotion });
+			if (interval > FIRST_INDEX) {
+				scrollRef.current?.scrollTo({ x: index * interval, animated: !reduceMotion });
 			}
-		}, [index, pageWidth, reduceMotion]);
+		}, [index, interval, reduceMotion]);
+
+		// Auto-play: one timer per slide shown, so a slide always gets the full interval.
+		const autoPlays = autoPlayIntervalMs !== undefined && !tookOver && !reduceMotion && total > POSITION_OFFSET;
+		React.useEffect((): (() => void) | undefined => {
+			if (!autoPlays) {
+				return undefined;
+			}
+			const timer = setTimeout((): void => {
+				onChange(nextCarouselIndex(index, total));
+			}, autoPlayIntervalMs);
+			return (): void => {
+				clearTimeout(timer);
+			};
+		}, [autoPlayIntervalMs, autoPlays, index, onChange, total]);
+
+		const takeOver = React.useCallback((): void => {
+			setTookOver(true);
+		}, []);
 
 		const settle = React.useCallback(
 			(event: NativeSyntheticEvent<NativeScrollEvent>): void => {
-				if (pageWidth <= FIRST_INDEX) {
+				if (interval <= FIRST_INDEX) {
 					return;
 				}
-				const page = clampCarouselIndex(Math.round(event.nativeEvent.contentOffset.x / pageWidth), total);
+				const page = clampCarouselIndex(Math.round(event.nativeEvent.contentOffset.x / interval), total);
 				if (page !== index) {
 					onChange(page);
 				}
 			},
-			[index, onChange, pageWidth, total],
+			[index, interval, onChange, total],
 		);
 
+		const select = React.useCallback(
+			(slideIndex: number): void => {
+				setTookOver(true);
+				onChange(slideIndex);
+			},
+			[onChange],
+		);
 		const showPrevious = React.useCallback((): void => {
-			onChange(clampCarouselIndex(index - POSITION_OFFSET, total));
-		}, [index, onChange, total]);
+			select(clampCarouselIndex(index - POSITION_OFFSET, total));
+		}, [index, select, total]);
 		const showNext = React.useCallback((): void => {
-			onChange(clampCarouselIndex(index + POSITION_OFFSET, total));
-		}, [index, onChange, total]);
+			select(clampCarouselIndex(index + POSITION_OFFSET, total));
+		}, [index, select, total]);
 
 		return (
 			<View ref={ref} testID={testID} onLayout={measure} className={cn(carouselVariants({ variant, size }), className)}>
 				<ScrollView
 					ref={scrollRef}
 					horizontal
-					pagingEnabled
 					showsHorizontalScrollIndicator={false}
+					// Full-width pages that touch page; slides that peek or sit apart snap to each slide's start.
+					{...(snaps ? { snapToInterval: interval, decelerationRate: "fast", disableIntervalMomentum: true } : { pagingEnabled: true })}
+					contentContainerStyle={trackStyle}
+					onScrollBeginDrag={takeOver}
 					onMomentumScrollEnd={settle}
 					testID={testID === undefined ? undefined : `${testID}-pager`}>
 					{slides.map((slide: React.ReactNode, slideIndex: number): React.JSX.Element => (
@@ -210,7 +302,7 @@ export const Carousel = React.memo(
 										selected={slideIndex === index}
 										label={slideLabel(slideIndex + POSITION_OFFSET, total)}
 										size={size}
-										onSelect={onChange}
+										onSelect={select}
 									/>
 								))}
 							</View>
