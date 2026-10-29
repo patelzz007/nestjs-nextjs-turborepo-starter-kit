@@ -4,9 +4,12 @@
 // - the pinned row — the leading control (the menu, or back) on the left, the app's status (the
 //   `trailing` slot: connection and session) and the notifications button on the right and, between
 //   them, the page's title. The row never moves.
-// - the subtitle line — centred under the title, between the two buttons. As the page scrolls
-//   (`progress` 0 → 1, src/lib/page-header-scroll.tsx) the header shrinks with the content and the
-//   subtitle fades out, leaving one slim bar that still shows the menu, the title and notifications.
+// - the subtitle line — centred under the title, between the two buttons.
+//
+// As the page scrolls (`progress` 0 → 1, src/lib/page-header-scroll.tsx) the header shrinks in place:
+// its background pulls up from the bottom edge, so the content's curved top stays attached to it, and
+// the subtitle fades out where it is. Nothing in the header slides with the content: what is left is
+// one slim bar with the menu, the title and notifications, exactly where they were.
 //
 // It is rendered once by the app shell for every signed-in screen — screens never draw their own
 // header. Presentational and controlled: the caller gives the title, subtitle, which control leads
@@ -43,12 +46,26 @@ const StyledAnimatedView = withUniwind(Animated.View);
  */
 export const PAGE_HEADER_ESTIMATED_HEIGHT = 92;
 
+/**
+ * The pinned row's height below the status bar (`h-14`: keep the two in step). The row never moves,
+ * expanded or collapsed, so anything anchored to the header's controls (the toasts) sits under it.
+ */
+export const PAGE_HEADER_ROW_HEIGHT = 56;
+
+/** Where the header's controls end, in points from the top of the screen: the same expanded or collapsed. */
+export function pageHeaderControlsBottom(topInset: number): number {
+	return topInset + PAGE_HEADER_ROW_HEIGHT;
+}
+
 const HIDDEN = 0;
 const VISIBLE = 1;
 const AT_REST = 0;
 const EXPANDED = 0;
-/** The subtitle is gone by the time the header is this far collapsed. */
-export const SUBTITLE_FADE_END = 0.6;
+/**
+ * The subtitle is gone by the time the header is this far collapsed: before the background's rising
+ * edge reaches the text (the line's bottom padding is ~45% of the collapse), so it never shows over content.
+ */
+const SUBTITLE_FADE_END = 0.4;
 
 export type PageHeaderLeading = "menu" | "back";
 
@@ -164,16 +181,23 @@ export function PageHeader({
 		[onCollapseDistanceChange],
 	);
 
-	// The header moves up with the content; the pinned row moves down by as much, so it stays put.
-	const bandStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -progress.get() * collapseDistance.get() }] }));
-	const pinnedStyle = useAnimatedStyle(() => ({ transform: [{ translateY: progress.get() * collapseDistance.get() }] }));
+	// Only the background moves: its bottom edge rises by the subtitle line's height as the header
+	// collapses (a transform, so the header's layout — and the content's clearance — never change).
+	const backgroundStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -progress.get() * collapseDistance.get() }] }));
 	const subtitleStyle = useAnimatedStyle(() => ({ opacity: interpolate(progress.get(), [EXPANDED, SUBTITLE_FADE_END], [VISIBLE, HIDDEN], Extrapolation.CLAMP) }));
 	const animates = slots.drift !== AT_REST;
 
 	return (
-		<StyledAnimatedView pointerEvents="box-none" onLayout={reportHeight} className="absolute inset-x-0 top-0 bg-background" style={[topInsetStyle, bandStyle]} testID={testID}>
-			<StyledAnimatedView pointerEvents="box-none" className="z-10 bg-background px-3" style={pinnedStyle}>
-				<View pointerEvents="box-none" className="h-14 flex-row items-center gap-2">
+		<View pointerEvents="box-none" onLayout={reportHeight} className="absolute inset-x-0 top-0" style={topInsetStyle} testID={testID}>
+			{/* The header's colour, status bar included: it rises from below as the header collapses. */}
+			<StyledAnimatedView
+				pointerEvents="none"
+				className="absolute inset-0 bg-background"
+				style={backgroundStyle}
+				testID={testID === undefined ? undefined : `${testID}-background`}
+			/>
+			<View pointerEvents="box-none" className="px-3">
+				<View pointerEvents="box-none" className="h-14 flex-row items-center gap-2" testID={testID === undefined ? undefined : `${testID}-controls`}>
 					<View className="size-11">
 						{leading === "menu" ? (
 							<StyledAnimatedView key="menu" entering={CONTROL_IN} exiting={CONTROL_OUT} className="absolute inset-0">
@@ -212,7 +236,7 @@ export function PageHeader({
 						testID={testID === undefined ? undefined : `${testID}-notifications`}
 					/>
 				</View>
-			</StyledAnimatedView>
+			</View>
 			{/* Indented by the buttons' width, so the subtitle sits between them, under the title. */}
 			<View pointerEvents="none" onLayout={reportCollapseDistance} className="px-16 pb-4" testID={testID === undefined ? undefined : `${testID}-subtitle-line`}>
 				<StyledAnimatedView style={subtitleStyle}>
@@ -223,7 +247,7 @@ export function PageHeader({
 					</StyledAnimatedView>
 				</StyledAnimatedView>
 			</View>
-		</StyledAnimatedView>
+		</View>
 	);
 }
 

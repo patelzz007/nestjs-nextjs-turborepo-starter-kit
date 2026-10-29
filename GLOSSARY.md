@@ -137,7 +137,7 @@ A service the instances need but do not run themselves: PostgreSQL, Redis, Kafka
 _Avoid_: Service, integration, backend
 
 **Alert** (operations):
-One incident in which a server, instance or dependency crossed a threshold or went silent. It is open until the condition clears, and it is resolved after that.
+One incident in which a server, instance, dependency, service or objective crossed a threshold or went silent. It is open until the condition clears, and it is resolved after that.
 _Avoid_: Notification, alarm, warning
 
 **Backup** (operations):
@@ -171,3 +171,43 @@ _Avoid_: Bot, fake user, virtual user
 **Load-test purge** (operations):
 Permanently removing everything the Load Test tenant and its load-test users created. It is the one removal in the platform that is not a soft delete.
 _Avoid_: Reset, cleanup, wipe
+
+### Application observability
+
+What the platform's own code does while it runs, request by request and job by job, as opposed to the health of the machines it runs on. Shown to platform staff as *Observe*.
+
+**Service** (observability):
+One application registered to report what its code does, such as the API or the worker. Its instances are the running copies of it.
+_Avoid_: App, project, source, Dependency
+
+**Operation** (observability):
+One named kind of work a service does: a route, a job, a message handler or a scheduled task.
+_Avoid_: Endpoint, transaction, route
+
+**Trace** (observability):
+One run of an operation, from the moment it started to the moment it answered, together with everything it called along the way.
+_Avoid_: Request, execution, transaction
+
+**Span** (observability):
+One timed call inside a trace, such as a method, a database query or an outgoing request.
+_Avoid_: Step, segment, call
+
+**Issue** (observability):
+All the errors that share one cause, counted together however often they happen.
+_Avoid_: Error group, exception, bug, incident
+
+**Objective** (observability):
+A promise one operation makes about how often it succeeds or how fast it answers, judged over a rolling window.
+_Avoid_: SLO, target, SLA
+
+**Release** (observability):
+The version of a service that its instances were running when they reported.
+_Avoid_: Deploy, build, version
+
+**Replay** (observability):
+A recording of what one person saw and did in a web page or the mobile app during a session, played back for platform staff.
+_Avoid_: Session recording, screen recording, video
+
+**Client key** (observability):
+The public key a web page or mobile app reports with. It can only send telemetry, never read it.
+_Avoid_: DSN, public token, app key

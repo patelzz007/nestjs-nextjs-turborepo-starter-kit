@@ -3,7 +3,7 @@ import * as React from "react";
 import { Text } from "react-native";
 import { makeMutable } from "react-native-reanimated";
 
-import { PageHeader, type PageHeaderProps } from "../page-header";
+import { PAGE_HEADER_ROW_HEIGHT, PageHeader, pageHeaderControlsBottom, type PageHeaderProps } from "../page-header";
 
 interface Handlers {
 	readonly onMenu: jest.Mock;
@@ -17,9 +17,12 @@ function handlers(): Handlers {
 	return { onMenu: jest.fn(), onBack: jest.fn(), onNotifications: jest.fn(), onHeightChange: jest.fn(), onCollapseDistanceChange: jest.fn() };
 }
 
-type HeaderOverrides = Partial<Omit<PageHeaderProps, keyof Handlers | "progress" | "collapseDistance">>;
+type HeaderOverrides = Partial<Omit<PageHeaderProps, keyof Handlers | "progress" | "collapseDistance">> & { readonly progressValue?: number };
 
-function header(actions: Handlers, overrides: HeaderOverrides = {}): React.JSX.Element {
+/** Expanded: at the top of the page. */
+const AT_TOP = 0;
+
+function header(actions: Handlers, { progressValue = AT_TOP, ...overrides }: HeaderOverrides = {}): React.JSX.Element {
 	return (
 		<PageHeader
 			title="Home"
@@ -28,7 +31,7 @@ function header(actions: Handlers, overrides: HeaderOverrides = {}): React.JSX.E
 			titleDrift={0}
 			leading="menu"
 			topInset={47}
-			progress={makeMutable(0)}
+			progress={makeMutable(progressValue)}
 			collapseDistance={makeMutable(36)}
 			testID="header"
 			{...actions}
@@ -92,6 +95,21 @@ describe("PageHeader", () => {
 		expect(actions.onCollapseDistanceChange).toHaveBeenCalledWith(36);
 	});
 
+	it("collapses by lifting only its background, the subtitle fading in place and the controls never moving", async () => {
+		await render(header(handlers(), { progressValue: 1 }));
+
+		expect(screen.getByTestId("header-background")).toHaveStyle({ transform: [{ translateY: -36 }] });
+		expect(screen.getByTestId("header-controls")).not.toHaveStyle({ transform: [{ translateY: 36 }] });
+		expect(screen.getByTestId("header")).not.toHaveStyle({ transform: [{ translateY: -36 }] });
+		expect(screen.getByText("Your account at a glance", { includeHiddenElements: true })).toBeOnTheScreen();
+	});
+
+	it("starts expanded: the background in place", async () => {
+		await render(header(handlers()));
+
+		expect(screen.getByTestId("header-background")).toHaveStyle({ transform: [{ translateY: -0 }] });
+	});
+
 	it("moves to a new page's title, leaving the old one hidden from screen readers while it goes", async () => {
 		const actions = handlers();
 		const view = await render(header(actions));
@@ -114,5 +132,12 @@ describe("PageHeader", () => {
 		expect(screen.getByRole("header", { name: "New backup codes" })).toBeOnTheScreen();
 		expect(screen.getByText("Keep them somewhere safe")).toBeOnTheScreen();
 		expect(screen.queryByText("Turn on two-factor authentication", { includeHiddenElements: true })).toBeNull();
+	});
+});
+
+describe("pageHeaderControlsBottom", () => {
+	it("puts what hangs off the header's controls (the toasts) right under the pinned row, below the status bar", () => {
+		expect(pageHeaderControlsBottom(47)).toBe(47 + PAGE_HEADER_ROW_HEIGHT);
+		expect(pageHeaderControlsBottom(0)).toBe(PAGE_HEADER_ROW_HEIGHT);
 	});
 });
