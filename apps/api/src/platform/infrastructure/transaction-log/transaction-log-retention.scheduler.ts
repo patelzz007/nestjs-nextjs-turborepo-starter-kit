@@ -1,9 +1,10 @@
 import { Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from "@nestjs/common";
 import { SchedulerRegistry } from "@nestjs/schedule";
-import { nowEpochMs } from "@workspace/shared";
+import { nowEpochMs, CaughtValueSchema } from "@workspace/shared";
 
 import { TransactionLogFileWriter, type TransactionLogPurgeResult } from "./transaction-log-file-writer";
 import { TRANSACTION_LOG_RETENTION_INTERVAL_ID, TRANSACTION_LOG_RETENTION_INTERVAL_MS } from "./transaction-log.constants";
+import { caughtErrorLogFields } from "../../application/errors/caught-error-log";
 
 /**
  * Deletes day files past TRANSACTION_LOG_RETENTION_DAYS: at boot, then hourly.
@@ -49,7 +50,7 @@ export class TransactionLogRetentionScheduler implements OnModuleInit, OnApplica
 			}
 			return result;
 		} catch (error) {
-			this.logger.error({ event: "transaction_log.retention_failed", error: error instanceof Error ? error.message : String(error) });
+			this.logger.error({ event: "transaction_log.retention_failed", ...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data) });
 			return null;
 		}
 	}

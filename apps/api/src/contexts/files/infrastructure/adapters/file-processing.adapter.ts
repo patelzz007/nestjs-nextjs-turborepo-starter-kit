@@ -1,6 +1,6 @@
 import { HttpStatus, Logger } from "@nestjs/common";
 import type { StoredFile } from "@prisma/client";
-import { assertNever, DocumentMimeTypeSchema, FileProcessingResultSchema, type FileProcessingResult, type StorageObjectLocator } from "@workspace/shared";
+import { assertNever, DocumentMimeTypeSchema, FileProcessingResultSchema, type FileProcessingResult, type StorageObjectLocator, CaughtValueSchema } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import type { Clock } from "../../../../platform/application/clock.port";
@@ -21,6 +21,7 @@ import type { FileProcessingPort, VerdictOutcome } from "../../application/ports
 import { FILES_SCAN_VERDICT_OPERATION } from "../../application/ports/files.tokens";
 import { storedLocatorOf } from "../persistence/stored-file.mapper";
 import { ImageObjectMissingError, type ImageRenditionService } from "./image-rendition.service";
+import { caughtErrorLogFields } from "../../../../platform/application/errors/caught-error-log";
 
 /** How a READY file was cleared: by a scanner (CLEAN) or with no scanner configured (NOT_SCANNED). */
 interface ReadyScanRecord {
@@ -280,7 +281,7 @@ export class FileProcessingAdapter implements FileProcessingPort {
 				await this.deps.storage.deleteObject(promoted.locator);
 			}
 		} catch (cleanupError) {
-			this.logger.error({ event: "files.promotion_undo_failed", fileId: file.id, error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError) });
+			this.logger.error({ event: "files.promotion_undo_failed", fileId: file.id, ...caughtErrorLogFields(CaughtValueSchema.safeParse(cleanupError).data) });
 		}
 	}
 

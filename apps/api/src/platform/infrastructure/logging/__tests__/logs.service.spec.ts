@@ -59,6 +59,12 @@ describe("LogService", () => {
 			service.warn("warning message", { context: "AuthGuard" });
 			expect(spy).toHaveBeenCalledWith("warning message", "AuthGuard");
 		});
+
+		it("prints a trace (a stack) under the message, and keeps the context", () => {
+			const spy = vi.spyOn(Logger.prototype, "warn");
+			service.warn("request failed", { context: "GlobalExceptionFilter", trace: "Error: boom\n    at handler (users.controller.ts:12:3)" });
+			expect(spy).toHaveBeenCalledWith("request failed\nError: boom\n    at handler (users.controller.ts:12:3)", "GlobalExceptionFilter");
+		});
 	});
 
 	describe("error", () => {

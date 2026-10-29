@@ -1,6 +1,6 @@
 import { Injectable, Logger, type CallHandler, type ExecutionContext, type NestInterceptor } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { IDEMPOTENCY_KEY_HEADER, JsonValueSchema, nowEpochMs, type DataValue, type JsonValue } from "@workspace/shared";
+import { IDEMPOTENCY_KEY_HEADER, JsonValueSchema, nowEpochMs, type DataValue, type JsonValue, CaughtValueSchema } from "@workspace/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { catchError, concatMap, defer, finalize, from, of, throwError, type Observable } from "rxjs";
 import { z } from "zod";
@@ -19,6 +19,7 @@ import {
 } from "./idempotency-request";
 import { IDEMPOTENT_OPTIONS_METADATA, IDEMPOTENT_REPLAYED_HEADER, type IdempotentOptions } from "./idempotency.constants";
 import { IdempotencyKeyRequiredError, IdempotencyResponseNotStorableError } from "./idempotency.errors";
+import { caughtErrorLogFields } from "../../application/errors/caught-error-log";
 
 /** What the interceptor needs to talk to the ledger for one request. */
 interface IdempotentCall {
@@ -154,7 +155,7 @@ export class IdempotencyInterceptor implements NestInterceptor<DataValue, DataVa
 				event: "idempotency.store_failed",
 				scope: call.scope,
 				correlationId: this.requestContext.correlationId(),
-				error: error instanceof Error ? error.message : String(error),
+				...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data),
 			});
 		} finally {
 			// `complete` releases the lock itself; this covers a body that could not even be prepared for storing.
@@ -173,7 +174,7 @@ export class IdempotencyInterceptor implements NestInterceptor<DataValue, DataVa
 				event: "idempotency.release_failed",
 				scope: call.scope,
 				correlationId: this.requestContext.correlationId(),
-				error: error instanceof Error ? error.message : String(error),
+				...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data),
 			});
 		}
 	}

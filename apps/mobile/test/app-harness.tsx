@@ -35,6 +35,8 @@ export const TEST_RAW_ENV: RawMobileEnv = {
 	apiPort: undefined,
 	iosStoreUrl: undefined,
 	androidStoreUrl: undefined,
+	showDemoAccount: undefined,
+	allowLanHttpApi: undefined,
 };
 
 export interface TestRuntimeOverrides {

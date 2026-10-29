@@ -1,6 +1,7 @@
 import { Logger } from "@nestjs/common";
 import { SchedulerRegistry } from "@nestjs/schedule";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { firstLoggedFailure } from "../../../../../test/support/logged-failure";
 
 import { TransactionLogFileWriter } from "../transaction-log-file-writer";
 import { TransactionLogRetentionScheduler } from "../transaction-log-retention.scheduler";
@@ -57,6 +58,8 @@ describe("TransactionLogRetentionScheduler", () => {
 		purge.mockRejectedValue(new Error("EACCES"));
 
 		await expect(retention.runOnce()).resolves.toBeNull();
-		expect(error).toHaveBeenCalledWith({ event: "transaction_log.retention_failed", error: "EACCES" });
+		const logged = firstLoggedFailure(error);
+		expect(logged).toMatchObject({ event: "transaction_log.retention_failed", error: "EACCES" });
+		expect(logged.stack).toContain("Error: EACCES");
 	});
 });

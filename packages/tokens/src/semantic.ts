@@ -384,6 +384,14 @@ export const SHARED_COLORS: SharedColors = {
 	"qr-background": oklch(1, 0, 0),
 	"qr-foreground": oklch(0, 0, 0),
 	/*
+	 * Search matches drawn over a document page (the PDF viewer). A rendered page is white in every
+	 * theme, so the highlighter is the same yellow in every theme too, painted with multiply blending:
+	 * the white paper turns yellow and the black print stays black. The match on show is the
+	 * stronger yellow; the others are paler.
+	 */
+	"document-match": oklch(0.95, 0.11, 100),
+	"document-match-active": oklch(0.89, 0.18, 97),
+	/*
 	 * ReUI status contract (badge, alert): `<status>-foreground` is the text
 	 * colour on a light `<status>` tint — aliased to the tone palette, so it
 	 * inherits its AA contrast and its dark-theme values. `invert` is the theme's

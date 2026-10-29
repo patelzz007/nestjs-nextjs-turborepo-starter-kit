@@ -8,15 +8,22 @@
 // no `title`. The screen feeds the header its scrolling, so the header collapses
 // with the content (src/lib/page-header-scroll.tsx). Outside it (the lock
 // screen, a forced update) the screen draws its own title at the top of the content.
+//
+// The scroll view starts below the header's pinned row (menu, title, notifications), which never
+// moves, and keeps only the subtitle line's height as padding: the content scrolls up under the
+// collapsing part of the header and is clipped at the pinned row. So the scrollbar runs along the
+// content, not from the top of the screen — Android has no scroll indicator insets to move it
+// (`scrollIndicatorInsets` is iOS-only).
 
 import * as React from "react";
 import { RefreshControl, View } from "react-native";
 import Animated from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
 
 import { KeyboardAvoidingView } from "@workspace/ui-native/components/keyboard-avoiding-view";
 
+import { pageHeaderControlsBottom } from "./page-header";
 import { usePageHeaderClearance } from "../lib/page-header-clearance";
 import { usePageHeaderScrollHandler } from "../lib/page-header-scroll";
 import { useKeyboardVisible } from "../lib/use-keyboard-visible";
@@ -68,9 +75,18 @@ export function Screen({ title, description, children, refreshing = false, onRef
 		(): { readonly paddingTop: number } | undefined => (headerClearance === null ? undefined : { paddingTop: headerClearance }),
 		[headerClearance],
 	);
+	// A scrolling screen starts below the header's pinned row; only the collapsing subtitle line is padding inside it.
+	const insets = useSafeAreaInsets();
+	const scrollTop = headerClearance === null ? 0 : pageHeaderControlsBottom(insets.top);
+	const scrollPaddingTop = headerClearance === null ? 0 : Math.max(headerClearance - scrollTop, 0);
+	const scrollFrameStyle = React.useMemo((): { readonly marginTop: number } => ({ marginTop: scrollTop }), [scrollTop]);
+	const scrollContentStyle = React.useMemo(
+		(): { readonly paddingTop: number } | undefined => (headerClearance === null ? undefined : { paddingTop: scrollPaddingTop }),
+		[headerClearance, scrollPaddingTop],
+	);
 	const scrollIndicatorInsets = React.useMemo(
-		(): { readonly top: number; readonly bottom: number } => ({ top: headerClearance ?? 0, bottom: tabBarClearance }),
-		[headerClearance, tabBarClearance],
+		(): { readonly top: number; readonly bottom: number } => ({ top: scrollPaddingTop, bottom: tabBarClearance }),
+		[scrollPaddingTop, tabBarClearance],
 	);
 	const showTitle = title !== undefined && !hasHeader;
 
@@ -103,19 +119,20 @@ export function Screen({ title, description, children, refreshing = false, onRef
 					{scrollable ? (
 						<StyledScrollView
 							onScroll={onScroll}
+							style={scrollFrameStyle}
 							scrollEventThrottle={SCROLL_EVENT_THROTTLE_MS}
 							testID={testID === undefined ? undefined : `${testID}-content`}
 							keyboardShouldPersistTaps="handled"
 							scrollIndicatorInsets={scrollIndicatorInsets}
 							contentContainerClassName={hasHeader ? "grow" : "grow gap-5 px-5 py-6"}
-							contentContainerStyle={headerClearanceStyle}
+							contentContainerStyle={scrollContentStyle}
 							refreshControl={
 								onRefresh === undefined ? undefined : (
 									<RefreshControl
 										refreshing={refreshing}
 										onRefresh={onRefresh}
 										// The spinner sits at the scroll view's top edge, not after the content's padding: under the shell's header it would be hidden. It drops to where the content starts.
-										{...(headerClearance === null ? {} : { progressViewOffset: headerClearance })}
+										{...(headerClearance === null ? {} : { progressViewOffset: scrollPaddingTop })}
 									/>
 								)
 							}>

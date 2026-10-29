@@ -1,3 +1,4 @@
+import { CaughtValueSchema } from "@workspace/shared";
 import { Inject, Logger } from "@nestjs/common";
 import { EventsHandler, type IEventHandler } from "@nestjs/cqrs";
 
@@ -8,6 +9,7 @@ import { ReferrerCredited } from "../../../../referrals/public-api";
 import type { ClaimsScope } from "../../claims-scope";
 import { CLAIMS_UNIT_OF_WORK } from "../../ports/claims.tokens";
 import { REFERRER_CREDIT_EMAIL_OPERATION, ReferrerCreditEmailApplicationService } from "../../services/referrer-credit-email.application-service";
+import { caughtErrorLogFields } from "../../../../../platform/application/errors/caught-error-log";
 
 /**
  * After the checkout committed: request the credited referrer's email right away. The sale is final
@@ -28,7 +30,7 @@ export class RequestReferrerCreditEmailOnReferrerCredited implements IEventHandl
 		try {
 			await this.emails.request(actor, { referralId: event.referralId, referrerUserId: event.referrerUserId });
 		} catch (error) {
-			this.logger.error({ event: "referrals.referrer_credit_email_deferred", referralId: event.referralId, error: error instanceof Error ? error.message : String(error) });
+			this.logger.error({ event: "referrals.referrer_credit_email_deferred", referralId: event.referralId, ...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data) });
 		}
 	}
 }

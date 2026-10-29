@@ -10,7 +10,7 @@ tags: ["overview", "documentation"]
 
 # Documentation
 
-A production-grade **NestJS + Next.js** Turborepo starter kit (there is no Expo app in this repository yet; `rules/04` covers one), shipped with a working
+A production-grade **NestJS + Next.js + Expo** Turborepo starter kit (the Expo app is `apps/mobile`; `rules/04` covers it), shipped with a working
 rewards platform (merchants, stores, rewards, customer claims, POS checkout, referrals, analytics) as
 the reference product.
 

@@ -1,15 +1,21 @@
 // ============================================
-// demo-account-list.ts — the seeded logins the sign-in screen offers in development
+// demo-account-list.ts — the seeded logins the sign-in screen offers
 // ============================================
 // The API's seed accounts (apps/api/prisma/seed), one per role worth trying on
-// the phone. NEVER import this file directly: only `loadDemoAccounts`
-// (demo-accounts.ts) does, inside an `if (__DEV__)` branch, which Metro removes
-// from a production bundle together with this module — so these passwords never
-// ship in a store build (ADR 042).
+// the phone. NEVER import this file directly: only `loadBundledDemoAccounts`
+// (lib/env.ts) does, inside a branch Metro removes from a release bundle that
+// was not built with `EXPO_PUBLIC_SHOW_DEMO_ACCOUNT=true` — together with this
+// module, so these passwords never ship in a store build (ADR 042). It lives in
+// lib/ because env.ts, the one file that may read the flag, imports it.
 
-import type { DemoAccount } from "./demo-accounts";
+/** A one-tap seeded login: the button's label and the credentials it signs in with. */
+export interface DemoAccount {
+	readonly label: string;
+	readonly email: string;
+	readonly password: string;
+}
 
-/** The seeded logins offered on the sign-in screen of a development build. */
+/** The seeded logins offered on the sign-in screen of a development or demo build. */
 export const MOBILE_DEMO_ACCOUNTS: readonly DemoAccount[] = [
 	{ label: "Super Admin", email: "superadmin@example.com", password: "SuperAdmin@123" },
 	{ label: "Admin", email: "admin@example.com", password: "Admin@123" },

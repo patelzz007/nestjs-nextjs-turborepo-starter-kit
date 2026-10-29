@@ -1,3 +1,4 @@
+import { CaughtValueSchema } from "@workspace/shared";
 import { Inject, Logger } from "@nestjs/common";
 import { EventsHandler, type IEventHandler } from "@nestjs/cqrs";
 
@@ -5,6 +6,7 @@ import { DeviceSessionsRevoked, UserCredentialsChanged } from "../../../domain/e
 import type { AccessTokenInvalidationPort } from "../../ports/access-token-invalidation.port";
 import { ACCESS_TOKEN_INVALIDATION, USER_SESSION_CACHE } from "../../ports/identity.tokens";
 import type { UserSessionCachePort } from "../../ports/user-session-cache.port";
+import { caughtErrorLogFields } from "../../../../../platform/application/errors/caught-error-log";
 
 /**
  * After commit (mechanism 2): a credential change or a session revocation drops the cached
@@ -29,7 +31,7 @@ export class InvalidateAccessTokenStateHandler implements IEventHandler<UserCred
 				await this.sessionCache.invalidateUsers(userIds);
 			}
 		} catch (error) {
-			this.logger.error({ event: "identity.invalidation_failed", eventName: event.eventName, error: error instanceof Error ? error.message : "unknown error" });
+			this.logger.error({ event: "identity.invalidation_failed", eventName: event.eventName, ...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data) });
 		}
 	}
 }

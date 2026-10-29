@@ -7,18 +7,20 @@
 // close button, or Android's back button while the document is open (it
 // returns to the choice instead of leaving the screen).
 // Pages are drawn by this device's engine — the app's native module (ADR 056)
-// — or, in Expo Go, the document is offered to another app.
+// — or, in Expo Go, the document is offered to another app. Where the engine
+// can, the viewer also searches the text and downloads a copy (Downloads on
+// Android, "Save to Files" on iOS), and a toast says where the copy went.
 
 import { IconButton } from "@workspace/ui-native/components/icon-button";
 import { PdfViewer } from "@workspace/ui-native/components/pdf-viewer";
 import { Subheading } from "@workspace/ui-native/components/text";
 import XIcon from "lucide-react-native/icons/x";
 import * as React from "react";
-import { BackHandler, View } from "react-native";
+import { BackHandler, Platform, View } from "react-native";
 
 import { useToast } from "../toast/facade";
-import { PDF_VIEWER_COPY } from "./labels";
-import { deviceNativePdfEngine, type PdfEngine } from "./pdf-engine";
+import { PDF_VIEWER_COPY, savedCopyMessage } from "./labels";
+import { deviceNativePdfEngine, type PdfEngine, type PdfSaveOutcome } from "./pdf-engine";
 import type { PdfSource } from "./pdf-source";
 import { usePdfDocument } from "./use-pdf-document";
 
@@ -59,6 +61,28 @@ export function PdfDocumentViewer({ source, onClose, engine }: PdfDocumentViewer
 		[openExternally, toast],
 	);
 
+	const { saveCopy } = document;
+	const handleDownload = React.useMemo(
+		(): (() => void) | undefined =>
+			saveCopy === null
+				? undefined
+				: (): void => {
+						void saveCopy().then((outcome: PdfSaveOutcome): void => {
+							switch (outcome.kind) {
+								case "saved":
+									toast.success(savedCopyMessage(Platform.OS, outcome.fileName));
+									return;
+								case "cancelled":
+									return;
+								case "failed":
+									toast.error(PDF_VIEWER_COPY.saveFailed);
+									return;
+							}
+						});
+					},
+		[saveCopy, toast],
+	);
+
 	return (
 		<View className="flex-1 gap-3" testID="pdf-document-viewer">
 			<View className="flex-row items-center gap-2">
@@ -67,7 +91,15 @@ export function PdfDocumentViewer({ source, onClose, engine }: PdfDocumentViewer
 				</View>
 				<IconButton icon={XIcon} label={PDF_VIEWER_COPY.close} variant="ghost" onPress={onClose} testID="pdf-document-viewer-close" />
 			</View>
-			<PdfViewer state={document.state} renderPage={document.renderPage} onRetry={document.retry} onOpenExternally={handleOpenExternally} testID="pdf-document" />
+			<PdfViewer
+				state={document.state}
+				renderPage={document.renderPage}
+				onRetry={document.retry}
+				onOpenExternally={handleOpenExternally}
+				onDownload={handleDownload}
+				onSearch={document.search ?? undefined}
+				testID="pdf-document"
+			/>
 		</View>
 	);
 }

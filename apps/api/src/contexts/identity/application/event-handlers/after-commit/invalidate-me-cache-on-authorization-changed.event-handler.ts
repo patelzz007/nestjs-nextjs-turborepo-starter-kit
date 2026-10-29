@@ -1,9 +1,11 @@
+import { CaughtValueSchema } from "@workspace/shared";
 import { Inject, Logger } from "@nestjs/common";
 import { EventsHandler, type IEventHandler } from "@nestjs/cqrs";
 
 import { UserAuthorizationChanged } from "../../../../authorization/public-api";
 import { USER_SESSION_CACHE } from "../../ports/identity.tokens";
 import type { UserSessionCachePort } from "../../ports/user-session-cache.port";
+import { caughtErrorLogFields } from "../../../../../platform/application/errors/caught-error-log";
 
 /**
  * `InvalidateMeCacheOnAuthorizationChanged` (plan §7.6, M2): roles or permissions of these users
@@ -20,7 +22,7 @@ export class InvalidateMeCacheOnAuthorizationChanged implements IEventHandler<Us
 		try {
 			await this.sessionCache.invalidateUsers(event.userIds);
 		} catch (error) {
-			this.logger.error({ event: "identity.me_cache_invalidation_failed", users: event.userIds.length, error: error instanceof Error ? error.message : "unknown error" });
+			this.logger.error({ event: "identity.me_cache_invalidation_failed", users: event.userIds.length, ...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data) });
 		}
 	}
 }

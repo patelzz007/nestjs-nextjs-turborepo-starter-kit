@@ -1,9 +1,11 @@
+import { CaughtValueSchema } from "@workspace/shared";
 import { Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from "@nestjs/common";
 import { SchedulerRegistry } from "@nestjs/schedule";
 
 import { runWithSystemRlsContext } from "../../../prisma/rls-context";
 import { IdempotencyRetentionService, type IdempotencyRetentionSummary } from "./idempotency-retention.service";
 import { IDEMPOTENCY_PURGE_INTERVAL_MS, IDEMPOTENCY_PURGE_SCHEDULER_ID, IDEMPOTENCY_RETENTION_OPERATION } from "./idempotency.constants";
+import { caughtErrorLogFields } from "../../application/errors/caught-error-log";
 
 /**
  * In-process retention schedule for deployments WITHOUT Redis (development,
@@ -45,7 +47,7 @@ export class IdempotencyRetentionIntervalScheduler implements OnModuleInit, OnAp
 		try {
 			return await runWithSystemRlsContext(IDEMPOTENCY_RETENTION_OPERATION, async (): Promise<IdempotencyRetentionSummary> => this.retention.purgeExpired());
 		} catch (error) {
-			this.logger.error({ event: "idempotency.retention_failed", error: error instanceof Error ? error.message : String(error) });
+			this.logger.error({ event: "idempotency.retention_failed", ...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data) });
 			return null;
 		}
 	}

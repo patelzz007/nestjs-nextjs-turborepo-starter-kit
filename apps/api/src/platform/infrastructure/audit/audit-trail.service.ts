@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import { Injectable, Logger } from "@nestjs/common";
-import { nowEpochMs, type CaughtValue, type JsonValue } from "@workspace/shared";
+import { nowEpochMs, type CaughtValue, type JsonValue, CaughtValueSchema } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
 import { RequestContextService, type RequestContext } from "../context/request-context";
@@ -14,6 +14,7 @@ import { buildHttpAuditEntry, isAuditedRoute, type HttpAuditEntry, type HttpAudi
 import type { SystemCommandAuditEntry } from "../../application/ports/command-audit.port";
 import { systemCommandAuditEntry } from "./system-command-audit";
 import { TransactionLog } from "../transaction-log/transaction-log.port";
+import { caughtErrorLogFields } from "../../application/errors/caught-error-log";
 
 /** The audited request the interceptor is currently running a handler for. */
 export interface AuditedRequestScope {
@@ -122,7 +123,7 @@ export class AuditTrailService {
 			await this.repository.append(entry);
 		} catch (error) {
 			const cause: Error = error instanceof Error ? error : new Error(String(error));
-			this.logger.error({ event: "audit.write_failed", phase: "success", entry, error: cause.message });
+			this.logger.error({ event: "audit.write_failed", phase: "success", entry, ...caughtErrorLogFields(cause) });
 			throw new AuditLogWriteError(cause);
 		}
 		this.transactionLog.record(entry);
@@ -143,7 +144,7 @@ export class AuditTrailService {
 			await this.repository.append(entry);
 		} catch (error) {
 			const cause: Error = error instanceof Error ? error : new Error(String(error));
-			this.logger.error({ event: "audit.write_failed", phase: "sensitive_read", entry, error: cause.message });
+			this.logger.error({ event: "audit.write_failed", phase: "sensitive_read", entry, ...caughtErrorLogFields(cause) });
 			throw new AuditLogWriteError(cause);
 		}
 		this.transactionLog.record(entry);
@@ -161,7 +162,7 @@ export class AuditTrailService {
 			await this.repository.append(row);
 		} catch (error) {
 			const cause: Error = error instanceof Error ? error : new Error(String(error));
-			this.logger.error({ event: "audit.write_failed", phase: "system_command", entry, error: cause.message });
+			this.logger.error({ event: "audit.write_failed", phase: "system_command", entry, ...caughtErrorLogFields(cause) });
 			throw new AuditLogWriteError(cause);
 		}
 		this.transactionLog.record(row);
@@ -176,7 +177,7 @@ export class AuditTrailService {
 		try {
 			await this.repository.append(entry);
 		} catch (error) {
-			this.logger.error({ event: "audit.write_failed", phase: "failure", entry, error: error instanceof Error ? error.message : String(error) });
+			this.logger.error({ event: "audit.write_failed", phase: "failure", entry, ...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data) });
 		}
 		this.transactionLog.record(entry);
 	}

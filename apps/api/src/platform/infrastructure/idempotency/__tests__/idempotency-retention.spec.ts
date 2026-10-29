@@ -2,6 +2,7 @@ import { Logger } from "@nestjs/common";
 import { QUEUE_JOB_OPTIONS } from "@workspace/shared";
 import { SchedulerRegistry } from "@nestjs/schedule";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { firstLoggedFailure } from "../../../../../test/support/logged-failure";
 import { MaintenanceSchedulerRegistry } from "../../jobs/maintenance-scheduler.registry";
 import { fakeMaintenanceQueue, type FakeMaintenanceQueue } from "../../jobs/__tests__/fake-maintenance-queue";
 
@@ -280,6 +281,8 @@ describe("IdempotencyRetentionIntervalScheduler (no Redis)", () => {
 		const { scheduler } = intervalSchedulerWith(() => Promise.reject(new Error("connection lost")));
 
 		await expect(scheduler.runOnce()).resolves.toBeNull();
-		expect(error).toHaveBeenCalledWith({ event: "idempotency.retention_failed", error: "connection lost" });
+		const logged = firstLoggedFailure(error);
+		expect(logged).toMatchObject({ event: "idempotency.retention_failed", error: "connection lost" });
+		expect(logged.stack).toContain("Error: connection lost");
 	});
 });

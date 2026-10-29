@@ -85,3 +85,71 @@ export function pdfPageIndexAt(scrollOffset: number, viewportHeight: number, lay
 	const current = layouts.findLast((layout: PdfPageLayout): boolean => layout.offset <= middle);
 	return current?.index ?? 0;
 }
+
+// ── Search ──────────────────────────────────────────────────────────────────
+// A search match arrives from the app's engine as boxes in fractions of the
+// page (0 at its left / top edge, 1 at its right / bottom edge), so the viewer
+// can draw it over the page at any width and zoom.
+
+/** One box of a match, as fractions of the page as it is shown (top-left origin). */
+export interface PdfTextBox {
+	readonly left: number;
+	readonly top: number;
+	readonly width: number;
+	readonly height: number;
+}
+
+/** One match of a search: the page it is on (0-based) and its boxes, one per line it spans. */
+export interface PdfTextMatch {
+	readonly pageIndex: number;
+	readonly rects: readonly PdfTextBox[];
+}
+
+/** A highlight's place over a page drawn `pageWidth` × `pageHeight` points, kept inside the page. */
+export interface PdfHighlightFrame {
+	readonly left: number;
+	readonly top: number;
+	readonly width: number;
+	readonly height: number;
+}
+
+const PAGE_START = 0;
+const PAGE_END = 1;
+
+/** Room around a highlighted word, in points, so the highlight frames it instead of hugging the letters. */
+export const PDF_HIGHLIGHT_PADDING_X = 3;
+export const PDF_HIGHLIGHT_PADDING_Y = 2;
+
+function clamp(value: number, max: number): number {
+	return Math.min(Math.max(value, PAGE_START), max);
+}
+
+/**
+ * Where `box` is drawn over a page `pageWidth` × `pageHeight` points big: grown by the highlight's
+ * padding on every side, and cut at the page's edges so it never spills off the page.
+ */
+export function pdfHighlightFrame(box: PdfTextBox, pageWidth: number, pageHeight: number): PdfHighlightFrame {
+	const left = clamp(box.left * pageWidth - PDF_HIGHLIGHT_PADDING_X, pageWidth);
+	const top = clamp(box.top * pageHeight - PDF_HIGHLIGHT_PADDING_Y, pageHeight);
+	const right = clamp((box.left + box.width) * pageWidth + PDF_HIGHLIGHT_PADDING_X, pageWidth);
+	const bottom = clamp((box.top + box.height) * pageHeight + PDF_HIGHLIGHT_PADDING_Y, pageHeight);
+	return { left, top, width: right - left, height: bottom - top };
+}
+
+/** The match to show first: the first one on or after the page the person is reading, else the first of all. */
+export function firstPdfMatchFrom(matches: readonly PdfTextMatch[], pageIndex: number): number {
+	const onward = matches.findIndex((match: PdfTextMatch): boolean => match.pageIndex >= pageIndex);
+	return Math.max(onward, PAGE_START);
+}
+
+/** Search directions: the next match or the previous one. */
+export type PdfMatchStep = "next" | "previous";
+
+/** The match after (or before) `current`, wrapping around at either end. */
+export function stepPdfMatch(current: number, total: number, step: PdfMatchStep): number {
+	if (total <= PAGE_START) {
+		return PAGE_START;
+	}
+	const offset = step === "next" ? PAGE_END : -PAGE_END;
+	return (current + offset + total) % total;
+}

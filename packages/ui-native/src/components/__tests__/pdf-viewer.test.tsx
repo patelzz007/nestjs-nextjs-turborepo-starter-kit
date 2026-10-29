@@ -3,7 +3,7 @@ import type { PdfOpenFailure } from "@workspace/shared";
 import * as React from "react";
 import { PixelRatio } from "react-native";
 
-import { MAX_PDF_PAGE_RENDER_WIDTH_PX, type PdfPageSize } from "../../lib/pdf-viewer-layout";
+import { MAX_PDF_PAGE_RENDER_WIDTH_PX, type PdfPageSize, type PdfTextMatch } from "../../lib/pdf-viewer-layout";
 import { DEFAULT_PDF_VIEWER_LABELS, PdfViewer, type PdfPageRenderer, type PdfViewerState } from "../pdf-viewer";
 
 const VIEWER = "viewer";
@@ -96,14 +96,14 @@ describe("PdfViewer — an open document", () => {
 		await renderViewer(THREE_PAGES, instantRenderer());
 		await layOut();
 
-		expect(screen.getByText("Page 1 of 3")).toBeOnTheScreen();
+		expect(screen.getByText("1 / 3")).toBeOnTheScreen();
 		expect(screen.getByRole("button", { name: DEFAULT_PDF_VIEWER_LABELS.previousPage })).toBeDisabled();
 		await fireEvent.press(screen.getByRole("button", { name: DEFAULT_PDF_VIEWER_LABELS.nextPage }));
 		await fireEvent.press(screen.getByRole("button", { name: DEFAULT_PDF_VIEWER_LABELS.nextPage }));
-		expect(screen.getByText("Page 3 of 3")).toBeOnTheScreen();
+		expect(screen.getByText("3 / 3")).toBeOnTheScreen();
 		expect(screen.getByRole("button", { name: DEFAULT_PDF_VIEWER_LABELS.nextPage })).toBeDisabled();
 		await fireEvent.press(screen.getByRole("button", { name: DEFAULT_PDF_VIEWER_LABELS.previousPage }));
-		expect(screen.getByText("Page 2 of 3")).toBeOnTheScreen();
+		expect(screen.getByText("2 / 3")).toBeOnTheScreen();
 	});
 
 	it("follows the page in the middle of the screen as it scrolls", async () => {
@@ -114,7 +114,7 @@ describe("PdfViewer — an open document", () => {
 		await fireEvent.scroll(screen.getByTestId(`${VIEWER}-pages`), {
 			nativeEvent: { contentOffset: { x: 0, y: pageSlot * 2 }, layoutMeasurement: VIEWPORT, contentSize: { width: FIT_WIDTH_PAGE, height: pageSlot * 3 } },
 		});
-		expect(screen.getByText("Page 3 of 3")).toBeOnTheScreen();
+		expect(screen.getByText("3 / 3")).toBeOnTheScreen();
 	});
 
 	it("zooms in steps, re-rendering pages sharper, and back out to fit-width", async () => {
@@ -185,9 +185,17 @@ describe("PdfViewer — an open document", () => {
 		expect(screen.getByText(DEFAULT_PDF_VIEWER_LABELS.empty)).toBeOnTheScreen();
 	});
 
+	it('shows the page as a short "1 / 3" that screen readers hear as "Page 1 of 3"', async () => {
+		await renderViewer(THREE_PAGES, instantRenderer());
+		await layOut();
+
+		expect(screen.getByText("1 / 3")).toHaveProp("accessibilityLabel", "Page 1 of 3");
+		expect(DEFAULT_PDF_VIEWER_LABELS.pageIndicatorShort(2, 12)).toBe("2 / 12");
+	});
+
 	it("uses the caller's words and frame", async () => {
 		await renderViewer(THREE_PAGES, instantRenderer(), {
-			labels: { pageIndicator: (page: number, pageCount: number): string => `${String(page)}/${String(pageCount)}`, zoomIn: "Agrandir" },
+			labels: { pageIndicatorShort: (page: number, pageCount: number): string => `${String(page)}/${String(pageCount)}`, zoomIn: "Agrandir" },
 			variant: "flush",
 		});
 		await layOut();
@@ -195,5 +203,135 @@ describe("PdfViewer — an open document", () => {
 		expect(screen.getByText("1/3")).toBeOnTheScreen();
 		expect(screen.getByRole("button", { name: "Agrandir" })).toBeOnTheScreen();
 		expect(screen.getByTestId(VIEWER)).toHaveProp("className", expect.not.stringContaining("border"));
+	});
+});
+
+/** Two matches on the second page and one on the third: one box each. */
+const MATCHES: readonly PdfTextMatch[] = [
+	{ pageIndex: 1, rects: [{ left: 0.1, top: 0.1, width: 0.2, height: 0.02 }] },
+	{ pageIndex: 1, rects: [{ left: 0.1, top: 0.5, width: 0.2, height: 0.02 }] },
+	{ pageIndex: 2, rects: [{ left: 0.4, top: 0.3, width: 0.2, height: 0.02 }] },
+];
+
+/** Opens the search row and searches for `query`. */
+async function searchFor(query: string): Promise<void> {
+	await fireEvent.press(screen.getByRole("button", { name: DEFAULT_PDF_VIEWER_LABELS.search }));
+	const input = screen.getByTestId(`${VIEWER}-search-input`);
+	await fireEvent.changeText(input, query);
+	await fireEvent(input, "submitEditing");
+}
+
+describe("PdfViewer — search", () => {
+	it("offers search only when the caller can search", async () => {
+		await renderViewer(THREE_PAGES, instantRenderer());
+
+		expect(screen.queryByRole("button", { name: DEFAULT_PDF_VIEWER_LABELS.search })).toBeNull();
+	});
+
+	it("asks for the trimmed query, says which match is shown, and highlights the matches on the pages", async () => {
+		const onSearch = jest.fn<Promise<readonly PdfTextMatch[]>, [string]>((): Promise<readonly PdfTextMatch[]> => Promise.resolve(MATCHES));
+		await renderViewer(THREE_PAGES, instantRenderer(), { onSearch });
+		await layOut();
+
+		await searchFor("  balance ");
+
+		expect(onSearch).toHaveBeenCalledWith("balance");
+		expect(await screen.findByText(DEFAULT_PDF_VIEWER_LABELS.matchIndicator(1, 3))).toBeOnTheScreen();
+		expect(screen.getByText("2 / 3")).toBeOnTheScreen();
+		// The boxes are decorative, hidden from screen readers: the search row announces the match.
+		expect(screen.getAllByTestId(`${VIEWER}-page-2-highlight-active`, { includeHiddenElements: true })).toHaveLength(1);
+		expect(screen.getAllByTestId(`${VIEWER}-page-2-highlight`, { includeHiddenElements: true })).toHaveLength(1);
+	});
+
+	it("steps through the matches, wrapping at either end", async () => {
+		await renderViewer(THREE_PAGES, instantRenderer(), { onSearch: (): Promise<readonly PdfTextMatch[]> => Promise.resolve(MATCHES) });
+		await layOut();
+		await searchFor("balance");
+		await screen.findByText(DEFAULT_PDF_VIEWER_LABELS.matchIndicator(1, 3));
+
+		await fireEvent.press(screen.getByRole("button", { name: DEFAULT_PDF_VIEWER_LABELS.previousMatch }));
+		expect(screen.getByText(DEFAULT_PDF_VIEWER_LABELS.matchIndicator(3, 3))).toBeOnTheScreen();
+		expect(screen.getByText("3 / 3")).toBeOnTheScreen();
+		await fireEvent.press(screen.getByRole("button", { name: DEFAULT_PDF_VIEWER_LABELS.nextMatch }));
+		expect(screen.getByText(DEFAULT_PDF_VIEWER_LABELS.matchIndicator(1, 3))).toBeOnTheScreen();
+	});
+
+	it("says when nothing matched or the search failed, with nothing to step through", async () => {
+		const none = jest.fn<Promise<readonly PdfTextMatch[]>, [string]>((): Promise<readonly PdfTextMatch[]> => Promise.resolve([]));
+		await renderViewer(THREE_PAGES, instantRenderer(), { onSearch: none });
+		await layOut();
+		await searchFor("zebra");
+		expect(await screen.findByText(DEFAULT_PDF_VIEWER_LABELS.noMatches)).toBeOnTheScreen();
+		expect(screen.getByRole("button", { name: DEFAULT_PDF_VIEWER_LABELS.nextMatch })).toBeDisabled();
+		await screen.unmount();
+
+		await renderViewer(THREE_PAGES, instantRenderer(), { onSearch: (): Promise<readonly PdfTextMatch[]> => Promise.reject(new Error("engine")) });
+		await layOut();
+		await searchFor("zebra");
+		expect(await screen.findByText(DEFAULT_PDF_VIEWER_LABELS.searchFailed)).toBeOnTheScreen();
+	});
+
+	it("does not search for nothing, and clears the highlights when closed", async () => {
+		const onSearch = jest.fn<Promise<readonly PdfTextMatch[]>, [string]>((): Promise<readonly PdfTextMatch[]> => Promise.resolve(MATCHES));
+		await renderViewer(THREE_PAGES, instantRenderer(), { onSearch });
+		await layOut();
+
+		await searchFor("   ");
+		expect(onSearch).not.toHaveBeenCalled();
+
+		await fireEvent.changeText(screen.getByTestId(`${VIEWER}-search-input`), "balance");
+		await fireEvent(screen.getByTestId(`${VIEWER}-search-input`), "submitEditing");
+		await screen.findByText(DEFAULT_PDF_VIEWER_LABELS.matchIndicator(1, 3));
+		await fireEvent.press(screen.getByRole("button", { name: DEFAULT_PDF_VIEWER_LABELS.closeSearch }));
+
+		expect(screen.queryByTestId(`${VIEWER}-search-bar`)).toBeNull();
+		expect(screen.queryByTestId(`${VIEWER}-page-2-highlight-active`, { includeHiddenElements: true })).toBeNull();
+	});
+
+	it("shows only the latest search's answer", async () => {
+		const answers: ((matches: readonly PdfTextMatch[]) => void)[] = [];
+		const onSearch = (): Promise<readonly PdfTextMatch[]> =>
+			new Promise<readonly PdfTextMatch[]>((resolve): void => {
+				answers.push(resolve);
+			});
+		await renderViewer(THREE_PAGES, instantRenderer(), { onSearch });
+		await layOut();
+		await searchFor("first");
+		await fireEvent(screen.getByTestId(`${VIEWER}-search-input`), "submitEditing");
+		const [first, second] = answers;
+
+		await act(async (): Promise<void> => {
+			second?.([]);
+			first?.(MATCHES);
+			await Promise.resolve();
+		});
+
+		expect(screen.getByText(DEFAULT_PDF_VIEWER_LABELS.noMatches)).toBeOnTheScreen();
+	});
+});
+
+describe("PdfViewer — document actions", () => {
+	it("puts Download and Open in… behind More when it has both", async () => {
+		const onDownload = jest.fn<undefined, []>();
+		const onOpenExternally = jest.fn<undefined, []>();
+		await renderViewer(THREE_PAGES, instantRenderer(), { onDownload, onOpenExternally });
+
+		await fireEvent.press(screen.getByRole("button", { name: DEFAULT_PDF_VIEWER_LABELS.moreActions }));
+		await fireEvent.press(await screen.findByText(DEFAULT_PDF_VIEWER_LABELS.download));
+		expect(onDownload).toHaveBeenCalledTimes(1);
+
+		await fireEvent.press(screen.getByRole("button", { name: DEFAULT_PDF_VIEWER_LABELS.moreActions }));
+		await fireEvent.press(await screen.findByText(DEFAULT_PDF_VIEWER_LABELS.openExternally));
+		expect(onOpenExternally).toHaveBeenCalledTimes(1);
+	});
+
+	it("shows a lone Download as its own button", async () => {
+		const onDownload = jest.fn<undefined, []>();
+		await renderViewer(THREE_PAGES, instantRenderer(), { onDownload });
+
+		await fireEvent.press(screen.getByRole("button", { name: DEFAULT_PDF_VIEWER_LABELS.download }));
+
+		expect(onDownload).toHaveBeenCalledTimes(1);
+		expect(screen.queryByRole("button", { name: DEFAULT_PDF_VIEWER_LABELS.moreActions })).toBeNull();
 	});
 });

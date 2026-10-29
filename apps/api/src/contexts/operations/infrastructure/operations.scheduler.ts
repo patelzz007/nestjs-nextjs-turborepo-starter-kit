@@ -7,13 +7,14 @@
 
 import { Inject, Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from "@nestjs/common";
 import { SchedulerRegistry } from "@nestjs/schedule";
-import { OPS_HOUR_MS, OPS_MINUTE_MS, OPS_SAMPLE_INTERVAL_MS } from "@workspace/shared";
+import { OPS_HOUR_MS, OPS_MINUTE_MS, OPS_SAMPLE_INTERVAL_MS, CaughtValueSchema } from "@workspace/shared";
 
 import type { BackupRunner } from "../application/services/backup-runner";
 import type { HistoryMaintainer } from "../application/services/history-maintainer";
 import type { InstanceReporter } from "../application/services/instance-reporter";
 import type { OperationsMonitor } from "../application/services/operations-monitor";
 import { BACKUP_RUNNER, HISTORY_MAINTAINER, INSTANCE_REPORTER, OPERATIONS_MONITOR } from "../application/ports/operations.tokens";
+import { caughtErrorLogFields } from "../../../platform/application/errors/caught-error-log";
 
 const HEARTBEAT_INTERVAL_ID = "operations.heartbeat";
 const MINUTE_INTERVAL_ID = "operations.minute";
@@ -74,7 +75,7 @@ export class OperationsScheduler implements OnModuleInit, OnApplicationShutdown 
 		try {
 			await work();
 		} catch (error) {
-			this.logger.error({ event: `${id}.failed`, error: error instanceof Error ? error.message : String(error) });
+			this.logger.error({ event: `${id}.failed`, ...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data) });
 		}
 	}
 }

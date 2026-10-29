@@ -1,3 +1,4 @@
+import { CaughtValueSchema } from "@workspace/shared";
 import { Inject, Logger } from "@nestjs/common";
 import { EventsHandler, type IEventHandler } from "@nestjs/cqrs";
 
@@ -5,6 +6,7 @@ import { FileDeleted } from "../../../domain/events/file-deleted.event";
 import type { FileObjectStoragePort } from "../../ports/file-object-storage.port";
 import { FILE_OBJECT_STORAGE } from "../../ports/files.tokens";
 import { StorageTaskDispatcher } from "../../ports/storage-task-dispatcher.port";
+import { caughtErrorLogFields } from "../../../../../platform/application/errors/caught-error-log";
 
 /**
  * After a deletion commits (mechanism 2): withdraws every published copy at
@@ -28,7 +30,7 @@ export class PurgeDeletedFileObjectsHandler implements IEventHandler<FileDeleted
 		try {
 			await this.purge(event);
 		} catch (error) {
-			this.logger.error({ event: "files.purge_after_delete_failed", fileId: event.fileId, error: error instanceof Error ? error.message : String(error) });
+			this.logger.error({ event: "files.purge_after_delete_failed", fileId: event.fileId, ...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data) });
 		}
 	}
 

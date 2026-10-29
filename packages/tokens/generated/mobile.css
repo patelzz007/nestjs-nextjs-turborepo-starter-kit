@@ -103,6 +103,8 @@
 			--print-row-alt: oklch(0.985 0.002 247.839);
 			--qr-background: oklch(1 0 0);
 			--qr-foreground: oklch(0 0 0);
+			--document-match: oklch(0.95 0.11 100);
+			--document-match-active: oklch(0.89 0.18 97);
 			--success-foreground: oklch(0.44 0.12 150);
 			--warning-foreground: oklch(0.46 0.1 80);
 			--info-foreground: oklch(0.46 0.16 258);
@@ -216,6 +218,8 @@
 			--print-row-alt: oklch(0.985 0.002 247.839);
 			--qr-background: oklch(1 0 0);
 			--qr-foreground: oklch(0 0 0);
+			--document-match: oklch(0.95 0.11 100);
+			--document-match-active: oklch(0.89 0.18 97);
 			--success-foreground: oklch(0.86 0.13 150);
 			--warning-foreground: oklch(0.89 0.13 95);
 			--info-foreground: oklch(0.84 0.09 250);
@@ -329,6 +333,8 @@
 			--print-row-alt: oklch(0.985 0.002 247.839);
 			--qr-background: oklch(1 0 0);
 			--qr-foreground: oklch(0 0 0);
+			--document-match: oklch(0.95 0.11 100);
+			--document-match-active: oklch(0.89 0.18 97);
 			--success-foreground: #b2c8a1;
 			--warning-foreground: #ebcb8b;
 			--info-foreground: #a8bdd3;
@@ -368,6 +374,8 @@
 	--color-print-row-alt: var(--print-row-alt);
 	--color-qr-background: var(--qr-background);
 	--color-qr-foreground: var(--qr-foreground);
+	--color-document-match: var(--document-match);
+	--color-document-match-active: var(--document-match-active);
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
 	--color-card: var(--card);

@@ -1,7 +1,9 @@
+import { CaughtValueSchema } from "@workspace/shared";
 import { Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from "@nestjs/common";
 import { SchedulerRegistry } from "@nestjs/schedule";
 
 import { AUTHORIZATION_CHANGE_SWEEP_INTERVAL_MS, AuthorizationChangeSweep, type AuthorizationChangeSweepResult } from "../../application/services/authorization-change-sweep";
+import { caughtErrorLogFields } from "../../../../platform/application/errors/caught-error-log";
 
 export const AUTHORIZATION_CHANGE_SWEEP_SCHEDULER_ID = "identity.authorization-change-sweep";
 
@@ -47,7 +49,7 @@ export class AuthorizationChangeSweepScheduler implements OnModuleInit, OnApplic
 			}
 			return result;
 		} catch (error) {
-			this.logger.error({ event: "identity.authorization_change_sweep_failed", error: error instanceof Error ? error.message : String(error) });
+			this.logger.error({ event: "identity.authorization_change_sweep_failed", ...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data) });
 			return null;
 		} finally {
 			this.running = false;

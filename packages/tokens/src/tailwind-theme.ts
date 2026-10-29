@@ -67,6 +67,8 @@ export const TAILWIND_THEME: TailwindTheme = {
 		"print-row-alt",
 		"qr-background",
 		"qr-foreground",
+		"document-match",
+		"document-match-active",
 		"background",
 		"foreground",
 		"card",

@@ -5,6 +5,7 @@ import type { SensitiveReadRecorder } from "../../application/ports/audit-read-s
 import { AuditContextMissingError, AuditLogWriteError } from "../../../../platform/infrastructure/audit/audit-log.errors";
 import type { AuditLogWriter } from "../../../../platform/infrastructure/audit/audit-log.repository";
 import type { AuditTrailService } from "../../../../platform/infrastructure/audit/audit-trail.service";
+import { caughtErrorLogFields } from "../../../../platform/application/errors/caught-error-log";
 
 /**
  * Writes the current request's ONE audit row — the sensitive-read summary in place of the
@@ -31,7 +32,7 @@ export class AuditTrailSensitiveReadRecorder implements SensitiveReadRecorder {
 				throw error;
 			}
 			const cause: Error = error instanceof Error ? error : new Error(String(error));
-			this.logger.error({ event: "audit.write_failed", phase: "sensitive_read", summary, error: cause.message });
+			this.logger.error({ event: "audit.write_failed", phase: "sensitive_read", summary, ...caughtErrorLogFields(cause) });
 			throw new AuditLogWriteError(cause);
 		}
 	}

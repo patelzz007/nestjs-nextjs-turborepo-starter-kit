@@ -108,3 +108,32 @@ files above now show as new and go in with the next commit. Their content is unc
 Check `git ls-files apps/mobile/modules/<name>` after adding one. The same class of bug, an unanchored
 ignore rule hiding source, was found and fixed for the operations backup commands in commit
 `0f2c2f43`.
+
+## Amendment (2026-10-29) — search and download on mobile
+
+People asked for search and download; until now the mobile viewer could only share. Both stay on the
+platform engines. No PDF library is added.
+
+- **Search.**
+  - **iOS:** PDFKit's `findString`, on every iOS version.
+  - **Android:** `PdfRenderer.Page.searchText`, added in **Android 15 (API 35)**. Older Android
+    versions are deliberately not covered: no platform API exists there, and adding one would mean a
+    PDF library. On those phones the module's `searchSupported` is `false` and the viewer has no
+    search button.
+  - **How matches are drawn:** they come back as boxes in fractions of the page and are drawn over
+    the rendered page bitmaps. The pages stay images, so there is still no text selection.
+  - **Highlighter yellow in every theme:** the two shared tokens `document-match` and
+    `document-match-active` are the same in light, dark and Nord, because a rendered page is white
+    in every theme. They are multiply-blended onto the page, so the print under a match stays black.
+    The theme-flipping `tone-yellow` read as olive on the white page in the light theme.
+- **Download.**
+  - **Android:** a copy into the shared *Downloads* collection through `MediaStore.Downloads`
+    (Android 10+, no permission needed). The folder picker was rejected, because since Android 11 it
+    will not let the person choose Downloads itself.
+  - **iOS:** the system "Save to Files" dialog. iOS has no shared Downloads folder an app writes
+    into.
+  - **Expo Go:** no module, so no Download either. The existing Share already offers the system's
+    save options there.
+- **Not verified on iOS.** The Swift side (`searchDocument`, `saveDocument`) was written without a
+  Mac with Xcode, so it was not compiled or run when this amendment was made. Build it with
+  `npx expo run:ios` before relying on it.

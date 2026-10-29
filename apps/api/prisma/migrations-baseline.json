@@ -1,5 +1,5 @@
 {
-	"baseline": "20261028204901_init",
-	"reason": "Sixth pre-release reset: the owner regenerated the one init migration after ADR 067 Phase 4 (Cedar, the JSON policy engine, MANAGE and role inheritance removed). No shared or deployed database has run the previous baseline.",
-	"since": "2026-10-28"
+	"baseline": "20261029195353_init",
+	"reason": "Seventh pre-release reset: the single init migration was regenerated from the current schema to consolidate the changes made since the previous baseline into one clean starting point. No shared or deployed database has applied the previous baseline, so no data migration is required.",
+	"since": "2026-10-29"
 }

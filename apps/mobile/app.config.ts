@@ -74,6 +74,21 @@ function readAppIdentity(): AppIdentityEnv {
 }
 
 /**
+ * `EXPO_PUBLIC_ALLOW_LAN_HTTP_API`: a test APK that talks to the API on the developer's machine over
+ * the LAN in plain http (config-plugins/lan-http-api.ts, src/lib/env.ts). Read here because the
+ * permission is written into the generated manifest at prebuild. `true`, `false` or unset.
+ */
+const LanHttpApiEnvSchema = z.object({ EXPO_PUBLIC_ALLOW_LAN_HTTP_API: z.enum(["true", "false"]).optional() });
+
+function readLanHttpApiEnabled(): boolean {
+	const parsed = LanHttpApiEnvSchema.safeParse({ EXPO_PUBLIC_ALLOW_LAN_HTTP_API: process.env.EXPO_PUBLIC_ALLOW_LAN_HTTP_API?.trim() || undefined });
+	if (!parsed.success) {
+		throw new Error("Invalid EXPO_PUBLIC_ALLOW_LAN_HTTP_API (apps/mobile/app.config.ts) — must be true or false, or left unset");
+	}
+	return parsed.data.EXPO_PUBLIC_ALLOW_LAN_HTTP_API === "true";
+}
+
+/**
  * The launch assets, generated from the brand mark and the `splash` colour
  * tokens by `pnpm tools tokens:generate` (packages/tokens, ADR 043) — never edited here.
  */
@@ -98,6 +113,7 @@ function readLaunchColors(): LaunchColors {
 export default function appConfig({ config }: ConfigContext): ExpoConfig {
 	const identity = readAppIdentity();
 	const launchColors = readLaunchColors();
+	const lanHttpApi = readLanHttpApiEnabled();
 	// The same slate splash in light and dark: launching looks the same whatever the theme.
 	const splash = { image: SPLASH_IMAGE, imageWidth: SPLASH_IMAGE_WIDTH, backgroundColor: launchColors.backgroundColor, resizeMode: "contain" };
 	return {
@@ -131,7 +147,16 @@ export default function appConfig({ config }: ConfigContext): ExpoConfig {
 			["expo-camera", { cameraPermission: CAMERA_PERMISSION, microphonePermission: false, recordAudioAndroid: false, barcodeScannerEnabled: true }],
 			// Release builds scan with Google's code scanner: Play installs its module with the app.
 			"./config-plugins/google-code-scanner-module.ts",
+			// Release builds are shrunk by R8: keep what native code finds by name (error codes, ML Kit).
+			"./config-plugins/release-keep-rules.ts",
+			// No yellow autofill highlight over a filled-in field, in any theme (Android draws it, not the app).
+			"./config-plugins/autofill-highlight.ts",
+			// A LAN test APK only: plain http to the developer's machine (off, and https-only, in every other build).
+			["./config-plugins/lan-http-api.ts", { enabled: lanHttpApi }],
 			["expo-splash-screen", { ...splash, dark: splash }],
+			"expo-font",
+			"expo-image",
+			"expo-sharing",
 		],
 	};
 }

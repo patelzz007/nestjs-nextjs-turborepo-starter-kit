@@ -25,7 +25,7 @@
 				"@workspace/mobile",
 				"@workspace/ui-native"
 			],
-			"pinVersion": "0.88.0"
+			"pinVersion": "0.88.1"
 		},
 		{
 			"label": "apps/mobile + packages/ui-native: Metro is the version @expo/metro bundles for SDK 58, so Uniwind's Metro peers resolve to the bundler Expo runs",

@@ -12,6 +12,7 @@ import { DetailList } from "@workspace/ui-native/components/detail-list";
 import { ListRow } from "@workspace/ui-native/components/list-row";
 import { PrivacyCover } from "../privacy-cover";
 import { PageHeaderClearanceProvider } from "../../lib/page-header-clearance";
+import { pageHeaderControlsBottom } from "../page-header";
 import { Screen } from "../screen";
 import { BodyText, ErrorText, Heading, Label, MutedText, Subheading } from "@workspace/ui-native/components/text";
 
@@ -27,6 +28,13 @@ const KEYBOARD_EVENT = { endCoordinates: { screenX: 0, screenY: 500, width: 390,
 
 /** A phone-sized frame: SafeAreaProvider renders nothing until it knows the metrics. */
 const METRICS: Metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 47, left: 0, right: 0, bottom: 34 } };
+
+/** The app shell's header, status bar included, in these tests: its pinned row and a subtitle line. */
+const HEADER_HEIGHT = 123;
+/** Where the header's pinned row ends on this frame: a scrolling screen starts there. */
+const PINNED_ROW_BOTTOM = pageHeaderControlsBottom(METRICS.insets.top);
+/** The rest of the header, its subtitle line: padding inside the scroll view, so the content starts below the header. */
+const SUBTITLE_LINE = HEADER_HEIGHT - PINNED_ROW_BOTTOM;
 
 /**
  * Every Screen is a route in the app, and it reads the router (its focus feeds the page header's
@@ -99,7 +107,7 @@ describe("Screen", () => {
 	it("under the app shell's header, leaves the title to the header and starts its content below it", async () => {
 		await renderScreen(
 			<SafeAreaProvider initialMetrics={METRICS}>
-				<PageHeaderClearanceProvider value={123}>
+				<PageHeaderClearanceProvider value={HEADER_HEIGHT}>
 					<Screen title="Home" description="Your account at a glance" testID="screen">
 						<BodyText>Content</BodyText>
 					</Screen>
@@ -109,14 +117,29 @@ describe("Screen", () => {
 
 		expect(screen.queryByRole("header")).toBeNull();
 		expect(screen.getByText("Your account at a glance")).toBeOnTheScreen();
-		expect(screen.getByTestId("screen-content")).toHaveProp("contentContainerStyle", { paddingTop: 123 });
-		expect(screen.getByTestId("screen-content")).toHaveProp("scrollIndicatorInsets", { top: 123, bottom: 0 });
+		expect(screen.getByTestId("screen-content")).toHaveProp("contentContainerStyle", { paddingTop: SUBTITLE_LINE });
+		expect(screen.getByTestId("screen-content")).toHaveProp("scrollIndicatorInsets", { top: SUBTITLE_LINE, bottom: 0 });
+	});
+
+	it("under the app shell's header, starts its scroll view below the header's pinned row, so the scrollbar runs along the content", async () => {
+		await renderScreen(
+			<SafeAreaProvider initialMetrics={METRICS}>
+				<PageHeaderClearanceProvider value={HEADER_HEIGHT}>
+					<Screen testID="screen">
+						<BodyText>Content</BodyText>
+					</Screen>
+				</PageHeaderClearanceProvider>
+			</SafeAreaProvider>,
+		);
+
+		expect(screen.getByTestId("screen-content")).toHaveStyle({ marginTop: PINNED_ROW_BOTTOM });
+		expect(PINNED_ROW_BOTTOM + SUBTITLE_LINE).toBe(HEADER_HEIGHT);
 	});
 
 	it("under the app shell's header, sits its content on a sheet with a curved top, and follows the scrolling", async () => {
 		await renderScreen(
 			<SafeAreaProvider initialMetrics={METRICS}>
-				<PageHeaderClearanceProvider value={123}>
+				<PageHeaderClearanceProvider value={HEADER_HEIGHT}>
 					<Screen testID="screen">
 						<BodyText>Content</BodyText>
 					</Screen>
@@ -141,10 +164,24 @@ describe("Screen", () => {
 		expect(screen.getByText("Content")).toBeOnTheScreen();
 	});
 
+	it("outside the shell, shows its own title and starts at the top", async () => {
+		await renderScreen(
+			<SafeAreaProvider initialMetrics={METRICS}>
+				<Screen title="Locked" testID="screen">
+					<BodyText>Content</BodyText>
+				</Screen>
+			</SafeAreaProvider>,
+		);
+
+		expect(screen.getByRole("header", { name: "Locked" })).toBeOnTheScreen();
+		expect(screen.getByTestId("screen-content")).toHaveStyle({ marginTop: 0 });
+		expect(screen.getByTestId("screen-content")).toHaveProp("scrollIndicatorInsets", { top: 0, bottom: 0 });
+	});
+
 	it("without scrolling, fills the screen below the app shell's header with its content", async () => {
 		await renderScreen(
 			<SafeAreaProvider initialMetrics={METRICS}>
-				<PageHeaderClearanceProvider value={123}>
+				<PageHeaderClearanceProvider value={HEADER_HEIGHT}>
 					<Screen scrollable={false} description="A document" testID="screen">
 						<BodyText>Pages</BodyText>
 					</Screen>
@@ -153,7 +190,7 @@ describe("Screen", () => {
 		);
 
 		const content = screen.getByTestId("screen-content");
-		expect(content).toHaveStyle({ paddingTop: 123 });
+		expect(content).toHaveStyle({ paddingTop: HEADER_HEIGHT });
 		expect(content).toHaveProp("className", expect.stringContaining("flex-1"));
 		expect(content).not.toHaveProp("contentContainerStyle");
 		expect(screen.getByText("Pages")).toBeOnTheScreen();
@@ -163,7 +200,7 @@ describe("Screen", () => {
 	it("drops the pull-to-refresh spinner below the app shell's header, where the content starts", async () => {
 		await renderScreen(
 			<SafeAreaProvider initialMetrics={METRICS}>
-				<PageHeaderClearanceProvider value={123}>
+				<PageHeaderClearanceProvider value={HEADER_HEIGHT}>
 					<Screen onRefresh={jest.fn()} testID="screen">
 						<BodyText>Content</BodyText>
 					</Screen>
@@ -171,7 +208,7 @@ describe("Screen", () => {
 			</SafeAreaProvider>,
 		);
 
-		expect(refreshOffsetOf("screen-content")).toBe(123);
+		expect(refreshOffsetOf("screen-content")).toBe(SUBTITLE_LINE);
 	});
 
 	it("leaves the spinner at the top outside the shell", async () => {

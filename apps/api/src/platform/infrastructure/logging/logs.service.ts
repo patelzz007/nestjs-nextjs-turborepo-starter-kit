@@ -31,11 +31,13 @@ export class LogService {
 		this.logger.log(formatted, logContext);
 	}
 
-	public warn(message: string, options?: LogOptions): void {
-		const parsed = options === undefined ? undefined : LogServiceOptionsSchema.parse(options);
+	/** A warning; with `trace` (a stack), the stack is printed under the message — Nest's `warn` has no stack argument. */
+	public warn(message: string, options?: LogOptions & { trace?: string | undefined }): void {
+		const { trace, ...logOptions } = options ?? {};
+		const parsed = options === undefined ? undefined : LogServiceOptionsSchema.parse(logOptions);
 		const logContext: string = parsed?.context ?? LogService.name;
 		const formatted: string = this.formatMessage(message, parsed);
-		this.logger.warn(formatted, logContext);
+		this.logger.warn(trace === undefined ? formatted : `${formatted}\n${trace}`, logContext);
 	}
 
 	public error(message: string, options?: LogOptions & { trace?: string | undefined }): void {

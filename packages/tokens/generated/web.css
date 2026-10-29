@@ -145,6 +145,8 @@
 	--print-row-alt: oklch(0.985 0.002 247.839);
 	--qr-background: oklch(1 0 0);
 	--qr-foreground: oklch(0 0 0);
+	--document-match: oklch(0.95 0.11 100);
+	--document-match-active: oklch(0.89 0.18 97);
 	--success-foreground: var(--tone-green);
 	--warning-foreground: var(--tone-yellow);
 	--info-foreground: var(--tone-blue);
@@ -434,6 +436,8 @@
 	--color-print-row-alt: var(--print-row-alt);
 	--color-qr-background: var(--qr-background);
 	--color-qr-foreground: var(--qr-foreground);
+	--color-document-match: var(--document-match);
+	--color-document-match-active: var(--document-match-active);
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
 	--color-card: var(--card);

@@ -1,3 +1,4 @@
+import { CaughtValueSchema } from "@workspace/shared";
 import { Inject, Logger } from "@nestjs/common";
 import { CommandHandler, type ICommandHandler } from "@nestjs/cqrs";
 
@@ -6,6 +7,7 @@ import { SignupReferralJobItemsFailedError } from "../../errors/signup-referral.
 import type { CodeMaintenanceOutcome, SignupReferralCodeMaintenancePort } from "../../ports/signup-referral-maintenance.port";
 import { SIGNUP_REFERRAL_CODE_MAINTENANCE } from "../../ports/referrals.tokens";
 import { MaintainSignupReferralCodesCommand, SIGNUP_REFERRAL_CODE_JOB_PAGE_SIZE, type SignupReferralCodeJobResult } from "./maintain-signup-referral-codes.command";
+import { caughtErrorLogFields } from "../../../../../platform/application/errors/caught-error-log";
 
 /**
  * Pages through only the users that need a code and handles each in its own transaction under that
@@ -41,7 +43,7 @@ export class MaintainSignupReferralCodesHandler implements ICommandHandler<Maint
 					successors += outcome === "successor" ? 1 : 0;
 				} catch (error) {
 					failures.push(error instanceof Error ? error : new Error(String(error)));
-					this.logger.error({ event: "signup_referral.code_issue_failed", userId, error: error instanceof Error ? error.message : String(error) });
+					this.logger.error({ event: "signup_referral.code_issue_failed", userId, ...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data) });
 				}
 			}
 		}

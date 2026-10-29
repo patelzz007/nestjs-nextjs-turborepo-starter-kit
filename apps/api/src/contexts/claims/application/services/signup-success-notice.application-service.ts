@@ -7,6 +7,7 @@ import type { SystemOperationName } from "../../../../platform/application/syste
 import type { UnitOfWork } from "../../../../platform/application/unit-of-work.port";
 import type { OwedSignupSuccessNotice } from "../../../referrals/public-api";
 import type { ClaimsScope } from "../claims-scope";
+import { caughtErrorLogFields } from "../../../../platform/application/errors/caught-error-log";
 
 /**
  * The system operation every delivery runs under: it reads the referee's name and writes the referrer's
@@ -113,7 +114,7 @@ export class SignupSuccessNoticeApplicationService {
 				} catch (error) {
 					const failure = error instanceof Error ? error : new Error(String(error));
 					failures.push(failure);
-					this.logger.error({ event: "signup_referral.notification_failed", signupReferralId: owed.signupReferralId, error: failure.message });
+					this.logger.error({ event: "signup_referral.notification_failed", signupReferralId: owed.signupReferralId, ...caughtErrorLogFields(failure) });
 				}
 			}
 		}

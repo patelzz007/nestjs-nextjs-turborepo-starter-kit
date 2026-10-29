@@ -76,3 +76,18 @@ and follow Reduce Motion.
 - The test helper's in-memory Secure Store now undoes injected failures on `reset()`. Before, a
   failure injected in one test leaked into the next.
 - Check swiping, the parallax, Reduce Motion and both themes on a device.
+
+## Amendment (2026-10-30) — replaying onboarding in a test build
+
+Settings → About offered "Sign out and replay onboarding" in development builds only. Testers now
+mostly use a release APK, where it was hidden, so it looked as if it had gone. It now shows in
+development builds **and in test builds**: release builds made with `EXPO_PUBLIC_SHOW_DEMO_ACCOUNT=true`,
+the same internal-test-APK signal the demo logins use (ADR 042). A store build never shows it.
+
+- **The rule:** `canReplayOnboarding(env)` in `apps/mobile/src/lib/env.ts`, unit-tested. Settings reads
+  it from the validated environment instead of `__DEV__`. The Expo boilerplate has the same function
+  and the same rule.
+- **Why reuse the demo flag:** both are affordances for people testing an APK, and both must never
+  reach a store build. A second flag would be one more thing to forget to turn off.
+- **Why it is needed at all:** onboarding's "seen" flag lives in the Keychain / Keystore, which
+  outlives a reinstall, so a tester has no other way to see onboarding again.

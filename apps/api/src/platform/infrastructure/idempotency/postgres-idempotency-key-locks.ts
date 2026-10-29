@@ -1,3 +1,4 @@
+import { CaughtValueSchema } from "@workspace/shared";
 import { createHash } from "node:crypto";
 
 import { Injectable, Logger, type OnModuleDestroy } from "@nestjs/common";
@@ -7,6 +8,7 @@ import { TypedConfigService } from "../../../config/typed-config.service";
 import type { IdempotencyRecordKey } from "./idempotency-record.repository";
 import type { IdempotencyKeyLock, IdempotencyKeyLockOutcome, IdempotencyKeyLocks } from "./idempotency-key-locks";
 import { IDEMPOTENCY_DUPLICATE_WAIT_MS, IDEMPOTENCY_LOCK_APPLICATION_NAME, IDEMPOTENCY_LOCK_POOL_MAX } from "./idempotency.constants";
+import { caughtErrorLogFields } from "../../application/errors/caught-error-log";
 
 /** SQLSTATE `lock_not_available`: the lock wait hit `lock_timeout`. */
 const LOCK_NOT_AVAILABLE = "55P03";
@@ -90,7 +92,7 @@ export class PostgresIdempotencyKeyLocks implements IdempotencyKeyLocks, OnModul
 					client.release();
 				} catch (error) {
 					// Ending the session frees every lock it holds.
-					this.logger.warn({ event: "idempotency.unlock_failed", error: error instanceof Error ? error.message : String(error) });
+					this.logger.warn({ event: "idempotency.unlock_failed", ...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data) });
 					client.release(true);
 				}
 			},

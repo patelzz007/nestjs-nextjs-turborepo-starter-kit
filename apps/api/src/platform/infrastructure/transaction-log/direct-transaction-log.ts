@@ -1,9 +1,11 @@
+import { CaughtValueSchema } from "@workspace/shared";
 import { Logger } from "@nestjs/common";
 
 import type { HttpAuditEntry } from "../audit/http-audit-entry";
 import type { TransactionLogConfig } from "../../../config/api-config.schema";
 import { TransactionLogFileWriter } from "./transaction-log-file-writer";
 import { DisabledTransactionLog, TransactionLog } from "./transaction-log.port";
+import { caughtErrorLogFields } from "../../application/errors/caught-error-log";
 
 /**
  * Without Redis (development, a single instance, the CLI): the entry goes
@@ -19,7 +21,7 @@ export class DirectTransactionLog extends TransactionLog {
 
 	public record(entry: HttpAuditEntry): void {
 		void this.writer.append(entry.occurredAt, this.writer.format(entry)).catch((error: unknown): void => {
-			this.logger.error({ event: "transaction_log.write_failed", correlationId: entry.correlationId, error: error instanceof Error ? error.message : String(error) });
+			this.logger.error({ event: "transaction_log.write_failed", correlationId: entry.correlationId, ...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data) });
 		});
 	}
 }

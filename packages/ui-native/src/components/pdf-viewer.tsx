@@ -1,5 +1,7 @@
 // A PDF document, page under page, with a toolbar: previous / next page and
-// where you are ("Page 2 of 12"), zoom out / in ("150%"), and "Open in…".
+// where you are ("Page 2 of 12"), zoom out / in ("150%"), search, and the
+// document's actions — "Download" and "Open in…" (behind a "More" menu when
+// there are both).
 //
 // Data-agnostic and controlled: the caller opens the document and passes its
 // `state` — loading, failed (why), external (this device cannot draw pages
@@ -14,15 +16,27 @@
 // Zoom is in steps of the viewer's width (lib/pdf-viewer-layout.ts): at fit-
 // width the pages scroll vertically; zoomed in, the column also scrolls
 // sideways. Every word is overridable through `labels`.
+//
+// Search is offered when the caller passes `onSearch` (its engine can find
+// text): a search row opens under the toolbar, the caller answers with every
+// match as boxes in fractions of the page (lib/pdf-viewer-layout.ts), and the
+// viewer highlights them, jumps to the first match on or after the page being
+// read, and steps through the rest (wrapping at either end).
 
 import type { PdfOpenFailure } from "@workspace/shared";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Image } from "expo-image";
 import ChevronLeftIcon from "lucide-react-native/icons/chevron-left";
+import ChevronDownIcon from "lucide-react-native/icons/chevron-down";
 import ChevronRightIcon from "lucide-react-native/icons/chevron-right";
+import ChevronUpIcon from "lucide-react-native/icons/chevron-up";
+import DownloadIcon from "lucide-react-native/icons/download";
+import EllipsisVerticalIcon from "lucide-react-native/icons/ellipsis-vertical";
 import FileTextIcon from "lucide-react-native/icons/file-text";
 import FileWarningIcon from "lucide-react-native/icons/file-exclamation-point";
+import SearchIcon from "lucide-react-native/icons/search";
 import ShareIcon from "lucide-react-native/icons/share";
+import XIcon from "lucide-react-native/icons/x";
 import ZoomInIcon from "lucide-react-native/icons/zoom-in";
 import ZoomOutIcon from "lucide-react-native/icons/zoom-out";
 import * as React from "react";
@@ -37,26 +51,35 @@ import {
 	Text,
 	View,
 	type ViewInstance,
+	type ViewStyle,
 } from "react-native";
 
 import { cn } from "../lib/cn";
 import {
 	clampPdfPageIndex,
+	firstPdfMatchFrom,
 	formatPdfZoom,
 	nextPdfZoom,
 	PDF_FIT_WIDTH_ZOOM,
+	pdfHighlightFrame,
 	pdfPageDisplayHeight,
 	pdfPageIndexAt,
 	pdfPageLayouts,
 	pdfPageRenderWidthPx,
 	previousPdfZoom,
+	stepPdfMatch,
+	type PdfMatchStep,
 	type PdfPageLayout,
 	type PdfPageSize,
+	type PdfTextBox,
+	type PdfTextMatch,
 } from "../lib/pdf-viewer-layout";
 import { Button } from "./button";
+import { DropdownMenu, type DropdownMenuItemData } from "./dropdown-menu";
 import { EmptyState } from "./empty";
 import { Icon } from "./icon";
 import { IconButton } from "./icon-button";
+import { Input } from "./input";
 import { Skeleton, SkeletonGroup } from "./skeleton";
 
 export const pdfViewerVariants = cva("flex-1 overflow-hidden bg-muted", {
@@ -88,6 +111,19 @@ export interface PdfViewerLabels {
 	readonly zoomIn: string;
 	readonly zoomOut: string;
 	readonly openExternally: string;
+	readonly download: string;
+	/** The "More" menu's trigger and title, when there are several document actions. */
+	readonly moreActions: string;
+	readonly search: string;
+	readonly searchPlaceholder: string;
+	readonly closeSearch: string;
+	readonly previousMatch: string;
+	readonly nextMatch: string;
+	readonly searching: string;
+	readonly noMatches: string;
+	readonly searchFailed: string;
+	/** "3 of 12" — which match is shown. */
+	readonly matchIndicator: (match: number, matchCount: number) => string;
 	readonly retry: string;
 	readonly empty: string;
 	readonly externalTitle: string;
@@ -96,14 +132,20 @@ export interface PdfViewerLabels {
 	readonly failureTitle: string;
 	/** Why the document could not be shown, one sentence per failure. */
 	readonly failures: Readonly<Record<PdfOpenFailure, string>>;
-	/** "Page 2 of 12" — the toolbar's indicator. */
+	/** "Page 2 of 12" — the toolbar's indicator, as screen readers say it. */
 	readonly pageIndicator: (page: number, pageCount: number) => string;
+	/** "2 / 12" — the toolbar's indicator as shown: short, so it fits beside the toolbar's buttons on a phone. */
+	readonly pageIndicatorShort: (page: number, pageCount: number) => string;
 	/** "Page 2 of 12" — each page's name for screen readers. */
 	readonly pageImage: (page: number, pageCount: number) => string;
 }
 
 function pageOf(page: number, pageCount: number): string {
 	return `Page ${String(page)} of ${String(pageCount)}`;
+}
+
+function pageOfShort(page: number, pageCount: number): string {
+	return `${String(page)} / ${String(pageCount)}`;
 }
 
 export const DEFAULT_PDF_VIEWER_LABELS: PdfViewerLabels = {
@@ -113,6 +155,17 @@ export const DEFAULT_PDF_VIEWER_LABELS: PdfViewerLabels = {
 	zoomIn: "Zoom in",
 	zoomOut: "Zoom out",
 	openExternally: "Open in another app",
+	download: "Download",
+	moreActions: "More actions",
+	search: "Search in document",
+	searchPlaceholder: "Search in document",
+	closeSearch: "Close search",
+	previousMatch: "Previous match",
+	nextMatch: "Next match",
+	searching: "Searching…",
+	noMatches: "No matches",
+	searchFailed: "Search failed. Try again.",
+	matchIndicator: (match: number, matchCount: number): string => `${String(match)} of ${String(matchCount)}`,
 	retry: "Try again",
 	empty: "This document has no pages.",
 	externalTitle: "Open this document in another app",
@@ -128,11 +181,15 @@ export const DEFAULT_PDF_VIEWER_LABELS: PdfViewerLabels = {
 		unavailable: "The file couldn't be loaded. Try again.",
 	},
 	pageIndicator: pageOf,
+	pageIndicatorShort: pageOfShort,
 	pageImage: pageOf,
 };
 
 /** Turns page `pageIndex` (0-based) into a bitmap `widthPx` pixels wide; resolves with its address. */
 export type PdfPageRenderer = (pageIndex: number, widthPx: number) => Promise<string>;
+
+/** Finds `query` in the document: every match, in page order; rejects when the search could not run. */
+export type PdfTextSearcher = (query: string) => Promise<readonly PdfTextMatch[]>;
 
 export interface PdfViewerProps {
 	readonly state: PdfViewerState;
@@ -141,6 +198,10 @@ export interface PdfViewerProps {
 	readonly onRetry?: (() => void) | undefined;
 	/** Hands the document to another app ("Open in…"); without it the action is hidden. */
 	readonly onOpenExternally?: (() => void) | undefined;
+	/** Saves a copy where the person keeps files ("Download"); without it the action is hidden. */
+	readonly onDownload?: (() => void) | undefined;
+	/** Finds text in the document; without it there is no search. */
+	readonly onSearch?: PdfTextSearcher | undefined;
 	readonly labels?: Partial<PdfViewerLabels> | undefined;
 	readonly variant?: PdfViewerVariant | undefined;
 	/** Extra classes for the frame, merged last (layout: `flex-1`, `min-h-96`). */
@@ -172,14 +233,22 @@ function partTestId(testID: string | undefined, part: string): { readonly testID
 
 export const PdfViewer = React.memo(
 	React.forwardRef<ViewInstance, PdfViewerProps>(function PdfViewer(
-		{ state, renderPage, onRetry, onOpenExternally, labels, variant = "framed", className, testID },
+		{ state, renderPage, onRetry, onOpenExternally, onDownload, onSearch, labels, variant = "framed", className, testID },
 		ref,
 	): React.JSX.Element {
 		const text = React.useMemo((): PdfViewerLabels => ({ ...DEFAULT_PDF_VIEWER_LABELS, ...labels }), [labels]);
 		return (
 			<View ref={ref} testID={testID} className={cn(pdfViewerVariants({ variant }), className)}>
 				{state.status === "ready" ? (
-					<PdfDocument pages={state.pages} renderPage={renderPage} onOpenExternally={onOpenExternally} labels={text} testID={testID} />
+					<PdfDocument
+						pages={state.pages}
+						renderPage={renderPage}
+						onOpenExternally={onOpenExternally}
+						onDownload={onDownload}
+						onSearch={onSearch}
+						labels={text}
+						testID={testID}
+					/>
 				) : (
 					<PdfStatus state={state} onRetry={onRetry} onOpenExternally={onOpenExternally} labels={text} testID={testID} />
 				)}
@@ -233,9 +302,55 @@ interface PdfDocumentProps {
 	readonly pages: readonly PdfPageSize[];
 	readonly renderPage: PdfPageRenderer;
 	readonly onOpenExternally: (() => void) | undefined;
+	readonly onDownload: (() => void) | undefined;
+	readonly onSearch: PdfTextSearcher | undefined;
 	readonly labels: PdfViewerLabels;
 	readonly testID: string | undefined;
 }
+
+/** Where a search got to: closed, the row open with nothing asked yet, running, answered, or failed. */
+type PdfSearchState =
+	| { readonly status: "closed" }
+	| { readonly status: "open" }
+	| { readonly status: "searching" }
+	| { readonly status: "found"; readonly matches: readonly PdfTextMatch[]; readonly current: number }
+	| { readonly status: "failed" };
+
+const SEARCH_CLOSED: PdfSearchState = { status: "closed" };
+const SEARCH_OPEN: PdfSearchState = { status: "open" };
+
+/** One highlight over a page: a box of a match, and whether that match is the one being shown. */
+interface PdfPageHighlight {
+	readonly key: string;
+	readonly box: PdfTextBox;
+	readonly active: boolean;
+}
+
+const NO_HIGHLIGHTS: readonly PdfPageHighlight[] = [];
+
+/** A highlighter darkens the paper, never the print: multiply keeps black text black under the yellow. */
+const HIGHLIGHTER_BLEND: ViewStyle["mixBlendMode"] = "multiply";
+/** Each page blends on its own (the highlights multiply onto the page, not onto the list behind it). */
+const PAGE_BLEND_ISOLATION: ViewStyle["isolation"] = "isolate";
+
+/** Every page's highlights, by page index, from a search's matches. */
+function highlightsByPage(search: PdfSearchState): ReadonlyMap<number, readonly PdfPageHighlight[]> {
+	const byPage = new Map<number, PdfPageHighlight[]>();
+	if (search.status !== "found") {
+		return byPage;
+	}
+	search.matches.forEach((match: PdfTextMatch, matchIndex: number): void => {
+		const highlights = byPage.get(match.pageIndex) ?? [];
+		match.rects.forEach((box: PdfTextBox, boxIndex: number): void => {
+			highlights.push({ key: `${String(matchIndex)}-${String(boxIndex)}`, box, active: matchIndex === search.current });
+		});
+		byPage.set(match.pageIndex, highlights);
+	});
+	return byPage;
+}
+
+/** The document's actions: download and "Open in…", each only when the caller offers it. */
+type PdfDocumentAction = "download" | "open-externally";
 
 interface ViewportSize {
 	readonly width: number;
@@ -245,12 +360,17 @@ interface ViewportSize {
 const UNMEASURED_VIEWPORT: ViewportSize = { width: 0, height: 0 };
 
 /** The open document: the toolbar over the scrolling column of pages. */
-function PdfDocument({ pages, renderPage, onOpenExternally, labels, testID }: PdfDocumentProps): React.JSX.Element {
+function PdfDocument({ pages, renderPage, onOpenExternally, onDownload, onSearch, labels, testID }: PdfDocumentProps): React.JSX.Element {
 	const listRef = React.useRef<FlatList<PdfPageSize>>(null);
 	const [viewport, setViewport] = React.useState<ViewportSize>(UNMEASURED_VIEWPORT);
 	const [zoom, setZoom] = React.useState(PDF_FIT_WIDTH_ZOOM);
 	const [pageIndex, setPageIndex] = React.useState(0);
+	const [query, setQuery] = React.useState("");
+	const [search, setSearch] = React.useState<PdfSearchState>(SEARCH_CLOSED);
+	/** Counts searches, so only the latest one's answer is shown. */
+	const searchRun = React.useRef(0);
 	const pageCount = pages.length;
+	const highlights = React.useMemo(() => highlightsByPage(search), [search]);
 
 	const pageWidth = Math.max(0, viewport.width - 2 * PAGE_GAP) * zoom;
 	const listStyle = React.useMemo(() => ({ width: pageWidth, height: viewport.height }), [pageWidth, viewport.height]);
@@ -301,6 +421,86 @@ function PdfDocument({ pages, renderPage, onOpenExternally, labels, testID }: Pd
 		[layouts],
 	);
 
+	const openSearch = React.useCallback((): void => {
+		setSearch(SEARCH_OPEN);
+	}, []);
+	const closeSearch = React.useCallback((): void => {
+		searchRun.current += 1;
+		setQuery("");
+		setSearch(SEARCH_CLOSED);
+	}, []);
+	const runSearch = React.useCallback((): void => {
+		const wanted = query.trim();
+		if (onSearch === undefined || wanted.length === 0) {
+			return;
+		}
+		searchRun.current += 1;
+		const run = searchRun.current;
+		setSearch({ status: "searching" });
+		onSearch(wanted).then(
+			(matches: readonly PdfTextMatch[]): void => {
+				if (run !== searchRun.current) {
+					return;
+				}
+				const current = firstPdfMatchFrom(matches, pageIndex);
+				setSearch({ status: "found", matches, current });
+				const first = matches.at(current);
+				if (first !== undefined) {
+					goToPage(first.pageIndex);
+				}
+			},
+			(): void => {
+				if (run === searchRun.current) {
+					setSearch({ status: "failed" });
+				}
+			},
+		);
+	}, [goToPage, onSearch, pageIndex, query]);
+	const stepMatch = React.useCallback(
+		(step: PdfMatchStep): void => {
+			if (search.status !== "found") {
+				return;
+			}
+			const current = stepPdfMatch(search.current, search.matches.length, step);
+			setSearch({ ...search, current });
+			const match = search.matches.at(current);
+			if (match !== undefined) {
+				goToPage(match.pageIndex);
+			}
+		},
+		[goToPage, search],
+	);
+	const showPreviousMatch = React.useCallback((): void => {
+		stepMatch("previous");
+	}, [stepMatch]);
+	const showNextMatch = React.useCallback((): void => {
+		stepMatch("next");
+	}, [stepMatch]);
+
+	const actions = React.useMemo((): readonly DropdownMenuItemData<PdfDocumentAction>[] => {
+		const offered: DropdownMenuItemData<PdfDocumentAction>[] = [];
+		if (onDownload !== undefined) {
+			offered.push({ value: "download", label: labels.download, icon: DownloadIcon });
+		}
+		if (onOpenExternally !== undefined) {
+			offered.push({ value: "open-externally", label: labels.openExternally, icon: ShareIcon });
+		}
+		return offered;
+	}, [labels, onDownload, onOpenExternally]);
+	const runAction = React.useCallback(
+		(action: PdfDocumentAction): void => {
+			switch (action) {
+				case "download":
+					onDownload?.();
+					return;
+				case "open-externally":
+					onOpenExternally?.();
+					return;
+			}
+		},
+		[onDownload, onOpenExternally],
+	);
+
 	const getItemLayout = React.useCallback(
 		(_data: ArrayLike<PdfPageSize> | null | undefined, index: number): PdfPageLayout => layouts.at(index) ?? { length: 0, offset: 0, index },
 		[layouts],
@@ -314,12 +514,13 @@ function PdfDocument({ pages, renderPage, onOpenExternally, labels, testID }: Pd
 				height={pdfPageDisplayHeight(item, pageWidth)}
 				renderWidthPx={renderWidthPx}
 				renderPage={renderPage}
+				highlights={highlights.get(index) ?? NO_HIGHLIGHTS}
 				accessibilityLabel={labels.pageImage(index + 1, pageCount)}
 				failedLabel={labels.pageFailed}
 				testID={testID === undefined ? undefined : `${testID}-page-${String(index + 1)}`}
 			/>
 		),
-		[labels, pageCount, pageWidth, renderPage, renderWidthPx, testID],
+		[highlights, labels, pageCount, pageWidth, renderPage, renderWidthPx, testID],
 	);
 
 	const isZoomed = zoom > PDF_FIT_WIDTH_ZOOM;
@@ -337,8 +538,12 @@ function PdfDocument({ pages, renderPage, onOpenExternally, labels, testID }: Pd
 					disabled={pageIndex <= 0}
 					{...partTestId(testID, "previous")}
 				/>
-				<Text className="font-sans-medium min-w-0 shrink text-center text-sm text-foreground" accessibilityLiveRegion="polite" numberOfLines={1}>
-					{pageCount === 0 ? "" : labels.pageIndicator(pageIndex + 1, pageCount)}
+				<Text
+					accessibilityLabel={pageCount === 0 ? undefined : labels.pageIndicator(pageIndex + 1, pageCount)}
+					className="font-sans-medium min-w-0 shrink text-center text-sm text-foreground"
+					accessibilityLiveRegion="polite"
+					numberOfLines={1}>
+					{pageCount === 0 ? "" : labels.pageIndicatorShort(pageIndex + 1, pageCount)}
 				</Text>
 				<IconButton
 					icon={ChevronRightIcon}
@@ -363,10 +568,24 @@ function PdfDocument({ pages, renderPage, onOpenExternally, labels, testID }: Pd
 					disabled={nextPdfZoom(zoom) === zoom}
 					{...partTestId(testID, "zoom-in")}
 				/>
-				{onOpenExternally === undefined ? null : (
-					<IconButton icon={ShareIcon} label={labels.openExternally} variant="ghost" size="sm" onPress={onOpenExternally} {...partTestId(testID, "open-externally")} />
+				{onSearch === undefined ? null : (
+					<IconButton icon={SearchIcon} label={labels.search} variant="ghost" size="sm" onPress={openSearch} {...partTestId(testID, "search")} />
 				)}
+				<PdfActions actions={actions} onSelect={runAction} onDownload={onDownload} onOpenExternally={onOpenExternally} labels={labels} testID={testID} />
 			</View>
+			{search.status === "closed" ? null : (
+				<PdfSearchBar
+					query={query}
+					onQueryChange={setQuery}
+					onSubmit={runSearch}
+					search={search}
+					onPrevious={showPreviousMatch}
+					onNext={showNextMatch}
+					onClose={closeSearch}
+					labels={labels}
+					testID={testID}
+				/>
+			)}
 			<View className="flex-1" onLayout={measure} {...partTestId(testID, "viewport")}>
 				{pageCount === 0 ? (
 					<View className="p-4">
@@ -379,6 +598,7 @@ function PdfDocument({ pages, renderPage, onOpenExternally, labels, testID }: Pd
 							data={pages}
 							keyExtractor={keyOfPage}
 							renderItem={renderItem}
+							extraData={highlights}
 							getItemLayout={getItemLayout}
 							onScroll={trackPage}
 							scrollEventThrottle={SCROLL_EVENT_THROTTLE_MS}
@@ -396,12 +616,102 @@ function PdfDocument({ pages, renderPage, onOpenExternally, labels, testID }: Pd
 	);
 }
 
+interface PdfActionsProps {
+	readonly actions: readonly DropdownMenuItemData<PdfDocumentAction>[];
+	readonly onSelect: (action: PdfDocumentAction) => void;
+	readonly onDownload: (() => void) | undefined;
+	readonly onOpenExternally: (() => void) | undefined;
+	readonly labels: PdfViewerLabels;
+	readonly testID: string | undefined;
+}
+
+/** The document's actions in the toolbar: one as its own button, several behind "More" (a phone toolbar has no room for both). */
+function PdfActions({ actions, onSelect, onDownload, onOpenExternally, labels, testID }: PdfActionsProps): React.JSX.Element | null {
+	if (actions.length > 1) {
+		return (
+			<DropdownMenu label={labels.moreActions} items={actions} onSelect={onSelect} icon={EllipsisVerticalIcon} variant="ghost" size="icon" {...partTestId(testID, "more")} />
+		);
+	}
+	if (onDownload !== undefined) {
+		return <IconButton icon={DownloadIcon} label={labels.download} variant="ghost" size="sm" onPress={onDownload} {...partTestId(testID, "download")} />;
+	}
+	if (onOpenExternally !== undefined) {
+		return <IconButton icon={ShareIcon} label={labels.openExternally} variant="ghost" size="sm" onPress={onOpenExternally} {...partTestId(testID, "open-externally")} />;
+	}
+	return null;
+}
+
+interface PdfSearchBarProps {
+	readonly query: string;
+	readonly onQueryChange: (query: string) => void;
+	readonly onSubmit: () => void;
+	readonly search: Exclude<PdfSearchState, { readonly status: "closed" }>;
+	readonly onPrevious: () => void;
+	readonly onNext: () => void;
+	readonly onClose: () => void;
+	readonly labels: PdfViewerLabels;
+	readonly testID: string | undefined;
+}
+
+/** What the search row says about the latest search ("3 of 12", "No matches"…); nothing before the first one. */
+function searchStatusText(search: PdfSearchBarProps["search"], labels: PdfViewerLabels): string {
+	switch (search.status) {
+		case "open":
+			return "";
+		case "searching":
+			return labels.searching;
+		case "failed":
+			return labels.searchFailed;
+		case "found":
+			return search.matches.length === 0 ? labels.noMatches : labels.matchIndicator(search.current + 1, search.matches.length);
+	}
+}
+
+/** The search row under the toolbar: the query, how the search went, and previous / next match. */
+function PdfSearchBar({ query, onQueryChange, onSubmit, search, onPrevious, onNext, onClose, labels, testID }: PdfSearchBarProps): React.JSX.Element {
+	const canStep = search.status === "found" && search.matches.length > 1;
+	return (
+		<View accessibilityRole="search" className="flex-row items-center gap-1 border-b border-border bg-card px-2 py-1.5" {...partTestId(testID, "search-bar")}>
+			<Input
+				value={query}
+				onChange={onQueryChange}
+				onSubmitEditing={onSubmit}
+				placeholder={labels.searchPlaceholder}
+				accessibilityLabel={labels.searchPlaceholder}
+				returnKeyType="search"
+				autoCapitalize="none"
+				autoCorrect={false}
+				autoFocus
+				size="sm"
+				className="min-w-0 flex-1"
+				{...partTestId(testID, "search-input")}
+			/>
+			<Text className="font-sans text-xs text-muted-foreground" accessibilityLiveRegion="polite" numberOfLines={1} {...partTestId(testID, "search-status")}>
+				{searchStatusText(search, labels)}
+			</Text>
+			<IconButton
+				icon={ChevronUpIcon}
+				label={labels.previousMatch}
+				variant="ghost"
+				size="sm"
+				onPress={onPrevious}
+				disabled={!canStep}
+				{...partTestId(testID, "previous-match")}
+			/>
+			<IconButton icon={ChevronDownIcon} label={labels.nextMatch} variant="ghost" size="sm" onPress={onNext} disabled={!canStep} {...partTestId(testID, "next-match")} />
+			<IconButton icon={XIcon} label={labels.closeSearch} variant="ghost" size="sm" onPress={onClose} {...partTestId(testID, "close-search")} />
+		</View>
+	);
+}
+
 interface PdfPageProps {
 	readonly pageIndex: number;
 	readonly width: number;
 	readonly height: number;
 	readonly renderWidthPx: number;
 	readonly renderPage: PdfPageRenderer;
+	/** The search's highlights on this page; none outside a search. */
+	readonly highlights: readonly PdfPageHighlight[];
 	readonly accessibilityLabel: string;
 	readonly failedLabel: string;
 	readonly testID: string | undefined;
@@ -420,12 +730,14 @@ const PdfPage = React.memo(function PdfPage({
 	height,
 	renderWidthPx,
 	renderPage,
+	highlights,
 	accessibilityLabel,
 	failedLabel,
 	testID,
 }: PdfPageProps): React.JSX.Element {
 	const [image, setImage] = React.useState<PdfPageImage>(RENDERING);
-	const frameStyle = React.useMemo(() => ({ width, height, marginTop: PAGE_GAP }), [width, height]);
+	// Its own blending layer: the search highlights multiply onto this page's bitmap, nothing behind it.
+	const frameStyle = React.useMemo((): ViewStyle => ({ width, height, marginTop: PAGE_GAP, isolation: PAGE_BLEND_ISOLATION }), [width, height]);
 	const imageStyle = React.useMemo(() => ({ width, height }), [width, height]);
 	const imageSource = React.useMemo(() => (image.status === "rendered" ? { uri: image.uri } : null), [image]);
 
@@ -462,6 +774,39 @@ const PdfPage = React.memo(function PdfPage({
 					<Skeleton className="size-full" />
 				</SkeletonGroup>
 			)}
+			{highlights.map((highlight: PdfPageHighlight): React.JSX.Element => (
+				<PdfHighlight key={highlight.key} highlight={highlight} pageWidth={width} pageHeight={height} testID={testID} />
+			))}
 		</View>
 	);
 });
+
+interface PdfHighlightProps {
+	readonly highlight: PdfPageHighlight;
+	readonly pageWidth: number;
+	readonly pageHeight: number;
+	readonly testID: string | undefined;
+}
+
+/**
+ * One match box over the page, like a highlighter pen: the `document-match` tokens (the same yellow in
+ * every theme, as a page is white in every theme) multiplied onto the page, so the paper turns yellow
+ * and the print stays black and readable — no outline, which would cover small print. The shown match
+ * is the stronger yellow. Decorative: the search row announces where it is.
+ */
+function PdfHighlight({ highlight, pageWidth, pageHeight, testID }: PdfHighlightProps): React.JSX.Element {
+	const frameStyle = React.useMemo(
+		() => ({ ...pdfHighlightFrame(highlight.box, pageWidth, pageHeight), mixBlendMode: HIGHLIGHTER_BLEND }),
+		[highlight.box, pageWidth, pageHeight],
+	);
+	return (
+		<View
+			pointerEvents="none"
+			accessibilityElementsHidden
+			importantForAccessibility="no-hide-descendants"
+			className={cn("absolute rounded", highlight.active ? "bg-document-match-active" : "bg-document-match")}
+			style={frameStyle}
+			{...partTestId(testID, highlight.active ? "highlight-active" : "highlight")}
+		/>
+	);
+}

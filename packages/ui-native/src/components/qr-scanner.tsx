@@ -6,7 +6,7 @@
 // scanner (ML Kit — the scanner Google ships; no camera permission: Play
 // services owns the camera). Everywhere else (iOS, an Android phone without
 // Play services, Expo Go — see lib/qr-scanner-engine.ts — or when Google's
-// scanner cannot start) it shows the kit's own
+// scanner cannot start this time) it shows the kit's own
 // scanner in the same spirit: the live camera (expo-camera's CameraView —
 // ML Kit on Android, AVFoundation on iOS) behind a dimmed frame with a
 // bracketed viewfinder, a close button, a torch toggle and one line of
@@ -15,6 +15,14 @@
 //
 // One code per opening: after a read the camera stops reporting until the
 // scanner is opened again, so a code held in view is never delivered twice.
+//
+// Closing Google's scanner closes this scanner. ML Kit reports the person
+// leaving it as a scan failure (the back button always, the X on some
+// versions), so expo-camera's failure code reads as a close
+// (lib/qr-scanner-engine.ts). Only a scanner that could not open at all — Play
+// services or ML Kit missing — falls back to the camera scanner, and only for
+// that opening: Play services may be updating, so the next opening tries
+// Google's scanner again.
 
 import { cva, type VariantProps } from "class-variance-authority";
 import Constants, { ExecutionEnvironment } from "expo-constants";
@@ -103,8 +111,12 @@ export const QrScanner = React.memo(
 	React.forwardRef<ViewInstance, QrScannerProps>(function QrScanner({ visible, onScan, onClose, labels, engine, variant = "default", testID }, ref): React.JSX.Element | null {
 		const text = React.useMemo((): QrScannerLabels => ({ ...DEFAULT_QR_SCANNER_LABELS, ...labels }), [labels]);
 		const [preferredEngine] = React.useState((): QrScannerEngine => engine ?? deviceEngine());
-		/** Google's scanner could not start on this device: the camera scanner stands in for the rest of the app's life. */
+		/** Google's scanner could not start for this opening: the camera scanner stands in until the scanner closes. */
 		const [isGoogleUnavailable, setGoogleUnavailable] = React.useState(false);
+		// Closed: the next opening tries Google's scanner again (adjusting state during render, React's documented pattern).
+		if (!visible && isGoogleUnavailable) {
+			setGoogleUnavailable(false);
+		}
 		const activeEngine: QrScannerEngine = preferredEngine === "google" && !isGoogleUnavailable ? "google" : "camera";
 
 		const onScanRef = React.useRef(onScan);

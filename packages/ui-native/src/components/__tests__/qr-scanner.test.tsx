@@ -182,4 +182,34 @@ describe("QrScanner — Google's code scanner", () => {
 
 		expect(await screen.findByTestId(CAMERA)).toBeOnTheScreen();
 	});
+
+	it("tries Google's scanner again on the next opening after it could not open (Play services may have been updating)", async () => {
+		cameraPermission.current = permissionOf(true, true);
+		CameraView.launchScanner.mockRejectedValueOnce(Object.assign(new Error("Play services unavailable"), { code: "ERR_GOOGLE_PLAY_SERVICES_UNAVAILABLE" }));
+		const view = await render(onPhone(<QrScanner visible engine="google" {...handlers()} testID={SCANNER} />));
+		expect(await screen.findByTestId(CAMERA)).toBeOnTheScreen();
+
+		CameraView.launchScanner.mockImplementationOnce((): Promise<void> => {
+			emitModernScan(CODE);
+			return Promise.resolve();
+		});
+		const { onScan, onClose } = handlers();
+		await view.rerender(onPhone(<QrScanner visible={false} engine="google" onScan={onScan} onClose={onClose} testID={SCANNER} />));
+		await view.rerender(onPhone(<QrScanner visible engine="google" onScan={onScan} onClose={onClose} testID={SCANNER} />));
+
+		expect(CameraView.launchScanner).toHaveBeenCalledTimes(2);
+		expect(onScan).toHaveBeenCalledWith(CODE);
+		expect(screen.queryByTestId(CAMERA)).toBeNull();
+	});
+
+	it("closes, without falling back, when the person leaves Google's scanner with the back button (a scan failure to expo-camera)", async () => {
+		cameraPermission.current = permissionOf(true, true);
+		CameraView.launchScanner.mockRejectedValueOnce(Object.assign(new Error("Barcode scanning failed"), { code: "ERR_BARCODE_SCANNING_FAILED" }));
+		const { onScan, onClose } = handlers();
+		await render(onPhone(<QrScanner visible engine="google" onScan={onScan} onClose={onClose} testID={SCANNER} />));
+
+		expect(onClose).toHaveBeenCalledTimes(1);
+		expect(onScan).not.toHaveBeenCalled();
+		expect(screen.queryByTestId(CAMERA)).toBeNull();
+	});
 });

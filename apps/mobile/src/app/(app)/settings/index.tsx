@@ -14,6 +14,7 @@ import { Screen } from "../../../components/screen";
 import { SignOutDialog, useSignOut, useSignOutConfirmation } from "../../../contexts/identity";
 import { useAppLockEnabled, usePreferencesCommands, useThemePreference } from "../../../features/preferences/facade";
 import { THEME_LABELS } from "../../../features/preferences/labels";
+import { canReplayOnboarding } from "../../../lib/env";
 import { PDF_VIEWER_TITLE } from "../../../features/pdf-viewer/labels";
 import { TILL_TITLE } from "../../../contexts/pos";
 import { ROUTES } from "../../../runtime/routes";
@@ -47,7 +48,7 @@ export default function SettingsScreen(): React.JSX.Element {
 		router.push(ROUTES.pdfViewer);
 	}, [router]);
 
-	/** Development builds only: onboarding's "seen" flag lives in the Keychain, which outlives reinstalls (ADR 041). */
+	/** Development and test builds only (`canReplayOnboarding`): onboarding's "seen" flag lives in the Keychain, which outlives reinstalls (ADR 041). */
 	const replayOnboarding = React.useCallback((): void => {
 		preferences.onboardingReset();
 		void signOutNow();
@@ -79,12 +80,12 @@ export default function SettingsScreen(): React.JSX.Element {
 			</Card>
 			<Card title="About">
 				<DetailList items={about} />
-				{env.isDevelopment ? (
+				{canReplayOnboarding(env) ? (
 					<Button
 						label="Sign out and replay onboarding"
 						variant="secondary"
 						onPress={replayOnboarding}
-						accessibilityHint="Development builds only: shows the first-launch walkthrough again"
+						accessibilityHint="Development and test builds only: shows the first-launch walkthrough again"
 					/>
 				) : null}
 			</Card>

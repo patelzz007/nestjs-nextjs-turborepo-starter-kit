@@ -87,7 +87,7 @@ describe("PageHeader", () => {
 		expect(screen.getByTestId("header-title")).toBeOnTheScreen();
 	});
 
-	it("reports its full height and its subtitle line's height, rounded up to whole points", async () => {
+	it("reports its full height rounded up, and its subtitle line's height (how far it collapses) rounded down", async () => {
 		const actions = handlers();
 		await render(header(actions));
 
@@ -95,7 +95,8 @@ describe("PageHeader", () => {
 		await fireEvent(screen.getByTestId("header-subtitle-clip"), "layout", layout(35.2));
 
 		expect(actions.onHeightChange).toHaveBeenCalledWith(139);
-		expect(actions.onCollapseDistanceChange).toHaveBeenCalledWith(36);
+		// Rounded down: the bar's edge never rises above the pinned row, so no sliver of the page shows under it.
+		expect(actions.onCollapseDistanceChange).toHaveBeenCalledWith(35);
 	});
 
 	it("collapses by lifting only its background, the subtitle fading in place and the controls never moving", async () => {
@@ -118,26 +119,24 @@ describe("PageHeader", () => {
 		expect(screen.getByTestId("header-subtitle-text")).toHaveStyle({ opacity: 0.5 });
 	});
 
-	it("starts expanded: the background in place, on the page's colour with no hairline", async () => {
+	it("starts expanded: the background in place, on the page's colour", async () => {
 		await render(header(handlers()));
 
 		expect(screen.getByTestId("header-background")).toHaveStyle({ transform: [{ translateY: -0 }] });
 		expect(screen.getByTestId("header-surface")).toHaveStyle({ opacity: 0 });
-		expect(screen.getByTestId("header-hairline")).toHaveStyle({ opacity: 0 });
 	});
 
-	it("turns the bar into the content's surface, edged by a hairline, as it collapses", async () => {
+	it("turns the bar into the content's surface as it collapses, with no line between the two", async () => {
 		await render(header(handlers(), { progressValue: 1 }));
 
 		expect(screen.getByTestId("header-surface")).toHaveStyle({ opacity: 1 });
-		expect(screen.getByTestId("header-hairline")).toHaveStyle({ opacity: 1 });
+		expect(screen.queryByTestId("header-hairline")).toBeNull();
 	});
 
-	it("blends part-way into the surface, with no hairline yet, half-way through the collapse", async () => {
+	it("blends part-way into the surface half-way through the collapse", async () => {
 		await render(header(handlers(), { progressValue: 0.5 }));
 
 		expect(screen.getByTestId("header-surface")).toHaveStyle({ opacity: 0.5 });
-		expect(screen.getByTestId("header-hairline")).toHaveStyle({ opacity: 0 });
 	});
 
 	it("draws its controls row exactly PAGE_HEADER_ROW_HEIGHT tall, where the toasts are anchored", async () => {

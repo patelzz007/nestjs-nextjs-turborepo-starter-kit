@@ -125,7 +125,7 @@
 		"prisma": "^7.10.1",
 		"read-excel-file": "^9.3.13",
 		"run-script-webpack-plugin": "^0.2.3",
-		"tsrs": "0.20.0-ts7.1.0-beta",
+		"tsrs": "0.20.1-ts7.1.0-beta",
 		"tsx": "^4.23.15",
 		"typescript": "7.0.2",
 		"vitest": "^5.0.5",

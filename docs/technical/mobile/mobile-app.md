@@ -1417,7 +1417,46 @@ till for a merchant's store. The code is in `src/features/till`; the scanner is 
   Expo Go on either platform. It shows the live camera behind a dimmed frame with a bracketed
   viewfinder, a close button and a torch toggle. It asks for the camera the moment it opens, never
   earlier, and after a refusal for good it explains and links to Settings. It reads one code per
-  opening. Google's scanner is skipped in Expo Go because Expo Go runs each project in its own
+  opening. If Google's scanner cannot start (its Play services module is still downloading, which
+  happens on the first scan of an APK installed outside the Play Store), the camera scanner stands
+  in for that one opening, and the next opening tries Google's again.
+- **Closing Google's scanner closes the scanner.** ML Kit does not report a close consistently: on
+  the device this was tested on (Android 16, ML Kit `common` 18.11.0), its X cancels the task, while
+  the system back button fails it with `MlKitException.INTERNAL` (13); other ML Kit versions fail the
+  X with `CODE_SCANNER_CANCELLED` (201). `expo-camera` 58.0.13 rejects every such failure with
+  `ERR_BARCODE_SCANNING_FAILED` and passes no ML Kit code on, so the app reads **both**
+  `ERR_BARCODE_SCANNING_CANCELLED` and `ERR_BARCODE_SCANNING_FAILED` as the person closing the
+  scanner (`googleScanOutcomeOfErrorCode`, `packages/ui-native/src/lib/qr-scanner-engine.ts`). Only
+  the codes expo-camera rejects with *before* the scanner opens (Play services or ML Kit missing)
+  fall back to the camera scanner. The cost: a scanner that fails while opening, typically its
+  Play services module still downloading on the first scan of an APK installed outside the Play
+  Store, also just closes; tapping Scan again opens it once the module is there. The library is
+  not patched; if a later `expo-camera` reports ML Kit's own codes, the rule can tell the two apart
+  again.
+- **A release build behaves like a debug build only with its keep rules.** R8 shrinks a release
+  build (`android.enableMinifyInReleaseBuilds`), and two things native code finds *by name* broke
+  there, so the release APK opened the camera scanner instead of Google's, and closing Google's
+  scanner opened the camera scanner as well:
+  - expo-camera checks for ML Kit with `Class.forName("com.google.mlkit.vision.barcode.BarcodeScanning")`
+    before it opens Google's scanner, and R8 had removed that class, which nothing calls directly.
+  - An Expo module error takes its code from its class's *simple name*. R8 renamed and merged
+    those classes, and stripped the inner-class records a nested class's simple name comes from.
+    Closing the scanner then rejected with `ERR_CAMERA_EXCEPTIONS$_BARCODE_SCANNING_FAILED`, read in
+    a shrunk build's log, instead of `ERR_BARCODE_SCANNING_FAILED`. The PDF module's codes were
+    affected the same way.
+
+  `apps/mobile/config-plugins/release-keep-rules.pro` keeps all of these, with the reason for each
+  rule:
+  - every `CodedException` class, whole;
+  - the `InnerClasses` attribute, and the `…Exceptions` classes those errors are nested in;
+  - ML Kit's `…Scanning` entry points.
+
+  The config plugin `release-keep-rules.ts` adds that file to the release build in
+  `app/build.gradle`; prebuild regenerates it. To check a change to the rules without a release
+  API, build a *debug* APK with `minifyEnabled true` and the same ProGuard files. It loads its
+  JavaScript from Metro and signs in against the dev API, while its native code is shrunk exactly
+  like a release build's.
+  Google's scanner is skipped in Expo Go because Expo Go runs each project in its own
   Android task, and expo-camera starts the scanner from the application context: closing it would
   land on Expo Go's home instead of the app. VisionKit's iOS scanner is not used, because it has no
   close button and cannot be styled.
@@ -1453,7 +1492,28 @@ the phone ([ADR 056](../../adr/056-in-house-pdf-viewer.md)). The code is in
     crop box, turned by the page's rotation;
   - `renderPage(fileUri, pageIndex, widthPx) → "file://…png"` — a white-backed PNG in
     `<caches>/pdf-pages/`, named by a SHA-256 of the file URI, its modification time, the page and
-    the width, so each page is drawn once per zoom level.
+    the width, so each page is drawn once per zoom level;
+  - `searchDocument(fileUri, query) → [{ pageIndex, rects: [{ left, top, width, height }] }]` —
+    every match (at most 500), case-insensitive, its boxes as fractions of the page as shown (top-left
+    origin), so the viewer draws them at any zoom. PDFKit `findString` on iOS; on Android
+    `PdfRenderer.Page.searchText`, which exists from Android 15 (API 35): the constant
+    `searchSupported` is `false` below it and the search button is hidden;
+  - `saveDocument(fileUri, fileName) → { saved, fileName }` — **Download**. Android writes a copy into
+    the shared Downloads collection through `MediaStore.Downloads` (Android 10+, no storage
+    permission; a clash is renamed, "Report (1).pdf", and the kept name is returned). iOS presents
+    "Save to Files" (`UIDocumentPickerViewController(forExporting:asCopy:)`), and `saved` is `false`
+    when the person cancels. `saveSupported` says whether this device can.
+- **Search and Download in the viewer.** The kit's `PdfViewer` takes `onSearch` (a search row under
+  the toolbar: the query, "3 of 12", previous / next match wrapping at either end, every match
+  highlighted over its page and the shown one outlined; it starts at the first match on or after the
+  page being read) and `onDownload`. Matches look like a highlighter pen: the shared tokens
+  `document-match` (others) and `document-match-active` (the one on show) are the same yellow in
+  every theme, because a rendered page is white in every theme; they are painted with
+  `mixBlendMode: "multiply"` inside a page that is its own blending layer (`isolation: "isolate"`), so
+  the paper turns yellow and the print stays black, and each box has a little room around its word
+  (`PDF_HIGHLIGHT_PADDING_X` / `_Y`). With both Download and "Open in another app" the toolbar shows
+  one **More** menu (an action sheet) instead of two buttons. A toast says where the copy went
+  ("Saved to Downloads as …" on Android). Neither exists in Expo Go, which has no engine.
 
   Rejections carry `ERR_PDF_PASSWORD_PROTECTED`, `ERR_PDF_UNREADABLE`, `ERR_PDF_INVALID_REQUEST` or
   `ERR_PDF_RENDER_FAILED`; `features/pdf-viewer/pdf-engine.ts` maps them onto the shared
@@ -1693,7 +1753,7 @@ When a product needs native modules, Face ID during development, or push: switch
 **development builds** (`npx expo run:ios` / `run:android` locally, or EAS). Native folders stay
 generated (`npx expo prebuild`), not committed, so the switch does not change the repo layout.
 Building an APK, an AAB or an iOS release, locally or with EAS, is a step-by-step guide of its own:
-[Building the mobile app](./building-release-apps.md).
+[Building the mobile app](./building-installable-apps.md).
 
 ---
 

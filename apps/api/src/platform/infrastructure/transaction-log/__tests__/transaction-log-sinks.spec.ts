@@ -1,6 +1,7 @@
 import { Logger } from "@nestjs/common";
 import { QUEUE_JOB_OPTIONS, type TransactionLogWriteJob } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { firstLoggedFailure } from "../../../../../test/support/logged-failure";
 
 import { DirectTransactionLog, standaloneTransactionLog } from "../direct-transaction-log";
 import { QueuedTransactionLog, type TransactionLogQueue } from "../queued-transaction-log";
@@ -93,7 +94,9 @@ describe("transaction log sinks", () => {
 				new DirectTransactionLog(writer).record(auditEntry());
 			}).not.toThrow();
 			await vi.waitFor(() => {
-				expect(error).toHaveBeenCalledWith({ event: "transaction_log.write_failed", correlationId: "corr-1", error: "disk full" });
+				const logged = firstLoggedFailure(error);
+				expect(logged).toMatchObject({ event: "transaction_log.write_failed", correlationId: "corr-1", error: "disk full" });
+				expect(logged.stack).toContain("Error: disk full");
 			});
 		});
 	});

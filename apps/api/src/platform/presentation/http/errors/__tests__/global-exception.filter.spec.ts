@@ -131,14 +131,14 @@ describe("GlobalExceptionFilter (Fastify integration)", () => {
 		warnLog.mockClear();
 	});
 
-	it("logs an expected (typed) 5xx at warn without a stack, keeping its safe message", async () => {
+	it("logs an expected (typed) 5xx at warn with its stack, keeping its safe message", async () => {
 		const response = await app.inject({ method: "GET", url: "/probe/unavailable" });
 
 		expect(response.statusCode).toBe(HttpStatus.SERVICE_UNAVAILABLE);
 		expect(envelopeOf(response.body).error).toEqual({ code: "SERVICE_UNAVAILABLE", message: "The API is not ready to serve traffic." });
 		expect(errorLog).not.toHaveBeenCalled();
 		expect(warnLog).toHaveBeenCalledTimes(1);
-		expect(warnLog.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second]).not.toHaveProperty("trace");
+		expect(warnLog.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second]?.trace).toContain("global-exception.filter.spec.ts");
 	});
 
 	/** Parse and schema-check the error envelope of a response body. */
@@ -162,7 +162,11 @@ describe("GlobalExceptionFilter (Fastify integration)", () => {
 		expect(envelope.error).toEqual({ code: "EMAIL_TAKEN", message: "Email already in use", details: { field: "email" } });
 		expect(envelope.meta.correlationId).toBe("corr-123");
 		expect(envelope.meta.timestamp).toBeGreaterThan(0);
+		// A client error is logged once, at warn, with the stack of the line that raised it.
 		expect(errorLog).not.toHaveBeenCalled();
+		expect(warnLog).toHaveBeenCalledTimes(1);
+		expect(warnLog.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.first]).toBe("HTTP GET /probe/app-error failed with 409 EMAIL_TAKEN");
+		expect(warnLog.mock.calls[LIST_SLOT_INDEX.first]?.[LIST_SLOT_INDEX.second]?.trace).toContain("global-exception.filter.spec.ts");
 	});
 
 	it("serializes a DomainError through the status map into the ADR 016 envelope", async () => {

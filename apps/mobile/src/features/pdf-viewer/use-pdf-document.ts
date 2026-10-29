@@ -2,13 +2,16 @@
 // PdfViewer state: download it (a remote source), check it (`checkPdfFile`),
 // then let the engine read its pages. Without an engine (Expo Go) the checked
 // file is offered to another app instead ("external"). A newer source — or a
-// retry — supersedes a load still in flight.
+// retry — supersedes a load still in flight. Once the document is open, it
+// also offers text search and saving a copy, where the engine can do them.
 
 import type { PdfOpenFailure } from "@workspace/shared";
-import type { PdfPageRenderer, PdfViewerState } from "@workspace/ui-native/components/pdf-viewer";
+import { pdfFileName } from "@workspace/shared";
+import type { PdfPageRenderer, PdfTextSearcher, PdfViewerState } from "@workspace/ui-native/components/pdf-viewer";
+import type { PdfTextMatch } from "@workspace/ui-native/lib/pdf-viewer-layout";
 import * as React from "react";
 
-import type { PdfEngine, PdfOpenResult } from "./pdf-engine";
+import type { PdfEngine, PdfOpenResult, PdfSaveOutcome } from "./pdf-engine";
 import { checkLocalPdf, downloadPdf, sharePdf } from "./pdf-files";
 import type { PdfSource } from "./pdf-source";
 
@@ -18,6 +21,10 @@ export interface PdfDocument {
 	readonly retry: () => void;
 	/** Hands the file to another app; `null` until there is a file on the phone to hand over. Rejects when no app takes it. */
 	readonly openExternally: (() => Promise<void>) | null;
+	/** Finds text in the open document; `null` until it is open, or where the engine cannot search. */
+	readonly search: PdfTextSearcher | null;
+	/** Saves a copy where the person keeps files; `null` until it is open, or where the engine cannot save. */
+	readonly saveCopy: (() => Promise<PdfSaveOutcome>) | null;
 }
 
 /** Where a load got to: the viewer's state, and the file on the phone once there is one. */
@@ -127,5 +134,20 @@ export function usePdfDocument(source: PdfSource | null, engine: PdfEngine | nul
 		[fileName, fileUri],
 	);
 
-	return { state: loaded.state, renderPage, retry, openExternally };
+	// Search and save act on the document on screen, so they exist only once it is open.
+	const isOpen = loaded.state.status === "ready";
+	const engineSearch = engine?.search ?? null;
+	const search = React.useMemo(
+		(): PdfTextSearcher | null =>
+			!isOpen || engineSearch === null || fileUri === null ? null : (query: string): Promise<readonly PdfTextMatch[]> => engineSearch(fileUri, query),
+		[engineSearch, fileUri, isOpen],
+	);
+	const engineSave = engine?.save ?? null;
+	const saveCopy = React.useMemo(
+		(): (() => Promise<PdfSaveOutcome>) | null =>
+			!isOpen || engineSave === null || fileUri === null || fileName === null ? null : (): Promise<PdfSaveOutcome> => engineSave(fileUri, pdfFileName(fileName)),
+		[engineSave, fileName, fileUri, isOpen],
+	);
+
+	return { state: loaded.state, renderPage, retry, openExternally, search, saveCopy };
 }

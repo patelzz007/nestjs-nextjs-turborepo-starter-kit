@@ -1,5 +1,11 @@
 import {
 	clampPdfPageIndex,
+	firstPdfMatchFrom,
+	PDF_HIGHLIGHT_PADDING_X,
+	PDF_HIGHLIGHT_PADDING_Y,
+	pdfHighlightFrame,
+	stepPdfMatch,
+	type PdfTextMatch,
 	formatPdfZoom,
 	MAX_PDF_PAGE_RENDER_WIDTH_PX,
 	nextPdfZoom,
@@ -100,5 +106,68 @@ describe("page layouts", () => {
 
 	it("is on the first page of an empty list", () => {
 		expect(pdfPageIndexAt(100, 600, [])).toBe(0);
+	});
+});
+
+const PAGE_WIDTH = 300;
+const PAGE_HEIGHT = 400;
+
+/** Compares a frame field by field, to well under a point (fractions of a page are not exact in floating point). */
+function expectFrame(actual: ReturnType<typeof pdfHighlightFrame>, expected: ReturnType<typeof pdfHighlightFrame>): void {
+	expect(actual.left).toBeCloseTo(expected.left);
+	expect(actual.top).toBeCloseTo(expected.top);
+	expect(actual.width).toBeCloseTo(expected.width);
+	expect(actual.height).toBeCloseTo(expected.height);
+}
+
+describe("pdfHighlightFrame", () => {
+	it("places a box drawn in fractions of the page over the page as drawn, with room around the word", () => {
+		expectFrame(pdfHighlightFrame({ left: 0.1, top: 0.25, width: 0.5, height: 0.05 }, PAGE_WIDTH, PAGE_HEIGHT), {
+			left: 30 - PDF_HIGHLIGHT_PADDING_X,
+			top: 100 - PDF_HIGHLIGHT_PADDING_Y,
+			width: 150 + 2 * PDF_HIGHLIGHT_PADDING_X,
+			height: 20 + 2 * PDF_HIGHLIGHT_PADDING_Y,
+		});
+	});
+
+	it("never lets the padding or a spilling box run off the page", () => {
+		expectFrame(pdfHighlightFrame({ left: -0.1, top: 0.95, width: 0.3, height: 0.1 }, PAGE_WIDTH, PAGE_HEIGHT), {
+			left: 0,
+			top: 380 - PDF_HIGHLIGHT_PADDING_Y,
+			width: 60 + PDF_HIGHLIGHT_PADDING_X,
+			height: 20 + PDF_HIGHLIGHT_PADDING_Y,
+		});
+	});
+});
+
+const MATCHES: readonly PdfTextMatch[] = [
+	{ pageIndex: 0, rects: [] },
+	{ pageIndex: 2, rects: [] },
+	{ pageIndex: 5, rects: [] },
+];
+
+describe("firstPdfMatchFrom", () => {
+	it("starts at the first match on or after the page being read", () => {
+		expect(firstPdfMatchFrom(MATCHES, 0)).toBe(0);
+		expect(firstPdfMatchFrom(MATCHES, 1)).toBe(1);
+		expect(firstPdfMatchFrom(MATCHES, 2)).toBe(1);
+	});
+
+	it("goes back to the first match when every match is before the page", () => {
+		expect(firstPdfMatchFrom(MATCHES, 9)).toBe(0);
+		expect(firstPdfMatchFrom([], 3)).toBe(0);
+	});
+});
+
+describe("stepPdfMatch", () => {
+	it("moves to the next and previous match, wrapping at either end", () => {
+		expect(stepPdfMatch(0, 3, "next")).toBe(1);
+		expect(stepPdfMatch(2, 3, "next")).toBe(0);
+		expect(stepPdfMatch(0, 3, "previous")).toBe(2);
+		expect(stepPdfMatch(1, 3, "previous")).toBe(0);
+	});
+
+	it("stays at the start when there are no matches", () => {
+		expect(stepPdfMatch(0, 0, "next")).toBe(0);
 	});
 });

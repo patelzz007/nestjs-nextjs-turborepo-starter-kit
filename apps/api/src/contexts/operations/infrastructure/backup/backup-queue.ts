@@ -7,10 +7,11 @@
 //     context's storage tasks).
 
 import { Logger } from "@nestjs/common";
-import { QUEUE_JOB_OPTIONS } from "@workspace/shared";
+import { QUEUE_JOB_OPTIONS, CaughtValueSchema } from "@workspace/shared";
 import type { Queue } from "bullmq";
 
 import type { BackupQueuePort } from "../../application/ports/backup.ports";
+import { caughtErrorLogFields } from "../../../../platform/application/errors/caught-error-log";
 
 /** The backup job's payload. */
 export interface OpsBackupJob {
@@ -38,7 +39,7 @@ export class InlineBackupQueue implements BackupQueuePort {
 	public enqueue(backupId: string): Promise<void> {
 		setImmediate((): void => {
 			this.run(backupId).catch((error: unknown): void => {
-				this.logger.error({ event: "operations.backup.inline_failed", backupId, error: error instanceof Error ? error.message : String(error) });
+				this.logger.error({ event: "operations.backup.inline_failed", backupId, ...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data) });
 			});
 		});
 		return Promise.resolve();

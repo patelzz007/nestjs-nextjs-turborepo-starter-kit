@@ -9,13 +9,14 @@
 import { randomBytes } from "node:crypto";
 
 import { Logger, type OnApplicationShutdown, type OnModuleInit } from "@nestjs/common";
-import { LoadTestOutcomeSchema, LoadTestProgressSchema, QUEUE_JOB_OPTIONS, QUEUE_NAMES, type LoadTestJob } from "@workspace/shared";
+import { LoadTestOutcomeSchema, LoadTestProgressSchema, QUEUE_JOB_OPTIONS, QUEUE_NAMES, type LoadTestJob, CaughtValueSchema } from "@workspace/shared";
 import { createBullMqConnection } from "@workspace/messaging";
 import * as bcrypt from "bcrypt";
 import { QueueEvents, type Queue } from "bullmq";
 
 import type { LoadTestPasswordPort, LoadTestQueuePort } from "../../application/ports/load-test.ports";
 import type { LoadTestRecorder } from "../../application/services/load-test-recorder";
+import { caughtErrorLogFields } from "../../../../platform/application/errors/caught-error-log";
 
 /** The job name on the `operations.load-test` queue. */
 export const LOAD_TEST_JOB_NAME = "run-load-test";
@@ -105,7 +106,7 @@ export class LoadTestEventsListener implements OnModuleInit, OnApplicationShutdo
 	/** Records one event; a failure is logged (the next event, or the outcome, records the run again). */
 	private handle(runId: string, work: () => Promise<void>): void {
 		work().catch((error: unknown): void => {
-			this.logger.error({ event: "load_test.record_failed", runId, error: error instanceof Error ? error.message : String(error) });
+			this.logger.error({ event: "load_test.record_failed", runId, ...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data) });
 		});
 	}
 }

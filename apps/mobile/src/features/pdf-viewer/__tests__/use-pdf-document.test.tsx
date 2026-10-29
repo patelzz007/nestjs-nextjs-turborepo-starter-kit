@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from "@testing-library/react-native";
 
 import { putFile, serveDownload } from "../../../../test/expo-file-system-fake";
 import { failNextShare, shares } from "../../../../test/expo-sharing-fake";
-import type { PdfEngine, PdfOpenResult } from "../pdf-engine";
+import type { PdfEngine, PdfOpenResult, PdfSave, PdfSearch } from "../pdf-engine";
 import type { PdfSource } from "../pdf-source";
 import { usePdfDocument, type PdfDocument } from "../use-pdf-document";
 
@@ -20,10 +20,16 @@ interface FakeEngine {
 	readonly open: jest.Mock<Promise<PdfOpenResult>, [string]>;
 }
 
-function fakeEngine(result: PdfOpenResult = { ok: true, pages: [LETTER] }): FakeEngine {
+/** What the fake engine can do besides opening and drawing: search and save, or neither. */
+interface FakeAbilities {
+	readonly search?: PdfSearch | null;
+	readonly save?: PdfSave | null;
+}
+
+function fakeEngine(result: PdfOpenResult = { ok: true, pages: [LETTER] }, abilities: FakeAbilities = {}): FakeEngine {
 	const open = jest.fn<Promise<PdfOpenResult>, [string]>((): Promise<PdfOpenResult> => Promise.resolve(result));
 	const renderPage = (_uri: string, pageIndex: number): Promise<string> => Promise.resolve(`file:///cache/pdf-pages/${String(pageIndex)}.png`);
-	return { engine: { open, renderPage }, open };
+	return { engine: { open, renderPage, search: abilities.search ?? null, save: abilities.save ?? null }, open };
 }
 
 interface HookProps {
@@ -158,5 +164,56 @@ describe("usePdfDocument", () => {
 		expect(document.current().state).toEqual({ status: "loading" });
 		expect(document.current().openExternally).toBeNull();
 		expect(open).not.toHaveBeenCalled();
+	});
+});
+
+describe("usePdfDocument — search and save", () => {
+	it("searches the open document's file", async () => {
+		const search = jest.fn<ReturnType<PdfSearch>, Parameters<PdfSearch>>((): ReturnType<PdfSearch> => Promise.resolve([{ pageIndex: 0, rects: [] }]));
+		putFile(PICKED_URI, PDF_BYTES);
+		const document = await renderDocument({ source: PICKED, engine: fakeEngine(undefined, { search }).engine });
+		await waitFor((): void => {
+			expect(document.current().search).not.toBeNull();
+		});
+
+		await expect(document.current().search?.("balance")).resolves.toEqual([{ pageIndex: 0, rects: [] }]);
+		expect(search).toHaveBeenCalledWith(PICKED_URI, "balance");
+	});
+
+	it("saves a copy under the document's name, ending in .pdf", async () => {
+		const save = jest.fn<ReturnType<PdfSave>, Parameters<PdfSave>>((_uri: string, fileName: string): ReturnType<PdfSave> => Promise.resolve({ kind: "saved", fileName }));
+		serveDownload(REMOTE_URL, PDF_BYTES);
+		const document = await renderDocument({ source: REMOTE, engine: fakeEngine(undefined, { save }).engine });
+		await waitFor((): void => {
+			expect(document.current().saveCopy).not.toBeNull();
+		});
+
+		await expect(document.current().saveCopy?.()).resolves.toEqual({ kind: "saved", fileName: "Bank statement.pdf" });
+		expect(save).toHaveBeenCalledWith(expect.stringContaining("Bank statement.pdf"), "Bank statement.pdf");
+	});
+
+	it("offers neither before the document is open, nor where the engine cannot, nor without an engine", async () => {
+		putFile(PICKED_URI, PDF_BYTES);
+		const failing = await renderDocument({
+			source: PICKED,
+			engine: fakeEngine({ ok: false, failure: "unreadable" }, { search: (): ReturnType<PdfSearch> => Promise.resolve([]) }).engine,
+		});
+		await waitFor((): void => {
+			expect(failing.current().state.status).toBe("failed");
+		});
+		expect(failing.current().search).toBeNull();
+
+		const plain = await renderDocument({ source: PICKED, engine: fakeEngine().engine });
+		await waitFor((): void => {
+			expect(plain.current().state.status).toBe("ready");
+		});
+		expect(plain.current().search).toBeNull();
+		expect(plain.current().saveCopy).toBeNull();
+
+		const expoGo = await renderDocument({ source: PICKED, engine: null });
+		await waitFor((): void => {
+			expect(expoGo.current().state.status).toBe("external");
+		});
+		expect(expoGo.current().saveCopy).toBeNull();
 	});
 });

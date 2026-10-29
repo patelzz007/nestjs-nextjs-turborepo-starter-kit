@@ -140,13 +140,21 @@ degrades to a generic `INTERNAL_ERROR` envelope instead of emitting something ma
 
 ## 5. Logging and correlation
 
-- **Unexpected 5xx** (bugs, provider failures): `LogService.error` with the full stack, error
-  name/message, HTTP status, `errorCode`, the (query-redacted) URL, `userId` and
-  `correlationId`.
-- **Expected 5xx** (`AppError` such as the readiness 503 while draining): `LogService.warn`
-  without a stack, so probes do not flood the error stream.
-- **4xx**: not logged by the filter — the access-log line (`onResponse` hook) already records
-  method, URL, status and request id.
+Every failed request is logged **once, by the global exception filter, with its stack** whenever
+the failure is an `Error`, so any failure can be traced to the line that raised it. The filter
+also sees failures raised before any interceptor runs (guards, authentication). Each line carries
+the error name/message, HTTP status, `errorCode`, the (query-redacted) URL, `userId` and
+`correlationId`.
+
+- **Unexpected 5xx** (bugs, provider failures): `LogService.error`.
+- **Expected 5xx** (`AppError` such as the readiness 503 while draining) **and every 4xx** (the
+  client's mistake): `LogService.warn`, with the stack printed under the message. Warn keeps the
+  error stream for real faults.
+- `PerformanceInterceptor` only warns about slow requests; it no longer logs failures, so a failure
+  is never logged twice.
+- **Outside a request** (schedulers, after-commit handlers, background jobs): a `catch` that logs and
+  carries on logs `{ event, ...caughtErrorLogFields(error) }`, which is the message plus the `stack`
+  (`apps/api/src/platform/application/errors/caught-error-log.ts`).
 - All metadata passes through the centralized redaction list — see
   [Observability → Logs](../operations/observability.md#logs).
 

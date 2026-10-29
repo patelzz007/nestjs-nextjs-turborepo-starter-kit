@@ -1,3 +1,4 @@
+import { CaughtValueSchema } from "@workspace/shared";
 import { Inject, Logger } from "@nestjs/common";
 import { EventsHandler, type IEventHandler } from "@nestjs/cqrs";
 
@@ -8,6 +9,7 @@ import { SignupReferralSucceeded } from "../../../../referrals/public-api";
 import type { ClaimsScope } from "../../claims-scope";
 import { CLAIMS_UNIT_OF_WORK } from "../../ports/claims.tokens";
 import { SIGNUP_SUCCESS_NOTICE_OPERATION, SignupSuccessNoticeApplicationService } from "../../services/signup-success-notice.application-service";
+import { caughtErrorLogFields } from "../../../../../platform/application/errors/caught-error-log";
 
 /**
  * After the checkout committed: deliver the referrer's "referral successful" notice for the referral
@@ -31,7 +33,7 @@ export class DeliverSignupSuccessNoticeOnSignupReferralSucceeded implements IEve
 			this.logger.error({
 				event: "signup_referral.notification_deferred",
 				signupReferralId: event.signupReferralId,
-				error: error instanceof Error ? error.message : String(error),
+				...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data),
 			});
 		}
 	}

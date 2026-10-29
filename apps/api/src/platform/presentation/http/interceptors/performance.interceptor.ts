@@ -27,10 +27,6 @@ export class PerformanceInterceptor implements NestInterceptor {
 						this.logger.warn(`Slow request: ${method} ${url} took ${String(duration)}ms`);
 					}
 				},
-				error: (error: Error): void => {
-					const duration: number = Date.now() - startTime;
-					this.logger.error(`Failed request: ${method} ${url} took ${String(duration)}ms`, error.stack);
-				},
 			}),
 		);
 	}

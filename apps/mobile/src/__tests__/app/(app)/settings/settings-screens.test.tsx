@@ -58,6 +58,15 @@ describe("Settings (§10.9)", () => {
 		expect(screen.queryByRole("button", { name: "Sign out and replay onboarding" })).toBeNull();
 	});
 
+	it("offers the onboarding replay in a test build (made with EXPO_PUBLIC_SHOW_DEMO_ACCOUNT=true), never in a store build", async () => {
+		stubApi({});
+		await renderSettings(SETTINGS_SCREENS, "/settings", {
+			rawEnv: { ...TEST_RAW_ENV, isDevelopment: false, apiUrl: "https://api.example.com", showDemoAccount: "true" },
+		});
+		expect(screen.getByRole("button", { name: "Sign out and replay onboarding" })).toBeOnTheScreen();
+		expect(screen.queryByLabelText(/API address/)).toBeNull();
+	});
+
 	it("can replay onboarding in a development build: it forgets it was seen and signs out (ADR 041)", async () => {
 		stubApi({ "POST /auth/logout": ok({ message: "Logged out successfully" }, 201) });
 		const runtime = await renderSettings(SETTINGS_SCREENS, "/settings");

@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from "@testing-library/react-native";
 
-import { MOBILE_DEMO_ACCOUNTS } from "../demo-account-list";
+import { MOBILE_DEMO_ACCOUNTS } from "../../../../lib/demo-account-list";
 import { loadDemoAccounts, useDemoAccounts, type DemoAccount } from "../demo-accounts";
 
 describe("loadDemoAccounts", () => {

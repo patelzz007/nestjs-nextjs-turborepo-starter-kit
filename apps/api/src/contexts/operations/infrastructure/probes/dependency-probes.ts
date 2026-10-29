@@ -9,11 +9,12 @@ import { connect as netConnect } from "node:net";
 import { connect as tlsConnect, type PeerCertificate } from "node:tls";
 
 import type { Prisma } from "@prisma/client";
-import { OPS_LARGEST_TABLE_COUNT, type OpsDependency, type OpsDependencyStats } from "@workspace/shared";
+import { OPS_LARGEST_TABLE_COUNT, type OpsDependency, type OpsDependencyStats, CaughtValueSchema } from "@workspace/shared";
 import type { Redis } from "ioredis";
 import { z } from "zod";
 
 import type { DependencyProbe, DependencyProbeResult } from "../../application/ports/dependency-probe.port";
+import { caughtErrorLogFields } from "../../../../platform/application/errors/caught-error-log";
 
 /** How long one check may take. */
 export const PROBE_TIMEOUT_MS = 3_000;
@@ -38,7 +39,7 @@ async function timed(check: () => Promise<OpsDependencyStats>, now: () => number
 		]);
 		return { configured: true, up: true, latencyMs: now() - started, stats };
 	} catch (error) {
-		return { configured: true, up: false, latencyMs: null, error: error instanceof Error ? error.message : String(error) };
+		return { configured: true, up: false, latencyMs: null, ...caughtErrorLogFields(CaughtValueSchema.safeParse(error).data) };
 	} finally {
 		clearTimeout(timer);
 	}

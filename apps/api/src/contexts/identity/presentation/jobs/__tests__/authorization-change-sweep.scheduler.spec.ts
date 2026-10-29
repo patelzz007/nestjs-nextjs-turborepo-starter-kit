@@ -2,6 +2,7 @@ import { Logger } from "@nestjs/common";
 import { SchedulerRegistry } from "@nestjs/schedule";
 import { epochMs } from "@workspace/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { firstLoggedFailure } from "../../../../../../test/support/logged-failure";
 
 import type { UserInvalidationTrigger } from "../../../../authorization/public-api";
 import type { AuthorizationChange, AuthorizationChangeFeedPort } from "../../../application/ports/authorization-change-feed.port";
@@ -67,7 +68,9 @@ describe("AuthorizationChangeSweepScheduler", () => {
 
 		await expect(scheduler.runOnce()).resolves.toBeNull();
 
-		expect(errors).toHaveBeenCalledWith({ event: "identity.authorization_change_sweep_failed", error: "database unavailable" });
+		const logged = firstLoggedFailure(errors);
+		expect(logged).toMatchObject({ event: "identity.authorization_change_sweep_failed", error: "database unavailable" });
+		expect(logged.stack).toContain("Error: database unavailable");
 		feed.next = (): Promise<readonly AuthorizationChange[]> => Promise.resolve([]);
 		await expect(scheduler.runOnce()).resolves.toEqual({ inWindow: 0, invalidated: 0 });
 	});

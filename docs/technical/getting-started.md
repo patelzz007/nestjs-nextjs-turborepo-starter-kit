@@ -143,7 +143,7 @@ optional (`KAFKA_BROKERS` unset means the outbox keeps events pending).
 ```bash
 pnpm dev              # api :8080, web :3000, admin :3001, docs :3002, merchant :3003
 pnpm dev:api          # or one app at a time: dev:web, dev:admin, dev:merchant, dev:mobile
-pnpm kill:all         # free the ports if a previous run is stuck
+pnpm kill:all         # free the dev ports (3000–3003, 8080, 8081) if a previous run is stuck
 ```
 
 | What | URL |

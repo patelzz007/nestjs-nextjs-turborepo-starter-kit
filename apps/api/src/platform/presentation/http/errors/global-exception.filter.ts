@@ -79,9 +79,7 @@ export class GlobalExceptionFilter implements ExceptionFilter<CaughtValue> {
 		// context middleware ran, the same per-request id Fastify's genReqId used.
 		const correlationId: string = this.requestContext.resolveCorrelationId(request.raw);
 
-		if (isServerErrorStatus(mapped.httpStatus)) {
-			this.logServerError(exception, mapped, request, correlationId);
-		}
+		this.logFailedRequest(exception, mapped, request, correlationId);
 
 		const envelope: ApiErrorResponse = GlobalExceptionFilter.buildEnvelope(mapped, correlationId);
 		await this.auditTrail.recordFailure(request, {
@@ -136,13 +134,15 @@ export class GlobalExceptionFilter implements ExceptionFilter<CaughtValue> {
 	}
 
 	/**
-	 * 5xx failures are logged server-side with the correlation id. An
-	 * unexpected error (a bug, a provider failure) is logged at `error` with the
-	 * full stack; a typed `AppError` 5xx (e.g. readiness 503 while draining) is
-	 * an expected condition, logged at `warn` without a stack so probes do not
-	 * flood the error stream.
+	 * Every failed request is logged here, once, with the correlation id and —
+	 * whenever the failure is an Error — its stack, so a failure can be traced to
+	 * the line that raised it. This is the one place: it also sees failures raised
+	 * before any interceptor runs (guards, authentication). An unexpected 5xx (a
+	 * bug, a provider failure) is logged at `error`; a typed `AppError` 5xx (e.g.
+	 * readiness 503 while draining) and every 4xx (the client's mistake) at `warn`,
+	 * so expected conditions do not flood the error stream.
 	 */
-	private logServerError(exception: CaughtValue, mapped: MappedError, request: FastifyRequest, correlationId: string): void {
+	private logFailedRequest(exception: CaughtValue, mapped: MappedError, request: FastifyRequest, correlationId: string): void {
 		const error: Error | undefined = exception instanceof Error ? exception : undefined;
 		const userId = request.user?.sub;
 		const message = `HTTP ${request.method} ${redactUrl(request.url)} failed with ${String(mapped.httpStatus)} ${mapped.code}`;
@@ -157,10 +157,11 @@ export class GlobalExceptionFilter implements ExceptionFilter<CaughtValue> {
 				errorMessage: readCaughtErrorMessage(exception),
 			},
 		};
-		if (exception instanceof AppError) {
-			this.logService.warn(message, options);
+		const withTrace = { ...options, ...(error?.stack !== undefined ? { trace: error.stack } : {}) };
+		if (exception instanceof AppError || !isServerErrorStatus(mapped.httpStatus)) {
+			this.logService.warn(message, withTrace);
 			return;
 		}
-		this.logService.error(message, { ...options, ...(error?.stack !== undefined ? { trace: error.stack } : {}) });
+		this.logService.error(message, withTrace);
 	}
 }
