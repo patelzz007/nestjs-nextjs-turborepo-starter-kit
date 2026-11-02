@@ -4,9 +4,15 @@ import { describe, expect, it } from "vitest";
 import { schemaTablesFromDmmf, type SchemaTable } from "../../../scripts/lib/seed-coverage";
 import { AUDIT_PAYLOAD_MAX_BYTES, PII_MASK } from "../../../src/platform/infrastructure/audit/audit-data-policy";
 import { REDACTED } from "../../../src/platform/infrastructure/nest-logging/redaction";
+import { TRANSACTION_GROUP_PREFIX } from "../../../src/contexts/audit/infrastructure/persistence/data-change-group-key";
 import {
 	buildDataChangeCaptureSql,
+	buildDataChangeGroupSql,
+	DATA_CHANGE_CAPTURE_EXEMPTIONS,
 	DATA_CHANGE_CAPTURE_MANIFEST,
+	DATA_CHANGE_GROUP_FUNCTION,
+	DATA_CHANGE_GROUP_TABLE,
+	DATA_CHANGE_GROUP_TRIGGER,
 	DATA_CHANGE_LOG_TABLE,
 	DATA_CHANGE_ROW_TRIGGER,
 	DATA_CHANGE_TRUNCATE_TRIGGER,
@@ -198,5 +204,32 @@ describe("buildDataChangeCaptureSql", () => {
 		]) {
 			expect(sql).toContain(`current_setting('${setting}', true)`);
 		}
+	});
+});
+
+describe("buildDataChangeGroupSql", () => {
+	const sql = buildDataChangeGroupSql();
+
+	it("keeps one group per inserted statement with a statement-level trigger over the inserted rows", () => {
+		expect(sql).toContain(`CREATE TRIGGER ${DATA_CHANGE_GROUP_TRIGGER} AFTER INSERT ON public."DataChangeLog"`);
+		expect(sql).toContain("REFERENCING NEW TABLE AS inserted");
+		expect(sql).toContain(`FOR EACH STATEMENT EXECUTE FUNCTION public.${DATA_CHANGE_GROUP_FUNCTION}()`);
+		expect(sql).toContain(`DROP TRIGGER IF EXISTS ${DATA_CHANGE_GROUP_TRIGGER} ON public."DataChangeLog";`);
+	});
+
+	it("groups by the same key as the timeline and keeps a group's first change and earliest time", () => {
+		expect(sql).toContain(`COALESCE(c."correlationId", '${TRANSACTION_GROUP_PREFIX}' || c."transactionId"::text)`);
+		expect(sql).toContain('ON CONFLICT ("groupKey") DO UPDATE SET');
+		expect(sql).toContain('"occurredAt" = LEAST(g."occurredAt", EXCLUDED."occurredAt")');
+		expect(sql).toContain('"firstChangeSequence" = LEAST(g."firstChangeSequence", EXCLUDED."firstChangeSequence")');
+	});
+
+	it("never lifts row-level security: only the trigger writes the group table", () => {
+		expect(sql).not.toMatch(/ROW LEVEL SECURITY|set_config/u);
+	});
+
+	it("is part of the capture SQL the apply runs, and the group table itself is never captured", () => {
+		expect(buildDataChangeCaptureSql({ captured: [], exempt: [] })).toContain(sql);
+		expect(DATA_CHANGE_CAPTURE_EXEMPTIONS[DATA_CHANGE_GROUP_TABLE]).toBeDefined();
 	});
 });

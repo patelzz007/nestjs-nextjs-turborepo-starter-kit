@@ -129,6 +129,14 @@ the server log, not a queryable table, at a volume no viewer could use.
 - Disabling a trigger needs table ownership (a deployment credential, not the application's), and
   `db:apply-security` re-installs and verifies every trigger on each run.
 
+## Implementation notes (2026-11-02): per-group index for the timeline
+
+| Area | What changed | Why |
+|---|---|---|
+| `DataChangeGroup` | One row per group of changes (correlation id, else `tx:<transaction id>`): its first change, first sequence and transaction, and earliest `occurredAt`, indexed on `occurredAt`. Kept by `data_change_group_track`, an `AFTER INSERT … REFERENCING NEW TABLE … FOR EACH STATEMENT` trigger on `DataChangeLog` that upserts one row per group per statement and keeps the earliest change (`prisma/rls/data-change-capture.ts`). Only the trigger writes it; DELETE is withheld; reads are bypass-only (`audit.trail.read`). The group key is one shared function (`data-change-group-key.ts`) used by the trigger and the timeline | The audit trail's background entries aggregated every change ever captured on every page, twice (count and page): 167,691 rows after one development seed, ~180 ms idle, and past the 5-second transaction limit under e2e load. In production it grew with every write |
+| Timeline | With no condition on the background entries (the default page), they come from `DataChangeGroup`; any condition (actor, tenant, correlation, time range, actor kind, table or row, search) keeps the row-level aggregate, which those conditions' indexes bound and whose exact result they define | The default page went from ~50 ms (count alone) to ~8 ms count and ~6 ms page on the same database, and no longer grows with the trail |
+| Existing databases | No backfill: the table starts with its migration, and an existing database is re-migrated and re-seeded (pre-release) | Decided with the project owner |
+
 ## References
 
 - `apps/api/prisma/rls/data-change-capture.ts` — manifest (exemptions, secret / non-secret columns) and the generated SQL

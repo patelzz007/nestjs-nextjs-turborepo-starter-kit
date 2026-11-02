@@ -1,8 +1,9 @@
 // ============================================
 // seed/geo-seed.ts - Geographic data seeder
 // ============================================
-// Fetches regions, subregions, countries, states, and cities from the
-// dr5hn/countries-states-cities-database GitHub repo and CONVERGES the geo
+// Reads regions, subregions, countries, states, and cities from the
+// dr5hn/countries-states-cities-database GitHub repo, at the commit pinned in
+// geo-dataset.ts (cached, retried, checksum-verified), and CONVERGES the geo
 // tables to it: a row is matched on its natural key (name within its parent;
 // countries by ISO2) and only missing rows are inserted. Nothing is ever
 // deleted — geo reference data is soft-deleted only (DELETE is withheld from
@@ -25,9 +26,8 @@ import { z } from "zod";
 import { isArrayValue, isJsonPrimitive } from "@workspace/shared";
 
 import { prisma } from "./client";
+import { loadGeoDatasetFile, nodeGeoDatasetIo, type GeoDatasetFileName } from "./geo-dataset";
 import { seedLog } from "./seed-log";
-
-const API_BASE = "https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/json/";
 
 const GeoJsonValueSchema = z.json();
 type GeoJsonValue = z.output<typeof GeoJsonValueSchema>;
@@ -37,11 +37,11 @@ type GeoRow = z.output<typeof GeoRowSchema>;
 
 const GeoRowListSchema = z.array(GeoRowSchema);
 
-async function fetchData(endpoint: string): Promise<readonly GeoRow[]> {
-	const response = await fetch(`${API_BASE}${endpoint}.json`);
-	const parsed = GeoRowListSchema.safeParse(await response.json());
+async function fetchData(file: GeoDatasetFileName): Promise<readonly GeoRow[]> {
+	const contents = await loadGeoDatasetFile(file, nodeGeoDatasetIo(seedLog));
+	const parsed = GeoRowListSchema.safeParse(JSON.parse(contents.toString("utf8")));
 	if (!parsed.success) {
-		throw new Error(`Expected array from ${endpoint}`);
+		throw new Error(`Expected an array of rows in ${file}.json`);
 	}
 	return parsed.data;
 }
@@ -140,7 +140,7 @@ function mapUpstreamIds(rows: readonly GeoRow[], keyOf: (row: GeoRow) => string 
 // ── Main seed ──────────────────────────────────────────────────────────────
 
 export async function seedGeo(): Promise<void> {
-	seedLog("Geo seeding started (converging to the upstream dataset; no deletes)...");
+	seedLog("Geo seeding started (converging to the pinned upstream dataset; no deletes)...");
 
 	// ── Regions ────────────────────────────────────────────────────────
 	const regionRows = await fetchData("regions");

@@ -22,6 +22,7 @@ One row per table that carries a `tenantId` (plus `Tenant` itself), read from th
 | `AuditLog` | yes | yes | policy | policy | no policy (append-only) | no policy (never hard-deleted) | DB-006, DB-002, DB-003 |
 | `AuthorizationAudit` | yes | yes | policy | policy | policy | bypass / policy | DB-006, DB-002, DB-003, DB-004 |
 | `DataChangeLog` | yes | yes | policy | policy | no policy (append-only) | no policy (never hard-deleted) | DB-006, DB-002, DB-003 |
+| `DataChangeGroup` | yes | yes | policy (inside its trigger, or the audit bypass) | policy (inside its trigger) | policy (inside its trigger) | no policy (never hard-deleted) | DB-006, `data-change-capture.e2e-spec.ts` |
 | `Location` | yes | yes | policy | policy | policy | bypass / policy | DB-006, DB-002, DB-003, DB-004, MT-001, LOC-001…004, MT-007, MT-006 (composite FK) |
 | `Membership` | yes | yes | policy | policy | policy | bypass / policy | DB-006, DB-002, DB-003, DB-004, MT-001, LOC-001…004, MT-007, MT-006 (composite FK) |
 | `MembershipLocationScope` | yes | yes | policy | policy | policy | bypass / policy | DB-006, DB-002, DB-003, DB-004, MT-001, LOC-001…004, MT-007, MT-006 (composite FK) |

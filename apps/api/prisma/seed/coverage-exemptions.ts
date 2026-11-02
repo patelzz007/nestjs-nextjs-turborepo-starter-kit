@@ -66,6 +66,10 @@ export const SEED_COVERAGE_EXEMPTIONS: readonly SeedCoverageExemption[] = [
 		neverSoftDeleted(table, DELIVERY_BOOKKEEPING),
 	),
 	neverSoftDeleted(
+		"DataChangeGroup",
+		"The change trail's per-group index, written and updated only by its trigger on DataChangeLog (itself append-only); no endpoint, job or admin action soft-deletes a group.",
+	),
+	neverSoftDeleted(
 		"CapabilityDefinition",
 		"Derived from the code's permission registry by the reference-data sync, which creates and updates capability rows but never retires one (a capability lives as long as its permission); nothing soft-deletes one.",
 	),

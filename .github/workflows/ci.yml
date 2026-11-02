@@ -304,6 +304,12 @@ jobs:
           psql --host localhost --username postgres --dbname app_ci --command "CREATE DATABASE app_ci_shadow"
           pnpm --filter @workspace/api db:check-drift
 
+      - name: Restore the pinned geo dataset (the seed downloads and verifies it on a miss)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/api/.cache/geo-dataset
+          key: geo-dataset-${{ hashFiles('apps/api/prisma/seed/geo-dataset.ts') }}
+
       - name: Seed the development scenario (proves seed.ts matches the schema)
         run: pnpm db:seed -- --scenario development
 
@@ -439,6 +445,12 @@ jobs:
 
       - name: Build the API, web and admin
         run: pnpm turbo run build --filter=@workspace/api --filter=@workspace/web --filter=@workspace/admin
+
+      - name: Restore the pinned geo dataset (the seed downloads and verifies it on a miss)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/api/.cache/geo-dataset
+          key: geo-dataset-${{ hashFiles('apps/api/prisma/seed/geo-dataset.ts') }}
 
       - name: Apply migrations + RLS, seed the development scenario
         run: |

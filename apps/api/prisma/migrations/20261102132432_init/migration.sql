@@ -2301,6 +2301,26 @@ CREATE TABLE "DataChangeLog" (
 );
 
 -- CreateTable
+CREATE TABLE "DataChangeGroup" (
+    "createdAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "createdBy" VARCHAR(128),
+    "updatedAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
+    "updatedBy" VARCHAR(128),
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" BIGINT,
+    "deletedBy" VARCHAR(128),
+    "id" UUID NOT NULL DEFAULT uuidv7(),
+    "groupKey" VARCHAR(64) NOT NULL,
+    "firstChangeId" UUID NOT NULL,
+    "firstChangeSequence" BIGINT NOT NULL,
+    "transactionId" BIGINT NOT NULL,
+    "correlationId" VARCHAR(64),
+    "occurredAt" BIGINT NOT NULL,
+
+    CONSTRAINT "DataChangeGroup_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "PlatformResourceIdempotencyRecord" (
     "id" TEXT NOT NULL,
     "createdAt" BIGINT NOT NULL DEFAULT ((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint,
@@ -3728,6 +3748,15 @@ CREATE INDEX "DataChangeLog_actorKind_occurredAt_idx" ON "DataChangeLog"("actorK
 
 -- CreateIndex
 CREATE INDEX "DataChangeLog_transactionId_idx" ON "DataChangeLog"("transactionId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "DataChangeGroup_groupKey_key" ON "DataChangeGroup"("groupKey");
+
+-- CreateIndex
+CREATE INDEX "DataChangeGroup_occurredAt_idx" ON "DataChangeGroup"("occurredAt");
+
+-- CreateIndex
+CREATE INDEX "DataChangeGroup_correlationId_idx" ON "DataChangeGroup"("correlationId");
 
 -- CreateIndex
 CREATE INDEX "PlatformResourceIdempotencyRecord_expiresAt_idx" ON "PlatformResourceIdempotencyRecord"("expiresAt");

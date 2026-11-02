@@ -4049,6 +4049,44 @@ model DataChangeLog {
   @@index([transactionId])
 }
 
+/// One row per group of `DataChangeLog` rows: the changes one request or job made (same
+/// `correlationId`), or, without a correlation id, one transaction (`groupKey` `tx:<transactionId>`).
+/// The audit trail's timeline lists these groups as its background entries, so a page reads one
+/// indexed row per group instead of aggregating every change ever captured. Maintained ONLY by the
+/// `data_change_group_track` trigger on `DataChangeLog` (prisma/rls/data-change-capture.ts): one
+/// upsert per group per inserted statement, keeping the group's first change and earliest time.
+/// RLS: INSERT/UPDATE only from inside a trigger; SELECT bypass-only (the audit readers) or from
+/// inside the trigger (its upsert reads the existing row); DELETE withheld from app_runtime.
+/// Not a business entity: never soft-deleted. Seeded by the trigger from the seeded change rows.
+/// @extends BaseModel
+model DataChangeGroup {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  id                  String  @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  /// `correlationId`, else `tx:<transactionId>` (`dataChangeGroupKey`).
+  groupKey            String  @unique @db.VarChar(64)
+  /// The group's first change (lowest `changeSequence`): the entry the timeline shows.
+  firstChangeId       String  @db.Uuid
+  firstChangeSequence BigInt
+  /// The transaction of the group's first change.
+  transactionId       BigInt
+  /// The request (or job) correlation id; NULL for a group of uncorrelated changes.
+  correlationId       String? @db.VarChar(64)
+  /// The group's earliest change (epoch ms): the entry's time on the timeline.
+  occurredAt          BigInt
+
+  @@index([occurredAt])
+  @@index([correlationId])
+}
+
 /// Lifecycle of an idempotency record (platform/idempotency, docs/technical/api/routes.md → Idempotency).
 enum IdempotencyRecordStatus {
   /// A request holding this key is executing; duplicates get 409 IDEMPOTENCY_REQUEST_IN_PROGRESS until `expiresAt` (the lease).

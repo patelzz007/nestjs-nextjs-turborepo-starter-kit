@@ -9,7 +9,8 @@ import {
 import { distinctReferenceIds, type AuditLogReferenceIds, type AuditLogReferences } from "./audit-references";
 import { toDataChangeLogSummary } from "./data-change-log.mapper";
 import { toHttpAuditLogSummary } from "./http-audit-log.mapper";
-import { dataChangeGroupKey, type AuditTrailEntryRow, type ChangeSummaries, type ChangeSummary } from "./prisma-audit-trail.read-repository";
+import { dataChangeGroupKey } from "./data-change-group-key";
+import { type AuditTrailEntryRow, type ChangeSummaries, type ChangeSummary } from "./prisma-audit-trail.read-repository";
 import type { DataChangeLogSummaryRow } from "./prisma-data-change-log.read-repository";
 import type { AuditLogSummaryRow } from "./prisma-http-audit-log.read-repository";
 

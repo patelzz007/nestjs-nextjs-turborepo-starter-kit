@@ -149,6 +149,13 @@ masked subjects are shown.
 | Admin | `/operations/rate-limits`: every policy with its fail mode and last-hour refusals, the most-refused callers (masked) with Lift penalty, never-limited exemptions, and tenant overrides (list, remove, set — traffic as rate + burst, broadcasts per week, with an end date and an audited reason) |
 | Clients | A 429 tells the person how long to wait: `rateLimitMessage` (`@workspace/api-client`, shared by web and mobile) reads `details.retryAfterSeconds`, falling back to the API's own message; every error resolver uses it (the web's `resolveAuthErrorMessage` behind sign-in and every form, merchant `userSafeErrorMessage`, admin `toastMutationError`, mobile `errorMessageOf`) — "Too many requests. Try again in 40 seconds." Queries never retry a 429 (only transport failures and 5xx are transient) |
 
+## Implementation notes (2026-11-02)
+
+| Area | What changed | Why |
+|---|---|---|
+| Throttler scope | A route on a per-user policy (`AUTHENTICATED_MUTATION`, `ADMIN_SECURITY_MUTATION`, on the `default` throttler) now skips the per-IP `strict` throttler (`alwaysOnThrottlersSkippedBy` in `rate-limit.decorator.ts`). A credential policy (`strict`) keeps the `default` throttler as its per-user backstop, and an opt-in throttler (`webhook`) still skips both. Every request is still counted per IP by `preAuth` | The decorator only skipped the always-on throttlers for opt-in policies, so `strict` also counted every per-user route, per IP per route, at the credential limit (30/min by default). That capped a signed-in user's mutations below their own policy (everyone behind one office address shared it) and made the `RateLimit-Policy` header name `SECURITY_ROUTES`. The approved plan (DDD + CQRS plan §10.2–10.3) maps each policy to one throttler and keeps per-user mutations off `strict` |
+| Tests | `rate-limit-policies.e2e-spec.ts` pins `THROTTLE_STRICT_LIMIT` below the default limit, so the per-user flood fails if `strict` counts it again, on any machine. The unit suite proves the skip rule per policy kind, and that a per-user route passes the strict limit for one user on one address | The e2e test passed only on machines whose `.env` raised the strict limit above the default (60 against 40); CI's default (30) exposed it |
+
 ## Considered options
 
 | Option | Why not |

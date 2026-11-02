@@ -29,6 +29,7 @@
  */
 
 import { AUDIT_PAYLOAD_MAX_BYTES, isEmailField, isPersonalDataField, PII_MASK } from "../../src/platform/infrastructure/audit/audit-data-policy";
+import { TRANSACTION_GROUP_PREFIX } from "../../src/contexts/audit/infrastructure/persistence/data-change-group-key";
 import { REDACTED } from "../../src/platform/infrastructure/nest-logging/redaction";
 
 /** Prisma's own bookkeeping table: not part of `schema.prisma`, never captured. */
@@ -36,6 +37,15 @@ export const PRISMA_MIGRATIONS_TABLE = "_prisma_migrations";
 
 /** The table the triggers append to. */
 export const DATA_CHANGE_LOG_TABLE = "DataChangeLog";
+
+/** One row per group of changes (a request / job, or an uncorrelated transaction), kept by {@link DATA_CHANGE_GROUP_TRIGGER}. */
+export const DATA_CHANGE_GROUP_TABLE = "DataChangeGroup";
+
+/** Statement-level trigger on `DataChangeLog` that keeps {@link DATA_CHANGE_GROUP_TABLE} in step. */
+export const DATA_CHANGE_GROUP_TRIGGER = "data_change_group_track";
+
+/** Its function: one upsert per group in the inserted statement. */
+export const DATA_CHANGE_GROUP_FUNCTION = "app_track_data_change_group";
 
 /** Row-level trigger (INSERT / UPDATE / DELETE) on every captured table. */
 export const DATA_CHANGE_ROW_TRIGGER = "data_change_capture";
@@ -85,6 +95,7 @@ const MESSAGING_REASON = "Messaging plumbing (outbox / inbox bookkeeping) that m
 export const DATA_CHANGE_CAPTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
 	[DATA_CHANGE_LOG_TABLE]: "The change trail itself: capturing its own inserts would recurse without end.",
 	AuditLog: "The HTTP audit trail (ADR 025): one row per request, joined to these changes by correlation id.",
+	[DATA_CHANGE_GROUP_TABLE]: "The change trail's own per-group index, written by its trigger: capturing it would record every change twice.",
 	PermissionAuditLog: AUDIT_TRAIL_REASON,
 	MfaRecoveryAuditLog: AUDIT_TRAIL_REASON,
 	ImpersonationAuditLog: AUDIT_TRAIL_REASON,
@@ -466,5 +477,62 @@ function createTriggersSql(table: CapturedTable): string {
  * exempt one — so exempting a table removes its triggers on the next apply.
  */
 export function buildDataChangeCaptureSql(plan: DataChangeCapturePlan): string {
-	return [buildDataChangeFunctionsSql(), ...plan.captured.map(createTriggersSql), ...plan.exempt.map(dropTriggersSql)].join("\n\n");
+	return [buildDataChangeFunctionsSql(), ...plan.captured.map(createTriggersSql), ...plan.exempt.map(dropTriggersSql), buildDataChangeGroupSql()].join("\n\n");
+}
+
+/** The group key of a change row (alias `c`), as `dataChangeGroupKey` computes it. */
+function groupKeyOf(alias: string): string {
+	return `COALESCE(${alias}."correlationId", ${sqlLiteral(TRANSACTION_GROUP_PREFIX)} || ${alias}."transactionId"::text)`;
+}
+
+/** One row per group of the change rows in `source` (alias `c`): its key, first change (by sequence), and earliest time. */
+function groupRowsSql(source: string): string {
+	return `SELECT ${groupKeyOf("c")},
+         (array_agg(c.id ORDER BY c."changeSequence"))[1],
+         min(c."changeSequence"),
+         (array_agg(c."transactionId" ORDER BY c."changeSequence"))[1],
+         (array_agg(c."correlationId" ORDER BY c."changeSequence"))[1],
+         min(c."occurredAt")
+    FROM ${source} AS c
+   GROUP BY 1`;
+}
+
+const GROUP_COLUMNS = `"groupKey", "firstChangeId", "firstChangeSequence", "transactionId", "correlationId", "occurredAt"`;
+
+/**
+ * Keeps {@link DATA_CHANGE_GROUP_TABLE} in step with `DataChangeLog`: a statement-level trigger reads the
+ * inserted rows as a set (`REFERENCING NEW TABLE`), so a bulk insert costs one upsert per group, not per
+ * row; an existing group keeps its earliest time and first change. There is no backfill: the table
+ * starts with its migration, and a database that already holds changes is re-migrated and re-seeded.
+ */
+export function buildDataChangeGroupSql(): string {
+	const table = `public.${sqlIdentifier(DATA_CHANGE_GROUP_TABLE)}`;
+	return `
+CREATE OR REPLACE FUNCTION public.${DATA_CHANGE_GROUP_FUNCTION}()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+-- pg_catalog first, so no built-in can be shadowed; public for the RLS helpers the upsert's
+-- policy check calls (app_rls_bypass_on → app_rls_bypass), which don't pin a search path.
+SET search_path = pg_catalog, public
+AS $fn$
+BEGIN
+  INSERT INTO ${table} AS g (${GROUP_COLUMNS})
+  ${groupRowsSql("inserted")}
+  ON CONFLICT ("groupKey") DO UPDATE SET
+    "firstChangeId" = CASE WHEN EXCLUDED."firstChangeSequence" < g."firstChangeSequence" THEN EXCLUDED."firstChangeId" ELSE g."firstChangeId" END,
+    "transactionId" = CASE WHEN EXCLUDED."firstChangeSequence" < g."firstChangeSequence" THEN EXCLUDED."transactionId" ELSE g."transactionId" END,
+    "firstChangeSequence" = LEAST(g."firstChangeSequence", EXCLUDED."firstChangeSequence"),
+    "occurredAt" = LEAST(g."occurredAt", EXCLUDED."occurredAt"),
+    "updatedAt" = (EXTRACT(epoch FROM clock_timestamp()) * 1000)::bigint
+  WHERE EXCLUDED."firstChangeSequence" < g."firstChangeSequence" OR EXCLUDED."occurredAt" < g."occurredAt";
+  RETURN NULL;
+END
+$fn$;
+
+DROP TRIGGER IF EXISTS ${DATA_CHANGE_GROUP_TRIGGER} ON public.${sqlIdentifier(DATA_CHANGE_LOG_TABLE)};
+CREATE TRIGGER ${DATA_CHANGE_GROUP_TRIGGER} AFTER INSERT ON public.${sqlIdentifier(DATA_CHANGE_LOG_TABLE)}
+  REFERENCING NEW TABLE AS inserted
+  FOR EACH STATEMENT EXECUTE FUNCTION public.${DATA_CHANGE_GROUP_FUNCTION}();
+`;
 }

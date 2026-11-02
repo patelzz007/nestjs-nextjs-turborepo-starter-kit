@@ -4,12 +4,13 @@ import { describe, expect, it } from "vitest";
 
 import {
 	actorSearchSql,
+	backgroundEntriesAreWholeGroups,
 	backgroundEntryConditions,
 	buildAuditTrailOrder,
 	buildAuditTrailTimeline,
-	dataChangeGroupKey,
 	requestEntryConditions,
 } from "../prisma-audit-trail.read-repository";
+import { dataChangeGroupKey } from "../data-change-group-key";
 
 const ACTOR_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -81,15 +82,47 @@ describe("backgroundEntryConditions", () => {
 });
 
 describe("buildAuditTrailTimeline", () => {
-	it("unions the requests with the grouped background changes", () => {
+	it("reads whole groups from their index when nothing narrows them, never aggregating every change", () => {
 		const timeline = sqlText(buildAuditTrailTimeline(query({})));
 
-		expect(timeline).toContain("FROM public.\"AuditLog\" a WHERE TRUE UNION ALL SELECT 'BACKGROUND'::text AS kind");
-		expect(timeline).toContain('GROUP BY COALESCE(d."correlationId", $1 || d."transactionId"::text)');
+		expect(timeline).toContain('FROM public."AuditLog" a WHERE TRUE UNION ALL SELECT \'BACKGROUND\'::text AS kind, g."firstChangeId"::text AS id');
+		expect(timeline).toContain('FROM public."DataChangeGroup" g WHERE NOT EXISTS (SELECT 1 FROM public."AuditLog" a WHERE a."correlationId" = g."correlationId")');
+		expect(timeline).not.toContain("DataChangeLog");
+	});
+
+	it("unions the requests with the grouped background changes when a condition narrows them", () => {
+		const timeline = sqlText(buildAuditTrailTimeline(query({ filter: { actorKind: { eq: "SYSTEM" } } })));
+
+		expect(timeline).toContain("UNION ALL SELECT 'BACKGROUND'::text AS kind");
+		expect(timeline).toMatch(/GROUP BY COALESCE\(d\."correlationId", \$\d+ \|\| d\."transactionId"::text\)/u);
+		expect(timeline).not.toContain("DataChangeGroup");
 	});
 
 	it("is the requests alone when background entries are excluded", () => {
 		expect(sqlText(buildAuditTrailTimeline(query({ filter: { kind: { eq: "REQUEST" } } })))).not.toContain("UNION ALL");
+	});
+});
+
+describe("backgroundEntriesAreWholeGroups", () => {
+	it("is true only without any condition on the background rows or groups", () => {
+		expect(backgroundEntriesAreWholeGroups(query({}))).toBe(true);
+		expect(backgroundEntriesAreWholeGroups(query({ filter: { kind: { eq: "BACKGROUND" } } }))).toBe(true);
+	});
+
+	it("is false for every condition the group index cannot answer exactly", () => {
+		const narrowed: readonly RawQuery[] = [
+			{ search: "Region" },
+			{ filter: { actorUserId: { eq: ACTOR_ID } } },
+			{ filter: { tenantId: { eq: ACTOR_ID } } },
+			{ filter: { correlationId: { eq: "req-1" } } },
+			{ filter: { occurredAt: { gte: "1700000000000" } } },
+			{ filter: { actorKind: { eq: "SYSTEM" } } },
+			{ filter: { tableName: { eq: "Region" } } },
+			{ filter: { rowId: { eq: "1" } } },
+		];
+		for (const input of narrowed) {
+			expect(backgroundEntriesAreWholeGroups(query(input)), JSON.stringify(input)).toBe(false);
+		}
 	});
 });
 

@@ -189,6 +189,61 @@ describe("Row-level data-change trail (e2e)", () => {
 		}
 	});
 
+	it("keeps one group per request: its first change and its earliest time", async () => {
+		const { response } = await createRegion(superAdmin);
+		const correlationId = correlationIdOf(response);
+		const GroupRowSchema = z.object({ firstChangeId: z.string(), occurredAt: z.string() });
+
+		const group = await pool.query('SELECT "firstChangeId", "occurredAt"::text AS "occurredAt" FROM public."DataChangeGroup" WHERE "groupKey" = $1', [correlationId]);
+		const expected = await pool.query(
+			'SELECT (array_agg(id ORDER BY "changeSequence"))[1] AS "firstChangeId", min("occurredAt")::text AS "occurredAt" FROM public."DataChangeLog" WHERE "correlationId" = $1',
+			[correlationId],
+		);
+		expect(z.array(GroupRowSchema).parse(group.rows)).toEqual(z.array(GroupRowSchema).parse(expected.rows));
+	});
+
+	it("leaves a group's first change in place when a later statement of the same group adds changes", async () => {
+		const correlationId = `data-change-group-${randomUUID()}`;
+		const client = await pool.connect();
+		try {
+			await client.query("BEGIN");
+			await client.query("SELECT set_config('app.correlation_id', $1, true)", [correlationId]);
+			await client.query('INSERT INTO public."Region" (name) VALUES ($1)', [`${REGION_PREFIX}first`]);
+			const afterFirst = await client.query('SELECT "firstChangeId" FROM public."DataChangeGroup" WHERE "groupKey" = $1', [correlationId]);
+			await client.query('INSERT INTO public."Region" (name) VALUES ($1), ($2)', [`${REGION_PREFIX}second`, `${REGION_PREFIX}third`]);
+			const groups = await client.query('SELECT "firstChangeId" FROM public."DataChangeGroup" WHERE "groupKey" = $1', [correlationId]);
+			const changes = await client.query('SELECT count(*)::int AS count FROM public."DataChangeLog" WHERE "correlationId" = $1', [correlationId]);
+
+			expect(groups.rows).toEqual(afterFirst.rows);
+			expect(groups.rows).toHaveLength(1);
+			expect(changes.rows).toEqual([{ count: 3 }]);
+		} finally {
+			await client.query("ROLLBACK");
+			client.release();
+		}
+	});
+
+	it("keeps the groups out of the application role's reach: no forging, editing, deleting or reading without the audit bypass", async () => {
+		const client = await pool.connect();
+		try {
+			await client.query("BEGIN");
+			await client.query("SET LOCAL ROLE app_runtime");
+			await client.query("SAVEPOINT forge");
+			await expect(
+				client.query(
+					'INSERT INTO public."DataChangeGroup" ("groupKey", "firstChangeId", "firstChangeSequence", "transactionId", "occurredAt") VALUES (\'forged\', uuidv7(), 1, 1, 1)',
+				),
+			).rejects.toThrow(/row-level security/);
+			await client.query("ROLLBACK TO SAVEPOINT forge");
+			expect((await client.query('UPDATE public."DataChangeGroup" SET "occurredAt" = 0')).rowCount).toBe(0);
+			expect((await client.query('SELECT 1 FROM public."DataChangeGroup"')).rowCount).toBe(0);
+			await expect(client.query('DELETE FROM public."DataChangeGroup"')).rejects.toThrow(/permission denied/);
+		} finally {
+			await client.query("ROLLBACK");
+			client.release();
+		}
+	});
+
 	it("shows an admin the changes of one request — filtered list, then one record with its row images", async () => {
 		const { response, name } = await createRegion(superAdmin);
 		const correlationId = correlationIdOf(response);

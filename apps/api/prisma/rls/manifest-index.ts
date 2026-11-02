@@ -74,6 +74,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"InboxDeadLetter",
 		"AuditLog",
 		"DataChangeLog",
+		"DataChangeGroup",
 		"PlatformResourceIdempotencyRecord",
 		"PermissionAuditLog",
 		"AuthorizationAudit",

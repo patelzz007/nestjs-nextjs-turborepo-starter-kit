@@ -65,6 +65,7 @@ BEGIN
     'InboxDeadLetter',
     'AuditLog',
     'DataChangeLog',
+    'DataChangeGroup',
     'PlatformResourceIdempotencyRecord',
     'GithubWebhookSubscription',
     'GithubWebhookDelivery'
@@ -777,6 +778,27 @@ DROP POLICY IF EXISTS data_change_logs_select ON public."DataChangeLog";
 CREATE POLICY data_change_logs_select ON public."DataChangeLog"
   FOR SELECT
   USING ((SELECT app_rls_bypass_on('DataChangeLog')));
+
+-- The change trail's per-group index (one row per request / job / uncorrelated transaction),
+-- kept ONLY by the `data_change_group_track` trigger on DataChangeLog: INSERT and the upsert's
+-- UPDATE are allowed only inside a trigger, and the upsert reads the conflicting row, so SELECT
+-- also admits the trigger. Everyone else reads it bypass-only (the audit timeline,
+-- `audit.trail.read`); DELETE is withheld from app_runtime (prisma/rls/withheld-privileges.ts).
+DROP POLICY IF EXISTS data_change_groups_insert ON public."DataChangeGroup";
+CREATE POLICY data_change_groups_insert ON public."DataChangeGroup"
+  FOR INSERT
+  WITH CHECK (pg_trigger_depth() > 0);
+
+DROP POLICY IF EXISTS data_change_groups_update ON public."DataChangeGroup";
+CREATE POLICY data_change_groups_update ON public."DataChangeGroup"
+  FOR UPDATE
+  USING (pg_trigger_depth() > 0)
+  WITH CHECK (pg_trigger_depth() > 0);
+
+DROP POLICY IF EXISTS data_change_groups_select ON public."DataChangeGroup";
+CREATE POLICY data_change_groups_select ON public."DataChangeGroup"
+  FOR SELECT
+  USING (pg_trigger_depth() > 0 OR (SELECT app_rls_bypass_on('DataChangeGroup')));
 
 DROP POLICY IF EXISTS platform_resource_idempotency_bypass ON public."PlatformResourceIdempotencyRecord";
 CREATE POLICY platform_resource_idempotency_bypass ON public."PlatformResourceIdempotencyRecord"

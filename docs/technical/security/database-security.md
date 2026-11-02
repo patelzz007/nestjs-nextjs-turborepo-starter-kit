@@ -73,6 +73,7 @@ hold even though `99-app-runtime-grants.sql` grants DML on every table:
 | --- | --- | --- |
 | `AuditLog`, `DataChangeLog`, `ImpersonationAuditLog`, `MfaRecoveryAuditLog` | `UPDATE`, `DELETE` | Append-only audit trails |
 | `ImpersonationSession`, `Region`, `Subregion`, `Country`, `State`, `City` | `DELETE` | Never hard-deleted |
+| `DataChangeGroup` | `DELETE` | The change trail's per-group index: upserted by its trigger, never deleted |
 
 `db:apply-security` revokes them in the same transaction as the blanket grant and verifies the live
 catalog; `db:check-rls-manifest` rejects unknown tables and hand-written `REVOKE … FROM app_runtime`.
@@ -144,6 +145,13 @@ installed by `pnpm tools db:apply-security` (`prisma/rls/data-change-capture.ts`
   application role cannot create functions or triggers, so it can neither forge nor pre-write a
   record. UPDATE / DELETE are withheld (append-only); SELECT is bypass-only
   (`audit.data_change.read`).
+- `DataChangeGroup` holds one row per group of changes (a request or job by correlation id, else
+  a transaction): its first change and earliest time. A statement-level trigger on `DataChangeLog`
+  (`data_change_group_track`, reading the inserted rows as a set) upserts it, so the audit
+  timeline reads one indexed row per group instead of aggregating every change. Only that trigger
+  writes it (INSERT / UPDATE need `pg_trigger_depth() > 0`), DELETE is withheld, and SELECT admits
+  the trigger's own upsert or the `audit.trail.read` bypass. The table itself is exempt from
+  capture.
 - Capture is the default: a table created by a later migration is captured on the next apply.
   Leaving one out takes an entry in `DATA_CHANGE_CAPTURE_EXEMPTIONS` with a reason, and every
   column whose name looks like secret material must be classified (`DATA_CHANGE_SECRET_COLUMNS`

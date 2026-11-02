@@ -70,3 +70,5 @@ playwright-report/
 /logs/
 # Where it was written before 2026-10-26 (relative to apps/api)
 apps/api/logs/
+# The seed's pinned geo dataset, downloaded once (prisma/seed/geo-dataset.ts); CI caches it.
+apps/api/.cache/

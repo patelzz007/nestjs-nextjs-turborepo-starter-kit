@@ -376,13 +376,33 @@ describe("ADR 071: refusals, headers, exemptions and penalties", () => {
 	it("sends the RateLimit headers to an authenticated caller, for the policy nearest its limit", async () => {
 		const app = await buildApp({ webhookLimit: WEBHOOK_ENABLED_LIMIT });
 		try {
-			const response = await app.inject({ method: "GET", url: "/probe/mutation", remoteAddress: "203.0.113.120", headers: { [TEST_USER_HEADER]: "user-headers" } });
+			// A credential route is counted by `strict` (per IP) and the `default` backstop (per user).
+			const response = await app.inject({ method: "GET", url: "/probe/login", remoteAddress: "203.0.113.120", headers: { [TEST_USER_HEADER]: "user-headers" } });
 			expect(response.statusCode).toBe(OK);
 			// After one request: strict 1 of 2 is nearer its limit than default 1 of 3.
 			expect(response.headers["ratelimit-policy"]).toBe(
 				`"SECURITY_ROUTES";q=${String(STRICT_LIMIT)};w=${String(createTestTypedConfig().rateLimits.throttleTtlMs / MS_PER_SECOND)}`,
 			);
 			expect(response.headers.ratelimit).toMatch(new RegExp(`^"SECURITY_ROUTES";r=${String(STRICT_LIMIT - 1)};t=\\d+$`));
+		} finally {
+			await app.close();
+		}
+	});
+
+	it("counts a per-user policy's route per user only: never also capped per client IP by the credential throttler", async () => {
+		const app = await buildApp({ webhookLimit: WEBHOOK_ENABLED_LIMIT });
+		try {
+			// One user, one address: past the strict limit (2) the route still answers, up to its own limit (3).
+			const statuses = await statusesOf(app, DEFAULT_LIMIT + 1, {
+				method: "GET",
+				url: "/probe/mutation",
+				remoteAddress: "203.0.113.122",
+				headers: { [TEST_USER_HEADER]: "user-busy" },
+			});
+			expect(statuses).toEqual([OK, OK, OK, TOO_MANY_REQUESTS]);
+			expect(limiterOf(app).policiesCounted()).not.toContain("SECURITY_ROUTES");
+			const response = await app.inject({ method: "GET", url: "/probe/mutation", remoteAddress: "203.0.113.123", headers: { [TEST_USER_HEADER]: "user-fresh" } });
+			expect(response.headers["ratelimit-policy"]).toMatch(new RegExp(`^"AUTHENTICATED_ROUTES";q=${String(DEFAULT_LIMIT)};`));
 		} finally {
 			await app.close();
 		}

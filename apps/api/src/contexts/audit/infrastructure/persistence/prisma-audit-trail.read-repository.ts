@@ -20,6 +20,7 @@ import { auditTrailChangeGroups, auditTrailReferenceIds, toAuditTrailEntry, type
 import type { PrismaAuditReferenceReader } from "./prisma-audit-reference.reader";
 import { DATA_CHANGE_LOG_SUMMARY_SELECT, type DataChangeLogSummaryRow } from "./prisma-data-change-log.read-repository";
 import { AUDIT_LOG_SUMMARY_SELECT, type AuditLogSummaryRow } from "./prisma-http-audit-log.read-repository";
+import { TRANSACTION_GROUP_PREFIX } from "./data-change-group-key";
 
 // ── The timeline: both audit stores as one ordered list ─────────────────────
 //
@@ -44,14 +45,6 @@ export interface AuditTrailEntryRow {
 const AuditTrailEntryRowSchema = z.object({ kind: AuditTrailEntryKindSchema, id: z.string(), occurredAt: z.coerce.number().int().nonnegative() });
 const CountRowSchema = z.tuple([z.object({ total: z.coerce.number().int().nonnegative() })]);
 const ChangeSummaryRowSchema = z.object({ group_key: z.string(), change_count: z.coerce.number().int().nonnegative(), tables: z.array(z.string()) });
-
-/** Prefix of the group key of changes with no correlation id: `tx:<transaction id>`. */
-const TRANSACTION_GROUP_PREFIX = "tx:";
-
-/** The group a change belongs to on the timeline: its correlation id, else its transaction. */
-export function dataChangeGroupKey(change: { readonly correlationId: string | null; readonly transactionId: bigint }): string {
-	return change.correlationId ?? `${TRANSACTION_GROUP_PREFIX}${change.transactionId.toString()}`;
-}
 
 /** {@link dataChangeGroupKey} in SQL (alias `d`). */
 function groupKeySql(): Prisma.Sql {
@@ -156,12 +149,36 @@ export function backgroundEntryConditions(query: AuditTrailListQuery): { readonl
 	};
 }
 
+/**
+ * True when no condition narrows the background entries' rows or groups, so each background entry is a
+ * whole group exactly as `DataChangeGroup` stores it (first change, earliest time). Any such condition
+ * (actor, tenant, correlation, time range, actor kind, changed table or row, search) keeps the row-level
+ * aggregate, which those conditions' indexes bound and whose result they define.
+ */
+export function backgroundEntriesAreWholeGroups(query: AuditTrailListQuery): boolean {
+	const filter = query.filter;
+	return (
+		query.search === undefined &&
+		[filter?.actorUserId, filter?.tenantId, filter?.correlationId, filter?.occurredAt, filter?.actorKind, filter?.tableName, filter?.rowId].every(
+			(condition) => condition === undefined,
+		)
+	);
+}
+
 /** The timeline as a derived table `t (kind, id, occurred_at)`. */
 export function buildAuditTrailTimeline(query: AuditTrailListQuery): Prisma.Sql {
 	const requests: Prisma.Sql = Prisma.sql`SELECT 'REQUEST'::text AS kind, a.id::text AS id, a."occurredAt" FROM public."AuditLog" a WHERE ${requestEntryConditions(query)}`;
 	const background = backgroundEntryConditions(query);
 	if (background === null) {
 		return requests;
+	}
+	if (backgroundEntriesAreWholeGroups(query)) {
+		// One indexed row per group (kept by the data_change_group_track trigger), not every change ever captured.
+		return Prisma.sql`${requests}
+		UNION ALL
+		SELECT 'BACKGROUND'::text AS kind, g."firstChangeId"::text AS id, g."occurredAt"
+		  FROM public."DataChangeGroup" g
+		 WHERE NOT EXISTS (SELECT 1 FROM public."AuditLog" a WHERE a."correlationId" = g."correlationId")`;
 	}
 	return Prisma.sql`${requests}
 		UNION ALL

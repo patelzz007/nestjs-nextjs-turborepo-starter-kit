@@ -102,8 +102,8 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 		tables("AuditLog", "User", "Tenant"),
 	),
 	"audit.trail.read": runtime(
-		"Read both bypass-only audit stores (audit_logs + data_change_logs) as one timeline for the admin audit log — only after the AUDIT_LOG permission check",
-		tables("AuditLog", "DataChangeLog", "User", "Tenant"),
+		"Read both bypass-only audit stores (audit_logs + data_change_logs, through their per-group index data_change_groups) as one timeline for the admin audit log — only after the AUDIT_LOG permission check",
+		tables("AuditLog", "DataChangeLog", "DataChangeGroup", "User", "Tenant"),
 	),
 	"audit.data_change.read": runtime(
 		"Read the bypass-only data_change_logs table (and the actor / tenant names its rows reference) for the admin data-change viewer — only after the AUDIT_LOG permission check",

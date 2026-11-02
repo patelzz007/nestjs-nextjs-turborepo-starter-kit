@@ -98,6 +98,12 @@ production, no teammate database you cannot wipe) — see [Migration baseline](#
   `City`, from dr5hn/countries-states-cities-database) keep the dataset's
   `DateTime @db.Timestamp(0)` columns and fixed `createdAt` default. Never copy that shape into a
   new table.
+- **The geography seed reads a pinned dataset.** `prisma/seed/geo-dataset.ts` pins one upstream
+  commit of dr5hn/countries-states-cities-database and each file's SHA-256, never `master`, so every
+  seed gets the same rows. Files download once into `apps/api/.cache/geo-dataset/<commit>/`
+  (gitignored; CI caches the folder), are retried with back-off on network errors, and are verified
+  before use. To take newer data, bump the commit and every checksum together (`shasum -a 256`); a
+  checksum that doesn't match fails the seed with that message.
 - **Unique values on soft-deletable models.** Decide whether a soft-deleted row should still hold
   its unique value. Usually it should not: use a partial unique index,
   `@@unique([tenantId, terminalId], where: { isDeleted: false })` (the `partialIndexes`

@@ -28,6 +28,8 @@ export const APP_RUNTIME_WITHHELD_PRIVILEGES: Readonly<Record<string, readonly W
 	// ── Append-only audit trails (rules/10 → "Storage and immutability") ──
 	AuditLog: APPEND_ONLY,
 	DataChangeLog: APPEND_ONLY,
+	// ── The change trail's per-group index: upserted by its trigger, never deleted (the trail is append-only) ──
+	DataChangeGroup: NEVER_DELETED,
 	ImpersonationAuditLog: APPEND_ONLY,
 	MfaRecoveryAuditLog: APPEND_ONLY,
 	// ── Proof of marketing consent (ADR 070): a withdrawal is a new row, never an edit ──

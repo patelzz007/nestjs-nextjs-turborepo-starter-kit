@@ -23,13 +23,19 @@ import { createE2eApp, extractCookie, mutationHeaders, uniqueClientIp, type Inje
  * proven, a 429 exactly at limit + 1, does not depend on the number. The `default` throttler also counts
  * every request to a route with a policy of its own, so it must stay above every such policy's limit
  * (the largest is ONBOARDING_STATUS_LIMIT, 30), or it would answer the 429 first: the first test checks
- * that. Set before the app's config is parsed (`vi.hoisted` runs ahead of the imports; every e2e file
- * has its own module graph), and restored after the file so later files see the usual environment.
+ * that. The `strict` limit is pinned too (below the default), so no environment can decide the outcome.
+ * Set before the app's config is parsed (`vi.hoisted` runs ahead of the imports; every e2e file has its
+ * own module graph), and restored after the file so later files see the usual environment.
  */
 vi.hoisted((): void => {
 	// Inside the hoisted callback: it runs before any module-level constant is initialised.
 	const throttleDefaultLimitForFloods = "40";
 	vi.stubEnv("THROTTLE_DEFAULT_LIMIT", throttleDefaultLimitForFloods);
+	// Pinned BELOW the default limit, whatever a developer's .env or CI sets: if the per-IP credential
+	// throttler ever counted a per-user policy's route again, it would answer the AUTHENTICATED_MUTATION
+	// flood first (and name itself in the headers), and that test below fails.
+	const throttleStrictLimitBelowDefault = "20";
+	vi.stubEnv("THROTTLE_STRICT_LIMIT", throttleStrictLimitBelowDefault);
 });
 afterAll((): void => {
 	vi.unstubAllEnvs();
