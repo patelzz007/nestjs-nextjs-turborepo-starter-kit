@@ -15,7 +15,10 @@ type QueueJobFamily =
 	| "storageCdnInvalidate"
 	| "transactionLogWrite"
 	| "operationsBackup"
-	| "operationsLoadTest";
+	| "operationsLoadTest"
+	| "notificationsFanOut"
+	| "notificationsChannel"
+	| "broadcastsSend";
 
 /** Default BullMQ retry settings per queue family. */
 export const QUEUE_JOB_OPTIONS: Readonly<Record<QueueJobFamily, QueueJobRetryOptions>> = {
@@ -70,6 +73,27 @@ export const QUEUE_JOB_OPTIONS: Readonly<Record<QueueJobFamily, QueueJobRetryOpt
 		backoff: { type: "exponential", delay: 30_000 },
 		removeOnComplete: 100,
 		removeOnFail: 100,
+	},
+	/** One notification fan-out (ADR 070): retried; the conditional claim makes a repeat a no-op. */
+	notificationsFanOut: {
+		attempts: 8,
+		backoff: { type: "exponential", delay: 2_000 },
+		removeOnComplete: 200,
+		removeOnFail: 1_000,
+	},
+	/** One push or SMS (ADR 070): retried with back-off for provider outages; the delivery row records each attempt. */
+	notificationsChannel: {
+		attempts: 5,
+		backoff: { type: "exponential", delay: 5_000 },
+		removeOnComplete: 200,
+		removeOnFail: 1_000,
+	},
+	/** One broadcast batch (ADR 073): retried; notify() dedupes per recipient, so a repeat never sends twice. */
+	broadcastsSend: {
+		attempts: 5,
+		backoff: { type: "exponential", delay: 10_000 },
+		removeOnComplete: 100,
+		removeOnFail: 500,
 	},
 	/** One load test (ADR 068): never retried — a second run would double the load on the platform without anyone asking. */
 	operationsLoadTest: {

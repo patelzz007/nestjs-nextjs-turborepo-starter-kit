@@ -35,7 +35,7 @@ function TestPalette({ open, setOpen }: CommandPaletteProps): JSX.Element {
 function renderTopbar(status: BreadcrumbStatus): void {
 	render(
 		<SidebarProvider storage={createNoopSidebarStorage()}>
-			<ShellTopbar breadcrumbStatus={status} commandPalette={TestPalette} actions={<span>extra action</span>} />
+			<ShellTopbar breadcrumbStatus={status} commandPalette={TestPalette} actions={<span>extra action</span>} notificationsHref="/dashboard/notifications" />
 		</SidebarProvider>,
 		{ wrapper: UiKitTestProviders },
 	);

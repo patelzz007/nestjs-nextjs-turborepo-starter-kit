@@ -27,7 +27,30 @@ export interface ServerReading {
 export interface InstanceReading {
 	readonly id: string;
 	readonly name: string;
+	/** Which service it runs and on which host: a newer process of the same pair succeeds it. */
+	readonly service: string;
+	readonly hostname: string;
+	readonly startedAt: EpochMs;
 	readonly lastSeenAt: EpochMs;
+}
+
+/**
+ * The instances that were **replaced**, not lost: another process of the same service on the same host
+ * started after this one last reported. That is a restart (a deploy, a process manager, a developer's
+ * watcher), so it is not an outage — it opens no alert, and the live store forgets it. An instance with
+ * no such successor (a crash nothing restarted, a host gone) is still reported silent, so several
+ * workers on one host still alert when one of them dies for good.
+ */
+export function replacedInstanceIds(instances: readonly InstanceReading[]): ReadonlySet<string> {
+	return new Set(
+		instances
+			.filter((instance) =>
+				instances.some(
+					(other) => other.id !== instance.id && other.service === instance.service && other.hostname === instance.hostname && other.startedAt > instance.lastSeenAt,
+				),
+			)
+			.map((instance) => instance.id),
+	);
 }
 
 export interface DependencyReading {
@@ -131,11 +154,12 @@ function serverBreaches(server: ServerReading, settings: OpsAlertSettings, now: 
 /** Every condition that should have an open alert now. */
 export function findBreaches(readings: Readings, settings: OpsAlertSettings, now: EpochMs): Breach[] {
 	const silentAfterMs: number = settings.silentAfterMinutes * MS_PER_MINUTE;
+	const replaced = replacedInstanceIds(readings.instances);
 	return [
 		...readings.servers.flatMap((server) => serverBreaches(server, settings, now)),
 		...readings.instances.flatMap((instance): Breach[] => {
 			const silentMs: number = now - instance.lastSeenAt;
-			return silentMs > silentAfterMs
+			return silentMs > silentAfterMs && !replaced.has(instance.id)
 				? [
 						{
 							subjectKind: "INSTANCE",

@@ -6,9 +6,6 @@ export const CLAIMS_UNIT_OF_WORK = Symbol("CLAIMS_UNIT_OF_WORK");
 /** {@link ClaimReadPort}. */
 export const CLAIM_READS = Symbol("CLAIM_READS");
 
-/** {@link RewardNotificationReadPort}. */
-export const REWARD_NOTIFICATION_READS = Symbol("REWARD_NOTIFICATION_READS");
-
 /** {@link ClaimCodesPort}. */
 export const CLAIM_CODES = Symbol("CLAIM_CODES");
 

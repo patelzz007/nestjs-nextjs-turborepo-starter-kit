@@ -1,10 +1,10 @@
 import { Logger } from "@nestjs/common";
-import { SIGNUP_REFERRALS_SCREEN_PATH } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import type { Clock } from "../../../../platform/application/clock.port";
 import type { SystemOperationName } from "../../../../platform/application/system-operation-names";
 import type { UnitOfWork } from "../../../../platform/application/unit-of-work.port";
+import { SIGNUP_REFERRAL_SUCCESS_NOTIFICATION } from "../../../notifications/public-api";
 import type { OwedSignupSuccessNotice } from "../../../referrals/public-api";
 import type { ClaimsScope } from "../claims-scope";
 import { caughtErrorLogFields } from "../../../../platform/application/errors/caught-error-log";
@@ -15,9 +15,6 @@ import { caughtErrorLogFields } from "../../../../platform/application/errors/ca
  * the one referrals' delivery used, so the RLS allowlist is unchanged.
  */
 export const SIGNUP_SUCCESS_NOTICE_OPERATION: SystemOperationName = "auth.signup_referrals.notify_success";
-
-/** `RewardNotification.type` of the referrer's "your referral is successful" notice (byte-stable; clients render on it). */
-export const SIGNUP_REFERRAL_SUCCESS_NOTIFICATION_TYPE = "signup_referral_redeemed";
 
 /** Owed notices one sweep page reads; the sweep pages until the backlog is drained. */
 export const SIGNUP_SUCCESS_NOTICE_PAGE_SIZE = 100;
@@ -74,15 +71,13 @@ export class SignupSuccessNoticeApplicationService {
 			if (refereeName === null) {
 				throw new SignupSuccessRefereeMissingError(signupReferralId);
 			}
-			await scope.notifications.add([
-				{
-					userId: claimed.referrerUserId,
-					type: SIGNUP_REFERRAL_SUCCESS_NOTIFICATION_TYPE,
-					title: "Referral successful",
-					body: `${refereeName} redeemed a reward. Your referral is successful.`,
-					metadata: { signupReferralId, href: SIGNUP_REFERRALS_SCREEN_PATH },
-				},
-			]);
+			await scope.notify.notify({
+				type: SIGNUP_REFERRAL_SUCCESS_NOTIFICATION,
+				recipient: { kind: "user", userId: claimed.referrerUserId },
+				payload: { signupReferralId, refereeName },
+				dedupeKey: `signup-success:${signupReferralId}`,
+				tenantId: null,
+			});
 			return "delivered";
 		});
 	}

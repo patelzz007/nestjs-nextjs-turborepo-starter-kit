@@ -204,3 +204,24 @@ Upload flow done   = multipart + per-chunk retry + resume + validation + signed 
 Migration done     = safe on large tables + expand/contract if breaking + tested on production-shaped data + rollback/forward plan
 Bugfix done        = failing test first + root cause fixed + same-class bugs searched + regression test kept
 ```
+
+## Root-cause and reusable-design completion criteria
+
+For a bug, regression, flaky test, performance issue, or operational defect:
+
+- [ ] The original behavior is reproduced or supported by captured evidence.
+- [ ] Expected and actual behavior are stated.
+- [ ] The root cause and violated invariant are identified, or the unresolved uncertainty is explicitly reported.
+- [ ] The correction is made at the owning layer; no symptom-masking workaround remains undisclosed.
+- [ ] A regression test covers the original failure mode.
+- [ ] Adjacent consumers and failure modes have been reviewed.
+- [ ] Verification was run after the final edit.
+
+For shared or extensible code:
+
+- [ ] The intended consumers and actual reuse cases are identified.
+- [ ] Shared code contains mechanisms/contracts, not one product's business policy.
+- [ ] Every abstraction has a stable, minimal contract and demonstrable value.
+- [ ] Variation points are explicit, and supported variants preserve security and data invariants.
+- [ ] No speculative framework, plugin registry, generic factory, or base class was introduced.
+- [ ] Compatibility and downstream consumers have been checked.

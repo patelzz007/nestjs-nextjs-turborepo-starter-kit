@@ -35,30 +35,67 @@ import { PreviewEmailTemplateHandler } from "./application/queries/preview-email
 import { EmailDeliveryAdapter } from "./infrastructure/adapters/email-delivery.adapter";
 import { EmailRequestHandOff } from "./infrastructure/adapters/email-hand-off.adapter";
 import { EmailLogEventsService } from "./infrastructure/adapters/email-log-signal.adapter";
-import { EmailRecipientRateLimiter } from "./infrastructure/adapters/email-recipient-rate-limiter.adapter";
+import { EmailRecipientRateLimiter, EMAIL_RATE_WINDOW_MS, EMAIL_RECIPIENT_POLICY } from "./infrastructure/adapters/email-recipient-rate-limiter.adapter";
 import { EmailRequestRelayAdapter } from "./infrastructure/adapters/email-request-relay.adapter";
 import { NotificationsHealthIndicator } from "./infrastructure/adapters/notifications-health.adapter";
 import { NotificationsTransactionalPortsFactory } from "./infrastructure/adapters/transactional-email-requests.adapter";
 import { emailTransportProvider } from "./infrastructure/adapters/transports/email-transport.provider";
 import { NotificationsQueueDisabledModule } from "./infrastructure/queue/notifications-queue-disabled.module";
-import { NotificationsQueueModule } from "./infrastructure/queue/notifications-queue.module";
 import { NotificationsIntegrationEventsMapper } from "./infrastructure/outbox/notifications-integration-events.mapper";
 import { PrismaEmailLogReadRepository } from "./infrastructure/persistence/prisma-email-log.read-repository";
 import { NotificationsScopeFactory } from "./infrastructure/persistence/notifications-scope.factory";
 import { EmailLogController } from "./presentation/http/email-log.controller";
 import { EmailPreviewController } from "./presentation/http/email-preview.controller";
 import { EmailWebhookController } from "./presentation/http/email-webhook.controller";
+import { NotificationUnsubscribeController, TwilioWebhooksController } from "./presentation/http/notification-webhooks.controller";
+import { NotificationsAdminController } from "./presentation/http/notifications-admin.controller";
+import { NotificationsController } from "./presentation/http/notifications.controller";
+import { TenantNotificationsController } from "./presentation/http/tenant-notifications.controller";
+import { NotificationsMaintenanceCron } from "./presentation/jobs/notifications-maintenance.cron";
+import {
+	DeliverNotificationHandler,
+	FanOutNotificationHandler,
+	RunNotificationsMaintenanceHandler,
+	SendBroadcastHandler,
+	StartDueBroadcastsHandler,
+} from "./application/commands/notification-command.handlers";
+import { BroadcastReportController } from "./presentation/http/broadcast-report.controller";
+import { BroadcastReportsAdminController } from "./presentation/http/broadcast-reports-admin.controller";
+import { BroadcastsAdminController } from "./presentation/http/broadcasts-admin.controller";
+import { TenantBroadcastsController } from "./presentation/http/tenant-broadcasts.controller";
+import { BroadcastSchedulerCron } from "./presentation/jobs/broadcast.jobs";
+import { BullMqBroadcastQueue } from "./infrastructure/queue/broadcast-queues";
+import { FanOutOnNotificationRequested } from "./application/event-handlers/after-commit/fan-out-on-notification-requested.event-handler";
+import { notificationProviders } from "./infrastructure/notifications.providers";
+import { describeSlidingWindow, RateLimitPolicyRegistry } from "../../platform/application/rate-limiting/rate-limit-policy-registry";
+import { SMS_CAP_WINDOW_MS, SMS_RECIPIENT_DAILY_POLICY, SMS_TENANT_DAILY_POLICY } from "./application/services/notification-fan-out";
+import { TenantAccessModule } from "../tenancy/public-api";
+import { BULLMQ_NOTIFICATION_QUEUES, NotificationsQueueModule } from "./infrastructure/queue/notifications-queue.module";
 
 // Queue wiring is decided at load time from the validated config (parsed by main.ts first).
-const notificationsQueueImports = getApiConfig().messaging.redisUrl !== undefined ? [NotificationsQueueModule] : [NotificationsQueueDisabledModule];
+const usesRedis = getApiConfig().messaging.redisUrl !== undefined;
+const notificationsQueueImports = usesRedis ? [NotificationsQueueModule] : [NotificationsQueueDisabledModule];
 
 /**
  * The notifications context: the EmailLog lifecycle, durable email requests
  * (ADR 060), the provider webhook and the admin email log / preview surfaces.
  */
 @Module({
-	imports: [PrismaModule, OutboxModule, UnitOfWorkModule, SystemCommandModule, ...notificationsQueueImports],
-	controllers: [EmailPreviewController, EmailWebhookController, EmailLogController],
+	imports: [PrismaModule, OutboxModule, UnitOfWorkModule, SystemCommandModule, TenantAccessModule, ...notificationsQueueImports],
+	controllers: [
+		EmailPreviewController,
+		EmailWebhookController,
+		EmailLogController,
+		NotificationsController,
+		NotificationsAdminController,
+		TenantNotificationsController,
+		NotificationUnsubscribeController,
+		TwilioWebhooksController,
+		BroadcastsAdminController,
+		BroadcastReportsAdminController,
+		TenantBroadcastsController,
+		BroadcastReportController,
+	],
 	providers: [
 		{
 			provide: EMAIL_RENDER_CONTEXT,
@@ -71,13 +108,14 @@ const notificationsQueueImports = getApiConfig().messaging.redisUrl !== undefine
 		NotificationsTransactionalPortsFactory,
 		{
 			provide: NOTIFICATIONS_UNIT_OF_WORK,
-			inject: [TenantTransactionService, NotificationsTransactionalPortsFactory, TransactionalEventDispatcher, AFTER_COMMIT_PUBLISHER],
+			inject: [TenantTransactionService, NotificationsTransactionalPortsFactory, TransactionalEventDispatcher, AFTER_COMMIT_PUBLISHER, TypedConfigService],
 			useFactory: (
 				transactions: TenantTransactionService,
 				ports: NotificationsTransactionalPortsFactory,
 				dispatcher: TransactionalEventDispatcher<Prisma.TransactionClient>,
 				publisher: AfterCommitPublisher,
-			): UnitOfWork<NotificationsScope> => new PrismaUnitOfWork(transactions, new NotificationsScopeFactory(ports), dispatcher, publisher),
+				config: TypedConfigService,
+			): UnitOfWork<NotificationsScope> => new PrismaUnitOfWork(transactions, new NotificationsScopeFactory(ports, config.runtime.appName), dispatcher, publisher),
 		},
 		EmailDeliveryAdapter,
 		{ provide: EMAIL_DELIVERY, useExisting: EmailDeliveryAdapter },
@@ -97,6 +135,16 @@ const notificationsQueueImports = getApiConfig().messaging.redisUrl !== undefine
 		PreviewEmailTemplateHandler,
 		HandOffRequestedEmailOnEmailRequested,
 		SignalEmailLogChanged,
+		// ── Notifications (ADR 070) ──
+		...notificationProviders(usesRedis, usesRedis ? BULLMQ_NOTIFICATION_QUEUES : null, usesRedis ? BullMqBroadcastQueue : null),
+		SendBroadcastHandler,
+		StartDueBroadcastsHandler,
+		BroadcastSchedulerCron,
+		FanOutNotificationHandler,
+		DeliverNotificationHandler,
+		RunNotificationsMaintenanceHandler,
+		FanOutOnNotificationRequested,
+		NotificationsMaintenanceCron,
 	],
 	exports: [NotificationsTransactionalPortsFactory, NotificationsHealthIndicator],
 })
@@ -105,11 +153,43 @@ export class NotificationsModule implements OnModuleInit {
 		private readonly mappers: IntegrationEventMapperRegistry,
 		private readonly emailRoutes: OutboxEmailRouteRegistry,
 		private readonly handOff: EmailRequestHandOff,
+		private readonly rateLimitPolicies: RateLimitPolicyRegistry,
+		private readonly config: TypedConfigService,
 	) {}
 
-	/** Registers the `email.log.updated` outbox mapper (M3) and this context as the target of the email outbox route (ADR 060). */
+	/**
+	 * Registers the `email.log.updated` outbox mapper (M3), this context as the target of the email outbox
+	 * route (ADR 060), and the per-destination limits it counts (ADR 071).
+	 */
 	public onModuleInit(): void {
 		this.mappers.register(new NotificationsIntegrationEventsMapper());
 		this.emailRoutes.register(this.handOff);
+		const { notifications, email } = this.config;
+		this.rateLimitPolicies.register(
+			{
+				name: EMAIL_RECIPIENT_POLICY,
+				algorithm: "sliding-window",
+				subject: "destination",
+				limit: describeSlidingWindow(email.rateLimitPerMinute, EMAIL_RATE_WINDOW_MS),
+				failMode: "closed",
+				penalty: false,
+			},
+			{
+				name: SMS_RECIPIENT_DAILY_POLICY,
+				algorithm: "sliding-window",
+				subject: "destination",
+				limit: describeSlidingWindow(notifications.smsDailyLimitPerRecipient, SMS_CAP_WINDOW_MS),
+				failMode: "closed",
+				penalty: false,
+			},
+			{
+				name: SMS_TENANT_DAILY_POLICY,
+				algorithm: "sliding-window",
+				subject: "tenant",
+				limit: describeSlidingWindow(notifications.smsDailyLimitPerTenant, SMS_CAP_WINDOW_MS),
+				failMode: "closed",
+				penalty: false,
+			},
+		);
 	}
 }

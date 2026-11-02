@@ -275,6 +275,56 @@ export function checkApiEnvRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>):
 	}
 	checkStorageRules(env, context);
 	checkGithubRules(env, context);
+	checkCacheRules(env, context);
+	checkNotificationRules(env, context);
+}
+
+/** ADR 070: a provider is configured before it is chosen, and the local sinks never run on a deployment. */
+export function checkNotificationRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>): void {
+	if (env.PUSH_PROVIDER === "native" && env.FCM_SERVICE_ACCOUNT_JSON === undefined && env.APNS_KEY_ID === undefined) {
+		context.addIssue({ code: "custom", path: ["PUSH_PROVIDER"], message: "native needs FCM_SERVICE_ACCOUNT_JSON (Android) and/or the APNS_* settings (iOS)" });
+	}
+	if (env.APNS_KEY_ID !== undefined && (env.APNS_TEAM_ID === undefined || env.APNS_BUNDLE_ID === undefined || env.APNS_PRIVATE_KEY === undefined)) {
+		context.addIssue({ code: "custom", path: ["APNS_KEY_ID"], message: "needs APNS_TEAM_ID, APNS_BUNDLE_ID and APNS_PRIVATE_KEY too" });
+	}
+	if (env.SMS_PROVIDER === "twilio" && (env.TWILIO_ACCOUNT_SID === undefined || env.TWILIO_AUTH_TOKEN === undefined || env.TWILIO_MESSAGING_SERVICE_SID === undefined)) {
+		context.addIssue({ code: "custom", path: ["SMS_PROVIDER"], message: "twilio needs TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_MESSAGING_SERVICE_SID" });
+	}
+	if (isDeployedProduction(env)) {
+		if (env.PUSH_PROVIDER === "mailpit") {
+			context.addIssue({ code: "custom", path: ["PUSH_PROVIDER"], message: "must not be mailpit on a deployed production environment (it is a local sink)" });
+		}
+		if (env.SMS_PROVIDER === "mailpit") {
+			context.addIssue({ code: "custom", path: ["SMS_PROVIDER"], message: "must not be mailpit on a deployed production environment (it is a local sink)" });
+		}
+		if (env.PUSH_PROVIDER === "native" && env.NOTIFICATIONS_ENCRYPTION_KEYS === undefined) {
+			context.addIssue({ code: "custom", path: ["NOTIFICATIONS_ENCRYPTION_KEYS"], message: "is required with PUSH_PROVIDER=native (device tokens are encrypted at rest)" });
+		}
+	}
+}
+
+/**
+ * ADR 072: a deployed production API keeps personal data in Redis only encrypted, and reaches Redis
+ * only over TLS with a password (one Redis holds the queues, rate limits and cache).
+ */
+export function checkCacheRules(env: ApiEnv, context: z.RefinementCtx<ApiEnv>): void {
+	if (!isDeployedProduction(env) || env.REDIS_URL === undefined) {
+		return;
+	}
+	if (env.CACHE_ENCRYPTION_KEYS === undefined) {
+		context.addIssue({
+			code: "custom",
+			path: ["CACHE_ENCRYPTION_KEYS"],
+			message: "is required on a deployed production environment (cached personal data is encrypted inside Redis)",
+		});
+	}
+	const redis = new URL(env.REDIS_URL);
+	if (redis.protocol !== "rediss:") {
+		context.addIssue({ code: "custom", path: ["REDIS_URL"], message: "must use rediss:// (TLS) on a deployed production environment" });
+	}
+	if (redis.password === "") {
+		context.addIssue({ code: "custom", path: ["REDIS_URL"], message: "must carry a password (AUTH) on a deployed production environment" });
+	}
 }
 
 /** A repository list needs a token to read it with, stays small, and names each repository once (GitHub names are case-insensitive). */

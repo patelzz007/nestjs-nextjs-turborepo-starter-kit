@@ -63,6 +63,17 @@ export const DEFAULT_RELATIVE_TIME_LABELS: RelativeTimeLabels = {
 	future: (amount: string): string => `in ${amount}`,
 };
 
+/** One letter or two per unit, the way a feed's timestamps read ("25m", "2h", "3d"). */
+const SHORT_UNIT_SUFFIX: Readonly<Record<RelativeTimeUnit, string>> = { year: "y", month: "mo", week: "w", day: "d", hour: "h", minute: "m" };
+
+/** The compact wording of a feed ("Just now", "25m", "3d"): no "ago", the unit shortened. */
+export const SHORT_RELATIVE_TIME_LABELS: RelativeTimeLabels = {
+	now: "Just now",
+	amount: (count: number, unit: RelativeTimeUnit): string => `${String(count)}${SHORT_UNIT_SUFFIX[unit]}`,
+	past: (amount: string): string => amount,
+	future: (amount: string): string => `in ${amount}`,
+};
+
 /**
  * `value` relative to `now`: "5 minutes ago", "in 2 days", "now". Truncates
  * toward zero, so 119 seconds ago reads "1 minute ago", never "2".

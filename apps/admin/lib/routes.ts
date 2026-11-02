@@ -81,6 +81,14 @@ export interface EmailsRoutes {
 	/** Template browser with one template preselected (`?key=`). */
 	readonly template: RouteBuilder;
 	readonly log: string;
+	/** Broadcasts and their reports (ADR 073). */
+	readonly broadcasts: string;
+	/** Write a platform broadcast. */
+	readonly broadcastNew: string;
+	/** One broadcast: its message, audience, status and results. */
+	readonly broadcast: RouteBuilder;
+	/** A platform draft in the composer. */
+	readonly broadcastEdit: RouteBuilder;
 }
 
 export interface GeographyRoutes {
@@ -139,6 +147,10 @@ export interface OperationsRoutes {
 	readonly alerts: string;
 	/** SuperAdmin only. */
 	readonly backups: string;
+	/** Rate limiting (ADR 071): policies, refusals, tenant overrides, penalties. */
+	readonly rateLimits: string;
+	/** The distributed cache (ADR 072): per-cache numbers, Redis memory, flushes. */
+	readonly cache: string;
 	readonly loadTests: string;
 	/** One load test: its timeline, steps and the servers' load. */
 	readonly loadTest: RouteBuilder;
@@ -172,6 +184,8 @@ export interface AdminRoutes {
 	readonly kanban: KanbanRoutes;
 	readonly operations: OperationsRoutes;
 	readonly account: AccountRoutes;
+	/** The staff member's own inbox (ADR 070) — personal, so any admin may open it. */
+	readonly notifications: string;
 }
 
 /** Appends one encoded path segment to `base`. */
@@ -224,6 +238,7 @@ const REWARDS = "/rewards";
 const REWARDS_REVIEW = `${REWARDS}/review`;
 const EMAILS = "/emails";
 const EMAIL_TEMPLATES = `${EMAILS}/templates`;
+const EMAIL_BROADCASTS = `${EMAILS}/broadcasts`;
 const AUDIT_LOGS = "/audit-logs";
 /** Row changes live under the audit log (`/audit-logs/changes/[id]`). */
 const AUDIT_LOG_CHANGES = `${AUDIT_LOGS}/changes`;
@@ -275,6 +290,10 @@ export const ROUTES: AdminRoutes = {
 		templates: EMAIL_TEMPLATES,
 		template: (key: string): string => withQuery(EMAIL_TEMPLATES, EMAIL_TEMPLATE_KEY_PARAM, key),
 		log: `${EMAILS}/log`,
+		broadcasts: EMAIL_BROADCASTS,
+		broadcastNew: `${EMAIL_BROADCASTS}/new`,
+		broadcast: (id: string): string => childPath(EMAIL_BROADCASTS, id),
+		broadcastEdit: (id: string): string => `${childPath(EMAIL_BROADCASTS, id)}/${EDIT_SEGMENT}`,
 	},
 	geography: {
 		index: "/geography",
@@ -308,6 +327,8 @@ export const ROUTES: AdminRoutes = {
 		server: (id: string): string => childPath(OPERATIONS_SERVERS, id),
 		alerts: `${OPERATIONS}/alerts`,
 		backups: `${OPERATIONS}/backups`,
+		rateLimits: `${OPERATIONS}/rate-limits`,
+		cache: `${OPERATIONS}/cache`,
 		loadTests: OPERATIONS_LOAD_TESTS,
 		loadTest: (id: string): string => childPath(OPERATIONS_LOAD_TESTS, id),
 		compare: (left: string, right: string): string =>
@@ -319,6 +340,7 @@ export const ROUTES: AdminRoutes = {
 		security: `${ACCOUNT}/security`,
 		github: `${ACCOUNT}/github`,
 	},
+	notifications: APP_LINKS.admin.notifications,
 };
 
 /** Detail / edit page patterns of one CRUD resource (App Router notation). */
@@ -338,6 +360,7 @@ export interface AdminRoutePatterns {
 	};
 	readonly kanban: { readonly task: string; readonly editTask: string };
 	readonly operations: { readonly server: string; readonly loadTest: string; readonly compare: string };
+	readonly emails: { readonly broadcast: string; readonly broadcastEdit: string };
 }
 
 /** Name of the dynamic segment in every admin detail page (`app/(panel)/x/[id]`). */
@@ -368,6 +391,7 @@ export const ROUTE_PATTERNS: AdminRoutePatterns = {
 		loadTest: `${OPERATIONS_LOAD_TESTS}/${routeParam(ID_PARAM)}`,
 		compare: `${OPERATIONS_LOAD_TESTS}/compare`,
 	},
+	emails: { broadcast: `${EMAIL_BROADCASTS}/${routeParam(ID_PARAM)}`, broadcastEdit: `${EMAIL_BROADCASTS}/${routeParam(ID_PARAM)}/${EDIT_SEGMENT}` },
 };
 
 /**

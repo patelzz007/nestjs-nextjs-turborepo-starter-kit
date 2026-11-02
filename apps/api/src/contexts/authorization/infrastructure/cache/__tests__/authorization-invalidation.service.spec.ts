@@ -8,6 +8,7 @@ import type { AccessTokenStatePort } from "../../../../../platform/application/p
 import { createTestTypedConfig } from "../../../../../../test/support/test-api-env";
 import { AuthorizationCacheService, type CachedAuthorization } from "../authorization-cache.service";
 import { AUTHORIZATION_INVALIDATION_CHANNEL, AuthorizationInvalidationService, MAX_USER_IDS_PER_INVALIDATION_MESSAGE } from "../authorization-invalidation.service";
+import { localAppCache } from "../../../../../../test/support/local-app-cache";
 
 /**
  * A real ioredis client that never connects (`lazyConnect`), with its network
@@ -44,7 +45,7 @@ class FakeRedis {
 	}
 }
 
-const REDIS_CONFIG = { REDIS_URL: "redis://cache:6379", AUTHORIZATION_CACHE_BACKEND: "redis", REDIS_NAMESPACE: "tenant-a" };
+const REDIS_CONFIG = { REDIS_URL: "redis://cache:6379", REDIS_NAMESPACE: "tenant-a" };
 /** The channel instances in REDIS_CONFIG's namespace share. */
 const CHANNEL = `tenant-a:${AUTHORIZATION_INVALIDATION_CHANNEL}`;
 
@@ -69,7 +70,7 @@ interface Instance {
 
 function instance(publisher: FakeRedis, subscriber: FakeRedis, env: Record<string, string> = REDIS_CONFIG): Instance {
 	const config = createTestTypedConfig(env);
-	const cache = new AuthorizationCacheService(config);
+	const cache = new AuthorizationCacheService(config, localAppCache());
 	const accessTokenState = new RecordingAccessTokenState();
 	return { service: new AuthorizationInvalidationService(cache, accessTokenState, config, publisher.client, subscriber.client), cache, accessTokenState };
 }

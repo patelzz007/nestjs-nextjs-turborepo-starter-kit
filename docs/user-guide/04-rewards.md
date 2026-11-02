@@ -3,7 +3,7 @@ title: "4. Rewards: create, review, publish"
 description: "How a merchant creates a reward, submits it for review, and how a platform admin approves or returns it."
 order: 5
 author: "Product & Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1793491200000
 coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
 tags: ["user-guide", "rewards", "review"]
 ---
@@ -30,10 +30,12 @@ stateDiagram-v2
 | Title, description, terms | What customers see |
 | Photos | 1–10 photos, the first is the cover. Each becomes a 16:9 image of at least 1920 × 1080 (Full HD); a larger photo keeps its extra detail, up to 4K. A photo of another shape opens a crop step: zoom all the way out to keep the whole photo, with a soft blur of it filling the space around it |
 | Category | cafe, restaurant, retail, wellness, entertainment, food, beverage |
-| Type and value | `DISCOUNT`, `FREE_ITEM`, `CASHBACK`, `POINTS`, `BOGO`, with a value |
+| Type and value | Pick a card: **Discount** (percent off), **Free item**, **Cashback** (an amount back), **Bonus points**, **Buy one, get one**. Each card says what customers see, what you set and what the till does |
+| Free item, SKU | **Free item** and **Buy one, get one** only, and both required: the item's name (printed on the receipt) and your SKU (the code your POS uses for it) |
 | Quantity | How many customers can claim it in total (stock) |
 | Start and expiry date | When it is visible and claimable |
 | Stores | **All stores** or **selected stores** (redeemable only there) |
+| Who can claim | **Everyone** (the default: anyone browsing your rewards) or **Chosen customers**: search your customers by name or email and tick one or several. Only they see and can claim it; everyone else never learns it exists, and its link answers "not found". On the web, chosen customers see a **Just for you** badge |
 | Rules | Maximum claims per customer; minimum spend in RM (checked against the whole bill at checkout) |
 | Referrals | Whether customers can earn a referrer reward through it, the size of the referral pool and the title of the referrer reward ([Referrals](./07-referrals.md)) |
 | Save as draft | Keep it private; otherwise it is submitted for review straight away |
@@ -41,13 +43,18 @@ stateDiagram-v2
 A draft (or a reward waiting for review) can still be edited. **Publish** on a draft submits it
 for review; the merchant cannot make it live alone.
 
+The reward's page shows **Who can claim** (Everyone, or "N chosen customers" with their names) and,
+for a free item, the item and its SKU. The till's answers carry what the reward gives — the item and
+SKU included — so a POS can apply it and print it ([POS checkout](./06-pos-checkout.md)).
+
 ## Review a reward (platform admin)
 
 1. **Rewards → Review** lists every reward in `PENDING_REVIEW`, oldest first — just its cover,
    title and merchant. **View more** opens the reward's own page (`/rewards/review/<id>`).
 2. The reward's page shows everything a decision needs: its status, the photos, the description
-   and terms, and a **Details** card (offer, type, category, quantity left, start and expiry,
-   stores, minimum spend, uses per customer, referrals, reward ID).
+   and terms, and a **Details** card (offer, type, the free item and its SKU, category, quantity
+   left, start and expiry, stores, who can claim, minimum spend, uses per customer, referrals,
+   reward ID).
    The photos show as a carousel (swipe, the arrows or the dots move between them).
    **View full size** opens them in a larger carousel, on the photo the page shows; **Download**
    (on the page or in the viewer) saves the shown photo's original upload (Full HD to 4K). With

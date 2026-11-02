@@ -2,7 +2,7 @@ import type { ExecutionContext } from "@nestjs/common";
 import type { ThrottlerModuleOptions } from "@nestjs/throttler";
 
 import type { TypedConfigService } from "../../../../../config/typed-config.service";
-import type { RedisThrottlerStorage } from "../../../../infrastructure/throttling/redis-throttler.storage";
+import type { RateLimiterThrottlerStorage } from "../../../../infrastructure/throttling/rate-limiter-throttler.storage";
 import { PRE_AUTH_LIMIT_MULTIPLIER, PRE_AUTH_THROTTLER, WEBHOOK_WINDOW_MS } from "./rate-limit-policy";
 import { routeThrottler, throttleTrackerFunction } from "./throttle-tracker";
 
@@ -24,9 +24,9 @@ export const WEBHOOK_THROTTLED_MESSAGE = "Too many webhook requests — this end
  *   count, per client IP per minute. `WEBHOOK_RATE_LIMIT_PER_MINUTE=0` turns it off.
  *
  * A route's `@RateLimit` policy overrides its throttler's limit, window and tracker.
- * `storage` is the Redis-backed storage, so every API instance shares one count.
+ * `storage` counts through the shared `RateLimiter` (ADR 071), so every API instance shares one count.
  */
-export function throttlerOptionsFactory(config: TypedConfigService, storage: RedisThrottlerStorage): ThrottlerModuleOptions {
+export function throttlerOptionsFactory(config: TypedConfigService, storage: RateLimiterThrottlerStorage): ThrottlerModuleOptions {
 	const webhookLimit: number = config.email.webhookRateLimitPerMinute;
 	const webhookDisabled: boolean = webhookLimit === 0;
 	return {

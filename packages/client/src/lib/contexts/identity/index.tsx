@@ -9,6 +9,7 @@
 export {
 	AuthProvider,
 	useAuth,
+	useAuthClientType,
 	useAuthCommands,
 	useAuthStatus,
 	useAuthUser,

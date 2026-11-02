@@ -6,6 +6,7 @@ import { CLOCK, type Clock } from "../../../../../platform/application/clock.por
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import { PosCodeLockedError, RedemptionCodeNotFoundError } from "../../../domain/errors/pos.errors";
 import { redemptionInvalidReason } from "../../../domain/policies/redemption-eligibility.policy";
+import { redemptionOfferOf } from "../../../domain/policies/redemption-offer.policy";
 import type { PosScope } from "../../pos-scope";
 import { POS_UNIT_OF_WORK } from "../../ports/pos.tokens";
 import { RedemptionCodeResolver, type CodeResolution } from "../../services/redemption-code-resolver";
@@ -46,12 +47,17 @@ export class ValidateRedemptionCodesHandler implements ICommandHandler<ValidateR
 				metadata: { claimId: claim.claimId, terminalId: point.terminalId, apiKeyId: point.apiKeyId, locationId: point.locationId },
 			});
 			const invalidReason = redemptionInvalidReason(claim, point.locationId, now);
+			const { reward } = resolved.lookup;
 			return {
 				kind: "preview",
 				preview: {
 					claimId: claim.claimId,
+					rewardId: reward.id,
 					rewardTitle: claim.rewardTitle,
-					rewardType: resolved.lookup.reward.rewardType,
+					rewardDescription: reward.description,
+					rewardType: reward.rewardType,
+					offer: redemptionOfferOf(reward.id, reward.offer),
+					termsConditions: reward.termsConditions,
 					claimExpiresAt: claim.claimExpiresAt,
 					valid: invalidReason === null,
 					invalidReason,

@@ -25,6 +25,27 @@
 export { NotificationsTransactionalPortsFactory } from "./infrastructure/adapters/transactional-email-requests.adapter";
 export type { EmailRequestTransactionalPort, EmailSendAudit, EmailSendOptions, NotificationsTransactionalPorts } from "./application/ports/email-request.port";
 export { EmailRequested } from "./domain/events/email-requested.event";
+
+// ── Notifying a person (ADR 070) ─────────────────────────────────────────────
+// PREFERRED over a bare email: `ports.notifications.notify({ type, recipient, payload, dedupeKey, tenantId })`
+// in YOUR unit of work's transaction. The types below are the catalog: copy lives in their renderers.
+export type { NotificationRecipient, NotifyRequest, NotifyResult, NotifyTransactionalPort } from "./application/ports/notify.port";
+export { NotifyRequestError } from "./application/ports/notify.port";
+export type { LegacyInboxImportPort, LegacyInboxNotice } from "./application/ports/legacy-inbox-import.port";
+export { NEW_SIGN_IN_NOTIFICATION, PASSWORD_CHANGED_NOTIFICATION, PHONE_CODE_NOTIFICATION } from "./domain/catalog/types/security.types";
+export {
+	alertDetailLinesOf as operationsAlertDetailLinesOf,
+	alertTitleOf as operationsAlertTitleOf,
+	OPERATIONS_ALERT_NOTIFICATION,
+} from "./domain/catalog/types/operations.types";
+export {
+	LEGACY_REWARD_NOTICE,
+	REFERRER_CREDITED_NOTIFICATION,
+	REWARD_APPROVED_NOTIFICATION,
+	REWARD_AUTO_PUBLISHED_NOTIFICATION,
+	REWARD_REJECTED_NOTIFICATION,
+	SIGNUP_REFERRAL_SUCCESS_NOTIFICATION,
+} from "./domain/catalog/types/rewards.types";
 export { EMAIL_LOG_ID_TAG } from "./domain/value-objects/email-log-id-tag.value-object";
 export { NotificationsHealthIndicator } from "./infrastructure/adapters/notifications-health.adapter";
 

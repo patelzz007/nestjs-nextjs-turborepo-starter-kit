@@ -33,11 +33,9 @@ describe("TypedConfigService", () => {
 		expect(config.tenantEncryptionMasterKey.equals(key)).toBe(false);
 	});
 
-	it("uses Redis-backed caches only when the backend resolves to redis AND Redis is configured", () => {
-		expect(createTestTypedConfig({ REDIS_URL: "redis://cache:6379" }).useRedisAuthorizationCache).toBe(true);
-		expect(createTestTypedConfig({ REDIS_URL: "redis://cache:6379", USER_SESSION_CACHE_BACKEND: "memory" }).useRedisUserSessionCache).toBe(false);
-		expect(createTestTypedConfig().useRedisAuthorizationCache).toBe(false);
-		expect(createTestTypedConfig({ AUTHORIZATION_CACHE_BACKEND: "redis" }).useRedisAuthorizationCache).toBe(false);
+	it("broadcasts cache invalidations exactly when Redis is configured", () => {
+		expect(createTestTypedConfig({ REDIS_URL: "redis://cache:6379" }).broadcastsCacheInvalidations).toBe(true);
+		expect(createTestTypedConfig().broadcastsCacheInvalidations).toBe(false);
 	});
 
 	it("derives broker switches from the configured URLs", () => {

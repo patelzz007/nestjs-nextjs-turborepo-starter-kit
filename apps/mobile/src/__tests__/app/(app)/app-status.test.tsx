@@ -2,6 +2,8 @@ import { act, fireEvent, screen, waitFor, within } from "expo-router/testing-lib
 
 import { dynamic, ok, stubApi, type StubResponse } from "../../../../test/api-stub";
 import { createTestRuntime, markerScreen, renderInApp } from "../../../../test/app-harness";
+import { openStreams, sendToStreams } from "../../../../test/expo-fetch-fake";
+import { FAKE_DEVICE_TOKEN, permissionRequests, rotatePushToken, setNotificationPermission } from "../../../../test/expo-notifications-fake";
 import { profileJson, sessionStatusJson, userJson } from "../../../../test/fixtures";
 import { testAccessToken } from "../../../../test/jwt";
 import { OFFLINE_STATE, setState } from "../../../../test/network-fake";
@@ -104,5 +106,119 @@ describe("app status: connection and session (the web shells' indicators)", () =
 		expect(header.getByRole("button", { name: MEASURED_CONNECTION })).toBeOnTheScreen();
 		expect(header.getByText("14m 32s")).toBeOnTheScreen();
 		expect(header.getByRole("button", { name: "Back" })).toBeOnTheScreen();
+	});
+});
+
+describe("app status: the bell's unread count (ADR 070), live", () => {
+	let unread = 2;
+
+	beforeEach(() => {
+		unread = 2;
+		stubApi({
+			"GET /auth/me": ok(userJson()),
+			"GET /auth/profile": ok(profileJson()),
+			"GET /session": dynamic((): StubResponse => ok(sessionStatusJson(Date.now() + EXPIRES_IN_MS))),
+			"GET /health/ping": ok({ timestamp: Date.now() }),
+			"GET /notifications/unread-count": dynamic((): StubResponse => ok({ unread })),
+		});
+	});
+
+	it("shows the unread count on the bell, and holds the inbox's stream open with the session's token", async () => {
+		await renderSignedIn("/");
+
+		expect(await within(screen.getByTestId("app-header")).findByRole("button", { name: "Notifications, 2 unread" })).toBeOnTheScreen();
+		expect(within(screen.getByTestId("app-header")).getByText("2", { includeHiddenElements: true })).toBeOnTheScreen();
+		const [stream] = openStreams();
+		expect(stream?.url).toContain("/notifications/stream?surface=CUSTOMER");
+		expect(stream?.headers.Authorization).toMatch(/^Bearer /u);
+	});
+
+	it("moves the moment the stream says the inbox changed", async () => {
+		await renderSignedIn("/");
+		await within(screen.getByTestId("app-header")).findByRole("button", { name: "Notifications, 2 unread" });
+
+		unread = 3;
+		await act(async (): Promise<void> => {
+			sendToStreams("/notifications/stream", JSON.stringify({ surface: "CUSTOMER", unread: 3 }));
+			await Promise.resolve();
+		});
+
+		expect(await within(screen.getByTestId("app-header")).findByRole("button", { name: "Notifications, 3 unread" })).toBeOnTheScreen();
+	});
+
+	it("shows no count once everything is read", async () => {
+		unread = 0;
+		await renderSignedIn("/");
+
+		await waitFor(() => {
+			expect(within(screen.getByTestId("app-header")).getByRole("button", { name: "Notifications" })).toBeOnTheScreen();
+		});
+		expect(screen.queryByTestId("app-header-notification-count", { includeHiddenElements: true })).toBeNull();
+	});
+});
+
+describe("app status: this phone stays registered for push (ADR 070)", () => {
+	const DEVICE = {
+		id: "0193f2c4-0000-7000-8000-0000000000d1",
+		platform: "ANDROID",
+		surface: "CUSTOMER",
+		deviceLabel: null,
+		appVersion: null,
+		lastSeenAt: 1_793_000_000_000,
+		isCurrentSession: true,
+		createdAt: 1_793_000_000_000,
+		updatedAt: 1_793_000_000_000,
+		isDeleted: false,
+		deletedAt: null,
+	};
+
+	function stubWithPush(): ReturnType<typeof stubApi> {
+		return stubApi({
+			"GET /auth/me": ok(userJson()),
+			"GET /auth/profile": ok(profileJson()),
+			"GET /session": dynamic((): StubResponse => ok(sessionStatusJson(Date.now() + EXPIRES_IN_MS))),
+			"GET /health/ping": ok({ timestamp: Date.now() }),
+			"PUT /notifications/push-devices": ok(DEVICE),
+		});
+	}
+
+	it("registers an already-allowed phone again when the signed-in app starts, without asking", async () => {
+		setNotificationPermission("granted");
+		const api = stubWithPush();
+
+		await renderSignedIn("/");
+
+		await waitFor(() => {
+			expect(api.callsTo("PUT /notifications/push-devices").at(0)?.body).toContain(`"token":"${FAKE_DEVICE_TOKEN}"`);
+		});
+		expect(permissionRequests()).toBe(0);
+	});
+
+	it("leaves a phone whose notifications are not allowed yet alone", async () => {
+		const api = stubWithPush();
+
+		await renderSignedIn("/");
+		await screen.findByText("14m 32s");
+
+		expect(api.callsTo("PUT /notifications/push-devices")).toHaveLength(0);
+		expect(permissionRequests()).toBe(0);
+	});
+
+	it("registers the new token when the OS rotates it", async () => {
+		setNotificationPermission("granted");
+		const api = stubWithPush();
+		await renderSignedIn("/");
+		await waitFor(() => {
+			expect(api.callsTo("PUT /notifications/push-devices")).toHaveLength(1);
+		});
+
+		await act(async (): Promise<void> => {
+			rotatePushToken("fcm-token-rotated");
+			await Promise.resolve();
+		});
+
+		await waitFor(() => {
+			expect(api.callsTo("PUT /notifications/push-devices").at(-1)?.body).toContain('"token":"fcm-token-rotated"');
+		});
 	});
 });

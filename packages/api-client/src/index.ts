@@ -36,6 +36,7 @@ export {
 	type ApiErrorExtras,
 	type ApiErrorPayload,
 } from "./errors";
+export { describeWait, isRateLimitError, rateLimitMessage, rateLimitRetryAfterSeconds } from "./rate-limit";
 export {
 	AUTHORIZATION_HEADER,
 	buildUrl,

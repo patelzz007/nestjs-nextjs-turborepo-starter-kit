@@ -3,7 +3,7 @@ title: "Mobile app: design and delivery plan"
 description: "The agreed design for adding an Expo (React Native + Uniwind + TypeScript) app to the monorepo: the shared token and API-client packages it needs, the API changes for a mobile client type and device sessions, every screen, the app lock, testing, CI, and the five-piece delivery order."
 order: 1
 author: "Platform Team"
-lastUpdated: 1792972800000
+lastUpdated: 1793404800000
 coverImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1200&h=630&fit=crop"
 tags: ["mobile", "expo", "react-native", "uniwind", "design", "sessions", "auth"]
 ---
@@ -1399,10 +1399,18 @@ till for a merchant's store. The code is in `src/features/till`; the scanner is 
   names shown on the screen are kept in Secure Store (`till.*` entries, `src/lib/secure-store.ts`). The till belongs to the
   merchant, not to the signed-in person: signing out leaves it paired. **Unpair this phone**
   forgets it on the device (the merchant revokes the key in the console).
-- **Redeeming.** **Scan customer QR** reads the claim's `qrPayload` (the redemption token);
-  **Check code** takes the 8-character backup code instead. `POST /integration/redemptions/validate` shows the
-  reward, when it expires, its minimum bill and whether it can be redeemed here (the reasons are
-  `RedemptionInvalidReasonSchema`'s, in the till's words). The cashier enters the bill, and
+- **Redeeming.** Two buttons read the claim's `qrPayload` (the redemption token): **Scan with Google
+  scanner** (ML Kit; disabled, with a line saying why, on a phone without Google Play services —
+  `deviceQrScannerEngine()` in `@workspace/ui-native/components/qr-scanner`) and **Scan with this app's
+  camera** (the kit's camera scanner, which has **Scan from gallery** inside it). **Scan from gallery**
+  beside them reads a photo straight away, and **Check code** takes the 8-character backup code instead.
+  `POST /integration/redemptions/validate` shows the reward, its description, what it gives (`offer`: the
+  percent off, the cashback, the points, or the free item with its SKU — `contexts/pos/offer-terms.ts`),
+  its terms, when it expires, its minimum bill and whether it can be redeemed here (the reasons are
+  `RedemptionInvalidReasonSchema`'s, in the till's words). The receipt lists what each redeemed reward
+  gave, the free item and its SKU included (ADR 074). Under each step, **What the till sent** shows the
+  request headers (API key cut short), request body and response body of the validate call — and of the
+  checkout call once the bill is redeemed — as JSON code blocks with line numbers and a Copy button. The cashier enters the bill, and
   `POST /integration/redemptions/checkout` redeems it. One Idempotency-Key per (code, bill), reused on a retry
   and spent on success, so a lost answer never redeems twice (rules/09). The minimum-bill check on
   the phone only spares a round trip: the API decides.
@@ -1414,12 +1422,24 @@ till for a merchant's store. The code is in `src/features/till`; the scanner is 
 - **Scanner.** In an Android build with Google Play services, Google's code scanner opens. It is
   ML Kit's full-screen scanner and needs no camera permission, because Play services owns the
   camera. Everywhere else the kit's camera scanner opens: iOS, Android without Play services, and
-  Expo Go on either platform. It shows the live camera behind a dimmed frame with a bracketed
-  viewfinder, a close button and a torch toggle. It asks for the camera the moment it opens, never
-  earlier, and after a refusal for good it explains and links to Settings. It reads one code per
-  opening. If Google's scanner cannot start (its Play services module is still downloading, which
+  Expo Go on either platform. It shows the live camera behind a scrim with a rounded window cut out
+  of it (`lib/qr-viewfinder.ts` sizes and places it), corner brackets that breathe and a white scan line
+  that sweeps the window down and back up while it looks, one status line under the window (starting the camera, looking, a tip after 8 s, found, or the
+  camera failed to start) and a dock at thumb height with **Gallery** and **Light**. On a read the
+  brackets close in, turn the success colour, a check appears and the phone taps
+  (`playSuccessFeedback`); the code is handed over 450 ms later, so the person sees it was read.
+  Reduce Motion turns the breathing, the sweep and the lock's movement off. The scanner slides up and
+  away itself (`SCANNER_SHEET_MOTION`) instead of using the Modal's slide: the camera and everything
+  over it move as one sheet and stay mounted until it is off screen, where the Modal's own animation
+  dropped the camera at once and slid the scrim away without it. It asks for the camera the moment it
+  opens, never earlier, and after a refusal for good it explains and links to Settings — the dock
+  still reads a photo, which needs no camera. It reads one code per opening. If Google's scanner cannot start (its Play services module is still downloading, which
   happens on the first scan of an APK installed outside the Play Store), the camera scanner stands
-  in for that one opening, and the next opening tries Google's again.
+  in for that one opening, and the next opening tries Google's again. Google's scanner has no
+  **Scan from gallery** of its own: Play services draws that screen, and its options
+  (`GmsBarcodeScannerOptions`: barcode formats, auto-zoom, manual input) offer no gallery and no way
+  to add a button, so **Scan from gallery** (`QrScanFromGalleryButton`) sits beside the button that
+  opens it.
 - **Closing Google's scanner closes the scanner.** ML Kit does not report a close consistently: on
   the device this was tested on (Android 16, ML Kit `common` 18.11.0), its X cancels the task, while
   the system back button fails it with `MlKitException.INTERNAL` (13); other ML Kit versions fail the

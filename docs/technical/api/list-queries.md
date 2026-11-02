@@ -255,7 +255,7 @@ mean "no filter".
 | `GET /notifications/email-log` | createdAt, subject, to, status | status, templateKey, createdAt | ✓ | `-createdAt` |
 | `GET /rewards` (marketplace) | createdAt, expiryDate, title | category, city | ✓ | `-createdAt` |
 | `GET /claims` (own claims) | claimedAt, createdAt | status | — | `-claimedAt` |
-| `GET /reward-notifications` | createdAt | readAt (`isNull` = unread; the bell counts `meta.total` of `filter[readAt][isNull]=true&limit=1`) | — | `-createdAt` |
+| `GET /notifications?surface=…` (own inbox, one app) | createdAt | readAt, archivedAt (`isNull`), category (the bell's badge is `GET /notifications/unread-count`) | — | `-createdAt` |
 | `GET /auth/sessions` (own sessions) | lastActiveAt, createdAt | — | — | `-lastActiveAt` |
 | `GET /tenants/memberships` (own memberships) | createdAt, displayName | — | ✓ (store name or slug) | `createdAt` (join order) |
 | `GET /tenants/:tenantSlug/members` | createdAt, role | role | — | `createdAt` (join order) |

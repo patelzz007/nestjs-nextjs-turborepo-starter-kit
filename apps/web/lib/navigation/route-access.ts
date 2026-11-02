@@ -67,6 +67,12 @@ export const WEB_ROUTE_ACCESS: readonly WebRouteAccessRule[] = [
 	{ pattern: ROUTES.dashboard.referrals, audience: "signed-in", breadcrumbLabel: "Referrals" },
 	// GET /auth/me, password and MFA endpoints — any session (restricted sessions included)
 	{ pattern: ROUTES.dashboard.account, audience: "signed-in" },
+	// GET /notifications?surface=CUSTOMER, /notifications/stream — any session (own inbox only)
+	{ pattern: ROUTES.dashboard.notifications, audience: "signed-in" },
+	// GET/PUT /notifications/preferences, PATCH …/schedule, POST …/consent, …/leave-tenant, GET/DELETE …/push-devices — own settings only
+	{ pattern: ROUTES.dashboard.notificationSettings, audience: "signed-in", breadcrumbLabel: "Settings" },
+	// POST /notifications/unsubscribe — @Public, the signed token is the authority
+	{ pattern: ROUTES.unsubscribe, audience: "public" },
 ];
 
 /** The session facts a route rule is evaluated against. */

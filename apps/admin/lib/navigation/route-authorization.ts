@@ -115,6 +115,9 @@ export function isRouteRuleSatisfied(
  * `@SuperAdminOnly` pages. Each mirrors the API route the page calls.
  */
 const EXPLICIT_ROUTE_RULES: readonly RouteAuthorizationRule[] = [
+	// GET /notifications?surface=ADMIN and its stream — the caller's own inbox (ADR 070), reached from the
+	// header's bell rather than the sidebar; any signed-in admin.
+	{ prefix: ROUTES.notifications },
 	// GET /auth/admin/users + /auth/admin/users/:userId — @SuperAdminOnly.
 	// Covers the list, every `/users/[id]` detail page, and the queue below.
 	{ prefix: ROUTES.users.list, superAdminOnly: true },
@@ -165,6 +168,10 @@ const EXPLICIT_ROUTE_RULES: readonly RouteAuthorizationRule[] = [
 		featureFlag: COMPONENT_GALLERY_FEATURE,
 	},
 	// GET /admin/operations/backups — @SuperAdminOnly (ADR 068)
+	// Platform broadcasts (ADR 073): write (CREATE), open one (READ), edit a draft (READ + UPDATE).
+	{ prefix: ROUTES.emails.broadcastNew, authorization: { permissions: [PERMISSION.BROADCAST.CREATE] } },
+	{ prefix: ROUTE_PATTERNS.emails.broadcast, authorization: { permissions: [PERMISSION.BROADCAST.READ] } },
+	{ prefix: ROUTE_PATTERNS.emails.broadcastEdit, authorization: { permissions: [PERMISSION.BROADCAST.READ, PERMISSION.BROADCAST.UPDATE], mode: "all" } },
 	{ prefix: ROUTES.operations.backups, superAdminOnly: true },
 	// GET /admin/operations/servers/:serverId and its history (READ SERVER_METRIC)
 	{ prefix: ROUTE_PATTERNS.operations.server, authorization: { permissions: [PERMISSION.SERVER_METRIC.READ] } },

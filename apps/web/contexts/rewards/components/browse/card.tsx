@@ -5,6 +5,7 @@ import { RewardCategoryVisual } from "@/contexts/rewards/components/detail/categ
 import { RewardMerchantAvatar } from "@/components/dashboard/shared/merchant-avatar";
 import { PLATFORM_DISPLAY_REGION, type RewardResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
+import { isRewardJustForViewer, JUST_FOR_YOU_LABEL } from "@/contexts/rewards/lib/reward-audience";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { CoverImage } from "@workspace/ui/components/cover-image";
 import { cn } from "@workspace/ui/lib/core/utils";
@@ -64,6 +65,7 @@ export function RewardCard({ reward, detailPathPrefix = ROUTE_PREFIXES.dashboard
 							{reward.category}
 						</Badge>
 						<Badge variant="outline">{rewardTypeLabel(reward.rewardType)}</Badge>
+						{isRewardJustForViewer(reward) ? <Badge variant="primary-light">{JUST_FOR_YOU_LABEL}</Badge> : null}
 					</div>
 				</div>
 			</div>

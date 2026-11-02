@@ -213,6 +213,11 @@ export function clientIpThrottleTracker(request: object): string {
  * An API key is `key:<apiKeyId>` from the key guard's `apiKeyAuth` bag.
  * Otherwise the client IP (`clientIpThrottleTracker`).
  */
+/** Whether the request carries a verified user or API key (rate-limit headers go only to these, ADR 071). */
+export function hasAuthenticatedPrincipal(request: object): boolean {
+	return UserIdTrackerSchema.safeParse(request).success || UserSubTrackerSchema.safeParse(request).success || ApiKeyTrackerSchema.safeParse(request).success;
+}
+
 export function principalThrottleTracker(request: object): string {
 	const byUserId = UserIdTrackerSchema.safeParse(request);
 	if (byUserId.success) {

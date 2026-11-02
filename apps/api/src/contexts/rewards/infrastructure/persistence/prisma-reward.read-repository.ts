@@ -21,6 +21,7 @@ import type { DueForAutoPublish, RewardReadPort } from "../../application/ports/
 import {
 	buildMarketplaceOrder,
 	buildMarketplaceWhere,
+	rewardAudienceWhere,
 	OPERATING_MERCHANT_WHERE,
 	buildTenantRewardListOrder,
 	buildTenantRewardListWhere,
@@ -37,6 +38,11 @@ import {
 import { mapRewardToResponse, type RewardResponseSource } from "./reward-response.mapper";
 import type { TenantDisplayAdapter } from "../adapters/tenant-display.adapter";
 import type { RewardsReadSession } from "./rewards-read-session";
+
+/** The signed-in person asking (a reward given to chosen customers is visible to them only); null otherwise. */
+function viewerUserIdOf(actor: ActorContext): string | null {
+	return actor.kind === "user" ? actor.userId : null;
+}
 
 /** Reward projections on Prisma. One include (tenant, logo, images, stores) per page — no N+1. */
 export class PrismaRewardReadRepository implements RewardReadPort {
@@ -105,7 +111,7 @@ export class PrismaRewardReadRepository implements RewardReadPort {
 	public async listMarketplace(actor: ActorContext, query: RewardListQuery): Promise<PaginatedServiceResult<RewardResponse>> {
 		return this.session.readPublished(actor, async (db) => {
 			const result = await fetchListPage(query, {
-				where: buildMarketplaceWhere(query),
+				where: buildMarketplaceWhere(query, viewerUserIdOf(actor)),
 				order: buildMarketplaceOrder(query),
 				keyset: rewardListKeyset<MarketplaceRewardRow>(),
 				and: (left: Prisma.RewardWhereInput, right: Prisma.RewardWhereInput): Prisma.RewardWhereInput => ({ AND: [left, right] }),
@@ -122,7 +128,9 @@ export class PrismaRewardReadRepository implements RewardReadPort {
 			this.toResponse(
 				db,
 				await db.reward.findFirst({
-					where: { AND: [{ id: rewardId, isDeleted: false, status: "PUBLISHED", rewardKind: "CONSUMER" }, OPERATING_MERCHANT_WHERE] },
+					where: {
+						AND: [{ id: rewardId, isDeleted: false, status: "PUBLISHED", rewardKind: "CONSUMER" }, OPERATING_MERCHANT_WHERE, rewardAudienceWhere(viewerUserIdOf(actor))],
+					},
 					select: MARKETPLACE_REWARD_SELECT,
 				}),
 			),

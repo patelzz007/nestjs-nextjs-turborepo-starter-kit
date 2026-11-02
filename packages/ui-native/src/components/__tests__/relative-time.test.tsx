@@ -2,7 +2,15 @@ import { render, screen } from "@testing-library/react-native";
 import * as React from "react";
 import type { TextInstance } from "react-native";
 
-import { DEFAULT_RELATIVE_TIME_LABELS, RelativeTime, formatAbsoluteTime, formatRelativeTime, type RelativeTimeLabels, type RelativeTimeUnit } from "../relative-time";
+import {
+	DEFAULT_RELATIVE_TIME_LABELS,
+	RelativeTime,
+	SHORT_RELATIVE_TIME_LABELS,
+	formatAbsoluteTime,
+	formatRelativeTime,
+	type RelativeTimeLabels,
+	type RelativeTimeUnit,
+} from "../relative-time";
 
 /** 16 Oct 2026, 06:00 UTC. */
 const NOW = Date.UTC(2026, 9, 16, 6, 0, 0);
@@ -28,6 +36,13 @@ describe("formatRelativeTime", () => {
 		expect(formatRelativeTime(NOW, NOW)).toBe("now");
 		expect(formatRelativeTime(NOW - FIFTY_NINE * SECOND_MS, NOW)).toBe("now");
 		expect(formatRelativeTime(NOW + FIFTY_NINE * SECOND_MS, NOW)).toBe("now");
+	});
+
+	it('has a feed\'s compact wording: no "ago", the unit shortened', () => {
+		expect(formatRelativeTime(NOW - THREE * MINUTE_MS, NOW, SHORT_RELATIVE_TIME_LABELS)).toBe("3m");
+		expect(formatRelativeTime(NOW - TWO * DAY_MS, NOW, SHORT_RELATIVE_TIME_LABELS)).toBe("2d");
+		expect(formatRelativeTime(NOW - FIFTY_NINE * SECOND_MS, NOW, SHORT_RELATIVE_TIME_LABELS)).toBe("Just now");
+		expect(formatRelativeTime(NOW + TWO * DAY_MS, NOW, SHORT_RELATIVE_TIME_LABELS)).toBe("in 2d");
 	});
 
 	it("speaks the caller's words for another language", () => {

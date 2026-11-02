@@ -50,4 +50,8 @@ export const tenantRewardsRoutes = {
 	get: "/tenants/:tenantSlug/rewards/:rewardId",
 	update: "/tenants/:tenantSlug/rewards/:rewardId",
 	publish: "/tenants/:tenantSlug/rewards/:rewardId/publish",
+	/** Who the reward is for (the customers it was given to). */
+	audience: "/tenants/:tenantSlug/rewards/:rewardId/audience",
+	/** The tenant's customers, to give a reward to. */
+	customers: "/tenants/:tenantSlug/rewards/customers",
 } satisfies Record<string, RouteTree>;

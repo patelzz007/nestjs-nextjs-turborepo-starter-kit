@@ -17,6 +17,8 @@ export const REWARD_ID_GENERATOR = Symbol("REWARD_ID_GENERATOR");
 
 /** Admin moderation of consumer rewards, across tenants. */
 export const REWARDS_ADMIN_REVIEW_OPERATION: SystemOperationName = "rewards.admin_review";
+/** A merchant reads its customers' names (masked emails) to give a reward to chosen ones. */
+export const REWARD_CUSTOMERS_READ_OPERATION: SystemOperationName = "rewards.customers.read";
 
 /** Published consumer rewards on the public marketplace. */
 export const MARKETPLACE_REWARDS_READ_OPERATION: SystemOperationName = "marketplace.published_rewards.read";

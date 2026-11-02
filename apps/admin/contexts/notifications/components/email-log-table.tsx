@@ -16,7 +16,7 @@ import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
 import { EMAIL_LOG_PAGE_SIZE_OPTIONS, EMAIL_LOG_URL_STATE, toEmailLogListQuery } from "@/contexts/notifications/url-state/email-log";
 import { useEmailLogLive } from "@/contexts/notifications/lib/email-log-live";
 import { LivePill } from "@/components/common/live-pill";
-import type { LiveState } from "@/contexts/notifications/lib/reconnecting-event-stream";
+import type { LiveState } from "@workspace/client/lib/features/live-updates/reconnecting-event-stream";
 import { formatDateTime } from "@/lib/format/dates";
 import { StatusBadge, type StatusTone } from "@workspace/ui/components/status-badge";
 import { Button } from "@workspace/ui/components/button";

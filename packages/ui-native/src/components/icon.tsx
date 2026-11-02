@@ -25,6 +25,8 @@ export type { LucideIcon };
 export const iconVariants = cva("shrink-0 items-center justify-center", {
 	variants: {
 		size: {
+			/** Glyphs inside a small control (a compact switch's thumb). */
+			xs: "size-3",
 			sm: "size-4",
 			md: "size-5",
 			lg: "size-6",
@@ -39,6 +41,7 @@ export type IconSize = NonNullable<VariantProps<typeof iconVariants>["size"]>;
 
 /** Side of each size step, in points — one scale for the whole app. */
 export const ICON_SIZES: Readonly<Record<IconSize, number>> = {
+	xs: 12,
 	sm: 16,
 	md: 20,
 	lg: 24,

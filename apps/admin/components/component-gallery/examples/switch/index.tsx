@@ -24,7 +24,7 @@ import { Switch14Example } from "@/components/component-gallery/examples/switch/
 export const SWITCH_EXAMPLES: readonly GalleryExample[] = [
 	{ id: "c-switch-1", label: "Basic", component: Switch1Example },
 	{ id: "c-switch-2", label: "With Description", component: Switch2Example },
-	{ id: "c-switch-3", label: "Disabled", component: Switch3Example },
+	{ id: "c-switch-3", label: "Off, Disabled and Locked", component: Switch3Example },
 	{ id: "c-switch-4", label: "Sizes", component: Switch4Example },
 	{ id: "c-switch-5", label: "Switch Group", component: Switch5Example },
 	{ id: "c-switch-6", label: "Card Separators", component: Switch6Example },

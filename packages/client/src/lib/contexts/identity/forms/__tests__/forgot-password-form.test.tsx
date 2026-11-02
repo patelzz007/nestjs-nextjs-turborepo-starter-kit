@@ -75,12 +75,13 @@ describe("ForgotPasswordForm", () => {
 	});
 
 	it("shows the API error and keeps the form when the request fails", async () => {
-		mocks.forgotPassword.mockRejectedValue(new ApiError({ message: "Too many requests. Try again later.", statusCode: 429 }));
+		mocks.forgotPassword.mockRejectedValue(new ApiError({ message: "Too many requests. Try again later.", statusCode: 429 }, { details: { retryAfterSeconds: 40 } }));
 		render(<ForgotPasswordForm />);
 
 		submitEmail("member@example.com");
 
-		expect(await screen.findByText("Too many requests. Try again later.")).toBeDefined();
+		// A 429 says how long to wait (ADR 071), from the API's `retryAfterSeconds`.
+		expect(await screen.findByText("Too many requests. Try again in 40 seconds.")).toBeDefined();
 		expect(screen.queryByText(SUCCESS_TEXT)).toBeNull();
 		await waitFor((): void => {
 			expect(screen.getByRole("button", { name: "Send reset link" })).toBeDefined();

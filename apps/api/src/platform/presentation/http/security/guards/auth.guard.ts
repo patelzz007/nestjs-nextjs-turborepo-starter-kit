@@ -15,6 +15,7 @@ import {
 	type AccessTokenVerifierPort,
 	type ImpersonationTokenCheckPort,
 } from "../../../../application/ports/access-token.port";
+import { OPTIONAL_AUTH_KEY } from "../decorators/optional-auth.decorator";
 import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
 import { resolveRequestClientType } from "../client-type";
 
@@ -86,9 +87,14 @@ export class AuthGuard implements CanActivate {
 	public async canActivate(context: ExecutionContext): Promise<boolean> {
 		const isPublic: boolean = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [context.getHandler(), context.getClass()]);
 
-		if (isPublic) return true;
-
 		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
+
+		if (isPublic) {
+			if (this.reflector.getAllAndOverride<boolean>(OPTIONAL_AUTH_KEY, [context.getHandler(), context.getClass()])) {
+				await this.recogniseOptionalCaller(request);
+			}
+			return true;
+		}
 
 		if (hasApiKeyAuthOnRequest(request)) {
 			return true;
@@ -107,7 +113,27 @@ export class AuthGuard implements CanActivate {
 		// Signature / expiry / claim-shape failures are all 401s from TokenService.
 		const payload: AccessTokenPayload = await this.tokenService.verifyAccessToken(token);
 		await this.assertTokenNotRevoked(payload);
+		this.bind(request, payload, bearer);
+		return true;
+	}
 
+	/** `@OptionalAuth()`: binds a valid session; anything else leaves the caller anonymous (never an error). */
+	private async recogniseOptionalCaller(request: FastifyRequest): Promise<void> {
+		const bearer: string | undefined = readBearerToken(request.headers.authorization);
+		const token: string | undefined = bearer ?? readAccessTokenCookie(request);
+		if (token === undefined || token.length === 0) {
+			return;
+		}
+		try {
+			const payload: AccessTokenPayload = await this.tokenService.verifyAccessToken(token);
+			await this.assertTokenNotRevoked(payload);
+			this.bind(request, payload, bearer);
+		} catch {
+			// Invalid, expired or revoked token, or revocation state unreadable: answer as anonymous.
+		}
+	}
+
+	private bind(request: FastifyRequest, payload: AccessTokenPayload, bearer: string | undefined): void {
 		request.user = payload;
 		this.requestContext.bindPrincipal({
 			userId: payload.sub,
@@ -117,7 +143,6 @@ export class AuthGuard implements CanActivate {
 			sessionId: payload.sid,
 			identity: { email: payload.email, fullName: payload.fullName },
 		});
-		return true;
 	}
 
 	/**

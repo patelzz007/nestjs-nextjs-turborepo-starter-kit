@@ -15,6 +15,11 @@ import { TenantTransactionService } from "../src/prisma/tenant-transaction.servi
 
 /** Brew & Bean KL owner (seeded). */
 const KL_OWNER_USER_ID = "019b76da-a800-763a-b64a-fd037629f93f";
+/**
+ * How long the first transaction holds the only connection: past Prisma's 2 s default `maxWait`, inside the
+ * pool's 5 s checkout bound (and Prisma's 5 s transaction timeout).
+ */
+const BUSY_POOL_HOLD_SECONDS = 3;
 
 const SessionRowSchema = z.object({
 	role: z.string(),
@@ -197,6 +202,27 @@ describe("TenantTransactionService session stamping (e2e)", () => {
 
 		expect(first.correlationId).toBe(opened);
 		expect(second.correlationId).toBe(opened);
+	});
+
+	it("waits for a busy pool as long as the pool's checkout allows, instead of failing at Prisma's 2 s default", async () => {
+		const config = getApiConfig();
+		// DB_POOL_MAX 2 leaves the request pool one connection, so the second transaction must wait for the first.
+		const single = new PrismaService(new TypedConfigService({ ...config, database: { ...config.database, poolMax: 2 } }));
+		single.onModuleInit();
+		await single.ensureConnected();
+		const one = new TenantTransactionService(single, new RequestContextService());
+		const scope = { context: userRlsContext(KL_OWNER_USER_ID, TENANT_SEED_IDS.klTenant, true), reason: null };
+		try {
+			const holder = one.withRlsContext(scope, async (tx): Promise<void> => {
+				// `$executeRaw`: pg_sleep returns void, which a query cannot read back.
+				await tx.$executeRaw`SELECT pg_sleep(${BUSY_POOL_HOLD_SECONDS})`;
+			});
+			const waiter = one.withRlsContext(scope, readSession);
+			await expect(holder).resolves.toBeUndefined();
+			await expect(waiter).resolves.toMatchObject({ tenantId: TENANT_SEED_IDS.klTenant });
+		} finally {
+			await single.onModuleDestroy();
+		}
 	});
 
 	it("DB-005: commit and rollback leave the pooled connection with no tenant and no visible tenant rows", async () => {

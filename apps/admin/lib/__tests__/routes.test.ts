@@ -7,6 +7,7 @@ describe("ROUTES", () => {
 	it("takes the paths the API emails from APP_LINKS, so the app and the emails cannot drift", () => {
 		expect(ROUTES.home).toBe(APP_LINKS.admin.home);
 		expect(ROUTES.users.mfaRecovery).toBe(APP_LINKS.admin.mfaRecoveryQueue);
+		expect(ROUTES.notifications).toBe(APP_LINKS.admin.notifications);
 		expect(ROUTES.auth.login).toBe(APP_LINKS.auth.login);
 		expect(ROUTES.auth.forgotPassword).toBe(APP_LINKS.auth.forgotPassword);
 		expect(ROUTES.auth.resetPassword).toBe(APP_LINKS.auth.resetPassword);

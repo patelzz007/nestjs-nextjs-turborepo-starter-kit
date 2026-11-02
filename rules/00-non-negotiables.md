@@ -813,3 +813,78 @@ Every promise is awaited, returned, or deliberately handled. A floating promise 
 export interface Clock { nowEpochMs(): number }
 export class SystemClock implements Clock { public nowEpochMs(): number { return Date.now(); } }
 ```
+
+## Root-cause-first engineering — applies to every change
+
+A visible symptom is evidence, not a diagnosis. The agent must correct the underlying defect at the layer that owns the violated invariant. A workaround that hides the symptom while leaving the defect reachable is not a completed fix.
+
+The following requirements apply to bugs, regressions, flaky tests, performance failures, security defects, data-integrity issues, build failures, and CI failures:
+
+1. Establish the observed behavior and the expected behavior from a reproducible case or the strongest available evidence.
+2. Trace the complete execution path and identify the violated invariant, incorrect assumption, missing boundary, or faulty state transition.
+3. Distinguish the root cause from contributing conditions, trigger conditions, and downstream symptoms.
+4. Choose the correction at the owning layer. Do not add compensating logic in a caller merely because it is the easiest place to make the symptom disappear.
+5. Add a regression test that fails for the original defect and passes with the correction. For nondeterministic defects, add the strongest deterministic test possible and document what remains unproven.
+6. Check adjacent consumers and failure modes for regressions.
+7. Run the required verification after the final edit and report exact results.
+
+A fix is not root-cause-complete merely because the original reproduction no longer fails. It must also preserve the relevant architecture, contracts, authorization, tenant isolation, data integrity, observability, and compatibility guarantees.
+
+If evidence is insufficient to identify the root cause, do not present a speculative workaround as the fix. Record what was observed, what was inspected, the competing hypotheses, and the next discriminating experiment. Ask for the missing information or continue investigation. A temporary mitigation may be proposed only when the risk justifies it, its temporary status and expiry/owner are explicit, and a permanent correction is tracked. A mitigation must not weaken security or data integrity.
+
+## Genericity and extensibility — reusable without becoming abstract for its own sake
+
+Shared and foundational code must be generic with respect to the consumers it is intended to serve, and extensible at real, evidenced variation boundaries. Generic does not mean universal, and extensible does not mean building a plugin framework for hypothetical future requirements.
+
+### Genericity requirements
+
+- A shared package must not import application-specific implementation details or encode one product's business vocabulary as infrastructure policy.
+- Shared APIs must express their responsibility through explicit, typed contracts. Inputs, outputs, errors, lifecycle, ownership, and supported guarantees must be clear.
+- Do not hardcode assumptions such as exactly one tenant, one organization, one role, one provider, one locale, one workflow state, or one consumer unless the authoritative architecture explicitly defines that constraint.
+- Keep domain policy in the owning bounded context. Shared infrastructure may provide mechanisms and extension contracts; it must not silently decide product-specific policy.
+- Reuse must preserve type information and validation. Do not widen types, use casts, or weaken Zod schemas to make unrelated consumers fit one abstraction.
+- Prefer composition and narrow interfaces where they create a real seam. Keep implementations replaceable where provider or policy variation is a known requirement.
+
+### Extensibility requirements
+
+- Identify the actual axis of variation before introducing an extension point: provider, policy, transport, persistence adapter, workflow, tenant mode, or consumer-specific presentation.
+- Make supported variation explicit through existing configuration, typed contracts, dependency injection, composition, or strategy selection consistent with this repository's patterns.
+- Adding a supported variant should not require editing unrelated consumers or duplicating the entire feature.
+- Extension points must preserve validation, authorization, audit, tenant isolation, transaction semantics, idempotency, and observability. An extension is not permitted to bypass a platform invariant.
+- Public contracts must consider current consumers, compatibility, versioning, defaults, and failure behavior. Do not silently change the meaning of an existing option.
+- Avoid closed assumptions hidden in loops, fixed array positions, fixed role lists, provider-specific branches scattered across callers, and single-tenant shortcuts. Use explicit domain models and allowlists where appropriate.
+
+### The abstraction threshold
+
+Before creating a reusable abstraction, answer all of these questions in the implementation plan or review notes:
+
+1. Which concrete callers exist now, or which approved near-term requirement needs the abstraction?
+2. What behavior is genuinely shared, and what behavior remains caller-owned?
+3. What is the smallest stable contract that represents the shared behavior?
+4. Which concrete variations must the contract support today?
+5. Which repository document establishes the correct layer and dependency direction?
+6. Does the abstraction reduce total complexity compared with duplication?
+7. Can it be tested independently without mocking away its essential behavior?
+
+If those answers are not concrete, keep the code local. Two short, clear implementations are preferable to a speculative universal helper. Do not create a generic factory, plugin registry, base class, framework, or configuration DSL for imagined future consumers.
+
+### Non-compliant and compliant design signals
+
+```text
+❌ A shared package imports apps/api/src/orders/OrderPolicy.
+✅ The owning context defines a narrow contract; infrastructure depends on the contract in the permitted direction.
+
+❌ A generic notification service contains `if (tenantName === "Cake Shop A")`.
+✅ Product-specific notification policy is injected or composed at the application boundary.
+
+❌ A provider abstraction exposes dozens of lowest-common-denominator methods and leaks provider SDK types.
+✅ A narrow application contract expresses the capabilities the use case needs; each adapter translates provider details.
+
+❌ A one-caller helper is wrapped in BaseManager<TOptions, TResult, TContext> “for future use”.
+✅ Keep the implementation local until a second real use case demonstrates a stable common contract.
+
+❌ A new tenant mode skips authorization because the old single-tenant path did not need that branch.
+✅ Both modes preserve the same authorization invariants; only tenant-context resolution/isolation strategy varies.
+```
+
+These requirements complement, rather than override, the repository's existing DDD, CQRS, tenancy, SOLID, and no-speculative-abstraction decisions. Where a generated rulebook conflicts with a hand-written rule, ADR, or architecture document, the existing precedence rules remain in force.

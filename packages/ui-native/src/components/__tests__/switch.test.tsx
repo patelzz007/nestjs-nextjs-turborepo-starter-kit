@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
 import type { ViewInstance } from "react-native";
 
-import { Switch } from "../switch";
+import { Switch, switchThumbVariants, switchTrackVariants } from "../switch";
 
 describe("Switch", () => {
 	it("is a controlled switch named by its label", async () => {
@@ -56,7 +56,7 @@ describe("Switch", () => {
 	it("has a card variant and a compact size", async () => {
 		await render(<Switch label="Notifications" checked onChange={jest.fn()} variant="card" size="sm" />);
 		expect(screen.getByRole("switch")).toHaveProp("className", expect.stringContaining("border-border"));
-		expect(JSON.stringify(screen.toJSON())).toContain("w-9");
+		expect(JSON.stringify(screen.toJSON())).toContain("w-10");
 	});
 
 	it("forwards its ref, merges the caller's className last and reports focus and blur", async () => {
@@ -73,5 +73,45 @@ describe("Switch", () => {
 		await fireEvent(control, "blur");
 		expect(onFocus).toHaveBeenCalledTimes(1);
 		expect(onBlur).toHaveBeenCalledTimes(1);
+	});
+
+	it("draws on, off and disabled differently, so off never looks unavailable", () => {
+		expect(switchTrackVariants({ checked: true })).toContain("bg-primary");
+		expect(switchTrackVariants({ checked: false })).toContain("border-muted-foreground bg-background");
+		expect(switchTrackVariants({ checked: false, state: "disabled" })).toContain("border-dashed");
+		expect(switchTrackVariants({ checked: true, state: "disabled" })).toContain("border-dashed");
+		expect(switchTrackVariants({ checked: false })).not.toContain("border-dashed");
+		expect(switchThumbVariants({ checked: true })).toContain("bg-primary-foreground");
+		expect(switchThumbVariants({ checked: false })).toContain("bg-muted-foreground");
+		expect(switchThumbVariants({ checked: false, state: "disabled" })).toContain("bg-muted-foreground/40");
+	});
+
+	it("shows a check while on and nothing while off", async () => {
+		const { rerender } = await render(<Switch label="Email" checked onChange={jest.fn()} />);
+		expect(screen.getByTestId("switch-check", { includeHiddenElements: true })).toBeOnTheScreen();
+
+		await rerender(<Switch label="Email" checked={false} onChange={jest.fn()} />);
+		expect(screen.queryByTestId("switch-check", { includeHiddenElements: true })).toBeNull();
+	});
+
+	it("keeps showing on or off while disabled", async () => {
+		await render(<Switch label="Phone" checked onChange={jest.fn()} disabled />);
+		expect(screen.getByRole("switch")).toBeChecked();
+		expect(screen.getByTestId("switch-check", { includeHiddenElements: true })).toBeOnTheScreen();
+		expect(JSON.stringify(screen.toJSON())).toContain("border-dashed");
+	});
+
+	it("shows a lock and takes no presses while locked", async () => {
+		const onChange = jest.fn();
+		await render(<Switch label="Security · Email" description="Always on" checked onChange={onChange} locked />);
+
+		const control = screen.getByRole("switch");
+		expect(control).toBeChecked();
+		expect(control).toBeDisabled();
+		expect(screen.getByTestId("switch-lock", { includeHiddenElements: true })).toBeOnTheScreen();
+		expect(screen.queryByTestId("switch-check", { includeHiddenElements: true })).toBeNull();
+		expect(JSON.stringify(screen.toJSON())).not.toContain("border-dashed");
+		await fireEvent.press(control);
+		expect(onChange).not.toHaveBeenCalled();
 	});
 });

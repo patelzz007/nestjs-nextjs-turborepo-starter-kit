@@ -180,6 +180,8 @@ model User {
   emailVerifiedAt             BigInt?
   phone                       String?                   @db.VarChar(20)
   phoneVerifiedAt             BigInt?
+  /// The language notifications are rendered in (ADR 070); `en` is the only shipped locale.
+  locale                      String                    @default("en") @db.VarChar(10)
   lastLoginAt                 BigInt?
   pendingAttributionToken     String?                   @db.VarChar(64)
   pendingAttributionExpiresAt BigInt?
@@ -710,6 +712,11 @@ enum PermissionResource {
   SHARE
   CLAIM
   TERMINAL
+  NOTIFICATION
+  BROADCAST
+  BROADCAST_REPORT
+  RATE_LIMIT
+  CACHE
 }
 
 enum PermissionScope {
@@ -1217,16 +1224,18 @@ model Tenant {
   deletedBy String? @db.VarChar(128)
   // ── end BaseModel ──
 
-  slug                String               @unique @db.VarChar(64)
-  displayName         String               @db.VarChar(200)
-  lifecycleState      TenantLifecycleState @default(PROVISIONING)
+  slug                 String               @unique @db.VarChar(64)
+  displayName          String               @db.VarChar(200)
+  lifecycleState       TenantLifecycleState @default(PROVISIONING)
   /// IANA time zone the merchant operates in (e.g. Asia/Kuala_Lumpur): merchant analytics bucket weeks
   /// at Monday 00:00 in this zone. Validated by `IanaTimeZoneSchema`; the default is
   /// `PLATFORM_DISPLAY_REGION.timeZone` (packages/shared) and must stay equal to it.
-  timeZone            String               @default("Asia/Kuala_Lumpur") @db.VarChar(64)
+  timeZone             String               @default("Asia/Kuala_Lumpur") @db.VarChar(64)
   /// The Load Test tenant (ADR 068): every load test acts inside it; its data is purged by hard delete.
-  isLoadTest          Boolean              @default(false)
-  deletionGraceEndsAt BigInt?
+  isLoadTest           Boolean              @default(false)
+  deletionGraceEndsAt  BigInt?
+  /// When platform staff turned this tenant's broadcasting off (three upheld strikes in 90 days, ADR 073); null while allowed.
+  broadcastsDisabledAt BigInt?
 
   slugHistory              TenantSlugHistory[]
   locations                Location[]
@@ -1254,6 +1263,7 @@ model Tenant {
   membershipLocationScopes MembershipLocationScope[]
   invitationLocationScopes TenantInvitationLocationScope[]
   rewardLocationScopes     RewardLocationScope[]
+  rewardAudienceMembers    RewardAudienceMember[]
   suspensionAppeals        TenantSuspensionAppeal[]
   customerBans             TenantCustomerBan[]
 
@@ -1973,6 +1983,12 @@ enum RewardKind {
   REFERRER
 }
 
+/// Who may see and claim a reward: everyone, or only the tenant's customers it was given to.
+enum RewardAudienceType {
+  EVERYONE
+  SELECTED_CUSTOMERS
+}
+
 /// RLS: tenant members for writes; public read for published consumer rewards.
 /// @extends BaseModel
 model Reward {
@@ -1988,13 +2004,18 @@ model Reward {
   // ── end BaseModel ──
 
   tenantId               String
-  title                  String            @db.VarChar(200)
-  description            String            @db.Text
+  title                  String             @db.VarChar(200)
+  description            String             @db.Text
   rewardType             RewardType
-  rewardValue            Int               @default(0)
-  termsConditions        String?           @db.Text
-  rewardKind             RewardKind        @default(CONSUMER)
-  category               String            @db.VarChar(100)
+  rewardValue            Int                @default(0)
+  /// FREE_ITEM / BOGO: the item given, as the receipt names it; null for every other type (ADR 074).
+  /// Set together with `freeItemSku`; the Reward aggregate enforces both-or-neither by type.
+  freeItemName           String?            @db.VarChar(200)
+  /// FREE_ITEM / BOGO: the merchant's product code for the item, matched by a POS; null otherwise (ADR 074).
+  freeItemSku            String?            @db.VarChar(64)
+  termsConditions        String?            @db.Text
+  rewardKind             RewardKind         @default(CONSUMER)
+  category               String             @db.VarChar(100)
   /// Reward rules other than the minimum spend (e.g. `maxUsePerUser`); validated by `RewardRulesSchema`.
   rules                  Json?
   /// Minimum bill, in integer minor units (sen), for redeeming this reward; null = no minimum.
@@ -2003,33 +2024,36 @@ model Reward {
   minSpendMinor          Int?
   quantityTotal          Int
   quantityRemaining      Int
-  quantityReserved       Int               @default(0)
+  quantityReserved       Int                @default(0)
   startDate              BigInt?
   expiryDate             BigInt
-  status                 RewardStatus      @default(DRAFT)
-  claimCount             Int               @default(0)
-  redemptionCount        Int               @default(0)
+  status                 RewardStatus       @default(DRAFT)
+  claimCount             Int                @default(0)
+  redemptionCount        Int                @default(0)
   metadata               Json?
-  referralsEnabled       Boolean           @default(true)
+  referralsEnabled       Boolean            @default(true)
   referralPoolTotal      Int?
   referralPoolRemaining  Int?
   referrerRewardId       String?
   parentConsumerRewardId String?
-  locationScopeType      LocationScopeType @default(ALL_LOCATIONS)
+  locationScopeType      LocationScopeType  @default(ALL_LOCATIONS)
+  /// SELECTED_CUSTOMERS: only the customers in `audienceMembers` see and claim it (never with referrals).
+  audienceType           RewardAudienceType @default(EVERYONE)
   submittedForReviewAt   BigInt?
   autoPublishAt          BigInt?
   reviewedAt             BigInt?
   reviewedByUserId       String?
-  rejectionReason        String?           @db.Text
+  rejectionReason        String?            @db.Text
 
-  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  referrerReward       Reward?               @relation("ConsumerReferrerReward", fields: [tenantId, referrerRewardId], references: [tenantId, id], onDelete: Restrict)
-  consumerRewards      Reward[]              @relation("ConsumerReferrerReward")
-  parentConsumerReward Reward?               @relation("ReferrerCloneParent", fields: [tenantId, parentConsumerRewardId], references: [tenantId, id], onDelete: Restrict)
-  referrerClones       Reward[]              @relation("ReferrerCloneParent")
+  tenant               Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  referrerReward       Reward?                @relation("ConsumerReferrerReward", fields: [tenantId, referrerRewardId], references: [tenantId, id], onDelete: Restrict)
+  consumerRewards      Reward[]               @relation("ConsumerReferrerReward")
+  parentConsumerReward Reward?                @relation("ReferrerCloneParent", fields: [tenantId, parentConsumerRewardId], references: [tenantId, id], onDelete: Restrict)
+  referrerClones       Reward[]               @relation("ReferrerCloneParent")
   claims               RewardClaim[]
   referrals            RewardReferral[]
   locationScopes       RewardLocationScope[]
+  audienceMembers      RewardAudienceMember[]
   /// The reward's images in display order (1–10 live rows; position 0 is the cover).
   images               RewardImage[]
 
@@ -2105,6 +2129,33 @@ model RewardLocationScope {
   @@unique([rewardId, locationId])
   @@index([tenantId])
   @@index([locationId])
+}
+
+/// RLS: tenant members — the customers a reward is given to (its audience is SELECTED_CUSTOMERS); a customer's own rows only through `marketplace.*` and `claims.*` operations.
+/// @extends BaseModel
+model RewardAudienceMember {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  tenantId String
+  rewardId String
+  /// One of the tenant's customers (a `TenantCustomer` link when they were chosen).
+  userId   String
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reward Reward @relation(fields: [tenantId, rewardId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([rewardId, userId])
+  @@index([tenantId])
+  @@index([userId])
 }
 
 /// RLS: app_owns(userId).
@@ -4488,4 +4539,535 @@ model LoadTestStepStat {
   p99Ms    Float?
 
   @@unique([runId, step])
+}
+
+// ============================================================================
+// Notifications (ADR 070), broadcasts and tenant customers (ADR 073), rate-limit overrides (ADR 071)
+// ============================================================================
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  PUSH
+  SMS
+}
+
+enum NotificationCategory {
+  SECURITY
+  ACCOUNT
+  TRANSACTIONAL
+  PRODUCT
+  MARKETING
+  OPERATIONS
+}
+
+enum NotificationSurface {
+  CUSTOMER
+  MERCHANT
+  ADMIN
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  HELD
+  QUEUED
+  SENDING
+  SENT
+  DELIVERED
+  FAILED
+  SUPPRESSED
+}
+
+enum NotificationDigestFrequency {
+  OFF
+  DAILY
+  WEEKLY
+}
+
+enum MarketingConsentScope {
+  PLATFORM
+  TENANT
+}
+
+enum MarketingConsentSource {
+  SIGNUP
+  FIRST_CLAIM
+  SETTINGS
+  UNSUBSCRIBE_LINK
+  LEAVE_TENANT
+}
+
+enum NotificationSuppressionCause {
+  HARD_BOUNCE
+  COMPLAINT
+  SMS_STOP
+  INVALID_NUMBER
+  UNSUBSCRIBED
+}
+
+enum PushPlatform {
+  IOS
+  ANDROID
+}
+
+enum BroadcastStatus {
+  DRAFT
+  PENDING_APPROVAL
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELLED
+  PAUSED
+  FAILED
+}
+
+enum BroadcastSendMode {
+  INSTANT
+  RECIPIENT_LOCAL_TIME
+}
+
+enum BroadcastReportReason {
+  SPAM
+  OFFENSIVE
+  SCAM
+}
+
+enum BroadcastReportStatus {
+  OPEN
+  DISMISSED
+  UPHELD
+}
+
+/// RLS: bypass only — written and read under `notifications.*` system operations; the recipient reads
+/// their own copy through `InAppNotification`.
+/// @extends BaseModel
+model Notification {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// The user it is for; null for a contact point (an address with no account).
+  recipientUserId String?
+  /// The user id, or the SHA-256 of a contact point's normalized address: one notification per recipient, type and dedupe key.
+  recipientKey    String               @db.VarChar(128)
+  /// A contact point's email address or E.164 phone number; null for a user (resolved at send time).
+  contactAddress  String?              @db.VarChar(320)
+  tenantId        String?
+  typeKey         String               @db.VarChar(96)
+  category        NotificationCategory
+  /// The producer's retry key: a repeated `notify()` with the same key is the same notification.
+  dedupeKey       String               @db.VarChar(160)
+  /// The producer's data, checked against the type's schema; emptied (`{}`) once a sensitive notification is delivered.
+  payload         Json
+  locale          String               @db.VarChar(10)
+  /// The broadcast it was sent for (ADR 073), if any.
+  broadcastId     String?
+  /// The grouping key it was folded under, if its type groups.
+  groupKey        String?              @db.VarChar(160)
+  /// When the fan-out turned it into deliveries; null while it waits for its outbox event.
+  fannedOutAt     BigInt?
+  /// Not delivered before this instant: a broadcast sent at each recipient's own local time (ADR 073).
+  notBefore       BigInt?
+
+  deliveries NotificationDelivery[]
+
+  @@unique([recipientKey, typeKey, dedupeKey])
+  @@index([recipientUserId, createdAt(sort: Desc)])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([broadcastId])
+  @@index([fannedOutAt])
+}
+
+/// RLS: bypass only — the delivery log (platform staff, and a tenant's admins through `notifications.*` reads).
+/// @extends BaseModel
+model NotificationDelivery {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  notificationId     String
+  recipientUserId    String?
+  tenantId           String?
+  typeKey            String                     @db.VarChar(96)
+  channel            NotificationChannel
+  status             NotificationDeliveryStatus @default(PENDING)
+  /// Why it was suppressed or held: preference, quiet-hours, digest, grouping, cap, no-device, unverified-phone, suppressed-destination, provider-disabled, recipient-deleted, tenant-inactive, no-consent.
+  reason             String?                    @db.VarChar(48)
+  /// When a held delivery is released (quiet hours ending, the digest hour).
+  heldUntil          BigInt?
+  attempts           Int                        @default(0)
+  /// `+60••••6789`, `j•••@example.com`, a device label — never the full destination.
+  maskedDestination  String?                    @db.VarChar(160)
+  pushDeviceId       String?
+  providerMessageId  String?                    @db.VarChar(160)
+  lastError          String?                    @db.Text
+  sentAt             BigInt?
+  deliveredAt        BigInt?
+  /// When the push was tapped (push only; email opens are never tracked).
+  openedAt           BigInt?
+  /// The fallback delivery this one was replaced by, when it could not be made.
+  fallbackDeliveryId String?
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, channel, pushDeviceId])
+  @@index([status, heldUntil])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([recipientUserId, createdAt(sort: Desc)])
+  @@index([channel, status, createdAt(sort: Desc)])
+  @@index([providerMessageId])
+}
+
+/// RLS: app_owns(userId) — a person's inbox (replaces `RewardNotification`).
+/// @extends BaseModel
+model InAppNotification {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  notificationId String?
+  userId         String
+  tenantId       String?
+  surface        NotificationSurface
+  typeKey        String               @db.VarChar(96)
+  category       NotificationCategory
+  title          String               @db.VarChar(200)
+  body           String               @db.Text
+  /// A broadcast's rich body (the validated ProseMirror JSON of ADR 073); null for a catalog notification.
+  richBody       Json?
+  /// Where opening it leads (an app path or an https link).
+  link           String?              @db.VarChar(500)
+  icon           String?              @db.VarChar(48)
+  /// The tenant name a broadcast is sent as; null for the platform.
+  senderName     String?              @db.VarChar(200)
+  senderLogoUrl  String?              @db.VarChar(500)
+  groupKey       String?              @db.VarChar(160)
+  /// How many notifications are folded into this row (1 when not grouped).
+  groupCount     Int                  @default(1)
+  broadcastId    String?
+  readAt         BigInt?
+  archivedAt     BigInt?
+
+  @@index([userId, surface, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([userId, surface, readAt])
+  @@index([userId, groupKey])
+  @@index([createdAt])
+}
+
+/// RLS: app_owns(userId).
+/// @extends BaseModel
+model NotificationPreference {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  userId    String
+  /// `platform`, or the tenant id of a per-tenant override (a string, so the unique key has no nulls).
+  tenantKey String               @db.VarChar(64)
+  category  NotificationCategory
+  channel   NotificationChannel
+  enabled   Boolean
+
+  @@unique([userId, tenantKey, category, channel])
+}
+
+/// RLS: app_owns(userId) — quiet hours, the email digest and the time zone they are read in.
+/// @extends BaseModel
+model NotificationSchedule {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  userId            String                      @unique
+  quietHoursEnabled Boolean                     @default(false)
+  /// Minutes after local midnight.
+  quietStartMinute  Int                         @default(1320)
+  quietEndMinute    Int                         @default(420)
+  timeZone          String                      @db.VarChar(64)
+  digestFrequency   NotificationDigestFrequency @default(OFF)
+}
+
+/// RLS: app_owns(userId) for reads and inserts; append-only (UPDATE/DELETE withheld) — proof of consent.
+/// @extends BaseModel
+model MarketingConsent {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  userId         String
+  scope          MarketingConsentScope
+  /// The tenant consented to; null for the platform's own marketing.
+  tenantId       String?
+  granted        Boolean
+  source         MarketingConsentSource
+  /// The consent wording the person saw, by version.
+  wordingVersion String                 @db.VarChar(32)
+  ip             String?                @db.VarChar(64)
+  userAgent      String?                @db.VarChar(500)
+  occurredAt     BigInt
+
+  @@index([userId, scope, tenantId, occurredAt(sort: Desc)])
+  @@index([tenantId, occurredAt(sort: Desc)])
+}
+
+/// RLS: bypass only — destinations nothing may be sent to on a channel until verified again.
+/// @extends BaseModel
+model NotificationSuppression {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  channel           NotificationChannel
+  /// SHA-256 of the normalized email address or E.164 phone number.
+  destinationHash   String                       @db.VarChar(64)
+  maskedDestination String                       @db.VarChar(160)
+  cause             NotificationSuppressionCause
+  liftedAt          BigInt?
+  liftedBy          String?                      @db.VarChar(128)
+  liftReason        String?                      @db.VarChar(500)
+
+  @@unique([channel, destinationHash], where: { liftedAt: null, isDeleted: false })
+  @@index([destinationHash])
+}
+
+/// RLS: app_owns(userId) — one installed app that receives push for the person signed in to it.
+/// @extends BaseModel
+model PushDevice {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  userId          String
+  /// The device session (refresh token) it is bound to: signing out revokes it.
+  deviceSessionId String
+  platform        PushPlatform
+  surface         NotificationSurface
+  /// The native FCM/APNs token, encrypted at rest.
+  tokenCiphertext String              @db.Text
+  /// SHA-256 of the token, for lookup and uniqueness.
+  tokenHash       String              @db.VarChar(64)
+  deviceLabel     String?             @db.VarChar(120)
+  appVersion      String?             @db.VarChar(32)
+  lastSeenAt      BigInt
+  revokedAt       BigInt?
+  revokedReason   String?             @db.VarChar(48)
+
+  @@unique([tokenHash], where: { revokedAt: null, isDeleted: false })
+  @@index([userId, revokedAt])
+  @@index([deviceSessionId])
+}
+
+/// RLS: the user reads their own links; the tenant's members read their tenant's (ADR 073).
+/// @extends BaseModel
+model TenantCustomer {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  tenantId       String
+  userId         String
+  firstClaimedAt BigInt
+  lastClaimedAt  BigInt
+  claimCount     Int     @default(1)
+  lastRedeemedAt BigInt?
+  /// When the customer chose to stop hearing from the tenant; cleared by their next claim.
+  leftAt         BigInt?
+
+  @@unique([tenantId, userId])
+  @@index([tenantId, lastClaimedAt(sort: Desc)])
+  @@index([userId])
+}
+
+/// RLS: the tenant's members read their tenant's broadcasts; platform broadcasts (tenantId null) only through `notifications.*` operations.
+/// @extends BaseModel
+model Broadcast {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  /// The sending tenant; null for a platform broadcast.
+  tenantId         String?
+  authorUserId     String
+  approverUserId   String?
+  status           BroadcastStatus       @default(DRAFT)
+  category         NotificationCategory
+  title            String                @db.VarChar(200)
+  /// The validated ProseMirror JSON body (ADR 073).
+  body             Json
+  /// The audience filters, as validated by the shared contract.
+  audienceFilter   Json
+  /// The channels it may use: a subset of in-app, email and push.
+  channels         NotificationChannel[]
+  sendMode         BroadcastSendMode     @default(INSTANT)
+  /// The instant to send at (INSTANT), or null to send now.
+  sendAt           BigInt?
+  /// RECIPIENT_LOCAL_TIME: the wall-clock send time in each recipient's own zone, written as if it were UTC (a floating time).
+  localSendAt      BigInt?
+  /// When sending may begin (set on scheduling): `sendAt`, or early enough for UTC+14 to reach `localSendAt`.
+  startsAt         BigInt?
+  /// The ISO week (`YYYY-Www`) its sending started in, counted against the weekly limit.
+  sendingWeek      String?               @db.VarChar(8)
+  audienceCount    Int?
+  sendingStartedAt BigInt?
+  completedAt      BigInt?
+  cancelledAt      BigInt?
+  pausedAt         BigInt?
+  pauseReason      String?               @db.VarChar(200)
+  approvedAt       BigInt?
+
+  reports BroadcastReport[]
+
+  @@index([tenantId, status, createdAt(sort: Desc)])
+  @@index([status, startsAt])
+  @@index([tenantId, sendingWeek])
+}
+
+/// RLS: the reporter writes their own report; review through `notifications.*` operations.
+/// @extends BaseModel
+model BroadcastReport {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  broadcastId    String
+  tenantId       String?
+  reporterUserId String
+  reason         BroadcastReportReason
+  note           String?               @db.VarChar(500)
+  status         BroadcastReportStatus @default(OPEN)
+  reviewedBy     String?               @db.VarChar(128)
+  reviewedAt     BigInt?
+
+  broadcast Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+
+  @@unique([broadcastId, reporterUserId])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([tenantId, createdAt(sort: Desc)])
+}
+
+/// RLS: bypass only — an upheld report against a tenant's broadcast; three in 90 days turn broadcasting off.
+/// @extends BaseModel
+model TenantBroadcastStrike {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  tenantId    String
+  broadcastId String
+  issuedBy    String @db.VarChar(128)
+  issuedAt    BigInt
+
+  @@unique([tenantId, broadcastId])
+  @@index([tenantId, issuedAt(sort: Desc)])
+}
+
+/// RLS: bypass only — platform staff raise or lower one rate-limit policy for one tenant (ADR 071).
+/// @extends BaseModel
+model TenantRateLimitOverride {
+  // ── BaseModel: managed by `pnpm db:schema`, do not edit ──
+  id        String  @id @default(uuid(7))
+  createdAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  createdBy String? @db.VarChar(128)
+  updatedAt BigInt  @default(dbgenerated("((EXTRACT(epoch FROM now()) * (1000)::numeric))::bigint"))
+  updatedBy String? @db.VarChar(128)
+  isDeleted Boolean @default(false)
+  deletedAt BigInt?
+  deletedBy String? @db.VarChar(128)
+  // ── end BaseModel ──
+
+  tenantId    String
+  policyName  String @db.VarChar(64)
+  /// At most `limit` within `windowMs`, refilling evenly (GCRA): 50/s burst 200 = 200 per 4 s; 5 a week = 5 per 7 days.
+  limit       Int
+  windowMs    BigInt
+  reason      String @db.VarChar(500)
+  expiresAt   BigInt
+  setByUserId String
+
+  @@unique([tenantId, policyName], where: { isDeleted: false })
+  @@index([expiresAt])
 }

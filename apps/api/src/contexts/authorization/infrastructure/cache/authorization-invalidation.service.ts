@@ -91,7 +91,7 @@ export class AuthorizationInvalidationService implements AuthorizationCacheInval
 		@Inject(REDIS_PUBLISHER) private readonly publisher: Redis | null,
 		@Inject(REDIS_SUBSCRIBER) private readonly subscriber: Redis | null,
 	) {
-		this.isDistributed = config.useRedisAuthorizationCache && publisher !== null && subscriber !== null;
+		this.isDistributed = config.broadcastsCacheInvalidations && publisher !== null && subscriber !== null;
 		this.channel = config.redisNamespace.channel(AUTHORIZATION_INVALIDATION_CHANNEL);
 	}
 

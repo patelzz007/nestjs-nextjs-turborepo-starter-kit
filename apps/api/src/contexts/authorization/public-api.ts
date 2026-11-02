@@ -41,7 +41,14 @@ export { AuthorizationErrorCodeSchema, type AuthorizationErrorCode, AccessDenied
 export { AuthorizationException } from "./presentation/http/authorization.exception";
 
 // ── Names other contexts and the security kit share ─────────────────────────
-export { ADMIN_ROLE_NAME, DEFAULT_CONSUMER_ROLE_NAME, LOCATION_MANAGER_ROLE_NAME, LOCATION_STAFF_ROLE_NAME, SUPER_ADMIN_ROLE_NAME } from "./domain/rbac-catalog";
+export {
+	ADMIN_PANEL_ROLE_NAMES,
+	ADMIN_ROLE_NAME,
+	DEFAULT_CONSUMER_ROLE_NAME,
+	LOCATION_MANAGER_ROLE_NAME,
+	LOCATION_STAFF_ROLE_NAME,
+	SUPER_ADMIN_ROLE_NAME,
+} from "./domain/rbac-catalog";
 
 // ── The Nest module ─────────────────────────────────────────────────────────
 export { AuthorizationModule } from "./authorization.module";

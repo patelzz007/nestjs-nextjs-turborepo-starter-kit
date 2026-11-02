@@ -17,7 +17,10 @@
 		"/dashboard/wallet": 567296,
 		"/dashboard/wallet/[claimId]": 565248,
 		"/hello": 475136,
-		"/rewards/[rewardId]": 527360
+		"/rewards/[rewardId]": 527360,
+		"/dashboard/notifications": 531456,
+		"/dashboard/notifications/settings": 536576,
+		"/unsubscribe": 436224
 	},
 	"admin": {
 		"/": 745472,
@@ -49,7 +52,7 @@
 		"/components/[slug]": 923648,
 		"/components/kanban-board": 661504,
 		"/components/kanban-board/tasks/[id]": 634880,
-		"/components/kanban-board/tasks/[id]/edit": 640000,
+		"/components/kanban-board/tasks/[id]/edit": 708608,
 		"/emails": 581632,
 		"/emails/log": 656384,
 		"/emails/templates": 587776,
@@ -75,7 +78,15 @@
 		"/operations/load-tests/[id]": 709632,
 		"/operations/load-tests/compare": 709632,
 		"/operations/servers": 721920,
-		"/operations/servers/[id]": 731136
+		"/operations/servers/[id]": 731136,
+		"/emails/broadcasts": 555008,
+		"/emails/broadcasts/[id]": 790528,
+		"/emails/broadcasts/[id]/edit": 790528,
+		"/emails/broadcasts/new": 790528,
+		"/notifications": 566272,
+		"/notifications/settings": 569344,
+		"/operations/cache": 540672,
+		"/operations/rate-limits": 589824
 	},
 	"merchant": {
 		"/": 528384,
@@ -112,7 +123,14 @@
 		"/t/[tenantSlug]/settings/verification": 599040,
 		"/t/[tenantSlug]/stores": 598016,
 		"/t/[tenantSlug]/terminals": 637952,
-		"/team-invite": 543744
+		"/team-invite": 543744,
+		"/notifications": 536576,
+		"/t/[tenantSlug]/broadcasts": 607232,
+		"/t/[tenantSlug]/broadcasts/[broadcastId]": 802816,
+		"/t/[tenantSlug]/broadcasts/[broadcastId]/edit": 792576,
+		"/t/[tenantSlug]/broadcasts/new": 792576,
+		"/t/[tenantSlug]/notifications": 618496,
+		"/t/[tenantSlug]/notifications/settings": 611328
 	},
 	"mobile": {
 		"ios": 7902208,

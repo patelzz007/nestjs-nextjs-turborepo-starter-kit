@@ -33,6 +33,12 @@ export const operationsRoutes = {
 	abortLoadTest: "/admin/operations/load-tests/:runId/abort",
 	loadTestCaps: "/admin/operations/load-tests/caps",
 	purgeLoadTestData: "/admin/operations/load-tests/data",
+	rateLimits: "/admin/operations/rate-limits",
+	rateLimitOverrides: "/admin/operations/rate-limits/overrides",
+	rateLimitOverride: "/admin/operations/rate-limits/overrides/:overrideId",
+	liftRateLimitPenalty: "/admin/operations/rate-limits/penalties/lift",
+	cache: "/admin/operations/cache",
+	flushCache: "/admin/operations/cache/flush",
 	/** Where a server agent reports — authenticated by the server's own token, not a session. */
 	agentReport: "/operations/agent/report",
 } satisfies Record<string, RouteTree>;

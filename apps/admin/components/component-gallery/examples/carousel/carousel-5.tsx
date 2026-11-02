@@ -13,24 +13,30 @@ const PHOTO_WIDTH_PX = 800;
 const PHOTO_HEIGHT_PX = 800;
 /** How long each slide stays before the carousel advances. */
 export const CAROUSEL_AUTOPLAY_DELAY_MS = 2000;
-/** Where autoplay wraps back to after the last slide. */
-const FIRST_SLIDE_INDEX = 0;
+type CarouselOptions = NonNullable<React.ComponentProps<typeof Carousel>["opts"]>;
+
+/** It loops, so autoplay always steps forward: after the last slide the first slides in from the right. */
+export const CAROUSEL_OPTIONS: CarouselOptions = { loop: true };
+
+/** What autoplay needs of the carousel: step forward, and hear the person grab it (Embla's api is one). */
+export interface CarouselStepper {
+	scrollNext(): void;
+	on(event: "pointerDown", callback: () => void): void;
+	off(event: "pointerDown", callback: () => void): void;
+}
 const SLIDES = carouselSampleSlides(SLIDE_COUNT);
 
 /**
- * Advances `api` every `delayMs`, wrapping to the first slide after the last,
- * and stops for good once the person drags the carousel — the same contract
- * as Embla's Autoplay plugin (`stopOnInteraction`), built on the kit's `setApi`.
+ * Advances `api` every `delayMs` — on a looping carousel, the first slide comes
+ * after the last, sliding the same way — and stops for good once the person drags
+ * the carousel: the same contract as Embla's Autoplay plugin (`stopOnInteraction`),
+ * built on the kit's `setApi`.
  */
-function useCarouselAutoplay(api: CarouselApi, delayMs: number): void {
+export function useCarouselAutoplay(api: CarouselStepper | undefined, delayMs: number): void {
 	React.useEffect((): (() => void) | undefined => {
 		if (!api) return undefined;
 		const intervalId = window.setInterval((): void => {
-			if (api.canScrollNext()) {
-				api.scrollNext();
-			} else {
-				api.scrollTo(FIRST_SLIDE_INDEX);
-			}
+			api.scrollNext();
 		}, delayMs);
 		const stop = (): void => {
 			window.clearInterval(intervalId);
@@ -48,7 +54,7 @@ export function Carousel5Example(): React.JSX.Element {
 	useCarouselAutoplay(api, CAROUSEL_AUTOPLAY_DELAY_MS);
 
 	return (
-		<Carousel setApi={setApi} className="w-full max-w-xs">
+		<Carousel setApi={setApi} opts={CAROUSEL_OPTIONS} className="w-full max-w-xs">
 			<CarouselContent>
 				{SLIDES.map((slide: CarouselSampleSlide): React.JSX.Element => (
 					<CarouselItem key={slide.id}>

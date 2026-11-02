@@ -2,6 +2,8 @@
 
 import { useMerchantBreadcrumb } from "@/components/common/merchant-breadcrumb";
 import MerchantCommandPaletteClientOnly from "@/components/layout/merchant-command-palette.client-only";
+import { useTenantSlug } from "@/contexts/tenancy/lib/tenant/use-tenant-slug";
+import { ROUTES, tenantRoutes } from "@/lib/routes";
 import { ShellTopbar } from "@workspace/client/lib/features/navigation/shell-topbar";
 import type * as React from "react";
 
@@ -12,5 +14,8 @@ import type * as React from "react";
  */
 export function MerchantTopbar(): React.JSX.Element {
 	const { status } = useMerchantBreadcrumb();
-	return <ShellTopbar breadcrumbStatus={status} commandPalette={MerchantCommandPaletteClientOnly} />;
+	const tenantSlug = useTenantSlug();
+	// Inside a tenant the inbox opens in place; elsewhere the entry route resolves a tenant first.
+	const notificationsHref = tenantSlug === undefined ? ROUTES.notifications : tenantRoutes(tenantSlug).notifications;
+	return <ShellTopbar breadcrumbStatus={status} commandPalette={MerchantCommandPaletteClientOnly} notificationsHref={notificationsHref} />;
 }

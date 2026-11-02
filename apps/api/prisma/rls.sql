@@ -567,6 +567,22 @@ CREATE POLICY reward_location_scopes_write ON public."RewardLocationScope"
   USING (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('RewardLocationScope')))
   WITH CHECK (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('RewardLocationScope')));
 
+-- Who a reward was given to: the tenant's members manage it; a customer never reads the list (whether a
+-- reward is theirs is decided inside the marketplace and claim operations, which may read it).
+ALTER TABLE public."RewardAudienceMember" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."RewardAudienceMember" FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS reward_audience_members_read ON public."RewardAudienceMember";
+CREATE POLICY reward_audience_members_read ON public."RewardAudienceMember"
+  FOR SELECT
+  USING (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('RewardAudienceMember')));
+
+DROP POLICY IF EXISTS reward_audience_members_write ON public."RewardAudienceMember";
+CREATE POLICY reward_audience_members_write ON public."RewardAudienceMember"
+  FOR ALL
+  USING (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('RewardAudienceMember')))
+  WITH CHECK (app_tenant_org_member("tenantId") OR (SELECT app_rls_bypass_on('RewardAudienceMember')));
+
 ALTER TABLE public."RewardImage" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public."RewardImage" FORCE ROW LEVEL SECURITY;
 

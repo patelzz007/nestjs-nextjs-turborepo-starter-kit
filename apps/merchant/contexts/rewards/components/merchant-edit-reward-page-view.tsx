@@ -1,8 +1,10 @@
 "use client";
 
+import type { CustomerPickerOption } from "@/components/merchant-ui/customer-picker";
 import { MerchantRewardEditorPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantCapabilityGate } from "@/contexts/tenancy";
 import { MerchantRewardEditorLayout, RewardPageBackLink } from "@/contexts/rewards/components/merchant-reward-editor-layout";
+import { MerchantRewardAudienceFields } from "@/contexts/rewards/components/merchant-reward-audience-fields";
 import { MerchantRewardFormFields } from "@/contexts/rewards/components/merchant-reward-form-fields";
 import type { SavedRewardImage } from "@/contexts/rewards/components/merchant-reward-images-field";
 import { MerchantRewardPreview } from "@/contexts/rewards/components/merchant-reward-preview";
@@ -10,6 +12,7 @@ import { MerchantRewardUnavailable } from "@/contexts/rewards/components/merchan
 import type { RewardVoucherCover } from "@/contexts/rewards/components/reward-voucher";
 import { useMerchantLocation } from "@/features/tenant-context/facade";
 import { describeRewardStores } from "@/contexts/rewards/lib/presentation";
+import { toRewardCustomerOption } from "@/contexts/rewards/lib/reward-audience";
 import { applyMerchantRewardChange } from "@/contexts/rewards/lib/query-cache";
 import { toRewardEditorInput, useRewardEditorForm, type RewardEditorInput } from "@/contexts/rewards/lib/reward-editor-form";
 import { isRewardEditable, useMerchantReward } from "@/contexts/rewards/lib/use-merchant-reward";
@@ -62,7 +65,7 @@ function MerchantEditRewardPageContent({ tenantSlug, rewardId, initialReward }: 
 	if (!isRewardEditable(state.reward.status)) {
 		return <MerchantRewardLocked tenantSlug={tenantSlug} reward={state.reward} />;
 	}
-	return <MerchantRewardEditForm tenantSlug={tenantSlug} reward={state.reward} />;
+	return <MerchantRewardEditAudienceGate tenantSlug={tenantSlug} reward={state.reward} />;
 }
 
 interface MerchantRewardEditFormProps {
@@ -89,8 +92,42 @@ function MerchantRewardLocked({ tenantSlug, reward }: MerchantRewardEditFormProp
 	);
 }
 
+/**
+ * A reward for chosen customers opens its editor only once its audience has loaded: saving earlier would
+ * send an empty pick, which reads as "everyone" and would hand a private reward to every customer.
+ */
+function MerchantRewardEditAudienceGate({ tenantSlug, reward }: MerchantRewardEditFormProps): React.JSX.Element {
+	const { api } = useAuth();
+	const isTargeted = reward.audienceType === "SELECTED_CUSTOMERS";
+	const audienceQuery = api.tenants.rewards.audience.useQuery({ tenantSlug, rewardId: reward.id }, { enabled: isTargeted });
+	const customers = React.useMemo((): readonly CustomerPickerOption[] => (audienceQuery.data?.data.customers ?? []).map(toRewardCustomerOption), [audienceQuery.data]);
+	const { refetch } = audienceQuery;
+	const retry = React.useCallback((): void => {
+		void refetch();
+	}, [refetch]);
+
+	if (!isTargeted) {
+		return <MerchantRewardEditForm tenantSlug={tenantSlug} reward={reward} audienceCustomers={NO_CUSTOMERS} />;
+	}
+	if (audienceQuery.isError) {
+		return <MerchantRewardUnavailable state={{ kind: "failed", error: audienceQuery.error, retry }} rewardsHref={tenantRoutes(tenantSlug).rewards.list} />;
+	}
+	if (!audienceQuery.isSuccess) {
+		return <MerchantRewardEditorPageSkeleton />;
+	}
+	return <MerchantRewardEditForm tenantSlug={tenantSlug} reward={reward} audienceCustomers={customers} />;
+}
+
+/** No one is picked for a reward given to everyone. */
+const NO_CUSTOMERS: readonly CustomerPickerOption[] = [];
+
+interface MerchantRewardEditFormFieldsProps extends MerchantRewardEditFormProps {
+	/** The customers the reward is given to (empty for everyone). */
+	readonly audienceCustomers: readonly CustomerPickerOption[];
+}
+
 /** The editor, mounted once the reward is known: its fields start from the saved reward. */
-function MerchantRewardEditForm({ tenantSlug, reward }: MerchantRewardEditFormProps): React.JSX.Element {
+function MerchantRewardEditForm({ tenantSlug, reward, audienceCustomers }: MerchantRewardEditFormFieldsProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const router = useRouter();
@@ -102,7 +139,16 @@ function MerchantRewardEditForm({ tenantSlug, reward }: MerchantRewardEditFormPr
 	const [cover] = images;
 	// The form follows the server's reward: a refetch is taken over while the merchant has not
 	// touched the form, and every unsaved edit is kept once they have.
-	const defaultValues = React.useMemo((): RewardEditorInput => toRewardEditorInput(mapRewardResponseToFormValues(reward)), [reward]);
+	const defaultValues = React.useMemo(
+		(): RewardEditorInput =>
+			toRewardEditorInput(
+				mapRewardResponseToFormValues(
+					reward,
+					audienceCustomers.map((customer) => customer.userId),
+				),
+			),
+		[audienceCustomers, reward],
+	);
 
 	const updateMutation = api.tenants.rewards.update.useMutation({
 		onSuccess: (response): void => {
@@ -170,6 +216,7 @@ function MerchantRewardEditForm({ tenantSlug, reward }: MerchantRewardEditFormPr
 							</p>
 						) : null
 					}
+					audience={<MerchantRewardAudienceFields editor={editor} tenantSlug={tenantSlug} initialCustomers={audienceCustomers} disabled={isSaving} />}
 					disabled={isSaving}
 				/>
 			}

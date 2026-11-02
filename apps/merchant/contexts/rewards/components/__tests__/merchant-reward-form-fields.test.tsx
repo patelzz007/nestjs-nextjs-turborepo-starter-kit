@@ -37,6 +37,8 @@ const DEFAULTS: RewardEditorInput = {
 	description: "",
 	imageFileIds: [],
 	rewardValue: "0",
+	freeItemName: "",
+	freeItemSku: "",
 	minPurchase: "",
 	termsConditions: "",
 	startDate: "2026-11-01",
@@ -45,6 +47,8 @@ const DEFAULTS: RewardEditorInput = {
 	maxClaimsPerUser: 1,
 	locationScopeType: "ALL_LOCATIONS",
 	locationIds: [],
+	audienceType: "EVERYONE",
+	audienceCustomerIds: [],
 };
 
 /** The noop the stubbed photos field never calls. */
@@ -69,7 +73,7 @@ function FieldsHarness({ stores, onValid }: FieldsHarnessProps): React.JSX.Eleme
 	);
 	return (
 		<form onSubmit={handleFormSubmit}>
-			<MerchantRewardFormFields editor={editor} tenantSlug="jonker-street-kitchen" initialImages={[]} onImagesChange={ignoreImages} stores={stores} />
+			<MerchantRewardFormFields editor={editor} tenantSlug="jonker-street-kitchen" initialImages={[]} onImagesChange={ignoreImages} stores={stores} audience={null} />
 			<button type="submit">Save</button>
 		</form>
 	);
@@ -89,7 +93,13 @@ describe("MerchantRewardFormFields", () => {
 	it("lays the form out as one document of titled sections, in page order", () => {
 		renderFields();
 
-		expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual(["The offer", "Photos", "When and how many", "Terms and conditions"]);
+		expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual([
+			"The offer",
+			"Photos",
+			"When and how many",
+			"Who can claim",
+			"Terms and conditions",
+		]);
 	});
 
 	it("adds the Where section only when there are stores to choose from", () => {
@@ -104,6 +114,53 @@ describe("MerchantRewardFormFields", () => {
 
 		expect(group.querySelectorAll('[role="radio"]')).toHaveLength(REWARD_TYPE_OPTIONS.length);
 		expect(screen.getByRole("radio", { name: /Discount/u }).getAttribute("aria-checked")).toBe("true");
+	});
+
+	it("gives each reward type a card with a title, a subtitle and what it means for the customer, the merchant and the till", () => {
+		renderFields();
+		const cards = document.querySelectorAll('[data-slot="reward-type-option"]');
+
+		expect(cards).toHaveLength(REWARD_TYPE_OPTIONS.length);
+		for (const option of REWARD_TYPE_OPTIONS) {
+			const radio = screen.getByRole("radio", { name: option.label });
+			const details = document.getElementById(radio.getAttribute("aria-describedby") ?? "");
+			expect(details?.textContent).toBe(`Customers see${option.example}You set${option.youSet}At the till${option.atTheTill}`);
+			expect(screen.getByText(option.description)).toBeTruthy();
+		}
+	});
+
+	it("asks for the free item's name and SKU only for a free item or buy one, get one reward", () => {
+		renderFields();
+		expect(screen.queryByRole("textbox", { name: "Free item" })).toBeNull();
+
+		for (const label of ["Free item", "Buy one, get one"]) {
+			act((): void => {
+				fireEvent.click(screen.getByRole("radio", { name: label }));
+			});
+			expect(screen.getByRole("textbox", { name: "Free item" })).toBeTruthy();
+			expect(screen.getByRole("textbox", { name: "SKU" })).toBeTruthy();
+		}
+
+		act((): void => {
+			fireEvent.click(screen.getByRole("radio", { name: "Bonus points" }));
+		});
+		expect(screen.queryByRole("textbox", { name: "SKU" })).toBeNull();
+	});
+
+	it("says which free-item field is missing, under that field", async () => {
+		renderFields();
+		act((): void => {
+			fireEvent.click(screen.getByRole("radio", { name: "Free item" }));
+		});
+		fireEvent.change(screen.getByRole("textbox", { name: "Free item" }), { target: { value: "Latte" } });
+		fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+		const sku = screen.getByRole("textbox", { name: "SKU" });
+		await waitFor((): void => {
+			expect(sku.getAttribute("aria-invalid")).toBe("true");
+		});
+		expect(document.getElementById("freeItemSku-error")?.textContent).toBe("Enter the item's SKU");
+		expect(screen.getByRole("textbox", { name: "Free item" }).getAttribute("aria-invalid")).toBeNull();
 	});
 
 	it("labels the value with the chosen type's unit", () => {

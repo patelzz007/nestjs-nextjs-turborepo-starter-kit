@@ -24,6 +24,7 @@ const EMAIL: OutboundEmail = {
 	cc: [],
 	bcc: [],
 	replyTo: undefined,
+	headers: {},
 };
 
 function failure(name: string): { data: null; error: { name: string; message: string; statusCode: number } } {

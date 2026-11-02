@@ -18,7 +18,7 @@ import { TOGGLE_ICON_SIZE, TOGGLE_SMALL_HIT_SLOP, toggleContentColorOf, toggleLa
 
 export const toggleGroupVariants = cva("flex-row flex-wrap", {
 	variants: {
-		variant: { default: "", outline: "" },
+		variant: { default: "", outline: "", pill: "" },
 		size: { sm: "gap-1.5", md: "gap-2", lg: "gap-2" },
 		state: { default: "", loading: "", disabled: "", error: "" },
 	},
@@ -136,7 +136,7 @@ const ToggleGroupItem = React.memo(function ToggleGroupItem({
 		playSelectionFeedback();
 		onToggle(option.value);
 	}, [onToggle, option.value]);
-	const contentColor = toggleContentColorOf(pressed);
+	const contentColor = toggleContentColorOf(pressed, variant);
 	const itemState = option.disabled === true && state === "default" ? "disabled" : state;
 	const showsLabel = !hideLabel || option.icon === undefined;
 	return (
@@ -149,11 +149,11 @@ const ToggleGroupItem = React.memo(function ToggleGroupItem({
 			onFocus={onFocus}
 			onBlur={onBlur}
 			hitSlop={size === "sm" ? TOGGLE_SMALL_HIT_SLOP : undefined}
-			className={toggleVariants({ variant, size, pressed, state: itemState })}>
+			className={cn(toggleVariants({ variant, size, pressed, state: itemState }))}>
 			{loading && pressed ? <ActivityIndicator size="small" colorClassName={contentColor} /> : null}
 			{option.icon === undefined || (loading && pressed) ? null : <Icon icon={option.icon} size={TOGGLE_ICON_SIZE[size]} colorClassName={contentColor} />}
 			{showsLabel ? (
-				<Text numberOfLines={1} className={toggleLabelVariants({ size, pressed })}>
+				<Text numberOfLines={1} className={cn(toggleLabelVariants({ variant, size, pressed }))}>
 					{option.label}
 				</Text>
 			) : null}

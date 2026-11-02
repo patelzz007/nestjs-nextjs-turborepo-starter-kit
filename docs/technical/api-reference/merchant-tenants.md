@@ -1660,7 +1660,7 @@ List the current user's tenant memberships
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data` | object[] | yes |  |
-| `data[].capabilities` | "merchant:view_dashboard" \| "merchant:view_rewards" \| "merchant:manage_rewards" \| "merchant:view_redemptions" \| "merchant:manage_api_keys" \| "merchant:view_analytics" \| "merchant:manage_team" \| "merchant:view_locations" \| "merchant:manage_locations" \| "merchant:manage_verification"[] | no |  |
+| `data[].capabilities` | "merchant:view_dashboard" \| "merchant:view_rewards" \| "merchant:manage_rewards" \| "merchant:view_redemptions" \| "merchant:manage_api_keys" \| "merchant:view_analytics" \| "merchant:manage_team" \| "merchant:view_locations" \| "merchant:manage_locations" \| "merchant:manage_verification" \| … (+3 more)[] | no |  |
 | `data[].createdAt` | integer | no |  |
 | `data[].displayName` | string | yes |  |
 | `data[].kybStatus` | "PENDING" \| "APPROVED" \| "REJECTED" \| "ACTION_REQUIRED" | yes |  |
@@ -2658,12 +2658,16 @@ List tenant rewards
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data` | object[] | yes |  |
+| `data[].audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
 | `data[].category` | string | yes |  |
 | `data[].claimCount` | integer | yes | min -9007199254740991 |
 | `data[].createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data[].deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data[].description` | string | yes |  |
 | `data[].expiryDate` | integer | yes |  |
+| `data[].freeItem` | object \| null | yes |  |
+| `data[].freeItem.name` | string | yes |  |
+| `data[].freeItem.sku` | string | yes |  |
 | `data[].id` | string (uuid) | yes |  |
 | `data[].images` | object[] | yes | 1–10 items |
 | `data[].images[].fileId` | string (uuid) | yes |  |
@@ -2871,9 +2875,14 @@ Create a draft reward
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `audienceCustomerIds` | string (uuid)[] | no | 0–500 items; default `[]` |
+| `audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | no | default `"EVERYONE"` |
 | `category` | "cafe" \| "restaurant" \| "retail" \| "wellness" \| "entertainment" \| "food" \| "beverage" | yes |  |
 | `description` | string | yes | length 1–5000 |
 | `expiryDate` | integer | yes |  |
+| `freeItem` | object | no |  |
+| `freeItem.name` | string | yes | length 1–200 |
+| `freeItem.sku` | string | yes | length 1–64; pattern `^[A-Za-z0-9](?:[A-Za-z0-9._/-]*[A-Za-z0-9])?$` |
 | `imageFileIds` | string (uuid)[] | yes | 1–10 items |
 | `locationIds` | string (uuid)[] | no | default `[]` |
 | `locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | no | default `"ALL_LOCATIONS"` |
@@ -2895,12 +2904,16 @@ Create a draft reward
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `data.audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
+| `data.freeItem` | object \| null | yes |  |
+| `data.freeItem.name` | string | yes |  |
+| `data.freeItem.sku` | string | yes |  |
 | `data.id` | string (uuid) | yes |  |
 | `data.images` | object[] | yes | 1–10 items |
 | `data.images[].fileId` | string (uuid) | yes |  |
@@ -3068,12 +3081,16 @@ Read one tenant reward (404 when not offered at any of the caller's stores)
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `data.audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
+| `data.freeItem` | object \| null | yes |  |
+| `data.freeItem.name` | string | yes |  |
+| `data.freeItem.sku` | string | yes |  |
 | `data.id` | string (uuid) | yes |  |
 | `data.images` | object[] | yes | 1–10 items |
 | `data.images[].fileId` | string (uuid) | yes |  |
@@ -3215,8 +3232,13 @@ Update a draft or pending reward
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `audienceCustomerIds` | string (uuid)[] | no | 0–500 items |
+| `audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | no |  |
 | `description` | string | no | length 1–5000 |
 | `expiryDate` | integer | no |  |
+| `freeItem` | object \| null | no |  |
+| `freeItem.name` | string | yes | length 1–200 |
+| `freeItem.sku` | string | yes | length 1–64; pattern `^[A-Za-z0-9](?:[A-Za-z0-9._/-]*[A-Za-z0-9])?$` |
 | `imageFileIds` | string (uuid)[] | no | 1–10 items |
 | `quantityTotal` | integer | no | min 1 |
 | `referralPoolTotal` | integer | no | min 1 |
@@ -3235,12 +3257,16 @@ Update a draft or pending reward
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `data.audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
+| `data.freeItem` | object \| null | yes |  |
+| `data.freeItem.name` | string | yes |  |
+| `data.freeItem.sku` | string | yes |  |
 | `data.id` | string (uuid) | yes |  |
 | `data.images` | object[] | yes | 1–10 items |
 | `data.images[].fileId` | string (uuid) | yes |  |
@@ -3369,6 +3395,45 @@ Response `200 OK` (application/json):
 }
 ```
 
+### GET /api/v1/tenants/{tenantSlug}/rewards/{rewardId}/audience
+
+Who the reward is for: everyone, or the customers it was given to (404 outside the caller's stores)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantRewardsController_getAudience` · [source](../../../apps/api/src/contexts/rewards/presentation/http/tenant-rewards.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+| `rewardId` | path | string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — The audience
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
+| `data.customers` | object[] | yes | 0–500 items |
+| `data.customers[].claimCount` | integer | yes |  |
+| `data.customers[].fullName` | string | yes |  |
+| `data.customers[].lastClaimedAt` | integer | yes |  |
+| `data.customers[].maskedEmail` | string \| null | yes |  |
+| `data.customers[].userId` | string (uuid) | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
 ### POST /api/v1/tenants/{tenantSlug}/rewards/{rewardId}/publish
 
 Submit reward for moderation review (no body required)
@@ -3395,12 +3460,16 @@ _No fields._
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `data.audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
+| `data.freeItem` | object \| null | yes |  |
+| `data.freeItem.name` | string | yes |  |
+| `data.freeItem.sku` | string | yes |  |
 | `data.id` | string (uuid) | yes |  |
 | `data.images` | object[] | yes | 1–10 items |
 | `data.images[].fileId` | string (uuid) | yes |  |
@@ -3526,6 +3595,56 @@ Response `201 Created` (application/json):
   }
 }
 ```
+
+### GET /api/v1/tenants/{tenantSlug}/rewards/customers
+
+The tenant's customers, to give a reward to (name and masked email; people who manage rewards)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Tenant member** — the caller's membership role and store scope are checked per call (merchant capabilities, see [authorization overview](../authorization/overview.md)).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `TenantRewardsController_listCustomers` · [source](../../../apps/api/src/contexts/rewards/presentation/http/tenant-rewards.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `tenantSlug` | path | string \| string (uuid) | yes |  |
+| `page` | query | integer | no | Page number (1-indexed) for offset pagination |
+| `limit` | query | integer | no | Page size (default 20, max 100) |
+| `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
+| `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: lastClaimedAt, claimCount. Default: -lastClaimedAt |
+| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: lastClaimedAt |
+| `search` | query | string | no | Case-insensitive free-text search over the resource's search columns |
+
+**Response 200 OK** (`application/json`) — One page of customers
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data` | object[] | yes |  |
+| `data[].claimCount` | integer | yes |  |
+| `data[].fullName` | string | yes |  |
+| `data[].lastClaimedAt` | integer | yes |  |
+| `data[].maskedEmail` | string \| null | yes |  |
+| `data[].userId` | string (uuid) | yes |  |
+| `meta.hasNext` | boolean | yes | Whether a next page exists |
+| `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
+| `meta.limit` | integer | yes | Items per page; range 1–100 |
+| `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
+| `meta.page` | integer | yes | Current page (1-indexed); min 1 |
+| `meta.total` | integer | yes | Total rows matching the current filters |
+| `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
 
 ### GET /api/v1/tenants/{tenantSlug}/rewards/summary
 
@@ -4939,7 +5058,7 @@ A member's extra permissions still in force, newest first, with their end time
 | `data[].membershipId` | string (uuid) | yes |  |
 | `data[].permission` | object | yes |  |
 | `data[].permission.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data[].permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
+| `data[].permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -4982,7 +5101,7 @@ Only a permission the caller's own role gives, within the caller's stores.
 | `locationId` | string (uuid) | no |  |
 | `permission` | object | yes |  |
 | `permission.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
+| `permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
 
 **Response 201 Created** (`application/json`) — Permission granted
 
@@ -4997,7 +5116,7 @@ Only a permission the caller's own role gives, within the caller's stores.
 | `data.membershipId` | string (uuid) | yes |  |
 | `data.permission` | object | yes |  |
 | `data.permission.action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data.permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
+| `data.permission.resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -5082,7 +5201,7 @@ The tenant's roles, with their permissions and how many members hold each
 | `data[].name` | string | yes |  |
 | `data[].permissions` | object[] | yes |  |
 | `data[].permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data[].permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
+| `data[].permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
 | `data[].templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -5122,7 +5241,7 @@ Create a role from tenant permissions the caller's own role holds
 | `name` | string | yes | length 1–100 |
 | `permissions` | object[] | yes | 0–200 items |
 | `permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
+| `permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
 
 **Response 201 Created** (`application/json`) — Role created
 
@@ -5133,7 +5252,7 @@ Create a role from tenant permissions the caller's own role holds
 | `data.name` | string | yes |  |
 | `data.permissions` | object[] | yes |  |
 | `data.permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
+| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
 | `data.templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -5174,7 +5293,7 @@ Rename a role or replace its permissions (never the Owner role)
 | `name` | string | no | length 1–100 |
 | `permissions` | object[] | no | 0–200 items |
 | `permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
+| `permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
 
 **Response 200 OK** (`application/json`) — Role updated
 
@@ -5185,7 +5304,7 @@ Rename a role or replace its permissions (never the Owner role)
 | `data.name` | string | yes |  |
 | `data.permissions` | object[] | yes |  |
 | `data.permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
+| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
 | `data.templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -5357,7 +5476,7 @@ Make a role equal the template it was copied from again
 | `data.name` | string | yes |  |
 | `data.permissions` | object[] | yes |  |
 | `data.permissions[].action` | "CREATE" \| "READ" \| "UPDATE" \| "DELETE" \| "LIST" \| "PUBLISH" \| "APPROVE" \| "REJECT" \| "SUSPEND" \| "BAN" \| … (+4 more) | yes |  |
-| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+30 more) | yes |  |
+| `data.permissions[].resource` | "USER" \| "PROFILE" \| "ROLE" \| "PERMISSION" \| "ADMIN_DASHBOARD" \| "SYSTEM_SETTINGS" \| "ANALYTICS" \| "AUDIT_LOG" \| "REPORT" \| "EMAIL" \| … (+35 more) | yes |  |
 | `data.templateKey` | "OWNER" \| "MANAGER" \| "CASHIER" \| null | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)

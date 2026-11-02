@@ -3,7 +3,8 @@
 // Jest runs as iOS, so `QrScanner` shows the kit's camera scanner; a test reads
 // a code with `readQrCode` (the camera's barcode event) and decides the
 // permission with `setCameraPermission`. The camera is granted unless a test
-// says otherwise. Reset before every test.
+// says otherwise. A photo picked for "Scan from gallery" holds the code a test
+// set with `setPhotoQrCode` (none by default). Reset before every test.
 
 import type { BarcodeScanningResult, CameraViewProps, PermissionResponse, ScanningOptions, ScanningResult } from "expo-camera";
 import { PermissionStatus } from "expo";
@@ -24,6 +25,11 @@ export class CameraView extends React.Component<FakeCameraViewProps> {
 
 	public static onModernBarcodeScanned(_listener: (result: ScanningResult) => void): { readonly remove: () => void } {
 		return { remove: (): void => undefined };
+	}
+
+	/** Like the native camera: once mounted it reports itself ready, and only then reads codes. */
+	public override componentDidMount(): void {
+		this.props.onCameraReady?.();
 	}
 
 	public override render(): React.JSX.Element {
@@ -73,8 +79,20 @@ export function readQrCode(data: string): void {
 	onBarcodeScanned(result);
 }
 
+/** What a picked photo holds: a code, or nothing (expo-camera's `scanFromURLAsync`). */
+let photoCode: string | null = null;
+
+export function setPhotoQrCode(data: string | null): void {
+	photoCode = data;
+}
+
+export function scanFromURLAsync(): Promise<BarcodeScanningResult[]> {
+	return Promise.resolve(photoCode === null ? [] : [{ type: "qr", data: photoCode, cornerPoints: [], bounds: { origin: { x: 0, y: 0 }, size: { width: 0, height: 0 } } }]);
+}
+
 export function reset(): void {
 	latestProps = null;
+	photoCode = null;
 	permission = permissionOf(true, true);
 	requests = 0;
 }

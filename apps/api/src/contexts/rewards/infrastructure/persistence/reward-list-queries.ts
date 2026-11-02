@@ -63,6 +63,8 @@ export const MARKETPLACE_REWARD_SELECT = {
 	description: true,
 	rewardType: true,
 	rewardValue: true,
+	freeItemName: true,
+	freeItemSku: true,
 	termsConditions: true,
 	rewardKind: true,
 	category: true,
@@ -81,6 +83,7 @@ export const MARKETPLACE_REWARD_SELECT = {
 	referralPoolRemaining: true,
 	referrerRewardId: true,
 	locationScopeType: true,
+	audienceType: true,
 	createdAt: true,
 	updatedAt: true,
 	isDeleted: true,
@@ -115,13 +118,25 @@ export function rewardListKeyset<TRow extends Pick<Reward, "id" | "createdAt">>(
  */
 export const OPERATING_MERCHANT_WHERE: Prisma.RewardWhereInput = { tenant: { isDeleted: false, lifecycleState: TENANT_OPERATING_LIFECYCLE_STATE } };
 
-/** Published, in-stock, unexpired consumer rewards of operating merchants + the filter AST + search. */
-export function buildMarketplaceWhere(query: RewardListQuery, now = BigInt(Date.now())): Prisma.RewardWhereInput {
+/**
+ * Who may see a reward: everyone sees rewards for everyone; a signed-in viewer also sees the rewards
+ * given to them (null = signed out).
+ */
+export function rewardAudienceWhere(viewerUserId: string | null): Prisma.RewardWhereInput {
+	if (viewerUserId === null) {
+		return { audienceType: "EVERYONE" };
+	}
+	return { OR: [{ audienceType: "EVERYONE" }, { audienceMembers: { some: { userId: viewerUserId, isDeleted: false } } }] };
+}
+
+/** Published, in-stock, unexpired consumer rewards of operating merchants the viewer may see + the filter AST + search. */
+export function buildMarketplaceWhere(query: RewardListQuery, viewerUserId: string | null, now = BigInt(Date.now())): Prisma.RewardWhereInput {
 	const filter = query.filter;
 	return {
 		AND: [
 			{ isDeleted: false, status: "PUBLISHED", rewardKind: "CONSUMER", quantityRemaining: { gt: 0 }, expiryDate: { gte: now } },
 			OPERATING_MERCHANT_WHERE,
+			rewardAudienceWhere(viewerUserId),
 			...fieldWhere(toPrismaEqualityFilter(filter?.category), (category) => ({ category })),
 			...fieldWhere(toPrismaEqualityFilter(filter?.city), (city): Prisma.RewardWhereInput => ({ tenant: { merchantProfile: { city } } })),
 			...fieldWhere(toPrismaEqualityFilter(filter?.tenantId), (tenantId) => ({ tenantId })),

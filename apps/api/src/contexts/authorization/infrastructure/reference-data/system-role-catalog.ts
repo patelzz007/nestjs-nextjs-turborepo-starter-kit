@@ -72,13 +72,23 @@ export const SYSTEM_ROLE_CATALOG: readonly SystemRoleDefinition[] = [
 			matchesAny(p, "GITHUB_PULL_REQUEST", ["READ", "UPDATE"]) ||
 			matchesAny(p, "KANBAN_TASK", ["CREATE", "READ", "UPDATE", "DELETE", "LIST"]) ||
 			matches(p, "UPDATE", "KANBAN_BOARD") ||
-			matchesAny(p, "SERVER_METRIC", ["READ", "LIST"]),
+			matchesAny(p, "SERVER_METRIC", ["READ", "LIST"]) ||
+			matchesAny(p, "NOTIFICATION", ["LIST", "UPDATE", "CREATE"]) ||
+			matchesAny(p, "BROADCAST", ["LIST", "READ", "CREATE", "UPDATE", "PUBLISH", "APPROVE", "DELETE"]) ||
+			matchesAny(p, "BROADCAST_REPORT", ["LIST", "UPDATE"]) ||
+			matchesAny(p, "RATE_LIMIT", ["LIST"]) ||
+			matches(p, "READ", "CACHE"),
 	},
 	{
 		name: PLATFORM_DEVELOPER_ROLE_NAME,
 		description: "Operations console — server, instance and dependency health, history and alerts, and load tests",
 		grants: (p: PermissionKey): boolean =>
-			matches(p, "READ", "ADMIN_DASHBOARD") || matchesAny(p, "SERVER_METRIC", ["READ", "LIST"]) || matchesAny(p, "LOAD_TEST", ["CREATE", "READ", "UPDATE", "LIST"]),
+			matches(p, "READ", "ADMIN_DASHBOARD") ||
+			matchesAny(p, "SERVER_METRIC", ["READ", "LIST"]) ||
+			matchesAny(p, "LOAD_TEST", ["CREATE", "READ", "UPDATE", "LIST"]) ||
+			matchesAny(p, "RATE_LIMIT", ["LIST", "UPDATE"]) ||
+			matchesAny(p, "CACHE", ["READ", "DELETE"]) ||
+			matches(p, "LIST", "NOTIFICATION"),
 	},
 	{
 		name: "User",

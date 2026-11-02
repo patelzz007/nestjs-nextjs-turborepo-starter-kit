@@ -8,7 +8,7 @@ describe("loadDemoAccounts", () => {
 		await expect(loadDemoAccounts()).resolves.toBe(MOBILE_DEMO_ACCOUNTS);
 	});
 
-	it("covers every role asked for: super admin, admin, manager, both owners and a cashier", () => {
+	it("covers every role asked for: super admin, admin, manager, both owners, a cashier and two customers", () => {
 		expect(MOBILE_DEMO_ACCOUNTS.map((account: DemoAccount): string => account.label)).toStrictEqual([
 			"Super Admin",
 			"Admin",
@@ -16,6 +16,8 @@ describe("loadDemoAccounts", () => {
 			"KL Owner",
 			"Melaka Owner",
 			"KL Cashier",
+			"Customer",
+			"Bishen Patel",
 		]);
 		expect(new Set(MOBILE_DEMO_ACCOUNTS.map((account: DemoAccount): string => account.email)).size).toBe(MOBILE_DEMO_ACCOUNTS.length);
 	});

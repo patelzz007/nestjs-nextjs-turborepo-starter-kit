@@ -39,7 +39,7 @@ const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*$/;
 /** What iOS shows when the app lock first asks for Face ID (real builds only; Expo Go cannot use Face ID). */
 const FACE_ID_PERMISSION = "Allow $(PRODUCT_NAME) to use Face ID to unlock the app.";
 /** Photos are only picked to attach to a GitHub comment; the microphone is never used, so it is blocked. */
-const PHOTOS_PERMISSION = "Allow $(PRODUCT_NAME) to attach your photos to the comments you write.";
+const PHOTOS_PERMISSION = "Allow $(PRODUCT_NAME) to attach your photos to the comments you write and to read QR codes from them.";
 /**
  * The camera reads QR codes only — the till's scanner (features/till). It is
  * NOT blocked for expo-image-picker either: that plugin's `cameraPermission:
@@ -110,10 +110,23 @@ function readLaunchColors(): LaunchColors {
 	return parsed.data;
 }
 
+/**
+ * Firebase's Android config for direct FCM push (ADR 070): the path in `GOOGLE_SERVICES_JSON` (EAS's
+ * file-secret convention; locally e.g. `./google-services.json`, never committed —
+ * `google-services.example.json` shows its shape). Unset, the build has no FCM and the app simply
+ * registers no push device.
+ */
+const GoogleServicesEnvSchema = z.object({ GOOGLE_SERVICES_JSON: z.string().min(1).optional() });
+
+function googleServicesFile(): string | undefined {
+	return GoogleServicesEnvSchema.parse({ GOOGLE_SERVICES_JSON: process.env.GOOGLE_SERVICES_JSON?.trim() || undefined }).GOOGLE_SERVICES_JSON;
+}
+
 export default function appConfig({ config }: ConfigContext): ExpoConfig {
 	const identity = readAppIdentity();
 	const launchColors = readLaunchColors();
 	const lanHttpApi = readLanHttpApiEnabled();
+	const firebaseConfig = googleServicesFile();
 	// The same slate splash in light and dark: launching looks the same whatever the theme.
 	const splash = { image: SPLASH_IMAGE, imageWidth: SPLASH_IMAGE_WIDTH, backgroundColor: launchColors.backgroundColor, resizeMode: "contain" };
 	return {
@@ -135,6 +148,7 @@ export default function appConfig({ config }: ConfigContext): ExpoConfig {
 		android: {
 			package: identity.MOBILE_BUNDLE_ID,
 			adaptiveIcon: { foregroundImage: APP_ICON, backgroundColor: launchColors.backgroundColor },
+			...(firebaseConfig === undefined ? {} : { googleServicesFile: firebaseConfig }),
 		},
 		plugins: [
 			// Async routes in development only: each screen bundles on first visit, so the dev server starts
@@ -157,6 +171,8 @@ export default function appConfig({ config }: ConfigContext): ExpoConfig {
 			"expo-font",
 			"expo-image",
 			"expo-sharing",
+			// Push (ADR 070): FCM on Android, APNs on iOS; the app asks for permission after its own primer.
+			["expo-notifications", { color: launchColors.backgroundColor }],
 		],
 	};
 }

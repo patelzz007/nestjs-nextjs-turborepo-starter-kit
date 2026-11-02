@@ -1,5 +1,5 @@
-import type { RewardClaim as RewardClaimRow, RewardNotification } from "@prisma/client";
-import { EpochMsSchema, JsonObjectSchema, type EpochMs, type RewardClaimResponse, type RewardNotificationResponse } from "@workspace/shared";
+import type { RewardClaim as RewardClaimRow } from "@prisma/client";
+import { EpochMsSchema, type EpochMs, type RewardClaimResponse } from "@workspace/shared";
 
 import type { RewardClaimState } from "../../domain/aggregates/reward-claim.aggregate";
 
@@ -38,21 +38,6 @@ export function toRewardClaimResponse(row: RewardClaimRow, rewardTitle: string):
 		claimExpiresAt: epochOf(row.claimExpiresAt),
 		redeemedAt: epochOrNull(row.redeemedAt),
 		isReferrerCredit: row.isReferrerCredit,
-		createdAt: epochOf(row.createdAt),
-		updatedAt: epochOf(row.updatedAt),
-		isDeleted: row.isDeleted,
-		deletedAt: epochOrNull(row.deletedAt),
-	};
-}
-
-export function toRewardNotificationResponse(row: RewardNotification): RewardNotificationResponse {
-	return {
-		id: row.id,
-		type: row.type,
-		title: row.title,
-		body: row.body,
-		readAt: epochOrNull(row.readAt),
-		metadata: row.metadata === null ? null : JsonObjectSchema.nullable().parse(row.metadata),
 		createdAt: epochOf(row.createdAt),
 		updatedAt: epochOf(row.updatedAt),
 		isDeleted: row.isDeleted,

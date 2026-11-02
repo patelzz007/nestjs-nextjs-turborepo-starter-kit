@@ -12,6 +12,7 @@ import {
 
 import type { PublicUrlResolve } from "../../../../config/public-url.resolver";
 import { RewardRulesValue } from "../../domain/value-objects/reward-rules.value-object";
+import { freeItemOfColumns } from "./free-item-columns";
 import { storedRulesJson } from "./reward.mapper";
 import { toImageSources } from "../../../files/public-api";
 
@@ -50,6 +51,8 @@ export type RewardResponseSource = Pick<
 	| "description"
 	| "rewardType"
 	| "rewardValue"
+	| "freeItemName"
+	| "freeItemSku"
 	| "termsConditions"
 	| "rewardKind"
 	| "category"
@@ -68,6 +71,7 @@ export type RewardResponseSource = Pick<
 	| "referralPoolRemaining"
 	| "referrerRewardId"
 	| "locationScopeType"
+	| "audienceType"
 	| "createdAt"
 	| "updatedAt"
 	| "isDeleted"
@@ -175,6 +179,7 @@ export function mapRewardToResponse(reward: RewardResponseSource, tenant: Reward
 		description: reward.description,
 		rewardType: reward.rewardType,
 		rewardValue: reward.rewardValue,
+		freeItem: freeItemOfColumns(reward),
 		termsConditions: reward.termsConditions,
 		rewardKind: reward.rewardKind,
 		category: reward.category,
@@ -193,6 +198,7 @@ export function mapRewardToResponse(reward: RewardResponseSource, tenant: Reward
 		referrerRewardId: reward.referrerRewardId,
 		rules: RewardRulesValue.fromStorage(storedRulesJson(reward.rules), reward.minSpendMinor).toApi(),
 		locationScopeType: reward.locationScopeType,
+		audienceType: reward.audienceType,
 		locationIds,
 		locationNames: locationNames.length > 0 ? locationNames : undefined,
 		createdAt: epochRequired(reward.createdAt),

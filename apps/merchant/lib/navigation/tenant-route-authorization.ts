@@ -18,6 +18,10 @@ export const TenantPageRouteSchema = z.enum([
 	"/rewards/new",
 	"/rewards/[rewardId]",
 	"/rewards/[rewardId]/edit",
+	"/broadcasts",
+	"/broadcasts/new",
+	"/broadcasts/[broadcastId]",
+	"/broadcasts/[broadcastId]/edit",
 	"/redemptions",
 	"/analytics",
 	"/terminals",
@@ -35,6 +39,8 @@ export const TenantPageRouteSchema = z.enum([
 	"/settings/verification",
 	"/settings/banned-customers",
 	"/account",
+	"/notifications",
+	"/notifications/settings",
 	"/stores",
 ]);
 
@@ -77,6 +83,11 @@ const BANNED_CUSTOMERS_DENIAL: TenantPageDenialCopy = {
 	description: "Only members who manage rewards can see and lift customer bans. Contact your store owner if you need access.",
 };
 
+const BROADCASTS_DENIAL: TenantPageDenialCopy = {
+	title: "Broadcasts are for owners and managers",
+	description: "Your role can't write messages to the store's customers. Contact your store owner if you need access.",
+};
+
 const TEAM_DENIAL: TenantPageDenialCopy = {
 	title: "Team access required",
 	description: "Your role can't view or manage team members. Contact your store owner if you need access.",
@@ -100,6 +111,14 @@ export const ORG_PAGE_RULES: Readonly<Record<TenantPageRoute, TenantPageRule>> =
 	"/rewards/[rewardId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewRewards] } },
 	// PATCH /t/:tenantSlug/rewards/:rewardId (merchant:manage_rewards).
 	"/rewards/[rewardId]/edit": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageRewards] } },
+	// GET /tenants/:tenantSlug/broadcasts (merchant:manage_broadcasts); sending needs merchant:publish_broadcasts in-page.
+	"/broadcasts": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageBroadcasts] }, denial: BROADCASTS_DENIAL },
+	// POST /tenants/:tenantSlug/broadcasts (merchant:manage_broadcasts).
+	"/broadcasts/new": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageBroadcasts] }, denial: BROADCASTS_DENIAL },
+	// GET /tenants/:tenantSlug/broadcasts/:broadcastId (merchant:manage_broadcasts).
+	"/broadcasts/[broadcastId]": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageBroadcasts] }, denial: BROADCASTS_DENIAL },
+	// PUT /tenants/:tenantSlug/broadcasts/:broadcastId (merchant:manage_broadcasts).
+	"/broadcasts/[broadcastId]/edit": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageBroadcasts] }, denial: BROADCASTS_DENIAL },
 	// GET /t/:tenantSlug/redemptions (merchant:view_redemptions).
 	"/redemptions": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.viewRedemptions] } },
 	// GET /t/:tenantSlug/analytics (merchant:view_analytics).
@@ -136,6 +155,14 @@ export const ORG_PAGE_RULES: Readonly<Record<TenantPageRoute, TenantPageRule>> =
 	// GET /t/:tenantSlug/customer-bans, POST …/customer-bans/:banId/lift (merchant:manage_rewards).
 	"/settings/banned-customers": { kind: "capability", requirement: { permissions: [MERCHANT_CAPABILITY.manageRewards] }, denial: BANNED_CUSTOMERS_DENIAL },
 	"/account": { kind: "open", reason: "Personal account (password, 2FA, email) — restricted enrollment sessions must always reach it." },
+	"/notifications": {
+		kind: "open",
+		reason: "The member's own merchant inbox (GET /notifications?surface=MERCHANT lists only the caller's notifications), whatever their role.",
+	},
+	"/notifications/settings": {
+		kind: "open",
+		reason: "The member's own notification settings (GET/PUT /notifications/preferences and friends act on the caller only), whatever their role.",
+	},
 	"/stores": { kind: "open", reason: "The member's own stores (GET /t/memberships lists only the caller's memberships) — the way to switch to any of them." },
 };
 

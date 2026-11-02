@@ -12,7 +12,7 @@ import { IdentityClaimantAdapter, ReferralsAttributionAdapter } from "../adapter
 import { PrismaClaimView } from "./prisma-claim.view";
 import { PrismaOtpChallengeRepository } from "./prisma-otp-challenge.repository";
 import { PrismaRewardClaimRepository } from "./prisma-reward-claim.repository";
-import { PrismaRewardNotificationInbox } from "./prisma-reward-notification.inbox";
+import { PrismaLegacyRewardNoticeStore } from "./prisma-legacy-reward-notice.store";
 import { newRowId } from "@workspace/shared";
 
 /**
@@ -26,10 +26,14 @@ export class ClaimsScopeFactory implements ScopeFactory<ClaimsScope, Prisma.Tran
 	public create(db: Prisma.TransactionClient, events: TransactionalEventCollector): ClaimsScope {
 		const rewards = createRewardsTransactionalPorts(db);
 		const referrals = createReferralsTransactionalPorts(db);
+		const notifications = this.notifications.create(db, events);
+		const tenants = createTenantsTransactionalPorts(db);
 		return {
 			claims: new PrismaRewardClaimRepository(db),
 			otpChallenges: new PrismaOtpChallengeRepository(db),
-			notifications: new PrismaRewardNotificationInbox(db),
+			notify: notifications.notifications,
+			legacyNotices: new PrismaLegacyRewardNoticeStore(db),
+			legacyInbox: notifications.legacyInbox,
 			views: new PrismaClaimView(db),
 			claimants: new IdentityClaimantAdapter(createIdentityTransactionalPorts(db, { newId: newRowId }, events).consumerClaimants),
 			referralAttribution: new ReferralsAttributionAdapter(referrals.rewardReferralAttribution),
@@ -39,8 +43,9 @@ export class ClaimsScopeFactory implements ScopeFactory<ClaimsScope, Prisma.Tran
 			rewardFacts: rewards.redemptionFacts,
 			legal: rewards.legal,
 			rewardAudit: rewards.audit,
-			customerStanding: createTenantsTransactionalPorts(db).customerStanding,
-			emails: this.notifications.create(db, events).emailRequests,
+			customerStanding: tenants.customerStanding,
+			tenantCustomers: tenants.tenantCustomers,
+			emails: notifications.emailRequests,
 			events,
 		};
 	}

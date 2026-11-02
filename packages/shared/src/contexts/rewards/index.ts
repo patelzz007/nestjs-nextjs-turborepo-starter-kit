@@ -5,5 +5,6 @@
 export * from "./contract";
 export * from "./routes";
 export * from "./schemas/reward-enums";
+export * from "./schemas/reward-free-item";
 export * from "./schemas/reward-legal";
 export * from "./schemas/reward";

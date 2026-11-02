@@ -1,7 +1,12 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
-import { PLATFORM_DISPLAY_REGION, RewardNotificationListQuerySchema, type DisplayRegion, type RewardNotificationListQuery } from "@workspace/shared";
+import {
+	InAppNotificationListQuerySchema,
+	PLATFORM_DISPLAY_REGION,
+	type DisplayRegion,
+	type InAppNotificationListQuery,
+	type InAppNotificationResponse,
+} from "@workspace/shared";
 import { AppShellNotificationBell } from "@workspace/ui/components/app-shell-notification-bell";
 import { Button } from "@workspace/ui/components/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
@@ -9,22 +14,16 @@ import { RelativeTime } from "@workspace/ui/components/relative-time";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { Bell } from "lucide-react";
 import Link from "next/link";
-import { useCallback, type JSX, type MouseEvent } from "react";
+import { useCallback, useMemo, type JSX, type MouseEvent } from "react";
 
-import { readPaginatedTotal } from "../../api/envelope";
-import { apiRouter } from "../../api/endpoints";
-import { useAuth } from "../../contexts/identity";
+import { useAuth, useAuthClientType } from "../../contexts/identity";
 import { NOTIFICATIONS_DROPDOWN_LABELS, type NotificationsDropdownLabels } from "./notifications-dropdown-labels";
+import { NOTIFICATION_SURFACE_OF_CLIENT } from "./notification-surface";
+import { notificationsPollInterval, useNotificationsLive } from "./use-notifications-live";
+import { useOpenNotification } from "./use-open-notification";
 
 /** How many of the newest notifications the dropdown previews. */
 export const NOTIFICATIONS_PREVIEW_LIMIT = 4;
-
-/** The newest notifications, newest first (the list's default sort). */
-const PREVIEW_QUERY: RewardNotificationListQuery = RewardNotificationListQuerySchema.parse({ limit: NOTIFICATIONS_PREVIEW_LIMIT });
-
-/** The smallest page of the unread ones: the badge reads its `meta.total`, never the rows. */
-const UNREAD_COUNT_PAGE_SIZE = 1;
-const UNREAD_COUNT_QUERY: RewardNotificationListQuery = RewardNotificationListQuerySchema.parse({ limit: UNREAD_COUNT_PAGE_SIZE, filter: { readAt: { isNull: true } } });
 
 export interface NotificationsDropdownProps {
 	/** Where "View all notifications" leads; the button is not shown without one. */
@@ -35,33 +34,34 @@ export interface NotificationsDropdownProps {
 }
 
 /**
- * The app shell's notification bell for the signed-in user (any app): their newest in-app notifications
- * and how many are unread — both read from `GET /reward-notifications` (the count is the unread filter's
- * `meta.total`). Opening one marks it read
- * (`POST /reward-notifications/read`). Times arrive as epoch milliseconds and are only formatted here.
+ * The app shell's notification bell for the signed-in person (ADR 070): the newest notifications of THIS
+ * app's inbox (`GET /notifications?surface=…`, archived ones left out) and its unread count
+ * (`GET /notifications/unread-count`). Both refresh the moment the live stream signals a change, and every
+ * minute while it is down. Opening one marks it read and follows its link.
  */
 export function NotificationsDropdown({ viewAllHref, region = PLATFORM_DISPLAY_REGION, labels = NOTIFICATIONS_DROPDOWN_LABELS }: NotificationsDropdownProps): JSX.Element {
 	const { api } = useAuth();
-	const queryClient = useQueryClient();
-	const listQuery = api.rewardNotifications.list.useQuery(PREVIEW_QUERY);
-	const unreadQuery = api.rewardNotifications.list.useQuery(UNREAD_COUNT_QUERY);
-	const markRead = api.rewardNotifications.read.useMutation();
-	const notifications = listQuery.data?.data ?? [];
-	const unreadCount = unreadQuery.data === undefined ? 0 : readPaginatedTotal(unreadQuery.data.meta, unreadQuery.data.data.length);
+	const surface = NOTIFICATION_SURFACE_OF_CLIENT[useAuthClientType()];
+	const liveState = useNotificationsLive(surface);
+	const previewQuery = useMemo(
+		(): InAppNotificationListQuery => InAppNotificationListQuerySchema.parse({ surface, limit: NOTIFICATIONS_PREVIEW_LIMIT, filter: { archivedAt: { isNull: true } } }),
+		[surface],
+	);
+	const listQuery = api.notifications.inbox.useQuery(previewQuery);
+	const unreadQuery = api.notifications.unreadCount.useQuery({ surface }, { refetchInterval: notificationsPollInterval(liveState) });
+	const openNotification = useOpenNotification(surface);
+	const notifications = useMemo((): readonly InAppNotificationResponse[] => listQuery.data?.data ?? [], [listQuery.data]);
+	const unreadCount = unreadQuery.data?.data.unread ?? 0;
 
 	const handleNotificationClick = useCallback(
 		(event: MouseEvent<HTMLButtonElement>): void => {
 			const notificationId = event.currentTarget.dataset.notificationId;
-			if (notificationId === undefined || event.currentTarget.dataset.read === "true") {
-				return;
+			const notification = notifications.find((candidate: InAppNotificationResponse): boolean => candidate.id === notificationId);
+			if (notification !== undefined) {
+				openNotification(notification);
 			}
-			markRead.mutate(
-				{ notificationIds: [notificationId] },
-				// The scope covers the preview and the unread count alike.
-				{ onSuccess: (): void => void queryClient.invalidateQueries({ queryKey: apiRouter.rewardNotifications.list.scopeKey(PREVIEW_QUERY) }) },
-			);
 		},
-		[markRead, queryClient],
+		[notifications, openNotification],
 	);
 
 	return (
@@ -79,10 +79,10 @@ export function NotificationsDropdown({ viewAllHref, region = PLATFORM_DISPLAY_R
 						) : null}
 					</div>
 				</div>
-				<div className="max-h-64 overflow-y-auto">
+				<div className="max-h-64 overflow-x-hidden overflow-y-auto">
 					{listQuery.isError ? <p className="px-4 py-3 text-sm text-muted-foreground">{labels.loadError}</p> : null}
 					{!listQuery.isError && !listQuery.isPending && notifications.length === 0 ? <p className="px-4 py-3 text-sm text-muted-foreground">{labels.empty}</p> : null}
-					{notifications.map((notification) => {
+					{notifications.map((notification: InAppNotificationResponse) => {
 						const read = notification.readAt !== null;
 						return (
 							<Button
@@ -93,14 +93,15 @@ export function NotificationsDropdown({ viewAllHref, region = PLATFORM_DISPLAY_R
 								data-read={String(read)}
 								onClick={handleNotificationClick}
 								className={cn(
-									"h-auto flex-col items-start gap-1 rounded-none border-b border-border/60 px-4 py-3 text-start transition-colors last:border-b-0 hover:bg-muted/60",
+									"h-auto min-w-0 flex-col items-start gap-1 rounded-none border-b border-border/60 px-4 py-3 text-start whitespace-normal transition-colors last:border-b-0 hover:bg-muted/60",
 									!read ? "bg-primary/[0.04]" : undefined,
 								)}>
-								<div className="flex w-full items-center justify-between gap-2">
-									<span className="text-sm font-medium text-foreground">{notification.title}</span>
-									{!read ? <span className="size-2 shrink-0 rounded-full bg-primary" /> : null}
+								<div className="flex w-full min-w-0 items-start justify-between gap-2">
+									<span className="line-clamp-2 min-w-0 flex-1 text-sm font-medium wrap-anywhere text-foreground">{notification.title}</span>
+									{!read ? <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" /> : null}
 								</div>
-								<p className="line-clamp-2 text-xs text-muted-foreground">{notification.body}</p>
+								{notification.senderName === null ? null : <span className="text-xs font-medium text-muted-foreground">{notification.senderName}</span>}
+								<p className="line-clamp-2 w-full text-xs wrap-anywhere text-muted-foreground">{notification.body}</p>
 								<RelativeTime epochMs={notification.createdAt} region={region} className="text-xs text-muted-foreground/70" />
 							</Button>
 						);

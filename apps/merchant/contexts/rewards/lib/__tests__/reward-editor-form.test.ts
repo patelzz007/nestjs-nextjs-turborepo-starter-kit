@@ -11,6 +11,8 @@ function input(overrides: Partial<RewardEditorInput> = {}): RewardEditorInput {
 		description: "Any nasi lemak set.",
 		imageFileIds: [IMAGE_ID],
 		rewardValue: "20",
+		freeItemName: "",
+		freeItemSku: "",
 		minPurchase: "",
 		termsConditions: "",
 		startDate: "2026-11-01",
@@ -19,6 +21,8 @@ function input(overrides: Partial<RewardEditorInput> = {}): RewardEditorInput {
 		maxClaimsPerUser: 1,
 		locationScopeType: "ALL_LOCATIONS",
 		locationIds: [],
+		audienceType: "EVERYONE",
+		audienceCustomerIds: [],
 		...overrides,
 	};
 }
@@ -33,6 +37,20 @@ describe("toRewardFormCandidate", () => {
 		expect(candidate.termsConditions).toBeUndefined();
 	});
 
+	it("sends chosen customers only while the reward is for chosen customers", () => {
+		const chosen = toRewardFormCandidate(input({ audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [IMAGE_ID] }));
+		const flippedBack = toRewardFormCandidate(input({ audienceType: "EVERYONE", audienceCustomerIds: [IMAGE_ID] }));
+
+		expect(chosen).toMatchObject({ audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [IMAGE_ID] });
+		expect(flippedBack).toMatchObject({ audienceType: "EVERYONE", audienceCustomerIds: [] });
+	});
+
+	it("asks for a customer when the reward is for chosen customers and none is picked", () => {
+		expect(rewardEditorErrors(input({ audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [] })).audienceCustomerIds).toBe(
+			"Choose at least one customer, or give the reward to everyone",
+		);
+	});
+
 	it("reads a blank required number as NaN (the schema reports it missing), never 0", () => {
 		expect(toRewardFormCandidate(input({ quantityTotal: "" })).quantityTotal).toBeNaN();
 	});
@@ -44,12 +62,16 @@ describe("toRewardFormCandidate", () => {
 			description: "Any nasi lemak set.",
 			imageFileIds: [IMAGE_ID],
 			rewardValue: "20",
+			freeItemName: "",
+			freeItemSku: "",
 			minPurchase: "",
 			termsConditions: "",
 			startDate: "2026-11-01",
 			expiryDate: "2026-11-30",
 			quantityTotal: "100",
 			maxClaimsPerUser: 1,
+			audienceType: "EVERYONE",
+			audienceCustomerIds: [],
 		};
 		const candidate = toRewardFormCandidate(editing);
 

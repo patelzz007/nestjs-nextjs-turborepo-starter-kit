@@ -5,7 +5,7 @@ import { PublicUrlResolver } from "../../../../config/public-url.resolver";
 import type { ScopeFactory } from "../../../../platform/application/events/in-transaction-event-handler";
 import type { TransactionalEventCollector } from "../../../../platform/application/events/transactional-event-collector";
 import { createFilesTransactionalPorts } from "../../../files/public-api";
-import { TENANT_READ, type TenantReadPort } from "../../../tenancy/public-api";
+import { createTenantsTransactionalPorts, TENANT_READ, type TenantReadPort } from "../../../tenancy/public-api";
 import { TenantDisplayAdapter } from "../adapters/tenant-display.adapter";
 import type { RewardsScope } from "../../application/rewards-scope";
 import { PrismaLegalAcceptanceRepository } from "./prisma-legal-acceptance.repository";
@@ -26,6 +26,7 @@ export class RewardsScopeFactory implements ScopeFactory<RewardsScope, Prisma.Tr
 			legalAcceptances: new PrismaLegalAcceptanceRepository(db),
 			imageFiles: new RewardImageFilesAdapter(createFilesTransactionalPorts(db).fileReferences),
 			stores: new PrismaTenantStoresAdapter(db),
+			customers: createTenantsTransactionalPorts(db).tenantCustomers,
 			views: new PrismaRewardViewAdapter(db, new TenantDisplayAdapter(this.tenants), this.publicUrls.resolve),
 			audit: new PrismaRewardAuditWriter(db),
 			events,

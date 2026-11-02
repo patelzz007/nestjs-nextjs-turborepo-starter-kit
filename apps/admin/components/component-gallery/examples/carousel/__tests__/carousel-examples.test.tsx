@@ -1,10 +1,16 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import { UiKitTestProviders } from "@workspace/ui/testing/ui-kit-test-providers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CAROUSEL_EXAMPLES } from "@/components/component-gallery/examples/carousel";
-import { CAROUSEL_AUTOPLAY_DELAY_MS, Carousel5Example } from "@/components/component-gallery/examples/carousel/carousel-5";
+import {
+	CAROUSEL_AUTOPLAY_DELAY_MS,
+	CAROUSEL_OPTIONS,
+	Carousel5Example,
+	type CarouselStepper,
+	useCarouselAutoplay,
+} from "@/components/component-gallery/examples/carousel/carousel-5";
 import { Carousel11Example } from "@/components/component-gallery/examples/carousel/carousel-11";
 import { Carousel9Example } from "@/components/component-gallery/examples/carousel/carousel-9";
 import type { GalleryExample } from "@/components/component-gallery/examples/gallery-example";
@@ -18,7 +24,7 @@ import type { GalleryExample } from "@/components/component-gallery/examples/gal
 /** The width and height of every element's offset box, in pixels. */
 const BOX_SIZE_PX = 100;
 const ORIGIN_PX = 0;
-/** Autoplay steps from the first of the Autoplay example's five slides to its last. */
+/** Autoplay steps from the first of the Autoplay example's five slides to its last (one more goes round). */
 const ADVANCES_TO_LAST_SLIDE = 4;
 /** The first step, checked on its own. */
 const FIRST_ADVANCE = 1;
@@ -114,31 +120,48 @@ describe("Carousel examples", () => {
 		expect(screen.getByRole("button", { name: "Show slide 1" }).getAttribute("aria-current")).toBe("false");
 	});
 
-	it("autoplay advances on its delay and wraps back to the first slide after the last", () => {
+	it("autoplay loops: both arrows stay on, so the first slide follows the last going the same way", () => {
 		vi.useFakeTimers();
 		render(<Carousel5Example />, { wrapper: UiKitTestProviders });
 		act(() => {
 			vi.advanceTimersByTime(ORIGIN_PX);
 		});
 		const carousel = screen.getByRole("region");
-		const previous = within(carousel).getByRole("button", { name: "Previous slide" });
-		const next = within(carousel).getByRole("button", { name: "Next slide" });
-		expect(previous.hasAttribute("disabled")).toBe(true);
 
+		expect(CAROUSEL_OPTIONS.loop).toBe(true);
 		act(() => {
-			vi.advanceTimersByTime(CAROUSEL_AUTOPLAY_DELAY_MS);
+			vi.advanceTimersByTime(CAROUSEL_AUTOPLAY_DELAY_MS * (ADVANCES_TO_LAST_SLIDE + FIRST_ADVANCE));
 		});
-		expect(previous.hasAttribute("disabled")).toBe(false);
+		expect(within(carousel).getByRole("button", { name: "Previous slide" }).hasAttribute("disabled")).toBe(false);
+		expect(within(carousel).getByRole("button", { name: "Next slide" }).hasAttribute("disabled")).toBe(false);
+	});
 
-		// The remaining advances reach the last slide; the next one wraps around.
-		act(() => {
-			vi.advanceTimersByTime(CAROUSEL_AUTOPLAY_DELAY_MS * (ADVANCES_TO_LAST_SLIDE - FIRST_ADVANCE));
+	it("autoplay only ever steps forward on its delay, and stops for good once the person grabs the carousel", () => {
+		vi.useFakeTimers();
+		const listeners = new Set<() => void>();
+		const scrollNext = vi.fn<() => void>();
+		const stepper: CarouselStepper = {
+			scrollNext,
+			on: (_event: "pointerDown", callback: () => void): void => {
+				listeners.add(callback);
+			},
+			off: (_event: "pointerDown", callback: () => void): void => {
+				listeners.delete(callback);
+			},
+		};
+		const { unmount } = renderHook(() => {
+			useCarouselAutoplay(stepper, CAROUSEL_AUTOPLAY_DELAY_MS);
 		});
-		expect(next.hasAttribute("disabled")).toBe(true);
-		act(() => {
-			vi.advanceTimersByTime(CAROUSEL_AUTOPLAY_DELAY_MS);
-		});
-		expect(previous.hasAttribute("disabled")).toBe(true);
-		expect(next.hasAttribute("disabled")).toBe(false);
+
+		vi.advanceTimersByTime(CAROUSEL_AUTOPLAY_DELAY_MS * (ADVANCES_TO_LAST_SLIDE + FIRST_ADVANCE));
+		expect(scrollNext).toHaveBeenCalledTimes(ADVANCES_TO_LAST_SLIDE + FIRST_ADVANCE);
+
+		for (const grab of listeners) {
+			grab();
+		}
+		vi.advanceTimersByTime(CAROUSEL_AUTOPLAY_DELAY_MS * ADVANCES_TO_LAST_SLIDE);
+		expect(scrollNext).toHaveBeenCalledTimes(ADVANCES_TO_LAST_SLIDE + FIRST_ADVANCE);
+		unmount();
+		expect(listeners.size).toBe(0);
 	});
 });

@@ -13,10 +13,18 @@ const APP_DIR: string = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
 /**
  * Routes that deliberately have no `loading.tsx`: client pages with static
- * content (their own Suspense fallbacks are shaped skeletons) and the legacy
- * verify-email path, which only redirects.
+ * content (their own Suspense fallbacks are shaped skeletons), the legacy
+ * verify-email path, which only redirects, and the unsubscribe page (a client
+ * page that waits on nothing until the person confirms).
  */
-const ROUTES_WITHOUT_LOADING: readonly string[] = ["auth/forgot-password", "auth/reset-password", "auth/signup", "auth/verify-email", "auth/verify-email/[token]"];
+const ROUTES_WITHOUT_LOADING: readonly string[] = [
+	"auth/forgot-password",
+	"auth/reset-password",
+	"auth/signup",
+	"auth/verify-email",
+	"auth/verify-email/[token]",
+	"unsubscribe",
+];
 
 /** Whether `directory` or a folder above it (up to `app/`) has a `loading.tsx` — the boundary Next.js would show. */
 function hasLoadingBoundary(directory: string): boolean {

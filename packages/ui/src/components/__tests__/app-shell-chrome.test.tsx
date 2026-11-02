@@ -7,13 +7,16 @@ import { UI_KIT_LABELS_EN } from "../../lib/labels/en";
 import type { UiKitLabels } from "../../lib/labels/ui-kit-labels";
 import { createNoopSidebarStorage } from "../../lib/sidebar/storage";
 import { AppPanelShell } from "../app-panel-shell";
-import { AppShellNotificationBell } from "../app-shell-notification-bell";
+import { AppShellNotificationBell, NOTIFICATION_BADGE_MAX, notificationBadgeText } from "../app-shell-notification-bell";
 import { AppShellTopbar, AppShellTopbarSearch } from "../app-shell-topbar";
 import { PanelShellContent } from "../panel-shell-content";
 import { PanelSidebarHeader } from "../panel-sidebar-header";
 import { SidebarProvider, SidebarTrigger } from "../sidebar";
 import { UiKitLabelsProvider } from "../ui-kit-labels-provider";
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
+
+const MANY_UNREAD = 120;
+const NINE = 9;
 
 const STORAGE = createNoopSidebarStorage();
 const BRAND = { icon: null, title: "Acme" };
@@ -56,14 +59,24 @@ describe("AppShellTopbar", () => {
 });
 
 describe("AppShellNotificationBell", () => {
-	it("shows the unread dot only when there is something unread, and forwards its ref to the bell", (): void => {
+	it("shows the unread count only when there is something unread, and forwards its ref to the bell", (): void => {
 		const ref = React.createRef<SVGSVGElement>();
 		const { rerender } = render(<AppShellNotificationBell ref={ref} unreadCount={0} />);
 		expect(ref.current?.dataset.slot).toBe("app-shell-notification-bell");
 		expect(document.querySelector("[data-slot='app-shell-notification-badge']")).toBeNull();
 
 		rerender(<AppShellNotificationBell ref={ref} unreadCount={2} />);
-		expect(document.querySelector("[data-slot='app-shell-notification-badge']")?.className).toContain("bg-destructive");
+		const badge = document.querySelector("[data-slot='app-shell-notification-badge']");
+		expect(badge?.className).toContain("bg-destructive");
+		expect(badge?.textContent).toBe("2");
+		expect(badge?.getAttribute("aria-hidden")).toBe("true");
+	});
+
+	it("caps a long count so the pill keeps its size", (): void => {
+		render(<AppShellNotificationBell unreadCount={MANY_UNREAD} />);
+		expect(document.querySelector("[data-slot='app-shell-notification-badge']")?.textContent).toBe("99+");
+		expect(notificationBadgeText(NOTIFICATION_BADGE_MAX)).toBe("99");
+		expect(notificationBadgeText(MANY_UNREAD, NINE)).toBe("9+");
 	});
 });
 

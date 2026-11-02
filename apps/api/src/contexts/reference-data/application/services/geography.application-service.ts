@@ -56,8 +56,9 @@ import {
 import { withSanitizedGeoName } from "../../domain/policies/geo-name.policy";
 import type { GeoDeletionStamp, GeoNamedRow, GeographyRepository } from "../../domain/repositories/geography.repository";
 import { GEO_ENTITY_LABEL, type GeoEntityKind, type GeoParentKind } from "../../domain/value-objects/geo-entity-kind.value-object";
+import type { GeographyCachePort } from "../ports/geography-cache.port";
 import type { GeographyReadPort } from "../ports/geography-read.port";
-import { GEO_WRITE_OPERATION, GEOGRAPHY_READ, REFERENCE_DATA_UNIT_OF_WORK } from "../ports/reference-data.tokens";
+import { GEO_WRITE_OPERATION, GEOGRAPHY_CACHE, GEOGRAPHY_READ, REFERENCE_DATA_UNIT_OF_WORK } from "../ports/reference-data.tokens";
 import type { ReferenceDataScope } from "../reference-data-scope";
 import { geoMissingParent, geoNotFound, geoWriterMissing } from "./geography.errors";
 
@@ -95,6 +96,7 @@ export class GeographyApplicationService {
 		@Inject(REFERENCE_DATA_UNIT_OF_WORK) private readonly unitOfWork: UnitOfWork<ReferenceDataScope>,
 		@Inject(GEOGRAPHY_READ) private readonly reads: GeographyReadPort,
 		@Inject(CLOCK) private readonly clock: Clock,
+		@Inject(GEOGRAPHY_CACHE) private readonly cache: GeographyCachePort,
 	) {}
 
 	// ── Reads ──────────────────────────────────────────────────────────
@@ -294,11 +296,14 @@ export class GeographyApplicationService {
 			throw geoWriterMissing();
 		}
 		const stamp: GeoDeletionStamp = { deletedBy: actor.userId, deletedAt: this.clock.now() };
-		return this.unitOfWork.runSystemOperation(GEO_WRITE_OPERATION, actor, async (scope: ReferenceDataScope): Promise<TResult> => {
+		const committed = await this.unitOfWork.runSystemOperation(GEO_WRITE_OPERATION, actor, async (scope: ReferenceDataScope): Promise<TResult> => {
 			const result: TResult = await work(scope, stamp);
 			await scope.requestAudit.recordInTransaction(result);
 			return result;
 		});
+		// After the commit, never before: no reader can cache the old rows in between (ADR 072).
+		await this.cache.invalidateAll();
+		return committed;
 	}
 }
 

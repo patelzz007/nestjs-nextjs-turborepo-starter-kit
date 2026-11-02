@@ -151,6 +151,20 @@ DROP POLICY IF EXISTS reward_location_scopes_api_key_insert ON public."RewardLoc
 CREATE POLICY reward_location_scopes_api_key_insert ON public."RewardLocationScope"
   FOR INSERT TO app_runtime WITH CHECK (app_api_key_org_access("tenantId"));
 
+DROP POLICY IF EXISTS reward_audience_members_api_key_read ON public."RewardAudienceMember";
+CREATE POLICY reward_audience_members_api_key_read ON public."RewardAudienceMember"
+  FOR SELECT TO app_runtime USING (app_api_key_org_access("tenantId"));
+
+DROP POLICY IF EXISTS reward_audience_members_api_key_insert ON public."RewardAudienceMember";
+CREATE POLICY reward_audience_members_api_key_insert ON public."RewardAudienceMember"
+  FOR INSERT TO app_runtime WITH CHECK (app_api_key_org_access("tenantId"));
+
+DROP POLICY IF EXISTS reward_audience_members_api_key_update ON public."RewardAudienceMember";
+CREATE POLICY reward_audience_members_api_key_update ON public."RewardAudienceMember"
+  FOR UPDATE TO app_runtime
+  USING (app_api_key_org_access("tenantId"))
+  WITH CHECK (app_api_key_org_access("tenantId"));
+
 DROP POLICY IF EXISTS reward_images_api_key_read ON public."RewardImage";
 CREATE POLICY reward_images_api_key_read ON public."RewardImage"
   FOR SELECT TO app_runtime USING (app_api_key_org_access("tenantId"));

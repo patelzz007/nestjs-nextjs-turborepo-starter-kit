@@ -6,7 +6,8 @@
 // the native blur view is a plain view, random UUIDs come from Node, and Reanimated's native worklet runtime
 // runs on the JS thread. Files and uploads (expo-file-system) and the photo
 // library (expo-image-picker) are fakes each test can fill, as are the file
-// picker (expo-document-picker) and the share sheet (expo-sharing); the camera
+// picker (expo-document-picker) and the share sheet (expo-sharing); live streams (expo/fetch)
+// stay open and quiet until a test sends a frame; the camera
 // (expo-camera) reads whatever QR code a test hands it. React Native's idle callbacks run on the next
 // timer tick (test/idle-callbacks.ts). Every query client a test creates is disposed after
 // the test, so no cache timer keeps the worker alive.
@@ -21,10 +22,12 @@ import * as mockBlur from "./test/expo-blur-mock";
 import * as mockCamera from "./test/expo-camera-fake";
 import * as mockCrypto from "./test/expo-crypto-mock";
 import * as mockDocumentPicker from "./test/expo-document-picker-fake";
+import * as mockExpoFetch from "./test/expo-fetch-fake";
 import * as mockFileSystem from "./test/expo-file-system-fake";
 import * as mockImagePicker from "./test/expo-image-picker-fake";
 import * as mockSharing from "./test/expo-sharing-fake";
 import * as mockNetwork from "./test/network-fake";
+import * as mockNotifications from "./test/expo-notifications-fake";
 import { installIdleCallbacks } from "./test/idle-callbacks";
 import { disposeTrackedQueryClients } from "./test/query-clients";
 import { memorySecureStore as mockSecureStore } from "./test/secure-store-memory";
@@ -51,6 +54,10 @@ jest.mock("expo-document-picker", () => mockDocumentPicker);
 jest.mock("expo-sharing", () => mockSharing);
 // The camera and its QR scanner are the OS's (test/expo-camera-fake.tsx).
 jest.mock("expo-camera", () => mockCamera);
+// The streaming fetch of the app's live streams: open and quiet until a test sends a frame (test/expo-fetch-fake.ts).
+jest.mock("expo/fetch", () => mockExpoFetch);
+// Push permission, the device token and push taps are the OS's (test/expo-notifications-fake.ts).
+jest.mock("expo-notifications", () => mockNotifications);
 // The keyboard is the OS's: keyboard-controller's own Jest stand-in (its provider and views render plain).
 jest.mock("react-native-keyboard-controller", () => jest.requireActual<typeof KeyboardController>("react-native-keyboard-controller/jest"));
 // Reanimated's worklet runtime is native; its own Jest stand-in runs worklets on the JS thread,
@@ -65,6 +72,8 @@ beforeEach(() => {
 	mockCamera.reset();
 	mockDocumentPicker.reset();
 	mockSharing.reset();
+	mockNotifications.reset();
+	mockExpoFetch.reset();
 });
 
 // Query clients' garbage-collection timers must not outlive the test (test/query-clients.ts).

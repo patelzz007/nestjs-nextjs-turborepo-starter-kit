@@ -4,14 +4,13 @@
 "use client";
 
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
-import { apiRoutes } from "@workspace/shared";
-
-import { liveEventsUrl, useLiveQueryInvalidation } from "@/contexts/notifications/lib/live-query-invalidation";
-import type { LiveState } from "@/contexts/notifications/lib/reconnecting-event-stream";
+import { liveEventsUrl, useLiveQueryInvalidation } from "@workspace/client/lib/features/live-updates/live-query-invalidation";
+import type { LiveState } from "@workspace/client/lib/features/live-updates/reconnecting-event-stream";
+import { apiRoutes, AuthClientTypeSchema } from "@workspace/shared";
 
 /** The audit trail SSE endpoint (`GET /admin/audit-trail/events`, LIST AUDIT_LOG). */
 export function auditTrailEventsUrl(): string {
-	return liveEventsUrl(apiRoutes.auditTrail.events);
+	return liveEventsUrl(apiRoutes.auditTrail.events, AuthClientTypeSchema.enum.admin);
 }
 
 /** Every cached audit-log page — a stable key, so the subscription stays open. */

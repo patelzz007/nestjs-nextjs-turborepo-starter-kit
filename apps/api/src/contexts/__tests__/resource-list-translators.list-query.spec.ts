@@ -12,7 +12,7 @@ import {
 	ProductListQuerySchema,
 	RewardClaimListQuerySchema,
 	RewardListQuerySchema,
-	RewardNotificationListQuerySchema,
+	InAppNotificationListQuerySchema,
 	SampleCategoryListQuerySchema,
 	MerchantRedemptionListQuerySchema,
 } from "@workspace/shared";
@@ -33,7 +33,8 @@ import {
 	buildAdminMerchantListWhere,
 } from "../tenancy/infrastructure/persistence/prisma-merchant-admin.read-repository";
 import { buildProductListOrder, buildProductListWhere } from "../catalog/infrastructure/persistence/prisma-product.repository";
-import { buildRewardClaimListOrder, buildRewardClaimListWhere, buildRewardNotificationListWhere } from "../claims/infrastructure/persistence/claim-list-queries";
+import { buildRewardClaimListOrder, buildRewardClaimListWhere } from "../claims/infrastructure/persistence/claim-list-queries";
+import { buildInAppNotificationListWhere } from "../notifications/infrastructure/persistence/prisma-notification-account.store";
 import { buildRedemptionListOrder, buildRedemptionListWhere } from "../pos/infrastructure/persistence/pos-list-queries";
 import { buildMarketplaceOrder, buildMarketplaceWhere } from "../rewards/public-api";
 import { MARKETPLACE_REWARD_SELECT } from "../rewards/infrastructure/persistence/reward-list-queries";
@@ -170,15 +171,20 @@ describe("audit and email logs", () => {
 describe("rewards", () => {
 	it("only lists live consumer rewards of operating merchants in the marketplace, filtering city through the merchant profile and by merchant", () => {
 		const query = RewardListQuerySchema.parse({ filter: { category: "cafe", city: { in: "MELAKA" } } });
-		expect(buildMarketplaceWhere(query, NOW)).toEqual({
+		expect(buildMarketplaceWhere(query, null, NOW)).toEqual({
 			AND: [
 				{ isDeleted: false, status: "PUBLISHED", rewardKind: "CONSUMER", quantityRemaining: { gt: 0 }, expiryDate: { gte: NOW } },
 				{ tenant: { isDeleted: false, lifecycleState: "ACTIVE" } },
+				{ audienceType: "EVERYONE" },
 				{ category: { equals: "cafe" } },
 				{ tenant: { merchantProfile: { city: { in: ["MELAKA"] } } } },
 			],
 		});
-		expect(buildMarketplaceWhere(RewardListQuerySchema.parse({ filter: { tenantId: ORG_ID } }), NOW).AND).toContainEqual({ tenantId: { equals: ORG_ID } });
+		expect(buildMarketplaceWhere(RewardListQuerySchema.parse({ filter: { tenantId: ORG_ID } }), null, NOW).AND).toContainEqual({ tenantId: { equals: ORG_ID } });
+		// Signed in: rewards for everyone, plus the ones given to this viewer.
+		expect(buildMarketplaceWhere(RewardListQuerySchema.parse({}), ORG_ID, NOW).AND).toContainEqual({
+			OR: [{ audienceType: "EVERYONE" }, { audienceMembers: { some: { userId: ORG_ID, isDeleted: false } } }],
+		});
 		expect(buildMarketplaceOrder(RewardListQuerySchema.parse({ sort: "expiryDate" })).orderBy).toEqual([{ expiryDate: "asc" }, { id: "asc" }]);
 		const selected = Object.keys(MARKETPLACE_REWARD_SELECT);
 		expect(selected).toContain("title");
@@ -205,8 +211,8 @@ describe("rewards", () => {
 			AND: [{ userId: USER_ID, isDeleted: false }, { status: { equals: "PENDING" } }],
 		});
 		expect(buildRewardClaimListOrder(RewardClaimListQuerySchema.parse({})).orderBy).toEqual([{ claimedAt: "desc" }, { id: "desc" }]);
-		expect(buildRewardNotificationListWhere(USER_ID, RewardNotificationListQuerySchema.parse({ filter: { readAt: { isNull: "true" } } }))).toEqual({
-			AND: [{ userId: USER_ID, isDeleted: false }, { readAt: { equals: null } }],
+		expect(buildInAppNotificationListWhere(USER_ID, InAppNotificationListQuerySchema.parse({ surface: "CUSTOMER", filter: { readAt: { isNull: "true" } } }))).toEqual({
+			AND: [{ userId: USER_ID, surface: "CUSTOMER", isDeleted: false }, { readAt: { equals: null } }],
 		});
 		expect(buildRedemptionListWhere(ALL_STORES, MerchantRedemptionListQuerySchema.parse({}))).toEqual({
 			AND: [{ tenantId: ORG_ID, isDeleted: false, claim: { isDeleted: false, reward: { isDeleted: false } } }],

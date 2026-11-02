@@ -25,6 +25,7 @@ export { buildOffsetPaginationMeta, type OffsetPaginationMeta } from "./lib/pagi
 export { DEFAULT_FILE_NAME_SEGMENT_MAX_LENGTH, safeFileNameSegment } from "./lib/file-name";
 export { LIST_SLOT_INDEX, type ListSlotIndex, type ListSlotKey } from "./lib/named-list-index";
 export { newRowId, ROW_ID_ENTROPY_BYTES, rowIdFrom, RowIdError } from "./lib/row-id";
+export { maskEmailAddress, maskPhone } from "./lib/mask-contact";
 // Values and types in separate statements: with the types among the values in one list, tsrs 0.20
 // emitted a truncated dist/index.js (it stopped mid-list), which broke every consumer of the build.
 export {

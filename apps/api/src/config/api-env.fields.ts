@@ -145,6 +145,23 @@ export function jwtExpiryEnvSchema(defaultValue: string): z.ZodType<string, stri
 /** `CORS_ORIGINS`: comma-separated absolute http(s) origins (at least one). */
 export const CorsOriginsEnvSchema = commaSeparatedEnvSchema(HttpUrlEnvSchema);
 
+/** `RATE_LIMIT_EXEMPT_CIDRS`: comma-separated IPv4/IPv6 CIDR blocks whose traffic is counted but never refused (ADR 071). */
+export const RateLimitExemptCidrsEnvSchema = commaSeparatedEnvSchema(z.union([z.cidrv4(), z.cidrv6()]));
+
+/** Who delivers push (ADR 070): `none` records `SUPPRESSED (provider-disabled)`, `mailpit` the local sink, `native` FCM + APNs. */
+export const PushProviderSchema = z.enum(["none", "mailpit", "native"]);
+export type PushProvider = z.output<typeof PushProviderSchema>;
+
+/** Who delivers SMS (ADR 070): `none`, `mailpit` (the local sink) or `twilio`. */
+export const SmsProviderSchema = z.enum(["none", "mailpit", "twilio"]);
+export type SmsProvider = z.output<typeof SmsProviderSchema>;
+
+/** `SMS_ALLOWED_COUNTRIES`: comma-separated country calling codes SMS may go to (defence against SMS pumping). */
+export const SmsAllowedCountriesEnvSchema = commaSeparatedEnvSchema(z.string().regex(/^[1-9]\d{0,3}$/, "must be a country calling code such as 60"));
+
+/** `BROADCAST_BLOCKED_LINK_DOMAINS`: domains a broadcast link may never point at (ADR 073). */
+export const BroadcastBlockedDomainsEnvSchema = commaSeparatedEnvSchema(z.string().regex(/^[a-z0-9.-]+\.[a-z]{2,}$/i, "must be a domain such as example.com"));
+
 /** Levels pino accepts for Fastify's request logger (and Prisma's debug switch). */
 export const LogLevelSchema = z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]);
 export type LogLevel = z.output<typeof LogLevelSchema>;
@@ -193,11 +210,6 @@ export const BullMqPrefixEnvSchema = z
 export const RedisNamespaceEnvSchema = BullMqPrefixEnvSchema;
 
 /** Backend for the authorization / user-session caches. `auto` = redis outside development when REDIS_URL is set. */
-export const CacheBackendSettingSchema = z.enum(["memory", "redis", "auto"]);
-export type CacheBackendSetting = z.output<typeof CacheBackendSettingSchema>;
-
-/** Resolved cache backend. */
-export type CacheBackend = Exclude<CacheBackendSetting, "auto">;
 
 /** Object storage provider. */
 export const StorageProviderSettingSchema = z.enum(["local", "s3", "firebase"]);

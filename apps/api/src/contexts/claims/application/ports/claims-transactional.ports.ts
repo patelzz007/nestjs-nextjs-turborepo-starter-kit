@@ -34,21 +34,25 @@ export interface ReferralAttributionPort {
 	attach(attributionToken: string, rewardId: string, refereeUserId: string): Promise<string | null>;
 }
 
-/** One in-app notice in a customer's reward inbox. */
-export interface RewardNotice {
+/** One row of the earlier reward inbox (`RewardNotification`), still waiting to move into the unified inbox (ADR 070). */
+export interface LegacyRewardNotice {
+	readonly id: string;
 	readonly userId: string;
+	/** The legacy type string (`reward_approved`, `signup_referral_redeemed`, …). */
 	readonly type: string;
 	readonly title: string;
 	readonly body: string;
 	readonly metadata: Readonly<Record<string, string>>;
+	readonly readAt: number | null;
+	readonly createdAt: number;
 }
 
-/** The reward notification inbox, bound to one transaction. */
-export interface RewardNotificationInbox {
-	add(notices: readonly RewardNotice[]): Promise<void>;
-
-	/** Set-based: stamps `readAt` on the user's unread notices (all, or only `notificationIds`). Idempotent. */
-	markRead(userId: string, selection: { readonly notificationIds: readonly string[] } | "all", now: EpochMs): Promise<void>;
+/** The earlier reward inbox, bound to one transaction: read for the move, then soft-deleted (ADR 070). */
+export interface LegacyRewardNoticeStore {
+	/** Up to `limit` live rows, oldest first. */
+	takeBatch(limit: number): Promise<readonly LegacyRewardNotice[]>;
+	/** Soft-deletes the moved rows (`isDeleted`, `deletedAt`, `deletedBy`). */
+	retire(ids: readonly string[], now: number, by: string): Promise<void>;
 }
 
 /** A claim as the API returns it, read in the command's own transaction. */

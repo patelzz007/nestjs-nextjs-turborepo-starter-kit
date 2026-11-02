@@ -81,6 +81,10 @@ const QuestionnaireExamples = dynamic(() => import("@/components/component-galle
 const RadioGroupExamples = dynamic(() => import("@/components/component-gallery/examples/radio-group").then((m) => m.RadioGroupExamples), { loading: ExamplesLoading });
 const RatingExamples = dynamic(() => import("@/components/component-gallery/examples/rating").then((m) => m.RatingExamples), { loading: ExamplesLoading });
 const ResizableExamples = dynamic(() => import("@/components/component-gallery/examples/resizable").then((m) => m.ResizableExamples), { loading: ExamplesLoading });
+const RichTextEditorExamples = dynamic(() => import("@/components/component-gallery/examples/rich-text-editor").then((m) => m.RichTextEditorExamples), {
+	loading: ExamplesLoading,
+});
+const RichTextViewExamples = dynamic(() => import("@/components/component-gallery/examples/rich-text-view").then((m) => m.RichTextViewExamples), { loading: ExamplesLoading });
 const ScrollAreaExamples = dynamic(() => import("@/components/component-gallery/examples/scroll-area").then((m) => m.ScrollAreaExamples), { loading: ExamplesLoading });
 const ScrollspyExamples = dynamic(() => import("@/components/component-gallery/examples/scrollspy").then((m) => m.ScrollspyExamples), { loading: ExamplesLoading });
 const SelectExamples = dynamic(() => import("@/components/component-gallery/examples/select").then((m) => m.SelectExamples), { loading: ExamplesLoading });
@@ -173,6 +177,8 @@ export const GALLERY_EXAMPLE_SECTIONS: ReadonlyMap<string, RenderGalleryExamples
 	["component-radio-group", (): React.JSX.Element => <RadioGroupExamples />],
 	["component-rating", (): React.JSX.Element => <RatingExamples />],
 	["component-resizable", (): React.JSX.Element => <ResizableExamples />],
+	["component-rich-text-editor", (): React.JSX.Element => <RichTextEditorExamples />],
+	["component-rich-text-view", (): React.JSX.Element => <RichTextViewExamples />],
 	["component-scroll-area", (): React.JSX.Element => <ScrollAreaExamples />],
 	["component-scrollspy", (): React.JSX.Element => <ScrollspyExamples />],
 	["component-select", (): React.JSX.Element => <SelectExamples />],

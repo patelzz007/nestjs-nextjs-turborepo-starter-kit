@@ -13,6 +13,8 @@ import { RequestContextService, type RequestPrincipal } from "../../../../../pla
 import { AuthGuard, readAccessTokenCookie, readBearerToken } from "../../../../../platform/presentation/http/security/guards/auth.guard";
 import { OptionalRefreshTokenGuard, readPresentedRefreshToken, RefreshTokenGuard } from "../../../../../platform/presentation/http/security/guards/refresh-token.guard";
 import { TokenService } from "../token.service";
+import { OPTIONAL_AUTH_KEY } from "../../../../../platform/presentation/http/security/decorators/optional-auth.decorator";
+import { IS_PUBLIC_KEY } from "../../../../../platform/presentation/http/security/decorators/public.decorator";
 
 /** Server-side revocation state the guard reads through its ports (account state + impersonation sessions). */
 const revocationState = {
@@ -166,6 +168,36 @@ describe("AuthGuard → request context", () => {
 		});
 
 		expect(principal).toBeUndefined();
+	});
+});
+
+describe("AuthGuard → @OptionalAuth() public routes", () => {
+	const guard = createAuthGuard();
+	const OPTIONAL = { [IS_PUBLIC_KEY]: true, [OPTIONAL_AUTH_KEY]: true };
+
+	it("recognises a signed-in caller on a public route", async () => {
+		const token: string = await jwt.signAsync(accessToken({ sub: "user-7", id: "user-7" }), { secret: config.auth.jwtAccessSecret });
+		const request = requestWith({ authorization: `Bearer ${token}` });
+
+		expect((await principalAfter(() => guard.canActivate(createHttpContext(request, OPTIONAL))))?.userId).toBe("user-7");
+	});
+
+	it("lets a caller with no token in, as anonymous", async () => {
+		expect(await principalAfter(() => guard.canActivate(createHttpContext(requestWith({}), OPTIONAL)))).toBeUndefined();
+	});
+
+	it("answers an invalid or revoked token as anonymous, never with an error", async () => {
+		expect(await principalAfter(() => guard.canActivate(createHttpContext(requestWith({ authorization: "Bearer not-a-jwt" }), OPTIONAL)))).toBeUndefined();
+
+		revocationState.assertTokenValid.mockRejectedValue(new UnauthorizedException({ message: "Token revoked", error: "SESSION_REVOKED" }));
+		const token: string = await jwt.signAsync(accessToken({}), { secret: config.auth.jwtAccessSecret });
+		expect(await principalAfter(() => guard.canActivate(createHttpContext(requestWith({ authorization: `Bearer ${token}` }), OPTIONAL)))).toBeUndefined();
+	});
+
+	it("never reads the token on a plain @Public() route", async () => {
+		const token: string = await jwt.signAsync(accessToken({ sub: "user-8", id: "user-8" }), { secret: config.auth.jwtAccessSecret });
+
+		expect(await principalAfter(() => guard.canActivate(createHttpContext(requestWith({ authorization: `Bearer ${token}` }), { [IS_PUBLIC_KEY]: true })))).toBeUndefined();
 	});
 });
 

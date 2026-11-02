@@ -1,7 +1,7 @@
 import { epochMs, type OpsAlertSettings } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
-import { type Breach, findBreaches, type Readings, reconcileAlerts, type ServerReading } from "../policies/alert-rules.policy";
+import { type Breach, findBreaches, type InstanceReading, type Readings, reconcileAlerts, replacedInstanceIds, type ServerReading } from "../policies/alert-rules.policy";
 
 const MINUTE = 60_000;
 const NOW = epochMs(1_000 * MINUTE);
@@ -10,6 +10,11 @@ const NONE: Readings = { servers: [], instances: [], dependencies: [], endpoints
 
 function server(overrides: Partial<ServerReading> = {}): ServerReading {
 	return { id: "s1", name: "web-01", lastSeenAt: NOW, recentCpuAverages: [10, 10, 10], memoryPercent: 50, diskPercent: 50, ...overrides };
+}
+
+/** An API process on web-01, started an hour before NOW and reporting until NOW. */
+function instance(overrides: Partial<InstanceReading> = {}): InstanceReading {
+	return { id: "i1", name: "api", service: "api", hostname: "web-01", startedAt: epochMs(NOW - 60 * MINUTE), lastSeenAt: NOW, ...overrides };
 }
 
 function rulesOf(readings: Partial<Readings>): string[] {
@@ -39,10 +44,7 @@ describe("findBreaches", () => {
 	it("covers instances, dependencies and endpoints", () => {
 		expect(
 			rulesOf({
-				instances: [
-					{ id: "i1", name: "api", lastSeenAt: epochMs(NOW - 4 * MINUTE) },
-					{ id: "i2", name: "api", lastSeenAt: NOW },
-				],
+				instances: [instance({ id: "i1", lastSeenAt: epochMs(NOW - 4 * MINUTE) }), instance({ id: "i2", hostname: "web-02" })],
 				dependencies: [
 					{ dependency: "KAFKA", configured: true, down: true, error: "ECONNREFUSED" },
 					{ dependency: "RABBITMQ", configured: false, down: true, error: null },
@@ -53,6 +55,34 @@ describe("findBreaches", () => {
 				],
 			}),
 		).toEqual(["INSTANCE:SILENT", "DEPENDENCY:DEPENDENCY_DOWN", "ENDPOINT:ENDPOINT_DOWN", "ENDPOINT:TLS_EXPIRING"]);
+	});
+
+	it("treats a process a newer one of its service replaced on its host as restarted, not silent", () => {
+		const old = instance({ id: "old", startedAt: epochMs(NOW - 90 * MINUTE), lastSeenAt: epochMs(NOW - 30 * MINUTE) });
+		const restarted = instance({ id: "new", startedAt: epochMs(NOW - 29 * MINUTE) });
+
+		expect(rulesOf({ instances: [old, restarted] })).toEqual([]);
+		expect([...replacedInstanceIds([old, restarted])]).toEqual(["old"]);
+	});
+
+	it("forgets every earlier process after many restarts, alerting for none of them", () => {
+		const restarts = [1, 2, 3, 4].map((step) =>
+			instance({ id: `pid-${String(step)}`, startedAt: epochMs(NOW - (50 - step * 10) * MINUTE), lastSeenAt: epochMs(NOW - (45 - step * 10) * MINUTE) }),
+		);
+		const live = instance({ id: "pid-5", startedAt: epochMs(NOW - 2 * MINUTE) });
+
+		expect(rulesOf({ instances: [...restarts, live] })).toEqual([]);
+		expect([...replacedInstanceIds([...restarts, live])].toSorted()).toEqual(["pid-1", "pid-2", "pid-3", "pid-4"]);
+	});
+
+	it("still reports a process nothing replaced: a crash on a host whose other worker started before it went quiet, or another host", () => {
+		const crashed = instance({ id: "crashed", startedAt: epochMs(NOW - 60 * MINUTE), lastSeenAt: epochMs(NOW - 10 * MINUTE) });
+		const sibling = instance({ id: "sibling", startedAt: epochMs(NOW - 60 * MINUTE) });
+		const elsewhere = instance({ id: "elsewhere", hostname: "web-02", startedAt: epochMs(NOW - MINUTE) });
+		const otherService = instance({ id: "worker", service: "worker", startedAt: epochMs(NOW - MINUTE) });
+
+		expect(rulesOf({ instances: [crashed, sibling, elsewhere, otherService] })).toEqual(["INSTANCE:SILENT"]);
+		expect(replacedInstanceIds([crashed, sibling, elsewhere, otherService]).size).toBe(0);
 	});
 
 	it("says what happened in its message", () => {

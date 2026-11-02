@@ -75,6 +75,11 @@ export const PERMISSION: PermissionRegistry = {
 	SERVER_METRIC: actionSlugs("SERVER_METRIC"),
 	DATABASE_BACKUP: actionSlugs("DATABASE_BACKUP"),
 	LOAD_TEST: actionSlugs("LOAD_TEST"),
+	NOTIFICATION: actionSlugs("NOTIFICATION"),
+	BROADCAST: actionSlugs("BROADCAST"),
+	BROADCAST_REPORT: actionSlugs("BROADCAST_REPORT"),
+	RATE_LIMIT: actionSlugs("RATE_LIMIT"),
+	CACHE: actionSlugs("CACHE"),
 	MEMBER: actionSlugs("MEMBER"),
 	KYB: actionSlugs("KYB"),
 	ACCESS_REQUEST: actionSlugs("ACCESS_REQUEST"),
@@ -107,6 +112,9 @@ export const MerchantCapabilitySchema = z.enum([
 	"merchant:view_locations",
 	"merchant:manage_locations",
 	"merchant:manage_verification",
+	"merchant:view_notifications",
+	"merchant:manage_broadcasts",
+	"merchant:publish_broadcasts",
 ]);
 
 export type MerchantCapability = z.output<typeof MerchantCapabilitySchema>;
@@ -126,6 +134,12 @@ export interface MerchantCapabilityRegistry {
 	readonly manageLocations: MerchantCapability;
 	/** Business verification (KYB): read, submit, and download documents. */
 	readonly manageVerification: MerchantCapability;
+	/** The tenant's own notification delivery log (ADR 070). */
+	readonly viewNotifications: MerchantCapability;
+	/** Draft, edit and submit broadcasts to the tenant's customers (ADR 073). */
+	readonly manageBroadcasts: MerchantCapability;
+	/** Approve another member's broadcast for sending (the second pair of eyes, ADR 073). */
+	readonly publishBroadcasts: MerchantCapability;
 }
 
 export const MERCHANT_CAPABILITY: MerchantCapabilityRegistry = {
@@ -139,6 +153,9 @@ export const MERCHANT_CAPABILITY: MerchantCapabilityRegistry = {
 	viewLocations: "merchant:view_locations",
 	manageLocations: "merchant:manage_locations",
 	manageVerification: "merchant:manage_verification",
+	viewNotifications: "merchant:view_notifications",
+	manageBroadcasts: "merchant:manage_broadcasts",
+	publishBroadcasts: "merchant:publish_broadcasts",
 };
 
 /**
@@ -161,6 +178,9 @@ export const MERCHANT_CAPABILITY_CEDAR_ACTIONS: Readonly<Record<MerchantCapabili
 	"merchant:view_locations": null,
 	"merchant:manage_locations": "tenant:manage_locations",
 	"merchant:manage_verification": "tenant:manage_verification",
+	"merchant:view_notifications": "tenant:view_notifications",
+	"merchant:manage_broadcasts": "tenant:manage_broadcasts",
+	"merchant:publish_broadcasts": "tenant:publish_broadcasts",
 };
 
 export const PermissionPairSchema = z
@@ -220,6 +240,14 @@ export const TENANT_PERMISSIONS: readonly PermissionPair[] = [
 	pair("KYB", "READ"),
 	pair("KYB", "UPDATE"),
 	pair("SUPPORT_ACCESS", "APPROVE"),
+	// Broadcasts to the tenant's customers and the tenant's own delivery log (ADR 070, 073).
+	pair("BROADCAST", "LIST"),
+	pair("BROADCAST", "READ"),
+	pair("BROADCAST", "CREATE"),
+	pair("BROADCAST", "UPDATE"),
+	pair("BROADCAST", "PUBLISH"),
+	pair("BROADCAST", "DELETE"),
+	pair("NOTIFICATION", "LIST"),
 ];
 
 /** Whether a permission is one a tenant may hold (see {@link TENANT_PERMISSIONS}). */
@@ -272,6 +300,9 @@ export const MERCHANT_CAPABILITY_PERMISSION: Readonly<Record<MerchantCapability,
 	"merchant:view_locations": pair("LOCATION", "READ"),
 	"merchant:manage_locations": pair("LOCATION", "UPDATE"),
 	"merchant:manage_verification": pair("KYB", "UPDATE"),
+	"merchant:view_notifications": pair("NOTIFICATION", "LIST"),
+	"merchant:manage_broadcasts": pair("BROADCAST", "UPDATE"),
+	"merchant:publish_broadcasts": pair("BROADCAST", "PUBLISH"),
 };
 
 /** The merchant capability slugs a set of effective permissions satisfies (what the merchant app shows). */

@@ -155,6 +155,9 @@ AuthUserContext.displayName = "AuthUserContext";
 const AuthCommandsContext = React.createContext<AuthCommands | undefined>(undefined);
 AuthCommandsContext.displayName = "AuthCommandsContext";
 
+const AuthClientTypeContext = React.createContext<AuthClientType | undefined>(undefined);
+AuthClientTypeContext.displayName = "AuthClientTypeContext";
+
 export interface AuthProviderProps {
 	readonly children: React.ReactNode;
 	/**
@@ -706,7 +709,9 @@ function AuthSession({
 	return (
 		<AuthContext.Provider value={value}>
 			<AuthCommandsContext.Provider value={commands}>
-				<AuthUserContext.Provider value={user}>{children}</AuthUserContext.Provider>
+				<AuthClientTypeContext.Provider value={clientType}>
+					<AuthUserContext.Provider value={user}>{children}</AuthUserContext.Provider>
+				</AuthClientTypeContext.Provider>
 			</AuthCommandsContext.Provider>
 		</AuthContext.Provider>
 	);
@@ -719,6 +724,18 @@ export function useAuth(): AuthContextType {
 		throw new Error("useAuth must be used within AuthProvider");
 	}
 	return context;
+}
+
+/**
+ * Which frontend this is (`AuthProviderProps.clientType`). Never changes for a mount: a live stream
+ * names it in its URL, since `EventSource` cannot send `X-Client-Type`.
+ */
+export function useAuthClientType(): AuthClientType {
+	const clientType = React.useContext(AuthClientTypeContext);
+	if (clientType === undefined) {
+		throw new Error("useAuthClientType must be used within AuthProvider");
+	}
+	return clientType;
 }
 
 /** The signed-in user (profile + session scope), or null — re-renders only when it changes. */

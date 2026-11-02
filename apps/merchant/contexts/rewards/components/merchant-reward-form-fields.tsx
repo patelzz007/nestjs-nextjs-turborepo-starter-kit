@@ -5,7 +5,7 @@ import { MAX_CLAIMS_OPTIONS, MIN_SPEND_PREFIX, REWARD_TYPE_OPTIONS, getRewardVal
 import { RewardEditorSection } from "@/contexts/rewards/components/reward-editor-section";
 import { formatClaimLimitCount } from "@/contexts/rewards/lib/reward-detail";
 import { RewardEditorTextFieldSchema, type RewardEditorField, type RewardEditorState } from "@/contexts/rewards/lib/reward-editor-form";
-import { RewardTypeSchema } from "@workspace/shared";
+import { REWARD_FREE_ITEM_NAME_MAX_LENGTH, REWARD_FREE_ITEM_SKU_MAX_LENGTH, rewardTypeGivesFreeItem, RewardTypeSchema } from "@workspace/shared";
 import { DatePicker } from "@workspace/ui/components/date-picker";
 import { Input } from "@workspace/ui/components/input";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@workspace/ui/components/input-group";
@@ -43,6 +43,21 @@ function FieldMessage({ field, message }: FieldMessageProps): React.JSX.Element 
 	);
 }
 
+interface RewardTypeDetailProps {
+	readonly label: string;
+	readonly value: string;
+}
+
+/** One line of a reward-type card's details: a muted label and its value. */
+function RewardTypeDetail({ label, value }: RewardTypeDetailProps): React.JSX.Element {
+	return (
+		<span className="flex justify-between gap-3">
+			<span className="text-muted-foreground">{label}</span>
+			<span className="text-right font-medium text-foreground">{value}</span>
+		</span>
+	);
+}
+
 /** `aria-invalid` / `aria-describedby` for an input whose field may carry an error. */
 function invalidProps(field: RewardEditorField, message: string | undefined): Pick<React.AriaAttributes, "aria-invalid" | "aria-describedby"> {
 	return message === undefined ? {} : { "aria-invalid": true, "aria-describedby": errorIdOf(field) };
@@ -59,6 +74,8 @@ export interface MerchantRewardFormFieldsProps {
 	readonly onImagesChange: (images: readonly SavedRewardImage[]) => void;
 	/** The "Where" section's body — store availability — or `null` when the tenant has one store. */
 	readonly stores: React.ReactNode;
+	/** The "Who can claim" section's body: everyone, or chosen customers (`MerchantRewardAudienceFields`). */
+	readonly audience: React.ReactNode;
 	/** Every field is locked while the reward saves. */
 	readonly disabled?: boolean;
 }
@@ -69,7 +86,15 @@ export interface MerchantRewardFormFieldsProps {
  * Shared by creating and editing a reward; validation comes from the shared
  * reward schema (`useRewardEditorForm`), never from rules written here.
  */
-export function MerchantRewardFormFields({ editor, tenantSlug, initialImages, onImagesChange, stores, disabled = false }: MerchantRewardFormFieldsProps): React.JSX.Element {
+export function MerchantRewardFormFields({
+	editor,
+	tenantSlug,
+	initialImages,
+	onImagesChange,
+	stores,
+	audience,
+	disabled = false,
+}: MerchantRewardFormFieldsProps): React.JSX.Element {
 	const { values, errors, setField } = editor;
 	const valueField = getRewardValueField(values.rewardType);
 
@@ -123,17 +148,35 @@ export function MerchantRewardFormFields({ editor, tenantSlug, initialImages, on
 					<p id="rewardType-label" className="text-sm font-medium text-foreground">
 						Reward type
 					</p>
-					<RadioGroup aria-labelledby="rewardType-label" value={values.rewardType} onValueChange={handleTypeChange} disabled={disabled} className="flex flex-wrap gap-2">
+					<RadioGroup
+						aria-labelledby="rewardType-label"
+						value={values.rewardType}
+						onValueChange={handleTypeChange}
+						disabled={disabled}
+						className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
 						{REWARD_TYPE_OPTIONS.map((option): React.JSX.Element => {
 							const Icon = option.icon;
+							const detailsId = `rewardType-${option.value}-details`;
 							return (
 								<Label
 									key={option.value}
 									data-slot="reward-type-option"
-									className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-background px-3 py-2.5 font-normal transition-colors duration-150 hover:border-foreground/20 has-data-checked:border-primary has-data-checked:bg-primary/5 has-data-disabled:cursor-not-allowed has-data-disabled:opacity-60 motion-reduce:transition-none dark:has-data-checked:bg-primary/10">
-									<RadioGroupItem value={option.value} />
-									<Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-									<span className="text-sm text-foreground">{option.label}</span>
+									className="flex cursor-pointer flex-col items-stretch gap-3 rounded-xl border border-border bg-background p-4 font-normal transition-colors duration-150 hover:border-foreground/20 has-data-checked:border-primary has-data-checked:bg-primary/5 has-data-disabled:cursor-not-allowed has-data-disabled:opacity-60 motion-reduce:transition-none dark:has-data-checked:bg-primary/10">
+									<span className="flex items-start gap-3">
+										<span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground" aria-hidden="true">
+											<Icon className="size-4" />
+										</span>
+										<span className="flex min-w-0 flex-1 flex-col gap-0.5">
+											<span className="text-sm font-medium text-foreground">{option.label}</span>
+											<span className="text-sm text-muted-foreground">{option.description}</span>
+										</span>
+										<RadioGroupItem value={option.value} aria-label={option.label} aria-describedby={detailsId} />
+									</span>
+									<span id={detailsId} data-slot="reward-type-details" className="grid gap-1.5 border-t border-border pt-3 text-xs">
+										<RewardTypeDetail label="Customers see" value={option.example} />
+										<RewardTypeDetail label="You set" value={option.youSet} />
+										<RewardTypeDetail label="At the till" value={option.atTheTill} />
+									</span>
 								</Label>
 							);
 						})}
@@ -194,6 +237,43 @@ export function MerchantRewardFormFields({ editor, tenantSlug, initialImages, on
 						<FieldMessage field="minPurchase" message={errors.minPurchase} />
 					</div>
 				</div>
+
+				{rewardTypeGivesFreeItem(values.rewardType) ? (
+					<div data-slot="reward-free-item" className="grid gap-5 sm:grid-cols-2">
+						<div className="flex flex-col gap-2">
+							<Label htmlFor="freeItemName">Free item</Label>
+							<Input
+								id="freeItemName"
+								name="freeItemName"
+								value={values.freeItemName}
+								onChange={handleTextChange}
+								placeholder="e.g. Latte (12 oz)"
+								maxLength={REWARD_FREE_ITEM_NAME_MAX_LENGTH}
+								disabled={disabled}
+								{...invalidProps("freeItemName", errors.freeItemName)}
+							/>
+							<p className="text-sm text-muted-foreground">{"Printed on the customer's receipt."}</p>
+							<FieldMessage field="freeItemName" message={errors.freeItemName} />
+						</div>
+						<div className="flex flex-col gap-2">
+							<Label htmlFor="freeItemSku">SKU</Label>
+							<Input
+								id="freeItemSku"
+								name="freeItemSku"
+								value={values.freeItemSku}
+								onChange={handleTextChange}
+								placeholder="e.g. BEV-LATTE-12OZ"
+								maxLength={REWARD_FREE_ITEM_SKU_MAX_LENGTH}
+								autoCapitalize="characters"
+								spellCheck={false}
+								disabled={disabled}
+								{...invalidProps("freeItemSku", errors.freeItemSku)}
+							/>
+							<p className="text-sm text-muted-foreground">The product code your POS uses, so the till can match it.</p>
+							<FieldMessage field="freeItemSku" message={errors.freeItemSku} />
+						</div>
+					</div>
+				) : null}
 
 				<div className="flex flex-col gap-2">
 					<Label htmlFor="title">Title</Label>
@@ -296,6 +376,10 @@ export function MerchantRewardFormFields({ editor, tenantSlug, initialImages, on
 					{stores}
 				</RewardEditorSection>
 			)}
+
+			<RewardEditorSection id="reward-audience" title="Who can claim" description="Give it to everyone, or only to customers you pick.">
+				{audience}
+			</RewardEditorSection>
 
 			<RewardEditorSection id="reward-terms" title="Terms and conditions" description="Optional. Shown to customers with the reward.">
 				<div className="flex flex-col gap-2">

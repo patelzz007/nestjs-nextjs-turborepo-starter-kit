@@ -14,6 +14,8 @@ function completeDraft(overrides: Partial<RewardEditorInput> = {}): RewardEditor
 		description: "Any nasi lemak set, dine-in or takeaway.",
 		imageFileIds: ["4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b"],
 		rewardValue: "20",
+		freeItemName: "",
+		freeItemSku: "",
 		minPurchase: "",
 		termsConditions: "",
 		startDate: "2026-11-01",
@@ -22,6 +24,8 @@ function completeDraft(overrides: Partial<RewardEditorInput> = {}): RewardEditor
 		maxClaimsPerUser: 1,
 		locationScopeType: "ALL_LOCATIONS",
 		locationIds: [],
+		audienceType: "EVERYONE",
+		audienceCustomerIds: [],
 		...overrides,
 	};
 }

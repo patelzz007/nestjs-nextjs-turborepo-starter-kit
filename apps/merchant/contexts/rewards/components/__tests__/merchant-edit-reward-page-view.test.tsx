@@ -25,8 +25,9 @@ interface UpdateMutationOptions {
 	readonly onSuccess: (response: { readonly data: RewardResponse }) => void;
 }
 
-const { rewardQuery, rewardsMutation, routerPush } = vi.hoisted(() => ({
+const { rewardQuery, audienceQuery, rewardsMutation, routerPush } = vi.hoisted(() => ({
 	rewardQuery: vi.fn<(input: object, options?: RewardQueryOptions) => object>(),
+	audienceQuery: vi.fn<(input: object, options?: { readonly enabled?: boolean }) => object>(),
 	rewardsMutation: vi.fn<(options: UpdateMutationOptions) => object>(),
 	routerPush: vi.fn(),
 }));
@@ -39,7 +40,7 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
 		api: {
 			tenants: {
-				rewards: { get: { useQuery: rewardQuery }, update: { useMutation: rewardsMutation } },
+				rewards: { get: { useQuery: rewardQuery }, audience: { useQuery: audienceQuery }, update: { useMutation: rewardsMutation } },
 				context: { useQuery: (): object => contextQueryState(TWO_STORE_CONTEXT) },
 			},
 		},
@@ -67,6 +68,7 @@ function FormFieldsStub({ editor }: FormFieldsStubProps): React.JSX.Element {
 			<input aria-label="Title" name="title" value={values.title} onChange={handleChange} />
 			<input aria-label="Description" name="description" value={values.description} onChange={handleChange} />
 			<input aria-label="Minimum purchase" type="number" name="minPurchase" value={values.minPurchase} onChange={handleChange} />
+			<output aria-label="Audience">{`${values.audienceType}:${values.audienceCustomerIds.join(",")}`}</output>
 		</>
 	);
 }
@@ -94,14 +96,64 @@ function rewardReturns(description: string, status: RewardResponse["status"] = "
 	rewardQuery.mockReturnValue({ data: { data: draftReward(description, status) }, isSuccess: true, isError: false, error: null, refetch: vi.fn() });
 }
 
+/** A reward for everyone never reads its audience: the query stays idle. */
+const IDLE_AUDIENCE = { data: undefined, isSuccess: false, isError: false, error: null, refetch: vi.fn() };
+
 beforeEach((): void => {
 	rewardReturns("One free latte");
+	audienceQuery.mockReturnValue(IDLE_AUDIENCE);
 	rewardsMutation.mockReturnValue({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false });
 });
 
 afterEach((): void => {
 	cleanup();
 	vi.clearAllMocks();
+});
+
+describe("MerchantEditRewardPageView audience", () => {
+	const CUSTOMER_ID = "0193f2c4-0000-7000-8000-0000000000a1";
+
+	function targetedRewardReturns(): void {
+		rewardQuery.mockReturnValue({
+			data: { data: rewardFixture({ ...draftReward("One free latte"), audienceType: "SELECTED_CUSTOMERS" }) },
+			isSuccess: true,
+			isError: false,
+			error: null,
+			refetch: vi.fn(),
+		});
+	}
+
+	it("does not read the audience of a reward for everyone", () => {
+		renderWithAuthorization(<MerchantEditRewardPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
+
+		expect(audienceQuery).toHaveBeenCalledWith({ tenantSlug: TEST_ORG_SLUG, rewardId: REWARD_ID }, { enabled: false });
+		expect(screen.getByLabelText("Audience").textContent).toBe("EVERYONE:");
+	});
+
+	it("waits for a private reward's customers before opening the editor, then starts from them", () => {
+		targetedRewardReturns();
+		const view = renderWithAuthorization(<MerchantEditRewardPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
+		expect(screen.queryByLabelText("Audience")).toBeNull();
+
+		audienceQuery.mockReturnValue({
+			data: { data: { audienceType: "SELECTED_CUSTOMERS", customers: [{ userId: CUSTOMER_ID, fullName: "Alice", maskedEmail: null, lastClaimedAt: 0, claimCount: 1 }] } },
+			isSuccess: true,
+			isError: false,
+			error: null,
+			refetch: vi.fn(),
+		});
+		view.rerender(<MerchantEditRewardPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />);
+
+		expect(screen.getByLabelText("Audience").textContent).toBe(`SELECTED_CUSTOMERS:${CUSTOMER_ID}`);
+	});
+
+	it("offers a retry when the audience cannot be read", () => {
+		targetedRewardReturns();
+		audienceQuery.mockReturnValue({ data: undefined, isSuccess: false, isError: true, error: new ApiError({ message: "down", statusCode: 503 }), refetch: vi.fn() });
+		renderWithAuthorization(<MerchantEditRewardPageView tenantSlug={TEST_ORG_SLUG} rewardId={REWARD_ID} />, { role: "OWNER" });
+
+		expect(screen.getByText("Could not load this reward")).toBeTruthy();
+	});
 });
 
 describe("MerchantEditRewardPageView form", () => {

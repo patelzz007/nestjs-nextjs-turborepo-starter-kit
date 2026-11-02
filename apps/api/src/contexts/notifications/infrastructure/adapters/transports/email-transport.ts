@@ -14,6 +14,8 @@ export interface OutboundEmail {
 	readonly cc: readonly string[];
 	readonly bcc: readonly string[];
 	readonly replyTo: string | undefined;
+	/** Extra headers, e.g. RFC 8058 `List-Unsubscribe` / `List-Unsubscribe-Post`. */
+	readonly headers: Readonly<Record<string, string>>;
 }
 
 /** What a provider returns for an accepted email. */

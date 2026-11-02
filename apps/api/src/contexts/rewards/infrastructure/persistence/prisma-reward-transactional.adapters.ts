@@ -11,11 +11,14 @@ import type {
 	RewardAuditEntry,
 	RewardAuditPort,
 	RewardImageFilesPort,
+	RedeemedRewardFacts,
+	RewardOfferFacts,
 	RewardRedemptionFacts,
 	RewardRedemptionFactsPort,
 	RewardViewPort,
 } from "../../application/ports/rewards-transactional.ports";
 import type { TenantDisplayAdapter } from "../adapters/tenant-display.adapter";
+import { freeItemOfColumns } from "./free-item-columns";
 import { REWARD_RESPONSE_INCLUDE } from "./reward-list-queries";
 import { mapRewardToResponse } from "./reward-response.mapper";
 
@@ -96,6 +99,13 @@ export class PrismaLegalAcceptanceCheck implements LegalAcceptanceCheck {
 	}
 }
 
+/** The columns a reward's offer is read from. */
+const OFFER_SELECT = { rewardType: true, rewardValue: true, freeItemName: true, freeItemSku: true } satisfies Prisma.RewardSelect;
+
+function offerFactsOf(row: Prisma.RewardGetPayload<{ select: typeof OFFER_SELECT }>): RewardOfferFacts {
+	return { rewardType: RewardTypeSchema.parse(row.rewardType), rewardValue: row.rewardValue, freeItem: freeItemOfColumns(row) };
+}
+
 /**
  * A reward's redemption facts; a soft-deleted reward has none (validate and checkout answer its code
  * alike, as unknown), and closed (soft-deleted) stores never count as a place it can be redeemed.
@@ -110,7 +120,9 @@ export class PrismaRewardRedemptionFacts implements RewardRedemptionFactsPort {
 				id: true,
 				tenantId: true,
 				title: true,
-				rewardType: true,
+				description: true,
+				...OFFER_SELECT,
+				termsConditions: true,
 				expiryDate: true,
 				locationScopeType: true,
 				minSpendMinor: true,
@@ -124,7 +136,10 @@ export class PrismaRewardRedemptionFacts implements RewardRedemptionFactsPort {
 			id: reward.id,
 			tenantId: reward.tenantId,
 			title: reward.title,
+			description: reward.description,
 			rewardType: RewardTypeSchema.parse(reward.rewardType),
+			offer: offerFactsOf(reward),
+			termsConditions: reward.termsConditions,
 			expiryDate: epochMs(Number(reward.expiryDate)),
 			locationScopeType: reward.locationScopeType,
 			locationIds: reward.locationScopes.map((scope) => scope.locationId),
@@ -132,11 +147,11 @@ export class PrismaRewardRedemptionFacts implements RewardRedemptionFactsPort {
 		};
 	}
 
-	public async titlesOf(rewardIds: readonly string[]): Promise<ReadonlyMap<string, string>> {
+	public async redeemedRewardsOf(rewardIds: readonly string[]): Promise<ReadonlyMap<string, RedeemedRewardFacts>> {
 		if (rewardIds.length === 0) {
 			return new Map();
 		}
-		const rows = await this.db.reward.findMany({ where: { id: { in: [...new Set(rewardIds)] } }, select: { id: true, title: true } });
-		return new Map(rows.map((row): [string, string] => [row.id, row.title]));
+		const rows = await this.db.reward.findMany({ where: { id: { in: [...new Set(rewardIds)] } }, select: { id: true, title: true, ...OFFER_SELECT } });
+		return new Map(rows.map((row): [string, RedeemedRewardFacts] => [row.id, { title: row.title, offer: offerFactsOf(row) }]));
 	}
 }

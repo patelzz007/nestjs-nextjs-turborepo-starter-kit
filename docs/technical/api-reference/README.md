@@ -1,6 +1,6 @@
 ---
 title: "API reference"
-description: "Every endpoint of the API (359 operations), generated from the OpenAPI export with real seed-data samples."
+description: "Every endpoint of the API (413 operations), generated from the OpenAPI export with real seed-data samples."
 order: 1
 author: "Generated from the OpenAPI export"
 lastUpdated: 1793145600000
@@ -12,7 +12,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference
 
-Every endpoint of `apps/api` — 359 operations, 229 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
+Every endpoint of `apps/api` — 413 operations, 227 with a sample captured from a freshly seeded API (`pnpm db:seed (development scenario)`). Read [API conventions](../api/README.md) first: the response envelope, authentication, the `X-Client-Type` and `X-Mutation-Intent` headers, errors and list queries apply to every endpoint below.
 
 **Content type.** Every endpoint takes and returns `application/json` unless its *Content type* line names another (a file upload, a download, a live stream). Errors are always `application/json`.
 
@@ -26,17 +26,18 @@ Every endpoint of `apps/api` — 359 operations, 229 with a sample captured from
 | [Auth, sessions and account security](./auth-and-sessions.md) | 47 | Login, signup, email verification, password reset, two-factor authentication, MFA recovery, sessions, impersonation and support access. |
 | [Roles, permissions and audit](./access-control.md) | 33 | Platform RBAC administration, authorization decisions, the capability catalog and the HTTP audit log. |
 | [Platform administration (merchants, rewards review, analytics)](./platform-admin.md) | 25 | What platform admins do in the admin panel: invite merchants, review KYB and store requests, approve rewards, read platform sales. |
-| [Merchant tenants (portal API)](./merchant-tenants.md) | 72 | Everything the merchant portal calls under /tenants/{tenantSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
-| [Customer rewards and claims](./customer-rewards.md) | 15 | The consumer app's API: browse rewards, share them with friends, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics. |
+| [Merchant tenants (portal API)](./merchant-tenants.md) | 74 | Everything the merchant portal calls under /tenants/{tenantSlug}: onboarding, KYB, stores, team, rewards, POS terminals, API keys, redemptions and analytics. |
+| [Customer rewards and claims](./customer-rewards.md) | 13 | The consumer app's API: browse rewards, share them with friends, accept the legal terms, claim with a one-time code, show the QR code and spending analytics. |
 | [Point of sale and integrations (machine-to-machine)](./pos.md) | 13 | Terminal pairing, validating a customer's QR / backup code and recording the paid bill, plus the integration API (`/integration/*`: rewards, analytics, redemption history). Authenticated with a merchant API key, which names its own tenant. |
 | [Files and object storage](./files.md) | 11 | Direct-to-storage uploads (upload ticket → upload → complete), signed downloads, deletion and the scanner callback. |
 | [Email log, templates and delivery webhooks](./email.md) | 7 | The outbound email log, template previews and test sends, and the Resend delivery webhook. |
+| [Notifications: inbox, preferences, push devices and broadcasts](./notifications.md) | 47 | One inbox per app (live over SSE), the preference matrix with quiet hours and digest, marketing consent, push device registration, one-click unsubscribe, Twilio callbacks, the delivery log and catalog for staff, and a tenant's own delivery log and broadcasts. |
 | [Geography reference data](./geography.md) | 31 | Regions, subregions, countries, states and cities: CRUD, autocomplete, import and export. |
 | [GitHub contributions](./github.md) | 5 | Read-only summary, commit history with line counts and contributor totals of the GitHub repositories the API is configured with. |
 | [GitHub pull requests](./github-pull-requests.md) | 25 | Admins link their own fine-grained GitHub token, then list and read pull requests — conversation, commits, files with diffs, line-comment threads and edit histories — as themselves. |
 | [Sample catalog (products and categories)](./catalog-samples.md) | 16 | The reference CRUD modules every new feature copies: list/detail/create/update/soft delete/restore/bulk. |
 | [Kanban boards](./kanban.md) | 24 | The platform staff's two linked boards: the epic → feature → story → task → subtask hierarchy with item keys, moves under the board lock (optimistic locking), Move to… (a new parent), ranked item search, WIP limits, checklists, links, watchers, history, comments with files, CSV import and attachments. |
-| [Platform operations (servers, backups, load tests)](./platform-operations.md) | 28 | The admin panel's operations console (ADR 068): servers and their history, instances, dependencies, alerts, database backups and load tests — and the endpoint a server agent reports to. |
+| [Platform operations (servers, backups, load tests)](./platform-operations.md) | 35 | The admin panel's operations console (ADR 068): servers and their history, instances, dependencies, alerts, database backups and load tests — and the endpoint a server agent reports to. |
 | [System: health and version](./system.md) | 7 | Liveness, readiness and deep health probes, the apps' connection-quality ping and the API version manifest. |
 
 ## All endpoints
@@ -198,7 +199,9 @@ Every endpoint of `apps/api` — 359 operations, 229 with a sample captured from
 | POST | [`/api/v1/tenants/{tenantSlug}/rewards`](./merchant-tenants.md#post-apiv1tenantstenantslugrewards) | Create a draft reward |
 | GET | [`/api/v1/tenants/{tenantSlug}/rewards/{rewardId}`](./merchant-tenants.md#get-apiv1tenantstenantslugrewardsrewardid) | Read one tenant reward (404 when not offered at any of the caller's stores) |
 | PATCH | [`/api/v1/tenants/{tenantSlug}/rewards/{rewardId}`](./merchant-tenants.md#patch-apiv1tenantstenantslugrewardsrewardid) | Update a draft or pending reward |
+| GET | [`/api/v1/tenants/{tenantSlug}/rewards/{rewardId}/audience`](./merchant-tenants.md#get-apiv1tenantstenantslugrewardsrewardidaudience) | Who the reward is for: everyone, or the customers it was given to (404 outside the caller's stores) |
 | POST | [`/api/v1/tenants/{tenantSlug}/rewards/{rewardId}/publish`](./merchant-tenants.md#post-apiv1tenantstenantslugrewardsrewardidpublish) | Submit reward for moderation review (no body required) |
+| GET | [`/api/v1/tenants/{tenantSlug}/rewards/customers`](./merchant-tenants.md#get-apiv1tenantstenantslugrewardscustomers) | The tenant's customers, to give a reward to (name and masked email; people who manage rewards) |
 | GET | [`/api/v1/tenants/{tenantSlug}/rewards/summary`](./merchant-tenants.md#get-apiv1tenantstenantslugrewardssummary) | Tenant reward figures: the count in each status and the units still claimable, over every reward in the store scope |
 | GET | [`/api/v1/tenants/{tenantSlug}/terminals`](./merchant-tenants.md#get-apiv1tenantstenantslugterminals) | List the tenant's POS terminals |
 | POST | [`/api/v1/tenants/{tenantSlug}/terminals`](./merchant-tenants.md#post-apiv1tenantstenantslugterminals) | Register a POS terminal at a store and get its one-time pairing code |
@@ -231,10 +234,8 @@ Every endpoint of `apps/api` — 359 operations, 229 with a sample captured from
 | GET | [`/api/v1/legal/status`](./customer-rewards.md#get-apiv1legalstatus) | Get rewards legal acceptance and verified phone status |
 | POST | [`/api/v1/referrals/attribution`](./customer-rewards.md#post-apiv1referralsattribution) | Remember the referral link the caller opened |
 | POST | [`/api/v1/referrals/rewards/{rewardId}/links`](./customer-rewards.md#post-apiv1referralsrewardsrewardidlinks) | Mint a share link for a reward |
-| GET | [`/api/v1/reward-notifications`](./customer-rewards.md#get-apiv1reward-notifications) | List in-app reward notifications |
-| POST | [`/api/v1/reward-notifications/read`](./customer-rewards.md#post-apiv1reward-notificationsread) | Mark reward notifications as read |
-| GET | [`/api/v1/rewards`](./customer-rewards.md#get-apiv1rewards) | Browse published consumer rewards |
-| GET | [`/api/v1/rewards/{rewardId}`](./customer-rewards.md#get-apiv1rewardsrewardid) | Get published reward detail |
+| GET | [`/api/v1/rewards`](./customer-rewards.md#get-apiv1rewards) | Browse published consumer rewards (signed in: also the rewards given to you; never cached by a shared cache) |
+| GET | [`/api/v1/rewards/{rewardId}`](./customer-rewards.md#get-apiv1rewardsrewardid) | Get published reward detail (a reward given to chosen customers is 404 for everyone else) |
 | GET | [`/api/v1/integration/analytics`](./pos.md#get-apiv1integrationanalytics) | The API key's tenant reward performance analytics |
 | GET | [`/api/v1/integration/analytics/dashboard`](./pos.md#get-apiv1integrationanalyticsdashboard) | The API key's tenant analytics dashboard |
 | GET | [`/api/v1/integration/analytics/export`](./pos.md#get-apiv1integrationanalyticsexport) | Download the API key's tenant analytics report (csv \| xlsx \| pdf) |
@@ -266,6 +267,53 @@ Every endpoint of `apps/api` — 359 operations, 229 with a sample captured from
 | POST | [`/api/v1/notifications/email-preview/{key}/send`](./email.md#post-apiv1notificationsemail-previewkeysend) | Send one email template (sample props) |
 | GET | [`/notifications/email-webhook`](./email.md#get-notificationsemail-webhook) | Webhook endpoint info (GET is not the delivery path) |
 | POST | [`/notifications/email-webhook`](./email.md#post-notificationsemail-webhook) | Resend delivery webhook (signature-verified) |
+| GET | [`/api/v1/admin/broadcast-reports`](./notifications.md#get-apiv1adminbroadcast-reports) | Reports from recipients, newest first, with the tenant's strikes in the last 90 days |
+| POST | [`/api/v1/admin/broadcast-reports/{reportId}/review`](./notifications.md#post-apiv1adminbroadcast-reportsreportidreview) | Dismiss (resume), uphold (stop it, strike the tenant; three strikes in 90 days stop its broadcasting) or resume |
+| GET | [`/api/v1/admin/broadcasts`](./notifications.md#get-apiv1adminbroadcasts) | Platform broadcasts, newest first |
+| POST | [`/api/v1/admin/broadcasts`](./notifications.md#post-apiv1adminbroadcasts) | Write a platform notice (a draft); 400 names any link that may not be sent |
+| GET | [`/api/v1/admin/broadcasts/{broadcastId}`](./notifications.md#get-apiv1adminbroadcastsbroadcastid) | One broadcast with its results per channel |
+| PUT | [`/api/v1/admin/broadcasts/{broadcastId}`](./notifications.md#put-apiv1adminbroadcastsbroadcastid) | Edit a draft; 409 for any other status |
+| POST | [`/api/v1/admin/broadcasts/{broadcastId}/approve`](./notifications.md#post-apiv1adminbroadcastsbroadcastidapprove) | Approve a notice to every user (never your own); 403 for the author |
+| POST | [`/api/v1/admin/broadcasts/{broadcastId}/cancel`](./notifications.md#post-apiv1adminbroadcastsbroadcastidcancel) | Cancel before sending; 409 once it is sending or sent |
+| POST | [`/api/v1/admin/broadcasts/{broadcastId}/schedule`](./notifications.md#post-apiv1adminbroadcastsbroadcastidschedule) | Schedule a draft (a notice to every user waits for a second staff member's approval) |
+| POST | [`/api/v1/admin/broadcasts/audience-preview`](./notifications.md#post-apiv1adminbroadcastsaudience-preview) | How many users the audience reaches, and how many it leaves out and why (counts only) |
+| GET | [`/api/v1/admin/notifications/catalog`](./notifications.md#get-apiv1adminnotificationscatalog) | Every notification type with its category, surfaces, channels and flags |
+| GET | [`/api/v1/admin/notifications/catalog/{key}/preview`](./notifications.md#get-apiv1adminnotificationscatalogkeypreview) | How one type renders on every channel, with its sample payload |
+| GET | [`/api/v1/admin/notifications/deliveries`](./notifications.md#get-apiv1adminnotificationsdeliveries) | Every delivery on every channel, newest first (masked destinations) |
+| POST | [`/api/v1/admin/notifications/deliveries/{deliveryId}/retry`](./notifications.md#post-apiv1adminnotificationsdeliveriesdeliveryidretry) | Queue a failed push or SMS delivery again (400 for any other) |
+| GET | [`/api/v1/admin/notifications/providers`](./notifications.md#get-apiv1adminnotificationsproviders) | Which provider each channel uses and whether it delivers for real |
+| GET | [`/api/v1/admin/notifications/suppressions`](./notifications.md#get-apiv1adminnotificationssuppressions) | Addresses and numbers nothing is sent to (bounces, complaints, STOP, unsubscribes) |
+| POST | [`/api/v1/admin/notifications/suppressions/{suppressionId}/lift`](./notifications.md#post-apiv1adminnotificationssuppressionssuppressionidlift) | Lift a suppression, with a reason (audited) |
+| POST | [`/api/v1/admin/notifications/test`](./notifications.md#post-apiv1adminnotificationstest) | Send yourself a test notification on every channel |
+| POST | [`/api/v1/broadcasts/{broadcastId}/report`](./notifications.md#post-apiv1broadcastsbroadcastidreport) | Report a broadcast from your inbox (once per broadcast); 404 for one you did not receive |
+| GET | [`/api/v1/notifications`](./notifications.md#get-apiv1notifications) | The caller's inbox on one surface, newest first (`filter[readAt][isNull]=true` = unread) |
+| POST | [`/api/v1/notifications/archive`](./notifications.md#post-apiv1notificationsarchive) | Archive notifications (they leave the inbox; read too) |
+| POST | [`/api/v1/notifications/consent`](./notifications.md#post-apiv1notificationsconsent) | Grant or withdraw marketing consent (the platform's, or one tenant's), recorded with its wording version |
+| POST | [`/api/v1/notifications/leave-tenant`](./notifications.md#post-apiv1notificationsleave-tenant) | Stop hearing from a tenant until claiming from it again (withdraws its consent) |
+| GET | [`/api/v1/notifications/preferences`](./notifications.md#get-apiv1notificationspreferences) | The preference matrix (category × channel), quiet hours, digest, consent and tenant links |
+| PUT | [`/api/v1/notifications/preferences`](./notifications.md#put-apiv1notificationspreferences) | Turn categories on or off per channel, everywhere or for one tenant (mandatory channels refuse with 400) |
+| PATCH | [`/api/v1/notifications/preferences`](./notifications.md#patch-apiv1notificationspreferences) | Set quiet hours, the time zone and the email digest |
+| GET | [`/api/v1/notifications/push-devices`](./notifications.md#get-apiv1notificationspush-devices) | The caller's registered push devices |
+| PUT | [`/api/v1/notifications/push-devices`](./notifications.md#put-apiv1notificationspush-devices) | Register this app install for push (bound to the signed-in session); 503 when push is not configured |
+| DELETE | [`/api/v1/notifications/push-devices/{deviceId}`](./notifications.md#delete-apiv1notificationspush-devicesdeviceid) | Remove one of the caller's push devices |
+| POST | [`/api/v1/notifications/push-opened`](./notifications.md#post-apiv1notificationspush-opened) | A push was tapped: it is marked opened and read in every inbox |
+| POST | [`/api/v1/notifications/read`](./notifications.md#post-apiv1notificationsread) | Mark notifications read (by id, or all on one surface); read everywhere, including the phone's tray |
+| GET | [`/api/v1/notifications/stream`](./notifications.md#get-apiv1notificationsstream) | The caller's inbox, live (SSE): a `{ surface, unread }` frame whenever it changes |
+| GET | [`/api/v1/notifications/unread-count`](./notifications.md#get-apiv1notificationsunread-count) | How many notifications on one surface are unread (the bell badge) |
+| POST | [`/api/v1/notifications/unsubscribe`](./notifications.md#post-apiv1notificationsunsubscribe) | Unsubscribe with a signed link's token (the web page); 400 for an invalid link |
+| POST | [`/api/v1/notifications/unsubscribe/one-click`](./notifications.md#post-apiv1notificationsunsubscribeone-click) | One-click unsubscribe (RFC 8058, from the List-Unsubscribe header); 400 for an invalid link |
+| GET | [`/api/v1/tenants/{tenantSlug}/broadcasts`](./notifications.md#get-apiv1tenantstenantslugbroadcasts) | The tenant's broadcasts, newest first |
+| POST | [`/api/v1/tenants/{tenantSlug}/broadcasts`](./notifications.md#post-apiv1tenantstenantslugbroadcasts) | Write a broadcast to the tenant's customers (a draft); 400 names any link that may not be sent |
+| GET | [`/api/v1/tenants/{tenantSlug}/broadcasts/{broadcastId}`](./notifications.md#get-apiv1tenantstenantslugbroadcastsbroadcastid) | One broadcast with its results per channel |
+| PUT | [`/api/v1/tenants/{tenantSlug}/broadcasts/{broadcastId}`](./notifications.md#put-apiv1tenantstenantslugbroadcastsbroadcastid) | Edit a draft; 409 for any other status |
+| POST | [`/api/v1/tenants/{tenantSlug}/broadcasts/{broadcastId}/cancel`](./notifications.md#post-apiv1tenantstenantslugbroadcastsbroadcastidcancel) | Cancel before sending; 409 once it is sending or sent |
+| POST | [`/api/v1/tenants/{tenantSlug}/broadcasts/{broadcastId}/schedule`](./notifications.md#post-apiv1tenantstenantslugbroadcastsbroadcastidschedule) | Schedule a draft; 409 when the weekly allowance is used up or broadcasting is off |
+| GET | [`/api/v1/tenants/{tenantSlug}/broadcasts/allowance`](./notifications.md#get-apiv1tenantstenantslugbroadcastsallowance) | Broadcasts used this week, the weekly limit, and whether broadcasting is on |
+| POST | [`/api/v1/tenants/{tenantSlug}/broadcasts/audience-preview`](./notifications.md#post-apiv1tenantstenantslugbroadcastsaudience-preview) | How many customers the audience reaches, and how many it leaves out and why (counts only) |
+| GET | [`/api/v1/tenants/{tenantSlug}/broadcasts/customers`](./notifications.md#get-apiv1tenantstenantslugbroadcastscustomers) | The tenant's customers, to pick recipients by hand (name and masked email; who can receive) |
+| GET | [`/api/v1/tenants/{tenantSlug}/notifications/deliveries`](./notifications.md#get-apiv1tenantstenantslugnotificationsdeliveries) | The tenant's deliveries, newest first (masked destinations) |
+| POST | [`/api/v1/webhooks/twilio/inbound`](./notifications.md#post-apiv1webhookstwilioinbound) | Inbound SMS (signature-verified): STOP suppresses the number; 403 for a bad signature, 503 when Twilio is not configured |
+| POST | [`/api/v1/webhooks/twilio/status`](./notifications.md#post-apiv1webhookstwiliostatus) | Twilio delivery status callback (signature-verified); 403 for a bad signature, 503 when Twilio is not configured |
 | GET | [`/api/v1/geo/autocomplete`](./geography.md#get-apiv1geoautocomplete) | Autocomplete search across all geo entities |
 | GET | [`/api/v1/geo/cascade-preview`](./geography.md#get-apiv1geocascade-preview) | Preview cascade delete impact |
 | GET | [`/api/v1/geo/cities`](./geography.md#get-apiv1geocities) | List cities |
@@ -368,7 +416,7 @@ Every endpoint of `apps/api` — 359 operations, 229 with a sample captured from
 | DELETE | [`/api/v1/admin/kanban/tasks/{taskId}/watch`](./kanban.md#delete-apiv1adminkanbantaskstaskidwatch) | Stop watching the item (idempotent); answers the item |
 | POST | [`/api/v1/admin/kanban/tasks/import`](./kanban.md#post-apiv1adminkanbantasksimport) | Create several items on one board at once (a CSV import), each at the bottom of its column; all or none. Answers that board |
 | GET | [`/api/v1/admin/operations/alert-settings`](./platform-operations.md#get-apiv1adminoperationsalert-settings) | The alert thresholds and the extra recipients |
-| PUT | [`/api/v1/admin/operations/alert-settings`](./platform-operations.md#put-apiv1adminoperationsalert-settings) | SuperAdmin: change the alert thresholds and the extra recipients (every SuperAdmin always gets alerts) |
+| PUT | [`/api/v1/admin/operations/alert-settings`](./platform-operations.md#put-apiv1adminoperationsalert-settings) | SuperAdmin: change the alert thresholds and the extra recipients (every SuperAdmin, Admin and Platform Developer always gets alerts, in the app, on their phone and by email) |
 | GET | [`/api/v1/admin/operations/alerts`](./platform-operations.md#get-apiv1adminoperationsalerts) | Alerts: open (default), resolved, or all — newest first |
 | GET | [`/api/v1/admin/operations/backups`](./platform-operations.md#get-apiv1adminoperationsbackups) | SuperAdmin: the backups, the schedule and when the next one runs |
 | POST | [`/api/v1/admin/operations/backups`](./platform-operations.md#post-apiv1adminoperationsbackups) | SuperAdmin: back the database up now (one backup at a time) |
@@ -376,6 +424,8 @@ Every endpoint of `apps/api` — 359 operations, 229 with a sample captured from
 | POST | [`/api/v1/admin/operations/backups/{backupId}/download`](./platform-operations.md#post-apiv1adminoperationsbackupsbackupiddownload) | SuperAdmin: a one-time, five-minute download link (needs a fresh second-factor proof) |
 | PUT | [`/api/v1/admin/operations/backups/{backupId}/pin`](./platform-operations.md#put-apiv1adminoperationsbackupsbackupidpin) | SuperAdmin: keep a backup past the retention (pinned), or let it go |
 | PUT | [`/api/v1/admin/operations/backups/schedule`](./platform-operations.md#put-apiv1adminoperationsbackupsschedule) | SuperAdmin: when the daily backup runs (platform time zone) and how long backups are kept |
+| GET | [`/api/v1/admin/operations/cache`](./platform-operations.md#get-apiv1adminoperationscache) | Every cache namespace with its counters (this instance), Redis memory and the circuit state |
+| POST | [`/api/v1/admin/operations/cache/flush`](./platform-operations.md#post-apiv1adminoperationscacheflush) | Drop one cache namespace, or one tenant's entries in every tenant cache, on every instance (with a reason) |
 | GET | [`/api/v1/admin/operations/dependencies`](./platform-operations.md#get-apiv1adminoperationsdependencies) | The latest check of every dependency (PostgreSQL, Redis, queues, Kafka, RabbitMQ, public endpoints) |
 | GET | [`/api/v1/admin/operations/dependencies/{dependency}/history`](./platform-operations.md#get-apiv1adminoperationsdependenciesdependencyhistory) | One dependency's history over a range |
 | GET | [`/api/v1/admin/operations/instances`](./platform-operations.md#get-apiv1adminoperationsinstances) | Every instance's latest heartbeat (API and analytics-consumer processes) |
@@ -387,6 +437,11 @@ Every endpoint of `apps/api` — 359 operations, 229 with a sample captured from
 | PUT | [`/api/v1/admin/operations/load-tests/caps`](./platform-operations.md#put-apiv1adminoperationsload-testscaps) | SuperAdmin: the load-test caps (virtual users, requests per second, minutes) |
 | DELETE | [`/api/v1/admin/operations/load-tests/data`](./platform-operations.md#delete-apiv1adminoperationsload-testsdata) | SuperAdmin: permanently delete what load tests created in the Load Test tenant (ADR 068, exception 2) |
 | GET | [`/api/v1/admin/operations/overview`](./platform-operations.md#get-apiv1adminoperationsoverview) | Every server, instance and dependency with its live numbers, and the open alerts |
+| GET | [`/api/v1/admin/operations/rate-limits`](./platform-operations.md#get-apiv1adminoperationsrate-limits) | Every rate-limit policy, refusals over the last hour, the most limited subjects (masked) and the exemptions |
+| GET | [`/api/v1/admin/operations/rate-limits/overrides`](./platform-operations.md#get-apiv1adminoperationsrate-limitsoverrides) | Live tenant overrides, soonest expiry first |
+| PUT | [`/api/v1/admin/operations/rate-limits/overrides`](./platform-operations.md#put-apiv1adminoperationsrate-limitsoverrides) | Set a tenant's limit for one policy until it expires (replaces its current override); 404 for an unknown tenant |
+| DELETE | [`/api/v1/admin/operations/rate-limits/overrides/{overrideId}`](./platform-operations.md#delete-apiv1adminoperationsrate-limitsoverridesoverrideid) | End an override now (the tenant goes back to the default); 404 when there is none |
+| POST | [`/api/v1/admin/operations/rate-limits/penalties/lift`](./platform-operations.md#post-apiv1adminoperationsrate-limitspenaltieslift) | Lift a subject's penalty from its overview row (opaque reference, with a reason); 404 once it has left the refusal log |
 | GET | [`/api/v1/admin/operations/servers`](./platform-operations.md#get-apiv1adminoperationsservers) | Every registered server with its latest sample |
 | POST | [`/api/v1/admin/operations/servers`](./platform-operations.md#post-apiv1adminoperationsservers) | SuperAdmin: register a server and issue its agent token (shown once) |
 | GET | [`/api/v1/admin/operations/servers/{serverId}`](./platform-operations.md#get-apiv1adminoperationsserversserverid) | One server: its host facts, live sample and its cloud provider's view |

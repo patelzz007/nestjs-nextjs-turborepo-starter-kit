@@ -1,6 +1,6 @@
 ---
 title: "API reference — Customer rewards and claims"
-description: "The consumer app's API: browse rewards, share them with friends, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics."
+description: "The consumer app's API: browse rewards, share them with friends, accept the legal terms, claim with a one-time code, show the QR code and spending analytics."
 order: 6
 author: "Generated from the OpenAPI export"
 lastUpdated: 1793145600000
@@ -12,7 +12,7 @@ tags: ["api", "reference", "generated"]
 
 # API reference — Customer rewards and claims
 
-The consumer app's API: browse rewards, share them with friends, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics.
+The consumer app's API: browse rewards, share them with friends, accept the legal terms, claim with a one-time code, show the QR code and spending analytics.
 
 How these endpoints fit together: [Customer claims guide](../../user-guide/05-customer-claims.md). Conventions shared by every endpoint (envelope, auth, errors, pagination): [API reference overview](./README.md).
 
@@ -20,9 +20,9 @@ How these endpoints fit together: [Customer claims guide](../../user-guide/05-cu
 
 ### GET /api/v1/rewards
 
-Browse published consumer rewards
+Browse published consumer rewards (signed in: also the rewards given to you; never cached by a shared cache)
 
-- **Public** — no session required.
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ConsumerRewardsController_listRewards` · [source](../../../apps/api/src/contexts/rewards/presentation/http/consumer-rewards.controller.ts)
 
@@ -42,12 +42,16 @@ Browse published consumer rewards
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data` | object[] | yes |  |
+| `data[].audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
 | `data[].category` | string | yes |  |
 | `data[].claimCount` | integer | yes | min -9007199254740991 |
 | `data[].createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data[].deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data[].description` | string | yes |  |
 | `data[].expiryDate` | integer | yes |  |
+| `data[].freeItem` | object \| null | yes |  |
+| `data[].freeItem.name` | string | yes |  |
+| `data[].freeItem.sku` | string | yes |  |
 | `data[].id` | string (uuid) | yes |  |
 | `data[].images` | object[] | yes | 1–10 items |
 | `data[].images[].fileId` | string (uuid) | yes |  |
@@ -100,6 +104,7 @@ Browse published consumer rewards
 | Status | Code | When |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
 | 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
 
 **Example** — called as no session.
@@ -258,9 +263,9 @@ Response `200 OK` (application/json):
 
 ### GET /api/v1/rewards/{rewardId}
 
-Get published reward detail
+Get published reward detail (a reward given to chosen customers is 404 for everyone else)
 
-- **Public** — no session required.
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - Content type: no request body; returns `application/json` (errors are always `application/json`)
 - Operation id `ConsumerRewardsController_getReward` · [source](../../../apps/api/src/contexts/rewards/presentation/http/consumer-rewards.controller.ts)
 
@@ -274,12 +279,16 @@ Get published reward detail
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `data.audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
+| `data.freeItem` | object \| null | yes |  |
+| `data.freeItem.name` | string | yes |  |
+| `data.freeItem.sku` | string | yes |  |
 | `data.id` | string (uuid) | yes |  |
 | `data.images` | object[] | yes | 1–10 items |
 | `data.images[].fileId` | string (uuid) | yes |  |
@@ -325,6 +334,7 @@ Get published reward detail
 | Status | Code | When |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
 | 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
 
 **Example** — called as no session.
@@ -1461,160 +1471,6 @@ Response `200 OK` (application/json):
   "meta": {
     "correlationId": "tTYLKuQIp3LXc7bpPvifh",
     "timestamp": 1793190893895
-  }
-}
-```
-
-## Reward Notifications
-
-### GET /api/v1/reward-notifications
-
-List in-app reward notifications
-
-- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- Content type: no request body; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardNotificationsController_listNotifications` · [source](../../../apps/api/src/contexts/claims/presentation/http/reward-notifications.controller.ts)
-
-**Parameters**
-
-| Name | In | Type | Required | Notes |
-| --- | --- | --- | --- | --- |
-| `page` | query | integer | no | Page number (1-indexed) for offset pagination |
-| `limit` | query | integer | no | Page size (default 10, max 100) |
-| `cursor` | query | string | no | Opaque keyset cursor from the previous response's `meta.nextCursor`. Only valid with the default sort order. |
-| `sort` | query | string | no | Comma-separated sort fields, `-` prefix = descending (max 3). Sortable: createdAt. Default: -createdAt |
-| `filter` | query | object | no | Filters as `filter[field]=value` or `filter[field][operator]=value`. Filterable: readAt |
-
-**Response 200 OK** (`application/json`) — One page of notifications, newest first; pagination is in `meta` (`filter[readAt][isNull]=true` counts the unread)
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `data` | object[] | yes |  |
-| `data[].body` | string | yes |  |
-| `data[].createdAt` | integer | yes | Epoch milliseconds when the record was created |
-| `data[].deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
-| `data[].id` | string (uuid) | yes |  |
-| `data[].isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
-| `data[].metadata` | any JSON \| null | yes |  |
-| `data[].readAt` | integer \| null | yes |  |
-| `data[].title` | string | yes |  |
-| `data[].type` | string | yes |  |
-| `data[].updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
-| `meta.hasNext` | boolean | yes | Whether a next page exists |
-| `meta.hasPrevious` | boolean | yes | Whether a previous page exists |
-| `meta.limit` | integer | yes | Items per page; range 1–100 |
-| `meta.nextCursor` | string \| null | yes | Opaque cursor for the next page, or null when there are no more rows |
-| `meta.page` | integer | yes | Current page (1-indexed); min 1 |
-| `meta.total` | integer | yes | Total rows matching the current filters |
-| `meta.totalPages` | integer | yes | Total pages for the current filters and page size; min 1 |
-
-**Errors** (standard envelope, branch on `error.code`)
-
-| Status | Code | When |
-| --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
-| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
-| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
-
-**Example** — called as alice.johnson@example.com (web app).
-
-```http
-GET /api/v1/reward-notifications?limit=2
-X-Client-Type: web
-Cookie: <session cookies from POST /api/v1/auth/login>
-```
-
-Response `200 OK` (application/json):
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "createdAt": 1793104415992,
-      "updatedAt": 1793190815995,
-      "isDeleted": false,
-      "deletedAt": null,
-      "id": "01a18280-68fa-70ed-bef4-05fae642ca5e",
-      "type": "claim_confirmed",
-      "title": "Claim confirmed",
-      "body": "Your free coffee reward is ready. Show QR at Brew & Bean KL.",
-      "readAt": null,
-      "metadata": {
-        "claimId": "019b76da-a800-7c1a-9069-f2e16d4af0a3"
-      }
-    }
-  ],
-  "meta": {
-    "limit": 2,
-    "total": 1,
-    "page": 1,
-    "totalPages": 1,
-    "nextCursor": null,
-    "hasNext": false,
-    "hasPrevious": false,
-    "correlationId": "bqfnPLEX08m6cBTtH2ALc",
-    "timestamp": 1793190901142
-  }
-}
-```
-
-### POST /api/v1/reward-notifications/read
-
-Mark reward notifications as read
-
-- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
-- Rate limit: `THROTTLE_DEFAULT_LIMIT` requests per `THROTTLE_TTL_MS` ms per signed-in principal (default limiter).
-- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
-- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
-- Operation id `RewardNotificationsController_markRead` · [source](../../../apps/api/src/contexts/claims/presentation/http/reward-notifications.controller.ts)
-
-**Request body** (`application/json`, required)
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `markAll` | boolean | no |  |
-| `notificationIds` | string (uuid)[] | no |  |
-
-**Response 201 Created** (`application/json`) — Notifications marked read
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `data.ok` | true | yes | The action was accepted |
-
-**Errors** (standard envelope, branch on `error.code`)
-
-| Status | Code | When |
-| --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
-| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
-| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
-
-**Example** — called as alice.johnson@example.com (web app).
-
-```http
-POST /api/v1/reward-notifications/read
-X-Client-Type: web
-X-Mutation-Intent: same-origin
-Cookie: <session cookies from POST /api/v1/auth/login>
-Content-Type: application/json
-
-{
-  "markAll": true
-}
-```
-
-Response `201 Created` (application/json):
-
-```json
-{
-  "success": true,
-  "data": {
-    "ok": true
-  },
-  "meta": {
-    "correlationId": "e__YMOABXQZBT1t-zKHq_",
-    "timestamp": 1793190901172
   }
 }
 ```

@@ -19,3 +19,14 @@ export const EMAIL_RENDER_CONTEXT = Symbol("EMAIL_RENDER_CONTEXT");
 
 /** The `queue.email.send` system operation, named once for every route and adapter that runs under it. */
 export const QUEUE_EMAIL_SEND_OPERATION: SystemOperationName = "queue.email.send";
+
+// ── Notifications (ADR 070) ──────────────────────────────────────────
+export const NOTIFICATION_DISPATCHER = Symbol("NOTIFICATION_DISPATCHER");
+export const CHANNEL_DELIVERY = Symbol("CHANNEL_DELIVERY");
+export const NOTIFICATIONS_MAINTENANCE = Symbol("NOTIFICATIONS_MAINTENANCE");
+export const UNSUBSCRIBE_LINKS = Symbol("UNSUBSCRIBE_LINKS");
+export const NOTIFICATION_RENDER_CONTEXT = Symbol("NOTIFICATION_RENDER_CONTEXT");
+export const NOTIFICATION_ACCOUNT = Symbol("NOTIFICATION_ACCOUNT");
+export const NOTIFICATION_ADMIN = Symbol("NOTIFICATION_ADMIN");
+export const BROADCAST_SERVICE = Symbol("BROADCAST_SERVICE");
+export const BROADCAST_QUEUE = Symbol("BROADCAST_QUEUE");

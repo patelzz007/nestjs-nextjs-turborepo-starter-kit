@@ -6,6 +6,7 @@ import { RewardBackupCodeSchema } from "../../claims/schemas/claim-enums";
 import { LocationFilterSchema } from "../../tenancy/schemas/location-filter";
 import { REWARD_LIST_DEFAULT_LIMIT } from "../../rewards/schemas/reward";
 import { RewardTypeSchema } from "../../rewards/schemas/reward-enums";
+import { RewardFreeItemResponseSchema } from "../../rewards/schemas/reward-free-item";
 import { RewardRedemptionMethodSchema } from "./pos-enums";
 
 // ── POS redemption: validate / checkout at the till, and the merchant's redemption history ──
@@ -125,10 +126,39 @@ export const RedemptionInvalidReasonSchema = z.enum(["ALREADY_REDEEMED", "EXPIRE
 
 export type RedemptionInvalidReason = z.output<typeof RedemptionInvalidReasonSchema>;
 
+/**
+ * What a redeemed reward gives, in the terms a POS applies and prints (ADR 074) — one shape per reward
+ * type, told apart by `type` (the reward's `rewardType`):
+ * - `DISCOUNT`: `percentOff` of the bill (whole percent).
+ * - `CASHBACK`: `amountMinor` back to the customer, in integer minor units of `currency`.
+ * - `POINTS`: `points` added to the customer's loyalty balance.
+ * - `FREE_ITEM`: `quantity` of `item` given free.
+ * - `BOGO`: `freeQuantity` of `item` given free with each one bought.
+ * `item.sku` is the merchant's own product code (to match the POS catalog); `item.name` goes on the receipt.
+ */
+export const RedemptionOfferSchema = z.discriminatedUnion("type", [
+	z.object({ type: z.literal("DISCOUNT"), percentOff: z.number().int().nonnegative() }),
+	z.object({ type: z.literal("CASHBACK"), amountMinor: z.number().int().nonnegative(), currency: SaleCurrencySchema }),
+	z.object({ type: z.literal("POINTS"), points: z.number().int().nonnegative() }),
+	z.object({ type: z.literal("FREE_ITEM"), quantity: z.number().int().nonnegative(), item: RewardFreeItemResponseSchema }),
+	z.object({ type: z.literal("BOGO"), freeQuantity: z.number().int().nonnegative(), item: RewardFreeItemResponseSchema }),
+]);
+
+export type RedemptionOffer = z.output<typeof RedemptionOfferSchema>;
+
+/**
+ * `POST /integration/redemptions/validate` — what the scanned code is for and whether it can be redeemed here:
+ * the reward, its offer in POS terms, its words for the receipt, and the minimum bill.
+ */
 export const RedemptionPreviewResponseSchema = z.object({
 	claimId: z.uuid(),
+	rewardId: z.uuid(),
 	rewardTitle: z.string(),
+	rewardDescription: z.string(),
 	rewardType: RewardTypeSchema,
+	offer: RedemptionOfferSchema,
+	/** The reward's terms and conditions (null when it has none) — some receipts print them. */
+	termsConditions: z.string().nullable(),
 	claimExpiresAt: EpochMsSchema,
 	valid: z.boolean(),
 	invalidReason: RedemptionInvalidReasonSchema.nullable(),
@@ -138,11 +168,14 @@ export const RedemptionPreviewResponseSchema = z.object({
 
 export type RedemptionPreviewResponse = z.output<typeof RedemptionPreviewResponseSchema>;
 
+/** One reward redeemed on the bill: what it was and what it gave, for the receipt. */
 export const RedemptionCheckoutItemSchema = z.object({
 	redemptionId: z.uuid(),
 	claimId: z.uuid(),
 	rewardId: z.uuid(),
 	rewardTitle: z.string(),
+	rewardType: RewardTypeSchema,
+	offer: RedemptionOfferSchema,
 });
 
 export type RedemptionCheckoutItem = z.output<typeof RedemptionCheckoutItemSchema>;

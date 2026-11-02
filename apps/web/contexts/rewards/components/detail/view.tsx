@@ -17,6 +17,7 @@ import { formatRewardOffer, rewardTypeLabel } from "@workspace/client/lib/contex
 import type { Envelope, RewardResponse } from "@workspace/shared";
 import { getRewardClaimBlockReason, rewardClaimBlockMessage, epochMs, PLATFORM_DISPLAY_REGION } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
+import { isRewardJustForViewer, JUST_FOR_YOU_LABEL } from "@/contexts/rewards/lib/reward-audience";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
@@ -140,6 +141,7 @@ export function RewardDetailView({ rewardId, initialReward, detailPathPrefix = R
 								{reward.category}
 							</Badge>
 							{typeLabel === offer ? null : <Badge variant="outline">{typeLabel}</Badge>}
+							{isRewardJustForViewer(reward) ? <Badge variant="primary-light">{JUST_FOR_YOU_LABEL}</Badge> : null}
 							{isSoldOut ? <Badge variant="destructive-light">Sold out</Badge> : null}
 							{isExpired ? <Badge variant="destructive-light">Expired</Badge> : null}
 							{isLowStock ? <Badge className="border-transparent bg-warning-soft text-warning">Almost gone</Badge> : null}

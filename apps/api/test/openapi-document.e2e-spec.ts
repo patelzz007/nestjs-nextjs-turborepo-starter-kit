@@ -421,6 +421,7 @@ describe("OpenAPI document (e2e)", () => {
 				"LocalStorageTransferController.localDownload",
 				"LocalStorageTransferController.localPublic",
 				"LocalStorageTransferController.localPublicVariant",
+				"NotificationsController.stream",
 			]);
 		});
 

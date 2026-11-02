@@ -26,6 +26,8 @@ import { serializeEmailTemplateProps } from "../../domain/templates/email-templa
 import { PrismaEmailLogRepository } from "../persistence/prisma-email-log.repository";
 import { EmailRecipientRateLimiter } from "./email-recipient-rate-limiter.adapter";
 import { maskEmail } from "./mask-email";
+import { TransactionalLegacyInboxImport } from "./transactional-legacy-inbox-import.adapter";
+import { TransactionalNotify } from "./transactional-notify.adapter";
 import { EmailTransport } from "./transports/email-transport";
 
 /** The collaborators every transactional request needs; shared by every scope the factory builds. */
@@ -190,6 +192,10 @@ export class NotificationsTransactionalPortsFactory {
 	}
 
 	public create(db: Prisma.TransactionClient, events: TransactionalEventCollector): NotificationsTransactionalPorts {
-		return { emailRequests: new TransactionalEmailRequests(db, events, this.deps) };
+		return {
+			emailRequests: new TransactionalEmailRequests(db, events, this.deps),
+			notifications: new TransactionalNotify(db, events, this.deps.clock),
+			legacyInbox: new TransactionalLegacyInboxImport(db),
+		};
 	}
 }

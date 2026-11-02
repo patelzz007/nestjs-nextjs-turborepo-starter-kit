@@ -34,7 +34,7 @@ export class RequestClaimOtpHandler implements ICommandHandler<RequestClaimOtpCo
 
 		return this.uow.runSystemOperation(CLAIM_OTP_REQUEST_OPERATION, actor, async (scope: ClaimsScope): Promise<OkResponse> => {
 			const now = this.clock.now();
-			const reward = await scope.rewards.assertClaimable(input.rewardId, now);
+			const reward = await scope.rewards.assertClaimable(input.rewardId, now, userId);
 			const claimant = await scope.claimants.profile(userId);
 			if (claimant === null) {
 				throw new ClaimantNotFoundError();

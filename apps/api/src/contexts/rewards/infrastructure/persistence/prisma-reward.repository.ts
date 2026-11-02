@@ -6,6 +6,7 @@ import type { ReferrerRewardSnapshot, RewardSnapshot } from "../../domain/aggreg
 import type { ReferrerReward } from "../../domain/entities/referrer-reward.entity";
 import { RewardNotFoundError } from "../../domain/errors/reward.errors";
 import type { RewardRepository } from "../../domain/repositories/reward.repository";
+import { freeItemColumns } from "./free-item-columns";
 import { REWARD_AGGREGATE_INCLUDE, rulesColumn, toRewardState, type RewardAggregateRow } from "./reward.mapper";
 
 /** Thrown inside the save when a compare-and-set matched nothing; the transaction rolls back. */
@@ -101,6 +102,7 @@ export class PrismaRewardRepository implements RewardRepository {
 				description: snapshot.description,
 				rewardType: snapshot.offer.rewardType,
 				rewardValue: snapshot.offer.rewardValue,
+				...freeItemColumns(snapshot.offer.freeItem),
 				termsConditions: snapshot.offer.termsConditions,
 				rewardKind: snapshot.kind,
 				category: snapshot.offer.category,
@@ -117,12 +119,16 @@ export class PrismaRewardRepository implements RewardRepository {
 				referralPoolTotal: snapshot.referralPoolTotal,
 				referralPoolRemaining: snapshot.referralPoolRemaining,
 				locationScopeType: snapshot.locationScope.type,
+				audienceType: snapshot.audience.type,
 				updatedAt: snapshot.updatedAt,
 			},
 			select: { id: true },
 		});
 		await this.insertImages(snapshot.id, snapshot.tenantId, snapshot.imageFileIds);
 		await this.insertLocationScopes(snapshot.id, snapshot);
+		if (snapshot.audience.customerIds.length > 0) {
+			await this.db.rewardAudienceMember.createMany({ data: snapshot.audience.customerIds.map((userId) => ({ tenantId: snapshot.tenantId, rewardId: snapshot.id, userId })) });
+		}
 		if (snapshot.referrer !== null) {
 			await this.insertReferrer(snapshot, snapshot.referrer);
 			await this.db.reward.updateMany({ where: { id: snapshot.id }, data: { referrerRewardId: snapshot.referrer.id } });
@@ -168,6 +174,7 @@ export class PrismaRewardRepository implements RewardRepository {
 				description: child.description,
 				rewardType: child.offer.rewardType,
 				rewardValue: child.offer.rewardValue,
+				...freeItemColumns(child.offer.freeItem),
 				termsConditions: child.offer.termsConditions,
 				rewardKind: "REFERRER",
 				category: child.offer.category,
@@ -200,6 +207,10 @@ export class PrismaRewardRepository implements RewardRepository {
 		const child = reward.referrerChild;
 		if (child?.hasChanges === true) {
 			await this.writeReferrer(child);
+		}
+		const audienceReplacedBy = reward.audienceReplacedBy;
+		if (audienceReplacedBy !== null) {
+			await this.replaceAudience(reward.snapshot(), audienceReplacedBy);
 		}
 		const images = reward.imagesToBind();
 		const replacedBy = reward.imagesReplacedBy;
@@ -262,6 +273,7 @@ export class PrismaRewardRepository implements RewardRepository {
 				title: snapshot.title,
 				rewardType: snapshot.offer.rewardType,
 				rewardValue: snapshot.offer.rewardValue,
+				...freeItemColumns(snapshot.offer.freeItem),
 				termsConditions: snapshot.offer.termsConditions,
 				expiryDate: snapshot.expiryDate,
 				status: snapshot.review.status,
@@ -300,6 +312,30 @@ export class PrismaRewardRepository implements RewardRepository {
 		await this.insertImages(rewardId, tenantId, fileIds);
 	}
 
+	/**
+	 * Members no longer chosen are soft-deleted (they keep the claims they made); chosen ones are revived
+	 * or added (one row per reward and customer).
+	 */
+	private async replaceAudience(snapshot: RewardSnapshot, replacedBy: { readonly actorId: string; readonly at: number }): Promise<void> {
+		const at = BigInt(replacedBy.at);
+		const chosen = [...snapshot.audience.customerIds];
+		await this.db.rewardAudienceMember.updateMany({
+			where: { rewardId: snapshot.id, isDeleted: false, userId: { notIn: chosen } },
+			data: { isDeleted: true, deletedAt: at, deletedBy: replacedBy.actorId, updatedAt: at, updatedBy: replacedBy.actorId },
+		});
+		if (chosen.length === 0) {
+			return;
+		}
+		await this.db.rewardAudienceMember.updateMany({
+			where: { rewardId: snapshot.id, isDeleted: true, userId: { in: chosen } },
+			data: { isDeleted: false, deletedAt: null, deletedBy: null, updatedAt: at, updatedBy: replacedBy.actorId },
+		});
+		await this.db.rewardAudienceMember.createMany({
+			data: chosen.map((userId) => ({ tenantId: snapshot.tenantId, rewardId: snapshot.id, userId, createdBy: replacedBy.actorId })),
+			skipDuplicates: true,
+		});
+	}
+
 	private async insertLocationScopes(rewardId: string, parent: RewardSnapshot): Promise<void> {
 		if (parent.locationScope.type !== "SELECTED" || parent.locationScope.locationIds.length === 0) {
 			return;
@@ -328,6 +364,7 @@ function definitionColumns(snapshot: RewardSnapshot): Prisma.RewardUpdateManyMut
 		description: snapshot.description,
 		rewardType: snapshot.offer.rewardType,
 		rewardValue: snapshot.offer.rewardValue,
+		...freeItemColumns(snapshot.offer.freeItem),
 		termsConditions: snapshot.offer.termsConditions,
 		rules: rulesColumn(snapshot.rules),
 		minSpendMinor: snapshot.rules.minSpend === null ? null : snapshot.rules.minSpend.amount,
@@ -342,5 +379,6 @@ function definitionColumns(snapshot: RewardSnapshot): Prisma.RewardUpdateManyMut
 		referralsEnabled: snapshot.referralsEnabled,
 		referralPoolTotal: snapshot.referralPoolTotal,
 		referralPoolRemaining: snapshot.referralPoolRemaining,
+		audienceType: snapshot.audience.type,
 	};
 }

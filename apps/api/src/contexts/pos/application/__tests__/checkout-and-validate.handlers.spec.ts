@@ -34,8 +34,12 @@ describe("ValidateRedemptionCodesHandler", () => {
 
 		await expect(handler.execute(new ValidateRedemptionCodesCommand(apiKeyActor(), POINT, { token }))).resolves.toEqual({
 			claimId: "claim-01",
+			rewardId: "reward-1",
 			rewardTitle: "Free latte",
+			rewardDescription: "One free latte with any order",
 			rewardType: "FREE_ITEM",
+			offer: { type: "FREE_ITEM", quantity: 1, item: { name: "Latte", sku: "BEV-LATTE-12OZ" } },
+			termsConditions: null,
 			claimExpiresAt: NOW + FIXTURE_CLAIM_TTL_MS,
 			valid: true,
 			invalidReason: null,
@@ -125,6 +129,7 @@ describe("CheckoutSaleHandler", () => {
 		const first = store.claims.seed("claim-01");
 		const second = store.claims.seed("claim-02", { rewardId: "reward-2" });
 		store.rewards.titles.set("reward-2", "Free cake");
+		store.rewards.offers.set("reward-2", { rewardType: "DISCOUNT", rewardValue: 15, freeItem: null });
 
 		const sale = await handler.execute(new CheckoutSaleCommand(apiKeyActor(), POINT, bill([{ token: first.token }, { backupCode: second.backupCode }])));
 
@@ -135,8 +140,22 @@ describe("CheckoutSaleHandler", () => {
 			paidAt: NOW,
 			idempotencyKey: "idem-1",
 			redemptions: [
-				{ redemptionId: "redemption-1", claimId: "claim-01", rewardId: "reward-1", rewardTitle: "Free latte" },
-				{ redemptionId: "redemption-2", claimId: "claim-02", rewardId: "reward-2", rewardTitle: "Free cake" },
+				{
+					redemptionId: "redemption-1",
+					claimId: "claim-01",
+					rewardId: "reward-1",
+					rewardTitle: "Free latte",
+					rewardType: "FREE_ITEM",
+					offer: { type: "FREE_ITEM", quantity: 1, item: { name: "Latte", sku: "BEV-LATTE-12OZ" } },
+				},
+				{
+					redemptionId: "redemption-2",
+					claimId: "claim-02",
+					rewardId: "reward-2",
+					rewardTitle: "Free cake",
+					rewardType: "DISCOUNT",
+					offer: { type: "DISCOUNT", percentOff: 15 },
+				},
 			],
 		});
 		expect([...store.claims.claims.values()].map((lookup) => lookup.claim.status)).toEqual(["REDEEMED", "REDEEMED"]);

@@ -1,4 +1,4 @@
-import type { EpochMs, JsonObject, LocationScopeType, RewardResponse, RewardType } from "@workspace/shared";
+import type { EpochMs, JsonObject, LocationScopeType, RewardFreeItem, RewardResponse, RewardType } from "@workspace/shared";
 
 import type { TenantStoreFacts } from "../../domain/policies/reward-location-scope.policy";
 
@@ -43,11 +43,23 @@ export interface LegalAcceptanceCheck {
 }
 
 /** What a till needs to know about the reward behind a presented claim code. */
+/** What a reward gives, as a redemption reports it to the till (ADR 074). */
+export interface RewardOfferFacts {
+	readonly rewardType: RewardType;
+	/** Percent off, whole-currency cashback, points, or the number of items given (by type). */
+	readonly rewardValue: number;
+	/** The item a `FREE_ITEM` / `BOGO` reward gives; null for every other type. */
+	readonly freeItem: RewardFreeItem | null;
+}
+
 export interface RewardRedemptionFacts {
 	readonly id: string;
 	readonly tenantId: string;
 	readonly title: string;
+	readonly description: string;
 	readonly rewardType: RewardType;
+	readonly offer: RewardOfferFacts;
+	readonly termsConditions: string | null;
 	readonly expiryDate: EpochMs;
 	readonly locationScopeType: LocationScopeType;
 	/** The live stores a `SELECTED` reward is valid at (empty for `ALL_LOCATIONS`). */
@@ -56,11 +68,17 @@ export interface RewardRedemptionFacts {
 	readonly minSpendMinor: number | null;
 }
 
+/** A redeemed reward as a sale's receipt names it: its title and what it gave. */
+export interface RedeemedRewardFacts {
+	readonly title: string;
+	readonly offer: RewardOfferFacts;
+}
+
 /** Redemption facts of rewards (pos asks through claims' redemption port). */
 export interface RewardRedemptionFactsPort {
 	/** The live reward's facts; null when it is gone. */
 	factsFor(rewardId: string): Promise<RewardRedemptionFacts | null>;
 
-	/** Titles of the rewards (soft-deleted ones included: a recorded sale keeps naming what it redeemed), one query for all. */
-	titlesOf(rewardIds: readonly string[]): Promise<ReadonlyMap<string, string>>;
+	/** The rewards' titles and offers (soft-deleted ones included: a recorded sale keeps naming what it redeemed), one query for all. */
+	redeemedRewardsOf(rewardIds: readonly string[]): Promise<ReadonlyMap<string, RedeemedRewardFacts>>;
 }

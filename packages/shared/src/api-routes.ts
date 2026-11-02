@@ -17,12 +17,19 @@
 import { authRoutes } from "./contexts/identity/routes";
 import { rewardReferralsRoutes, signupReferralsAuthRoutes } from "./contexts/referrals/routes";
 import { adminRbacRoutes, capabilitiesRoutes, supportAccessRoutes, tenantAccessRoutes } from "./contexts/authorization/routes";
-import { emailRoutes, merchantInviteEmailPreviewRoutes } from "./contexts/notifications/routes";
+import {
+	broadcastReportRoutes,
+	emailRoutes,
+	merchantInviteEmailPreviewRoutes,
+	notificationsAdminRoutes,
+	notificationsRoutes,
+	tenantNotificationsRoutes,
+} from "./contexts/notifications/routes";
 import { auditLogsRoutes, auditTrailRoutes, dataChangesRoutes } from "./contexts/audit/routes";
 import { githubPicturesRoutes, githubPullRequestsRoutes, githubRoutes } from "./contexts/integrations-github/routes";
 import { geoRoutes } from "./contexts/reference-data/routes";
 import { integrationRewardsRoutes, legalRoutes, tenantRewardsRoutes, rewardsAdminRewardRoutes, rewardsRoutes } from "./contexts/rewards/routes";
-import { claimsRoutes, rewardNotificationsRoutes } from "./contexts/claims/routes";
+import { claimsRoutes } from "./contexts/claims/routes";
 import { claimsAnalyticsRoutes, integrationAnalyticsRoutes, tenantAnalyticsRoutes, rewardsAdminAnalyticsRoutes } from "./contexts/reporting/routes";
 import { integrationRedemptionsRoutes, tenantApiKeysRoutes, tenantRedemptionsRoutes, tenantTerminalsRoutes } from "./contexts/pos/routes";
 import { filesRoutes } from "./contexts/files/routes";
@@ -45,6 +52,9 @@ export const apiRoutes = {
 	},
 	capabilities: capabilitiesRoutes,
 	email: emailRoutes,
+	notifications: { ...notificationsRoutes, ...broadcastReportRoutes },
+	notificationsAdmin: notificationsAdminRoutes,
+	tenantNotifications: tenantNotificationsRoutes,
 	admin: adminRbacRoutes,
 	auditLogs: auditLogsRoutes,
 	auditTrail: auditTrailRoutes,
@@ -59,7 +69,6 @@ export const apiRoutes = {
 		...claimsRoutes,
 		...claimsAnalyticsRoutes,
 	},
-	rewardNotifications: rewardNotificationsRoutes,
 	files: filesRoutes,
 	tenants: {
 		...tenantsRoutes,

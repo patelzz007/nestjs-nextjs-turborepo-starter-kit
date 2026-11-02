@@ -16,6 +16,7 @@ import { PrismaModule } from "../../prisma/prisma.module";
 import { TenantTransactionService } from "../../prisma/tenant-transaction.service";
 import { FilesModule, StoredFileAccess } from "../files/public-api";
 import { NotificationsModule, NotificationsTransactionalPortsFactory } from "../notifications/public-api";
+import { DropTenantRouteOnLifecycleChangedHandler } from "./application/event-handlers/after-commit/drop-tenant-route-on-lifecycle-changed.event-handler";
 import { ReconcileKybOnFileVerdict } from "./application/event-handlers/in-transaction/reconcile-kyb-on-file-verdict.in-transaction-handler";
 import type { TenantsScope } from "./application/tenants-scope";
 import type { KybFileAccessPort } from "./application/ports/kyb-files.port";
@@ -179,6 +180,7 @@ const HANDLERS = [
 		RewardsAdminMerchantsController,
 	],
 	providers: [
+		DropTenantRouteOnLifecycleChangedHandler,
 		{
 			provide: TENANTS_SCOPE_FACTORY,
 			inject: [LOCATION_CLOSURE_FACTORY, REDEMPTION_CUSTOMER_FACTORY, TENANT_AUDIT, StoredFileAccess, NotificationsTransactionalPortsFactory, TypedConfigService, LogService],

@@ -1,7 +1,9 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { BoundedTtlCache, nowEpochMs } from "@workspace/shared";
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import { nowEpochMs, type BoundedTtlCache } from "@workspace/shared";
+import { z } from "zod";
 
 import { TypedConfigService } from "../../../../config/typed-config.service";
+import { APP_CACHE, defineCache, type AppCache, type CacheDefinition, type CacheEnvelope } from "../../../../platform/application/ports/app-cache.port";
 
 /**
  * In-memory authorization cache backed by a bounded TTL store.
@@ -36,20 +38,46 @@ export interface CachedAuthorization {
 
 // ── Service ─────────────────────────────────────────────────────────────────
 
+/** Authorization state is never served stale: a role change must take effect on the next check. */
+const NO_STALE_MS = 0;
+
+const CachedAuthorizationSchema = z.object({
+	roles: z.array(z.string()),
+	permissions: z.array(z.object({ action: z.string(), resource: z.string() })),
+	capabilities: z.array(z.string()),
+	cachedAt: z.number(),
+});
+
 @Injectable()
 export class AuthorizationCacheService {
 	private readonly logger: Logger = new Logger(AuthorizationCacheService.name);
 
-	private readonly store: BoundedTtlCache<string, CachedAuthorization>;
+	/**
+	 * Declared on the cache of ADR 072 (`local`: read synchronously on every authorization check), so
+	 * the admin Cache page shows it and can flush it on every instance.
+	 */
+	public readonly definition: CacheDefinition<CachedAuthorization, "user">;
 	private readonly defaultTtlMs: number;
 
-	public constructor(config: TypedConfigService) {
+	public constructor(config: TypedConfigService, @Inject(APP_CACHE) cache: AppCache) {
 		this.defaultTtlMs = config.caches.authorizationTtlMs;
-		this.store = new BoundedTtlCache<string, CachedAuthorization>({
-			maxEntries: config.caches.authorizationMaxEntries,
-			defaultTtlMs: this.defaultTtlMs,
-			capacityPolicy: "evict-oldest",
+		this.definition = defineCache<CachedAuthorization, "user">({
+			name: "authorization.state",
+			version: 1,
+			schema: CachedAuthorizationSchema,
+			scope: "user",
+			tier: "local",
+			ttlMs: this.defaultTtlMs,
+			staleMs: NO_STALE_MS,
+			containsPersonalData: false,
+			localMaxEntries: config.caches.authorizationMaxEntries,
+			sharedMaxKeys: config.caches.authorizationMaxEntries,
 		});
+		cache.register(this.definition);
+	}
+
+	private get store(): BoundedTtlCache<string, CacheEnvelope<CachedAuthorization>> {
+		return this.definition.local;
 	}
 
 	/**
@@ -58,7 +86,13 @@ export class AuthorizationCacheService {
 	 * @returns The cached state, or `null` on miss / expiry.
 	 */
 	public get(userId: string): CachedAuthorization | null {
-		return this.store.get(userId, nowEpochMs());
+		const envelope = this.store.get(userId, nowEpochMs());
+		if (envelope === null) {
+			this.definition.counters.misses += 1;
+			return null;
+		}
+		this.definition.counters.hits += 1;
+		return envelope.value;
 	}
 
 	/**
@@ -70,7 +104,8 @@ export class AuthorizationCacheService {
 	 */
 	public set(userId: string, auth: CachedAuthorization, ttlMs?: number): void {
 		const ttl: number = ttlMs ?? this.defaultTtlMs;
-		const stored = this.store.set(userId, auth, ttl, nowEpochMs());
+		const now = nowEpochMs();
+		const stored = this.store.set(userId, { value: auth, storedAt: now, freshUntil: now + ttl, staleUntil: now + ttl }, ttl, now);
 		if (stored) {
 			this.logger.debug(`Cached authorization for user ${userId} (TTL ${String(ttl)}ms)`);
 		}

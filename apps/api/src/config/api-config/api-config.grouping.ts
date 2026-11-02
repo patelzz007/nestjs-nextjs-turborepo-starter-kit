@@ -7,6 +7,7 @@ import { toKafkaSecurityOptions } from "@workspace/messaging/kafka";
 import { resolveApiPublicUrl } from "../api-public-url";
 import { toGithubRepositoryParams, type StorageProviderSetting } from "../api-env.fields";
 import {
+	DEFAULT_SMS_ALLOWED_COUNTRIES,
 	DEFAULT_STORAGE_DOWNLOAD_TTL_SECONDS,
 	hostTimeZone,
 	LOCAL_PRIVATE_CONTAINER,
@@ -19,7 +20,6 @@ import {
 	configuredPrivateContainer,
 	configuredPublicContainer,
 	resolveApiDocsPolicy,
-	resolveCacheBackend,
 	resolveLogLevel,
 	resolveMalwareScannerConfig,
 	resolveObserveConfig,
@@ -129,16 +129,38 @@ export function toApiConfig(env: ApiEnv): ApiConfig {
 			throttleStrictLimit: env.THROTTLE_STRICT_LIMIT,
 			throttleTtlMs: env.THROTTLE_TTL_MS,
 			securityCounterMaxKeys: env.SECURITY_COUNTER_MAX_KEYS,
+			expectedInstances: env.RATE_LIMIT_EXPECTED_INSTANCES,
+			exemptCidrs: env.RATE_LIMIT_EXEMPT_CIDRS ?? [],
+			tenantTraffic: { ratePerSecond: env.RATE_LIMIT_TENANT_RATE_PER_SECOND, burst: env.RATE_LIMIT_TENANT_BURST },
+			apiKeyTraffic: { ratePerSecond: env.RATE_LIMIT_API_KEY_RATE_PER_SECOND, burst: env.RATE_LIMIT_API_KEY_BURST },
 		},
 		caches: {
-			authorizationBackend: resolveCacheBackend(env.AUTHORIZATION_CACHE_BACKEND, nodeEnv, env.REDIS_URL),
 			authorizationTtlMs: env.AUTHORIZATION_CACHE_TTL_MS,
 			authorizationMaxEntries: env.AUTHORIZATION_CACHE_MAX_ENTRIES,
-			userSessionBackend: resolveCacheBackend(env.USER_SESSION_CACHE_BACKEND, nodeEnv, env.REDIS_URL),
 			userSessionTtlMs: env.USER_SESSION_CACHE_TTL_MS,
 			userSessionMaxEntries: env.USER_SESSION_CACHE_MAX_ENTRIES,
 			accessTokenStateTtlMs: env.ACCESS_TOKEN_STATE_CACHE_TTL_MS,
 			accessTokenStateMaxEntries: env.ACCESS_TOKEN_STATE_CACHE_MAX_ENTRIES,
+			encryptionKeys: env.CACHE_ENCRYPTION_KEYS ?? null,
+			memoryAlertPercent: env.CACHE_MEMORY_ALERT_PERCENT,
+		},
+		notifications: {
+			pushProvider: env.PUSH_PROVIDER ?? (nodeEnv === NodeEnvSchema.enum.development || nodeEnv === NodeEnvSchema.enum.test ? "mailpit" : "none"),
+			smsProvider: env.SMS_PROVIDER ?? (nodeEnv === NodeEnvSchema.enum.development || nodeEnv === NodeEnvSchema.enum.test ? "mailpit" : "none"),
+			fcmServiceAccountJson: env.FCM_SERVICE_ACCOUNT_JSON ?? null,
+			apns:
+				env.APNS_KEY_ID === undefined || env.APNS_TEAM_ID === undefined || env.APNS_BUNDLE_ID === undefined || env.APNS_PRIVATE_KEY === undefined
+					? null
+					: { keyId: env.APNS_KEY_ID, teamId: env.APNS_TEAM_ID, bundleId: env.APNS_BUNDLE_ID, privateKey: env.APNS_PRIVATE_KEY, environment: env.APNS_ENVIRONMENT },
+			twilio:
+				env.TWILIO_ACCOUNT_SID === undefined || env.TWILIO_AUTH_TOKEN === undefined || env.TWILIO_MESSAGING_SERVICE_SID === undefined
+					? null
+					: { accountSid: env.TWILIO_ACCOUNT_SID, authToken: env.TWILIO_AUTH_TOKEN, messagingServiceSid: env.TWILIO_MESSAGING_SERVICE_SID },
+			smsAllowedCountries: env.SMS_ALLOWED_COUNTRIES ?? DEFAULT_SMS_ALLOWED_COUNTRIES,
+			smsDailyLimitPerRecipient: env.SMS_DAILY_LIMIT_PER_RECIPIENT,
+			smsDailyLimitPerTenant: env.SMS_DAILY_LIMIT_PER_TENANT,
+			encryptionKeys: env.NOTIFICATIONS_ENCRYPTION_KEYS ?? null,
+			broadcastBlockedLinkDomains: env.BROADCAST_BLOCKED_LINK_DOMAINS ?? [],
 		},
 		messaging: {
 			redisUrl: env.REDIS_URL,

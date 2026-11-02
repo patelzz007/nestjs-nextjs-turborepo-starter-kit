@@ -3,6 +3,7 @@ import type { EpochMs } from "@workspace/shared";
 import type { CustomerStandingPort } from "./customer-standing.port";
 import type { TenantAuditWriter } from "./tenant-audit.port";
 import type { TenantExistencePort } from "./tenant-existence.port";
+import type { TenantCustomerLinksPort } from "./tenant-customer-links.port";
 
 /** What a till needs to know about its tenant. */
 export interface TillTenantFacts {
@@ -38,4 +39,6 @@ export interface TenantsTransactionalPorts {
 	readonly existence: TenantExistencePort;
 	readonly customerStanding: CustomerStandingPort;
 	readonly audit: TenantAuditWriter;
+	/** The tenant-customer link a claim creates and a redemption stamps (ADR 073). */
+	readonly tenantCustomers: TenantCustomerLinksPort;
 }

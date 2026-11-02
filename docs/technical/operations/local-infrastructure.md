@@ -99,3 +99,61 @@ before anything publishes or consumes. On a fresh machine, in this order:
 
 The Postgres volume name carries the major version (`postgres_18_data`): a major upgrade needs a
 dump/restore, and a versioned volume can never be started against data files from an older major.
+
+## Planned rework of `compose.yml` (agreed 2026-10-30, not built yet)
+
+Step 1 of the build order agreed with ADRs [070](../../adr/070-multi-channel-notifications.md),
+[071](../../adr/071-unified-rate-limiting.md), [072](../../adr/072-distributed-cache.md) and
+[073](../../adr/073-broadcasts-and-tenant-customers.md). Until it is built, the sections above
+describe what runs today.
+
+### What starts
+
+`pnpm docker:up` keeps starting **everything** (you run it yourself before `pnpm run dev`), with two
+exceptions behind Compose profiles:
+
+| Profile | Service | Why opt-in |
+| --- | --- | --- |
+| `db` | `postgres` (replaces today's commented-out block) | A native PostgreSQL already owns 5432 and holds the dev database |
+| `load` | `load-runner` | Builds an image; only needed for load tests |
+
+`pnpm docker:down` keeps stopping every profile (`--profile "*"`).
+
+### Changes
+
+| # | Change | Why |
+| --- | --- | --- |
+| 1 | **Fix the misplaced comment**: the Mailpit description sits above `load-runner` | Reads as if the load runner were the inbox |
+| 2 | **Drop every hard-coded `container_name`** and the fixed network name; Compose names them from the project name (`COMPOSE_PROJECT_NAME`, default `hello-world`), e.g. `hello-world-redis-1` | A fork and the starter kit can run side by side |
+| 3 | **`postgres` becomes a real service in the `db` profile** (`postgres:18.6`, as CI) | No commenting and uncommenting |
+| 4 | **Add `object-storage`: SeaweedFS** (`weed server -s3`) plus a one-shot `object-storage-init` container that creates the bucket and exits | Lets the S3 adapter (multipart, presigned URLs) run locally. MinIO Community Edition stopped publishing images in October 2025 and its repository has been archived since 2026 |
+| 5 | **Add the tool UIs**: Kafka UI and Redis Insight beside Bull Board | Inspect topics and keys without the CLI |
+| 6 | **Redis: explicit `maxmemory` and `maxmemory-policy noeviction`** (one Redis for queues and cache, [ADR 072](../../adr/072-distributed-cache.md)) | An evicted BullMQ key is a lost job; today Redis has no limit at all |
+| 7 | **One `x-defaults` block** merged into every service: `restart: unless-stopped`, the shared network, `init: true`, `security_opt: [no-new-privileges:true]`, json-file logs rotated at 10 MB × 3 | Same behaviour everywhere, bounded disk use |
+| 8 | **Memory limits**: Kafka heap 512 MB (`KAFKA_HEAP_OPTS`), RabbitMQ memory watermark, a `mem_limit` per service | Keeps a laptop usable |
+| 9 | **A healthcheck on every service**, including Bull Board, the tool UIs, SeaweedFS and the load runner; every `depends_on` waits for `service_healthy` (the init container for `service_completed_successfully`) | `docker:up` means ready, not just started |
+| 10 | **Bull Board reads `BULLMQ_PREFIX`** instead of a fixed `bull` | Today a changed prefix shows empty queues |
+| 11 | New queues from ADRs 070 and 073 (`notifications.fan-out`, `notifications.push`, `notifications.sms`, and the digest, broadcast and retention queues) added to Bull Board's list | Kept in step by the drift test below |
+
+### One naming table, enforced
+
+This document will hold **one table of every name**, and a tooling test checks the files against it
+so nothing drifts:
+
+| Kind | Rule | Checked in |
+| --- | --- | --- |
+| Compose service | Same name as the dependency in Operations: `postgres`, `redis`, `kafka`, `rabbitmq`, `mailpit`, `object-storage`, `bull-board`, `kafka-ui`, `redis-insight`, `load-runner` | `compose.yml`, the Operations dependency list |
+| Env var | `<SERVICE>_<THING>` (`REDIS_PORT`, `MAILPIT_UI_PORT`, `OBJECT_STORAGE_S3_PORT`) | `compose.yml`, `.env.example` files, this document |
+| Queue | `<context>.<job>` | `ALL_QUEUE_NAMES`, Bull Board's `QUEUE_NAMES`, the docs |
+| Image tag | Identical in `compose.yml` and every CI service container | `compose.yml`, `.github/workflows/*.yml` (today's "Keep in step" comments become enforced) |
+| Volume | `<service>[_<major>]_data` | `compose.yml` |
+
+### Decisions
+
+| # | Question | Answer |
+| --- | --- | --- |
+| Q22, Q22b | What `docker:up` starts | Everything, except PostgreSQL (`db`) and the load runner (`load`) |
+| Q23 | Container names | Dropped; the project name names them |
+| Q24, Q24b | Drift guards and naming | One naming table here; a test checks every file against it |
+| Q25 | Laptop hygiene | Shared defaults, memory limits, healthchecks everywhere, Redis memory settings |
+| Q26, Q56 | Local object storage | SeaweedFS with a one-shot init container that creates the bucket |

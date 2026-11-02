@@ -64,14 +64,27 @@ export interface TenantSettingsRoutes {
 	readonly bannedCustomers: AppPath;
 }
 
+/** The tenant's broadcasts to its customers (ADR 073): the list, the composer, one broadcast, its editor. */
+export interface TenantBroadcastRoutes {
+	readonly list: AppPath;
+	readonly new: AppPath;
+	readonly detail: (broadcastId: string) => AppPath;
+	readonly edit: (broadcastId: string) => AppPath;
+}
+
 export interface TenantRouteTable {
 	readonly dashboard: AppPath;
 	readonly rewards: TenantRewardRoutes;
+	readonly broadcasts: TenantBroadcastRoutes;
 	readonly redemptions: AppPath;
 	readonly analytics: AppPath;
 	readonly terminals: AppPath;
 	readonly apiKeys: AppPath;
 	readonly account: AppPath;
+	/** The member's own merchant inbox (ADR 070) — personal, not the tenant's. */
+	readonly notifications: AppPath;
+	/** The member's own notification settings (channels, quiet hours, phones). */
+	readonly notificationSettings: AppPath;
 	/** Every store the member belongs to (the switcher lists the first page). */
 	readonly stores: AppPath;
 	readonly settings: TenantSettingsRoutes;
@@ -91,6 +104,8 @@ export interface AppRouteTable {
 	readonly home: AppPath;
 	/** Personal-account entry — resolves the tenant server-side, then `/t/{slug}/account`. */
 	readonly account: AppPath;
+	/** Inbox entry (the API's links) — resolves the tenant server-side, then `/t/{slug}/notifications`. */
+	readonly notifications: AppPath;
 	readonly onboarding: AppPath;
 	readonly teamInvite: AppPath;
 	readonly auth: AuthRouteTable;
@@ -102,6 +117,7 @@ export const TENANT_SCOPE_PREFIX: AppPath = "/t";
 export const ROUTES: AppRouteTable = {
 	home: "/",
 	account: "/account",
+	notifications: toAppPath(APP_LINKS.merchant.notifications),
 	onboarding: toAppPath(APP_LINKS.merchant.onboarding),
 	teamInvite: toAppPath(APP_LINKS.merchant.teamInvite),
 	auth: {
@@ -120,11 +136,19 @@ export const TENANT_ROUTES: TenantRouteTable = {
 		detail: (rewardId: string): AppPath => `/rewards/${encodeURIComponent(rewardId)}`,
 		edit: (rewardId: string): AppPath => `/rewards/${encodeURIComponent(rewardId)}/edit`,
 	},
+	broadcasts: {
+		list: "/broadcasts",
+		new: "/broadcasts/new",
+		detail: (broadcastId: string): AppPath => `/broadcasts/${encodeURIComponent(broadcastId)}`,
+		edit: (broadcastId: string): AppPath => `/broadcasts/${encodeURIComponent(broadcastId)}/edit`,
+	},
 	redemptions: "/redemptions",
 	analytics: "/analytics",
 	terminals: "/terminals",
 	apiKeys: "/api-keys",
 	account: "/account",
+	notifications: "/notifications",
+	notificationSettings: "/notifications/settings",
 	stores: "/stores",
 	settings: {
 		index: "/settings",
@@ -149,11 +173,15 @@ export const TENANT_STATIC_ROUTES: readonly AppPath[] = [
 	TENANT_ROUTES.dashboard,
 	TENANT_ROUTES.rewards.list,
 	TENANT_ROUTES.rewards.new,
+	TENANT_ROUTES.broadcasts.list,
+	TENANT_ROUTES.broadcasts.new,
 	TENANT_ROUTES.redemptions,
 	TENANT_ROUTES.analytics,
 	TENANT_ROUTES.terminals,
 	TENANT_ROUTES.apiKeys,
 	TENANT_ROUTES.account,
+	TENANT_ROUTES.notifications,
+	TENANT_ROUTES.notificationSettings,
 	TENANT_ROUTES.stores,
 	TENANT_ROUTES.settings.index,
 	TENANT_ROUTES.settings.team,
@@ -170,6 +198,7 @@ export const TENANT_STATIC_ROUTES: readonly AppPath[] = [
 export const APP_STATIC_ROUTES: readonly AppPath[] = [
 	ROUTES.home,
 	ROUTES.account,
+	ROUTES.notifications,
 	ROUTES.onboarding,
 	ROUTES.teamInvite,
 	ROUTES.auth.login,
@@ -250,15 +279,25 @@ export interface TenantSettingsHrefs {
 	readonly bannedCustomers: AppPath;
 }
 
+export interface TenantBroadcastHrefs {
+	readonly list: AppPath;
+	readonly new: AppPath;
+	readonly detail: (broadcastId: string) => AppPath;
+	readonly edit: (broadcastId: string) => AppPath;
+}
+
 export interface TenantHrefs {
 	readonly root: AppPath;
 	readonly dashboard: AppPath;
 	readonly rewards: TenantRewardHrefs;
+	readonly broadcasts: TenantBroadcastHrefs;
 	readonly redemptions: AppPath;
 	readonly analytics: AppPath;
 	readonly terminals: AppPath;
 	readonly apiKeys: AppPath;
 	readonly account: AppPath;
+	readonly notifications: AppPath;
+	readonly notificationSettings: AppPath;
 	readonly stores: AppPath;
 	readonly settings: TenantSettingsHrefs;
 }
@@ -274,12 +313,20 @@ export function tenantRoutes(slug: string): TenantHrefs {
 			detail: (rewardId: string): AppPath => tenantPath(slug, TENANT_ROUTES.rewards.detail(rewardId)),
 			edit: (rewardId: string): AppPath => tenantPath(slug, TENANT_ROUTES.rewards.edit(rewardId)),
 		},
+		broadcasts: {
+			list: tenantPath(slug, TENANT_ROUTES.broadcasts.list),
+			new: tenantPath(slug, TENANT_ROUTES.broadcasts.new),
+			detail: (broadcastId: string): AppPath => tenantPath(slug, TENANT_ROUTES.broadcasts.detail(broadcastId)),
+			edit: (broadcastId: string): AppPath => tenantPath(slug, TENANT_ROUTES.broadcasts.edit(broadcastId)),
+		},
 		redemptions: tenantPath(slug, TENANT_ROUTES.redemptions),
 		analytics: tenantPath(slug, TENANT_ROUTES.analytics),
 		// Built by the API into emails too — `APP_LINKS` is the shared source.
 		terminals: toAppPath(APP_LINKS.merchant.terminals(slug)),
 		apiKeys: toAppPath(APP_LINKS.merchant.apiKeys(slug)),
 		account: tenantPath(slug, TENANT_ROUTES.account),
+		notifications: tenantPath(slug, TENANT_ROUTES.notifications),
+		notificationSettings: tenantPath(slug, TENANT_ROUTES.notificationSettings),
 		stores: tenantPath(slug, TENANT_ROUTES.stores),
 		settings: {
 			index: tenantPath(slug, TENANT_ROUTES.settings.index),

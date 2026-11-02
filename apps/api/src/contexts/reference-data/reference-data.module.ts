@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
+import { APP_CACHE, type AppCache } from "../../platform/application/ports/app-cache.port";
 import type { UnitOfWork } from "../../platform/application/unit-of-work.port";
 import { AuditTrailService } from "../../platform/infrastructure/audit/audit-trail.service";
 import { SystemCommandModule } from "../../platform/infrastructure/system-command.module";
@@ -12,10 +13,10 @@ import { TransactionalEventDispatcher } from "../../platform/infrastructure/unit
 import { AFTER_COMMIT_PUBLISHER, UnitOfWorkModule } from "../../platform/infrastructure/unit-of-work/unit-of-work.module";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { TenantTransactionService } from "../../prisma/tenant-transaction.service";
-import type { GeographyReadPort } from "./application/ports/geography-read.port";
-import { GEOGRAPHY_READ, REFERENCE_DATA_UNIT_OF_WORK } from "./application/ports/reference-data.tokens";
+import { GEOGRAPHY_CACHE, GEOGRAPHY_READ, REFERENCE_DATA_UNIT_OF_WORK } from "./application/ports/reference-data.tokens";
 import type { ReferenceDataScope } from "./application/reference-data-scope";
 import { GeographyApplicationService } from "./application/services/geography.application-service";
+import { CachedGeographyRead } from "./infrastructure/cache/cached-geography-read";
 import { PrismaGeographyReadRepository } from "./infrastructure/persistence/prisma-geography.read-repository";
 import { ReferenceDataScopeFactory } from "./infrastructure/persistence/reference-data-scope.factory";
 import { GeoController } from "./presentation/http/geo.controller";
@@ -41,11 +42,14 @@ import { GeoController } from "./presentation/http/geo.controller";
 			): UnitOfWork<ReferenceDataScope> => new PrismaUnitOfWork(transactions, new ReferenceDataScopeFactory(auditTrail), dispatcher, publisher),
 		},
 		{
-			provide: GEOGRAPHY_READ,
-			inject: [TenantTransactionService],
-			useFactory: (transactions: TenantTransactionService): GeographyReadPort =>
-				new PrismaGeographyReadRepository(new PrismaReadExecutor(transactions, USER_OWNED_DATA_SCOPE)),
+			// The hot reads go through the cache of ADR 072; writes drop it after commit (`GEOGRAPHY_CACHE`).
+			provide: CachedGeographyRead,
+			inject: [TenantTransactionService, APP_CACHE],
+			useFactory: (transactions: TenantTransactionService, cache: AppCache): CachedGeographyRead =>
+				new CachedGeographyRead(new PrismaGeographyReadRepository(new PrismaReadExecutor(transactions, USER_OWNED_DATA_SCOPE)), cache),
 		},
+		{ provide: GEOGRAPHY_READ, useExisting: CachedGeographyRead },
+		{ provide: GEOGRAPHY_CACHE, useExisting: CachedGeographyRead },
 		GeographyApplicationService,
 	],
 })

@@ -4,7 +4,7 @@ import { DAY_MS, epochMs, type RewardClaimListQuery, type RewardClaimResponse, t
 import { systemActor, type ActorContext } from "../../../../platform/application/actor-context";
 import type { TenantDisplayData, TenantReadPort } from "../../../tenancy/public-api";
 import { ReferrerCredited } from "../../../referrals/public-api";
-import { RewardApproved, RewardRejected } from "../../../rewards/public-api";
+import { RewardApproved, RewardAutoPublished, RewardRejected } from "../../../rewards/public-api";
 import {
 	ClaimantNotFoundError,
 	ClaimCustomerBannedError,
@@ -24,8 +24,6 @@ import { ExpireOverdueClaimsCommand } from "../commands/expire-overdue-claims/ex
 import { ExpireOverdueClaimsHandler } from "../commands/expire-overdue-claims/expire-overdue-claims.handler";
 import { IssueClaimQrCodesCommand } from "../commands/issue-claim-qr-codes/issue-claim-qr-codes.command";
 import { IssueClaimQrCodesHandler } from "../commands/issue-claim-qr-codes/issue-claim-qr-codes.handler";
-import { MarkRewardNotificationsReadCommand } from "../commands/mark-reward-notifications-read/mark-reward-notifications-read.command";
-import { MarkRewardNotificationsReadHandler } from "../commands/mark-reward-notifications-read/mark-reward-notifications-read.handler";
 import { RequestClaimOtpCommand } from "../commands/request-claim-otp/request-claim-otp.command";
 import { RequestClaimOtpHandler } from "../commands/request-claim-otp/request-claim-otp.handler";
 import { RecordNotificationOnReferrerCredited, RecordOwnerNoticesOnRewardReview } from "../event-handlers/in-transaction/record-reward-notices.in-transaction-handlers";
@@ -231,44 +229,70 @@ describe("ClaimRedemptionApplicationService", () => {
 	});
 });
 
-describe("Reward inbox", () => {
-	it("marks the selected, or all, unread notices read", async () => {
-		await store.inbox.add([
-			{ userId: USER, type: "t", title: "a", body: "a", metadata: {} },
-			{ userId: USER, type: "t", title: "b", body: "b", metadata: {} },
-			{ userId: "user-2", type: "t", title: "c", body: "c", metadata: {} },
-		]);
-		const handler = new MarkRewardNotificationsReadHandler(store.uow, store.clock);
+describe("Reward notices (ADR 070)", () => {
+	const REVIEWED_REWARD = "0193f2c4-0000-7000-8000-0000000000a1";
+	const REFERRER_REWARD = "0193f2c4-0000-7000-8000-0000000000a2";
+	const facts = { rewardId: REVIEWED_REWARD, tenantId: "org-1", title: "Free latte" };
+	const tenants: TenantReadPort = {
+		getDisplayData: (tenantIds: readonly string[]): Promise<ReadonlyMap<string, TenantDisplayData>> =>
+			Promise.resolve(
+				new Map(
+					tenantIds.map((tenantId: string): [string, TenantDisplayData] => [
+						tenantId,
+						{ tenantId, slug: "sunrise-cafe", displayName: "Sunrise Cafe", timeZone: "Asia/Kuala_Lumpur", logo: null },
+					]),
+				),
+			),
+		listOwnerUserIds: (): Promise<readonly string[]> => Promise.resolve(["owner-1", "owner-2"]),
+	};
 
-		await handler.execute(new MarkRewardNotificationsReadCommand(customer(USER), { notificationIds: ["notice-1"] }));
-		expect(store.inbox.notices.map((notice) => notice.readAt)).toEqual([NOW, null, null]);
-		await handler.execute(new MarkRewardNotificationsReadCommand(customer(USER), { markAll: true }));
-		expect(store.inbox.notices.map((notice) => notice.readAt)).toEqual([NOW, NOW, null]);
+	it("tells every owner about each review decision, with the tenant's slug for the merchant link", async () => {
+		await new RecordOwnerNoticesOnRewardReview(tenants).handle(new RewardApproved(NOW, facts, "admin-1"), store.scope);
+		await new RecordOwnerNoticesOnRewardReview(tenants).handle(new RewardRejected(epochMs(NOW + 1), facts, "admin-1", "Blurry photo"), store.scope);
+
+		expect(store.notify.notifications.map((notification) => [notification.userId, notification.typeKey, notification.tenantId])).toEqual([
+			["owner-1", "rewards.reward-approved", "org-1"],
+			["owner-2", "rewards.reward-approved", "org-1"],
+			["owner-1", "rewards.reward-rejected", "org-1"],
+			["owner-2", "rewards.reward-rejected", "org-1"],
+		]);
+		expect(store.notify.notifications.at(2)?.payload).toEqual({ rewardId: REVIEWED_REWARD, rewardTitle: "Free latte", tenantSlug: "sunrise-cafe", reason: "Blurry photo" });
 	});
 
-	it("writes the review decision to every owner, and the referrer-credit notice to the referrer", async () => {
-		const tenants: TenantReadPort = {
-			getDisplayData: (): Promise<ReadonlyMap<string, TenantDisplayData>> => Promise.resolve(new Map()),
-			listOwnerUserIds: (): Promise<readonly string[]> => Promise.resolve(["owner-1", "owner-2"]),
-		};
-		const facts = { rewardId: REWARD, tenantId: "org-1", title: "Free latte" };
+	it("keeps each review of the same reward apart, and a repeat of one decision writes nothing", async () => {
+		const handler = new RecordOwnerNoticesOnRewardReview(tenants);
+		await handler.handle(new RewardRejected(NOW, facts, "admin-1", "Blurry photo"), store.scope);
+		await handler.handle(new RewardRejected(NOW, facts, "admin-1", "Blurry photo"), store.scope);
+		await handler.handle(new RewardRejected(epochMs(NOW + DAY_MS), facts, "admin-1", "Still blurry"), store.scope);
 
-		await new RecordOwnerNoticesOnRewardReview(tenants).handle(new RewardApproved(NOW, facts, "admin-1"), store.scope);
-		await new RecordOwnerNoticesOnRewardReview(tenants).handle(new RewardRejected(NOW, facts, "admin-1", "Blurry photo"), store.scope);
-		await new RecordNotificationOnReferrerCredited().handle(
-			new ReferrerCredited(NOW, "referral-1", "referrer-1", "reward-2", "Free cake", epochMs(NOW + DAY_MS), 7),
-			store.scope,
-		);
-
-		expect(store.inbox.notices.map((notice) => [notice.userId, notice.type])).toEqual([
-			["owner-1", "reward_approved"],
-			["owner-2", "reward_approved"],
-			["owner-1", "reward_rejected"],
-			["owner-2", "reward_rejected"],
-			["referrer-1", "referrer_reward_credited"],
+		expect(store.notify.notifications.filter((notification) => notification.userId === "owner-1").map((notification) => notification.dedupeKey)).toEqual([
+			`reward-rejected:${REVIEWED_REWARD}:${String(NOW)}`,
+			`reward-rejected:${REVIEWED_REWARD}:${String(NOW + DAY_MS)}`,
 		]);
-		expect(store.inbox.notices.at(-1)?.body).toBe('Your referral redeemed a reward. Claim "Free cake" within 7 days.');
-		expect(store.inbox.notices.at(2)?.body).toBe("Blurry photo");
+	});
+
+	it("writes nothing for a tenant without owners", async () => {
+		const ownerless: TenantReadPort = { ...tenants, listOwnerUserIds: (): Promise<readonly string[]> => Promise.resolve([]) };
+
+		await new RecordOwnerNoticesOnRewardReview(ownerless).handle(new RewardAutoPublished(NOW, facts), store.scope);
+
+		expect(store.notify.notifications).toEqual([]);
+	});
+
+	it("tells the referrer their credit, once per referral", async () => {
+		const credited = new ReferrerCredited(NOW, "referral-1", "referrer-1", REFERRER_REWARD, "Free cake", epochMs(NOW + DAY_MS), 7);
+		await new RecordNotificationOnReferrerCredited().handle(credited, store.scope);
+		await new RecordNotificationOnReferrerCredited().handle(credited, store.scope);
+
+		expect(store.notify.notifications).toEqual([
+			{
+				userId: "referrer-1",
+				typeKey: "rewards.referrer-credited",
+				payload: { rewardId: REFERRER_REWARD, rewardTitle: "Free cake", claimTtlDays: 7 },
+				dedupeKey: "referrer-credited:referral-1",
+				tenantId: null,
+			},
+		]);
 	});
 });
 

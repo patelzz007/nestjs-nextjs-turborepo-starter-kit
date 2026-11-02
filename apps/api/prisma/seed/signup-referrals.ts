@@ -1,9 +1,10 @@
 import type { User } from "@prisma/client";
-import { DAY_MS, SIGNUP_REFERRAL_CODE_TTL_MS, SIGNUP_REFERRALS_SCREEN_PATH } from "@workspace/shared";
+import { DAY_MS, SIGNUP_REFERRAL_CODE_TTL_MS } from "@workspace/shared";
 
 import { issueSignupReferralCode } from "../../src/contexts/referrals/infrastructure/persistence/signup-referral-code.issuer";
-import { SIGNUP_REFERRAL_SUCCESS_NOTIFICATION_TYPE } from "../../src/contexts/claims/application/services/signup-success-notice.application-service";
+import { SIGNUP_REFERRAL_SUCCESS_NOTIFICATION } from "../../src/contexts/notifications/domain/catalog/types/rewards.types";
 import { prisma } from "./client";
+import { seedInboxNotification } from "./inbox-notifications";
 import { seedLog } from "./seed-log";
 
 /** The demo referrer: a consumer account whose Referrals screen shows every state. */
@@ -103,15 +104,16 @@ export async function seedSignupReferralDemo(users: readonly User[]): Promise<vo
 			},
 		});
 		if (successNotifiedAt !== null) {
-			await prisma.rewardNotification.create({
-				data: {
-					userId: referrer.id,
-					type: SIGNUP_REFERRAL_SUCCESS_NOTIFICATION_TYPE,
-					title: "Referral successful",
-					body: `${referee.fullName} redeemed a reward. Your referral is successful.`,
-					metadata: { signupReferralId: referral.id, href: SIGNUP_REFERRALS_SCREEN_PATH },
-					createdAt: BigInt(successNotifiedAt),
-				},
+			// What the referrer's signup-success notice (ADR 070) leaves in their customer inbox.
+			await seedInboxNotification({
+				type: SIGNUP_REFERRAL_SUCCESS_NOTIFICATION,
+				userId: referrer.id,
+				surface: "CUSTOMER",
+				payload: { signupReferralId: referral.id, refereeName: referee.fullName },
+				dedupeKey: `signup-success:${referral.id}`,
+				tenantId: null,
+				createdAt: BigInt(successNotifiedAt),
+				readAt: null,
 			});
 		}
 		created += 1;

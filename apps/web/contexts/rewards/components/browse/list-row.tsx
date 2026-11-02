@@ -5,6 +5,7 @@ import { RewardCategoryVisual } from "@/contexts/rewards/components/detail/categ
 import { RewardMerchantAvatar } from "@/components/dashboard/shared/merchant-avatar";
 import { PLATFORM_DISPLAY_REGION, type RewardResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/badge";
+import { isRewardJustForViewer, JUST_FOR_YOU_LABEL } from "@/contexts/rewards/lib/reward-audience";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { CoverImage } from "@workspace/ui/components/cover-image";
 import { cn } from "@workspace/ui/lib/core/utils";
@@ -51,6 +52,11 @@ export function RewardListRow({ reward, detailPathPrefix = ROUTE_PREFIXES.dashbo
 			<div className="min-w-0 flex-1">
 				<div className="flex min-w-0 items-center gap-2">
 					<h2 className="line-clamp-2 text-[0.9375rem] leading-snug font-semibold text-foreground sm:line-clamp-1 sm:text-base">{reward.title}</h2>
+					{isRewardJustForViewer(reward) ? (
+						<Badge variant="primary-light" className="shrink-0 px-1.5 py-0 text-[10px]">
+							{JUST_FOR_YOU_LABEL}
+						</Badge>
+					) : null}
 					{isLowStock && !isSoldOut ? (
 						<Badge className="hidden shrink-0 border-transparent bg-warning-soft px-1.5 py-0 text-[10px] text-warning sm:inline-flex">Low</Badge>
 					) : null}

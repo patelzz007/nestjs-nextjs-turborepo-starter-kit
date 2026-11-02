@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import CommandPaletteClientOnly from "@/components/layout/command-palette.client-only";
 import { WebTopbar } from "@/components/layout/web-topbar";
+import { ROUTES } from "@/lib/routes";
 
 const READY: BreadcrumbStatus = { kind: "ready", items: [{ label: "Rewards", href: "/dashboard", icon: Gift }] };
 
@@ -28,10 +29,10 @@ afterEach(() => {
 });
 
 describe("WebTopbar", () => {
-	it("hands the shared header this app's breadcrumb trail and its command palette", () => {
+	it("hands the shared header this app's breadcrumb trail, its command palette and its inbox page", () => {
 		render(<WebTopbar />);
 
 		expect(screen.getByRole("banner").textContent).toBe("shell");
-		expect(shellTopbar).toHaveBeenCalledWith({ breadcrumbStatus: READY, commandPalette: CommandPaletteClientOnly });
+		expect(shellTopbar).toHaveBeenCalledWith({ breadcrumbStatus: READY, commandPalette: CommandPaletteClientOnly, notificationsHref: ROUTES.dashboard.notifications });
 	});
 });

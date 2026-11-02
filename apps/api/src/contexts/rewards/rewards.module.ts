@@ -29,7 +29,9 @@ import { RecordRewardReviewAuditHandler } from "./application/event-handlers/in-
 import type { LegalAcceptanceReadPort, RewardImageDeliveryPort, RewardReadPort } from "./application/ports/reward-read.port";
 import { LEGAL_ACCEPTANCE_READS, REWARD_ID_GENERATOR, REWARD_IMAGE_DELIVERY, REWARD_READS, REWARDS_UNIT_OF_WORK, type IdGenerator } from "./application/ports/rewards.tokens";
 import { GetLegalAcceptanceStatusHandler } from "./application/queries/get-legal-acceptance-status/get-legal-acceptance-status.handler";
+import { GetRewardAudienceHandler } from "./application/queries/get-reward-audience/get-reward-audience.handler";
 import { GetTenantRewardHandler } from "./application/queries/get-tenant-reward/get-tenant-reward.handler";
+import { ListRewardCustomersHandler } from "./application/queries/list-reward-customers/list-reward-customers.handler";
 import { GetPublishedRewardHandler } from "./application/queries/get-published-reward/get-published-reward.handler";
 import { GetRewardForAdminHandler } from "./application/queries/get-reward-for-admin/get-reward-for-admin.handler";
 import { GetRewardImageDownloadUrlHandler } from "./application/queries/get-reward-image-download-url/get-reward-image-download-url.handler";
@@ -72,6 +74,8 @@ const QUERY_HANDLERS: readonly Provider[] = [
 	ListTenantRewardsHandler,
 	SummarizeTenantRewardsHandler,
 	GetTenantRewardHandler,
+	GetRewardAudienceHandler,
+	ListRewardCustomersHandler,
 	ListRewardsPendingReviewHandler,
 	GetRewardForAdminHandler,
 	GetRewardImageDownloadUrlHandler,

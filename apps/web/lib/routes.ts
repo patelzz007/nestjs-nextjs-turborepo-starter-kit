@@ -42,6 +42,10 @@ export interface WebDashboardRoutes {
 	readonly account: string;
 	/** Signup referral code and referee list. */
 	readonly referrals: string;
+	/** The customer inbox (ADR 070). */
+	readonly notifications: string;
+	/** What reaches the customer, and where: channels, quiet hours, consent per store, phones. */
+	readonly notificationSettings: string;
 }
 
 export interface WebRoutes {
@@ -51,6 +55,8 @@ export interface WebRoutes {
 	readonly hello: string;
 	readonly auth: WebAuthRoutes;
 	readonly dashboard: WebDashboardRoutes;
+	/** An email footer's one-click unsubscribe (`?token=`; no sign-in needed). */
+	readonly unsubscribe: string;
 }
 
 export interface WebRoutePrefixes {
@@ -83,7 +89,10 @@ export const ROUTES: WebRoutes = {
 		activity: `${DASHBOARD_PREFIX}/activity`,
 		account: APP_LINKS.web.account,
 		referrals: `${DASHBOARD_PREFIX}/referrals`,
+		notifications: APP_LINKS.web.notifications,
+		notificationSettings: `${APP_LINKS.web.notifications}/settings`,
 	},
+	unsubscribe: APP_LINKS.web.unsubscribe,
 };
 
 export const ROUTE_PREFIXES: WebRoutePrefixes = {

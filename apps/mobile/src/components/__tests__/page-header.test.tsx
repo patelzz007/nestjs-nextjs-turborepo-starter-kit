@@ -69,6 +69,17 @@ describe("PageHeader", () => {
 		expect(screen.getByRole("button", { name: "Notifications" })).toBeOnTheScreen();
 	});
 
+	it("puts the unread count on the bell's corner and in its name, and nothing at zero", async () => {
+		await render(header(handlers(), { notificationCount: 3, testID: "header" }));
+
+		expect(screen.getByRole("button", { name: "Notifications, 3 unread" })).toBeOnTheScreen();
+		expect(screen.getByText("3", { includeHiddenElements: true })).toBeOnTheScreen();
+
+		await render(header(handlers(), { notificationCount: 0, testID: "header" }));
+		expect(screen.getByRole("button", { name: "Notifications" })).toBeOnTheScreen();
+		expect(screen.queryByTestId("header-notification-count", { includeHiddenElements: true })).toBeNull();
+	});
+
 	it("leads with back deeper in a stack", async () => {
 		const actions = handlers();
 		await render(header(actions, { leading: "back", title: "Security", subtitle: "Your password and sign-in", titleKey: "/settings/security" }));

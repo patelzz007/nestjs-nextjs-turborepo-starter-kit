@@ -16,6 +16,8 @@ export type {
 	LegalAcceptanceCheck,
 	RewardAuditEntry,
 	RewardAuditPort,
+	RedeemedRewardFacts,
+	RewardOfferFacts,
 	RewardRedemptionFacts,
 	RewardRedemptionFactsPort,
 } from "./application/ports/rewards-transactional.ports";

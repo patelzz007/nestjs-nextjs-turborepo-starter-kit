@@ -5,7 +5,7 @@ import { Pool, type PoolConfig } from "pg";
 
 import { TypedConfigService } from "../config/typed-config.service";
 import { DATABASE_APPLICATION_NAME, DATABASE_CONNECT_TIMEOUT_MS } from "./database-pool.constants";
-import { closePrismaConnections, databasePoolBudget, prismaLogSubscriptions } from "./prisma-client-setup";
+import { closePrismaConnections, databasePoolBudget, PRISMA_TRANSACTION_DEFAULTS, prismaLogSubscriptions } from "./prisma-client-setup";
 
 /**
  * Pool settings for the system client: its share of the replica's `DB_POOL_MAX`
@@ -50,7 +50,7 @@ export class SystemPrismaService extends PrismaClient<Prisma.PrismaClientOptions
 	public constructor(config: TypedConfigService) {
 		const pool = new Pool(buildSystemPoolConfig(config));
 		const isDebug: boolean = config.isDebugLogging;
-		super({ adapter: new PrismaPg(pool), log: prismaLogSubscriptions(isDebug) });
+		super({ adapter: new PrismaPg(pool), log: prismaLogSubscriptions(isDebug), transactionOptions: PRISMA_TRANSACTION_DEFAULTS });
 		this.pool = pool;
 
 		this.$on("error", (event: Prisma.LogEvent): void => {

@@ -30,13 +30,17 @@ export const LAYOUT: Layout = {
 		"input-group-kbd-nudge": rem(-0.15),
 		/* Stroke of the dashed chart-tooltip series indicator (between border and border-2). */
 		"chart-indicator-dashed-width": px(1.5),
-		"switch-height": px(18.4),
-		"switch-width": px(32),
-		"switch-height-sm": px(14),
-		"switch-width-sm": px(24),
-		"switch-thumb-size": px(16),
-		"switch-thumb-size-sm": px(12),
-		/* Gap the checked thumb keeps from the track's end edge. */
+		/* The switch: a 2 px track border, then this gap, then the thumb (22 = 2 + 2 + 14 + 2 + 2). */
+		"switch-height": px(22),
+		"switch-width": px(40),
+		"switch-height-sm": px(18),
+		"switch-width-sm": px(32),
+		"switch-thumb-size": px(14),
+		"switch-thumb-size-sm": px(10),
+		/* Gap the thumb keeps from the track's border, on every side. */
 		"switch-thumb-inset": px(2),
+		/* How far the thumb travels: the width less both borders, both gaps and the thumb. */
+		"switch-thumb-travel": px(18),
+		"switch-thumb-travel-sm": px(14),
 	},
 };

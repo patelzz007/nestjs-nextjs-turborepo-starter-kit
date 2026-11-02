@@ -4,7 +4,10 @@ import * as React from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { UiKitTestProviders } from "../../testing/ui-kit-test-providers";
-import { ImageCarousel, type ImageCarouselImage } from "../image-carousel";
+import { ImageCarousel, type ImageCarouselImage, imageCarouselOptions } from "../image-carousel";
+
+/** A start index past the first. */
+const THIRD_IMAGE = 2;
 
 /** Embla observes the viewport's size and its slides' visibility — jsdom implements neither. */
 class NoopObserver {
@@ -77,6 +80,10 @@ describe("ImageCarousel", () => {
 		render(<ImageCarousel images={[photo("a"), photo("b")]} startIndex={9} />, { wrapper: UiKitTestProviders });
 
 		expect(screen.getByText("2 / 2")).toBeDefined();
+	});
+
+	it("goes round in a loop, from where it starts", () => {
+		expect(imageCarouselOptions(THIRD_IMAGE)).toEqual({ startIndex: THIRD_IMAGE, loop: true });
 	});
 
 	it("renders nothing without images", () => {

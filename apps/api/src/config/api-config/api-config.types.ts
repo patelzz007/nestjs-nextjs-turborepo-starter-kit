@@ -5,9 +5,10 @@ import type { AppVersion, GithubRepositoryParams, NodeEnv, OpsCloudProvider } fr
 import type { KafkaSecurityOptions } from "@workspace/messaging/kafka";
 
 import type {
-	CacheBackend,
 	EmailMode,
 	EmailProvider,
+	PushProvider,
+	SmsProvider,
 	LoginVerificationMode,
 	LogLevel,
 	MalwareScannerSetting,
@@ -146,6 +147,27 @@ export interface EncryptionConfig {
 	readonly tenantJobHmacSecret: string | null;
 }
 
+/** Notification channels (ADR 070). */
+export interface NotificationsConfig {
+	readonly pushProvider: PushProvider;
+	readonly smsProvider: SmsProvider;
+	readonly fcmServiceAccountJson: string | null;
+	readonly apns: {
+		readonly keyId: string;
+		readonly teamId: string;
+		readonly bundleId: string;
+		readonly privateKey: string;
+		readonly environment: "sandbox" | "production";
+	} | null;
+	readonly twilio: { readonly accountSid: string; readonly authToken: string; readonly messagingServiceSid: string } | null;
+	readonly smsAllowedCountries: readonly string[];
+	readonly smsDailyLimitPerRecipient: number;
+	readonly smsDailyLimitPerTenant: number;
+	/** Push device tokens are encrypted at rest with it; without it, devices cannot register. */
+	readonly encryptionKeys: Readonly<Record<number, string>> | null;
+	readonly broadcastBlockedLinkDomains: readonly string[];
+}
+
 export interface EmailConfig {
 	readonly mode: EmailMode;
 	/** Who delivers when `mode` is `send`. `mailpit` only ever runs on localhost (enforced at parse time). */
@@ -169,17 +191,33 @@ export interface RateLimitConfig {
 	readonly throttleStrictLimit: number;
 	readonly throttleTtlMs: number;
 	readonly securityCounterMaxKeys: number;
+	/** How many API instances share each limit (the local share while Redis is down). */
+	readonly expectedInstances: number;
+	/** CIDR blocks whose traffic is counted but never refused (monitoring). */
+	readonly exemptCidrs: readonly string[];
+	/** A tenant's default bucket (members and keys together); an override replaces it for one tenant. */
+	readonly tenantTraffic: TokenBucketDefaults;
+	/** One API key's default bucket. */
+	readonly apiKeyTraffic: TokenBucketDefaults;
+}
+
+/** A steady rate with room for a burst (GCRA). */
+export interface TokenBucketDefaults {
+	readonly ratePerSecond: number;
+	readonly burst: number;
 }
 
 export interface CacheConfig {
-	readonly authorizationBackend: CacheBackend;
 	readonly authorizationTtlMs: number;
 	readonly authorizationMaxEntries: number;
-	readonly userSessionBackend: CacheBackend;
 	readonly userSessionTtlMs: number;
 	readonly userSessionMaxEntries: number;
 	readonly accessTokenStateTtlMs: number;
 	readonly accessTokenStateMaxEntries: number;
+	/** `CACHE_ENCRYPTION_KEYS`: the key ring personal data is encrypted with inside Redis; `null` keeps such caches in each process only. */
+	readonly encryptionKeys: Readonly<Record<number, string>> | null;
+	/** Percent of Redis `maxmemory` at which health reports the cache as degraded. */
+	readonly memoryAlertPercent: number;
 }
 
 export interface MessagingConfig {
@@ -293,6 +331,7 @@ export interface ApiConfig {
 	readonly sessions: SessionsConfig;
 	readonly github: GithubConfig;
 	readonly encryption: EncryptionConfig;
+	readonly notifications: NotificationsConfig;
 	readonly email: EmailConfig;
 	readonly rateLimits: RateLimitConfig;
 	readonly caches: CacheConfig;

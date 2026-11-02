@@ -60,9 +60,9 @@ export const REFERENCE_PAGES: readonly ReferencePage[] = [
 		slug: "customer-rewards",
 		title: "Customer rewards and claims",
 		description:
-			"The consumer app's API: browse rewards, share them with friends, accept the legal terms, claim with a one-time code, show the QR code, read notifications and spending analytics.",
+			"The consumer app's API: browse rewards, share them with friends, accept the legal terms, claim with a one-time code, show the QR code and spending analytics.",
 		guide: { label: "Customer claims guide", href: "../../user-guide/05-customer-claims.md" },
-		tags: ["Rewards", "Referrals", "Claims", "Legal", "Reward Notifications"],
+		tags: ["Rewards", "Referrals", "Claims", "Legal"],
 	},
 	{
 		slug: "pos",
@@ -85,6 +85,14 @@ export const REFERENCE_PAGES: readonly ReferencePage[] = [
 		description: "The outbound email log, template previews and test sends, and the Resend delivery webhook.",
 		guide: { label: "Email (Resend) guide", href: "../email/resend-setup.md" },
 		tags: ["Email Log", "Email Templates", "Email Webhook"],
+	},
+	{
+		slug: "notifications",
+		title: "Notifications: inbox, preferences, push devices and broadcasts",
+		description:
+			"One inbox per app (live over SSE), the preference matrix with quiet hours and digest, marketing consent, push device registration, one-click unsubscribe, Twilio callbacks, the delivery log and catalog for staff, and a tenant's own delivery log and broadcasts.",
+		guide: { label: "ADR 070: multi-channel notifications", href: "../../adr/070-multi-channel-notifications.md" },
+		tags: ["Notifications", "Notifications (admin)", "Notifications (tenant)", "Notification webhooks", "Broadcasts"],
 	},
 	{
 		slug: "geography",

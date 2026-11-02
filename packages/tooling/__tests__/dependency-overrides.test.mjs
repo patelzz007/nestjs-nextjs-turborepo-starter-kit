@@ -7,8 +7,10 @@
  * instead of at runtime inside firebase-admin. The scoped `concurrently>shell-quote`
  * security override is checked the same way: concurrently loads the overridden
  * version and the one function it imports (`quote`) still quotes as it expects. The scoped
- * `@expo/cli>zod` security override (zod 3 → 4): @expo/cli loads the overridden version and its
- * own DevTools plugin schema still accepts a valid plugin and reports an invalid one by issue.
+ * `@expo/cli>zod` security override (zod 3 → 4): @expo/cli resolves the overridden version, and
+ * none of its own code loads that copy (since 58.1.18 its DevTools schemas are plain JSON schemas
+ * and its MCP integration takes zod from `expo-mcp`), so the major bump changes nothing it runs.
+ * A release that starts loading its own zod again fails here, to be re-checked against zod 4.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -97,24 +99,20 @@ describe("pnpm overrides: @expo/cli>zod", () => {
 		expect(version).toMatch(/^\d+\.\d+\.\d+$/);
 	});
 
-	it("@expo/cli loads the overridden zod and its DevTools plugin schema still parses as it expects", () => {
+	it("@expo/cli resolves the overridden zod, and none of its own code loads that copy", () => {
 		// The @expo/cli that `expo start` runs: resolved from the mobile app's `expo`, as expo resolves it
 		// (a store scan would also find copies a past install left behind, outside the lockfile).
 		const requireFromMobile = createRequire(path.join(REPO_ROOT, "apps/mobile/package.json"));
 		const requireFromExpo = createRequire(requireFromMobile.resolve("expo/package.json"));
-		const copies = [path.dirname(requireFromExpo.resolve("@expo/cli/package.json"))];
+		const packageDir = path.dirname(requireFromExpo.resolve("@expo/cli/package.json"));
+		const requireFromParent = createRequire(path.join(packageDir, "package.json"));
+		expect(readManifest(path.dirname(requireFromParent.resolve("zod/package.json"))).version).toBe(version);
 
-		for (const packageDir of copies) {
-			const requireFromParent = createRequire(path.join(packageDir, "package.json"));
-			const zodManifestPath = requireFromParent.resolve("zod/package.json");
-			expect(readManifest(path.dirname(zodManifestPath)).version).toBe(version);
-
-			// @expo/cli's own schema module, exactly as `expo start` loads it for a DevTools plugin.
-			const { PluginSchema } = requireFromParent("./build/src/start/server/DevToolsPlugin.schema.js");
-			expect(PluginSchema.safeParse({ packageName: "plugin", packageRoot: "/plugin", bannerTitle: true }).success).toBe(true);
-			const invalid = PluginSchema.safeParse({ packageName: "", packageRoot: "/plugin" });
-			expect(invalid.success).toBe(false);
-			expect(invalid.error.issues.map((issue) => issue.path.join("."))).toEqual(["packageName"]);
-		}
+		// A plain `require("zod")` / `import … from "zod"` would load the overridden copy.
+		const ownZodLoad = /\brequire\(\s*["']zod["']\s*\)|\bfrom\s+["']zod["']/u;
+		const loaders = readdirSync(path.join(packageDir, "build"), { recursive: true, encoding: "utf8" })
+			.filter((file) => file.endsWith(".js"))
+			.filter((file) => ownZodLoad.test(readFileSync(path.join(packageDir, "build", file), "utf8")));
+		expect(loaders).toEqual([]);
 	});
 });

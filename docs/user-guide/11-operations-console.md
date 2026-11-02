@@ -3,7 +3,7 @@ title: "11. Operations console"
 description: "Watch the platform's servers, instances and dependencies, read their history, act on alerts, back up the database and load test the platform."
 order: 12
 author: "Product & Platform Team"
-lastUpdated: 1793145600000
+lastUpdated: 1793491200000
 coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
 tags: ["user-guide", "operations", "monitoring", "backups", "load-testing"]
 ---
@@ -54,8 +54,27 @@ Lost the token? Open the server and **Rotate agent token**: the old one stops wo
 
 An alert opens when a server's CPU stays high, its memory or disk fills, a server or instance stops
 reporting, a dependency or address goes down, or a TLS certificate is about to expire. It resolves
-by itself when the condition clears. Both are emailed to every SuperAdmin and the extra recipients.
-SuperAdmins set the thresholds and extra recipients at the bottom of the page.
+by itself when the condition clears. A restarted instance is not an outage: when a newer process of the
+same service starts on the same machine, the old one is simply forgotten, with no alert. Every
+SuperAdmin, Admin and Platform Developer is told both
+times: under the bell in the admin panel, in the phone app's notifications, as a push on their phone
+(at any hour) and by email. They can turn the email off in their notification settings, but not the
+other two. The extra recipients get the email only. SuperAdmins set the thresholds and extra
+recipients at the bottom of the page.
+
+## Rate limits
+
+**Operations → Rate limits** shows every limit with its refusals in the last hour, the callers refused
+most (addresses masked) with **Lift penalty**, what is never limited (load tests, the server agent,
+monitors), and per-business **overrides**: more traffic for a busy business, or more broadcasts per
+week, until an end date and with a reason. How limits work:
+[Rate limits and the cache](../technical/operations/rate-limits-and-cache.md).
+
+## Cache
+
+**Operations → Cache** shows each cache's hit ratio, entries and failures, with **Flush**; Redis memory
+against its alert line; a warning while Redis isn't answering (the apps keep working from the
+database); and **Flush one tenant** with a reason. It refreshes every 15 seconds.
 
 ## Backups (SuperAdmin)
 

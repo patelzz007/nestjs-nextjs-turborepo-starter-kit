@@ -197,6 +197,22 @@ const PLATFORM_PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
 	{ action: "CREATE", resource: "LOAD_TEST", description: "Start a load test", group: "Operations", isSystem: true },
 	{ action: "UPDATE", resource: "LOAD_TEST", description: "Abort a running load test", group: "Operations", isSystem: true },
 	{ action: "DELETE", resource: "LOAD_TEST", description: "Purge every row the load tests created", group: "Operations", isSystem: true },
+	{ action: "LIST", resource: "NOTIFICATION", description: "See the notification delivery log", group: "Notifications", isSystem: true },
+	{ action: "UPDATE", resource: "NOTIFICATION", description: "Retry failed deliveries and lift suppressions", group: "Notifications", isSystem: true },
+	{ action: "CREATE", resource: "NOTIFICATION", description: "Send a test notification to yourself", group: "Notifications", isSystem: true },
+	{ action: "LIST", resource: "BROADCAST", description: "See broadcasts", group: "Notifications", isSystem: true },
+	{ action: "READ", resource: "BROADCAST", description: "Open a broadcast and its results", group: "Notifications", isSystem: true },
+	{ action: "CREATE", resource: "BROADCAST", description: "Write a broadcast", group: "Notifications", isSystem: true },
+	{ action: "UPDATE", resource: "BROADCAST", description: "Edit a draft broadcast", group: "Notifications", isSystem: true },
+	{ action: "PUBLISH", resource: "BROADCAST", description: "Schedule or send a broadcast", group: "Notifications", isSystem: true },
+	{ action: "APPROVE", resource: "BROADCAST", description: "Approve a platform broadcast to all users (four eyes)", group: "Notifications", isSystem: true },
+	{ action: "DELETE", resource: "BROADCAST", description: "Cancel a broadcast before it sends", group: "Notifications", isSystem: true },
+	{ action: "LIST", resource: "BROADCAST_REPORT", description: "See reported broadcasts", group: "Notifications", isSystem: true },
+	{ action: "UPDATE", resource: "BROADCAST_REPORT", description: "Dismiss or uphold a report, resume a paused broadcast", group: "Notifications", isSystem: true },
+	{ action: "LIST", resource: "RATE_LIMIT", description: "See the rate-limit policies and who is being limited", group: "Operations", isSystem: true },
+	{ action: "UPDATE", resource: "RATE_LIMIT", description: "Set tenant overrides and lift penalties", group: "Operations", isSystem: true },
+	{ action: "READ", resource: "CACHE", description: "See the cache namespaces and Redis memory", group: "Operations", isSystem: true },
+	{ action: "DELETE", resource: "CACHE", description: "Flush a cache namespace or one tenant's cached data", group: "Operations", isSystem: true },
 ];
 
 /**

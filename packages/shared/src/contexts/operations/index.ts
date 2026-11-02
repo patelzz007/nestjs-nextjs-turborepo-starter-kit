@@ -8,3 +8,4 @@ export * from "./schemas/operations";
 export * from "./percentiles";
 export * from "./load-test-plan";
 export * from "./machine-usage";
+export * from "./schemas/traffic-and-cache";

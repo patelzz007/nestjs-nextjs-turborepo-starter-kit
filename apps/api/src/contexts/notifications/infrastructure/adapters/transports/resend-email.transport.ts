@@ -72,6 +72,7 @@ export class ResendEmailTransport extends EmailTransport {
 						...(email.cc.length > 0 ? { cc: [...email.cc] } : {}),
 						...(email.bcc.length > 0 ? { bcc: [...email.bcc] } : {}),
 						...(email.replyTo === undefined ? {} : { replyTo: email.replyTo }),
+						...(Object.keys(email.headers).length === 0 ? {} : { headers: { ...email.headers } }),
 					},
 					{ idempotencyKey: `email-log/${email.emailLogId}` },
 				),

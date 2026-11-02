@@ -24,6 +24,7 @@ import { sha256Hex } from "../src/platform/infrastructure/crypto/sha256";
 import { INSERT_REWARD_COVER_SQL, rewardCoverParams } from "./support/reward-image-fixture";
 import { RewardCodeHasher } from "../src/platform/infrastructure/crypto/reward-code-hasher";
 import { createE2eApp, login, markSeedUserEmailVerified, mutationHeaders, parseSuccessEnvelope, type InjectResponse, type LoginResult } from "./e2e-helpers";
+import { deleteNotificationsByPayload, notificationsByPayload, withRlsBypass } from "./support/notification-rows";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
 
@@ -232,7 +233,7 @@ describe("POS checkout (e2e)", () => {
 		const sales = await query(`SELECT DISTINCT "saleId" FROM public."RewardRedemption" WHERE "claimId" IN (${fixtureClaims})`, [fixtureRewards]);
 		await query(`DELETE FROM public."RewardRedemption" WHERE "claimId" IN (${fixtureClaims})`, [fixtureRewards]);
 		await query(`DELETE FROM public."RewardSale" WHERE id = ANY($1::text[])`, [`{${sales.map((sale) => String(sale.saleId)).join(",")}}`]);
-		await query(`DELETE FROM public."RewardNotification" WHERE metadata->>'rewardId' = $1`, [referrerRewardId]);
+		await withRlsBypass(pool, (client) => deleteNotificationsByPayload(client, "rewardId", [referrerRewardId]));
 		await query(`DELETE FROM public."RewardClaim" WHERE "rewardId" = ANY($1::text[])`, [fixtureRewards]);
 		await query(`DELETE FROM public."RewardReferral" WHERE "rewardId" = ANY($1::text[])`, [fixtureRewards]);
 		await query(`UPDATE public."Reward" SET "referrerRewardId" = NULL WHERE id = ANY($1::text[])`, [fixtureRewards]);
@@ -487,11 +488,8 @@ describe("POS checkout (e2e)", () => {
 		expect(creditClaim?.rewardId).toBe(referrerRewardId);
 		// The 30-day credit TTL, capped by the referrer reward's own (earlier) expiry.
 		expect(Number(creditClaim?.claimExpiresAt)).toBe(Number(childBefore?.expiryDate));
-		const [notices] = await query(
-			`SELECT COUNT(*)::int AS n FROM public."RewardNotification" WHERE "userId" = $1 AND type = 'referrer_reward_credited' AND metadata->>'rewardId' = $2`,
-			[bobId, referrerRewardId],
-		);
-		expect(notices?.n).toBe(1);
+		const notices = await withRlsBypass(pool, (client) => notificationsByPayload(client, "rewardId", [referrerRewardId]));
+		expect(notices.filter((notice) => notice.recipientUserId === bobId && notice.typeKey === "rewards.referrer-credited")).toHaveLength(1);
 		const [emails] = await query(CREDIT_EMAILS_SQL, [testStartedAt]);
 		expect(emails?.n).toBe(1);
 		const [credits] = await query(`SELECT COUNT(*)::int AS n FROM public."RewardClaim" WHERE "referralId" = $1 AND "isReferrerCredit" = true AND "userId" = $2`, [

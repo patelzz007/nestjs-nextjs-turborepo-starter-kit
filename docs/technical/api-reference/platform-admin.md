@@ -629,7 +629,7 @@ Renders the invite email for a business name and pilot city, for a live preview 
 | --- | --- | --- | --- |
 | `data.description` | string | yes | at least 1 characters |
 | `data.html` | string | yes | at least 1 characters |
-| `data.key` | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+5 more) | yes |  |
+| `data.key` | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+8 more) | yes |  |
 | `data.label` | string | yes | at least 1 characters |
 | `data.previewText` | string | yes | at least 1 characters |
 | `data.props` | object | yes |  |
@@ -1847,12 +1847,16 @@ Get one reward in full, whatever its status (moderation detail)
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `data.audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
+| `data.freeItem` | object \| null | yes |  |
+| `data.freeItem.name` | string | yes |  |
+| `data.freeItem.sku` | string | yes |  |
 | `data.id` | string (uuid) | yes |  |
 | `data.images` | object[] | yes | 1–10 items |
 | `data.images[].fileId` | string (uuid) | yes |  |
@@ -1930,12 +1934,16 @@ _No fields._
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `data.audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
+| `data.freeItem` | object \| null | yes |  |
+| `data.freeItem.name` | string | yes |  |
+| `data.freeItem.sku` | string | yes |  |
 | `data.id` | string (uuid) | yes |  |
 | `data.images` | object[] | yes | 1–10 items |
 | `data.images[].fileId` | string (uuid) | yes |  |
@@ -2157,12 +2165,16 @@ Reject a pending reward
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `data.audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
+| `data.freeItem` | object \| null | yes |  |
+| `data.freeItem.name` | string | yes |  |
+| `data.freeItem.sku` | string | yes |  |
 | `data.id` | string (uuid) | yes |  |
 | `data.images` | object[] | yes | 1–10 items |
 | `data.images[].fileId` | string (uuid) | yes |  |
@@ -2317,12 +2329,16 @@ List rewards pending moderation (oldest first, paginated)
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data` | object[] | yes |  |
+| `data[].audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
 | `data[].category` | string | yes |  |
 | `data[].claimCount` | integer | yes | min -9007199254740991 |
 | `data[].createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data[].deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data[].description` | string | yes |  |
 | `data[].expiryDate` | integer | yes |  |
+| `data[].freeItem` | object \| null | yes |  |
+| `data[].freeItem.name` | string | yes |  |
+| `data[].freeItem.sku` | string | yes |  |
 | `data[].id` | string (uuid) | yes |  |
 | `data[].images` | object[] | yes | 1–10 items |
 | `data[].images[].fileId` | string (uuid) | yes |  |

@@ -8,6 +8,7 @@ import type { UnitOfWork } from "../../../../../platform/application/unit-of-wor
 import { ClaimNoLongerRedeemableError } from "../../../../claims/public-api";
 import { RewardSale, type CheckoutPoint, type SaleLine } from "../../../domain/aggregates/reward-sale.aggregate";
 import { PosCodeLockedError, RedemptionCodeNotFoundError, SaleIdempotencyKeyTakenError } from "../../../domain/errors/pos.errors";
+import { redemptionOfferOf } from "../../../domain/policies/redemption-offer.policy";
 import type { StoredSale } from "../../../domain/repositories/pos.repositories";
 import { idempotencyKeyTakenElsewhere, redemptionRefused, toPosWireError } from "../../errors/pos-refusal.errors";
 import type { PosScope } from "../../pos-scope";
@@ -163,7 +164,7 @@ export class CheckoutSaleHandler implements ICommandHandler<CheckoutSaleCommand,
 
 	private async respond(scope: PosScope, sale: StoredSale): Promise<RedemptionCheckoutResponse> {
 		const rewardIds = await scope.claims.rewardIdsOf(sale.lines.map((line) => line.claimId));
-		const titles = await scope.rewardFacts.titlesOf([...rewardIds.values()]);
+		const rewards = await scope.rewardFacts.redeemedRewardsOf([...rewardIds.values()]);
 		return {
 			saleId: sale.id,
 			billTotalMinor: sale.billTotalMinor,
@@ -172,11 +173,18 @@ export class CheckoutSaleHandler implements ICommandHandler<CheckoutSaleCommand,
 			idempotencyKey: sale.idempotencyKey,
 			redemptions: sale.lines.map((line) => {
 				const rewardId = rewardIds.get(line.claimId);
-				const rewardTitle = rewardId === undefined ? undefined : titles.get(rewardId);
-				if (rewardId === undefined || rewardTitle === undefined) {
+				const reward = rewardId === undefined ? undefined : rewards.get(rewardId);
+				if (rewardId === undefined || reward === undefined) {
 					throw new SaleRedemptionUnresolvedError(sale.id, line.claimId);
 				}
-				return { redemptionId: line.redemptionId, claimId: line.claimId, rewardId, rewardTitle };
+				return {
+					redemptionId: line.redemptionId,
+					claimId: line.claimId,
+					rewardId,
+					rewardTitle: reward.title,
+					rewardType: reward.offer.rewardType,
+					offer: redemptionOfferOf(rewardId, reward.offer),
+				};
 			}),
 		};
 	}

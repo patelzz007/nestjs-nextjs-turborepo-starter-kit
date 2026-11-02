@@ -1,4 +1,8 @@
-import { Module } from "@nestjs/common";
+import { Module, type OnModuleInit } from "@nestjs/common";
+import { ANALYTICS_EXPORT_RATE_LIMIT, ANALYTICS_EXPORT_RATE_LIMIT_WINDOW_MS } from "@workspace/shared";
+
+import { describeSlidingWindow, RateLimitPolicyRegistry } from "../../platform/application/rate-limiting/rate-limit-policy-registry";
+import { ANALYTICS_EXPORT_POLICY, AnalyticsExportRateLimitGuard } from "./presentation/http/analytics-export-rate-limit.guard";
 
 import { TypedConfigService } from "../../config/typed-config.service";
 import { AuditTrailService } from "../../platform/infrastructure/audit/audit-trail.service";
@@ -47,7 +51,6 @@ import { CsvAnalyticsReportRenderer } from "./infrastructure/report/renderers/cs
 import { PdfAnalyticsReportRenderer } from "./infrastructure/report/renderers/pdf-analytics-report.renderer";
 import { XlsxAnalyticsReportRenderer } from "./infrastructure/report/renderers/xlsx-analytics-report.renderer";
 import { RewardsAdminAnalyticsController } from "./presentation/http/admin-analytics.controller";
-import { AnalyticsExportRateLimitGuard } from "./presentation/http/analytics-export-rate-limit.guard";
 import { ConsumerAnalyticsController } from "./presentation/http/consumer-analytics.controller";
 import { IntegrationAnalyticsController } from "./presentation/http/integration-analytics.controller";
 import { TenantAnalyticsController } from "./presentation/http/tenant-analytics.controller";
@@ -116,4 +119,18 @@ import { TenantAnalyticsController } from "./presentation/http/tenant-analytics.
 		GetConsumerDashboardHandler,
 	],
 })
-export class ReportingModule {}
+export class ReportingModule implements OnModuleInit {
+	public constructor(private readonly rateLimitPolicies: RateLimitPolicyRegistry) {}
+
+	/** The export limit this module's guard counts (ADR 071). */
+	public onModuleInit(): void {
+		this.rateLimitPolicies.register({
+			name: ANALYTICS_EXPORT_POLICY,
+			algorithm: "sliding-window",
+			subject: "principal",
+			limit: describeSlidingWindow(ANALYTICS_EXPORT_RATE_LIMIT, ANALYTICS_EXPORT_RATE_LIMIT_WINDOW_MS),
+			failMode: "open",
+			penalty: false,
+		});
+	}
+}

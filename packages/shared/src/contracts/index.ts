@@ -21,12 +21,18 @@
 import { authContract } from "../contexts/identity/contract";
 import { rewardReferralsContract, signupReferralsAuthContract } from "../contexts/referrals/contract";
 import { adminRbacContract, capabilitiesContract, supportAccessContract, tenantAccessContract } from "../contexts/authorization/contract";
-import { emailContract, merchantInviteEmailPreviewContract } from "../contexts/notifications/contract";
+import {
+	emailContract,
+	merchantInviteEmailPreviewContract,
+	notificationsAdminContract,
+	notificationsContract,
+	tenantNotificationsContract,
+} from "../contexts/notifications/contract";
 import { auditLogsContract, auditTrailContract, dataChangesContract } from "../contexts/audit/contract";
 import { githubContract, githubPullRequestsContract } from "../contexts/integrations-github/contract";
 import { geoContract } from "../contexts/reference-data/contract";
 import { integrationRewardsContract, legalContract, tenantRewardsContract, rewardsAdminRewardContract, rewardsContract } from "../contexts/rewards/contract";
-import { claimsContract, rewardNotificationsContract } from "../contexts/claims/contract";
+import { claimsContract } from "../contexts/claims/contract";
 import { claimsAnalyticsContract, integrationAnalyticsContract, tenantAnalyticsContract, rewardsAdminAnalyticsContract } from "../contexts/reporting/contract";
 import { integrationRedemptionsContract, tenantApiKeysContract, tenantRedemptionsContract, tenantTerminalsContract } from "../contexts/pos/contract";
 import { filesContract } from "../contexts/files/contract";
@@ -85,6 +91,9 @@ export const apiContract = {
 	auditTrail: auditTrailContract,
 	dataChanges: dataChangesContract,
 	email: emailContract,
+	notifications: notificationsContract,
+	notificationsAdmin: notificationsAdminContract,
+	tenantNotifications: tenantNotificationsContract,
 	github: githubContract,
 	githubPullRequests: githubPullRequestsContract,
 	geo: geoContract,
@@ -94,7 +103,6 @@ export const apiContract = {
 		...claimsContract,
 		...claimsAnalyticsContract,
 	},
-	rewardNotifications: rewardNotificationsContract,
 	files: filesContract,
 	tenants: {
 		...tenantsContract,

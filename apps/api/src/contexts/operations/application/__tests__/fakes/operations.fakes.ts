@@ -31,7 +31,7 @@ import {
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import type { SystemOperationName } from "../../../../../platform/application/system-operation-names";
-import type { EmailRequestTransactionalPort } from "../../../../notifications/public-api";
+import type { EmailRequestTransactionalPort, NotifyResult, NotifyTransactionalPort } from "../../../../notifications/public-api";
 import type { OperationsScope } from "../../operations-scope";
 import type { OpsLiveStore } from "../../ports/ops-live-store.port";
 import type { LoadTestProvisioningPort, LoadTestPurgePort, ProvisionedLoadTestTenant } from "../../ports/load-test-tenant.port";
@@ -40,6 +40,7 @@ import type {
 	LoadTestRepository,
 	LoadTestRunRecord,
 	NewLoadTestRun,
+	OpsAlertRecipient,
 	OpsAlertRecipientsReader,
 	OpsAlertRepository,
 	OpsBackupRecord,
@@ -279,8 +280,8 @@ class UnusedAlerts implements OpsAlertRepository {
 }
 
 class UnusedRecipients implements OpsAlertRecipientsReader {
-	public superAdminEmails(): Promise<readonly string[]> {
-		return notUsed("recipients.superAdminEmails");
+	public alertRecipients(): Promise<readonly OpsAlertRecipient[]> {
+		return notUsed("recipients.alertRecipients");
 	}
 }
 
@@ -380,6 +381,12 @@ class UnusedEmails implements EmailRequestTransactionalPort {
 	}
 }
 
+class UnusedNotifications implements NotifyTransactionalPort {
+	public notify(): Promise<NotifyResult> {
+		return notUsed("notifications.notify");
+	}
+}
+
 class UnusedPurge implements LoadTestPurgePort {
 	public purge(): Promise<LoadTestPurgeResult> {
 		return notUsed("purge.purge");
@@ -402,6 +409,7 @@ export class FakeOperationsUnitOfWork implements UnitOfWork<OperationsScope> {
 		loadTests: new UnusedLoadTests(),
 		loadTestTenant: new UnusedLoadTestTenant(),
 		emails: new UnusedEmails(),
+		notifications: new UnusedNotifications(),
 		purge: new UnusedPurge(),
 	};
 

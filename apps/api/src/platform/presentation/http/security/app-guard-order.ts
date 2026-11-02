@@ -5,6 +5,7 @@ import { MobileAppVersionGuard } from "./guards/mobile-app-version.guard";
 import { MutationIntentGuard } from "./guards/mutation-intent.guard";
 import { RestrictedSessionGuard } from "./guards/restricted-session.guard";
 import { PreAuthThrottlerGuard, PrincipalThrottlerGuard } from "./throttling/scoped-throttler.guards";
+import { TenantTrafficGuard } from "./throttling/tenant-traffic.guard";
 
 /**
  * Global guard order. An outdated mobile app is rejected before any other answer.
@@ -15,7 +16,8 @@ import { PreAuthThrottlerGuard, PrincipalThrottlerGuard } from "./throttling/sco
  * API key, then the JWT. The principal throttlers run after `AuthGuard` so
  * `request.user` and `apiKeyAuth` exist and the tracker can key on the principal.
  * Public credential routes still count, because `AuthGuard` lets them through.
- * Then a restricted session, then authorization.
+ * Then a restricted session, then authorization, which binds the request's tenant. Last, the tenant's
+ * own traffic bucket (and an API key's): a request refused before it never spends a tenant's bucket.
  */
 export const APP_GUARD_ORDER: [
 	typeof MobileAppVersionGuard,
@@ -26,4 +28,15 @@ export const APP_GUARD_ORDER: [
 	typeof PrincipalThrottlerGuard,
 	typeof RestrictedSessionGuard,
 	typeof AuthorizationGuard,
-] = [MobileAppVersionGuard, PreAuthThrottlerGuard, MutationIntentGuard, ApiKeyAuthGuard, AuthGuard, PrincipalThrottlerGuard, RestrictedSessionGuard, AuthorizationGuard];
+	typeof TenantTrafficGuard,
+] = [
+	MobileAppVersionGuard,
+	PreAuthThrottlerGuard,
+	MutationIntentGuard,
+	ApiKeyAuthGuard,
+	AuthGuard,
+	PrincipalThrottlerGuard,
+	RestrictedSessionGuard,
+	AuthorizationGuard,
+	TenantTrafficGuard,
+];

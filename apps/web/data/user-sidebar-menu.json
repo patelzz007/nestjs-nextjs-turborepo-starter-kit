@@ -1,144 +1,144 @@
 {
-  "header": {
-    "title": "Rewardly",
-    "subtitle": "My Rewards"
-  },
-  "sections": [
-    {
-      "title": "Rewards",
-      "color": "green",
-      "items": [
-        {
-          "title": "Browse Rewards",
-          "url": "/dashboard",
-          "icon": "Search",
-          "disabled": false
-        },
-        {
-          "title": "Near Me",
-          "url": "/dashboard/nearby",
-          "icon": "MapPin",
-          "disabled": true
-        },
-        {
-          "title": "Trending",
-          "url": "/dashboard/trending",
-          "icon": "TrendingUp",
-          "disabled": true
-        },
-        {
-          "title": "Categories",
-          "url": "/dashboard/categories",
-          "icon": "FolderOpen",
-          "disabled": true
-        },
-        {
-          "title": "Favorites",
-          "url": "/dashboard/favorites",
-          "icon": "Heart",
-          "disabled": true
-        }
-      ]
-    },
-    {
-      "title": "Wallet",
-      "color": "blue",
-      "items": [
-        {
-          "title": "My Wallet",
-          "url": "/dashboard/wallet",
-          "icon": "Wallet",
-          "disabled": false
-        },
-        {
-          "title": "Redeemed",
-          "url": "/dashboard/wallet/redeemed",
-          "icon": "CheckCircle",
-          "disabled": true
-        },
-        {
-          "title": "Expired",
-          "url": "/dashboard/wallet/expired",
-          "icon": "Clock",
-          "disabled": true
-        }
-      ]
-    },
-    {
-      "title": "Insights",
-      "color": "amber",
-      "items": [
-        {
-          "title": "My Activity",
-          "url": "/dashboard/activity",
-          "icon": "BarChart2",
-          "disabled": false
-        },
-        {
-          "title": "Claim Trends",
-          "url": "/dashboard/activity/claims",
-          "icon": "TrendingUp",
-          "disabled": true
-        },
-        {
-          "title": "History",
-          "url": "/dashboard/activity/history",
-          "icon": "Clock",
-          "disabled": true
-        }
-      ]
-    },
-    {
-      "title": "Earn More",
-      "color": "purple",
-      "items": [
-        {
-          "title": "Referrals",
-          "url": "/dashboard/referrals",
-          "icon": "Users",
-          "disabled": false
-        },
-        {
-          "title": "Points",
-          "url": "/dashboard/points",
-          "icon": "Award",
-          "disabled": true,
-          "children": [
-            {
-              "title": "Balance",
-              "url": "/dashboard/points/balance",
-              "icon": "Wallet",
-              "disabled": true
-            },
-            {
-              "title": "History",
-              "url": "/dashboard/points/history",
-              "icon": "FileText",
-              "disabled": true
-            },
-            {
-              "title": "Redeem Points",
-              "url": "/dashboard/points/redeem",
-              "icon": "Gift",
-              "disabled": true
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "bottomItems": [
-    {
-      "title": "Account",
-      "url": "/dashboard/account",
-      "icon": "UserCog",
-      "disabled": false
-    },
-    {
-      "title": "Help & Support",
-      "url": "/dashboard/support",
-      "icon": "HelpCircle",
-      "disabled": true
-    }
-  ]
+	"header": {
+		"title": "Rewardly",
+		"subtitle": "My Rewards"
+	},
+	"sections": [
+		{
+			"title": "Rewards",
+			"color": "green",
+			"items": [
+				{
+					"title": "Browse Rewards",
+					"url": "/dashboard",
+					"icon": "Search",
+					"disabled": false
+				},
+				{
+					"title": "Near Me",
+					"url": "/dashboard/nearby",
+					"icon": "MapPin",
+					"disabled": true
+				},
+				{
+					"title": "Trending",
+					"url": "/dashboard/trending",
+					"icon": "TrendingUp",
+					"disabled": true
+				},
+				{
+					"title": "Categories",
+					"url": "/dashboard/categories",
+					"icon": "FolderOpen",
+					"disabled": true
+				},
+				{
+					"title": "Favorites",
+					"url": "/dashboard/favorites",
+					"icon": "Heart",
+					"disabled": true
+				}
+			]
+		},
+		{
+			"title": "Wallet",
+			"color": "blue",
+			"items": [
+				{
+					"title": "My Wallet",
+					"url": "/dashboard/wallet",
+					"icon": "Wallet",
+					"disabled": false
+				},
+				{
+					"title": "Redeemed",
+					"url": "/dashboard/wallet/redeemed",
+					"icon": "CheckCircle",
+					"disabled": true
+				},
+				{
+					"title": "Expired",
+					"url": "/dashboard/wallet/expired",
+					"icon": "Clock",
+					"disabled": true
+				}
+			]
+		},
+		{
+			"title": "Insights",
+			"color": "amber",
+			"items": [
+				{
+					"title": "My Activity",
+					"url": "/dashboard/activity",
+					"icon": "BarChart2",
+					"disabled": false
+				},
+				{
+					"title": "Claim Trends",
+					"url": "/dashboard/activity/claims",
+					"icon": "TrendingUp",
+					"disabled": true
+				},
+				{
+					"title": "History",
+					"url": "/dashboard/activity/history",
+					"icon": "Clock",
+					"disabled": true
+				}
+			]
+		},
+		{
+			"title": "Earn More",
+			"color": "purple",
+			"items": [
+				{
+					"title": "Referrals",
+					"url": "/dashboard/referrals",
+					"icon": "Users",
+					"disabled": false
+				},
+				{
+					"title": "Points",
+					"url": "/dashboard/points",
+					"icon": "Award",
+					"disabled": true,
+					"children": [
+						{
+							"title": "Balance",
+							"url": "/dashboard/points/balance",
+							"icon": "Wallet",
+							"disabled": true
+						},
+						{
+							"title": "History",
+							"url": "/dashboard/points/history",
+							"icon": "FileText",
+							"disabled": true
+						},
+						{
+							"title": "Redeem Points",
+							"url": "/dashboard/points/redeem",
+							"icon": "Gift",
+							"disabled": true
+						}
+					]
+				}
+			]
+		}
+	],
+	"bottomItems": [
+		{
+			"title": "Account",
+			"url": "/dashboard/account",
+			"icon": "UserCog",
+			"disabled": false
+		},
+		{
+			"title": "Help & Support",
+			"url": "/dashboard/support",
+			"icon": "HelpCircle",
+			"disabled": true
+		}
+	]
 }

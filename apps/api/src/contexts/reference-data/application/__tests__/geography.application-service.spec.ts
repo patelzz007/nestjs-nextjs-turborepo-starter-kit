@@ -1,5 +1,6 @@
 import {
 	CityListQuerySchema,
+	RegionListQuerySchema,
 	epochMs,
 	type CreateCityInput,
 	type CreateCountryInput,
@@ -18,6 +19,7 @@ import { GEO_WRITE_OPERATION } from "../ports/reference-data.tokens";
 import type { ReferenceDataScope } from "../reference-data-scope";
 import { GeographyApplicationService } from "../services/geography.application-service";
 import { InMemoryGeographyRead, rootKey } from "./fakes/in-memory-geography-read";
+import { RecordingGeographyCache } from "./fakes/recording-geography-cache";
 import { InMemoryGeographyRepository } from "./fakes/in-memory-geography.repository";
 import { RecordingRequestAudit } from "./fakes/recording-request-audit";
 
@@ -60,16 +62,28 @@ describe("GeographyApplicationService", () => {
 	let unitOfWork: InMemoryUnitOfWork<ReferenceDataScope>;
 	let reads: InMemoryGeographyRead;
 	let service: GeographyApplicationService;
+	let cache: RecordingGeographyCache;
 
 	beforeEach(() => {
 		geography = new InMemoryGeographyRepository();
 		audit = new RecordingRequestAudit();
 		unitOfWork = new InMemoryUnitOfWork<ReferenceDataScope>({ geography, requestAudit: audit, events: new TransactionalEventCollector() });
 		reads = new InMemoryGeographyRead();
-		service = new GeographyApplicationService(unitOfWork, reads, new FixedClock(NOW));
+		cache = new RecordingGeographyCache();
+		service = new GeographyApplicationService(unitOfWork, reads, new FixedClock(NOW), cache);
 	});
 
 	describe("writes", () => {
+		it("drop the cached geography once the write has committed, and a read never does (ADR 072)", async () => {
+			await service.listRegions(SUPERADMIN, RegionListQuerySchema.parse({}));
+			expect(cache.invalidations).toBe(0);
+
+			const region = await service.createRegion(SUPERADMIN, REGION_INPUT);
+			expect(cache.invalidations).toBe(1);
+			await service.deleteRegion(SUPERADMIN, region.id);
+			expect(cache.invalidations).toBe(2);
+		});
+
 		it("run under geo.reference_data.write as the actor, and audit the result in the same unit of work", async () => {
 			const region = await service.createRegion(SUPERADMIN, REGION_INPUT);
 

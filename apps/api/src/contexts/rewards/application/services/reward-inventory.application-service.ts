@@ -11,14 +11,14 @@ import type { ClaimableRewardFacts, ReferrerCreditFacts, RewardInventoryPort } f
 export class RewardInventoryApplicationService implements RewardInventoryPort {
 	public constructor(private readonly rewards: RewardRepository) {}
 
-	public async assertClaimable(rewardId: string, now: EpochMs): Promise<ClaimableRewardFacts> {
+	public async assertClaimable(rewardId: string, now: EpochMs, customerUserId: string): Promise<ClaimableRewardFacts> {
 		const reward = await this.rewards.getLive(rewardId);
-		return reward.assertClaimable(now);
+		return reward.assertClaimable(now, customerUserId);
 	}
 
-	public async reserve(rewardId: string, now: EpochMs): Promise<ClaimableRewardFacts> {
+	public async reserve(rewardId: string, now: EpochMs, customerUserId: string): Promise<ClaimableRewardFacts> {
 		const reward = await this.rewards.getForInventory(rewardId);
-		const facts = reward.reserve(now);
+		const facts = reward.reserve(now, customerUserId);
 		await this.rewards.save(reward);
 		return facts;
 	}

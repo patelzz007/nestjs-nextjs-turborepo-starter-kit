@@ -7,7 +7,8 @@ import {
 	RewardClaimCreatedResponseSchema,
 	RewardClaimQrResponseSchema,
 	RewardClaimResponseSchema,
-	RewardNotificationResponseSchema,
+	InAppNotificationResponseSchema,
+	NotificationUnreadCountResponseSchema,
 } from "@workspace/shared";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -98,6 +99,8 @@ describe("Consumer claims (e2e)", () => {
 					title: "E2E consumer claim reward",
 					description: "Created by consumer-claims.e2e-spec.ts",
 					rewardType: "FREE_ITEM",
+					freeItemName: "Coffee (12 oz)",
+					freeItemSku: "E2E-COFFEE-12OZ",
 					category: "cafe",
 					images: { create: [{ fileId: rewardCoverImageSeedId("free-coffee"), position: 0 }] },
 					quantityTotal: QUANTITY,
@@ -258,27 +261,37 @@ describe("Consumer claims (e2e)", () => {
 		expect(challenge).toEqual({ attempts: MAX_OTP_ATTEMPTS, failedAttempts: MAX_OTP_ATTEMPTS, consumedAt: null });
 	});
 
-	/** The badge's count: the unread notifications' `meta.total`, read with the smallest page. */
+	/** The bell's badge: `GET /notifications/unread-count` of the customer inbox (ADR 070). */
 	async function unreadCount(): Promise<number> {
-		const response = await get(alice, "/reward-notifications?limit=1&filter[readAt][isNull]=true");
+		const response = await get(alice, "/notifications/unread-count?surface=CUSTOMER");
 		expect(response.statusCode, response.body).toBe(200);
-		return parsePaginatedEnvelope(response, RewardNotificationResponseSchema).meta.total;
+		return parseSuccessEnvelope(response, NotificationUnreadCountResponseSchema).data.unread;
 	}
 
-	it("lists the reward inbox, counts the unread ones with the same list, and marks everything read", async () => {
+	it("lists the customer inbox, counts its unread notices, and marks everything read", async () => {
 		const aliceId = z.object({ id: z.string() }).parse((await pool.query(`SELECT id FROM public."User" WHERE email = 'alice.johnson@example.com'`)).rows.at(0)).id;
 		const noticeId = randomUUID();
-		await pool.query(`INSERT INTO public."RewardNotification" (id, "userId", type, title, body) VALUES ($1, $2, 'e2e', 'E2E notice', 'Inbox check')`, [noticeId, aliceId]);
+		await pool.query(
+			`INSERT INTO public."InAppNotification" (id, "userId", surface, "typeKey", category, title, body) VALUES ($1, $2, 'CUSTOMER', 'notifications.test', 'ACCOUNT', 'E2E notice', 'Inbox check')`,
+			[noticeId, aliceId],
+		);
+		try {
+			const inbox = await get(alice, "/notifications?surface=CUSTOMER&limit=50");
+			expect(inbox.statusCode, inbox.body).toBe(200);
+			const page = parsePaginatedEnvelope(inbox, InAppNotificationResponseSchema).data;
+			expect(page.map((item) => item.id)).toContain(noticeId);
+			expect(await unreadCount()).toBeGreaterThan(0);
 
-		const inbox = await get(alice, "/reward-notifications?limit=50");
-		expect(inbox.statusCode, inbox.body).toBe(200);
-		const page = parseSuccessEnvelope(inbox, z.array(RewardNotificationResponseSchema)).data;
-		expect(page.map((item) => item.id)).toContain(noticeId);
-		expect(await unreadCount()).toBeGreaterThan(0);
+			// Another app's inbox is separate: the merchant surface never lists a customer notice.
+			const merchantInbox = await get(alice, "/notifications?surface=MERCHANT&limit=50");
+			expect(merchantInbox.statusCode, merchantInbox.body).toBe(200);
+			expect(parsePaginatedEnvelope(merchantInbox, InAppNotificationResponseSchema).data.map((item) => item.id)).not.toContain(noticeId);
 
-		const read = await post(alice, "/reward-notifications/read", { markAll: true });
-		expect(read.statusCode, read.body).toBe(201);
-		expect(await unreadCount()).toBe(0);
-		await pool.query(`DELETE FROM public."RewardNotification" WHERE id = $1`, [noticeId]);
+			const read = await post(alice, "/notifications/read", { surface: "CUSTOMER", markAll: true });
+			expect(read.statusCode, read.body).toBe(201);
+			expect(await unreadCount()).toBe(0);
+		} finally {
+			await pool.query(`DELETE FROM public."InAppNotification" WHERE id = $1`, [noticeId]);
+		}
 	});
 });

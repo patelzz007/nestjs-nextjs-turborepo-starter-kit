@@ -3,6 +3,7 @@ import type { Provider } from "@nestjs/common";
 import { BullMqHealthIndicator, KafkaHealthIndicator, RabbitMqHealthIndicator } from "@workspace/messaging/nest";
 
 import { AUTHORIZATION_HEALTH_INDICATOR } from "../../../../contexts/authorization/public-api";
+import { CacheHealthIndicator } from "../../../infrastructure/cache/cache-health.indicator";
 import { RuntimeRoleProof } from "../../../infrastructure/database/runtime-role-proof";
 import { MaintenanceSchedulerRegistry } from "../../../infrastructure/jobs/maintenance-scheduler.registry";
 
@@ -29,6 +30,9 @@ import { MODULE_HEALTH_INDICATORS, type ModuleHealthIndicator, type RegisteredMo
  * The tenant-isolation proof IS critical: an instance whose runtime role can bypass RLS, or whose
  * tables do not force it, would serve tenant data without isolation (D9, RuntimeRoleProof).
  *
+ * The cache is NOT critical (ADR 072): a miss loads from the database, so a full or unreachable Redis
+ * degrades the instance and is reported, never a reason to leave rotation.
+ *
  * The maintenance schedulers are critical only until their first registration
  * attempt settles (MaintenanceSchedulerRegistry): an instance is not ready
  * before it tried, but a Redis failure after that is reported and retried,
@@ -40,6 +44,7 @@ export const moduleHealthIndicatorsProvider: Provider = {
 		authorizationIndicator: ModuleHealthIndicator,
 		schedulers: MaintenanceSchedulerRegistry,
 		tenantIsolation: RuntimeRoleProof,
+		cacheIndicator: CacheHealthIndicator,
 		queueIndicator?: BullMqHealthIndicator,
 		kafkaIndicator?: KafkaHealthIndicator,
 		rabbitIndicator?: RabbitMqHealthIndicator,
@@ -48,6 +53,7 @@ export const moduleHealthIndicatorsProvider: Provider = {
 			{ name: "authorization", indicator: authorizationIndicator, critical: true },
 			{ name: "maintenance-schedulers", indicator: schedulers, critical: true },
 			{ name: "tenant-isolation", indicator: tenantIsolation, critical: true },
+			{ name: "cache", indicator: cacheIndicator, critical: false },
 		];
 		if (queueIndicator !== undefined) {
 			indicators.push({ name: "queue", indicator: queueIndicator, critical: false });
@@ -64,6 +70,7 @@ export const moduleHealthIndicatorsProvider: Provider = {
 		AUTHORIZATION_HEALTH_INDICATOR,
 		MaintenanceSchedulerRegistry,
 		RuntimeRoleProof,
+		CacheHealthIndicator,
 		{ token: BullMqHealthIndicator, optional: true },
 		{ token: KafkaHealthIndicator, optional: true },
 		{ token: RabbitMqHealthIndicator, optional: true },

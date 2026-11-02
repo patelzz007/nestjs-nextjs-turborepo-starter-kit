@@ -5,7 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import { DependencyUnavailableError } from "../platform/application/errors/app-error";
 import { TypedConfigService } from "../config/typed-config.service";
 import { DATABASE_APPLICATION_NAME } from "./database-pool.constants";
-import { closePrismaConnections, databasePoolBudget, prismaLogSubscriptions } from "./prisma-client-setup";
+import { closePrismaConnections, databasePoolBudget, PRISMA_TRANSACTION_DEFAULTS, prismaLogSubscriptions } from "./prisma-client-setup";
 import { RlsPool } from "./rls-pool";
 
 /** Result of one connection attempt — a value, never a rejection. */
@@ -32,7 +32,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 			allowExitOnIdle: config.database.allowExitOnIdle,
 			application_name: DATABASE_APPLICATION_NAME.request,
 		});
-		super({ adapter: new PrismaPg(pool), log: prismaLogSubscriptions(config.isDebugLogging) });
+		super({ adapter: new PrismaPg(pool), log: prismaLogSubscriptions(config.isDebugLogging), transactionOptions: PRISMA_TRANSACTION_DEFAULTS });
 		this.pool = pool;
 	}
 

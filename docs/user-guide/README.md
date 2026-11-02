@@ -83,6 +83,7 @@ flowchart TD
 | 9 | [Platform administration](./09-platform-administration.md) | Platform admins |
 | 10 | [Account and security](./10-account-and-security.md) | Everyone |
 | 11 | [Operations console](./11-operations-console.md) | SuperAdmin, Platform Developer, Admin |
+| 12 | [Notifications and broadcasts](./12-notifications-and-broadcasts.md) | Everyone; merchants for broadcasts |
 
 ## Try it with the demo data
 

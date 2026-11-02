@@ -14,6 +14,8 @@ const COMPLETE_DRAFT: RewardEditorInput = {
 	description: "Any nasi lemak set.",
 	imageFileIds: [REWARD_FIXTURE_IMAGE.fileId],
 	rewardValue: "20",
+	freeItemName: "",
+	freeItemSku: "",
 	minPurchase: "",
 	termsConditions: "",
 	startDate: "2026-11-01",
@@ -22,6 +24,8 @@ const COMPLETE_DRAFT: RewardEditorInput = {
 	maxClaimsPerUser: 1,
 	locationScopeType: "ALL_LOCATIONS",
 	locationIds: [],
+	audienceType: "EVERYONE",
+	audienceCustomerIds: [],
 };
 
 const ALL_STORES = { label: "All stores", fullLabel: "All stores" };

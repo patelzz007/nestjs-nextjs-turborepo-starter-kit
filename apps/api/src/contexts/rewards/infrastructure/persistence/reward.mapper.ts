@@ -2,17 +2,20 @@ import { Prisma, type Reward as RewardRow } from "@prisma/client";
 import { epochMs, JsonValueSchema, RewardTypeSchema, type EpochMs, type JsonValue } from "@workspace/shared";
 
 import type { RewardInventoryCounts, RewardRowState, RewardState } from "../../domain/aggregates/reward.state";
+import { RewardAudience } from "../../domain/value-objects/reward-audience.value-object";
 import { RewardLocationScope } from "../../domain/value-objects/reward-location-scope.value-object";
 import { RewardRulesValue } from "../../domain/value-objects/reward-rules.value-object";
 import { RewardKindValueSchema } from "../../domain/value-objects/reward-status.value-object";
+import { freeItemOfColumns } from "./free-item-columns";
 
 /**
  * What a command load selects: the reward row, its live images in order, every store it names
- * (with the store's state, for claimability), and its referrer child row.
+ * (with the store's state, for claimability), the customers it was given to, and its referrer child row.
  */
 export const REWARD_AGGREGATE_INCLUDE = {
 	images: { where: { isDeleted: false }, orderBy: { position: "asc" }, select: { fileId: true } },
 	locationScopes: { select: { locationId: true, location: { select: { isDeleted: true, status: true } } } },
+	audienceMembers: { where: { isDeleted: false }, orderBy: { createdAt: "asc" }, select: { userId: true } },
 	referrerReward: true,
 } satisfies Prisma.RewardInclude;
 
@@ -43,7 +46,13 @@ function rowState(row: RewardRow): RewardRowState {
 		status: row.status,
 		title: row.title,
 		description: row.description,
-		offer: { rewardType: RewardTypeSchema.parse(row.rewardType), rewardValue: row.rewardValue, termsConditions: row.termsConditions, category: row.category },
+		offer: {
+			rewardType: RewardTypeSchema.parse(row.rewardType),
+			rewardValue: row.rewardValue,
+			freeItem: freeItemOfColumns(row),
+			termsConditions: row.termsConditions,
+			category: row.category,
+		},
 		startDate: epochOrNull(row.startDate),
 		expiryDate: epoch(row.expiryDate),
 		inventory: inventoryOf(row),
@@ -76,6 +85,10 @@ export function toRewardState(row: RewardAggregateRow): RewardState {
 			row.locationScopes.map((scope) => scope.locationId),
 		),
 		imageFileIds: row.images.map((image) => image.fileId),
+		audience: RewardAudience.fromStorage(
+			row.audienceType,
+			row.audienceMembers.map((member) => member.userId),
+		),
 		availableAtActiveStore: row.locationScopeType === "ALL_LOCATIONS" || row.locationScopes.some((scope) => !scope.location.isDeleted && scope.location.status === "ACTIVE"),
 		referrer: child === null || child.isDeleted ? null : rowState(child),
 	};

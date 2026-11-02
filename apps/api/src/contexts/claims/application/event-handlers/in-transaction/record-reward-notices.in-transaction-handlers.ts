@@ -1,47 +1,36 @@
 import type { InTransactionEventHandler } from "../../../../../platform/application/events/in-transaction-event-handler";
 import type { DomainEvent } from "../../../../../platform/domain/domain-event";
-import type { TenantReadPort } from "../../../../tenancy/public-api";
+import {
+	REFERRER_CREDITED_NOTIFICATION,
+	REWARD_APPROVED_NOTIFICATION,
+	REWARD_AUTO_PUBLISHED_NOTIFICATION,
+	REWARD_REJECTED_NOTIFICATION,
+} from "../../../../notifications/public-api";
 import { ReferrerCredited } from "../../../../referrals/public-api";
 import { RewardApproved, RewardAutoPublished, RewardRejected } from "../../../../rewards/public-api";
+import type { TenantReadPort } from "../../../../tenancy/public-api";
 import type { ClaimsScope } from "../../claims-scope";
-import type { RewardNotice } from "../../ports/claims-transactional.ports";
 
-/** Inbox type of the referrer-credit notice (byte-stable; clients render on it). */
-export const REFERRER_CREDITED_NOTICE_TYPE = "referrer_reward_credited";
-
-/** A referee's redemption credited the referrer: tell them in the checkout's own transaction. */
+/** A referee's redemption credited the referrer: tell them, in the checkout's own transaction (ADR 070). */
 export class RecordNotificationOnReferrerCredited implements InTransactionEventHandler<ReferrerCredited, ClaimsScope> {
 	public accepts(event: DomainEvent): event is ReferrerCredited {
 		return event instanceof ReferrerCredited;
 	}
 
 	public async handle(event: ReferrerCredited, scope: ClaimsScope): Promise<void> {
-		await scope.notifications.add([
-			{
-				userId: event.referrerUserId,
-				type: REFERRER_CREDITED_NOTICE_TYPE,
-				title: "You earned a referrer reward!",
-				body: `Your referral redeemed a reward. Claim "${event.referrerRewardTitle}" within ${String(event.claimTtlDays)} days.`,
-				metadata: { rewardId: event.referrerRewardId },
-			},
-		]);
+		await scope.notify.notify({
+			type: REFERRER_CREDITED_NOTIFICATION,
+			recipient: { kind: "user", userId: event.referrerUserId },
+			payload: { rewardId: event.referrerRewardId, rewardTitle: event.referrerRewardTitle, claimTtlDays: event.claimTtlDays },
+			dedupeKey: `referrer-credited:${event.referralId}`,
+			tenantId: null,
+		});
 	}
 }
 
 type RewardReviewDecision = RewardApproved | RewardRejected | RewardAutoPublished;
 
-function noticeFor(event: RewardReviewDecision, ownerUserId: string): RewardNotice {
-	const metadata = { rewardId: event.rewardId };
-	if (event instanceof RewardApproved) {
-		return { userId: ownerUserId, type: "reward_approved", title: "Reward approved", body: `"${event.title}" is now live in the marketplace.`, metadata };
-	}
-	if (event instanceof RewardRejected) {
-		return { userId: ownerUserId, type: "reward_rejected", title: "Reward needs changes", body: event.reason, metadata };
-	}
-	return { userId: ownerUserId, type: "reward_auto_published", title: "Reward published", body: `"${event.title}" was auto-published after the 24h review window.`, metadata };
-}
-
-/** Every review decision tells the tenant's owners, in the decision's own transaction. */
+/** Every review decision tells the tenant's owners, in the decision's own transaction (ADR 070). */
 export class RecordOwnerNoticesOnRewardReview implements InTransactionEventHandler<RewardReviewDecision, ClaimsScope> {
 	public constructor(private readonly tenants: TenantReadPort) {}
 
@@ -51,6 +40,33 @@ export class RecordOwnerNoticesOnRewardReview implements InTransactionEventHandl
 
 	public async handle(event: RewardReviewDecision, scope: ClaimsScope): Promise<void> {
 		const owners = await this.tenants.listOwnerUserIds(event.tenantId);
-		await scope.notifications.add(owners.map((ownerUserId) => noticeFor(event, ownerUserId)));
+		if (owners.length === 0) {
+			return;
+		}
+		const tenant = (await this.tenants.getDisplayData([event.tenantId])).get(event.tenantId);
+		if (tenant === undefined) {
+			return;
+		}
+		// A reward can be reviewed more than once (rejected, edited, reviewed again): the decision's time keeps each one.
+		const decision = `${event.rewardId}:${String(event.occurredAt)}`;
+		for (const ownerUserId of owners) {
+			if (event instanceof RewardRejected) {
+				await scope.notify.notify({
+					type: REWARD_REJECTED_NOTIFICATION,
+					recipient: { kind: "user", userId: ownerUserId },
+					payload: { rewardId: event.rewardId, rewardTitle: event.title, tenantSlug: tenant.slug, reason: event.reason },
+					dedupeKey: `reward-rejected:${decision}`,
+					tenantId: event.tenantId,
+				});
+			} else {
+				await scope.notify.notify({
+					type: event instanceof RewardApproved ? REWARD_APPROVED_NOTIFICATION : REWARD_AUTO_PUBLISHED_NOTIFICATION,
+					recipient: { kind: "user", userId: ownerUserId },
+					payload: { rewardId: event.rewardId, rewardTitle: event.title, tenantSlug: tenant.slug },
+					dedupeKey: `${event instanceof RewardApproved ? "reward-approved" : "reward-auto-published"}:${decision}`,
+					tenantId: event.tenantId,
+				});
+			}
+		}
 	}
 }

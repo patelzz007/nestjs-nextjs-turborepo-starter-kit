@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 
 import { NotFoundError } from "../../application/errors/app-error";
-import { PrismaTenantRouteLookup } from "./prisma-tenant-route.lookup";
+import { CachedTenantRouteLookup } from "./cached-tenant-route.lookup";
 import { tenantResolution, type TenantResolution, type TenantRouteLookup, type TenantSource, type TenantSourceRequest } from "../../application/tenancy/tenant-source.port";
 
 /**
@@ -10,7 +10,7 @@ import { tenantResolution, type TenantResolution, type TenantRouteLookup, type T
  */
 @Injectable()
 export class RouteTenantSource implements TenantSource {
-	public constructor(@Inject(PrismaTenantRouteLookup) private readonly lookup: TenantRouteLookup) {}
+	public constructor(@Inject(CachedTenantRouteLookup) private readonly lookup: TenantRouteLookup) {}
 
 	public async resolve(request: TenantSourceRequest): Promise<TenantResolution> {
 		const routeKey = request.tenantSlug;

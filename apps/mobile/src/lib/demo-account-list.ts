@@ -23,4 +23,8 @@ export const MOBILE_DEMO_ACCOUNTS: readonly DemoAccount[] = [
 	{ label: "KL Owner", email: "brew.owner@kl-rewards.demo", password: "BrewOwner@123" },
 	{ label: "Melaka Owner", email: "jonker.owner@melaka-rewards.demo", password: "JonkerOwner@123" },
 	{ label: "KL Cashier", email: "brew.cashier@kl-rewards.demo", password: "BrewCashier@123" },
+	{ label: "Customer", email: "user@example.com", password: "User@123" },
+	// The developer's own test customer: opted in to offers by the seed, so broadcasts can be tried on it.
+	// Its sign-in asks for the emailed code (Mailpit locally).
+	{ label: "Bishen Patel", email: "bishenpatel123@gmail.com", password: "HelloWorld_123" },
 ];

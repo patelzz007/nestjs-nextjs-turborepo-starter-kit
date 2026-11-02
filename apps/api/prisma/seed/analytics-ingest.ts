@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { JsonObjectSchema } from "@workspace/shared";
+import { JsonObjectSchema, KAFKA_TOPICS } from "@workspace/shared";
 import {
 	ANALYTICS_CONSUMER_ID,
 	createConsumerPool,
@@ -27,6 +27,9 @@ import { seedLog } from "./seed-log";
 // duplicate delivery (a no-op) — idempotent by the consumer's own guarantee. It connects with the seed's
 // login and acts as the `analytics_consumer` role (`SET ROLE`), so the consumer's RLS policies apply to it
 // exactly as to the production consumer login (every table forces RLS); that login is not needed.
+// Only rows on the Kafka topics are replayed — what the consumer actually reads. Internal routes
+// (`internal.notifications.email`, handed to BullMQ, never to Kafka) are not platform events: a row of
+// one marked published (by an API left running while the database was reset) is not the consumer's.
 // ---------------------------------------------------------------------------
 
 /** The database role the analytics consumer runs as (prisma/rls/90-analytics-consumer.sql). */
@@ -61,13 +64,16 @@ async function assertActedAsConsumer(roleSwitches: readonly Promise<Error | null
 	}
 }
 
-/** Replays every PUBLISHED outbox event through the analytics consumer's own handler. */
+/** Replays every PUBLISHED outbox event on a Kafka topic through the analytics consumer's own handler. */
 export async function seedAnalyticsIngest(): Promise<AnalyticsIngestSummary> {
 	const databaseUrl: string | undefined = process.env.DATABASE_URL;
 	if (databaseUrl === undefined) {
 		throw new Error("DATABASE_URL is required to seed analytics events");
 	}
-	const published = await prisma.outboxEvent.findMany({ where: { status: "PUBLISHED" }, orderBy: [{ topic: "asc" }, { createdAt: "asc" }, { id: "asc" }] });
+	const published = await prisma.outboxEvent.findMany({
+		where: { status: "PUBLISHED", topic: { in: [...KAFKA_TOPICS] } },
+		orderBy: [{ topic: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+	});
 	const pool = createConsumerPool(databaseUrl, POOL_SETTINGS);
 	// Queued before any query the handler issues on the new connection. A refused switch is kept (never an
 	// unhandled rejection) and reported as the seed's failure below: it is the cause of whatever failed next.

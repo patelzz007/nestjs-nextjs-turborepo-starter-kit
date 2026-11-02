@@ -10,15 +10,18 @@ describe("errorMessageOf", () => {
 		expect(errorMessageOf(new ApiError({ message: "x", error: "SESSION_REVOKED", statusCode: 401 }))).toBe("This device was signed out. Please sign in again.");
 	});
 
-	it("shows the API's own message for other errors (429 included, it names the retry time)", () => {
-		expect(errorMessageOf(new ApiError({ message: "Too many attempts, try again in 30 seconds", error: "TOO_MANY_REQUESTS", statusCode: 429 }))).toBe(
-			"Too many attempts, try again in 30 seconds",
+	it("says how long to wait after a 429, from the API's retryAfterSeconds (ADR 071)", () => {
+		expect(errorMessageOf(new ApiError({ message: "Too many attempts", error: "RATE_LIMITED", statusCode: 429 }, { details: { retryAfterSeconds: 30 } }))).toBe(
+			"Too many requests. Try again in 30 seconds.",
 		);
+		expect(errorMessageOf(new ApiError({ message: "", statusCode: 429 }))).toBe("Too many requests. Try again in a moment.");
+	});
+
+	it("shows the API's own message for other errors", () => {
 		expect(errorMessageOf(new ApiError({ message: "Code expired", error: "BAD_REQUEST", statusCode: 400 }))).toBe("Code expired");
 	});
 
 	it("falls back when the API sent no message", () => {
-		expect(errorMessageOf(new ApiError({ message: "", statusCode: 429 }))).toBe("Too many attempts. Please wait a moment and try again.");
 		expect(errorMessageOf(new ApiError({ message: "", statusCode: 500 }))).toBe(GENERIC_ERROR_MESSAGE);
 	});
 

@@ -355,6 +355,8 @@ export const SizeNameSchema = z.enum([
 	"switch-thumb-size",
 	"switch-thumb-size-sm",
 	"switch-thumb-inset",
+	"switch-thumb-travel",
+	"switch-thumb-travel-sm",
 ]);
 export type SizeName = z.infer<typeof SizeNameSchema>;
 

@@ -239,3 +239,17 @@ If an AI coding agent produced the diff under review, it does not get a lighter 
 ❌ Approving because the author is senior (or because an AI wrote it, and "it usually gets it right").
 ✅ The same standard for everyone and everything.
 ```
+
+## Root cause, genericity, and extensibility review
+
+- [ ] For bug fixes, is the root cause stated and supported by evidence, rather than inferred from the location where the symptom appeared?
+- [ ] Does the fix correct the invariant at the layer that owns it, rather than add a compensating workaround in a caller?
+- [ ] Is there a regression test that fails on the original defect and passes with the fix?
+- [ ] Were contributing conditions, adjacent consumers, and likely regressions considered?
+- [ ] If root cause remains uncertain, is the uncertainty and next diagnostic step explicit rather than hidden behind a speculative “fix”?
+- [ ] Is shared code independent of application-specific business policy?
+- [ ] Are generic abstractions backed by real callers and a stable contract, rather than hypothetical reuse?
+- [ ] Are actual variation points explicit and configurable/composable without weakening platform invariants?
+- [ ] Does the design avoid both duplication that risks drift and abstraction that adds needless indirection?
+- [ ] Are public contracts and downstream consumers accounted for?
+- [ ] Does the implementation preserve validation, authorization, tenant isolation, audit, idempotency, and observability for every supported variant?

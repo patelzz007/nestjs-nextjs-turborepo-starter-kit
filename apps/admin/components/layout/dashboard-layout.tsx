@@ -13,6 +13,7 @@ import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolvePinnedMenuItems } from "@workspace/ui/lib/palette/resolve-pinned-menu-items";
 import { ADMIN_ROUTE_AUTHORIZATION, canAccessRoute, filterMenuByRouteAccess, type RouteAccessSession } from "@/lib/navigation/route-authorization";
 import { buildSearchableItems } from "@/lib/palette/search";
+import { ROUTES } from "@/lib/routes";
 import { useSessionPermissionsQuery } from "@/lib/session/capabilities";
 import { useSuperAdminStatus } from "@/lib/session/super-admin";
 import { RouteAuthorizationGuard } from "@/contexts/authorization/components/route-authorization-guard";
@@ -24,6 +25,7 @@ import AdminCommandPaletteClientOnly from "@/components/layout/command-palette.c
 import { AdminSidebarPanel } from "@/components/layout/sidebar/sidebar";
 import { StoreBoundAppPanelShell } from "@workspace/client/lib/features/sidebar/store-bound-panel-shell";
 import { AppShellHeader } from "@workspace/ui/components/app-shell-header";
+import { NotificationsDropdown } from "@workspace/client/lib/features/notifications/notifications-dropdown";
 import { SessionStatusBadge } from "@/components/common/session-status-badge";
 import { Profile01 } from "@/components/settings/profile-01";
 import { useCommandPaletteShortcut } from "@workspace/ui/components/app-shell-topbar";
@@ -189,7 +191,9 @@ export function DashboardLayout({
 							profileMenu={<Profile01 user={user} onLogout={onLogout} />}
 						/>
 					}
-					topbar={<AppShellHeader breadcrumb={<AdminShellBreadcrumb />} onOpenSearch={openCommandPalette} />}
+					topbar={
+						<AppShellHeader breadcrumb={<AdminShellBreadcrumb />} onOpenSearch={openCommandPalette} actions={<NotificationsDropdown viewAllHref={ROUTES.notifications} />} />
+					}
 					overlay={<ScrollToTop threshold={300} />}>
 					<RouteAuthorizationGuard
 						rules={ADMIN_ROUTE_AUTHORIZATION}

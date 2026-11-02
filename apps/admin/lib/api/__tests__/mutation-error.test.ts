@@ -16,6 +16,12 @@ describe("resolveMutationErrorMessage", () => {
 		);
 	});
 
+	it("says how long to wait when a 429 names it", () => {
+		const error = new ApiError({ message: "ThrottlerException: Too Many Requests", error: "RATE_LIMITED", statusCode: 429 }, { details: { retryAfterSeconds: 20 } });
+
+		expect(resolveMutationErrorMessage(error)).toBe("Too many requests. Try again in 20 seconds.");
+	});
+
 	it("maps a transport-level code to its generic message", () => {
 		expect(resolveMutationErrorMessage(apiError("RATE_LIMITED", "ThrottlerException: Too Many Requests", 429))).toBe(STANDARD_MUTATION_ERROR_MESSAGES.RATE_LIMITED);
 	});

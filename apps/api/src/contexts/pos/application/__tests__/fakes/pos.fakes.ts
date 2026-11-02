@@ -21,6 +21,8 @@ import type {
 	RewardAuditEntry,
 	RewardAuditPort,
 	RewardInventoryPort,
+	RedeemedRewardFacts,
+	RewardOfferFacts,
 	RewardRedemptionFacts,
 	RewardRedemptionFactsPort,
 } from "../../../../rewards/public-api";
@@ -46,6 +48,8 @@ export const MEMBER = "member-1";
 
 /** One hour: how far in the future the fixture claims expire. */
 export const FIXTURE_CLAIM_TTL_MS = 3_600_000;
+/** The fixture reward's offer: one free latte. */
+export const FIXTURE_LATTE_OFFER: RewardOfferFacts = { rewardType: "FREE_ITEM", rewardValue: 1, freeItem: { name: "Latte", sku: "BEV-LATTE-12OZ" } };
 
 const REQUEST = { requestId: "req-1", ip: null, userAgent: null, deviceLabel: null, endpoint: null };
 
@@ -146,7 +150,10 @@ export class InMemoryClaimRedemption implements ClaimRedemptionPort {
 				id: rewardId,
 				tenantId: TENANT_ID,
 				title: "Free latte",
+				description: "One free latte with any order",
 				rewardType: "FREE_ITEM",
+				offer: FIXTURE_LATTE_OFFER,
+				termsConditions: null,
 				expiryDate: epochMs(NOW + FIXTURE_CLAIM_TTL_MS),
 				locationScopeType: "ALL_LOCATIONS",
 				locationIds: [],
@@ -205,6 +212,8 @@ export class NoReservedUnitError extends Error {
 export class InMemoryRewards implements RewardInventoryPort, RewardRedemptionFactsPort {
 	public readonly redemptions: string[] = [];
 	public readonly titles = new Map<string, string>([["reward-1", "Free latte"]]);
+	/** What each reward gives; a reward not listed gives the fixture's free latte. */
+	public readonly offers = new Map<string, RewardOfferFacts>();
 	/** Reserved units per reward: each seeded PENDING claim holds one. */
 	public readonly reserved = new Map<string, number>();
 	/** Each `lockForCheckout` call, ids as given. */
@@ -257,8 +266,15 @@ export class InMemoryRewards implements RewardInventoryPort, RewardRedemptionFac
 		return Promise.reject(new Error("pos reads facts through claims"));
 	}
 
-	public titlesOf(rewardIds: readonly string[]): Promise<ReadonlyMap<string, string>> {
-		return Promise.resolve(new Map(rewardIds.flatMap((rewardId): [string, string][] => (this.titles.has(rewardId) ? [[rewardId, this.titles.get(rewardId) ?? ""]] : []))));
+	public redeemedRewardsOf(rewardIds: readonly string[]): Promise<ReadonlyMap<string, RedeemedRewardFacts>> {
+		return Promise.resolve(
+			new Map(
+				rewardIds.flatMap((rewardId): [string, RedeemedRewardFacts][] => {
+					const title = this.titles.get(rewardId);
+					return title === undefined ? [] : [[rewardId, { title, offer: this.offers.get(rewardId) ?? FIXTURE_LATTE_OFFER }]];
+				}),
+			),
+		);
 	}
 }
 

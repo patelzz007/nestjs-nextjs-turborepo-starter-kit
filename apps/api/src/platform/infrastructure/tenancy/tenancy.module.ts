@@ -3,9 +3,11 @@ import { Global, Module } from "@nestjs/common";
 import { TenancyConfigService } from "../../../config/tenancy.config";
 import { SERVED_TENANT_POLICY } from "../../application/tenancy/served-tenant.port";
 import { TENANT_PROVISIONING_GATE } from "../../application/tenancy/tenant-provisioning.port";
+import { TENANT_ROUTE_CACHE } from "../../application/tenancy/tenant-route-cache.port";
 import { TENANT_SOURCE, type TenantSource } from "../../application/tenancy/tenant-source.port";
 import { DefaultTenantService } from "./default-tenant.service";
 import { FixedTenantSource } from "./fixed-tenant.source";
+import { CachedTenantRouteLookup } from "./cached-tenant-route.lookup";
 import { PrismaTenantRouteLookup } from "./prisma-tenant-route.lookup";
 import { RouteTenantSource } from "./route-tenant.source";
 import { ModeServedTenantPolicy } from "./served-tenant.policy";
@@ -22,6 +24,8 @@ export function selectTenantSource(tenancy: TenancyConfigService, fixed: FixedTe
 	providers: [
 		DefaultTenantService,
 		PrismaTenantRouteLookup,
+		CachedTenantRouteLookup,
+		{ provide: TENANT_ROUTE_CACHE, useExisting: CachedTenantRouteLookup },
 		FixedTenantSource,
 		RouteTenantSource,
 		{
@@ -34,6 +38,6 @@ export function selectTenantSource(tenancy: TenancyConfigService, fixed: FixedTe
 		ModeServedTenantPolicy,
 		{ provide: SERVED_TENANT_POLICY, useExisting: ModeServedTenantPolicy },
 	],
-	exports: [DefaultTenantService, TENANT_SOURCE, TENANT_PROVISIONING_GATE, SERVED_TENANT_POLICY],
+	exports: [DefaultTenantService, TENANT_SOURCE, TENANT_PROVISIONING_GATE, SERVED_TENANT_POLICY, TENANT_ROUTE_CACHE],
 })
 export class TenancyModule {}

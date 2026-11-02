@@ -1,8 +1,10 @@
 "use client";
 
+import type { CustomerPickerOption } from "@/components/merchant-ui/customer-picker";
 import { MerchantRewardEditorPageSkeleton } from "@/components/loading/merchant-page-skeletons";
 import { MerchantCapabilityGate } from "@/contexts/tenancy";
 import { MerchantRewardEditorLayout } from "@/contexts/rewards/components/merchant-reward-editor-layout";
+import { MerchantRewardAudienceFields } from "@/contexts/rewards/components/merchant-reward-audience-fields";
 import { MerchantRewardFormFields } from "@/contexts/rewards/components/merchant-reward-form-fields";
 import type { SavedRewardImage } from "@/contexts/rewards/components/merchant-reward-images-field";
 import { MerchantRewardLocationFields } from "@/contexts/rewards/components/merchant-reward-location-fields";
@@ -55,6 +57,8 @@ function buildDefaultFormValues(activeLocationId: string | undefined, hasMultipl
 		// Empty until a photo is uploaded — the schema then asks for one ("Add at least one image").
 		imageFileIds: [],
 		rewardValue: "0",
+		freeItemName: "",
+		freeItemSku: "",
 		minPurchase: "",
 		termsConditions: "",
 		startDate: format(startDate, "yyyy-MM-dd"),
@@ -63,8 +67,13 @@ function buildDefaultFormValues(activeLocationId: string | undefined, hasMultipl
 		maxClaimsPerUser: 1,
 		locationScopeType: limitToActiveStore ? "SELECTED" : "ALL_LOCATIONS",
 		locationIds: limitToActiveStore ? [activeLocationId] : [],
+		audienceType: "EVERYONE",
+		audienceCustomerIds: [],
 	};
 }
+
+/** A new reward has given no one anything yet. */
+const NO_CUSTOMERS: readonly CustomerPickerOption[] = [];
 
 /** A reward not created yet has no claims or redemptions. */
 const NO_ACTIVITY = { claimCount: 0, redemptionCount: 0 };
@@ -164,6 +173,7 @@ function MerchantCreateRewardPageContent({ tenantSlug, defaultCategory }: Mercha
 					initialImages={NO_IMAGES}
 					onImagesChange={handleImagesChange}
 					stores={hasMultipleLocations ? <MerchantRewardLocationFields editor={editor} disabled={isSaving} /> : null}
+					audience={<MerchantRewardAudienceFields editor={editor} tenantSlug={tenantSlug} initialCustomers={NO_CUSTOMERS} disabled={isSaving} />}
 					disabled={isSaving}
 				/>
 			}

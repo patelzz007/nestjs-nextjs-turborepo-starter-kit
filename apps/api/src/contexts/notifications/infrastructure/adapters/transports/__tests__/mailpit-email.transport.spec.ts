@@ -28,6 +28,7 @@ const EMAIL: OutboundEmail = {
 	cc: ["cc@example.com"],
 	bcc: ["bcc@example.com"],
 	replyTo: "support@example.com",
+	headers: { "List-Unsubscribe": "<https://api.example.com/u?token=t>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
 };
 
 function transport(mode: "send" | "log-only" = "send"): MailpitEmailTransport {
@@ -73,7 +74,7 @@ describe("MailpitEmailTransport", () => {
 			Text: "Your code is 123456",
 			HTML: "<p>Your code is <b>123456</b></p>",
 			Tags: ["login-verification"],
-			Headers: { [MAILPIT_EMAIL_LOG_ID_HEADER]: EMAIL.emailLogId },
+			Headers: { ...EMAIL.headers, [MAILPIT_EMAIL_LOG_ID_HEADER]: EMAIL.emailLogId },
 		});
 	});
 

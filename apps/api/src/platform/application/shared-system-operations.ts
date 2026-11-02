@@ -21,3 +21,6 @@ export const ACCESS_FACTS_OPERATION: SystemOperationName = "authorization.access
 
 /** Write a tenant's own access (roles, member roles, grants, shares) after the decision service allowed it (ADR 067). */
 export const TENANT_ACCESS_WRITE_OPERATION: SystemOperationName = "authorization.tenant_access.write";
+
+/** Platform staff read and set tenant rate-limit overrides; the traffic guard reads them (ADR 071). */
+export const RATE_LIMIT_OVERRIDES_OPERATION: SystemOperationName = "rate_limits.overrides";

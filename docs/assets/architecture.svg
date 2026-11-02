@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 990" width="1800" height="990" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8b949e"/></marker></defs>
+<rect width="1800" height="990" rx="24" fill="#0d1117"/>
+<text x="60" y="62" fill="#e6edf3" font-size="30" font-weight="700" text-anchor="start">Architecture at a glance</text>
+<text x="60" y="92" fill="#9da7b3" font-size="15" font-weight="450" text-anchor="start">Every client talks to one NestJS API; the API owns PostgreSQL, Redis, Kafka, object storage and the notification providers.</text>
+<rect x="40" y="125" width="320" height="770" rx="20" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+<text x="200" y="162" fill="#9da7b3" font-size="14" font-weight="700" text-anchor="middle">CLIENTS</text>
+<rect x="70" y="185" width="260" height="100" rx="12" fill="#1c2330" stroke="#3b4656" stroke-width="1.5"/>
+<text x="200.0" y="231.0" fill="#e6edf3" font-size="19" font-weight="650" text-anchor="middle">Web · :3000</text>
+<text x="200.0" y="255.0" fill="#9da7b3" font-size="14" font-weight="450" text-anchor="middle">Next.js customer app</text>
+<rect x="70" y="325" width="260" height="100" rx="12" fill="#1c2330" stroke="#3b4656" stroke-width="1.5"/>
+<text x="200.0" y="371.0" fill="#e6edf3" font-size="19" font-weight="650" text-anchor="middle">Admin · :3001</text>
+<text x="200.0" y="395.0" fill="#9da7b3" font-size="14" font-weight="450" text-anchor="middle">Next.js platform console</text>
+<rect x="70" y="465" width="260" height="100" rx="12" fill="#1c2330" stroke="#3b4656" stroke-width="1.5"/>
+<text x="200.0" y="511.0" fill="#e6edf3" font-size="19" font-weight="650" text-anchor="middle">Merchant · :3003</text>
+<text x="200.0" y="535.0" fill="#9da7b3" font-size="14" font-weight="450" text-anchor="middle">Next.js business portal</text>
+<rect x="70" y="605" width="260" height="100" rx="12" fill="#1c2330" stroke="#3b4656" stroke-width="1.5"/>
+<text x="200.0" y="651.0" fill="#e6edf3" font-size="19" font-weight="650" text-anchor="middle">Mobile app</text>
+<text x="200.0" y="675.0" fill="#9da7b3" font-size="14" font-weight="450" text-anchor="middle">Expo · iOS & Android</text>
+<rect x="70" y="745" width="260" height="100" rx="12" fill="#1c2330" stroke="#3b4656" stroke-width="1.5"/>
+<text x="200.0" y="791.0" fill="#e6edf3" font-size="19" font-weight="650" text-anchor="middle">POS till</text>
+<text x="200.0" y="815.0" fill="#9da7b3" font-size="14" font-weight="450" text-anchor="middle">integrations · X-API-Key</text>
+<rect x="640" y="410" width="320" height="160" rx="16" fill="#132238" stroke="#388bfd" stroke-width="2.2"/>
+<text x="800.0" y="472" fill="#e6edf3" font-size="22" font-weight="700" text-anchor="middle">NestJS API · :8080</text>
+<text x="800.0" y="500" fill="#9da7b3" font-size="14.5" font-weight="450" text-anchor="middle">Fastify · CQRS · bounded contexts</text>
+<text x="800.0" y="524" fill="#9da7b3" font-size="14.5" font-weight="450" text-anchor="middle">RLS scope · rate limits · cache · audit</text>
+<path d="M330,235 L400,235 C520,235 520,440 634,440" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="338.2" y="221" width="143.6" height="26" rx="13" fill="#262c36" stroke="#30363d"/>
+<text x="410" y="239" fill="#c9d1d9" font-size="13.5" font-weight="500" text-anchor="middle">httpOnly cookies</text>
+<path d="M330,375 L400,375 C520,375 520,465 634,465" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="338.2" y="361" width="143.6" height="26" rx="13" fill="#262c36" stroke="#30363d"/>
+<text x="410" y="379" fill="#c9d1d9" font-size="13.5" font-weight="500" text-anchor="middle">httpOnly cookies</text>
+<path d="M330,515 L400,515 C520,515 520,490 634,490" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="338.2" y="501" width="143.6" height="26" rx="13" fill="#262c36" stroke="#30363d"/>
+<text x="410" y="519" fill="#c9d1d9" font-size="13.5" font-weight="500" text-anchor="middle">httpOnly cookies</text>
+<path d="M330,655 L400,655 C520,655 520,515 634,515" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="349.6" y="641" width="120.8" height="26" rx="13" fill="#262c36" stroke="#30363d"/>
+<text x="410" y="659" fill="#c9d1d9" font-size="13.5" font-weight="500" text-anchor="middle">Bearer tokens</text>
+<path d="M330,795 L400,795 C520,795 520,540 634,540" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="364.8" y="781" width="90.39999999999999" height="26" rx="13" fill="#262c36" stroke="#30363d"/>
+<text x="410" y="799" fill="#c9d1d9" font-size="13.5" font-weight="500" text-anchor="middle">X-API-Key</text>
+<path d="M1110,152 L1110,238 A150.0,12 0 0 0 1410,238 L1410,152" fill="#1c2330" stroke="#3fb950" stroke-width="1.5"/>
+<ellipse cx="1260.0" cy="152" rx="150.0" ry="12" fill="#232b38" stroke="#3fb950" stroke-width="1.5"/>
+<text x="1260.0" y="199.0" fill="#e6edf3" font-size="19" font-weight="650" text-anchor="middle">PostgreSQL 18</text>
+<text x="1260.0" y="223.0" fill="#9da7b3" font-size="14" font-weight="450" text-anchor="middle">row-level security · FORCE RLS</text>
+<path d="M1110,302 L1110,388 A150.0,12 0 0 0 1410,388 L1410,302" fill="#1c2330" stroke="#f85149" stroke-width="1.5"/>
+<ellipse cx="1260.0" cy="302" rx="150.0" ry="12" fill="#232b38" stroke="#f85149" stroke-width="1.5"/>
+<text x="1260.0" y="349.0" fill="#e6edf3" font-size="19" font-weight="650" text-anchor="middle">Redis 8</text>
+<text x="1260.0" y="373.0" fill="#9da7b3" font-size="14" font-weight="450" text-anchor="middle">BullMQ · cache · rate limits</text>
+<path d="M1110,452 L1110,538 A150.0,12 0 0 0 1410,538 L1410,452" fill="#1c2330" stroke="#d29922" stroke-width="1.5"/>
+<ellipse cx="1260.0" cy="452" rx="150.0" ry="12" fill="#232b38" stroke="#d29922" stroke-width="1.5"/>
+<text x="1260.0" y="499.0" fill="#e6edf3" font-size="19" font-weight="650" text-anchor="middle">Kafka</text>
+<text x="1260.0" y="523.0" fill="#9da7b3" font-size="14" font-weight="450" text-anchor="middle">domain events</text>
+<path d="M1110,602 L1110,688 A150.0,12 0 0 0 1410,688 L1410,602" fill="#1c2330" stroke="#a371f7" stroke-width="1.5"/>
+<ellipse cx="1260.0" cy="602" rx="150.0" ry="12" fill="#232b38" stroke="#a371f7" stroke-width="1.5"/>
+<text x="1260.0" y="649.0" fill="#e6edf3" font-size="19" font-weight="650" text-anchor="middle">Object storage</text>
+<text x="1260.0" y="673.0" fill="#9da7b3" font-size="14" font-weight="450" text-anchor="middle">S3 · Firebase · local disk</text>
+<path d="M1110,752 L1110,838 A150.0,12 0 0 0 1410,838 L1410,752" fill="#1c2330" stroke="#39c5cf" stroke-width="1.5"/>
+<ellipse cx="1260.0" cy="752" rx="150.0" ry="12" fill="#232b38" stroke="#39c5cf" stroke-width="1.5"/>
+<text x="1260.0" y="799.0" fill="#e6edf3" font-size="19" font-weight="650" text-anchor="middle">Notification providers</text>
+<text x="1260.0" y="823.0" fill="#9da7b3" font-size="14" font-weight="450" text-anchor="middle">Resend · FCM / APNs · Twilio</text>
+<path d="M960,430 C1000,430 960,195 1010,195 L1104,195" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="1006.2" y="181" width="67.6" height="26" rx="13" fill="#262c36" stroke="#30363d"/>
+<text x="1040" y="199" fill="#c9d1d9" font-size="13.5" font-weight="500" text-anchor="middle">Prisma</text>
+<path d="M960,460 C1000,460 960,345 1010,345 L1104,345" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="975.8" y="331" width="128.39999999999998" height="26" rx="13" fill="#262c36" stroke="#30363d"/>
+<text x="1040" y="349" fill="#c9d1d9" font-size="13.5" font-weight="500" text-anchor="middle">queues · cache</text>
+<path d="M960,490 C1000,490 960,495 1010,495 L1104,495" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="953.0" y="481" width="174.0" height="26" rx="13" fill="#262c36" stroke="#30363d"/>
+<text x="1040" y="499" fill="#c9d1d9" font-size="13.5" font-weight="500" text-anchor="middle">transactional outbox</text>
+<path d="M960,520 C1000,520 960,645 1010,645 L1104,645" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="987.2" y="631" width="105.6" height="26" rx="13" fill="#262c36" stroke="#30363d"/>
+<text x="1040" y="649" fill="#c9d1d9" font-size="13.5" font-weight="500" text-anchor="middle">signed URLs</text>
+<path d="M960,550 C1000,550 960,795 1010,795 L1104,795" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="960.6" y="781" width="158.79999999999998" height="26" rx="13" fill="#262c36" stroke="#30363d"/>
+<text x="1040" y="799" fill="#c9d1d9" font-size="13.5" font-weight="500" text-anchor="middle">email · push · SMS</text>
+<rect x="1490" y="440" width="270" height="110" rx="12" fill="#1c2330" stroke="#3b4656" stroke-width="1.5"/>
+<text x="1625.0" y="491.0" fill="#e6edf3" font-size="19" font-weight="650" text-anchor="middle">analytics-consumer</text>
+<text x="1625.0" y="515.0" fill="#9da7b3" font-size="14" font-weight="450" text-anchor="middle">Kafka → read models</text>
+<path d="M1410,495 L1484,495" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#arrow)"/>
+<path d="M1625,440 C1625,300 1625,195 1416,195" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="1572.2" y="286" width="105.6" height="26" rx="13" fill="#262c36" stroke="#30363d"/>
+<text x="1625" y="304" fill="#c9d1d9" font-size="13.5" font-weight="500" text-anchor="middle">projections</text>
+<path d="M200,895 L200,940 L1065,940 C1080,940 1085,930 1085,915 L1085,680 C1085,668 1092,665 1104,665" fill="none" stroke="#8b949e" stroke-width="1.8" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<rect x="423.8" y="926" width="432.4" height="26" rx="13" fill="#262c36" stroke="#30363d"/>
+<text x="640" y="944" fill="#c9d1d9" font-size="13.5" font-weight="500" text-anchor="middle">direct upload · presigned URL (web · admin · merchant)</text>
+</svg>

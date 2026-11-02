@@ -56,8 +56,12 @@ export const textareaVariants = cva(
 	},
 );
 
+/**
+ * The checkbox's box: solid primary with a tick while checked, solid primary with a dash while part-checked
+ * (`data-indeterminate`), outlined while unchecked, and tinted with a lock while locked (`data-locked`, kept on by policy).
+ */
 export const checkboxVariants = cva(
-	"peer relative flex shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-input shadow-xs transition-shadow outline-none group-has-disabled/field:opacity-50 after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30 data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground dark:data-checked:bg-primary",
+	"peer relative flex shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-input shadow-xs transition-shadow outline-none group-has-disabled/field:opacity-50 after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-indeterminate:border-primary data-indeterminate:bg-primary data-indeterminate:text-primary-foreground data-locked:cursor-not-allowed dark:bg-input/30 dark:data-indeterminate:bg-primary data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground data-locked:data-checked:border-transparent data-locked:data-checked:bg-primary/20 data-locked:data-checked:text-primary dark:data-checked:bg-primary dark:data-locked:data-checked:bg-primary/25",
 	{
 		variants: {
 			variant: {
@@ -78,8 +82,14 @@ export const checkboxVariants = cva(
 	},
 );
 
+/**
+ * The switch's track. Every state looks different, so "off" is never mistaken for "can't change": on is a
+ * solid primary track, off a hollow outlined one, disabled a dashed grey one (still showing on or off), and
+ * locked (`data-locked`, always on by policy) a tinted one. A caller's `data-checked:bg-*` recolours the
+ * whole track: the checked border is transparent.
+ */
 export const switchVariants = cva(
-	"peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent shadow-xs transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50",
+	"peer group/switch relative inline-flex shrink-0 items-center rounded-full border-2 px-(--switch-thumb-inset) transition-colors outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:ring-3 focus-visible:ring-ring/50 data-checked:border-transparent data-checked:bg-primary aria-invalid:data-checked:border-destructive data-unchecked:border-muted-foreground data-unchecked:bg-transparent aria-invalid:data-unchecked:border-destructive data-disabled:cursor-not-allowed data-disabled:border-dashed data-locked:data-disabled:border-solid data-disabled:data-checked:border-muted-foreground/50 data-disabled:data-checked:bg-muted data-locked:data-disabled:data-checked:border-transparent data-locked:data-disabled:data-checked:bg-primary/30 data-disabled:data-unchecked:border-muted-foreground/50 data-disabled:data-unchecked:bg-muted",
 	{
 		variants: {
 			variant: {
@@ -89,7 +99,12 @@ export const switchVariants = cva(
 				default: "h-[var(--switch-height)] w-[var(--switch-width)]",
 				sm: "h-[var(--switch-height-sm)] w-[var(--switch-width-sm)]",
 			},
-			state: fieldStateVariants.state,
+			state: {
+				default: "",
+				loading: "pointer-events-none opacity-60",
+				disabled: "pointer-events-none",
+				error: "ring-3 ring-destructive/20 dark:ring-destructive/40",
+			},
 		},
 		defaultVariants: {
 			variant: "default",

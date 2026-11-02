@@ -98,3 +98,19 @@ export const LAUNCH_MOTION = {
 	lightCycleMs: 2400,
 	lightDelayMs: 900,
 } satisfies Readonly<Record<string, number | WithSpringConfig>>;
+
+/**
+ * The full-screen QR scanner (QrScanner) arriving and leaving: the live camera and everything over it
+ * slide as ONE sheet, so the picture and its controls never part. Leaving is quicker and accelerates
+ * away — the person is done with it. Reduce Motion shows and hides it in place.
+ */
+export const SCANNER_SHEET_MOTION = {
+	enter: { duration: 380, easing: EMPHASIZED_ENTER_EASING, reduceMotion: ReduceMotion.System } satisfies WithTimingConfig,
+	exit: { duration: 260, easing: Easing.in(Easing.cubic), reduceMotion: ReduceMotion.System } satisfies WithTimingConfig,
+};
+
+/**
+ * The scan line sweeping the QR scanner's window while it looks for a code: down, then back up, at an
+ * even pace that eases only at the edges. One sweep per direction.
+ */
+export const SCAN_LINE_MOTION = { duration: 1800, easing: Easing.inOut(Easing.sin), reduceMotion: ReduceMotion.System } satisfies WithTimingConfig;

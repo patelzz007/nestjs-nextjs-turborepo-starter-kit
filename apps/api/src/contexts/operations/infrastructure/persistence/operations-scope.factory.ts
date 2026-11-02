@@ -41,11 +41,13 @@ export class OperationsScopeFactory implements ScopeFactory<OperationsScope, Pri
 
 	public create(db: Prisma.TransactionClient, events: TransactionalEventCollector): OperationsScope {
 		const loadTestTenant = new PrismaLoadTestTenant(db);
+		const notifications = this.notifications.create(db, events);
 		return {
 			...createOperationsReadScope(db),
 			loadTestTenant,
 			purge: loadTestTenant,
-			emails: this.notifications.create(db, events).emailRequests,
+			emails: notifications.emailRequests,
+			notifications: notifications.notifications,
 		};
 	}
 }

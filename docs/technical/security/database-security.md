@@ -86,6 +86,10 @@ with `FORCE ROW LEVEL SECURITY`**. So the API never queries as that user:
   (`apps/api/src/prisma/rls-pool.ts`, a `pg.Pool` subclass). `DB_POOL_MAX` (default 10, minimum 2) is
   the replica's whole connection budget: `databasePoolBudget` (`apps/api/src/prisma/prisma-client-setup.ts`)
   gives the system pool 1 connection (2 from a budget of 10) and this request pool the rest.
+- One bound for waiting on a connection: a checkout waits at most `DATABASE_CONNECT_TIMEOUT_MS` (5 s,
+  `database-pool.constants.ts`), and both Prisma clients let a transaction wait the same before it starts
+  (`PRISMA_TRANSACTION_DEFAULTS.maxWait`). Prisma's own default is 2 s, which made a busy-but-healthy pool
+  fail with "Unable to start a transaction in the given time" before the pool's own bound was reached.
 - Every checkout runs `applyRlsSession`: `SET ROLE` to the scope's role (`app_runtime`, or a system
   operation's narrower role) and sets every `app.*` variable from the current RLS context — so a
   pooled connection never carries the previous request's identity. Inside a transaction,

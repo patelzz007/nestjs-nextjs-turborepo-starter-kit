@@ -23,11 +23,12 @@ describe("Icon", () => {
 	});
 
 	it("keeps one ascending size scale and a heavier bold stroke", () => {
-		expect([ICON_SIZES.sm, ICON_SIZES.md, ICON_SIZES.lg, ICON_SIZES.xl, ICON_SIZES["2xl"]]).toStrictEqual([16, 20, 24, 32, 40]);
+		expect([ICON_SIZES.xs, ICON_SIZES.sm, ICON_SIZES.md, ICON_SIZES.lg, ICON_SIZES.xl, ICON_SIZES["2xl"]]).toStrictEqual([12, 16, 20, 24, 32, 40]);
 		expect(ICON_STROKE_WIDTHS.bold).toBeGreaterThan(ICON_STROKE_WIDTHS.regular);
 	});
 
 	it("sizes its box to the same step as the glyph", () => {
+		expect(iconVariants({ size: "xs" })).toContain("size-3");
 		expect(iconVariants({ size: "sm" })).toContain("size-4");
 		expect(iconVariants({ size: "md" })).toContain("size-5");
 		expect(iconVariants({ size: "lg" })).toContain("size-6");

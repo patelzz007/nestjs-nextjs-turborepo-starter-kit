@@ -1,4 +1,4 @@
-import { BarChart3, Gift, LogIn, Ticket, UserCog, Users, type LucideIcon } from "lucide-react";
+import { BarChart3, Bell, Gift, LogIn, Ticket, UserCog, Users, type LucideIcon } from "lucide-react";
 
 import { ROUTES } from "@/lib/routes";
 
@@ -48,6 +48,15 @@ export const WEB_NAV_ITEMS: readonly WebNavItem[] = [
 		description: "Your signup code and friends who joined",
 		icon: Users,
 		keywords: ["referral", "invite", "friends", "code", "signup"],
+	},
+	{
+		id: "notifications",
+		title: "Notifications",
+		url: ROUTES.dashboard.notifications,
+		section: "Account",
+		description: "Everything we've told you, read and unread",
+		icon: Bell,
+		keywords: ["notifications", "inbox", "alerts", "messages", "unread"],
 	},
 	{
 		id: "account",

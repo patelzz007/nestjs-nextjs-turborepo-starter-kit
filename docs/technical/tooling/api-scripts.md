@@ -4,7 +4,7 @@ tags: ["tooling", "database", "development", "scripts"]
 description: "The two command-line tools in apps/api/scripts — database and local development — and how to add a command."
 order: 8
 author: "Platform Team"
-lastUpdated: 1792368000000
+lastUpdated: 1793404800000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -43,7 +43,7 @@ all it takes to bring the client back.
 
 ## `scripts/dev.ts`
 
-Development only. `tunnel` and `github-webhook` refuse to run when `NODE_ENV=production`.
+Development only. `tunnel`, `github-webhook` and `notifications-demo` refuse to run when `NODE_ENV=production`.
 
 | Package script                                    | Command             | What it does                                                                                                                    |
 | ------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -52,6 +52,7 @@ Development only. `tunnel` and `github-webhook` refuse to run when `NODE_ENV=pro
 | `pnpm mail:latest [--to <email>] [--code]` (root) | `mail`              | Prints the newest email in the local Mailpit ([Mailpit](../email/mailpit-local-inbox.md)).                                      |
 | `webhook:test-signature`                          | `webhook-signature` | Posts a signed and a tampered Resend event to the email webhook (expect 200, then 403).                                         |
 | `email:previews`                                  | `email-previews`    | Screenshots every email template into `docs/images/email` (needs Google Chrome; `CHROME_BIN`).                                  |
+| `notifications:demo [--email <address>]`          | `notifications-demo` | Sends one person (the only superadmin by default) two new sign-ins and a test notification through `notify()` and the fan-out queue, so they show in the admin panel's and the mobile app's inboxes, on registered phones and in Mailpit. Runs under the `notifications.demo` system operation (`User` and `Notification` only): run `pnpm --filter @workspace/api db:apply-security` once after pulling it. |
 
 ## Adding a command
 

@@ -71,7 +71,7 @@ export class MailpitEmailTransport extends EmailTransport implements OnApplicati
 			Text: email.text,
 			HTML: email.html,
 			Tags: [email.templateKey],
-			Headers: { [MAILPIT_EMAIL_LOG_ID_HEADER]: email.emailLogId },
+			Headers: { ...email.headers, [MAILPIT_EMAIL_LOG_ID_HEADER]: email.emailLogId },
 		});
 		let response: Response;
 		try {

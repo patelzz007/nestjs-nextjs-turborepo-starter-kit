@@ -9,8 +9,9 @@
  *   - `/docs/<slug>`          → maps to `docs/<slug>.md` (README keeps its case)
  *   - `/images/...`           → the file must exist under `docs/images/`
  *
- * Fenced code blocks are skipped (example links inside them are not real
- * links). External URLs (http/https/mailto) are ignored.
+ * Fenced code blocks and inline code spans are skipped (example links and
+ * patterns inside them, such as a regex `[a-z](?:…)`, are not real links).
+ * External URLs (http/https/mailto) are ignored.
  *
  * Usage: `node scripts/check-links.mjs` — exits 1 when any link is broken.
  */
@@ -40,9 +41,11 @@ function headingSlugs(filePath) {
 	return slugs;
 }
 
-/** Plain markdown links in a file, excluding fenced code blocks. */
+/** Plain markdown links in a file, excluding fenced code blocks and inline code spans. */
 function extractLinks(filePath) {
-	const source = readFileSync(filePath, "utf8").replace(/```[\s\S]*?```/g, "");
+	const source = readFileSync(filePath, "utf8")
+		.replace(/```[\s\S]*?```/g, "")
+		.replace(/`[^`\n]*`/g, "");
 	const links = [];
 	for (const match of source.matchAll(/\[[^\]]*]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) {
 		links.push(match[1]);

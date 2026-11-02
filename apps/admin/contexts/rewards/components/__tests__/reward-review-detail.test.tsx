@@ -45,6 +45,7 @@ interface RewardStub {
 	readonly tenantLogoSources: readonly { readonly width: number; readonly url: string }[];
 	readonly rewardType: "FREE_ITEM" | "DISCOUNT";
 	readonly rewardValue: number;
+	readonly freeItem: { readonly name: string; readonly sku: string } | null;
 	readonly status: "PENDING_REVIEW" | "PUBLISHED";
 	readonly category: string;
 	readonly quantityRemaining: number;
@@ -145,6 +146,7 @@ const REWARD: RewardStub = {
 	tenantLogoSources: [],
 	rewardType: "FREE_ITEM",
 	rewardValue: 1,
+	freeItem: { name: "Latte (12 oz)", sku: "BEV-LATTE-12OZ" },
 	status: "PENDING_REVIEW",
 	category: "cafe",
 	quantityRemaining: 8,
@@ -220,6 +222,8 @@ describe("RewardReviewDetailView", () => {
 		expect(screen.getByText("One free latte with any breakfast set.")).toBeDefined();
 		expect(screen.getByText("Dine-in only.")).toBeDefined();
 		expect(factOf("Offer")).toBe("Free item");
+		expect(factOf("Free item")).toBe("Latte (12 oz)");
+		expect(factOf("SKU")).toBe("BEV-LATTE-12OZ");
 		expect(factOf("Category")).toBe("Café");
 		expect(factOf("Quantity")).toBe("8 of 10 left");
 		expect(factOf("Starts")).toBe("When approved");

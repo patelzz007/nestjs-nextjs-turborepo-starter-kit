@@ -6,7 +6,14 @@
 // messages to show, one setter), so they stay data-agnostic and test without a form instance.
 
 import { useForm, useSelector } from "@tanstack/react-form";
-import { LocationScopeTypeSchema, MerchantRewardFormFieldsSchema, RewardTypeSchema, type MerchantRewardFormValues } from "@workspace/shared";
+import {
+	LocationScopeTypeSchema,
+	MerchantRewardFormFieldsSchema,
+	RewardAudienceTypeSchema,
+	rewardTypeGivesFreeItem,
+	RewardTypeSchema,
+	type MerchantRewardFormValues,
+} from "@workspace/shared";
 import * as React from "react";
 import { z } from "zod";
 
@@ -22,6 +29,9 @@ export const RewardEditorInputSchema = z
 		description: z.string(),
 		imageFileIds: z.array(z.string()),
 		rewardValue: z.string(),
+		/** The item a free item or buy one, get one reward gives (kept while the merchant tries other types, sent only for those two). */
+		freeItemName: z.string(),
+		freeItemSku: z.string(),
 		minPurchase: z.string(),
 		termsConditions: z.string(),
 		startDate: z.string(),
@@ -30,6 +40,9 @@ export const RewardEditorInputSchema = z
 		maxClaimsPerUser: z.number(),
 		locationScopeType: LocationScopeTypeSchema.optional(),
 		locationIds: z.array(z.string()).optional(),
+		/** Who can claim it: everyone, or the customers in `audienceCustomerIds`. */
+		audienceType: RewardAudienceTypeSchema,
+		audienceCustomerIds: z.array(z.string()),
 	})
 	.strict();
 
@@ -39,7 +52,7 @@ export type RewardEditorInput = z.output<typeof RewardEditorInputSchema>;
 export type RewardEditorField = keyof RewardEditorInput;
 
 /** The fields typed into a text box: one change handler serves them all, by the input's `name`. */
-export const RewardEditorTextFieldSchema = z.enum(["title", "description", "termsConditions", "rewardValue", "minPurchase", "quantityTotal"]);
+export const RewardEditorTextFieldSchema = z.enum(["title", "description", "termsConditions", "rewardValue", "freeItemName", "freeItemSku", "minPurchase", "quantityTotal"]);
 
 export type RewardEditorTextField = z.output<typeof RewardEditorTextFieldSchema>;
 
@@ -70,6 +83,7 @@ export function toRewardFormCandidate(input: RewardEditorInput): z.input<typeof 
 		description: input.description,
 		imageFileIds: input.imageFileIds,
 		rewardValue: requiredNumber(input.rewardValue),
+		...(rewardTypeGivesFreeItem(input.rewardType) ? { freeItem: { name: input.freeItemName, sku: input.freeItemSku } } : {}),
 		minPurchase: optionalNumber(input.minPurchase),
 		termsConditions: optionalText(input.termsConditions),
 		startDate: input.startDate,
@@ -78,6 +92,9 @@ export function toRewardFormCandidate(input: RewardEditorInput): z.input<typeof 
 		maxClaimsPerUser: input.maxClaimsPerUser,
 		...(input.locationScopeType === undefined ? {} : { locationScopeType: input.locationScopeType }),
 		...(input.locationIds === undefined ? {} : { locationIds: input.locationIds }),
+		audienceType: input.audienceType,
+		// Customers are kept while the merchant flips back to "Everyone", but only sent for chosen customers.
+		audienceCustomerIds: input.audienceType === "SELECTED_CUSTOMERS" ? input.audienceCustomerIds : [],
 	};
 }
 
@@ -92,6 +109,8 @@ export function toRewardEditorInput(values: MerchantRewardFormValues): RewardEdi
 		description: values.description,
 		imageFileIds: values.imageFileIds,
 		rewardValue: String(values.rewardValue),
+		freeItemName: values.freeItem?.name ?? "",
+		freeItemSku: values.freeItem?.sku ?? "",
 		minPurchase: values.minPurchase === undefined ? "" : String(values.minPurchase),
 		termsConditions: values.termsConditions ?? "",
 		startDate: values.startDate,
@@ -100,7 +119,21 @@ export function toRewardEditorInput(values: MerchantRewardFormValues): RewardEdi
 		maxClaimsPerUser: values.maxClaimsPerUser,
 		...(values.locationScopeType === undefined ? {} : { locationScopeType: values.locationScopeType }),
 		...(values.locationIds === undefined ? {} : { locationIds: values.locationIds }),
+		audienceType: values.audienceType ?? "EVERYONE",
+		audienceCustomerIds: values.audienceCustomerIds ?? [],
 	};
+}
+
+/** The schema's nested free item, as the editor's two text boxes. */
+const FREE_ITEM_PATH_FIELDS: Readonly<Record<string, RewardEditorField>> = { name: "freeItemName", sku: "freeItemSku" };
+
+/** The editor field an issue's path names: its first key, or the free item's text box (`freeItem.name` → `freeItemName`). */
+function editorFieldOfPath(path: readonly PropertyKey[]): PropertyKey | undefined {
+	const [head, child] = path;
+	if (head !== "freeItem") {
+		return head;
+	}
+	return FREE_ITEM_PATH_FIELDS[String(child)] ?? "freeItemName";
 }
 
 /** The first message the shared schema has for each field, in the merchant's words; empty once the values are valid. */
@@ -113,8 +146,7 @@ export function rewardEditorErrors(input: RewardEditorInput): RewardEditorErrors
 	}
 	const errors: Partial<Record<RewardEditorField, string>> = {};
 	for (const issue of result.error.issues) {
-		const [head] = issue.path;
-		const field = RewardEditorFieldSchema.safeParse(head);
+		const field = RewardEditorFieldSchema.safeParse(editorFieldOfPath(issue.path));
 		if (field.success && errors[field.data] === undefined) {
 			errors[field.data] = issue.message;
 		}
@@ -203,6 +235,12 @@ export function useRewardEditorForm<TMeta>({ defaultValues, defaultMeta, onValid
 			rewardValue: (value, options): void => {
 				form.setFieldValue("rewardValue", value, options);
 			},
+			freeItemName: (value, options): void => {
+				form.setFieldValue("freeItemName", value, options);
+			},
+			freeItemSku: (value, options): void => {
+				form.setFieldValue("freeItemSku", value, options);
+			},
 			minPurchase: (value, options): void => {
 				form.setFieldValue("minPurchase", value, options);
 			},
@@ -226,6 +264,12 @@ export function useRewardEditorForm<TMeta>({ defaultValues, defaultMeta, onValid
 			},
 			locationIds: (value, options): void => {
 				form.setFieldValue("locationIds", value, options);
+			},
+			audienceType: (value, options): void => {
+				form.setFieldValue("audienceType", value, options);
+			},
+			audienceCustomerIds: (value, options): void => {
+				form.setFieldValue("audienceCustomerIds", value, options);
 			},
 		}),
 		[form],

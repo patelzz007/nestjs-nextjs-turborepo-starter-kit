@@ -1,21 +1,19 @@
 import "reflect-metadata";
-import fastifyRateLimit from "@fastify/rate-limit";
 import { Body, Controller, Get, HttpStatus, Logger, Module, Post, type MiddlewareConsumer, type NestModule } from "@nestjs/common";
 import { HttpAdapterHost } from "@nestjs/core";
-import { FastifyAdapter, RouteConfig, type NestFastifyApplication } from "@nestjs/platform-fastify";
+import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test } from "@nestjs/testing";
 import { Prisma } from "@prisma/client";
 import { LIST_SLOT_INDEX, ApiErrorResponseSchema, type JsonValue } from "@workspace/shared";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { rateLimitErrorResponseBuilder } from "../../../../../bootstrap/register-fastify-plugins";
 import { AuthorizationException } from "../../../../../contexts/authorization/public-api";
 import { LogService } from "../../../../infrastructure/logging/logs.service";
 import { TypedConfigService } from "../../../../../config/typed-config.service";
 import { RequestContextMiddleware } from "../../middleware/request-context.middleware";
 import { ZodValidationPipe } from "../../validation/pipes/zod-validation.pipe";
-import { ConflictError, DependencyUnavailableError } from "../../../../application/errors/app-error";
+import { ConflictError, DependencyUnavailableError, RateLimitError } from "../../../../application/errors/app-error";
 import { DomainError } from "../../../../domain/errors/domain-error";
 import { GlobalExceptionFilter } from "../global-exception.filter";
 import { createAuditTrailDouble } from "../../../../../../test/support/audit-trail-double";
@@ -25,6 +23,9 @@ import { RequestContextService } from "../../../../infrastructure/context/reques
 const CreateThingSchema = z.object({ name: z.string().min(1), quantity: z.number().int() }).strict();
 
 const PROBE_REWARD_ID = "reward-probe-1";
+
+/** The wait the probe's refusal asks for. */
+const PROBE_RETRY_AFTER_SECONDS = 30;
 
 class RewardNotDraftProbeError extends DomainError {
 	public readonly code = "REWARD_NOT_DRAFT";
@@ -64,8 +65,8 @@ class ProbeController {
 		return body;
 	}
 
-	public limited(): { ok: boolean } {
-		return { ok: true };
+	public limited(): void {
+		throw new RateLimitError({ message: "Too many requests — please try again shortly.", details: { retryAfterSeconds: PROBE_RETRY_AFTER_SECONDS } });
 	}
 
 	public unavailable(): void {
@@ -96,7 +97,6 @@ route(Get("duplicate"), "duplicate");
 route(Post("validate"), "validate");
 route(Get("limited"), "limited");
 route(Get("unavailable"), "unavailable");
-route(RouteConfig({ rateLimit: { max: 1, timeWindow: "1 minute" } }), "limited");
 Body(new ZodValidationPipe(CreateThingSchema))(ProbeController.prototype, "validate", 0);
 Controller("probe")(ProbeController);
 Module({ controllers: [ProbeController], providers: [RequestContextService, { provide: TypedConfigService, useValue: createTestTypedConfig() }] })(ProbeModule);
@@ -116,7 +116,6 @@ describe("GlobalExceptionFilter (Fastify integration)", () => {
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({ imports: [ProbeModule] }).compile();
 		app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter({ bodyLimit: 64 }));
-		await app.getHttpAdapter().getInstance().register(fastifyRateLimit, { global: false, errorResponseBuilder: rateLimitErrorResponseBuilder });
 		app.useGlobalFilters(new GlobalExceptionFilter(app.get(HttpAdapterHost), logService, new RequestContextService(), audit.auditTrail, createTestTypedConfig()));
 		await app.init();
 		await app.getHttpAdapter().getInstance().ready();
@@ -295,17 +294,14 @@ describe("GlobalExceptionFilter (Fastify integration)", () => {
 		expect(row?.errorDetail).toMatchObject({ message: "Email already in use", stack: [] });
 	});
 
-	it("turns @fastify/rate-limit rejections into 429 RATE_LIMITED with Retry-After", async () => {
-		const first = await app.inject({ method: "GET", url: "/probe/limited" });
-		const second = await app.inject({ method: "GET", url: "/probe/limited" });
+	it("turns a RateLimitError (every limiter's refusal, ADR 071) into 429 RATE_LIMITED with Retry-After", async () => {
+		const refused = await app.inject({ method: "GET", url: "/probe/limited" });
 
-		expect(first.statusCode).toBe(HttpStatus.OK);
-		expect(second.statusCode).toBe(HttpStatus.TOO_MANY_REQUESTS);
-		const envelope = envelopeOf(second.body);
+		expect(refused.statusCode).toBe(HttpStatus.TOO_MANY_REQUESTS);
+		const envelope = envelopeOf(refused.body);
 		expect(envelope.error.code).toBe("RATE_LIMITED");
-		expect(Object.keys(envelope.error.details ?? {})).toEqual(["retryAfterSeconds"]);
-		expect(envelope.error.details).toHaveProperty("retryAfterSeconds", expect.any(Number));
-		expect(Number(second.headers["retry-after"])).toBeGreaterThan(0);
+		expect(envelope.error.details).toEqual({ retryAfterSeconds: PROBE_RETRY_AFTER_SECONDS });
+		expect(refused.headers["retry-after"]).toBe(String(PROBE_RETRY_AFTER_SECONDS));
 	});
 });
 

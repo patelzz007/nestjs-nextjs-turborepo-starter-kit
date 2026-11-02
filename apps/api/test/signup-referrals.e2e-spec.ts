@@ -11,6 +11,7 @@ import { SweepSignupSuccessNoticesCommand } from "../src/contexts/claims/applica
 import { SIGNUP_SUCCESS_NOTICE_OPERATION } from "../src/contexts/claims/application/services/signup-success-notice.application-service";
 import { systemActor } from "../src/platform/application/actor-context";
 import { createE2eApp, login, markSeedUserEmailVerified, parseSuccessEnvelope, type LoginResult } from "./e2e-helpers";
+import { deleteNotificationsByPayload, notificationsByPayload } from "./support/notification-rows";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
 const DASHBOARD_URL = `${API_VERSION_PREFIX}/auth/signup-referrals/dashboard`;
@@ -46,8 +47,8 @@ describe("signup referrals (e2e)", () => {
 		const client = await pool.connect();
 		try {
 			await client.query("SELECT set_config('app.rls_bypass', 'true', false)");
+			await deleteNotificationsByPayload(client, "signupReferralId", createdReferralIds);
 			for (const id of createdReferralIds) {
-				await client.query(`DELETE FROM public."RewardNotification" WHERE metadata->>'signupReferralId' = $1`, [id]);
 				await client.query(`DELETE FROM public."SignupReferral" WHERE id = $1`, [id]);
 			}
 		} finally {
@@ -150,11 +151,10 @@ describe("signup referrals (e2e)", () => {
 			expect((await sweep()).delivered).toBeGreaterThanOrEqual(1);
 			await sweep();
 
-			const notices = await client.query<{ userId: string; body: string }>(
-				`SELECT "userId" AS "userId", body FROM public."RewardNotification" WHERE type = 'signup_referral_redeemed' AND metadata->>'signupReferralId' = $1`,
-				[signupReferralId],
-			);
-			expect(notices.rows).toEqual([{ userId: referrer.id, body: `${referee.fullName} redeemed a reward. Your referral is successful.` }]);
+			// One notification however often the sweep runs (the notice is claimed, and notify() is keyed on the referral).
+			expect(await notificationsByPayload(client, "signupReferralId", [signupReferralId])).toEqual([
+				{ recipientUserId: referrer.id, typeKey: "referrals.signup-success", payload: { signupReferralId, refereeName: referee.fullName } },
+			]);
 			const [row] = (await client.query<{ notified: string | null }>(`SELECT "successNotifiedAt" AS notified FROM public."SignupReferral" WHERE id = $1`, [signupReferralId]))
 				.rows;
 			expect(row?.notified).not.toBeNull();

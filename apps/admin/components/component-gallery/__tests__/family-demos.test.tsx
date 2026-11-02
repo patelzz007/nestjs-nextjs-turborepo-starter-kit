@@ -199,6 +199,18 @@ describe("Selection demos", () => {
 		expect(all.getAttribute("aria-checked")).toBe("false");
 		expect(within(section).getByRole("checkbox", { name: "Email" }).getAttribute("aria-checked")).toBe("false");
 	});
+
+	it("hangs the channels from a TreeBranch under select-all, with the in-app one locked on", () => {
+		renderFamily("family-selection");
+		const section = sectionOf("checkbox");
+		const branch = within(section).getByRole("list", { name: "All channels" });
+		expect(within(branch).getAllByRole("listitem")).toHaveLength(4);
+		const locked = within(branch).getByRole("checkbox", { name: "In the app (always on)" });
+		expect(locked.getAttribute("aria-checked")).toBe("true");
+		expect(locked.hasAttribute("data-locked")).toBe(true);
+		fireEvent.click(locked);
+		expect(locked.getAttribute("aria-checked")).toBe("true");
+	});
 });
 
 describe("Overlay demos", () => {

@@ -210,8 +210,8 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 	),
 	"operations.settings.write": runtime("SuperAdmin: change the alert thresholds and recipients, the backup schedule or the load-test caps", tables("OpsSettings")),
 	"operations.monitor.collect": routinePoller(
-		"Once a minute, on one instance: record the dependencies' minute, evaluate the alert rules against servers, instances, dependencies and endpoints, open / update / resolve alerts and request their emails to the SuperAdmins and the extra recipients",
-		tables("OpsServer", "OpsServerSample", "OpsDependencySample", "OpsAlert", "OpsSettings", "User", "EmailLog", "OutboxEvent"),
+		"Once a minute, on one instance: record the dependencies' minute, evaluate the alert rules against servers, instances, dependencies and endpoints, open / update / resolve alerts, notify every SuperAdmin, Admin and Platform Developer (ADR 070) and email the extra recipients",
+		tables("OpsServer", "OpsServerSample", "OpsDependencySample", "OpsAlert", "OpsSettings", "User", "UserRole", "Role", "Notification", "EmailLog", "OutboxEvent"),
 	),
 	"operations.instance.record": routinePoller("Once a minute, each instance: write its own finished minute of process and request metrics", tables("OpsInstanceSample")),
 	"operations.history.maintain": routinePoller(
@@ -335,11 +335,11 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 		tables("RewardClaim", "Reward", "RewardImage", "RewardLocationScope", "Location", "RewardAuditLog", "OutboxEvent"),
 	),
 	"claims.otp.request": runtime(
-		"Read a claimable reward and the customer, store the claim code, and request the code email",
-		tables("Reward", "RewardImage", "RewardLocationScope", "Location", "User", "RewardOtpChallenge", "EmailLog", "OutboxEvent"),
+		"Read a claimable reward (and whether it was given to the customer) and the customer, store the claim code, and request the code email",
+		tables("Reward", "RewardImage", "RewardLocationScope", "RewardAudienceMember", "Location", "User", "RewardOtpChallenge", "EmailLog", "OutboxEvent"),
 	),
 	"claims.reward.claim": runtime(
-		"Lock the customer, spend the claim code, check the merchant operates and has not banned the customer, reserve one unit, attach a referral, and store the claim with the verified phone",
+		"Lock the customer, spend the claim code, check the merchant operates and has not banned the customer and that the reward is for them, reserve one unit, attach a referral, store the claim with the verified phone, and link the customer to the tenant (ADR 073)",
 		tables(
 			"RewardLegalAcceptance",
 			"User",
@@ -347,11 +347,13 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 			"Reward",
 			"RewardImage",
 			"RewardLocationScope",
+			"RewardAudienceMember",
 			"Location",
 			"RewardReferral",
 			"RewardClaim",
 			"Tenant",
 			"TenantCustomerBan",
+			"TenantCustomer",
 		),
 	),
 	"rewards.referral_credit.deliver": runtime(
@@ -359,8 +361,12 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 		tables("RewardReferral", "RewardClaim", "Reward", "RewardLocationScope", "Location", "User", "EmailLog", "OutboxEvent"),
 	),
 	"marketplace.published_rewards.read": runtime(
-		"Read published consumer rewards for the public marketplace, including their images, stores and the merchant named by a city filter",
-		tables("Reward", "RewardImage", "StoredFile", "FileVariant", "RewardLocationScope", "Location", "Tenant", "TenantMerchantProfile"),
+		"Read published consumer rewards for the public marketplace, including their images, stores, the merchant named by a city filter, and whether a reward for chosen customers was given to the viewer",
+		tables("Reward", "RewardImage", "StoredFile", "FileVariant", "RewardLocationScope", "RewardAudienceMember", "Location", "Tenant", "TenantMerchantProfile"),
+	),
+	"rewards.customers.read": runtime(
+		"A merchant reads its customers (name and masked email) to give a reward to chosen ones, and who a reward was given to",
+		tables("TenantCustomer", "User", "Reward", "RewardAudienceMember", "RewardImage", "RewardLocationScope", "Location"),
 	),
 	"rewards.admin_review": runtime(
 		"Review a consumer reward across tenants: the moderation queue, the decision, its audit row, the owners' notice and the image download",
@@ -779,6 +785,99 @@ export const SYSTEM_OPERATIONS: Readonly<Record<SystemOperation, SystemOperation
 		),
 	),
 	"seed.github_link.carry": runtime("Export or import the superadmin GitHub account link across a baseline reset, ciphertext unchanged", tables("GithubAccountLink", "User")),
+	"notifications.fan_out": runtime(
+		"Turn one notification into its deliveries: preferences, consent, suppressions, devices, the inbox and email requests (ADR 070)",
+		tables(
+			"Notification",
+			"NotificationDelivery",
+			"InAppNotification",
+			"NotificationPreference",
+			"NotificationSchedule",
+			"MarketingConsent",
+			"NotificationSuppression",
+			"PushDevice",
+			"User",
+			"Membership",
+			"UserRole",
+			"Role",
+			"Tenant",
+			"TenantCustomer",
+			"TenantCustomerBan",
+			"Broadcast",
+			"StoredFile",
+			"EmailLog",
+			"OutboxEvent",
+		),
+	),
+	"notifications.deliver": runtime(
+		"BullMQ worker: send one push or SMS delivery and record its outcome (ADR 070)",
+		tables("Notification", "NotificationDelivery", "PushDevice", "InAppNotification", "User"),
+	),
+	"notifications.inbox": runtime(
+		"A person's own inbox across surfaces: mark read, archive, a push tap, the unread count (ADR 070)",
+		tables("InAppNotification", "NotificationDelivery", "PushDevice"),
+	),
+	"notifications.preferences": runtime(
+		"A person's own preferences, quiet hours, consent, tenant links and push devices (ADR 070, 073); their platform roles say whether the operations alerts are theirs",
+		tables("NotificationPreference", "NotificationSchedule", "MarketingConsent", "TenantCustomer", "Tenant", "PushDevice", "RefreshToken", "User", "UserRole", "Role"),
+	),
+	"notifications.maintenance": runtime(
+		"Release held deliveries, send digests, sweep missed fan-outs, apply retention, revoke devices of ended sessions (ADR 070)",
+		tables("Notification", "NotificationDelivery", "InAppNotification", "NotificationSchedule", "PushDevice", "RefreshToken", "User", "EmailLog", "OutboxEvent"),
+	),
+	"notifications.delivery_log": runtime(
+		"Platform staff or a tenant's admins: read the delivery log; staff: retry a failed delivery (ADR 070)",
+		tables("Notification", "NotificationDelivery"),
+	),
+	"notifications.suppressions": runtime("Platform staff: list and lift suppressions (ADR 070)", tables("NotificationSuppression")),
+	"notifications.demo": runtime(
+		"Development tool (pnpm --filter @workspace/api notifications:demo): find one person and request the demo notifications for them through notify() (ADR 070)",
+		tables("Notification", "User"),
+	),
+	"notifications.webhook.twilio": runtime(
+		"A verified Twilio status callback or STOP reply: delivery status and suppressions (ADR 070)",
+		tables("NotificationDelivery", "NotificationSuppression"),
+	),
+	"notifications.unsubscribe": runtime(
+		"A signed one-click unsubscribe link (RFC 8058): the preference, consent or suppression it names (ADR 070)",
+		tables("NotificationPreference", "MarketingConsent", "NotificationSuppression", "Tenant"),
+	),
+	"notifications.legacy_inbox.migrate": runtime(
+		"Hourly until empty: move RewardNotification rows into the unified inbox and soft-delete them (ADR 070)",
+		tables("RewardNotification", "Notification", "InAppNotification"),
+	),
+	"broadcasts.write": runtime(
+		"Tenant owners/managers or platform staff: write, schedule, approve and cancel broadcasts (ADR 073)",
+		tables("Broadcast", "Tenant", "TenantRateLimitOverride", "NotificationDelivery", "BroadcastReport"),
+	),
+	"broadcasts.audience": runtime(
+		"Count and resolve a broadcast's audience: tenant customers with consent, platform users (ADR 073)",
+		tables("TenantCustomer", "MarketingConsent", "TenantCustomerBan", "Membership", "User", "Tenant", "UserRole", "Role", "RewardClaim", "RewardRedemption", "Reward"),
+	),
+	"broadcasts.send": runtime(
+		"BullMQ worker: freeze a broadcast's audience and request one notification per recipient (ADR 073)",
+		tables(
+			"Broadcast",
+			"Notification",
+			"TenantCustomer",
+			"MarketingConsent",
+			"TenantCustomerBan",
+			"Membership",
+			"User",
+			"Tenant",
+			"UserRole",
+			"Role",
+			"RewardClaim",
+			"RewardRedemption",
+			"Reward",
+			"StoredFile",
+		),
+	),
+	"broadcasts.reports": runtime(
+		"A recipient reports a broadcast; platform staff review reports and strikes (ADR 073)",
+		tables("BroadcastReport", "Broadcast", "TenantBroadcastStrike", "Tenant", "InAppNotification"),
+	),
+	"rate_limits.overrides": runtime("Platform staff: read and set tenant rate-limit overrides (ADR 071)", tables("TenantRateLimitOverride", "Tenant")),
 };
 
 /** True when `name` is an allowlisted operation. */

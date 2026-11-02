@@ -6,6 +6,7 @@ import { isTenantOperating } from "../../domain/policies/tenant-operating.policy
 import type { TenantExistencePort } from "../../application/ports/tenant-existence.port";
 import type { CustomerStandingPort } from "../../application/ports/customer-standing.port";
 import { createTenantAuditPort, TransactionTenantAuditWriter } from "../audit/tenant-audit.adapter";
+import { TransactionTenantCustomerLinks } from "./transaction-tenant-customer-links";
 
 /** The merchant profile's POS policy on the caller's transaction. */
 class TransactionMerchantPosSettings implements MerchantPosSettingsPort {
@@ -102,5 +103,6 @@ export function createTenantsTransactionalPorts(db: Prisma.TransactionClient): T
 		existence: new TransactionTenantExistence(db),
 		customerStanding: new TransactionCustomerStanding(db),
 		audit: new TransactionTenantAuditWriter(db, createTenantAuditPort()),
+		tenantCustomers: new TransactionTenantCustomerLinks(db),
 	};
 }

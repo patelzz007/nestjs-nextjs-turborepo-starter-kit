@@ -211,10 +211,19 @@ describe("Audit trail timeline (e2e)", () => {
 				await backgroundJob(randomUUID(), [`${REGION_PREFIX}${randomUUID().slice(0, 8)}`]);
 				await until(() => listening.received.includes("DataChangeLog"));
 
-				listening.received.length = 0;
-				await trail({});
+				// Viewing the log is audited, but its row is one the trigger never signals (an open page would
+				// otherwise refetch forever). Checked by the read's own correlation id: other spec files write
+				// audit rows to the same database in parallel, so the channel is never guaranteed silent.
+				const readCorrelationId = randomUUID();
+				const read = await app.inject({ method: "GET", url: TRAIL_URL, headers: { cookie: cookie(superAdmin), "x-correlation-id": readCorrelationId } });
+				expect(read.statusCode, read.body).toBe(200);
 				await new Promise((resolve) => setTimeout(resolve, QUIET_MS));
-				expect(listening.received).toEqual([]);
+				const recorded = await pool.query<{ signals: boolean }>(
+					// The trigger's own WHEN clause (prisma/rls/95-audit-trail-notify.sql), evaluated for this row.
+					`SELECT NOT (method = 'GET' AND endpoint ~ '^/api/v[0-9]+/admin/(audit-|data-changes)') AS signals FROM public."AuditLog" WHERE "correlationId" = $1`,
+					[readCorrelationId],
+				);
+				expect(recorded.rows).toEqual([{ signals: false }]);
 
 				const response = await app.inject({
 					method: "POST",

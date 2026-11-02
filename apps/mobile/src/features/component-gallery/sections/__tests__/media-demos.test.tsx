@@ -39,13 +39,16 @@ describe("MediaDemos", () => {
 		expect(gallery.queryByRole("image", { name: "The app icon, as a reward photo" })).toBeNull();
 	});
 
-	it("moves the image carousel with its arrows", async () => {
+	it("moves the image carousel with its arrows, round both ways", async () => {
 		await render(<MediaDemos />);
 		const gallery = within(screen.getByTestId("demo-ImageCarousel"));
 
-		expect(gallery.getByRole("button", { name: "Previous slide" })).toBeDisabled();
+		expect(gallery.getByRole("button", { name: "Previous slide" })).toBeEnabled();
 		await fireEvent.press(gallery.getByRole("button", { name: "Next slide" }));
 		expect(gallery.getByRole("image", { name: "The launch artwork, as a second photo" })).toBeOnTheScreen();
+		await fireEvent.press(gallery.getByRole("button", { name: "Previous slide" }));
+		await fireEvent.press(gallery.getByRole("button", { name: "Previous slide" }));
+		expect(gallery.getByRole("image", { name: "A photo that is still processing" })).toBeOnTheScreen();
 	});
 
 	it("resizes the picture from a handle, keeping it square until the switch frees it", async () => {

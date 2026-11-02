@@ -28,6 +28,7 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 			tenants: {
 				rewards: {
 					get: { useQuery: rewardQuery },
+					audience: { useQuery: (): object => ({ data: undefined, isSuccess: false, isError: false, error: null, refetch: vi.fn() }) },
 					create: { useMutation: rewardsMutation },
 					update: { useMutation: rewardsMutation },
 					publish: { useMutation: rewardsMutation },

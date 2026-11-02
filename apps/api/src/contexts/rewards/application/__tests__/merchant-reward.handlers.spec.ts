@@ -6,6 +6,7 @@ import { InMemoryUnitOfWork } from "../../../../platform/application/__tests__/f
 import { ConflictError } from "../../../../platform/application/errors/app-error";
 import { AuthorizationDeniedError } from "../../../../platform/domain/errors/authorization-denied.error";
 import {
+	RewardAudienceInvalidError,
 	RewardImagesInvalidError,
 	RewardLocationForbiddenError,
 	RewardLocationInvalidError,
@@ -13,6 +14,7 @@ import {
 	RewardNotEditableError,
 	RewardNotFoundError,
 } from "../../domain/errors/reward.errors";
+import { RewardAudience } from "../../domain/value-objects/reward-audience.value-object";
 import { RewardLocationScope } from "../../domain/value-objects/reward-location-scope.value-object";
 import { NOW, TENANT_ID, REWARD_ID, referrerRow, rewardState, STORE_A, STORE_B } from "../../domain/__tests__/reward-state.fixture";
 import { CreateRewardCommand, type CreateRewardInput } from "../commands/create-reward/create-reward.command";
@@ -34,7 +36,8 @@ function createInput(patch: Partial<CreateRewardInput> = {}): CreateRewardInput 
 		title: "Free coffee",
 		description: "One free coffee",
 		rewardType: "FREE_ITEM",
-		rewardValue: 0,
+		rewardValue: 1,
+		freeItem: { name: "Coffee", sku: "BEV-COFFEE" },
 		category: "cafe",
 		imageFileIds: [IMAGE_ID],
 		quantityTotal: 5,
@@ -43,6 +46,8 @@ function createInput(patch: Partial<CreateRewardInput> = {}): CreateRewardInput 
 		saveAsDraft: true,
 		locationScopeType: "ALL_LOCATIONS",
 		locationIds: [],
+		audienceType: "EVERYONE",
+		audienceCustomerIds: [],
 		...patch,
 	};
 }
@@ -222,5 +227,48 @@ describe("SubmitRewardForReviewHandler (D04)", () => {
 		await expect(
 			new SubmitRewardForReviewHandler(h.uow, h.access, h.clock).execute(new SubmitRewardForReviewCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID })),
 		).rejects.toThrow(ConflictError);
+	});
+});
+
+describe("who a reward is for", () => {
+	const ALICE = "0199a1b2-0000-7000-8000-0000000000a1";
+	const STRANGER = "0199a1b2-0000-7000-8000-0000000000a9";
+	const alice = { userId: ALICE, fullName: "Alice", maskedEmail: "a•••@example.com", lastClaimedAt: NOW, claimCount: 2 };
+
+	it("gives a new reward to the tenant's chosen customers", async () => {
+		const h = harness();
+		h.scope.customers.add(alice);
+
+		await new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock).execute(
+			new CreateRewardCommand(userActor(), createInput({ audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [ALICE] })),
+		);
+
+		const [rewardId] = h.scope.rewards.added;
+		expect(h.scope.rewards.rows.get(rewardId ?? "")?.audience.customerIds).toEqual([ALICE]);
+	});
+
+	it("refuses to give a reward to someone who is not the tenant's customer, writing nothing", async () => {
+		const h = harness();
+		h.scope.customers.add(alice);
+
+		await expect(
+			new CreateRewardHandler(h.uow, h.access, new SequentialIds(), h.clock).execute(
+				new CreateRewardCommand(userActor(), createInput({ audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [ALICE, STRANGER] })),
+			),
+		).rejects.toThrow(RewardAudienceInvalidError);
+		expect(h.scope.rewards.added).toEqual([]);
+	});
+
+	it("changes who a draft is for, and back to everyone", async () => {
+		const h = harness();
+		h.scope.customers.add(alice);
+		h.scope.rewards.seed(rewardState("DRAFT"));
+		const revise = new ReviseRewardHandler(h.uow, h.access, h.clock);
+
+		await revise.execute(new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [ALICE] }));
+		expect(h.scope.rewards.rows.get(REWARD_ID)?.audience.equals(RewardAudience.selected([ALICE]))).toBe(true);
+
+		await revise.execute(new ReviseRewardCommand(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID, audienceType: "EVERYONE", audienceCustomerIds: [] }));
+		expect(h.scope.rewards.rows.get(REWARD_ID)?.audience.isEveryone).toBe(true);
 	});
 });

@@ -20,6 +20,11 @@ export const QueueNameSchema = z.enum([
 	"transaction-log.write",
 	"operations.backup",
 	"operations.load-test",
+	"notifications.fan-out",
+	"notifications.push",
+	"notifications.sms",
+	"notifications.maintenance",
+	"broadcasts.send",
 ]);
 
 /**
@@ -44,6 +49,16 @@ export const QUEUE_NAMES = {
 	operationsBackup: QueueNameSchema.enum["operations.backup"],
 	/** Load tests (ADR 068): taken by the separate load runner, never by the API. */
 	operationsLoadTest: QueueNameSchema.enum["operations.load-test"],
+	/** ADR 070: turns one notification into its deliveries (jobId = notification id). */
+	notificationsFanOut: QueueNameSchema.enum["notifications.fan-out"],
+	/** ADR 070: one push to one device (jobId = delivery id). */
+	notificationsPush: QueueNameSchema.enum["notifications.push"],
+	/** ADR 070: one SMS (jobId = delivery id). */
+	notificationsSms: QueueNameSchema.enum["notifications.sms"],
+	/** ADR 070: releases held deliveries, sends digests, sweeps missed fan-outs and applies retention. */
+	notificationsMaintenance: QueueNameSchema.enum["notifications.maintenance"],
+	/** ADR 073: sends one broadcast to its frozen audience, in batches. */
+	broadcastsSend: QueueNameSchema.enum["broadcasts.send"],
 } satisfies Readonly<Record<string, z.output<typeof QueueNameSchema>>>;
 
 /** All queue names, for infrastructure that registers or inspects every queue. */
@@ -51,8 +66,12 @@ export const ALL_QUEUE_NAMES: readonly z.output<typeof QueueNameSchema>[] = Queu
 
 export type QueueName = z.output<typeof QueueNameSchema>;
 
-/** One serializable template prop: a scalar, or a list of strings (`cc` / `bcc`). */
-export const EmailJobPropValueSchema = z.union([EmailPreviewPropValueSchema, z.array(z.string())]);
+/**
+ * One serializable template prop: a scalar, a list of strings (`cc` / `bcc`), or a flat object of
+ * scalars (the admin alert's `action: { label, url }`). Every template's props must fit, or the email
+ * can't be queued; `email-template-props.spec.ts` round-trips each template's sample props through it.
+ */
+export const EmailJobPropValueSchema = z.union([EmailPreviewPropValueSchema, z.array(z.string()), z.record(z.string(), EmailPreviewPropValueSchema)]);
 
 export type EmailJobPropValue = z.output<typeof EmailJobPropValueSchema>;
 

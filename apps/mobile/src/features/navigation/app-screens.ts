@@ -11,6 +11,7 @@ import { z } from "zod";
 import { ROUTES, type AppRoute } from "../../runtime/routes";
 import { DEVICES_COPY, TwoFactorEnrollmentModeSchema, twoFactorEnrollmentTitleOf } from "../../contexts/identity";
 import { PDF_VIEWER_TITLE } from "../pdf-viewer/labels";
+import { NOTIFICATION_SETTINGS_TITLE, NOTIFICATIONS_TITLE } from "../../contexts/notifications";
 import { TILL_TITLE } from "../../contexts/pos";
 import { SERVER_TITLE, SERVERS_TITLE } from "../../contexts/operations";
 import { COMMITS_TITLE, commitScreenTitle, FILES_CHANGED_TITLE, GITHUB_ACCOUNT_TITLE, PULL_REQUESTS_TITLE, pullRequestScreenTitle } from "../../contexts/integrations-github";
@@ -88,6 +89,8 @@ const SUB_SCREENS: ReadonlyMap<AppRoute, ScreenEntry> = new Map<AppRoute, Screen
 	[ROUTES.appLock, entry("App lock", "Lock the app when you leave it")],
 	[ROUTES.components, entry("Components", "The UI kit, live")],
 	[ROUTES.till, entry(TILL_TITLE, "Scan and redeem customers' rewards")],
+	[ROUTES.notifications, entry(NOTIFICATIONS_TITLE, "Everything we've told you")],
+	[ROUTES.notificationSettings, entry(NOTIFICATION_SETTINGS_TITLE, "What reaches you, and where")],
 	[ROUTES.pdfViewer, entry(PDF_VIEWER_TITLE, "Read a document")],
 	[
 		ROUTES.twoFactorSetup,

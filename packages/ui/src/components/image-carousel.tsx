@@ -36,6 +36,14 @@ export interface ImageCarouselProps {
 	readonly labels?: UiKitLabelsOverride<"carousel"> | undefined;
 }
 
+/**
+ * The gallery's Embla options: start at `startIndex`, and go round one way — after the last image the first
+ * slides in from the right (and before the first, the last from the left), never a rewind across them all.
+ */
+export function imageCarouselOptions(startIndex: number): { readonly startIndex: number; readonly loop: true } {
+	return { startIndex, loop: true };
+}
+
 /** Overlaid controls sit on the image: quiet translucent surfaces that stay legible on any photo. */
 const OVERLAY_SURFACE = "border-0 bg-background/80 text-foreground shadow-sm backdrop-blur-sm hover:bg-background";
 
@@ -68,7 +76,7 @@ function CarouselDot({ index, isSelected, label, api }: CarouselDotProps): React
 /**
  * A swipeable gallery of same-shaped images — one image renders as a plain
  * `CoverImage`; several get previous/next buttons, a position counter and a
- * dot per image (arrow keys move too, from `Carousel`). Every slide is lazy
+ * dot per image (arrow keys move too, from `Carousel`), and go round in a loop. Every slide is lazy
  * except a priority first one, and each loads the rendition its width needs.
  * Data-agnostic: the caller maps its images to `src`/`sources`.
  */
@@ -89,7 +97,7 @@ export function ImageCarousel({
 	const initialIndex = Math.min(Math.max(startIndex, 0), Math.max(total - 1, 0));
 	const [selected, setSelected] = React.useState(initialIndex);
 	// Embla reads its options once per init: the start index is fixed for this carousel's lifetime.
-	const [options] = React.useState(() => ({ startIndex: initialIndex }));
+	const [options] = React.useState(() => imageCarouselOptions(initialIndex));
 
 	React.useEffect((): (() => void) | undefined => {
 		if (api === undefined) {

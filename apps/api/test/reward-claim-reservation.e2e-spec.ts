@@ -47,6 +47,8 @@ describe("Reward claim reservation (integration)", () => {
 					title: "E2E reservation reward",
 					description: "Created by reward-claim-reservation.e2e-spec.ts",
 					rewardType: "FREE_ITEM",
+					freeItemName: "Coffee (12 oz)",
+					freeItemSku: "E2E-COFFEE-12OZ",
 					category: "cafe",
 					images: { create: [{ fileId: rewardCoverImageSeedId("free-coffee"), position: 0 }] },
 					quantityTotal: quantity,

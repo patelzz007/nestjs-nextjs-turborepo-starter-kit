@@ -13,6 +13,7 @@
 
 import { ApiError } from "@workspace/client/lib/api/api-request";
 import { ApiDownloadError, DownloadErrorCodeSchema } from "@workspace/client/lib/api/download";
+import { describeWait, rateLimitRetryAfterSeconds } from "@workspace/client/lib/api/rate-limit";
 import { ApiErrorCodes, StandardApiErrorCodeSchema, type ApiErrorCode, type StandardApiErrorCode } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/toast";
 
@@ -47,6 +48,11 @@ export function resolveMutationErrorMessage(error: Error, overrides: MutationErr
 	}
 	if (!(error instanceof ApiError)) {
 		return UNKNOWN_MUTATION_ERROR_MESSAGE;
+	}
+	// A 429 that names its wait says it (ADR 071); one that does not keeps the generic message below.
+	const waitSeconds = overrides[ApiErrorCodes.RATE_LIMITED] === undefined ? rateLimitRetryAfterSeconds(error) : null;
+	if (waitSeconds !== null) {
+		return `Too many requests. Try again in ${describeWait(waitSeconds)}.`;
 	}
 	const byCode = error.code === undefined ? undefined : messageForCode(error.code, overrides);
 	if (byCode !== undefined) {

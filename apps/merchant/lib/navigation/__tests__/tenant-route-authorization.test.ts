@@ -128,7 +128,7 @@ describe("tenant route map ↔ app/t/[tenantSlug] pages", () => {
 	it("documents why each open route carries no capability", () => {
 		const openRoutes = TenantPageRouteSchema.options.filter((route) => ORG_PAGE_RULES[route].kind === "open");
 
-		expect(openRoutes).toEqual(["/", "/account", "/stores"]);
+		expect(openRoutes).toEqual(["/", "/account", "/notifications", "/notifications/settings", "/stores"]);
 		for (const route of openRoutes) {
 			const rule = ORG_PAGE_RULES[route];
 			expect(rule.kind === "open" ? rule.reason.length : 0).toBeGreaterThan(0);

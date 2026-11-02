@@ -7,7 +7,7 @@ import { readCaughtErrorMessage } from "../../../../platform/infrastructure/util
 import { rejectAfter } from "../../../../platform/infrastructure/utils/promise-timeout";
 import { EmailDeliveryFailure, type EmailDeliveryPort, type EmailDeliveryReceipt } from "../../application/ports/email-delivery.port";
 import { EMAIL_RENDER_CONTEXT } from "../../application/ports/notifications.tokens";
-import type { BaseEmailProps, BaseEmailTemplate } from "../../domain/templates/base/base-email-template";
+import type { BaseEmailProps, BaseEmailTemplate, EmailUnsubscribeLinks } from "../../domain/templates/base/base-email-template";
 import { maskEmail } from "./mask-email";
 import { EmailTransport, EmailTransportError } from "./transports/email-transport";
 
@@ -27,6 +27,12 @@ class EmailTimeoutError extends Error {
  * (Resend uses it as its idempotency key), so a retry after a timeout — by the
  * queue or the inline loop — can never send twice to a real recipient.
  */
+/** RFC 8058 one-click unsubscribe: the mail client POSTs `List-Unsubscribe=One-Click` to the URL. */
+/** RFC 8058: the one-click endpoint the mail client POSTs to (never the web page a person opens). */
+export function listUnsubscribeHeaders(links: EmailUnsubscribeLinks | null): Readonly<Record<string, string>> {
+	return links === null ? {} : { "List-Unsubscribe": `<${links.oneClickUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" };
+}
+
 @Injectable()
 export class EmailDeliveryAdapter implements EmailDeliveryPort {
 	public constructor(
@@ -50,6 +56,7 @@ export class EmailDeliveryAdapter implements EmailDeliveryPort {
 			cc: props.cc ?? [],
 			bcc: props.bcc ?? [],
 			replyTo: props.replyTo ?? this.config.email.replyTo,
+			headers: listUnsubscribeHeaders(template.unsubscribeLinks()),
 		});
 		try {
 			// Not every provider SDK takes an AbortSignal — a hung call is cut by the timeout branch.

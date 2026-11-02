@@ -133,9 +133,28 @@ Send the bill total in minor units (sen) and up to 10 QR tokens / backup codes o
 | `data.paidAt` | integer | yes |  |
 | `data.redemptions` | object[] | yes |  |
 | `data.redemptions[].claimId` | string (uuid) | yes |  |
+| `data.redemptions[].offer` | object | yes |  |
+| `data.redemptions[].offer.⟨shape 1⟩ percentOff` | integer | yes |  |
+| `data.redemptions[].offer.⟨shape 1⟩ type` | "DISCOUNT" | yes |  |
+| `data.redemptions[].offer.⟨shape 2⟩ amountMinor` | integer | yes |  |
+| `data.redemptions[].offer.⟨shape 2⟩ currency` | "MYR" | yes |  |
+| `data.redemptions[].offer.⟨shape 2⟩ type` | "CASHBACK" | yes |  |
+| `data.redemptions[].offer.⟨shape 3⟩ points` | integer | yes |  |
+| `data.redemptions[].offer.⟨shape 3⟩ type` | "POINTS" | yes |  |
+| `data.redemptions[].offer.⟨shape 4⟩ item` | object | yes |  |
+| `data.redemptions[].offer.⟨shape 4⟩ item.name` | string | yes |  |
+| `data.redemptions[].offer.⟨shape 4⟩ item.sku` | string | yes |  |
+| `data.redemptions[].offer.⟨shape 4⟩ quantity` | integer | yes |  |
+| `data.redemptions[].offer.⟨shape 4⟩ type` | "FREE_ITEM" | yes |  |
+| `data.redemptions[].offer.⟨shape 5⟩ freeQuantity` | integer | yes |  |
+| `data.redemptions[].offer.⟨shape 5⟩ item` | object | yes |  |
+| `data.redemptions[].offer.⟨shape 5⟩ item.name` | string | yes |  |
+| `data.redemptions[].offer.⟨shape 5⟩ item.sku` | string | yes |  |
+| `data.redemptions[].offer.⟨shape 5⟩ type` | "BOGO" | yes |  |
 | `data.redemptions[].redemptionId` | string (uuid) | yes |  |
 | `data.redemptions[].rewardId` | string (uuid) | yes |  |
 | `data.redemptions[].rewardTitle` | string | yes |  |
+| `data.redemptions[].rewardType` | "DISCOUNT" \| "FREE_ITEM" \| "CASHBACK" \| "POINTS" \| "BOGO" | yes |  |
 | `data.saleId` | string (uuid) | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -223,8 +242,29 @@ POS validate QR or backup code
 | `data.claimId` | string (uuid) | yes |  |
 | `data.invalidReason` | "ALREADY_REDEEMED" \| "EXPIRED" \| "NOT_VALID_AT_STORE" \| "STORE_REQUIRED" \| "CUSTOMER_BANNED" \| null | yes |  |
 | `data.minSpendMinor` | integer \| null | yes |  |
+| `data.offer` | object | yes |  |
+| `data.offer.⟨shape 1⟩ percentOff` | integer | yes |  |
+| `data.offer.⟨shape 1⟩ type` | "DISCOUNT" | yes |  |
+| `data.offer.⟨shape 2⟩ amountMinor` | integer | yes |  |
+| `data.offer.⟨shape 2⟩ currency` | "MYR" | yes |  |
+| `data.offer.⟨shape 2⟩ type` | "CASHBACK" | yes |  |
+| `data.offer.⟨shape 3⟩ points` | integer | yes |  |
+| `data.offer.⟨shape 3⟩ type` | "POINTS" | yes |  |
+| `data.offer.⟨shape 4⟩ item` | object | yes |  |
+| `data.offer.⟨shape 4⟩ item.name` | string | yes |  |
+| `data.offer.⟨shape 4⟩ item.sku` | string | yes |  |
+| `data.offer.⟨shape 4⟩ quantity` | integer | yes |  |
+| `data.offer.⟨shape 4⟩ type` | "FREE_ITEM" | yes |  |
+| `data.offer.⟨shape 5⟩ freeQuantity` | integer | yes |  |
+| `data.offer.⟨shape 5⟩ item` | object | yes |  |
+| `data.offer.⟨shape 5⟩ item.name` | string | yes |  |
+| `data.offer.⟨shape 5⟩ item.sku` | string | yes |  |
+| `data.offer.⟨shape 5⟩ type` | "BOGO" | yes |  |
+| `data.rewardDescription` | string | yes |  |
+| `data.rewardId` | string (uuid) | yes |  |
 | `data.rewardTitle` | string | yes |  |
 | `data.rewardType` | "DISCOUNT" \| "FREE_ITEM" \| "CASHBACK" \| "POINTS" \| "BOGO" | yes |  |
+| `data.termsConditions` | string \| null | yes |  |
 | `data.valid` | boolean | yes |  |
 
 **Errors** (standard envelope, branch on `error.code`)
@@ -864,12 +904,16 @@ List the API key's tenant rewards
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `data` | object[] | yes |  |
+| `data[].audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
 | `data[].category` | string | yes |  |
 | `data[].claimCount` | integer | yes | min -9007199254740991 |
 | `data[].createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data[].deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data[].description` | string | yes |  |
 | `data[].expiryDate` | integer | yes |  |
+| `data[].freeItem` | object \| null | yes |  |
+| `data[].freeItem.name` | string | yes |  |
+| `data[].freeItem.sku` | string | yes |  |
 | `data[].id` | string (uuid) | yes |  |
 | `data[].images` | object[] | yes | 1–10 items |
 | `data[].images[].fileId` | string (uuid) | yes |  |
@@ -1076,9 +1120,14 @@ Create a draft reward for the API key's tenant
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `audienceCustomerIds` | string (uuid)[] | no | 0–500 items; default `[]` |
+| `audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | no | default `"EVERYONE"` |
 | `category` | "cafe" \| "restaurant" \| "retail" \| "wellness" \| "entertainment" \| "food" \| "beverage" | yes |  |
 | `description` | string | yes | length 1–5000 |
 | `expiryDate` | integer | yes |  |
+| `freeItem` | object | no |  |
+| `freeItem.name` | string | yes | length 1–200 |
+| `freeItem.sku` | string | yes | length 1–64; pattern `^[A-Za-z0-9](?:[A-Za-z0-9._/-]*[A-Za-z0-9])?$` |
 | `imageFileIds` | string (uuid)[] | yes | 1–10 items |
 | `locationIds` | string (uuid)[] | no | default `[]` |
 | `locationScopeType` | "ALL_LOCATIONS" \| "SELECTED" | no | default `"ALL_LOCATIONS"` |
@@ -1100,12 +1149,16 @@ Create a draft reward for the API key's tenant
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `data.audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
+| `data.freeItem` | object \| null | yes |  |
+| `data.freeItem.name` | string | yes |  |
+| `data.freeItem.sku` | string | yes |  |
 | `data.id` | string (uuid) | yes |  |
 | `data.images` | object[] | yes | 1–10 items |
 | `data.images[].fileId` | string (uuid) | yes |  |
@@ -1270,12 +1323,16 @@ Read one of the API key's tenant rewards (404 when not offered at the key's stor
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `data.audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
+| `data.freeItem` | object \| null | yes |  |
+| `data.freeItem.name` | string | yes |  |
+| `data.freeItem.sku` | string | yes |  |
 | `data.id` | string (uuid) | yes |  |
 | `data.images` | object[] | yes | 1–10 items |
 | `data.images[].fileId` | string (uuid) | yes |  |
@@ -1418,8 +1475,13 @@ Update a draft or pending reward of the API key's tenant
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `audienceCustomerIds` | string (uuid)[] | no | 0–500 items |
+| `audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | no |  |
 | `description` | string | no | length 1–5000 |
 | `expiryDate` | integer | no |  |
+| `freeItem` | object \| null | no |  |
+| `freeItem.name` | string | yes | length 1–200 |
+| `freeItem.sku` | string | yes | length 1–64; pattern `^[A-Za-z0-9](?:[A-Za-z0-9._/-]*[A-Za-z0-9])?$` |
 | `imageFileIds` | string (uuid)[] | no | 1–10 items |
 | `quantityTotal` | integer | no | min 1 |
 | `referralPoolTotal` | integer | no | min 1 |
@@ -1438,12 +1500,16 @@ Update a draft or pending reward of the API key's tenant
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `data.audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
+| `data.freeItem` | object \| null | yes |  |
+| `data.freeItem.name` | string | yes |  |
+| `data.freeItem.sku` | string | yes |  |
 | `data.id` | string (uuid) | yes |  |
 | `data.images` | object[] | yes | 1–10 items |
 | `data.images[].fileId` | string (uuid) | yes |  |
@@ -1595,12 +1661,16 @@ _No fields._
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `data.audienceType` | "EVERYONE" \| "SELECTED_CUSTOMERS" | yes |  |
 | `data.category` | string | yes |  |
 | `data.claimCount` | integer | yes | min -9007199254740991 |
 | `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
 | `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
 | `data.description` | string | yes |  |
 | `data.expiryDate` | integer | yes |  |
+| `data.freeItem` | object \| null | yes |  |
+| `data.freeItem.name` | string | yes |  |
+| `data.freeItem.sku` | string | yes |  |
 | `data.id` | string (uuid) | yes |  |
 | `data.images` | object[] | yes | 1–10 items |
 | `data.images[].fileId` | string (uuid) | yes |  |

@@ -22,6 +22,8 @@ describe("merchant nav authorization", () => {
 			"analytics",
 			"rewards",
 			"rewards-new",
+			"broadcasts",
+			"broadcasts-new",
 			"redemptions",
 			"terminals",
 			"api-keys",
@@ -33,6 +35,14 @@ describe("merchant nav authorization", () => {
 			"settings-banned-customers",
 			"account",
 		]);
+	});
+
+	it("shows broadcasts to managers and keeps them from cashiers", () => {
+		const managerIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("MANAGER")))).map((item) => item.id);
+		const cashierIds = filterMerchantNavItems(MERCHANT_NAV_ITEMS, predicateFor(resolveMerchantCapabilities(membershipFixture("CASHIER")))).map((item) => item.id);
+
+		expect(managerIds).toEqual(expect.arrayContaining(["broadcasts", "broadcasts-new"]));
+		expect(cashierIds).not.toContain("broadcasts");
 	});
 
 	it("hides business verification from admins (owner-only)", () => {

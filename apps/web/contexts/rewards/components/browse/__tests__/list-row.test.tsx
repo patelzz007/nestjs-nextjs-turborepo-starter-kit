@@ -57,3 +57,11 @@ describe("RewardListRow action", () => {
 		expect(action.querySelector("svg")).toBeNull();
 	});
 });
+
+describe("RewardListRow audience", () => {
+	it("marks a reward the merchant gave the viewer as just for them", () => {
+		render(<RewardListRow reward={buildRewardResponse({ audienceType: "SELECTED_CUSTOMERS" })} />);
+
+		expect(screen.getByText("Just for you")).toBeDefined();
+	});
+});

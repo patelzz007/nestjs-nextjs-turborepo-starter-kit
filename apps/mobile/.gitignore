@@ -10,3 +10,6 @@ dist/
 # What Gradle builds inside a local module's Android sources.
 modules/*/android/build/
 modules/*/android/.gradle/
+
+# Firebase config for push (ADR 070): each product adds its own; google-services.example.json shows the shape.
+/google-services.json

@@ -4,7 +4,7 @@
 // Built per transaction by `OperationsScopeFactory` (infrastructure/persistence). Reads get the same
 // repositories without the email port: a read never requests an email.
 
-import type { EmailRequestTransactionalPort } from "../../notifications/public-api";
+import type { EmailRequestTransactionalPort, NotifyTransactionalPort } from "../../notifications/public-api";
 import type {
 	LoadTestRepository,
 	OpsAlertRecipientsReader,
@@ -30,5 +30,7 @@ export interface OperationsReadScope {
 export interface OperationsScope extends OperationsReadScope {
 	/** Emails requested here commit (or roll back) with the unit of work (ADR 060). */
 	readonly emails: EmailRequestTransactionalPort;
+	/** `notify()` (ADR 070): the alerts' notifications commit with the alert rows. */
+	readonly notifications: NotifyTransactionalPort;
 	readonly purge: LoadTestPurgePort;
 }

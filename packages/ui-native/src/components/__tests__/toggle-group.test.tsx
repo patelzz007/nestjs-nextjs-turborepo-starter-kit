@@ -82,6 +82,20 @@ describe("ToggleGroup", () => {
 		expect(chip).toHaveProp("hitSlop", 4);
 	});
 
+	it("draws pill chips: a solid brand pill for the chosen one, a muted one for the rest", async () => {
+		await render(<ToggleGroup<Style> type="single" label="Text style" options={OPTIONS} value="bold" onChange={jest.fn()} variant="pill" size="sm" />);
+
+		const chosen = String(screen.getByRole("radio", { name: "Bold" }).props.className);
+		const other = String(screen.getByRole("radio", { name: "Italic" }).props.className);
+		expect(chosen).toContain("rounded-full");
+		expect(chosen).toContain("bg-primary");
+		expect(chosen).not.toContain("bg-secondary");
+		expect(other).toContain("bg-muted");
+		expect(other).not.toContain("rounded-md");
+		expect(String(screen.getByText("Bold").props.className)).toContain("text-primary-foreground");
+		expect(String(screen.getByText("Italic").props.className)).toContain("text-foreground");
+	});
+
 	it("forwards its ref, merges the caller's className last and reports focus and blur", async () => {
 		const ref = React.createRef<ViewInstance>();
 		const onFocus = jest.fn();

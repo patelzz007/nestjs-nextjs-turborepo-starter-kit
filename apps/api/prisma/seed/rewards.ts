@@ -8,6 +8,7 @@ import { API_KEY_PREFIX_LENGTH } from "../../src/contexts/pos/public-api";
 
 import { cleanupTenantSeedData, TENANT_SEED_IDS, SEED_TENANT_IDS, SEED_TEAM_INVITE_TOKEN_KL_ALICE, seedTenantsAndMerchants } from "./tenants";
 import { prisma } from "./client";
+import { cleanupSeedInboxNotifications } from "./inbox-notifications";
 import { seedCodeHash } from "./reward-code-hashing";
 import { deterministicUuid } from "./deterministic-uuid";
 import { daysAgo, daysFromNow } from "./helpers";
@@ -61,6 +62,9 @@ interface ExtraKlRewardSeed {
 	readonly description: string;
 	readonly rewardType: RewardType;
 	readonly rewardValue: number;
+	/** FREE_ITEM / BOGO only: the item given, as the receipt names it, and its SKU (ADR 074). */
+	readonly freeItemName?: string;
+	readonly freeItemSku?: string;
 	readonly category: string;
 	readonly imageSet: RewardImageSetSlug;
 	readonly quantityTotal: number;
@@ -73,6 +77,9 @@ interface ExtraMlkRewardSeed {
 	readonly title: string;
 	readonly rewardType: RewardType;
 	readonly rewardValue: number;
+	/** FREE_ITEM / BOGO only: the item given, as the receipt names it, and its SKU (ADR 074). */
+	readonly freeItemName?: string;
+	readonly freeItemSku?: string;
 	readonly description: string;
 	readonly category: string;
 	readonly imageSet: RewardImageSetSlug;
@@ -172,6 +179,7 @@ export async function cleanupRewardSeedData(): Promise<void> {
 	const userId = { in: seedConsumers.map((consumer) => consumer.id) };
 
 	await prisma.rewardNotification.deleteMany({ where: { userId } });
+	await cleanupSeedInboxNotifications(seedConsumers.map((consumer) => consumer.id));
 	await prisma.rewardLegalAcceptance.deleteMany({ where: { userId } });
 	await prisma.rewardOtpChallenge.deleteMany({ where: { userId } });
 	await prisma.rewardRedemption.deleteMany({ where: { tenantId } });
@@ -367,6 +375,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				title: "Free coffee — Grand Opening",
 				description: "One free regular coffee. Show QR at counter. Valid 7 days after claim.",
 				rewardType: "FREE_ITEM",
+				freeItemName: "Americano (12 oz)",
+				freeItemSku: "BEV-AMERICANO-12OZ",
 				rewardValue: 1,
 				termsConditions: "One per customer. Valid weekdays only.",
 				rewardKind: "CONSUMER",
@@ -414,6 +424,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				title: "Free iced tea — Bukit Katil opening",
 				description: "Complimentary iced tea with any main course at Bukit Katil only.",
 				rewardType: "FREE_ITEM",
+				freeItemName: "Iced lemon tea",
+				freeItemSku: "BEV-ICEDTEA-LEMON",
 				rewardValue: 1,
 				termsConditions: "Bukit Katil store only. One per customer per day.",
 				rewardKind: "CONSUMER",
@@ -465,6 +477,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			title: "Referrer: Free pastry (Brew & Bean)",
 			description: "A free pastry of your choice, earned when a friend redeems their free coffee.",
 			rewardType: "FREE_ITEM",
+			freeItemName: "Butter croissant",
+			freeItemSku: "BAK-CROISSANT-BUTTER",
 			rewardValue: 1,
 			rewardKind: "REFERRER",
 			category: "cafe",
@@ -539,6 +553,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				title: "Draft: Matcha latte trial",
 				description: "A free iced or hot matcha latte while we trial our new matcha.",
 				rewardType: "FREE_ITEM",
+				freeItemName: "Matcha latte (12 oz)",
+				freeItemSku: "BEV-MATCHA-LATTE-12OZ",
 				rewardValue: 1,
 				rewardKind: "CONSUMER",
 				category: "beverage",
@@ -571,6 +587,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				title: "Disabled: Cendol giveaway",
 				description: "A free bowl of cendol with gula Melaka with any main course.",
 				rewardType: "FREE_ITEM",
+				freeItemName: "Cendol",
+				freeItemSku: "DST-CENDOL",
 				rewardValue: 1,
 				rewardKind: "CONSUMER",
 				category: "food",
@@ -612,6 +630,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			title: "Buy one, get one signature noodles",
 			description: "Buy one bowl of our signature curry laksa and get a second one free.",
 			rewardType: "BOGO",
+			freeItemName: "Signature curry laksa",
+			freeItemSku: "NDL-CURRY-LAKSA",
 			rewardValue: 1,
 			category: "food",
 			imageSet: "signature-noodles",
@@ -634,6 +654,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			title: "Free croissant with any drink",
 			description: "A free butter croissant with any hot or iced drink before 11am.",
 			rewardType: "FREE_ITEM",
+			freeItemName: "Butter croissant",
+			freeItemSku: "BAK-CROISSANT-BUTTER",
 			rewardValue: 1,
 			category: "food",
 			imageSet: "croissant",
@@ -645,6 +667,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			title: "Wellness: Free yoga class voucher",
 			description: "One free drop-in class at our partner yoga studio next door.",
 			rewardType: "FREE_ITEM",
+			freeItemName: "Drop-in yoga class (60 min)",
+			freeItemSku: "SVC-YOGA-DROPIN-60",
 			rewardValue: 1,
 			category: "wellness",
 			imageSet: "yoga-class",
@@ -662,6 +686,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				description: row.description,
 				rewardType: row.rewardType,
 				rewardValue: row.rewardValue,
+				freeItemName: row.freeItemName ?? null,
+				freeItemSku: row.freeItemSku ?? null,
 				termsConditions: "Subject to store availability.",
 				rewardKind: "CONSUMER",
 				category: row.category,
@@ -680,6 +706,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		{
 			title: "Nyonya kuih sampler",
 			rewardType: "FREE_ITEM",
+			freeItemName: "Nyonya kuih sampler (3 pcs)",
+			freeItemSku: "KUI-SAMPLER-3PC",
 			rewardValue: 1,
 			description: "Three-piece kuih platter. Bukit Katil only.",
 			category: "food",
@@ -705,6 +733,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				description: row.description,
 				rewardType: row.rewardType,
 				rewardValue: row.rewardValue,
+				freeItemName: row.freeItemName ?? null,
+				freeItemSku: row.freeItemSku ?? null,
 				termsConditions: "While stocks last.",
 				rewardKind: "CONSUMER",
 				category: row.category,

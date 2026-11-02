@@ -1,4 +1,7 @@
-import { Module } from "@nestjs/common";
+import { Module, type OnModuleInit } from "@nestjs/common";
+
+import { describeSlidingWindow, RateLimitPolicyRegistry } from "../../platform/application/rate-limiting/rate-limit-policy-registry";
+import { POS_RATE_LIMIT_PER_KEY, POS_RATE_LIMIT_POLICY, POS_RATE_LIMIT_TTL_MS, PosRateLimitGuard } from "./presentation/http/guards/pos-rate-limit.guard";
 import type { Prisma } from "@prisma/client";
 
 import type { UnitOfWork } from "../../platform/application/unit-of-work.port";
@@ -39,7 +42,6 @@ import { PosScopeFactory } from "./infrastructure/persistence/pos-scope.factory"
 import { PrismaApiKeyReadRepository, PrismaRedemptionReadRepository, PrismaTerminalReadRepository } from "./infrastructure/persistence/prisma-pos.read-repositories";
 import { PosRegistrations } from "./infrastructure/pos-registrations";
 import { MerchantApiKeyGuard } from "../../platform/presentation/http/security/guards/merchant-api-key.guard";
-import { PosRateLimitGuard } from "./presentation/http/guards/pos-rate-limit.guard";
 import { TenantApiKeysController } from "./presentation/http/tenant-api-keys.controller";
 import { IntegrationRedemptionsController } from "./presentation/http/integration-redemptions.controller";
 import { TenantRedemptionsController } from "./presentation/http/tenant-redemptions.controller";
@@ -118,4 +120,18 @@ import { RedemptionsController } from "./presentation/http/redemptions.controlle
 		ListTenantRedemptionsHandler,
 	],
 })
-export class PosModule {}
+export class PosModule implements OnModuleInit {
+	public constructor(private readonly rateLimitPolicies: RateLimitPolicyRegistry) {}
+
+	/** The per-key till limit this module's guard counts (ADR 071). */
+	public onModuleInit(): void {
+		this.rateLimitPolicies.register({
+			name: POS_RATE_LIMIT_POLICY,
+			algorithm: "sliding-window",
+			subject: "apiKey",
+			limit: describeSlidingWindow(POS_RATE_LIMIT_PER_KEY, POS_RATE_LIMIT_TTL_MS),
+			failMode: "open",
+			penalty: false,
+		});
+	}
+}

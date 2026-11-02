@@ -104,6 +104,9 @@ export const DATA_CHANGE_CAPTURE_EXEMPTIONS: Readonly<Record<string, string>> = 
 	LoadTestPoint: TELEMETRY_REASON,
 	LoadTestStepStat: TELEMETRY_REASON,
 	PlatformResourceIdempotencyRecord: "Idempotency-Key replay cache (expired rows are taken over in place); the request it replays is in the HTTP audit trail.",
+	Notification: `${LOG_REASON} One row per message to one person (ADR 070), written by the fan-out; its payload can carry a one-time code.`,
+	NotificationDelivery: `${LOG_REASON} The delivery log (ADR 070): one row per channel attempt chain, updated by the workers on every state change.`,
+	MarketingConsent: `${AUDIT_TRAIL_REASON} Append-only proof of marketing consent (ADR 070).`,
 };
 
 /** Columns whose value never enters a change record — credentials, key material and their digests. */
@@ -123,6 +126,7 @@ export const DATA_CHANGE_SECRET_COLUMNS: Readonly<Record<string, readonly string
 	RewardReferral: ["attributionToken", "refereeDeviceHash"],
 	TenantEncryptionKey: ["wrappedKey"],
 	GithubAccountLink: ["tokenCiphertext"],
+	PushDevice: ["tokenCiphertext", "tokenHash"],
 };
 
 const KEY_VERSION_REASON = "The version number of the key that encrypted a secret: it names a key and holds no key material.";
@@ -143,6 +147,12 @@ export const DATA_CHANGE_NON_SECRET_COLUMNS: Readonly<Record<string, Readonly<Re
 	GithubAccountLink: {
 		tokenKeyVersion: KEY_VERSION_REASON,
 		tokenExpiresAt: "When GitHub expires the linked token (epoch ms): a date the app shows to its owner, not part of the credential.",
+	},
+	NotificationSchedule: {
+		digestFrequency: "How often the email digest is sent (OFF, DAILY, WEEKLY): a preference, not a hash digest.",
+	},
+	NotificationSuppression: {
+		destinationHash: "SHA-256 of a normalized email address or phone number, the lookup key of a suppression; derived from an address, not from a credential.",
 	},
 	RewardSale: {
 		requestHash: "Fingerprint of a POS sale request used to detect idempotent replays; derived from the sale body, not from a credential.",

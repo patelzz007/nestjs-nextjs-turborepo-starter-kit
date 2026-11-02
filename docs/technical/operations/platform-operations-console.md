@@ -48,8 +48,15 @@ The API enforces every row (`SERVER_METRIC`, `LOAD_TEST`, `DATABASE_BACKUP` perm
    `OpsServerSample` (`MINUTE`). Every API instance records its own minute (`OpsInstanceSample`) and
    one instance per minute probes the dependencies (`OpsDependencySample`).
 3. Hourly, the minutes roll up into `HOUR` rows. Minutes are kept 7 days, hours a year.
-4. Each minute the alert rules run over the latest readings; an alert opens and resolves by email
-   to every SuperAdmin plus `OPS_ALERT_EXTRA_RECIPIENTS`.
+4. Each minute the alert rules run over the latest readings. An alert opens and resolves through
+   `notify()` (`operations.alert`) for every SuperAdmin, Admin and Platform Developer — admin bell,
+   phone app, push at any hour, email — and by email alone to `OPS_ALERT_EXTRA_RECIPIENTS`
+   (`ops-alert-notifier.ts`, [notifications](../notifications/overview.md#operations-alerts)).
+   An instance that stops reporting alerts only when nothing **replaced** it: if a newer process of the
+   same service on the same host started after it last reported, it was restarted (a deploy, a process
+   manager, a developer's watcher), so it opens no alert and the live store forgets it that minute
+   (`replacedInstanceIds`). One with no successor — a crash nothing restarted, a host gone — alerts, and
+   is forgotten after 24 hours.
 
 ### Cloud providers (a generic adapter)
 

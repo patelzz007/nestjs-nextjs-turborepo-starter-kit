@@ -6,6 +6,7 @@
 //   mail [--to <email>] [--code] pnpm mail:latest — the newest email in the local Mailpit
 //   webhook-signature            pnpm --filter @workspace/api webhook:test-signature — a signed + a tampered Resend event
 //   email-previews               pnpm --filter @workspace/api email:previews — the docs gallery screenshots
+//   notifications-demo [--email] pnpm --filter @workspace/api notifications:demo — a few real notifications for one person
 // Run through the package scripts, which load apps/api/.env first.
 
 import { execFileSync, spawn } from "node:child_process";
@@ -18,17 +19,29 @@ import { fileURLToPath } from "node:url";
 
 import { PrismaPg } from "@prisma/adapter-pg";
 import { GithubAccountLinkStatus, PrismaClient } from "@prisma/client";
-import { CaughtValueSchema, EmailRenderContextSchema, HttpUrlEnvSchema } from "@workspace/shared";
+import { createBullMqConnection } from "@workspace/messaging";
+import { CaughtValueSchema, EmailRenderContextSchema, HttpUrlEnvSchema, QUEUE_NAMES } from "@workspace/shared";
+import { Queue } from "bullmq";
 
+import { getApiConfig } from "../src/config/api-config";
 import { ApiEnvSchema } from "../src/config/api-config.schema";
 import { TypedConfigService } from "../src/config/typed-config.service";
 import { GithubCredentialCipher } from "../src/contexts/integrations-github/infrastructure/adapters/github-credential.cipher";
 import { GithubHttpTransport, GLOBAL_GITHUB_FETCH } from "../src/contexts/integrations-github/infrastructure/github-api/github-http.transport";
 import { GithubWebhooksClient } from "../src/contexts/integrations-github/infrastructure/github-api/github-webhooks.client";
+import type { NotificationChannelJob, NotificationFanOutJob } from "../src/contexts/notifications/application/ports/notification-queues.port";
+import { DemoNotificationsSender } from "../src/contexts/notifications/application/services/demo-notifications";
+import { PrismaDemoNotificationsStore } from "../src/contexts/notifications/infrastructure/persistence/prisma-demo-notifications.store";
+import { BullMqNotificationQueues } from "../src/contexts/notifications/infrastructure/queue/bullmq-notification-queues";
+import { RequestContextService } from "../src/platform/infrastructure/context/request-context";
+import { SystemClock } from "../src/platform/infrastructure/system-clock";
 import { readCaughtErrorMessage } from "../src/platform/infrastructure/utils/caught-error";
+import { PrismaService } from "../src/prisma/prisma.service";
+import { TenantTransactionService } from "../src/prisma/tenant-transaction.service";
 import { EXIT_FAILED, EXIT_OK, PROCESS_OUTPUT, runCli, type CliCommand } from "./lib/cli";
 import { lightPinnedHtml } from "./lib/email-preview";
 import { extractVerificationCodes, formatMessage, MailpitMessageSchema, MailpitSearchResponseSchema, newestMessageToPath, parseInboxArgs } from "./lib/mailpit";
+import { describeDemoNotificationsOutcome, parseDemoNotificationsArgs } from "./lib/notifications-demo";
 import { EMAIL_WEBHOOK_PATH, envValue, findEmailWebhookId, newestTunnelUrl, ResendWebhookListSchema, webhookUrlFor, withEnvValue } from "./lib/tunnel";
 import { signStandardWebhook, standardWebhookHeaders } from "./lib/webhook-signature";
 
@@ -380,12 +393,50 @@ async function emailPreviews(): Promise<number> {
 
 // ── entry ─────────────────────────────────────────────────────────────────
 
+// ── notifications-demo ────────────────────────────────────────────────────
+
+/**
+ * A few real notifications for one person (the superadmin unless `--email` says otherwise), through the
+ * API's own notify() and fan-out queue: they land in the admin panel's and the mobile app's inboxes, on
+ * registered phones and in Mailpit. Needs `pnpm db:apply-security` once (the `notifications.demo` operation).
+ */
+async function notificationsDemo(args: readonly string[]): Promise<number> {
+	if (refuseInProduction("notifications-demo")) {
+		return EXIT_FAILED;
+	}
+	const query = parseDemoNotificationsArgs(args);
+	const config = getApiConfig();
+	const prisma = new PrismaService(new TypedConfigService(config));
+	const { redisUrl, bullPrefix } = config.messaging;
+	const queueOptions = redisUrl === undefined ? null : { connection: createBullMqConnection(redisUrl), prefix: bullPrefix };
+	const queues =
+		queueOptions === null
+			? null
+			: {
+					fanOut: new Queue<NotificationFanOutJob>(QUEUE_NAMES.notificationsFanOut, queueOptions),
+					push: new Queue<NotificationChannelJob>(QUEUE_NAMES.notificationsPush, queueOptions),
+					sms: new Queue<NotificationChannelJob>(QUEUE_NAMES.notificationsSms, queueOptions),
+				};
+	try {
+		const clock = new SystemClock();
+		const store = new PrismaDemoNotificationsStore(new TenantTransactionService(prisma, new RequestContextService()), clock);
+		const sender = new DemoNotificationsSender(store, queues === null ? null : new BullMqNotificationQueues(queues.fanOut, queues.push, queues.sms), clock);
+		const report = describeDemoNotificationsOutcome(query, await sender.send(query));
+		(report.ok ? out : err)(report.message);
+		return report.ok ? EXIT_OK : EXIT_FAILED;
+	} finally {
+		await Promise.all(queues === null ? [] : [queues.fanOut.close(), queues.push.close(), queues.sms.close()]);
+		await prisma.$disconnect();
+	}
+}
+
 const DEV_COMMANDS: ReadonlyMap<string, CliCommand> = new Map<string, CliCommand>([
 	["tunnel", { summary: "Start a detached quick tunnel to the API and re-point the Resend and GitHub webhooks", run: tunnel }],
 	["github-webhook", { summary: "Re-point GitHub live pull-request updates to <tunnel-url>", run: githubWebhook }],
 	["mail", { summary: "Print the newest email in Mailpit (--to <email>, --code)", run: mail }],
 	["webhook-signature", { summary: "Post a signed and a tampered Resend event to the email webhook", run: webhookSignature }],
 	["email-previews", { summary: "Screenshot every email template into docs/images/email", run: emailPreviews }],
+	["notifications-demo", { summary: "Send one person a few real notifications (--email <address>; default: the superadmin)", run: notificationsDemo }],
 ]);
 
 process.exitCode = await runCli("dev", DEV_COMMANDS, process.argv.slice(2));

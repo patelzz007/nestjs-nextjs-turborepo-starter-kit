@@ -1,40 +1,95 @@
-import { Injectable, type ExecutionContext } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { z } from "zod";
-import { InjectThrottlerOptions, InjectThrottlerStorage, ThrottlerGuard, type ThrottlerModuleOptions, type ThrottlerStorage } from "@nestjs/throttler";
+import { InjectThrottlerOptions, InjectThrottlerStorage, ThrottlerGuard, type ThrottlerModuleOptions, type ThrottlerRequest, type ThrottlerStorage } from "@nestjs/throttler";
 
-import { LOAD_TEST_KEY_HEADER, LoadTestTrafficKeys } from "../../../../infrastructure/throttling/load-test-traffic-keys";
+import { RateLimitError } from "../../../../application/errors/app-error";
+import { hasAuthenticatedPrincipal } from "../../../../infrastructure/http/client-ip";
+import { RateLimitExemptions } from "../../../../infrastructure/rate-limiting/rate-limit-exemptions";
+import { RateLimitRefusalLog } from "../../../../infrastructure/rate-limiting/rate-limit-refusal-log";
+import { SECURITY_THROTTLERS, throttlerPolicyName } from "../../../../infrastructure/throttling/rate-limiter-throttler.storage";
 import { PRE_AUTH_THROTTLER } from "./rate-limit-policy";
 
-/** One non-empty header value (a repeated header arrives as a list, and is ignored). */
-const LoadTestKeyHeaderSchema = z.string().min(1);
+/** The IETF `RateLimit` header fields (draft-ietf-httpapi-ratelimit-headers). */
+export const RATE_LIMIT_POLICY_HEADER = "RateLimit-Policy";
+export const RATE_LIMIT_HEADER = "RateLimit";
 
-/** A request's `X-Load-Test-Key` header, if it sent exactly one. */
-function loadTestKeyOf(context: ExecutionContext): string | null {
-	const header: string | string[] | undefined = context.switchToHttp().getRequest<{ readonly headers: Readonly<Record<string, string | string[] | undefined>> }>().headers[
-		LOAD_TEST_KEY_HEADER
-	];
-	const parsed = LoadTestKeyHeaderSchema.safeParse(header);
-	return parsed.success ? parsed.data : null;
+const MS_PER_SECOND = 1_000;
+
+/** The policy nearest its limit so far on one request: its headers are the ones sent. */
+interface HeaderChoice {
+	readonly usedShare: number;
 }
 
+/** Sets one response header. */
+type SetHeader = (name: string, value: string) => void;
+
 /**
- * The guards' shared skip rule: a request carrying a live load-test traffic key is a load test's own
- * traffic, already capped by its run (ADR 068), so the per-IP and per-principal buckets do not count it.
+ * The guards' shared counting (ADR 071):
+ *
+ * - Exempt traffic (a live load-test key, `RATE_LIMIT_EXEMPT_CIDRS`) is counted but never refused.
+ * - A refusal is logged (`rate_limit.refused`, the capped refusal stream) and answered with the one
+ *   `RateLimitError` envelope and `Retry-After` in seconds.
+ * - Only an authenticated user or API key receives the `RateLimit-Policy` / `RateLimit` headers, for
+ *   the policy nearest its limit; an unauthenticated caller learns nothing about attempts left.
  */
-abstract class LoadTestAwareThrottlerGuard extends ThrottlerGuard {
+abstract class PolicyThrottlerGuard extends ThrottlerGuard {
+	private readonly headerChoices: WeakMap<object, HeaderChoice> = new WeakMap<object, HeaderChoice>();
+
 	public constructor(
 		options: ThrottlerModuleOptions,
 		storage: ThrottlerStorage,
 		reflector: Reflector,
-		private readonly loadTestKeys: LoadTestTrafficKeys,
+		private readonly exemptions: RateLimitExemptions,
+		private readonly refusals: RateLimitRefusalLog,
 	) {
 		super(options, storage, reflector);
 	}
 
-	protected override async shouldSkip(context: ExecutionContext): Promise<boolean> {
-		const key: string | null = loadTestKeyOf(context);
-		return (key !== null && (await this.loadTestKeys.isLive(key))) || super.shouldSkip(context);
+	protected override async handleRequest(requestProps: ThrottlerRequest): Promise<boolean> {
+		const { context, limit, ttl, throttler, blockDuration, getTracker, generateKey } = requestProps;
+		const { req, res } = this.getRequestResponse(context);
+		const throttlerName = throttler.name ?? "default";
+		const tracker = await getTracker(req, context);
+		const key = generateKey(context, tracker, throttlerName);
+		const record = await this.storageService.increment(key, ttl, limit, blockDuration, throttlerName);
+		if (record.isBlocked) {
+			if ((await this.exemptions.reasonFor(req)) !== null) {
+				// Counted above, so the admin page sees it; never refused, and not a refusal to log.
+				return true;
+			}
+			await this.refusals.record({
+				policyName: throttlerPolicyName(throttlerName),
+				subject: { kind: throttlerName === "default" ? "principal" : "ip", id: tracker },
+				penalized: SECURITY_THROTTLERS.includes(throttlerName) && record.timeToBlockExpire * MS_PER_SECOND > ttl,
+			});
+			const message = await this.getErrorMessage(context, { ...record, ttl, limit, key, tracker });
+			throw new RateLimitError({ message, details: { retryAfterSeconds: record.timeToBlockExpire } });
+		}
+		if (hasAuthenticatedPrincipal(req)) {
+			this.setRateLimitHeaders(
+				req,
+				(name: string, value: string): void => {
+					this.setResponseHeader(res, name, value);
+				},
+				throttlerPolicyName(throttlerName),
+				limit,
+				ttl,
+				record.totalHits,
+				record.timeToExpire,
+			);
+		}
+		return true;
+	}
+
+	private setRateLimitHeaders(request: object, setHeader: SetHeader, name: string, limit: number, ttlMs: number, used: number, resetSeconds: number): void {
+		const usedShare = used / limit;
+		const previous = this.headerChoices.get(request);
+		if (previous !== undefined && previous.usedShare > usedShare) {
+			return;
+		}
+		this.headerChoices.set(request, { usedShare });
+		setHeader(RATE_LIMIT_POLICY_HEADER, `"${name}";q=${String(limit)};w=${String(Math.ceil(ttlMs / MS_PER_SECOND))}`);
+		setHeader(RATE_LIMIT_HEADER, `"${name}";r=${String(Math.max(0, limit - used))};t=${String(resetSeconds)}`);
 	}
 }
 
@@ -44,14 +99,15 @@ abstract class LoadTestAwareThrottlerGuard extends ThrottlerGuard {
  * missing credentials are counted before authentication rejects them.
  */
 @Injectable()
-export class PreAuthThrottlerGuard extends LoadTestAwareThrottlerGuard {
+export class PreAuthThrottlerGuard extends PolicyThrottlerGuard {
 	public constructor(
 		@InjectThrottlerOptions() options: ThrottlerModuleOptions,
 		@InjectThrottlerStorage() storage: ThrottlerStorage,
 		reflector: Reflector,
-		loadTestKeys: LoadTestTrafficKeys,
+		exemptions: RateLimitExemptions,
+		refusals: RateLimitRefusalLog,
 	) {
-		super(options, storage, reflector, loadTestKeys);
+		super(options, storage, reflector, exemptions, refusals);
 	}
 
 	public override async onModuleInit(): Promise<void> {
@@ -65,14 +121,15 @@ export class PreAuthThrottlerGuard extends LoadTestAwareThrottlerGuard {
  * Registered AFTER `AuthGuard`, so the principal tracker sees `request.user`.
  */
 @Injectable()
-export class PrincipalThrottlerGuard extends LoadTestAwareThrottlerGuard {
+export class PrincipalThrottlerGuard extends PolicyThrottlerGuard {
 	public constructor(
 		@InjectThrottlerOptions() options: ThrottlerModuleOptions,
 		@InjectThrottlerStorage() storage: ThrottlerStorage,
 		reflector: Reflector,
-		loadTestKeys: LoadTestTrafficKeys,
+		exemptions: RateLimitExemptions,
+		refusals: RateLimitRefusalLog,
 	) {
-		super(options, storage, reflector, loadTestKeys);
+		super(options, storage, reflector, exemptions, refusals);
 	}
 
 	public override async onModuleInit(): Promise<void> {

@@ -18,8 +18,12 @@ const VALIDATE_TOKEN = "t".repeat(32);
 const META = { correlationId: "corr-1", timestamp: 1_790_812_800_000 };
 const PREVIEW = {
 	claimId: "8f5b1c2e-3d4a-4b6c-9e7f-1a2b3c4d5e6f",
+	rewardId: "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
 	rewardTitle: "Free coffee",
+	rewardDescription: "One free coffee",
 	rewardType: "FREE_ITEM",
+	offer: { type: "FREE_ITEM", quantity: 1, item: { name: "Americano (12 oz)", sku: "BEV-AMERICANO-12OZ" } },
+	termsConditions: null,
 	claimExpiresAt: 1_790_899_200_000,
 	valid: true,
 	invalidReason: null,

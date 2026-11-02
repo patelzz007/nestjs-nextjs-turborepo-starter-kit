@@ -25,6 +25,7 @@ import EmailsLoading from "../emails/loading";
 import EmailLogLoading from "../emails/log/loading";
 import EmailTemplatesLoading from "../emails/templates/loading";
 import GeographyLoading from "../geography/loading";
+import NotificationsLoading from "../notifications/loading";
 import DashboardLoading from "../(home)/loading";
 import PanelLoading from "../loading";
 import MerchantDetailLoading from "../merchants/[id]/loading";
@@ -77,6 +78,7 @@ const ROUTE_CASES: readonly RouteLoadingCase[] = [
 		announcement: "Loading analytics…",
 		landmarks: [PAGE_HEADER, '[data-slot="stat-cards-skeleton"]', '[data-slot="chart-skeleton"]', '[data-slot="list-skeleton"]'],
 	},
+	{ route: "/notifications", loadingView: NotificationsLoading, announcement: "Loading notifications…", landmarks: ['[data-slot="notifications-inbox-skeleton"]'] },
 	{ route: "/audit-logs", loadingView: AuditLogsLoading, announcement: "Loading audit log…", landmarks: [PAGE_HEADER, TABLE] },
 	{
 		route: "/audit-logs/[id]",

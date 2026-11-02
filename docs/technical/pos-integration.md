@@ -3,7 +3,7 @@ title: "POS Integration"
 tags: ["pos", "redemptions", "checkout", "api-keys", "terminals", "pairing", "sales"]
 description: "How a merchant's point-of-sale checks customers' reward QR codes and deducts rewards after payment."
 author: "Platform Team"
-lastUpdated: 1791072000000
+lastUpdated: 1793491200000
 coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
 ---
 
@@ -139,15 +139,65 @@ curl -X POST https://api.example.com/api/v1/integration/redemptions/validate \
 ```
 
 ```json
-{ "claimId": "…", "rewardTitle": "Free latte", "rewardType": "FREE_ITEM", "claimExpiresAt": 1790000000000, "valid": true, "invalidReason": null, "minSpendMinor": 2000 }
+{
+	"claimId": "…",
+	"rewardId": "…",
+	"rewardTitle": "Free latte",
+	"rewardDescription": "A free latte with any breakfast set.",
+	"rewardType": "FREE_ITEM",
+	"offer": { "type": "FREE_ITEM", "quantity": 1, "item": { "name": "Latte (12 oz)", "sku": "BEV-LATTE-12OZ" } },
+	"termsConditions": "One per customer.",
+	"claimExpiresAt": 1790000000000,
+	"valid": true,
+	"invalidReason": null,
+	"minSpendMinor": 2000
+}
 ```
 
 - Send exactly one of `token` or `backupCode` (both, or neither, is a `400` validation error).
+- `offer` is what the reward gives, in terms the POS applies — see [What a reward gives](#what-a-reward-gives-the-offer-block).
+  `rewardDescription` and `termsConditions` are the merchant's words, for the screen or the receipt.
 - `invalidReason` is one of `ALREADY_REDEEMED`, `EXPIRED`, `NOT_VALID_AT_STORE`, `STORE_REQUIRED`,
   `CUSTOMER_BANNED` (the merchant banned this customer from its rewards; tell them, do not apply it).
 - `minSpendMinor` is the reward's minimum bill in sen (`null` = none). Checkout refuses a smaller bill.
 
 Validate changes nothing except the audit log (`merchant.scan_qr`).
+
+### Why the request carries only the token
+
+The QR code a customer shows holds one thing: the **redemption token** of their claim — a random secret
+(at least 16 characters) the API issued when they claimed the reward. Only its hash is stored, like a
+password. The backup code under the QR is a shorter stand-in for the same claim. The token is all the
+API needs, because everything else is either already known or not trusted from the till:
+
+| What | Where it comes from |
+|---|---|
+| Which merchant | The `X-API-Key` header (the key belongs to one merchant, sometimes one store) |
+| Which till and store | The `X-Terminal-Id` header (a registered terminal is bound to its store) |
+| Which customer, reward and claim | The token: the API looks the claim up by its hash |
+| What the reward gives, its terms, its minimum bill | The API's own records — returned in the response, never sent by the till |
+
+So the till sends a secret it read, and the API answers with everything about it. A POS never has to
+know the reward in advance, and cannot make one look different from what the merchant set up.
+**Checkout** is where the till sends more: the bill total, its currency, an idempotency key and every
+code redeemed on that bill.
+
+### What a reward gives: the `offer` block
+
+`offer.type` is the reward's type; the other fields depend on it (ADR 074). Validate returns it, and
+checkout returns it again for every redeemed reward, so a POS can apply the reward and print it.
+
+| `type` | Fields | Example | What the POS does |
+|---|---|---|---|
+| `DISCOUNT` | `percentOff` (whole percent) | `{ "type": "DISCOUNT", "percentOff": 15 }` | Takes 15% off the bill |
+| `CASHBACK` | `amountMinor`, `currency` | `{ "type": "CASHBACK", "amountMinor": 500, "currency": "MYR" }` | Gives RM 5.00 back |
+| `POINTS` | `points` | `{ "type": "POINTS", "points": 200 }` | Adds 200 points to the customer's loyalty balance |
+| `FREE_ITEM` | `quantity`, `item.name`, `item.sku` | `{ "type": "FREE_ITEM", "quantity": 1, "item": { "name": "Latte (12 oz)", "sku": "BEV-LATTE-12OZ" } }` | Rings 1 × the SKU up at no charge; prints the name |
+| `BOGO` | `freeQuantity`, `item.name`, `item.sku` | `{ "type": "BOGO", "freeQuantity": 1, "item": { "name": "Curry laksa", "sku": "NDL-CURRY-LAKSA" } }` | For each one bought, adds 1 free |
+
+`item.sku` is the merchant's own product code, typed in the reward editor, so a POS matches it to its
+catalog. Every amount is integer minor units, like the bill. New fields may be added to these objects;
+ignore the ones you don't know (ADR 022).
 
 ## Checkout
 
@@ -175,9 +225,21 @@ Response (`201`):
 	"currency": "MYR",
 	"paidAt": 1790000000000,
 	"idempotencyKey": "…",
-	"redemptions": [{ "redemptionId": "…", "claimId": "…", "rewardId": "…", "rewardTitle": "Free latte" }]
+	"redemptions": [
+		{
+			"redemptionId": "…",
+			"claimId": "…",
+			"rewardId": "…",
+			"rewardTitle": "Free latte",
+			"rewardType": "FREE_ITEM",
+			"offer": { "type": "FREE_ITEM", "quantity": 1, "item": { "name": "Latte (12 oz)", "sku": "BEV-LATTE-12OZ" } }
+		}
+	]
 }
 ```
+
+Each redemption carries its `offer`, so the receipt can list what was given (for a free item: its name
+and SKU) without a second call.
 
 Each paid bill becomes one `RewardSale` row. It is the source of merchant sales, the customer's "where / what I spent", and the admin's platform sales (`GET /api/v1/admin/analytics/sales`, permission `ANALYTICS:READ`). One `merchant.redeem_reward` event is written to the transactional outbox in the same transaction.
 

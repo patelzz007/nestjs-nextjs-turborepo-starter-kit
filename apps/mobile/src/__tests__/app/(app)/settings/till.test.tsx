@@ -3,7 +3,8 @@ import { act, fireEvent, screen, waitFor } from "expo-router/testing-library";
 
 import { dynamic, fail, ok, stubApi } from "../../../../../test/api-stub";
 import { createTestRuntime, renderInApp } from "../../../../../test/app-harness";
-import { cameraPermissionRequests, isReadingQrCodes, readQrCode, setCameraPermission } from "../../../../../test/expo-camera-fake";
+import { cameraPermissionRequests, isReadingQrCodes, readQrCode, setCameraPermission, setPhotoQrCode } from "../../../../../test/expo-camera-fake";
+import { pickNext } from "../../../../../test/expo-image-picker-fake";
 import { testAccessToken } from "../../../../../test/jwt";
 import { memorySecureStore } from "../../../../../test/secure-store-memory";
 import TillScreen from "../../../../app/(app)/settings/till";
@@ -20,12 +21,18 @@ const PAIRED = {
 const CLAIM_ID = "8f5b1c2e-3d4a-4b6c-9e7f-1a2b3c4d5e6f";
 const TOKEN = "k3J9xQ2mV8pL1tR6wZ4bN7cY0dF5gH2s";
 const CLAIM_EXPIRES_AT = 1_793_000_000_000;
+const REWARD_ID = "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e";
+const FLAT_WHITE_OFFER = { type: "FREE_ITEM", quantity: 1, item: { name: "Flat white (8 oz)", sku: "BEV-FLATWHITE-8OZ" } };
 
 function preview(overrides: Partial<{ valid: boolean; invalidReason: string | null; minSpendMinor: number | null }> = {}): ReturnType<typeof ok> {
 	return ok({
 		claimId: CLAIM_ID,
+		rewardId: REWARD_ID,
 		rewardTitle: "Free flat white",
+		rewardDescription: "A free flat white with any breakfast set.",
 		rewardType: "FREE_ITEM",
+		offer: FLAT_WHITE_OFFER,
+		termsConditions: "One per customer.",
 		claimExpiresAt: CLAIM_EXPIRES_AT,
 		valid: true,
 		invalidReason: null,
@@ -42,7 +49,14 @@ function receipt(billTotalMinor: number, idempotencyKey: string): ReturnType<typ
 		paidAt: 1_792_000_000_000,
 		idempotencyKey,
 		redemptions: [
-			{ redemptionId: "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d", claimId: CLAIM_ID, rewardId: "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e", rewardTitle: "Free flat white" },
+			{
+				redemptionId: "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+				claimId: CLAIM_ID,
+				rewardId: REWARD_ID,
+				rewardTitle: "Free flat white",
+				rewardType: "FREE_ITEM",
+				offer: FLAT_WHITE_OFFER,
+			},
 		],
 	});
 }
@@ -159,7 +173,7 @@ describe("Till — redeeming", () => {
 		});
 		await renderPairedTill();
 
-		await fireEvent.press(screen.getByRole("button", { name: "Scan customer QR" }));
+		await fireEvent.press(screen.getByRole("button", { name: "Scan with this app's camera" }));
 		await scan(TOKEN);
 
 		expect(await screen.findByText("Free flat white")).toBeOnTheScreen();
@@ -181,6 +195,120 @@ describe("Till — redeeming", () => {
 		expect(checkoutCall?.headers["x-api-key"]).toBe(PAIRED.apiKey);
 	});
 
+	it("shows what it sent and what came back: request headers (key masked), request body, response body", async () => {
+		stubApi({ "POST /integration/redemptions/validate": preview() });
+		await renderPairedTill();
+
+		await fireEvent.press(screen.getByRole("button", { name: "Scan with this app's camera" }));
+		await scan(TOKEN);
+
+		expect(await screen.findByText("What the till sent")).toBeOnTheScreen();
+		const headers = screen.getByTestId("till-exchange-request-headers");
+		expect(headers).toHaveTextContent(/"X-Terminal-Id": "TERM-7F3K9QX2"/u);
+		expect(headers).toHaveTextContent(/"X-API-Key": "mk_liv••••••••"/u);
+		expect(headers).not.toHaveTextContent(new RegExp(PAIRED.apiKey, "u"));
+		expect(screen.getByTestId("till-exchange-request-body")).toHaveTextContent(new RegExp(`"token": "${TOKEN}"`, "u"));
+		expect(screen.getByTestId("till-exchange-response-body")).toHaveTextContent(/"rewardTitle": "Free flat white"/u);
+	});
+
+	it("shows what the reward gives — the free item and its SKU — with its description and terms", async () => {
+		stubApi({ "POST /integration/redemptions/validate": preview() });
+		await renderPairedTill();
+
+		await fireEvent.press(screen.getByRole("button", { name: "Scan with this app's camera" }));
+		await scan(TOKEN);
+
+		expect(await screen.findByText("A free flat white with any breakfast set.")).toBeOnTheScreen();
+		expect(screen.getByText("1 × Flat white (8 oz) free")).toBeOnTheScreen();
+		expect(screen.getByText("Flat white (8 oz)")).toBeOnTheScreen();
+		expect(screen.getByText("BEV-FLATWHITE-8OZ")).toBeOnTheScreen();
+		expect(screen.getByText("One per customer.")).toBeOnTheScreen();
+	});
+
+	it("puts the free item and its SKU on the receipt, and shows what the redeem call sent, line by line", async () => {
+		stubApi({
+			"POST /integration/redemptions/validate": preview(),
+			"POST /integration/redemptions/checkout": dynamic((call) => receipt(2550, CheckoutBodySchema.parse(call.body).idempotencyKey)),
+		});
+		await renderPairedTill();
+		await fireEvent.press(screen.getByRole("button", { name: "Scan with this app's camera" }));
+		await scan(TOKEN);
+		await fireEvent.changeText(await screen.findByLabelText("Bill total"), "25.50");
+		await fireEvent.press(screen.getByRole("button", { name: "Redeem" }));
+
+		const line = await screen.findByTestId("till-receipt-1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d");
+		expect(line).toHaveTextContent(/1 × Flat white \(8 oz\) free/u);
+		expect(line).toHaveTextContent(/BEV-FLATWHITE-8OZ/u);
+		expect(screen.getByText("What the till sent to redeem it")).toBeOnTheScreen();
+		const body = screen.getByTestId("till-checkout-exchange-request-body");
+		expect(body).toHaveTextContent(/"billTotalMinor": 2550/u);
+		expect(body).toHaveTextContent(/"currency": "MYR"/u);
+		expect(body).toHaveTextContent(/"idempotencyKey": "[0-9a-f-]{36}"/u);
+		expect(screen.getByTestId("till-checkout-exchange-response-body")).toHaveTextContent(/"sku": "BEV-FLATWHITE-8OZ"/u);
+		expect(screen.getByTestId("till-checkout-exchange-request-body-line-numbers", { includeHiddenElements: true })).toHaveTextContent(/^1\s2\s3\s4\s5\s6/u);
+	});
+
+	it("offers Google's scanner and the app's own camera, disabling Google's on a phone without Play services", async () => {
+		stubApi({});
+		await renderPairedTill();
+
+		expect(screen.getByRole("button", { name: "Scan with Google scanner" })).toBeDisabled();
+		expect(screen.getByText(/Google's scanner isn't available on this phone/u)).toBeOnTheScreen();
+		expect(screen.getByRole("button", { name: "Scan with this app's camera" })).toBeEnabled();
+	});
+
+	it("opens the app's own camera scanner, with Scan from gallery inside it", async () => {
+		stubApi({});
+		await renderPairedTill();
+
+		await fireEvent.press(screen.getByRole("button", { name: "Scan with this app's camera" }));
+
+		expect(await screen.findByTestId("till-camera-scanner-gallery")).toHaveAccessibleName("Scan from gallery");
+	});
+
+	it("numbers the lines of each JSON block", async () => {
+		stubApi({ "POST /integration/redemptions/validate": preview() });
+		await renderPairedTill();
+		await fireEvent.press(screen.getByRole("button", { name: "Scan with this app's camera" }));
+		await scan(TOKEN);
+
+		expect(await screen.findByTestId("till-exchange-request-body-line-numbers", { includeHiddenElements: true })).toHaveTextContent("1\n2\n3");
+	});
+
+	it("shows the API's error answer in the response body", async () => {
+		stubApi({ "POST /integration/redemptions/validate": fail(422, "REDEMPTION_CODE_INVALID", "This code is not valid") });
+		await renderPairedTill();
+
+		await fireEvent.press(screen.getByRole("button", { name: "Scan with this app's camera" }));
+		await scan(TOKEN);
+
+		expect(await screen.findByTestId("till-exchange-response-body")).toHaveTextContent(/"code": "REDEMPTION_CODE_INVALID"/u);
+	});
+
+	it("reads the customer's QR from a photo in the gallery", async () => {
+		const api = stubApi({ "POST /integration/redemptions/validate": preview() });
+		await renderPairedTill();
+		setPhotoQrCode(TOKEN);
+		pickNext({
+			uri: "file:///photos/qr.jpg",
+			width: 640,
+			height: 640,
+			type: "image",
+			fileName: "qr.jpg",
+			fileSize: 1000,
+			mimeType: "image/jpeg",
+			assetId: null,
+			base64: null,
+			exif: null,
+			duration: null,
+		});
+
+		await fireEvent.press(screen.getByTestId("till-scan-gallery"));
+
+		expect(await screen.findByText("Free flat white")).toBeOnTheScreen();
+		expect(api.callsTo("POST /integration/redemptions/validate").at(0)?.body).toBe(JSON.stringify({ token: TOKEN }));
+	});
+
 	it("retries a failed checkout with the same idempotency key, so the reward is redeemed once", async () => {
 		const answers = [fail(503, "SERVICE_UNAVAILABLE", "Try again in a moment")];
 		const api = stubApi({
@@ -188,7 +316,7 @@ describe("Till — redeeming", () => {
 			"POST /integration/redemptions/checkout": dynamic((call) => answers.shift() ?? receipt(2550, CheckoutBodySchema.parse(call.body).idempotencyKey)),
 		});
 		await renderPairedTill();
-		await fireEvent.press(screen.getByRole("button", { name: "Scan customer QR" }));
+		await fireEvent.press(screen.getByRole("button", { name: "Scan with this app's camera" }));
 		await scan(TOKEN);
 		await fireEvent.changeText(await screen.findByLabelText("Bill total"), "25.50");
 
@@ -205,7 +333,7 @@ describe("Till — redeeming", () => {
 		const api = stubApi({ "POST /integration/redemptions/validate": preview({ valid: false, invalidReason: "EXPIRED" }) });
 		await renderPairedTill();
 
-		await fireEvent.press(screen.getByRole("button", { name: "Scan customer QR" }));
+		await fireEvent.press(screen.getByRole("button", { name: "Scan with this app's camera" }));
 		await scan(TOKEN);
 
 		expect(await screen.findByText("This reward has expired.")).toBeOnTheScreen();
@@ -216,7 +344,7 @@ describe("Till — redeeming", () => {
 	it("holds a bill under the reward's minimum spend before sending it", async () => {
 		const api = stubApi({ "POST /integration/redemptions/validate": preview({ minSpendMinor: 3000 }) });
 		await renderPairedTill();
-		await fireEvent.press(screen.getByRole("button", { name: "Scan customer QR" }));
+		await fireEvent.press(screen.getByRole("button", { name: "Scan with this app's camera" }));
 		await scan(TOKEN);
 
 		await fireEvent.changeText(await screen.findByLabelText("Bill total"), "25");
@@ -241,7 +369,7 @@ describe("Till — redeeming", () => {
 		const api = stubApi({});
 		await renderPairedTill();
 
-		await fireEvent.press(screen.getByRole("button", { name: "Scan customer QR" }));
+		await fireEvent.press(screen.getByRole("button", { name: "Scan with this app's camera" }));
 		await scan(buildPosPairingQrPayload("ABCD2345"));
 
 		expect(await screen.findByText("That's a terminal pairing code. Scan the customer's reward QR code instead.")).toBeOnTheScreen();

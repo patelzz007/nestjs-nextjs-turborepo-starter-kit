@@ -5,7 +5,7 @@
 // the web's `resolveAuthErrorMessage`); other API errors show the server's own
 // message (the standard error envelope, ADR 016); anything else is generic.
 
-import { ApiError, SessionRefreshUnavailableError } from "@workspace/api-client";
+import { ApiError, rateLimitMessage, SessionRefreshUnavailableError } from "@workspace/api-client";
 import { AuthErrorCodeSchema, type AuthErrorCode } from "@workspace/shared";
 
 const AUTH_ERROR_MESSAGES: Readonly<Record<AuthErrorCode, string>> = {
@@ -27,13 +27,9 @@ const AUTH_ERROR_MESSAGES: Readonly<Record<AuthErrorCode, string>> = {
 	SUPER_ADMIN_REQUIRED: "Super administrator access is required for this action.",
 };
 
-const HTTP_TOO_MANY_REQUESTS = 429;
-
 export const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
 
 export const OFFLINE_ERROR_MESSAGE = "We couldn't reach the server. Check your connection and try again.";
-
-const TOO_MANY_REQUESTS_MESSAGE = "Too many attempts. Please wait a moment and try again.";
 
 /** The message to show for a failed request. */
 export function errorMessageOf(error: Error | null): string {
@@ -48,9 +44,10 @@ export function errorMessageOf(error: Error | null): string {
 		if (code.success) {
 			return AUTH_ERROR_MESSAGES[code.data];
 		}
-		if (error.statusCode === HTTP_TOO_MANY_REQUESTS) {
-			// The API's own message carries the retry time when it has one.
-			return error.message.length > 0 ? error.message : TOO_MANY_REQUESTS_MESSAGE;
+		// A 429 says how long to wait, from the API's `retryAfterSeconds` (ADR 071).
+		const tooFast = rateLimitMessage(error);
+		if (tooFast !== null) {
+			return tooFast;
 		}
 		return error.message.length > 0 ? error.message : GENERIC_ERROR_MESSAGE;
 	}

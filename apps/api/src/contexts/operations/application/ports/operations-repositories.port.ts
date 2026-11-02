@@ -134,8 +134,15 @@ export interface OpsSettingsRepository {
 }
 
 /** Who gets alert emails: every live SuperAdmin plus the extra recipients. */
+/** A person the operations alerts go to: in the admin panel, on their phone and by email (ADR 070). */
+export interface OpsAlertRecipient {
+	readonly userId: string;
+	readonly email: string;
+}
+
 export interface OpsAlertRecipientsReader {
-	superAdminEmails(): Promise<readonly string[]>;
+	/** Every active SuperAdmin (flag or role), Admin and Platform Developer, load-test users left out. */
+	alertRecipients(): Promise<readonly OpsAlertRecipient[]>;
 }
 
 // ── Backups ─────────────────────────────────────────────────────────────────

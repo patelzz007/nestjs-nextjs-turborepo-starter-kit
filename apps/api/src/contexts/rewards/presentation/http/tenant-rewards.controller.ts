@@ -18,6 +18,12 @@ import {
 	type MerchantRewardSummaryQuery,
 	type PaginatedServiceResult,
 	type RewardResponse,
+	RewardAudienceResponseSchema,
+	RewardCustomerListQuerySchema,
+	RewardCustomerSchema,
+	type RewardAudienceResponse,
+	type RewardCustomer,
+	type RewardCustomerListQuery,
 } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
@@ -32,7 +38,9 @@ import type { MerchantActor } from "../../../../platform/presentation/http/secur
 import { CreateRewardCommand } from "../../application/commands/create-reward/create-reward.command";
 import { ReviseRewardCommand } from "../../application/commands/revise-reward/revise-reward.command";
 import { SubmitRewardForReviewCommand } from "../../application/commands/submit-reward-for-review/submit-reward-for-review.command";
+import { GetRewardAudienceQuery } from "../../application/queries/get-reward-audience/get-reward-audience.query";
 import { GetTenantRewardQuery } from "../../application/queries/get-tenant-reward/get-tenant-reward.query";
+import { ListRewardCustomersQuery } from "../../application/queries/list-reward-customers/list-reward-customers.query";
 import { ListTenantRewardsQuery } from "../../application/queries/list-tenant-rewards/list-tenant-rewards.query";
 import { SummarizeTenantRewardsQuery } from "../../application/queries/summarize-tenant-rewards/summarize-tenant-rewards.query";
 import { RewardsEmptyBodyDto } from "./rewards-empty-body.dto";
@@ -75,6 +83,31 @@ export class TenantRewardsController {
 		@ZodQuery(MerchantRewardSummaryQuerySchema) query: MerchantRewardSummaryQuery,
 	): Promise<MerchantRewardSummary> {
 		return this.queryBus.execute(new SummarizeTenantRewardsQuery(actor, { ...query, tenantId: merchant.tenantId }));
+	}
+
+	@SkipAuthThrottle()
+	@Get("customers")
+	@ApiOperation({ summary: "The tenant's customers, to give a reward to (name and masked email; people who manage rewards)" })
+	@ZodPaginatedResponse(RewardCustomerSchema, { description: "One page of customers" })
+	public listCustomers(
+		@GetMerchantActor() merchant: MerchantActor,
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(TenantSlugParamSchema) _params: z.output<typeof TenantSlugParamSchema>,
+		@ZodListQuery(RewardCustomerListQuerySchema) query: RewardCustomerListQuery,
+	): Promise<PaginatedServiceResult<RewardCustomer>> {
+		return this.queryBus.execute(new ListRewardCustomersQuery(actor, { ...query, tenantId: merchant.tenantId }));
+	}
+
+	@SkipAuthThrottle()
+	@Get(":rewardId/audience")
+	@ApiOperation({ summary: "Who the reward is for: everyone, or the customers it was given to (404 outside the caller's stores)" })
+	@ZodResponse(RewardAudienceResponseSchema, { description: "The audience" })
+	public getAudience(
+		@GetMerchantActor() merchant: MerchantActor,
+		@CurrentActor() actor: ActorContext,
+		@ZodParams(apiContract.tenants.rewards.audience.input) params: z.output<typeof apiContract.tenants.rewards.audience.input>,
+	): Promise<RewardAudienceResponse> {
+		return this.queryBus.execute(new GetRewardAudienceQuery(actor, { tenantId: merchant.tenantId, rewardId: params.rewardId }));
 	}
 
 	@SkipAuthThrottle()

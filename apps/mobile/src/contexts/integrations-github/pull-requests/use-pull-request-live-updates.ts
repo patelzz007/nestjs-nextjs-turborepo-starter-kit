@@ -9,16 +9,15 @@
 // it. The stream carries no content; the views are read again as usual.
 
 import { useQueryClient } from "@tanstack/react-query";
-import { buildUrl } from "@workspace/api-client";
 import { apiRoutes, GithubPullRequestChangeSchema, isChangeTo, type GithubLiveUpdatesStatus, type GithubPullRequestParams } from "@workspace/shared";
-import { fetch as expoFetch } from "expo/fetch";
 import { useFocusEffect } from "expo-router";
 import * as React from "react";
-import { AppState, type AppStateStatus } from "react-native";
 
+import { openApiEventStream } from "../../../lib/api-event-stream";
 import { useApi } from "../../../lib/api-context";
+import { useAppActive } from "../../../lib/use-app-active";
 import { errorMessageOf } from "../../../lib/error-messages";
-import { openServerEventStream, type ServerEvent, type ServerEventStreamState, type StreamingFetch } from "../../../lib/server-events";
+import type { ServerEvent, ServerEventStreamState } from "../../../lib/server-events";
 import { useReadyRuntime } from "../../../runtime/runtime-context";
 import { useToast } from "../../../features/toast/facade";
 import { refreshLiveUpdates, refreshPullRequest } from "./refresh";
@@ -32,27 +31,6 @@ export interface PullRequestLiveUpdates {
 	readonly isChanging: boolean;
 	readonly turnOn: () => void;
 	readonly turnOff: () => void;
-}
-
-/** `expo/fetch`, which streams a response body (React Native's own fetch cannot). */
-const streamingFetch: StreamingFetch = (url, init) => expoFetch(url, { headers: init.headers, signal: init.signal });
-
-/** In the foreground — anything but backgrounded or inactive (the OS may report `unknown` before its first change). */
-function isForeground(state: string | null | undefined): boolean {
-	return state !== "background" && state !== "inactive";
-}
-
-function useAppIsActive(): boolean {
-	const [active, setActive] = React.useState(isForeground(AppState.currentState));
-	React.useEffect((): (() => void) => {
-		const subscription = AppState.addEventListener("change", (state: AppStateStatus): void => {
-			setActive(isForeground(state));
-		});
-		return (): void => {
-			subscription.remove();
-		};
-	}, []);
-	return active;
 }
 
 function useScreenIsFocused(): boolean {
@@ -79,7 +57,7 @@ export function usePullRequestLiveUpdates(pullRequest: GithubPullRequestParams):
 	const disable = api.githubPullRequests.disableLiveUpdates.useMutation();
 	const [connection, setConnection] = React.useState<ServerEventStreamState | "idle">("idle");
 	const focused = useScreenIsFocused();
-	const active = useAppIsActive();
+	const active = useAppActive();
 	const current = status.data?.data.status;
 	const streaming = current === "enabled" && focused && active;
 
@@ -88,19 +66,10 @@ export function usePullRequestLiveUpdates(pullRequest: GithubPullRequestParams):
 			return undefined;
 		}
 		const path = `${apiRoutes.githubPullRequests.liveUpdates.replace(":owner", encodeURIComponent(pullRequest.owner)).replace(":repository", encodeURIComponent(pullRequest.repository))}/events`;
-		const stream = openServerEventStream({
-			url: buildUrl(runtime.env.apiBaseUrl, path),
-			fetch: streamingFetch,
-			getAccessToken: () => runtime.tokenProvider.getAccessToken(),
-			// Any authenticated read renews an expired access token; one that cannot be renewed ends the session.
-			refreshSession: async (): Promise<boolean> => {
-				try {
-					await api.auth.me.fetchOrThrow(undefined);
-					return true;
-				} catch {
-					return false;
-				}
-			},
+		const stream = openApiEventStream({
+			runtime,
+			api,
+			path,
 			onEvent: (event: ServerEvent): void => {
 				if (event.type === "resync") {
 					void refreshPullRequest(queryClient, pullRequest);

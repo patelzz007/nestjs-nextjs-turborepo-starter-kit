@@ -5,6 +5,7 @@
 // re-mounts as screens change; the screens learn the header's height from PageHeaderClearance and
 // start their content below it, and feed it their scrolling through PageHeaderScroll.
 
+import { useKeepPushRegistered, usePushTaps } from "../../contexts/notifications";
 import * as React from "react";
 import { View } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
@@ -29,6 +30,9 @@ export interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps): React.JSX.Element {
 	// The drawer's store lives as long as the shell: signing out unmounts it, so the drawer starts closed next time.
+	// A tapped push reports itself opened and opens the inbox (ADR 070).
+	usePushTaps();
+	useKeepPushRegistered();
 	const [drawerStore] = React.useState(createAppDrawerStore);
 	const [toastStore] = React.useState(createToastStore);
 	const insets = useSafeAreaInsets();

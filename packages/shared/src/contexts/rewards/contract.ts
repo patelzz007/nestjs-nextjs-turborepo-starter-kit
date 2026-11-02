@@ -22,6 +22,9 @@ import {
 	MerchantUpdateRewardPathInputSchema,
 	REWARD_IMAGES_ARCHIVE_CONTENT_TYPE,
 	RewardListQuerySchema,
+	RewardAudienceResponseSchema,
+	RewardCustomerListQuerySchema,
+	RewardCustomerSchema,
 	RewardResponseSchema,
 } from "./schemas/reward";
 import { TenantSlugParamSchema } from "../tenancy/schemas/tenant";
@@ -162,7 +165,7 @@ export const tenantRewardsContract = {
 	update: defineContract({
 		method: "PATCH",
 		path: tenantRewardsRoutes.update,
-		input: MerchantUpdateRewardPathInputSchema.extend({ tenantSlug: TenantSlugParamSchema.shape.tenantSlug }),
+		input: z.intersection(TenantSlugParamSchema, MerchantUpdateRewardPathInputSchema),
 		response: singleResponse(RewardResponseSchema),
 	}),
 	publish: defineContract({
@@ -170,5 +173,17 @@ export const tenantRewardsContract = {
 		path: tenantRewardsRoutes.publish,
 		input: z.object({ tenantSlug: TenantSlugParamSchema.shape.tenantSlug, rewardId: UuidParamSchema }).strict(),
 		response: singleResponse(RewardResponseSchema),
+	}),
+	audience: defineContract({
+		method: "GET",
+		path: tenantRewardsRoutes.audience,
+		input: z.object({ tenantSlug: TenantSlugParamSchema.shape.tenantSlug, rewardId: UuidParamSchema }).strict(),
+		response: singleResponse(RewardAudienceResponseSchema),
+	}),
+	customers: defineContract({
+		method: "GET",
+		path: tenantRewardsRoutes.customers,
+		input: z.intersection(TenantSlugParamSchema, RewardCustomerListQuerySchema),
+		response: paginatedResponse(RewardCustomerSchema),
 	}),
 };

@@ -24,6 +24,7 @@ export {
 	type ApiDocsPolicy,
 	type AuthConfig,
 	type CacheConfig,
+	type NotificationsConfig,
 	type ClientAppsConfig,
 	type DatabaseConfig,
 	type EmailConfig,
@@ -45,7 +46,7 @@ export {
 	type TenancyConfig,
 	type TransactionLogConfig,
 } from "./api-config/api-config.types";
-export { resolveApiDocsPolicy, resolveCacheBackend, resolveLogLevel, resolveRedisNamespace, resolveStorageProvider } from "./api-config/api-config.derivations";
+export { resolveApiDocsPolicy, resolveLogLevel, resolveRedisNamespace, resolveStorageProvider } from "./api-config/api-config.derivations";
 export { checkApiEnvRules, isLoopbackUrl } from "./api-config/api-env.rules";
 export { toApiConfig } from "./api-config/api-config.grouping";
 

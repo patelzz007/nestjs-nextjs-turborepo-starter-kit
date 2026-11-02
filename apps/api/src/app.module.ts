@@ -23,6 +23,9 @@ import { AuditModule } from "./contexts/audit/public-api";
 import { AuthorizationModule } from "./contexts/authorization/public-api";
 import { APP_GUARD_ORDER } from "./platform/presentation/http/security/app-guard-order";
 import { ThrottlingModule } from "./platform/presentation/http/security/throttling/throttling.module";
+import { TenantRateLimitOverridesModule } from "./platform/infrastructure/rate-limiting/overrides/tenant-rate-limit-overrides.module";
+import { RateLimitingModule } from "./platform/infrastructure/rate-limiting/rate-limiting.module";
+import { AppCacheModule } from "./platform/infrastructure/cache/app-cache.module";
 import { PosAccessModule } from "./contexts/pos/public-api";
 import { PosModule } from "./contexts/pos/pos.module";
 import { IdentityModule } from "./contexts/identity/identity.module";
@@ -90,6 +93,9 @@ if (observeConfig !== null) {
 		HealthModule,
 		PosAccessModule,
 		RewardsAccessModule,
+		RateLimitingModule,
+		TenantRateLimitOverridesModule,
+		AppCacheModule,
 		ThrottlingModule,
 		IdentityModule,
 		ReferralsModule,

@@ -212,7 +212,10 @@ export class OperationsController {
 	@PlatformOperation(OPS_SETTINGS_WRITE_OPERATION)
 	@RateLimit(RATE_LIMIT_POLICY.adminSecurityMutation)
 	@Put("alert-settings")
-	@ApiOperation({ summary: "SuperAdmin: change the alert thresholds and the extra recipients (every SuperAdmin always gets alerts)" })
+	@ApiOperation({
+		summary:
+			"SuperAdmin: change the alert thresholds and the extra recipients (every SuperAdmin, Admin and Platform Developer always gets alerts, in the app, on their phone and by email)",
+	})
 	@ZodResponse(OpsAlertSettingsSchema, { description: "The saved settings" })
 	public updateAlertSettings(@CurrentActor() actor: ActorContext, @ZodBody(OpsAlertSettingsInputSchema) settings: OpsAlertSettings): Promise<OpsAlertSettings> {
 		return this.commandBus.execute(new UpdateOpsAlertSettingsCommand(actor, settings));

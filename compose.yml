@@ -32,7 +32,7 @@
 # EVERY service binds to 127.0.0.1 only, so the default dev passwords are never
 # reachable from other machines on your network. Host ports and the RabbitMQ
 # credentials can be overridden (RABBITMQ_DEFAULT_USER / RABBITMQ_DEFAULT_PASS,
-# REDIS_PORT, KAFKA_PORT, RABBITMQ_AMQP_PORT, RABBITMQ_UI_PORT, BULL_BOARD_PORT,
+# REDIS_PORT, REDIS_MAXMEMORY, KAFKA_PORT, RABBITMQ_AMQP_PORT, RABBITMQ_UI_PORT, BULL_BOARD_PORT,
 # MAILPIT_UI_PORT, MAILPIT_SMTP_PORT).
 
 name: hello-world
@@ -72,7 +72,10 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:${REDIS_PORT:-6379}:6379"
-    command: redis-server --appendonly yes --save 60 1
+    # One Redis holds the BullMQ queues, the rate limits and the cache (ADR 072): it must NEVER evict
+    # (an evicted queue key is a lost job), so the cache keeps every key under a TTL and a per-cache
+    # budget, and health warns at CACHE_MEMORY_ALERT_PERCENT of this limit.
+    command: redis-server --appendonly yes --save 60 1 --maxmemory ${REDIS_MAXMEMORY:-512mb} --maxmemory-policy noeviction
     volumes:
       - redis_data:/data
     healthcheck:
@@ -202,7 +205,7 @@ services:
       REDIS_PASSWORD: ""
       REDIS_USE_TLS: "false"
       BULL_PREFIX: bull
-      QUEUE_NAMES: email.send,rewards.auto-publish,claims.expire-pending,claims.expire-referrer,outbox.publish,storage.cleanup,storage.delete,idempotency.retention,storage.scan,outbox.retention,rewards.referral-credit-notify,storage.cdn-invalidate,transaction-log.write,operations.backup,operations.load-test
+      QUEUE_NAMES: email.send,rewards.auto-publish,claims.expire-pending,claims.expire-referrer,outbox.publish,storage.cleanup,storage.delete,idempotency.retention,storage.scan,outbox.retention,rewards.referral-credit-notify,storage.cdn-invalidate,transaction-log.write,operations.backup,operations.load-test,notifications.fan-out,notifications.push,notifications.sms,notifications.maintenance,broadcasts.send
     networks:
       - infra
 

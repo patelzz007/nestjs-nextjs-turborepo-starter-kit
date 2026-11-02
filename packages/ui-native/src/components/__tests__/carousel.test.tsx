@@ -5,7 +5,11 @@ import { AccessibilityInfo, Text, type ViewInstance } from "react-native";
 import {
 	Carousel,
 	carouselGapOf,
+	carouselLoopJump,
+	carouselScrollTarget,
 	carouselSlideMetrics,
+	SETTLED_ON_COPY_SHARE,
+	SLIDING_ONTO_COPY_SHARE,
 	clampCarouselIndex,
 	DEFAULT_CAROUSEL_GAP,
 	defaultCarouselSlideLabel,
@@ -348,5 +352,175 @@ describe("Carousel auto-play", () => {
 		await wait(LONG_WAIT_MS);
 
 		expect(screen.getByText("Showing 0")).toBeOnTheScreen();
+	});
+});
+
+describe("Carousel loop (round, both ways)", () => {
+	const LAST_SLIDE = SLIDE_TITLES.length - 1;
+	const TOTAL = SLIDE_TITLES.length;
+	/** A looping pager has the last slide's copy in front: every slide sits one place along. */
+	const LEAD = 1;
+	/** How far short of a copy a phone may snap a swipe (pixel rounding). */
+	const FEW_POINTS = 3;
+
+	it("places each slide one along behind the last's copy, and a wrap on the copy it slides onto", () => {
+		expect(carouselScrollTarget(SECOND_SLIDE, PAGE_WIDTH, TOTAL, "none", LEAD)).toBe((SECOND_SLIDE + LEAD) * PAGE_WIDTH);
+		expect(carouselScrollTarget(SECOND_SLIDE, PAGE_WIDTH, TOTAL, "none", 0)).toBe(SECOND_SLIDE * PAGE_WIDTH);
+		expect(carouselScrollTarget(0, PAGE_WIDTH, TOTAL, "forward", LEAD)).toBe((TOTAL + LEAD) * PAGE_WIDTH);
+		expect(carouselScrollTarget(LAST_SLIDE, PAGE_WIDTH, TOTAL, "backward", LEAD)).toBe(0);
+	});
+
+	it("swaps a copy for the real slide it stands for, showing the same picture, and leaves the real slides alone", () => {
+		const firstCopyAt = (TOTAL + LEAD) * PAGE_WIDTH;
+		expect(carouselLoopJump(firstCopyAt, PAGE_WIDTH, TOTAL, SLIDING_ONTO_COPY_SHARE)).toEqual({ offset: LEAD * PAGE_WIDTH, index: 0 });
+		expect(carouselLoopJump(firstCopyAt + PEEK, PAGE_WIDTH, TOTAL, SLIDING_ONTO_COPY_SHARE)).toEqual({ offset: LEAD * PAGE_WIDTH + PEEK, index: 0 });
+		expect(carouselLoopJump(0, PAGE_WIDTH, TOTAL, SLIDING_ONTO_COPY_SHARE)).toEqual({ offset: TOTAL * PAGE_WIDTH, index: LAST_SLIDE });
+		expect(carouselLoopJump(LEAD * PAGE_WIDTH, PAGE_WIDTH, TOTAL, SETTLED_ON_COPY_SHARE)).toBeNull();
+		expect(carouselLoopJump(TOTAL * PAGE_WIDTH, PAGE_WIDTH, TOTAL, SETTLED_ON_COPY_SHARE)).toBeNull();
+		expect(carouselLoopJump(firstCopyAt, 0, TOTAL, SETTLED_ON_COPY_SHARE)).toBeNull();
+	});
+
+	it("reads a settled swipe as the nearest slide, a few points off the copy, but swaps a sliding wrap only at its very end", () => {
+		const firstCopyAt = (TOTAL + LEAD) * PAGE_WIDTH;
+		const fewPointsShort = firstCopyAt - FEW_POINTS;
+		const halfWay = firstCopyAt - PAGE_WIDTH * SETTLED_ON_COPY_SHARE + 1;
+		expect(carouselLoopJump(fewPointsShort, PAGE_WIDTH, TOTAL, SETTLED_ON_COPY_SHARE)?.index).toBe(0);
+		expect(carouselLoopJump(halfWay, PAGE_WIDTH, TOTAL, SETTLED_ON_COPY_SHARE)?.index).toBe(0);
+		expect(carouselLoopJump(fewPointsShort, PAGE_WIDTH, TOTAL, SLIDING_ONTO_COPY_SHARE)?.index).toBe(0);
+		expect(carouselLoopJump(halfWay, PAGE_WIDTH, TOTAL, SLIDING_ONTO_COPY_SHARE)).toBeNull();
+	});
+
+	it("puts the last slide's copy in front and the first's behind when it loops, both hidden from screen readers", async () => {
+		await render(
+			<Carousel index={0} onChange={jest.fn()} loop testID="carousel">
+				{slides()}
+			</Carousel>,
+		);
+
+		for (const copy of ["carousel-loop-copy-first", "carousel-loop-copy-last"]) {
+			expect(screen.queryByTestId(copy)).toBeNull();
+			expect(screen.getByTestId(copy, { includeHiddenElements: true })).toHaveProp("importantForAccessibility", "no-hide-descendants");
+		}
+		expect(screen.getAllByText("Welcome", { includeHiddenElements: true })).toHaveLength(2);
+		expect(screen.getAllByText("Security", { includeHiddenElements: true })).toHaveLength(2);
+	});
+
+	it("loops with auto-play even without being asked, and never with one slide or neither", async () => {
+		const { rerender } = await render(
+			<Carousel index={0} onChange={jest.fn()} autoPlayIntervalMs={AUTO_PLAY_MS} testID="carousel">
+				{slides()}
+			</Carousel>,
+		);
+		expect(screen.getByTestId("carousel-loop-copy-first", { includeHiddenElements: true })).toBeOnTheScreen();
+
+		await rerender(
+			<Carousel index={0} onChange={jest.fn()} loop testID="carousel">
+				<Text>Only</Text>
+			</Carousel>,
+		);
+		expect(screen.queryByTestId("carousel-loop-copy-first", { includeHiddenElements: true })).toBeNull();
+
+		await rerender(
+			<Carousel index={0} onChange={jest.fn()} testID="carousel">
+				{slides()}
+			</Carousel>,
+		);
+		expect(screen.queryByTestId("carousel-loop-copy-last", { includeHiddenElements: true })).toBeNull();
+	});
+
+	it("keeps the next arrow on at the last slide, and goes on to the first", async () => {
+		const onChange = jest.fn();
+		await render(
+			<Carousel index={LAST_SLIDE} onChange={onChange} loop showControls testID="carousel">
+				{slides()}
+			</Carousel>,
+		);
+		const next = screen.getByRole("button", { name: "Next slide" });
+
+		expect(next).toBeEnabled();
+		await fireEvent.press(next);
+
+		expect(onChange).toHaveBeenCalledWith(0);
+	});
+
+	it("keeps the previous arrow on at the first slide, and goes back to the last", async () => {
+		const onChange = jest.fn();
+		await render(
+			<Carousel index={0} onChange={onChange} loop showControls testID="carousel">
+				{slides()}
+			</Carousel>,
+		);
+		const previous = screen.getByRole("button", { name: "Previous slide" });
+
+		expect(previous).toBeEnabled();
+		await fireEvent.press(previous);
+
+		expect(onChange).toHaveBeenCalledWith(LAST_SLIDE);
+	});
+
+	it("goes on to the first slide when a swipe passes the last one", async () => {
+		const onChange = jest.fn();
+		await render(
+			<Carousel index={LAST_SLIDE} onChange={onChange} loop testID="carousel">
+				{slides()}
+			</Carousel>,
+		);
+
+		await swipeTo(TOTAL + LEAD);
+
+		expect(onChange).toHaveBeenCalledWith(0);
+	});
+
+	it("goes back to the last slide when a swipe goes back past the first one", async () => {
+		const onChange = jest.fn();
+		await render(
+			<Carousel index={0} onChange={onChange} loop testID="carousel">
+				{slides()}
+			</Carousel>,
+		);
+
+		await swipeTo(0);
+
+		expect(onChange).toHaveBeenCalledWith(LAST_SLIDE);
+	});
+
+	it("goes on to the first slide when the phone snaps a swipe a few points short of the copy (a real Android swipe)", async () => {
+		// Measured on a phone: 399.53-point slides, and a swipe past the last settling 1.57 points short.
+		const phoneInterval = 399.5294189453125;
+		const phoneSettle = 1996.0784912109375;
+		const onChange = jest.fn();
+		await render(
+			<Carousel index={LAST_SLIDE} onChange={onChange} loop testID="carousel">
+				{slides()}
+			</Carousel>,
+		);
+
+		await fireEvent(screen.getByTestId("carousel"), "layout", { nativeEvent: { layout: { width: phoneInterval, height: PAGE_WIDTH, x: 0, y: 0 } } });
+		await fireEvent(screen.getByTestId("carousel-pager"), "momentumScrollEnd", { nativeEvent: { contentOffset: { x: phoneSettle, y: 0 } } });
+
+		expect(onChange).toHaveBeenCalledWith(0);
+	});
+
+	it("settles on the real slide a swipe stops on, one place along behind the last's copy", async () => {
+		const onChange = jest.fn();
+		await render(
+			<Carousel index={0} onChange={onChange} loop testID="carousel">
+				{slides()}
+			</Carousel>,
+		);
+
+		await swipeTo(SECOND_SLIDE + LEAD);
+
+		expect(onChange).toHaveBeenCalledWith(SECOND_SLIDE);
+	});
+
+	it("reports every frame while moving, to catch a copy at once", async () => {
+		await render(
+			<Carousel index={0} onChange={jest.fn()} loop testID="carousel">
+				{slides()}
+			</Carousel>,
+		);
+
+		expect(screen.getByTestId("carousel-pager")).toHaveProp("scrollEventThrottle", 16);
 	});
 });

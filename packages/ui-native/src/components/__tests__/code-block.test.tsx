@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as React from "react";
 import type { ViewInstance } from "react-native";
 
-import { CodeBlock } from "../code-block";
+import { CodeBlock, codeLineNumbers } from "../code-block";
 
 const CODE = "const session = await auth.signIn({ email, password });";
 
@@ -14,6 +14,27 @@ describe("CodeBlock", () => {
 		expect(code).toHaveProp("selectable", true);
 		expect(code).toHaveProp("className", expect.stringContaining("font-mono"));
 		expect(screen.getByTestId("code-scroll")).toHaveProp("horizontal", true);
+	});
+
+	it("numbers each line in a gutter that is never selected or read out, only when asked", async () => {
+		const json = '{\n  "token": "abc"\n}';
+		await render(<CodeBlock code={json} showLineNumbers testID="code" />);
+
+		const gutter = screen.getByTestId("code-line-numbers", { includeHiddenElements: true });
+		expect(gutter).toHaveTextContent("1\n2\n3");
+		expect(gutter).not.toHaveProp("selectable", true);
+		expect(gutter).toHaveProp("importantForAccessibility", "no-hide-descendants");
+		expect(screen.getByText(json)).toHaveProp("selectable", true);
+	});
+
+	it("has no gutter by default", async () => {
+		await render(<CodeBlock code={CODE} testID="code" />);
+		expect(screen.queryByTestId("code-line-numbers", { includeHiddenElements: true })).toBeNull();
+	});
+
+	it("counts a line for every line break, the last line included", () => {
+		expect(codeLineNumbers("one line")).toBe("1");
+		expect(codeLineNumbers("a\nb\n")).toBe("1\n2\n3");
 	});
 
 	it("has no header when there is nothing to put in it", async () => {

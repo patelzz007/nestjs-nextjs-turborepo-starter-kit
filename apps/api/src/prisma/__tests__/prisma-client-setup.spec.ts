@@ -1,7 +1,11 @@
 import { Logger } from "@nestjs/common";
 import { describe, expect, it } from "vitest";
 
-import { closePrismaConnections, databasePoolBudget, prismaLogSubscriptions } from "../prisma-client-setup";
+import { DATABASE_CONNECT_TIMEOUT_MS } from "../database-pool.constants";
+import { closePrismaConnections, databasePoolBudget, PRISMA_TRANSACTION_DEFAULTS, prismaLogSubscriptions } from "../prisma-client-setup";
+
+/** Prisma's own `maxWait` when a client sets none. */
+const PRISMA_DEFAULT_MAX_WAIT_MS = 2_000;
 
 describe("databasePoolBudget", () => {
 	it("never lets one replica hold more than DB_POOL_MAX connections across both pools", () => {
@@ -16,6 +20,13 @@ describe("databasePoolBudget", () => {
 	it("gives the system pool one connection, and a second from a budget of ten", () => {
 		expect(databasePoolBudget(9)).toEqual({ request: 8, system: 1 });
 		expect(databasePoolBudget(10)).toEqual({ request: 8, system: 2 });
+	});
+});
+
+describe("PRISMA_TRANSACTION_DEFAULTS", () => {
+	it("lets a transaction wait to start exactly as long as the pool's own checkout, not Prisma's shorter default", () => {
+		expect(PRISMA_TRANSACTION_DEFAULTS.maxWait).toBe(DATABASE_CONNECT_TIMEOUT_MS);
+		expect(PRISMA_TRANSACTION_DEFAULTS.maxWait).toBeGreaterThan(PRISMA_DEFAULT_MAX_WAIT_MS);
 	});
 });
 

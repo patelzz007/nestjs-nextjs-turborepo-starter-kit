@@ -1,7 +1,7 @@
 ---
 title: "API reference — Platform operations (servers, backups, load tests)"
 description: "The admin panel's operations console (ADR 068): servers and their history, instances, dependencies, alerts, database backups and load tests — and the endpoint a server agent reports to."
-order: 15
+order: 16
 author: "Generated from the OpenAPI export"
 lastUpdated: 1793145600000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop"
@@ -53,7 +53,7 @@ The alert thresholds and the extra recipients
 
 ### PUT /api/v1/admin/operations/alert-settings
 
-SuperAdmin: change the alert thresholds and the extra recipients (every SuperAdmin always gets alerts)
+SuperAdmin: change the alert thresholds and the extra recipients (every SuperAdmin, Admin and Platform Developer always gets alerts, in the app, on their phone and by email)
 
 - **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
 - **SuperAdmin only.**
@@ -384,6 +384,96 @@ SuperAdmin: when the daily backup runs (platform time zone) and how long backups
 | --- | --- | --- | --- |
 | `data.backupHour` | integer | yes | range 0–23 |
 | `data.retentionDays` | integer | yes | range 1–365 |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/admin/operations/cache
+
+Every cache namespace with its counters (this instance), Redis memory and the circuit state
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `READ:CACHE`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `OperationsTrafficController_cache` · [source](../../../apps/api/src/contexts/operations/presentation/http/operations-traffic.controller.ts)
+
+**Response 200 OK** (`application/json`) — The cache
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.circuitOpen` | boolean | yes |  |
+| `data.namespaces` | object[] | yes |  |
+| `data.namespaces[].encrypted` | boolean | yes |  |
+| `data.namespaces[].hitRatio` | number \| null | yes | range 0–1 |
+| `data.namespaces[].hits` | integer | yes |  |
+| `data.namespaces[].loadFailures` | integer | yes |  |
+| `data.namespaces[].localEntries` | integer | yes |  |
+| `data.namespaces[].misses` | integer | yes |  |
+| `data.namespaces[].name` | string | yes |  |
+| `data.namespaces[].refusedWrites` | integer | yes |  |
+| `data.namespaces[].scope` | "tenant" \| "user" \| "platform" | yes |  |
+| `data.namespaces[].sharedKeys` | integer \| null | yes |  |
+| `data.namespaces[].sharedMaxKeys` | integer | yes |  |
+| `data.namespaces[].staleServed` | integer | yes |  |
+| `data.namespaces[].tier` | "local" \| "shared" \| "two-tier" | yes |  |
+| `data.namespaces[].ttlMs` | integer | yes |  |
+| `data.namespaces[].version` | integer | yes |  |
+| `data.redis` | object \| null | yes |  |
+| `data.redis.alertPercent` | integer | yes |  |
+| `data.redis.maxBytes` | integer \| null | yes |  |
+| `data.redis.policy` | string | yes |  |
+| `data.redis.policyOk` | boolean | yes |  |
+| `data.redis.usedBytes` | integer | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/admin/operations/cache/flush
+
+Drop one cache namespace, or one tenant's entries in every tenant cache, on every instance (with a reason)
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `DELETE:CACHE`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `OperationsTrafficController_flushCache` · [source](../../../apps/api/src/contexts/operations/presentation/http/operations-traffic.controller.ts)
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `⟨shape 1⟩ name` | string | yes | length 1–96 |
+| `⟨shape 1⟩ reason` | string | yes | length 10–500 |
+| `⟨shape 1⟩ target` | "namespace" | yes |  |
+| `⟨shape 2⟩ reason` | string | yes | length 10–500 |
+| `⟨shape 2⟩ target` | "tenant" | yes |  |
+| `⟨shape 2⟩ tenantId` | string (uuid) | yes |  |
+
+**Response 201 Created** (`application/json`) — Flushed
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.ok` | true | yes | The action was accepted |
 
 **Errors** (standard envelope, branch on `error.code`)
 
@@ -1122,6 +1212,223 @@ Every server, instance and dependency with its live numbers, and the open alerts
 
 | Status | Code | When |
 | --- | --- | --- |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/admin/operations/rate-limits
+
+Every rate-limit policy, refusals over the last hour, the most limited subjects (masked) and the exemptions
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `LIST:RATE_LIMIT`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `OperationsTrafficController_rateLimits` · [source](../../../apps/api/src/contexts/operations/presentation/http/operations-traffic.controller.ts)
+
+**Response 200 OK** (`application/json`) — Rate limits
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.exemptions` | object[] | yes |  |
+| `data.exemptions[].kind` | "load-test" \| "server-agent" \| "cidr" | yes |  |
+| `data.exemptions[].label` | string | yes |  |
+| `data.policies` | object[] | yes |  |
+| `data.policies[].algorithm` | "sliding-window" \| "token-bucket" \| "concurrency" | yes |  |
+| `data.policies[].failMode` | "closed" \| "open" | yes |  |
+| `data.policies[].limit` | string | yes |  |
+| `data.policies[].name` | string | yes |  |
+| `data.policies[].penalty` | boolean | yes |  |
+| `data.policies[].refusalsByTenMinutes` | integer[] | yes |  |
+| `data.policies[].refusedLastHour` | integer | yes |  |
+| `data.policies[].subject` | "ip" \| "principal" \| "tenant" \| "apiKey" \| "destination" | yes |  |
+| `data.topSubjects` | object[] | yes |  |
+| `data.topSubjects[].lastRefusedAt` | integer | yes |  |
+| `data.topSubjects[].maskedSubject` | string | yes |  |
+| `data.topSubjects[].penalized` | boolean | yes |  |
+| `data.topSubjects[].policyName` | string | yes |  |
+| `data.topSubjects[].refusals` | integer | yes |  |
+| `data.topSubjects[].subjectKind` | "ip" \| "principal" \| "tenant" \| "apiKey" \| "destination" | yes |  |
+| `data.topSubjects[].subjectRef` | string | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### GET /api/v1/admin/operations/rate-limits/overrides
+
+Live tenant overrides, soonest expiry first
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `LIST:RATE_LIMIT`.
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `OperationsTrafficController_overrides` · [source](../../../apps/api/src/contexts/operations/presentation/http/operations-traffic.controller.ts)
+
+**Response 200 OK** (`application/json`) — Overrides
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data` | object[] | yes |  |
+| `data[].createdAt` | integer | yes | Epoch milliseconds when the record was created |
+| `data[].deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
+| `data[].expiresAt` | integer | yes |  |
+| `data[].id` | string (uuid) | yes |  |
+| `data[].isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
+| `data[].limit` | integer | yes |  |
+| `data[].policyName` | "TENANT_TRAFFIC" \| "API_KEY_TRAFFIC" \| "TENANT_BROADCASTS" | yes |  |
+| `data[].reason` | string | yes |  |
+| `data[].setByUserId` | string (uuid) | yes |  |
+| `data[].tenantId` | string (uuid) | yes |  |
+| `data[].tenantName` | string | yes |  |
+| `data[].updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data[].windowMs` | integer | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### PUT /api/v1/admin/operations/rate-limits/overrides
+
+Set a tenant's limit for one policy until it expires (replaces its current override); 404 for an unknown tenant
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `UPDATE:RATE_LIMIT`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `OperationsTrafficController_setOverride` · [source](../../../apps/api/src/contexts/operations/presentation/http/operations-traffic.controller.ts)
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `⟨shape 1⟩ burst` | integer | yes | range 1–100000 |
+| `⟨shape 1⟩ expiresAt` | integer | yes |  |
+| `⟨shape 1⟩ policyName` | "TENANT_TRAFFIC" \| "API_KEY_TRAFFIC" | yes |  |
+| `⟨shape 1⟩ ratePerSecond` | integer | yes | range 1–10000 |
+| `⟨shape 1⟩ reason` | string | yes | length 10–500 |
+| `⟨shape 1⟩ tenantId` | string (uuid) | yes |  |
+| `⟨shape 2⟩ expiresAt` | integer | yes |  |
+| `⟨shape 2⟩ perWeek` | integer | yes | range 1–100 |
+| `⟨shape 2⟩ policyName` | "TENANT_BROADCASTS" | yes |  |
+| `⟨shape 2⟩ reason` | string | yes | length 10–500 |
+| `⟨shape 2⟩ tenantId` | string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — The override
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.createdAt` | integer | yes | Epoch milliseconds when the record was created |
+| `data.deletedAt` | integer \| null | yes | Epoch milliseconds when soft-delete occurred, or null if active |
+| `data.expiresAt` | integer | yes |  |
+| `data.id` | string (uuid) | yes |  |
+| `data.isDeleted` | boolean | yes | Soft-delete flag — false means the record is active |
+| `data.limit` | integer | yes |  |
+| `data.policyName` | "TENANT_TRAFFIC" \| "API_KEY_TRAFFIC" \| "TENANT_BROADCASTS" | yes |  |
+| `data.reason` | string | yes |  |
+| `data.setByUserId` | string (uuid) | yes |  |
+| `data.tenantId` | string (uuid) | yes |  |
+| `data.tenantName` | string | yes |  |
+| `data.updatedAt` | integer | yes | Epoch milliseconds when the record was last updated |
+| `data.windowMs` | integer | yes |  |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### DELETE /api/v1/admin/operations/rate-limits/overrides/{overrideId}
+
+End an override now (the tenant goes back to the default); 404 when there is none
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `UPDATE:RATE_LIMIT`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: no request body; returns `application/json` (errors are always `application/json`)
+- Operation id `OperationsTrafficController_removeOverride` · [source](../../../apps/api/src/contexts/operations/presentation/http/operations-traffic.controller.ts)
+
+**Parameters**
+
+| Name | In | Type | Required | Notes |
+| --- | --- | --- | --- | --- |
+| `overrideId` | path | string (uuid) | yes |  |
+
+**Response 200 OK** (`application/json`) — Ended
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.ok` | true | yes | The action was accepted |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
+| 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
+| 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
+| 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |
+
+> [!WARNING]
+> No captured sample. Add this endpoint to `apps/docs/scripts/capture-api-samples.mjs` and re-run the capture.
+
+### POST /api/v1/admin/operations/rate-limits/penalties/lift
+
+Lift a subject's penalty from its overview row (opaque reference, with a reason); 404 once it has left the refusal log
+
+- **Signed-in session** — the httpOnly cookies from `POST /api/v1/auth/login` (send `X-Client-Type: web | admin | merchant`) or `Authorization: Bearer <access token>`.
+- **Admin-panel access** (SuperAdmin or the `ADMIN_DASHBOARD` permission).
+- **Permission** `UPDATE:RATE_LIMIT`.
+- Rate limit: 10 requests per 60 s per signed-in principal (default limiter).
+- Browser calls must send `X-Mutation-Intent: same-origin` from an allowed origin (CSRF protection).
+- Content type: accepts `application/json`; returns `application/json` (errors are always `application/json`)
+- Operation id `OperationsTrafficController_liftPenalty` · [source](../../../apps/api/src/contexts/operations/presentation/http/operations-traffic.controller.ts)
+
+**Request body** (`application/json`, required)
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `reason` | string | yes | length 10–500 |
+| `subjectRef` | string | yes | pattern `^[0-9a-f]{32}$` |
+
+**Response 201 Created** (`application/json`) — Lifted
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `data.ok` | true | yes | The action was accepted |
+
+**Errors** (standard envelope, branch on `error.code`)
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | The path, query or body failed the shared zod schema; `error.details.issues` lists each field. |
 | 401 | `ACCESS_TOKEN_MISSING`, `ACCESS_TOKEN_EXPIRED`, `TOKEN_VERSION_MISMATCH`, … | No valid session — sign in again or refresh. |
 | 403 | `PERMISSION_DENIED`, `SUPER_ADMIN_REQUIRED`, … | The caller lacks the permission or role above. |
 | 429 | `RATE_LIMITED` | Too many requests from this client; retry after `error.details.retryAfterSeconds`. |

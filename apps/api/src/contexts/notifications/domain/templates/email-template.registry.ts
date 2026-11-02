@@ -16,6 +16,9 @@ import {
 	TwoFactorStatusEmailPropsSchema,
 	VerificationEmailPropsSchema,
 	WelcomeEmailPropsSchema,
+	BroadcastEmailPropsSchema,
+	NotificationDigestEmailPropsSchema,
+	NotificationEmailPropsSchema,
 	type EmailJobPropValue,
 	type EmailPreview,
 	type EmailTemplateKey,
@@ -39,6 +42,9 @@ import { TwoFactorDisabledEmailTemplate } from "./two-factor-disabled-email.temp
 import { TwoFactorEnabledEmailTemplate } from "./two-factor-enabled-email.template";
 import { VerificationEmailTemplate } from "./verification-email.template";
 import { WelcomeEmailTemplate } from "./welcome-email.template";
+import { BroadcastEmailTemplate } from "./broadcast-email.template";
+import { NotificationDigestEmailTemplate } from "./notification-digest-email.template";
+import { NotificationEmailTemplate } from "./notification-email.template";
 
 /** A queued job's JSON-safe template props (see `serializeEmailTemplateProps`). */
 export type EmailJobProps = Record<string, EmailJobPropValue>;
@@ -200,6 +206,21 @@ export const EMAIL_TEMPLATE_REGISTRY: Readonly<Record<EmailTemplateKey, EmailTem
 		TeamMemberInviteEmailTemplate,
 		TeamMemberInviteEmailPropsSchema,
 	),
+	notification: registerTemplate(
+		"notification",
+		"Notification",
+		"A catalog notification sent by email (ADR 070); the words come from the type's renderer.",
+		NotificationEmailTemplate,
+		NotificationEmailPropsSchema,
+	),
+	"notification-digest": registerTemplate(
+		"notification-digest",
+		"Notification digest",
+		"The daily or weekly summary of held notifications (ADR 070).",
+		NotificationDigestEmailTemplate,
+		NotificationDigestEmailPropsSchema,
+	),
+	broadcast: registerTemplate("broadcast", "Broadcast", "A broadcast from a business or the platform (ADR 073).", BroadcastEmailTemplate, BroadcastEmailPropsSchema),
 };
 
 /** Static metadata list for the admin preview index. */

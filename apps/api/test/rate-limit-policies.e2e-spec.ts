@@ -46,14 +46,20 @@ afterAll((): void => {
 const TOO_MANY_REQUESTS = 429;
 const HTTP_CREATED = 201;
 const PASSWORD = "Rate-limit-e2e-1A!";
-/** The limit header of the `strict` throttler; the `default` throttler's header has no suffix. */
-const STRICT_LIMIT_HEADER = "x-ratelimit-limit-strict";
-const DEFAULT_LIMIT_HEADER = "x-ratelimit-limit";
+/** The IETF rate-limit headers (ADR 071), as Fastify's inject lowercases them. */
+const RATE_LIMIT_POLICY_HEADER = "ratelimit-policy";
+const RATE_LIMIT_HEADER = "ratelimit";
+/** The `@nestjs/throttler` headers ADR 071 retired: no response may carry one. */
+const LEGACY_LIMIT_HEADER_PREFIX = "x-ratelimit-";
 
 interface PolicyCase {
 	readonly name: string;
 	readonly limit: number;
-	readonly limitHeader: string;
+	/**
+	 * Whether the caller is signed in: only then does a response name its limit (`RateLimit-Policy` with
+	 * `q=<limit>`). A pre-authentication caller learns nothing about the attempts left (ADR 071).
+	 */
+	readonly authenticated: boolean;
 	/** One throttled request from `clientIp` (and the principal's bearer token, when the policy is principal-keyed). */
 	readonly send: (clientIp: string) => Promise<InjectResponse>;
 	/** A principal-keyed policy: every request comes from a new address, so only the principal's bucket can fill. */
@@ -97,13 +103,24 @@ describe("Rate-limit policies (e2e)", () => {
 		return accessToken;
 	}
 
+	function expectRateLimitHeaders(response: InjectResponse, policy: PolicyCase): void {
+		expect(Object.keys(response.headers).filter((name: string): boolean => name.startsWith(LEGACY_LIMIT_HEADER_PREFIX))).toEqual([]);
+		if (!policy.authenticated) {
+			expect(response.headers[RATE_LIMIT_POLICY_HEADER], policy.name).toBeUndefined();
+			expect(response.headers[RATE_LIMIT_HEADER], policy.name).toBeUndefined();
+			return;
+		}
+		expect(String(response.headers[RATE_LIMIT_POLICY_HEADER]), policy.name).toContain(`;q=${String(policy.limit)};`);
+		expect(String(response.headers[RATE_LIMIT_HEADER]), policy.name).toMatch(/;r=\d+;t=\d+$/u);
+	}
+
 	async function expectThrottledAfterLimit(policy: PolicyCase): Promise<void> {
 		const clientIp = uniqueClientIp();
 		const addressFor = (): string => (policy.principalKeyed === true ? uniqueClientIp() : clientIp);
 		for (let attempt = 1; attempt <= policy.limit; attempt += 1) {
 			const response = await policy.send(addressFor());
 			expect(response.statusCode, `${policy.name} attempt ${String(attempt)}: ${response.body}`).not.toBe(TOO_MANY_REQUESTS);
-			expect(response.headers[policy.limitHeader]).toBe(String(policy.limit));
+			expectRateLimitHeaders(response, policy);
 		}
 		const throttled = await policy.send(addressFor());
 		expect(throttled.statusCode, policy.name).toBe(TOO_MANY_REQUESTS);
@@ -125,37 +142,37 @@ describe("Rate-limit policies (e2e)", () => {
 		{
 			name: "CREDENTIAL — forgot password",
 			limit: CREDENTIAL_LOW_LIMIT,
-			limitHeader: STRICT_LIMIT_HEADER,
+			authenticated: false,
 			send: (ip) => post(`${API_VERSION_PREFIX}/auth/forgot-password`, ip, { email: `nobody-${randomUUID()}@example.com` }),
 		},
 		{
 			name: "CREDENTIAL — verify email",
 			limit: CREDENTIAL_LOW_LIMIT,
-			limitHeader: STRICT_LIMIT_HEADER,
+			authenticated: false,
 			send: (ip) => post(`${API_VERSION_PREFIX}/auth/verify-email`, ip, { token: randomUUID() }),
 		},
 		{
 			name: "SESSION_ISSUE — validate reset token",
 			limit: SESSION_ISSUE_LIMIT,
-			limitHeader: STRICT_LIMIT_HEADER,
+			authenticated: false,
 			send: (ip) => post(`${API_VERSION_PREFIX}/auth/validate-reset-token`, ip, { token: randomUUID() }),
 		},
 		{
 			name: "SESSION_REFRESH — refresh without a token",
 			limit: SESSION_REFRESH_LIMIT,
-			limitHeader: STRICT_LIMIT_HEADER,
+			authenticated: false,
 			send: (ip) => post(`${API_VERSION_PREFIX}/auth/refresh`, ip, {}),
 		},
 		{
 			name: "TERMINAL_PAIRING — unknown pairing code",
 			limit: TERMINAL_PAIRING_LIMIT,
-			limitHeader: STRICT_LIMIT_HEADER,
+			authenticated: false,
 			send: (ip) => post(`${API_VERSION_PREFIX}/integration/terminals/pair`, ip, {}),
 		},
 		{
 			name: "ONBOARDING_STATUS — unknown invite token",
 			limit: ONBOARDING_STATUS_LIMIT,
-			limitHeader: STRICT_LIMIT_HEADER,
+			authenticated: false,
 			send: (ip) => post(`${API_VERSION_PREFIX}/tenants/onboarding/documents/status`, ip, {}),
 		},
 	];
@@ -171,7 +188,7 @@ describe("Rate-limit policies (e2e)", () => {
 		await expectThrottledAfterLimit({
 			name: "CREDENTIAL — change password",
 			limit: CREDENTIAL_LOW_LIMIT,
-			limitHeader: STRICT_LIMIT_HEADER,
+			authenticated: true,
 			send: (ip) => post(`${API_VERSION_PREFIX}/auth/change-password`, ip, {}, { authorization: `Bearer ${accessToken}` }),
 		});
 	});
@@ -182,7 +199,7 @@ describe("Rate-limit policies (e2e)", () => {
 			name: "ADMIN_SECURITY_MUTATION — create role",
 			principalKeyed: true,
 			limit: ADMIN_SECURITY_MUTATION_LIMIT,
-			limitHeader: DEFAULT_LIMIT_HEADER,
+			authenticated: true,
 			send: (ip) => post(`${API_VERSION_PREFIX}/admin/roles`, ip, {}, { authorization: `Bearer ${accessToken}` }),
 		});
 	});
@@ -193,7 +210,7 @@ describe("Rate-limit policies (e2e)", () => {
 			name: "AUTHENTICATED_MUTATION — role assignment preview",
 			principalKeyed: true,
 			limit: getApiConfig().rateLimits.throttleDefaultLimit,
-			limitHeader: DEFAULT_LIMIT_HEADER,
+			authenticated: true,
 			send: (ip) => post(`${API_VERSION_PREFIX}/admin/roles/preview`, ip, {}, { authorization: `Bearer ${accessToken}` }),
 		});
 	});

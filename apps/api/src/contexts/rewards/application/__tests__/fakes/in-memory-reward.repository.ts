@@ -37,6 +37,7 @@ function toState(snapshot: RewardSnapshot, previous: RewardState | undefined): R
 		startDate: snapshot.startDate,
 		expiryDate: snapshot.expiryDate,
 		inventory: snapshot.inventory,
+		audience: snapshot.audience,
 		submittedForReviewAt: snapshot.review.submittedForReviewAt,
 		autoPublishAt: snapshot.review.autoPublishAt,
 		reviewedAt: snapshot.review.reviewedAt,

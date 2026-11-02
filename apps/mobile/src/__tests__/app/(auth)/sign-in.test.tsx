@@ -158,7 +158,7 @@ describe("Sign in screen", () => {
 		const { runtime } = await renderSignIn();
 
 		expect(await screen.findByRole("header", { name: "Quick sign-in (development)" })).toBeOnTheScreen();
-		for (const label of ["Super Admin", "Admin", "Manager", "KL Owner", "Melaka Owner", "KL Cashier"]) {
+		for (const label of ["Super Admin", "Admin", "Manager", "KL Owner", "Melaka Owner", "KL Cashier", "Customer", "Bishen Patel"]) {
 			expect(screen.getByRole("button", { name: `Sign in as ${label}` })).toBeOnTheScreen();
 		}
 		await fireEvent.press(screen.getByRole("button", { name: "Sign in as KL Owner" }));

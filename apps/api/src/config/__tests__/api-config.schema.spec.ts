@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SINGLE_TENANT_SEED_TENANT_ID } from "../../../prisma/seed/tenant-seed-ids";
 import { TEST_API_ENV, type TestEnv } from "../../../test/support/test-api-env";
 import { API_ENV_SCOPE, parseApiConfig } from "../api-config";
-import { isLoopbackUrl, resolveApiDocsPolicy, resolveCacheBackend, resolveLogLevel, resolveRedisNamespace, type ApiConfig } from "../api-config.schema";
+import { isLoopbackUrl, resolveApiDocsPolicy, resolveLogLevel, resolveRedisNamespace, type ApiConfig } from "../api-config.schema";
 
 /** Parse the fixture with `overrides`; `undefined` removes a variable. */
 function parse(overrides: Readonly<Record<string, string | undefined>> = {}): ApiConfig {
@@ -57,6 +57,9 @@ const DEPLOYED_PRODUCTION: TestEnv = {
 	STORAGE_CLOUDFRONT_PUBLIC_DOMAIN: "d111111abcdef8.cloudfront.net",
 	STORAGE_CLOUDFRONT_DISTRIBUTION_ID: "E2QWRUHAPOMQZL",
 	MALWARE_SCANNER: "none",
+	// ADR 072: personal data encrypted inside Redis, Redis over TLS with a password.
+	REDIS_URL: "rediss://:redis-password@cache.internal:6380",
+	CACHE_ENCRYPTION_KEYS: '{"1":"AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI="}',
 };
 
 /** The S3 public-delivery pair (CloudFront origin bucket + CDN host) every s3 deployment needs. */
@@ -119,7 +122,16 @@ describe("API env schema", () => {
 		expect(config.http).toMatchObject({ host: "127.0.0.1", port: 8080, publicUrl: "http://127.0.0.1:8080", trustedProxies: [], shutdownTimeoutMs: 15_000 });
 		expect(config.database).toMatchObject({ poolMax: 10, idleTimeoutMs: 30_000, allowExitOnIdle: true });
 		expect(config.auth).toMatchObject({ jwtAccessExpiry: "15m", jwtRefreshExpiry: "7d", twoFactorIssuer: "hello-world", loginVerificationMode: "disabled" });
-		expect(config.rateLimits).toEqual({ throttleDefaultLimit: 300, throttleStrictLimit: 30, throttleTtlMs: 60_000, securityCounterMaxKeys: 50_000 });
+		expect(config.rateLimits).toEqual({
+			throttleDefaultLimit: 300,
+			throttleStrictLimit: 30,
+			throttleTtlMs: 60_000,
+			securityCounterMaxKeys: 50_000,
+			expectedInstances: 1,
+			exemptCidrs: [],
+			tenantTraffic: { ratePerSecond: 50, burst: 200 },
+			apiKeyTraffic: { ratePerSecond: 20, burst: 100 },
+		});
 		expect(config.observability).toEqual({
 			logLevel: "warn",
 			memoryMonitoring: false,
@@ -299,7 +311,6 @@ describe("API env schema", () => {
 		it("validates closed option sets", () => {
 			expect(captureEnvError({ EMAIL_MODE: "smtp" }).variables).toEqual(["EMAIL_MODE"]);
 			expect(captureEnvError({ LOG_LEVEL: "verbose" }).variables).toEqual(["LOG_LEVEL"]);
-			expect(captureEnvError({ AUTHORIZATION_CACHE_BACKEND: "memcached" }).variables).toEqual(["AUTHORIZATION_CACHE_BACKEND"]);
 			expect(captureEnvError({ STORAGE_PROVIDER: "azure" }).variables).toEqual(["STORAGE_PROVIDER"]);
 			expect(captureEnvError({ STORAGE_CLOUDFRONT_PUBLIC_DOMAIN: "https://d111111abcdef8.cloudfront.net" }).variables).toEqual(["STORAGE_CLOUDFRONT_PUBLIC_DOMAIN"]);
 			expect(captureEnvError({ STORAGE_CLOUDFRONT_PUBLIC_DOMAIN: "d111111abcdef8.cloudfront.net/assets" }).variables).toEqual(["STORAGE_CLOUDFRONT_PUBLIC_DOMAIN"]);
@@ -417,6 +428,14 @@ describe("API env schema", () => {
 			const issue = { variable: "EMAIL_PROVIDER", problem: "must be resend on a deployed environment (the local Mailpit inbox is only allowed when APP_URL is localhost)" };
 			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, EMAIL_PROVIDER: "mailpit" }).issues).toEqual([issue]);
 			expect(captureEnvError({ NODE_ENV: "development", APP_URL: "https://dev.example.com", EMAIL_PROVIDER: "mailpit" }).issues).toEqual([issue]);
+		});
+
+		it("requires the cache key ring and a TLS, password-protected Redis on a deployed production environment (ADR 072)", () => {
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, CACHE_ENCRYPTION_KEYS: undefined }).variables).toEqual(["CACHE_ENCRYPTION_KEYS"]);
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, REDIS_URL: "redis://:redis-password@cache.internal:6379" }).variables).toEqual(["REDIS_URL"]);
+			expect(captureEnvError({ ...DEPLOYED_PRODUCTION, REDIS_URL: "rediss://cache.internal:6380" }).variables).toEqual(["REDIS_URL"]);
+			// A production build on localhost is not a deployment: plain local Redis stays allowed.
+			expect(parse({ ...PRODUCTION }).caches.encryptionKeys).toBeNull();
 		});
 
 		it("forbids EMAIL_TEST_TO on a deployed production environment and requires REDIS_URL in production", () => {
@@ -657,20 +676,6 @@ describe("resolveApiDocsPolicy", () => {
 		expect(parse({ SWAGGER_ENABLED: "0" }).http.apiDocs).toEqual({ enabled: false, access: "public" });
 		expect(parse(PRODUCTION).http.apiDocs).toEqual({ enabled: false, access: "platform_admin" });
 		expect(parse({ ...PRODUCTION, SWAGGER_ENABLED: "1" }).http.apiDocs).toEqual({ enabled: true, access: "platform_admin" });
-	});
-});
-
-describe("resolveCacheBackend", () => {
-	it("honours an explicit backend", () => {
-		expect(resolveCacheBackend("memory", "production", "redis://cache:6379")).toBe("memory");
-		expect(resolveCacheBackend("redis", "development", undefined)).toBe("redis");
-	});
-
-	it("auto-selects redis only outside development and only when Redis is configured", () => {
-		expect(resolveCacheBackend("auto", "production", "redis://cache:6379")).toBe("redis");
-		expect(resolveCacheBackend("auto", "test", "redis://cache:6379")).toBe("redis");
-		expect(resolveCacheBackend("auto", "development", "redis://cache:6379")).toBe("memory");
-		expect(resolveCacheBackend("auto", "production", undefined)).toBe("memory");
 	});
 });
 

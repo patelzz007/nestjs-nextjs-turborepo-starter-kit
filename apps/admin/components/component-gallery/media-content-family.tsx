@@ -40,6 +40,8 @@ import { UserAvatar } from "@workspace/ui/components/user-avatar";
 import { FileText, ImageOff, RotateCcw, X } from "lucide-react";
 import * as React from "react";
 
+import { RichTextEditor1Example } from "@/components/component-gallery/examples/rich-text-editor/rich-text-editor-1";
+import { RichTextView1Example } from "@/components/component-gallery/examples/rich-text-view/rich-text-view-1";
 import { GALLERY_ENTRIES } from "@/components/component-gallery/gallery-catalog";
 import { ComponentSection, DemoRow, DemoSurface, DemoValue, ExampleOnlySections } from "@/components/component-gallery/gallery-section";
 
@@ -604,6 +606,16 @@ export function MediaContentFamily(): React.JSX.Element {
 			</ComponentSection>
 			<ComponentSection entry={GALLERY_ENTRIES.codeBlock} height="h-72">
 				<CodeBlockDemo />
+			</ComponentSection>
+			<ComponentSection entry={GALLERY_ENTRIES.richTextEditor} height="h-[640px]">
+				<DemoSurface>
+					<RichTextEditor1Example />
+				</DemoSurface>
+			</ComponentSection>
+			<ComponentSection entry={GALLERY_ENTRIES.richTextView} height="h-[400px]">
+				<DemoSurface>
+					<RichTextView1Example />
+				</DemoSurface>
 			</ComponentSection>
 			<ComponentSection entry={GALLERY_ENTRIES.qrCode} height="h-72">
 				<QrCodeDemo />

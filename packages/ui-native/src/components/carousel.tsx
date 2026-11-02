@@ -26,6 +26,15 @@
 //     stops for good the moment the person takes over (a swipe, a dot or an arrow), and never runs with
 //     the OS "Reduce Motion" setting on — moving content must be stoppable (WCAG 2.2.2). The caller turns
 //     it off while the screen is out of sight (pass `undefined`).
+//
+//   - `loop` (always on with auto-play): round and round, both ways. After the last slide the first
+//     comes in from the right, sliding left like every other step; before the first, the last comes in
+//     from the left — never a rewind back across all the slides. A copy of the last slide sits before
+//     the first and a copy of the first after the last; the carousel slides onto a copy, then swaps to
+//     the real slide with no animation (the two look the same). Arrows, swipes and auto-play all do so.
+//
+//       [ 3' ][ 1 ][ 2 ][ 3 ][ 1' ]   3 → 1' slides left, then 1' → 1 in place;
+//                                      1 → 3' slides right, then 3' → 3 in place
 
 import { cva, type VariantProps } from "class-variance-authority";
 import ChevronLeftIcon from "lucide-react-native/icons/chevron-left";
@@ -93,6 +102,15 @@ const FIRST_INDEX = 0;
 const NO_PEEK = 0;
 /** Full-width pages touch unless the caller asks for a gap. */
 const NO_GAP = 0;
+/**
+ * How close to a copy counts as on it, as a share of one slide. A swipe settles where the OS snapped it —
+ * whole physical pixels, so a few points off the copy's exact offset — and is read as the nearest slide.
+ * A wrap the carousel animates swaps in its last few points instead: the swap keeps the picture still.
+ */
+export const SETTLED_ON_COPY_SHARE = 0.5;
+export const SLIDING_ONTO_COPY_SHARE = 0.05;
+/** How often a moving pager reports where it is, in milliseconds: every frame, to catch the copy at once. */
+const SCROLL_EVENT_THROTTLE_MS = 16;
 /** Points between slides when they peek, unless the caller says otherwise. */
 export const DEFAULT_CAROUSEL_GAP = 12;
 
@@ -113,6 +131,45 @@ export function carouselSlideMetrics(width: number, peek: number, gap: number): 
 /** The slide after `index`, back to the first after the last (auto-play's order). */
 export function nextCarouselIndex(index: number, total: number): number {
 	return index >= total - POSITION_OFFSET ? FIRST_INDEX : index + POSITION_OFFSET;
+}
+
+/** How a step goes round a looping carousel: not at all, past the last slide, or before the first. */
+export type CarouselWrap = "none" | "forward" | "backward";
+
+/**
+ * Where the pager scrolls to show slide `index`. A looping pager has the last slide's copy in front (`lead`
+ * is 1), so every slide sits one place along; while wrapping it goes to a copy instead — the first's after
+ * the last (`forward`) or the last's before the first (`backward`) — so the step slides like the others.
+ */
+export function carouselScrollTarget(index: number, interval: number, total: number, wrap: CarouselWrap, lead: number): number {
+	switch (wrap) {
+		case "forward":
+			return (total + lead) * interval;
+		case "backward":
+			return FIRST_INDEX;
+		case "none":
+			return (index + lead) * interval;
+	}
+}
+
+/**
+ * A looping pager on a copy — the first slide's after the last (or past it in a fling), or the last
+ * slide's in front — within `share` of a slide, and the real slide it stands for, with the offset that
+ * shows exactly the same picture; `null` anywhere else. The two look alike, so the pager swaps in place.
+ */
+export function carouselLoopJump(offset: number, interval: number, total: number, share: number): { readonly offset: number; readonly index: number } | null {
+	if (interval <= FIRST_INDEX) {
+		return null;
+	}
+	const tolerance = interval * share;
+	const firstCopyAt = (total + POSITION_OFFSET) * interval;
+	if (offset >= firstCopyAt - tolerance) {
+		return { offset: offset - total * interval, index: FIRST_INDEX };
+	}
+	if (offset <= tolerance) {
+		return { offset: offset + total * interval, index: total - POSITION_OFFSET };
+	}
+	return null;
 }
 
 /** The default accessible names of the arrows (the web kit's `previousSlide` / `nextSlide`); generic and overridable. */
@@ -158,6 +215,12 @@ export interface CarouselProps {
 	 * Motion. Pass `undefined` while the screen is out of sight.
 	 */
 	readonly autoPlayIntervalMs?: number | undefined;
+	/**
+	 * Go round, both ways: after the last slide the first slides in from the right, and before the first
+	 * the last slides in from the left (both arrows stay on; a swipe past either end goes round). Always
+	 * on with `autoPlayIntervalMs`.
+	 */
+	readonly loop?: boolean | undefined;
 	readonly variant?: CarouselVariant | undefined;
 	readonly size?: CarouselSize | undefined;
 	/** Extra classes for the container, merged last (layout: `mt-4`). */
@@ -179,6 +242,7 @@ export const Carousel = React.memo(
 			peek = NO_PEEK,
 			gap: requestedGap,
 			autoPlayIntervalMs,
+			loop = false,
 			variant = "plain",
 			size = "md",
 			className,
@@ -194,6 +258,17 @@ export const Carousel = React.memo(
 		const [tookOver, setTookOver] = React.useState(false);
 		const slides = React.Children.toArray(children);
 		const total = slides.length;
+		const loops = (loop || autoPlayIntervalMs !== undefined) && total > POSITION_OFFSET;
+		const [firstSlide] = slides;
+		const lastSlide = slides.at(-POSITION_OFFSET);
+		// A looping pager has the last slide's copy in front: every slide sits one place along.
+		const lead = loops ? POSITION_OFFSET : FIRST_INDEX;
+		// A wrap was asked for: the next index is reached via a copy.
+		const wrapAsked = React.useRef<CarouselWrap>("none");
+		// The copy the pager is on, or sliding onto; `none` once it swapped to the real slide.
+		const onCopy = React.useRef<CarouselWrap>("none");
+		// The pager was put in place once: the first placement after layout never animates.
+		const placed = React.useRef(false);
 		const gap = carouselGapOf(peek, requestedGap);
 		// Slides that peek or sit apart snap slide by slide; full-width pages that touch page.
 		const snaps = peek > NO_PEEK || gap > NO_GAP;
@@ -205,12 +280,55 @@ export const Carousel = React.memo(
 			setPageWidth(event.nativeEvent.layout.width);
 		}, []);
 
-		// The caller moved `index` (a dot, or its own control): bring that page into view.
+		// The caller moved `index` (a dot, or its own control): bring that page into view. Wrapping round,
+		// slide on to a copy; without motion there is nothing to see, so go straight to the slide.
 		React.useEffect((): void => {
-			if (interval > FIRST_INDEX) {
-				scrollRef.current?.scrollTo({ x: index * interval, animated: !reduceMotion });
+			if (interval <= FIRST_INDEX) {
+				return;
 			}
-		}, [index, interval, reduceMotion]);
+			const animated = !reduceMotion && placed.current;
+			const wrap: CarouselWrap = animated ? wrapAsked.current : "none";
+			wrapAsked.current = "none";
+			// Still on a copy (its last scroll report never came): swap first, so this move never rewinds.
+			if (onCopy.current !== "none" && wrap === "none") {
+				const real = onCopy.current === "forward" ? lead * interval : total * interval;
+				scrollRef.current?.scrollTo({ x: real, animated: false });
+			}
+			onCopy.current = wrap;
+			placed.current = true;
+			scrollRef.current?.scrollTo({ x: carouselScrollTarget(index, interval, total, wrap, lead), animated });
+		}, [index, interval, lead, reduceMotion, total]);
+
+		/** Go round (`loop`): past the last slide to the first, or before the first to the last. */
+		const wrapRound = React.useCallback(
+			(wrap: Exclude<CarouselWrap, "none">): void => {
+				wrapAsked.current = wrap;
+				onChange(wrap === "forward" ? FIRST_INDEX : total - POSITION_OFFSET);
+			},
+			[onChange, total],
+		);
+
+		// The pager reached a copy: swap to the real slide in place, and say which one it is.
+		const swapOffCopy = React.useCallback(
+			(offset: number, share: number): number | null => {
+				const jump = loops ? carouselLoopJump(offset, interval, total, share) : null;
+				if (jump === null) {
+					return null;
+				}
+				onCopy.current = "none";
+				scrollRef.current?.scrollTo({ x: jump.offset, animated: false });
+				return jump.index;
+			},
+			[interval, loops, total],
+		);
+		const follow = React.useCallback(
+			(event: NativeSyntheticEvent<NativeScrollEvent>): void => {
+				if (onCopy.current !== "none") {
+					swapOffCopy(event.nativeEvent.contentOffset.x, SLIDING_ONTO_COPY_SHARE);
+				}
+			},
+			[swapOffCopy],
+		);
 
 		// Auto-play: one timer per slide shown, so a slide always gets the full interval.
 		const autoPlays = autoPlayIntervalMs !== undefined && !tookOver && !reduceMotion && total > POSITION_OFFSET;
@@ -219,12 +337,17 @@ export const Carousel = React.memo(
 				return undefined;
 			}
 			const timer = setTimeout((): void => {
-				onChange(nextCarouselIndex(index, total));
+				const next = nextCarouselIndex(index, total);
+				if (next === FIRST_INDEX) {
+					wrapRound("forward");
+				} else {
+					onChange(next);
+				}
 			}, autoPlayIntervalMs);
 			return (): void => {
 				clearTimeout(timer);
 			};
-		}, [autoPlayIntervalMs, autoPlays, index, onChange, total]);
+		}, [autoPlayIntervalMs, autoPlays, index, onChange, total, wrapRound]);
 
 		const takeOver = React.useCallback((): void => {
 			setTookOver(true);
@@ -235,12 +358,20 @@ export const Carousel = React.memo(
 				if (interval <= FIRST_INDEX) {
 					return;
 				}
-				const page = clampCarouselIndex(Math.round(event.nativeEvent.contentOffset.x / interval), total);
+				// A swipe past either end settled on a copy: it is the slide it copies.
+				const real = swapOffCopy(event.nativeEvent.contentOffset.x, SETTLED_ON_COPY_SHARE);
+				if (real !== null) {
+					if (real !== index) {
+						onChange(real);
+					}
+					return;
+				}
+				const page = clampCarouselIndex(Math.round(event.nativeEvent.contentOffset.x / interval) - lead, total);
 				if (page !== index) {
 					onChange(page);
 				}
 			},
-			[index, interval, onChange, total],
+			[index, interval, lead, onChange, swapOffCopy, total],
 		);
 
 		const select = React.useCallback(
@@ -251,11 +382,25 @@ export const Carousel = React.memo(
 			[onChange],
 		);
 		const showPrevious = React.useCallback((): void => {
+			if (loops && index <= FIRST_INDEX) {
+				setTookOver(true);
+				wrapRound("backward");
+				return;
+			}
 			select(clampCarouselIndex(index - POSITION_OFFSET, total));
-		}, [index, select, total]);
+		}, [index, loops, select, total, wrapRound]);
 		const showNext = React.useCallback((): void => {
+			if (loops && index >= total - POSITION_OFFSET) {
+				setTookOver(true);
+				wrapRound("forward");
+				return;
+			}
 			select(clampCarouselIndex(index + POSITION_OFFSET, total));
-		}, [index, select, total]);
+		}, [index, loops, select, total, wrapRound]);
+
+		// An arrow stops at its end only when the carousel does not go round.
+		const previousOff = !loops && index <= FIRST_INDEX;
+		const nextOff = !loops && index >= total - POSITION_OFFSET;
 
 		return (
 			<View ref={ref} testID={testID} onLayout={measure} className={cn(carouselVariants({ variant, size }), className)}>
@@ -268,7 +413,19 @@ export const Carousel = React.memo(
 					contentContainerStyle={trackStyle}
 					onScrollBeginDrag={takeOver}
 					onMomentumScrollEnd={settle}
+					onScroll={follow}
+					scrollEventThrottle={SCROLL_EVENT_THROTTLE_MS}
 					testID={testID === undefined ? undefined : `${testID}-pager`}>
+					{loops ? (
+						// The last slide again, for a wrap backwards to slide onto; screen readers never reach it.
+						<View
+							style={pageStyle}
+							accessibilityElementsHidden
+							importantForAccessibility="no-hide-descendants"
+							testID={testID === undefined ? undefined : `${testID}-loop-copy-last`}>
+							{lastSlide}
+						</View>
+					) : null}
 					{slides.map((slide: React.ReactNode, slideIndex: number): React.JSX.Element => (
 						<View
 							// Children.toArray gives every slide a stable key; the position is its fallback.
@@ -279,6 +436,16 @@ export const Carousel = React.memo(
 							{slide}
 						</View>
 					))}
+					{loops ? (
+						// The first slide again, for a wrap forwards to slide onto; screen readers never reach it.
+						<View
+							style={pageStyle}
+							accessibilityElementsHidden
+							importantForAccessibility="no-hide-descendants"
+							testID={testID === undefined ? undefined : `${testID}-loop-copy-first`}>
+							{firstSlide}
+						</View>
+					) : null}
 				</ScrollView>
 				{showIndicators || showControls ? (
 					<View className="flex-row items-center justify-center gap-2">
@@ -287,7 +454,7 @@ export const Carousel = React.memo(
 								icon={ChevronLeftIcon}
 								label={previousLabel}
 								onPress={showPrevious}
-								disabled={index <= FIRST_INDEX}
+								disabled={previousOff}
 								variant="ghost"
 								size="sm"
 								{...(testID === undefined ? {} : { testID: `${testID}-previous` })}
@@ -312,7 +479,7 @@ export const Carousel = React.memo(
 								icon={ChevronRightIcon}
 								label={nextLabel}
 								onPress={showNext}
-								disabled={index >= total - POSITION_OFFSET}
+								disabled={nextOff}
 								variant="ghost"
 								size="sm"
 								{...(testID === undefined ? {} : { testID: `${testID}-next` })}

@@ -8,6 +8,13 @@ import type { BaseEmailProps, BaseEmailTemplate } from "../../../domain/template
 import type { NotificationsScope } from "../../notifications-scope";
 import { EmailDeliveryFailure, type EmailDeliveryPort, type EmailDeliveryReceipt } from "../../ports/email-delivery.port";
 import type { EmailRequestTransactionalPort, EmailSendOptions } from "../../ports/email-request.port";
+import type { NotifyRequest, NotifyResult, NotifyTransactionalPort } from "../../ports/notify.port";
+import { InMemoryNotificationAccountStore } from "./in-memory-notification-account.store";
+import { InMemoryNotificationStore } from "./in-memory-notification.store";
+import { InMemoryBroadcastStore } from "./in-memory-broadcast.store";
+import type { ActorContext } from "../../../../../platform/application/actor-context";
+import type { SystemOperationName } from "../../../../../platform/application/system-operation-names";
+import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 
 export const EMAIL_LOG_ID = "6b1f3e2a-9c4d-4e5f-8a7b-1c2d3e4f5a6b";
 export const NOW: EpochMs = epochMs(1_800_000_000_000);
@@ -112,8 +119,63 @@ export class RecordingEmailRequests implements EmailRequestTransactionalPort {
 	}
 }
 
-export function notificationsScope(emailLogs: InMemoryEmailLogs, emailRequests: EmailRequestTransactionalPort = new RecordingEmailRequests()): NotificationsScope {
-	return { emailLogs, emailRequests, events: new TransactionalEventCollector() };
+/** Records every `notify()` and answers it as new. */
+export class RecordingNotify implements NotifyTransactionalPort {
+	public readonly requests: {
+		readonly typeKey: string;
+		readonly dedupeKey: string;
+		readonly recipientUserId: string | null;
+		readonly broadcastId: string | null;
+		readonly notBefore: number | null;
+		readonly category: string | null;
+	}[] = [];
+
+	public notify<TPayload>(request: NotifyRequest<TPayload>): Promise<NotifyResult> {
+		const recipientUserId = request.recipient.kind === "user" ? request.recipient.userId : null;
+		const repeat = this.requests.some(
+			(existing) => existing.typeKey === request.type.key && existing.dedupeKey === request.dedupeKey && existing.recipientUserId === recipientUserId,
+		);
+		if (repeat) {
+			return Promise.resolve({ duplicate: true });
+		}
+		this.requests.push({
+			typeKey: request.type.key,
+			dedupeKey: request.dedupeKey,
+			recipientUserId,
+			broadcastId: request.broadcastId ?? null,
+			notBefore: request.notBefore ?? null,
+			category: request.category ?? null,
+		});
+		return Promise.resolve({ duplicate: false, notificationId: EMAIL_LOG_ID });
+	}
+}
+
+/** Runs each unit of work on one fixed scope and records the system operation it ran under. */
+export class RecordingNotificationsUnitOfWork implements UnitOfWork<NotificationsScope> {
+	public readonly operations: (SystemOperationName | null)[] = [];
+
+	public constructor(public readonly scope: NotificationsScope) {}
+
+	public run<TResult>(_actor: ActorContext, work: (scope: NotificationsScope) => Promise<TResult>): Promise<TResult> {
+		this.operations.push(null);
+		return work(this.scope);
+	}
+
+	public runSystemOperation<TResult>(operation: SystemOperationName, _actor: ActorContext, work: (scope: NotificationsScope) => Promise<TResult>): Promise<TResult> {
+		this.operations.push(operation);
+		return work(this.scope);
+	}
+}
+
+export function notificationsScope(
+	emailLogs: InMemoryEmailLogs,
+	emailRequests: EmailRequestTransactionalPort = new RecordingEmailRequests(),
+	notificationStore: InMemoryNotificationStore = new InMemoryNotificationStore((): number => NOW),
+	accountStore: InMemoryNotificationAccountStore = new InMemoryNotificationAccountStore(),
+	broadcasts: InMemoryBroadcastStore = new InMemoryBroadcastStore(),
+	notify: RecordingNotify = new RecordingNotify(),
+): NotificationsScope {
+	return { emailLogs, emailRequests, notify, notificationStore, accountStore, broadcasts, events: new TransactionalEventCollector() };
 }
 
 export function failure(retryable: boolean, message = "provider error"): EmailDeliveryFailure {

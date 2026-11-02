@@ -2,7 +2,8 @@
 // drives it) and the admin panel (which previews it): the read endpoints a single-endpoint test may
 // call, and how each load shape changes the request rate over the run.
 
-import { claimsRoutes, rewardNotificationsRoutes } from "../claims/routes";
+import { claimsRoutes } from "../claims/routes";
+import { notificationsRoutes } from "../notifications/routes";
 import { authRoutes } from "../identity/routes";
 import { legalRoutes, rewardsRoutes } from "../rewards/routes";
 import type { LoadTestShape } from "./schemas/operations";
@@ -11,7 +12,13 @@ import type { LoadTestShape } from "./schemas/operations";
  * The read (`GET`) endpoints a single-endpoint load test may call: a signed-in customer's own
  * screens, no path parameters. Writes happen only through scenarios.
  */
-export const LOAD_TEST_READ_ENDPOINTS: readonly string[] = [rewardsRoutes.list, claimsRoutes.list, authRoutes.me, rewardNotificationsRoutes.list, legalRoutes.status];
+export const LOAD_TEST_READ_ENDPOINTS: readonly string[] = [
+	rewardsRoutes.list,
+	claimsRoutes.list,
+	authRoutes.me,
+	`${notificationsRoutes.unreadCount}?surface=CUSTOMER`,
+	legalRoutes.status,
+];
 
 /** One stage: reach `target` requests per second over `durationSeconds`. */
 export interface LoadTestStage {

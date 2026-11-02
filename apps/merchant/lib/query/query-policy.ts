@@ -1,5 +1,6 @@
 import { ApiError } from "@workspace/client/lib/api/use-api";
 import { resolveAuthErrorMessage } from "@workspace/client/lib/api/error-messages";
+import { rateLimitMessage } from "@workspace/client/lib/api/rate-limit";
 
 // ============================================
 // lib/query/query-policy.ts - named freshness and retry rules for merchant queries
@@ -50,6 +51,10 @@ export function retryTransientFailures(failureCount: number, error: Error): bool
  * (it can carry URLs, hostnames or stack details).
  */
 export function userSafeErrorMessage(error: Error, fallback: string): string {
+	const tooFast = rateLimitMessage(error);
+	if (tooFast !== null) {
+		return tooFast;
+	}
 	if (error instanceof ApiError && error.statusCode !== undefined && error.statusCode < HTTP_SERVER_ERROR_MIN) {
 		return resolveAuthErrorMessage(error);
 	}

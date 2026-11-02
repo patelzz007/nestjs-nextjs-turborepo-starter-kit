@@ -1,18 +1,51 @@
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import * as Haptics from "expo-haptics";
 import * as React from "react";
 import { Linking, type ViewInstance } from "react-native";
 import { SafeAreaProvider, type Metrics } from "react-native-safe-area-context";
 
 import * as mockExpoCamera from "../../../test/expo-camera-mock";
-import { DEFAULT_QR_SCANNER_LABELS, QrScanner } from "../qr-scanner";
+import { SCANNER_SHEET_MOTION } from "../../lib/motion";
+import type { GalleryScanDevice } from "../../lib/qr-gallery-scan";
+import { LOCK_HOLD_MS, SLOW_SCAN_AFTER_MS } from "../../lib/qr-viewfinder";
+import { DEFAULT_QR_SCANNER_LABELS, deviceQrScannerEngine, galleryScanMessage, QrScanFromGalleryButton, QrScanner } from "../qr-scanner";
 
 jest.mock("expo-camera", () => mockExpoCamera);
+jest.mock("expo-image-picker", () => ({ launchImageLibraryAsync: jest.fn() }));
 
-const { CameraView, cameraPermission, emitModernScan, latestCameraProps, modernScanListeners, permissionOf, requestCameraPermission, scannedBarcode } = mockExpoCamera;
+/** A photo library whose one photo holds `data` (or no code at all). */
+function libraryWith(data: string | null): GalleryScanDevice {
+	return {
+		pickImage: () =>
+			Promise.resolve({
+				canceled: false,
+				assets: [
+					{
+						uri: "file:///photo.jpg",
+						width: 1,
+						height: 1,
+						type: "image",
+						fileName: null,
+						fileSize: 1,
+						mimeType: "image/jpeg",
+						assetId: null,
+						base64: null,
+						exif: null,
+						duration: null,
+					},
+				],
+			}),
+		decode: () => Promise.resolve(data === null ? [] : [mockExpoCamera.scannedBarcode(data)]),
+	};
+}
+
+const { CameraView, cameraPermission, cameraStart, emitModernScan, latestCameraProps, modernScanListeners, permissionOf, requestCameraPermission, scannedBarcode } =
+	mockExpoCamera;
 
 const SCANNER = "scanner";
 const CAMERA = `${SCANNER}-camera`;
 const CODE = "pos-pair:v1:ABCD2345";
+const SCAN_LINE = "qr-scanner-scan-line";
 
 /** A phone with a notch and a home indicator: the scanner's bars sit inside them. */
 const PHONE_METRICS: Metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 47, right: 0, bottom: 34, left: 0 } };
@@ -43,6 +76,7 @@ async function readWithCamera(data: string): Promise<void> {
 
 afterEach(() => {
 	cameraPermission.current = null;
+	cameraStart.current = "ready";
 	latestCameraProps.current = null;
 	modernScanListeners.clear();
 });
@@ -57,15 +91,80 @@ describe("QrScanner — the kit's camera scanner", () => {
 		expect(screen.getByText(DEFAULT_QR_SCANNER_LABELS.hint)).toBeOnTheScreen();
 	});
 
-	it("delivers the first code read, then stops reading until it is opened again", async () => {
+	it("says it is starting the camera, and reads no code until the camera is ready", async () => {
 		cameraPermission.current = permissionOf(true, true);
+		cameraStart.current = "pending";
+		await render(onPhone(<QrScanner visible engine="camera" {...handlers()} testID={SCANNER} />));
+
+		expect(screen.getByText(DEFAULT_QR_SCANNER_LABELS.startingCamera)).toBeOnTheScreen();
+		expect(latestCameraProps.current?.onBarcodeScanned).toBeUndefined();
+
+		await act((): void => {
+			latestCameraProps.current?.onCameraReady?.();
+		});
+
+		expect(screen.getByText(DEFAULT_QR_SCANNER_LABELS.hint)).toBeOnTheScreen();
+		expect(latestCameraProps.current?.onBarcodeScanned).toBeDefined();
+	});
+
+	it("offers a tip when no code was read for a while", async () => {
+		jest.useFakeTimers();
+		try {
+			cameraPermission.current = permissionOf(true, true);
+			await render(onPhone(<QrScanner visible engine="camera" {...handlers()} testID={SCANNER} />));
+
+			await act((): void => {
+				jest.advanceTimersByTime(SLOW_SCAN_AFTER_MS);
+			});
+
+			expect(screen.getByText(DEFAULT_QR_SCANNER_LABELS.slowHint)).toBeOnTheScreen();
+			expect(latestCameraProps.current?.onBarcodeScanned).toBeDefined();
+		} finally {
+			jest.useRealTimers();
+		}
+	});
+
+	it("explains a camera that could not start, and still offers a photo", async () => {
+		cameraPermission.current = permissionOf(true, true);
+		cameraStart.current = "fails";
+		await render(onPhone(<QrScanner visible engine="camera" {...handlers()} galleryDevice={libraryWith(CODE)} testID={SCANNER} />));
+
+		expect(screen.getByText(DEFAULT_QR_SCANNER_LABELS.cameraFailed)).toBeOnTheScreen();
+		expect(screen.queryByRole("button", { name: DEFAULT_QR_SCANNER_LABELS.torchOn })).toBeNull();
+		expect(screen.getByRole("button", { name: DEFAULT_QR_SCANNER_LABELS.scanFromGallery })).toBeOnTheScreen();
+	});
+
+	it("locks onto the first code read — says it was found, taps the phone — then delivers it once and stops reading", async () => {
+		cameraPermission.current = permissionOf(true, true);
+		const success = jest.spyOn(Haptics, "notificationAsync").mockResolvedValue(undefined);
 		const { onScan, onClose } = handlers();
 		await render(onPhone(<QrScanner visible engine="camera" onScan={onScan} onClose={onClose} testID={SCANNER} />));
 
 		await readWithCamera(CODE);
 
-		expect(onScan).toHaveBeenCalledWith(CODE);
+		expect(screen.getByText(DEFAULT_QR_SCANNER_LABELS.found)).toBeOnTheScreen();
+		expect(success).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success);
 		expect(latestCameraProps.current?.onBarcodeScanned).toBeUndefined();
+		await waitFor((): void => {
+			expect(onScan).toHaveBeenCalledWith(CODE);
+		});
+		expect(onScan).toHaveBeenCalledTimes(1);
+	});
+
+	it("hands nothing over when it is closed during the lock", async () => {
+		cameraPermission.current = permissionOf(true, true);
+		const { onScan, onClose } = handlers();
+		await render(onPhone(<QrScanner visible engine="camera" onScan={onScan} onClose={onClose} testID={SCANNER} />));
+		await readWithCamera(CODE);
+
+		await screen.rerender(onPhone(<QrScanner visible={false} engine="camera" onScan={onScan} onClose={onClose} testID={SCANNER} />));
+		await act(async (): Promise<void> => {
+			await new Promise((resolve): void => {
+				setTimeout(resolve, 600);
+			});
+		});
+
+		expect(onScan).not.toHaveBeenCalled();
 	});
 
 	it("reads again after being closed and reopened", async () => {
@@ -73,12 +172,82 @@ describe("QrScanner — the kit's camera scanner", () => {
 		const { onScan, onClose } = handlers();
 		await render(onPhone(<QrScanner visible engine="camera" onScan={onScan} onClose={onClose} testID={SCANNER} />));
 		await readWithCamera(CODE);
+		await waitFor((): void => {
+			expect(onScan).toHaveBeenCalledWith(CODE);
+		});
 
 		await screen.rerender(onPhone(<QrScanner visible={false} engine="camera" onScan={onScan} onClose={onClose} testID={SCANNER} />));
 		await screen.rerender(onPhone(<QrScanner visible engine="camera" onScan={onScan} onClose={onClose} testID={SCANNER} />));
 		await readWithCamera("second-code");
 
-		expect(onScan).toHaveBeenLastCalledWith("second-code");
+		await waitFor((): void => {
+			expect(onScan).toHaveBeenLastCalledWith("second-code");
+		});
+	});
+
+	it("slides the camera and everything over it away as one sheet, reading nothing while it leaves", async () => {
+		jest.useFakeTimers();
+		try {
+			cameraPermission.current = permissionOf(true, true);
+			const { onScan, onClose } = handlers();
+			await render(onPhone(<QrScanner visible engine="camera" onScan={onScan} onClose={onClose} testID={SCANNER} />));
+			await act((): void => {
+				jest.advanceTimersByTime(SCANNER_SHEET_MOTION.enter.duration);
+			});
+
+			await screen.rerender(onPhone(<QrScanner visible={false} engine="camera" onScan={onScan} onClose={onClose} testID={SCANNER} />));
+			await act((): void => {
+				jest.advanceTimersByTime(SCANNER_SHEET_MOTION.exit.duration - 1);
+			});
+			expect(screen.getByTestId(CAMERA)).toBeOnTheScreen();
+			expect(screen.getByRole("button", { name: DEFAULT_QR_SCANNER_LABELS.close })).toBeOnTheScreen();
+			expect(latestCameraProps.current?.onBarcodeScanned).toBeUndefined();
+
+			await act((): void => {
+				jest.advanceTimersByTime(SCANNER_SHEET_MOTION.exit.duration);
+			});
+			expect(screen.queryByTestId(CAMERA)).toBeNull();
+			expect(screen.queryByRole("button", { name: DEFAULT_QR_SCANNER_LABELS.close })).toBeNull();
+			expect(onScan).not.toHaveBeenCalled();
+		} finally {
+			jest.useRealTimers();
+		}
+	});
+
+	it("stays open when it is opened before its last slide away was reported finished", async () => {
+		jest.useFakeTimers();
+		try {
+			cameraPermission.current = permissionOf(true, true);
+			const { onScan, onClose } = handlers();
+			await render(onPhone(<QrScanner visible={false} engine="camera" onScan={onScan} onClose={onClose} testID={SCANNER} />));
+			await screen.rerender(onPhone(<QrScanner visible engine="camera" onScan={onScan} onClose={onClose} testID={SCANNER} />));
+			await act((): void => {
+				jest.advanceTimersByTime(SCANNER_SHEET_MOTION.enter.duration);
+			});
+
+			expect(screen.getByTestId(CAMERA)).toBeOnTheScreen();
+			await readWithCamera(CODE);
+			await act((): void => {
+				jest.advanceTimersByTime(LOCK_HOLD_MS);
+			});
+			expect(onScan).toHaveBeenCalledWith(CODE);
+		} finally {
+			jest.useRealTimers();
+		}
+	});
+
+	it("sweeps a scan line across the window while it looks, never before the camera is ready", async () => {
+		cameraPermission.current = permissionOf(true, true);
+		cameraStart.current = "pending";
+		await render(onPhone(<QrScanner visible engine="camera" {...handlers()} testID={SCANNER} />));
+		expect(screen.queryByTestId(SCAN_LINE, { includeHiddenElements: true })).toBeNull();
+
+		await act((): void => {
+			latestCameraProps.current?.onCameraReady?.();
+		});
+
+		expect(screen.getByTestId(SCAN_LINE, { includeHiddenElements: true })).toBeTruthy();
+		expect(screen.queryByTestId(SCAN_LINE)).toBeNull();
 	});
 
 	it("closes from its close button", async () => {
@@ -147,6 +316,10 @@ describe("QrScanner — the kit's camera scanner", () => {
 });
 
 describe("QrScanner — Google's code scanner", () => {
+	it("is not this device's scanner off Android or without Play services: a screen offering both disables it", () => {
+		expect(deviceQrScannerEngine()).toBe("camera");
+	});
+
 	it("opens Google's scanner when shown and delivers its code, drawing nothing itself", async () => {
 		CameraView.launchScanner.mockImplementationOnce((): Promise<void> => {
 			emitModernScan(CODE);
@@ -211,5 +384,58 @@ describe("QrScanner — Google's code scanner", () => {
 		expect(onClose).toHaveBeenCalledTimes(1);
 		expect(onScan).not.toHaveBeenCalled();
 		expect(screen.queryByTestId(CAMERA)).toBeNull();
+	});
+});
+
+describe("QrScanner — scan from gallery", () => {
+	it("reads a code from a photo in the camera scanner, and stops the camera", async () => {
+		cameraPermission.current = permissionOf(true, true);
+		const { onScan, onClose } = handlers();
+		await render(onPhone(<QrScanner visible engine="camera" onScan={onScan} onClose={onClose} galleryDevice={libraryWith(CODE)} testID={SCANNER} />));
+
+		await act(async (): Promise<void> => {
+			await fireEvent.press(screen.getByRole("button", { name: DEFAULT_QR_SCANNER_LABELS.scanFromGallery }));
+		});
+
+		expect(onScan).toHaveBeenCalledWith(CODE);
+		expect(latestCameraProps.current?.onBarcodeScanned).toBeUndefined();
+	});
+
+	it("says when the photo holds no code, and keeps the camera reading", async () => {
+		cameraPermission.current = permissionOf(true, true);
+		const { onScan, onClose } = handlers();
+		await render(onPhone(<QrScanner visible engine="camera" onScan={onScan} onClose={onClose} galleryDevice={libraryWith(null)} testID={SCANNER} />));
+
+		await act(async (): Promise<void> => {
+			await fireEvent.press(screen.getByRole("button", { name: DEFAULT_QR_SCANNER_LABELS.scanFromGallery }));
+		});
+
+		expect(await screen.findByText(DEFAULT_QR_SCANNER_LABELS.galleryNoCode)).toBeOnTheScreen();
+		expect(onScan).not.toHaveBeenCalled();
+		expect(latestCameraProps.current?.onBarcodeScanned).toBeDefined();
+	});
+
+	it("can leave the gallery out", async () => {
+		cameraPermission.current = permissionOf(true, true);
+		await render(onPhone(<QrScanner visible engine="camera" allowGallery={false} {...handlers()} testID={SCANNER} />));
+
+		expect(screen.queryByRole("button", { name: DEFAULT_QR_SCANNER_LABELS.scanFromGallery })).toBeNull();
+	});
+
+	it("offers the same beside Google's scanner, which draws its own screen", async () => {
+		const onScan = jest.fn<undefined, [string]>();
+		await render(<QrScanFromGalleryButton onScan={onScan} galleryDevice={libraryWith(CODE)} />);
+
+		await act(async (): Promise<void> => {
+			await fireEvent.press(screen.getByRole("button", { name: DEFAULT_QR_SCANNER_LABELS.scanFromGallery }));
+		});
+
+		expect(onScan).toHaveBeenCalledWith(CODE);
+	});
+
+	it("words only the outcomes that need it", () => {
+		expect(galleryScanMessage({ kind: "failed" }, DEFAULT_QR_SCANNER_LABELS)).toBe(DEFAULT_QR_SCANNER_LABELS.galleryFailed);
+		expect(galleryScanMessage({ kind: "cancelled" }, DEFAULT_QR_SCANNER_LABELS)).toBeNull();
+		expect(galleryScanMessage({ kind: "scanned", data: CODE }, DEFAULT_QR_SCANNER_LABELS)).toBeNull();
 	});
 });

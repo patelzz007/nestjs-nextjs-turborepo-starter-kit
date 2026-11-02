@@ -12,6 +12,7 @@
 import { ApiErrorBodySchema, AuthErrorCodeSchema, TenantAccessErrorCodeSchema, type CaughtValue } from "@workspace/shared";
 import { z } from "zod";
 
+import { rateLimitMessage } from "./rate-limit";
 import { ApiError } from "./use-api";
 
 // ── Locale plumbing ──────────────────────────────────────────────────────
@@ -121,6 +122,12 @@ export function extractAuthErrorMessage(error: CaughtValue): string | null {
  */
 export function resolveAuthErrorMessage(error: CaughtValue, locale: Locale = DEFAULT_LOCALE): string {
 	const catalog: AuthMessageCatalog = AUTH_MESSAGE_CATALOGS[locale];
+
+	// A 429 says how long to wait (ADR 071), which beats any fixed sentence.
+	const tooFast = error instanceof ApiError ? rateLimitMessage(error) : null;
+	if (tooFast !== null) {
+		return tooFast;
+	}
 
 	if (error instanceof ApiError && error.error !== undefined) {
 		// safeParse narrows `error.error` to a real enum member, and the catalog

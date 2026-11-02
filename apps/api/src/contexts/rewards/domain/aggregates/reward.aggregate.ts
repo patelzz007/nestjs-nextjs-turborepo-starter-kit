@@ -3,6 +3,7 @@ import { epochMs, type EpochMs } from "@workspace/shared";
 import { AggregateRoot } from "../../../../platform/domain/aggregate-root";
 import { ReferrerReward } from "../entities/referrer-reward.entity";
 import {
+	RewardAudienceReferralsError,
 	RewardExpiredError,
 	RewardJustSoldOutError,
 	RewardNotDraftError,
@@ -27,6 +28,8 @@ import {
 	type RewardEventFacts,
 } from "../events/reward.events";
 import { nextUpdatedAt, type RewardConcurrencyToken } from "../value-objects/reward-concurrency-token.value-object";
+import type { RewardAudience } from "../value-objects/reward-audience.value-object";
+import { assertFreeItemFitsType, revisedFreeItem } from "../value-objects/reward-free-item.value-object";
 import type { RewardLocationScope } from "../value-objects/reward-location-scope.value-object";
 import type { RewardRulesValue } from "../value-objects/reward-rules.value-object";
 import {
@@ -98,6 +101,13 @@ function reviewOf(row: RewardRowState, status: RewardLifecycleStatus): RewardRev
 	};
 }
 
+/** Referrals bring in new people, which a reward for chosen customers is not for. */
+function assertAudienceAllowsReferrals(audience: RewardAudience, referralsEnabled: boolean): void {
+	if (!audience.isEveryone && referralsEnabled) {
+		throw new RewardAudienceReferralsError();
+	}
+}
+
 function assertWholeQuantity(quantity: number): void {
 	if (!Number.isSafeInteger(quantity) || quantity < 1) {
 		throw new RewardQuantityInvalidError(quantity);
@@ -124,6 +134,8 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 	private referralPoolRemaining: number | null;
 	private imageFileIds: readonly string[];
 	private imagesReplaced = false;
+	private audience: RewardAudience;
+	private audienceReplacement: { readonly actorId: string; readonly at: EpochMs } | null = null;
 	private imageReplacement: { readonly actorId: string; readonly at: EpochMs } | null = null;
 	private definitionChanged = false;
 	private updatedAt: EpochMs;
@@ -153,6 +165,7 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 		this.referralPoolTotal = state.referralPoolTotal;
 		this.referralPoolRemaining = state.referralPoolRemaining;
 		this.imageFileIds = state.imageFileIds;
+		this.audience = state.audience;
 		this.updatedAt = state.updatedAt;
 	}
 
@@ -162,6 +175,8 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 	 */
 	public static create(definition: NewRewardDefinition, now: EpochMs): Reward {
 		assertWholeQuantity(definition.quantityTotal);
+		assertFreeItemFitsType(definition.offer.rewardType, definition.offer.freeItem);
+		assertAudienceAllowsReferrals(definition.audience, definition.referralsEnabled);
 		const review: RewardReviewState = definition.saveAsDraft
 			? { status: "DRAFT", submittedForReviewAt: null, autoPublishAt: null, reviewedAt: null, reviewedByUserId: null }
 			: { status: "PENDING_REVIEW", submittedForReviewAt: now, autoPublishAt: epochMs(now + AUTO_PUBLISH_WINDOW_MS), reviewedAt: null, reviewedByUserId: null };
@@ -196,6 +211,7 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 			referralPoolTotal: pool,
 			referralPoolRemaining: pool,
 			imageFileIds: definition.imageFileIds,
+			audience: definition.audience,
 			updatedAt: now,
 		});
 		reward.imagesReplaced = true;
@@ -235,6 +251,7 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 				referralPoolTotal: state.referralPoolTotal,
 				referralPoolRemaining: state.referralPoolRemaining,
 				imageFileIds: state.imageFileIds,
+				audience: state.audience,
 				updatedAt: state.updatedAt,
 			},
 		);
@@ -304,6 +321,11 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 	}
 
 	/** Who replaced the images in this unit of work, and when (recorded as `deletedBy` / `deletedAt` on the old rows). */
+	/** Who replaced the audience and when, when this unit of work changed it (the repository rewrites its members). */
+	public get audienceReplacedBy(): { readonly actorId: string; readonly at: EpochMs } | null {
+		return this.audienceReplacement;
+	}
+
 	public get imagesReplacedBy(): { readonly actorId: string; readonly at: EpochMs } | null {
 		return this.imageReplacement;
 	}
@@ -336,6 +358,7 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 			referralPoolTotal: this.referralPoolTotal,
 			referralPoolRemaining: this.referralPoolRemaining,
 			locationScope: this.locationScope,
+			audience: this.audience,
 			imageFileIds: this.imageFileIds,
 			updatedAt: this.updatedAt,
 			referrer: this.referrer === null ? null : this.referrer.snapshot(),
@@ -367,13 +390,21 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 		this.rules = revision.rules ?? this.rules;
 		this.startDate = revision.startDate === undefined ? this.startDate : revision.startDate;
 		this.referralsEnabled = revision.referralsEnabled ?? this.referralsEnabled;
+		if (revision.audience !== undefined && !revision.audience.equals(this.audience)) {
+			this.audience = revision.audience;
+			this.audienceReplacement = { actorId: manager.actorId, at: now };
+		}
+		assertAudienceAllowsReferrals(this.audience, this.referralsEnabled);
+		const rewardType = revision.rewardType ?? this.offer.rewardType;
 		const offer: RewardOffer = {
-			rewardType: revision.rewardType ?? this.offer.rewardType,
+			rewardType,
 			rewardValue: revision.rewardValue ?? this.offer.rewardValue,
+			freeItem: revisedFreeItem(rewardType, this.offer.freeItem, revision.freeItem),
 			termsConditions: revision.termsConditions === undefined ? this.offer.termsConditions : revision.termsConditions,
 			category: this.offer.category,
 		};
-		const offerChanged = revision.rewardType !== undefined || revision.rewardValue !== undefined || revision.termsConditions !== undefined;
+		assertFreeItemFitsType(offer.rewardType, offer.freeItem);
+		const offerChanged = revision.rewardType !== undefined || revision.rewardValue !== undefined || revision.freeItem !== undefined || revision.termsConditions !== undefined;
 		this.offer = offer;
 		if (revision.imageFileIds !== undefined) {
 			this.imageFileIds = revision.imageFileIds;
@@ -460,8 +491,9 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 	// ── Inventory (claims and checkout, through RewardInventoryPort) ────
 
 	/** A consumer may start a claim: published, unexpired, in stock. Otherwise 404 / 400 / 409 as today. */
-	public assertClaimable(now: EpochMs): ClaimableRewardFacts {
-		if (this.kind !== "CONSUMER" || this.review.status !== "PUBLISHED") {
+	public assertClaimable(now: EpochMs, customerUserId: string): ClaimableRewardFacts {
+		// A reward for chosen customers does not exist for anyone else (no existence oracle).
+		if (this.kind !== "CONSUMER" || this.review.status !== "PUBLISHED" || !this.audience.includes(customerUserId)) {
 			throw new RewardNotFoundError(this.id);
 		}
 		if (this.expiryDate < now) {
@@ -474,7 +506,10 @@ export class Reward extends AggregateRoot<RewardDomainEvent> {
 	}
 
 	/** Takes one unit for a claim: remaining −1, reserved +1, claims +1. */
-	public reserve(now: EpochMs): ClaimableRewardFacts {
+	public reserve(now: EpochMs, customerUserId: string): ClaimableRewardFacts {
+		if (!this.audience.includes(customerUserId)) {
+			throw new RewardNotFoundError(this.id);
+		}
 		const sellable =
 			this.kind === "CONSUMER" && this.review.status === "PUBLISHED" && this.expiryDate >= now && this.inventory.quantityRemaining > 0 && this.availableAtActiveStore;
 		if (!sellable) {

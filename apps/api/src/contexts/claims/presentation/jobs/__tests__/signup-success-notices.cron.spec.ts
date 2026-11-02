@@ -29,7 +29,7 @@ describe("SignupSuccessNoticesCron", () => {
 
 	it("dispatches the sweep as the notice cron system operation", async () => {
 		const store = new InMemoryClaimsStore();
-		store.signupSuccessNotices.succeed("signup-referral-1", "referrer-1", "referee-1");
+		store.signupSuccessNotices.succeed("0193f2c4-0000-7000-8000-0000000000c1", "referrer-1", "referee-1");
 		store.claimants.names.set("referee-1", "Aisha Rahman");
 		const { cron, dispatcher } = await cronWith(store);
 
@@ -39,12 +39,12 @@ describe("SignupSuccessNoticesCron", () => {
 			[SweepSignupSuccessNoticesCommand, { kind: "cron", name: "SignupSuccessNoticesCron.sweep" }],
 		]);
 		expect(dispatcher.dispatched.at(0)?.command).toMatchObject({ actor: { kind: "system", operation: SIGNUP_SUCCESS_NOTICE_OPERATION, origin: "cron" } });
-		expect(store.inbox.notices).toHaveLength(1);
+		expect(store.notify.notifications).toHaveLength(1);
 	});
 
 	it("rethrows a run with failures (the dispatcher already audited it as failed)", async () => {
 		const store = new InMemoryClaimsStore();
-		store.signupSuccessNotices.succeed("signup-referral-1", "referrer-1", "referee-gone");
+		store.signupSuccessNotices.succeed("0193f2c4-0000-7000-8000-0000000000c1", "referrer-1", "referee-gone");
 		const { cron } = await cronWith(store);
 
 		await expect(cron.sweep()).rejects.toBeInstanceOf(SignupSuccessNoticesFailedError);

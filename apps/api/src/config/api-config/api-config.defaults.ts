@@ -69,6 +69,22 @@ export const DEFAULT_ACCESS_TOKEN_STATE_CACHE_TTL_MS = 30 * MS_PER_SECOND;
 export const DEFAULT_CACHE_MAX_ENTRIES = 10_000;
 export const DEFAULT_ACCESS_TOKEN_STATE_CACHE_MAX_ENTRIES = 50_000;
 export const DEFAULT_SECURITY_COUNTER_MAX_KEYS = 50_000;
+/** SMS goes only to these calling codes unless `SMS_ALLOWED_COUNTRIES` says otherwise (Malaysia). */
+export const DEFAULT_SMS_ALLOWED_COUNTRIES: readonly string[] = ["60"];
+/** SMS per destination per day, and per tenant per day (ADR 070 caps against SMS pumping). */
+export const DEFAULT_SMS_DAILY_LIMIT_PER_RECIPIENT = 10;
+export const DEFAULT_SMS_DAILY_LIMIT_PER_TENANT = 1_000;
+/** Redis memory use (percent of `maxmemory`) at which health reports the cache as degraded (ADR 072). */
+export const DEFAULT_CACHE_MEMORY_ALERT_PERCENT = 80;
+export const MAX_PERCENT = 100;
+/** API instances sharing one limit: an `open` policy counting locally (Redis down) takes this share. */
+export const DEFAULT_RATE_LIMIT_EXPECTED_INSTANCES = 1;
+/** Every request a tenant's members and keys make together (ADR 071 TENANT_TRAFFIC): a steady rate and a burst. */
+export const DEFAULT_RATE_LIMIT_TENANT_RATE_PER_SECOND = 50;
+export const DEFAULT_RATE_LIMIT_TENANT_BURST = 200;
+/** One API key's requests (ADR 071 API_KEY_TRAFFIC). */
+export const DEFAULT_RATE_LIMIT_API_KEY_RATE_PER_SECOND = 20;
+export const DEFAULT_RATE_LIMIT_API_KEY_BURST = 100;
 
 export const DEFAULT_STORAGE_DOWNLOAD_TTL_SECONDS = 300;
 export const PRODUCTION_STORAGE_PHYSICAL_DELETE_DELAY_MS = 30 * MS_PER_DAY;

@@ -1,6 +1,8 @@
 import type { EmailSendResult } from "@workspace/shared";
 
 import type { BaseEmailProps, BaseEmailTemplate } from "../../domain/templates/base/base-email-template";
+import type { LegacyInboxImportPort } from "./legacy-inbox-import.port";
+import type { NotifyTransactionalPort } from "./notify.port";
 
 /** Who triggered a send, recorded on the email log row (the row IS the domain audit record of the send). */
 export interface EmailSendAudit {
@@ -38,4 +40,8 @@ export interface EmailRequestTransactionalPort {
 /** What `NotificationsTransactionalPortsFactory.create(db, events)` returns. */
 export interface NotificationsTransactionalPorts {
 	readonly emailRequests: EmailRequestTransactionalPort;
+	/** `notify()` (ADR 070): the preferred way to tell a person something, on any channel. */
+	readonly notifications: NotifyTransactionalPort;
+	/** The one-time move of the earlier reward inbox (ADR 070); only claims, which owns that inbox, calls it. */
+	readonly legacyInbox: LegacyInboxImportPort;
 }

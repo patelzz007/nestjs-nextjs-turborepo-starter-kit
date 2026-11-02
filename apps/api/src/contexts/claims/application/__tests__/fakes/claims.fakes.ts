@@ -1,11 +1,20 @@
-import { epochMs, type EmailSendResult, type EpochMs, type RewardBackupCode, type RewardClaimResponse } from "@workspace/shared";
+import { epochMs, type EmailSendResult, type EpochMs, type JsonObject, type RewardBackupCode, type RewardClaimResponse } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../../platform/application/actor-context";
 import type { Clock } from "../../../../../platform/application/clock.port";
 import { TransactionalEventCollector } from "../../../../../platform/application/events/transactional-event-collector";
 import type { SystemOperationName } from "../../../../../platform/application/system-operation-names";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
-import type { BaseEmailProps, BaseEmailTemplate, EmailRequestTransactionalPort } from "../../../../notifications/public-api";
+import type {
+	BaseEmailProps,
+	BaseEmailTemplate,
+	EmailRequestTransactionalPort,
+	LegacyInboxImportPort,
+	LegacyInboxNotice,
+	NotifyRequest,
+	NotifyResult,
+	NotifyTransactionalPort,
+} from "../../../../notifications/public-api";
 import type {
 	ClaimedSignupSuccessNotice,
 	OwedSignupSuccessNotice,
@@ -21,6 +30,8 @@ import type {
 	RewardAuditEntry,
 	RewardAuditPort,
 	RewardInventoryPort,
+	RedeemedRewardFacts,
+	RewardOfferFacts,
 	RewardRedemptionFacts,
 	RewardRedemptionFactsPort,
 } from "../../../../rewards/public-api";
@@ -31,9 +42,19 @@ import type { OtpChallengeRepository, OverdueClaim, RewardClaimRepository } from
 import { LIMIT_COUNTED_CLAIM_STATUSES } from "../../../domain/value-objects/claim-rules.value-object";
 import type { ClaimsScope } from "../../claims-scope";
 import type { ClaimCodesPort, IssuedClaimCodes, IssuedOtp } from "../../ports/claim-codes.port";
-import type { ClaimantPort, ClaimantProfile, ClaimViewPort, ReferralAttributionPort, RewardNotice, RewardNotificationInbox } from "../../ports/claims-transactional.ports";
+import type {
+	ClaimantPort,
+	ClaimantProfile,
+	ClaimViewPort,
+	LegacyRewardNotice,
+	LegacyRewardNoticeStore,
+	ReferralAttributionPort,
+} from "../../ports/claims-transactional.ports";
 import type { ClaimCodeLookup } from "../../services/claim-redemption.application-service";
-import type { CustomerStandingPort } from "../../../../tenancy/public-api";
+import type { CustomerStandingPort, TenantCustomerLinksPort, TenantCustomerPage, TenantCustomerPageRequest, TenantCustomerSummary } from "../../../../tenancy/public-api";
+
+/** The fixture reward's offer: one free coffee. */
+const FREE_COFFEE_OFFER: RewardOfferFacts = { rewardType: "FREE_ITEM", rewardValue: 1, freeItem: { name: "Coffee", sku: "BEV-COFFEE" } };
 
 export const NOW: EpochMs = epochMs(1_800_000_000_000);
 
@@ -195,28 +216,148 @@ export class InMemoryOtpChallenges implements OtpChallengeRepository {
 	}
 }
 
-export class InMemoryInbox implements RewardNotificationInbox {
-	public readonly notices: (RewardNotice & { readonly readAt: EpochMs | null; readonly id: string })[] = [];
-	/** Users whose inbox insert fails (as a lost database connection would). */
-	public readonly failingFor = new Set<string>();
+/** A tenant-customer link as the claims scope wrote it. */
+export interface FakeTenantCustomer {
+	readonly tenantId: string;
+	readonly userId: string;
+	readonly firstClaimedAt: number;
+	readonly lastClaimedAt: number;
+	readonly claimCount: number;
+	readonly lastRedeemedAt: number | null;
+	readonly leftAt: number | null;
+}
 
-	public add(notices: readonly RewardNotice[]): Promise<void> {
-		if (notices.some((notice): boolean => this.failingFor.has(notice.userId))) {
-			return Promise.reject(new Error("inbox unavailable"));
-		}
-		for (const notice of notices) {
-			this.notices.push({ ...notice, readAt: null, id: `notice-${String(this.notices.length + 1)}` });
+/** `TenantCustomer` with the adapter's semantics: one row per tenant and user, a claim brings a left customer back. */
+export class InMemoryTenantCustomers implements TenantCustomerLinksPort {
+	public readonly rows = new Map<string, FakeTenantCustomer>();
+
+	public recordClaim(tenantId: string, userId: string, claimedAt: number): Promise<void> {
+		const key = `${tenantId}:${userId}`;
+		const existing = this.rows.get(key);
+		this.rows.set(
+			key,
+			existing === undefined
+				? { tenantId, userId, firstClaimedAt: claimedAt, lastClaimedAt: claimedAt, claimCount: 1, lastRedeemedAt: null, leftAt: null }
+				: { ...existing, lastClaimedAt: claimedAt, claimCount: existing.claimCount + 1, leftAt: null },
+		);
+		return Promise.resolve();
+	}
+
+	public recordRedemption(tenantId: string, userId: string, redeemedAt: number): Promise<void> {
+		const key = `${tenantId}:${userId}`;
+		const existing = this.rows.get(key);
+		if (existing !== undefined) {
+			this.rows.set(key, { ...existing, lastRedeemedAt: redeemedAt });
 		}
 		return Promise.resolve();
 	}
 
-	public markRead(userId: string, selection: { readonly notificationIds: readonly string[] } | "all", now: EpochMs): Promise<void> {
-		for (const [index, notice] of this.notices.entries()) {
-			if (notice.userId === userId && notice.readAt === null && (selection === "all" || selection.notificationIds.includes(notice.id))) {
-				this.notices.splice(index, 1, { ...notice, readAt: now });
+	public customersAmong(tenantId: string, userIds: readonly string[]): Promise<readonly string[]> {
+		return Promise.resolve([...new Set(userIds)].filter((userId) => this.rows.has(`${tenantId}:${userId}`)));
+	}
+
+	public async summaries(tenantId: string, userIds: readonly string[]): Promise<readonly TenantCustomerSummary[]> {
+		return (await this.page(tenantId, { search: null, sortField: "lastClaimedAt", descending: true, page: 1, limit: this.rows.size })).items.filter((summary) =>
+			userIds.includes(summary.userId),
+		);
+	}
+
+	public page(tenantId: string, request: TenantCustomerPageRequest): Promise<TenantCustomerPage> {
+		const items = [...this.rows.values()]
+			.filter((row) => row.tenantId === tenantId)
+			.map((row): TenantCustomerSummary => ({ userId: row.userId, fullName: row.userId, maskedEmail: null, lastClaimedAt: row.lastClaimedAt, claimCount: row.claimCount }));
+		return Promise.resolve({ items: items.slice((request.page - 1) * request.limit, request.page * request.limit), total: items.length });
+	}
+}
+
+/** One `notify()` claims made, with its payload as the notification row stores it. */
+export interface RecordedNotification {
+	readonly userId: string;
+	readonly typeKey: string;
+	readonly payload: JsonObject;
+	readonly dedupeKey: string;
+	readonly tenantId: string | null;
+}
+
+/**
+ * `notify()` with the transactional adapter's semantics: the payload is checked against the type's
+ * schema, a repeat (same recipient, type and dedupe key) writes nothing, and an insert can fail.
+ */
+export class RecordingNotify implements NotifyTransactionalPort {
+	public readonly notifications: RecordedNotification[] = [];
+	/** Users whose notification insert fails (as a lost database connection would). */
+	public readonly failingFor = new Set<string>();
+
+	public notify<TPayload>(request: NotifyRequest<TPayload>): Promise<NotifyResult> {
+		if (request.recipient.kind !== "user") {
+			return Promise.reject(new Error("claims only notifies users"));
+		}
+		const userId = request.recipient.userId;
+		if (this.failingFor.has(userId)) {
+			return Promise.reject(new Error("inbox unavailable"));
+		}
+		const payload = request.type.declaration.toJson(request.payload);
+		if (!request.type.isValidPayload(payload)) {
+			return Promise.reject(new Error(`"${request.type.key}" payload is invalid`));
+		}
+		const repeat = this.notifications.some(
+			(existing: RecordedNotification): boolean => existing.userId === userId && existing.typeKey === request.type.key && existing.dedupeKey === request.dedupeKey,
+		);
+		if (repeat) {
+			return Promise.resolve({ duplicate: true });
+		}
+		this.notifications.push({ userId, typeKey: request.type.key, payload, dedupeKey: request.dedupeKey, tenantId: request.tenantId });
+		return Promise.resolve({ duplicate: false, notificationId: `notification-${String(this.notifications.length)}` });
+	}
+}
+
+/** A legacy reward-inbox row and whether the move retired it. */
+export interface FakeLegacyRewardNotice extends LegacyRewardNotice {
+	readonly deletedAt: number | null;
+	readonly deletedBy: string | null;
+}
+
+/** `RewardNotification` for the move: live rows oldest first; retiring soft-deletes them. */
+export class InMemoryLegacyRewardNotices implements LegacyRewardNoticeStore {
+	public readonly rows = new Map<string, FakeLegacyRewardNotice>();
+
+	public add(notice: LegacyRewardNotice): void {
+		this.rows.set(notice.id, { ...notice, deletedAt: null, deletedBy: null });
+	}
+
+	public takeBatch(limit: number): Promise<readonly LegacyRewardNotice[]> {
+		return Promise.resolve(
+			[...this.rows.values()]
+				.filter((row: FakeLegacyRewardNotice): boolean => row.deletedAt === null)
+				.sort((left, right): number => left.createdAt - right.createdAt || left.id.localeCompare(right.id))
+				.slice(0, limit),
+		);
+	}
+
+	public retire(ids: readonly string[], now: number, by: string): Promise<void> {
+		for (const id of ids) {
+			const row = this.rows.get(id);
+			if (row?.deletedAt === null) {
+				this.rows.set(id, { ...row, deletedAt: now, deletedBy: by });
 			}
 		}
 		return Promise.resolve();
+	}
+}
+
+/** Notifications' side of the move: keyed on the legacy id, like the real import. */
+export class RecordingLegacyInbox implements LegacyInboxImportPort {
+	public readonly imported: LegacyInboxNotice[] = [];
+
+	public import(notices: readonly LegacyInboxNotice[]): Promise<number> {
+		let added = 0;
+		for (const notice of notices) {
+			if (!this.imported.some((existing: LegacyInboxNotice): boolean => existing.legacyId === notice.legacyId)) {
+				this.imported.push(notice);
+				added += 1;
+			}
+		}
+		return Promise.resolve(added);
 	}
 }
 
@@ -330,9 +471,13 @@ export class InMemoryInventory implements RewardInventoryPort, RewardRedemptionF
 		return Promise.resolve(null);
 	}
 
-	public titlesOf(rewardIds: readonly string[]): Promise<ReadonlyMap<string, string>> {
+	public redeemedRewardsOf(rewardIds: readonly string[]): Promise<ReadonlyMap<string, RedeemedRewardFacts>> {
 		return Promise.resolve(
-			new Map(rewardIds.filter((rewardId): boolean => rewardId === this.facts.rewardId).map((rewardId): [string, string] => [rewardId, this.facts.title])),
+			new Map(
+				rewardIds
+					.filter((rewardId): boolean => rewardId === this.facts.rewardId)
+					.map((rewardId): [string, RedeemedRewardFacts] => [rewardId, { title: this.facts.title, offer: FREE_COFFEE_OFFER }]),
+			),
 		);
 	}
 
@@ -344,7 +489,10 @@ export class InMemoryInventory implements RewardInventoryPort, RewardRedemptionF
 						id: rewardId,
 						tenantId: this.facts.tenantId,
 						title: this.facts.title,
+						description: this.facts.title,
 						rewardType: "FREE_ITEM",
+						offer: FREE_COFFEE_OFFER,
+						termsConditions: null,
 						expiryDate: this.facts.expiryDate,
 						locationScopeType: "ALL_LOCATIONS",
 						locationIds: [],
@@ -533,7 +681,10 @@ export class InMemoryClaimsStore {
 	public readonly clock = new FixedClock();
 	public readonly claims = new InMemoryClaims();
 	public readonly otpChallenges = new InMemoryOtpChallenges();
-	public readonly inbox = new InMemoryInbox();
+	public readonly notify = new RecordingNotify();
+	public readonly legacyNotices = new InMemoryLegacyRewardNotices();
+	public readonly legacyInbox = new RecordingLegacyInbox();
+	public readonly tenantCustomers = new InMemoryTenantCustomers();
 	public readonly claimants = new InMemoryClaimants();
 	public readonly attribution = new ScriptedAttribution();
 	public readonly referrerCreditNotices = new InMemoryReferrerCreditNotices();
@@ -553,7 +704,9 @@ export class InMemoryClaimsStore {
 		return {
 			claims: this.claims,
 			otpChallenges: this.otpChallenges,
-			notifications: this.inbox,
+			notify: this.notify,
+			legacyNotices: this.legacyNotices,
+			legacyInbox: this.legacyInbox,
 			views: new StoreClaimView(this.claims),
 			claimants: this.claimants,
 			referralAttribution: this.attribution,
@@ -562,6 +715,7 @@ export class InMemoryClaimsStore {
 			rewards: this.inventory,
 			rewardFacts: this.inventory,
 			customerStanding: this.customerStanding,
+			tenantCustomers: this.tenantCustomers,
 			legal: this.legal,
 			rewardAudit: this.rewardAudit,
 			emails: this.emails,
@@ -578,7 +732,10 @@ export class InMemoryClaimsStore {
 			restorableMap(this.claimants.profiles),
 			restorableMap(this.referrerCreditNotices.notified),
 			restorableMap(this.signupSuccessNotices.notified),
-			restorableArray(this.inbox.notices),
+			restorableArray(this.notify.notifications),
+			restorableMap(this.legacyNotices.rows),
+			restorableArray(this.legacyInbox.imported),
+			restorableMap(this.tenantCustomers.rows),
 			restorableArray(this.rewardAudit.entries),
 			restorableArray(this.emails.sent),
 		];

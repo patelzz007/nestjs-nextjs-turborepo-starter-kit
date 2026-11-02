@@ -68,9 +68,10 @@ exposes them, but no screen in the web or merchant app shows them yet.
 
 `GET /api/v1/rewards`, `GET /api/v1/legal/status`, `POST /api/v1/legal/accept`,
 `POST /api/v1/claims/otp`, `POST /api/v1/claims`, `GET /api/v1/claims`,
-`GET /api/v1/claims/{claimId}/qr`, `GET /api/v1/claims/analytics`,
-`GET /api/v1/reward-notifications`, `POST /api/v1/reward-notifications/read` —
-examples in [Customer rewards API](../technical/api-reference/customer-rewards.md). QR tokens and
+`GET /api/v1/claims/{claimId}/qr`, `GET /api/v1/claims/analytics` — examples in
+[Customer rewards API](../technical/api-reference/customer-rewards.md). The bell and the inbox
+(`GET /api/v1/notifications?surface=CUSTOMER`, `GET /api/v1/notifications/unread-count`,
+`POST /api/v1/notifications/read`) are in [Notifications API](../technical/api-reference/notifications.md). QR tokens and
 backup codes are stored only as keyed hashes (`REWARD_CODE_HASH_KEYS`).
 
 **Stock is reserved, not spent, at claim time.** Each reward keeps `quantityRemaining` (still

@@ -3,7 +3,7 @@ title: "6. POS pairing and checkout"
 description: "Pair a till with the merchant portal, then validate a customer's QR or backup code before payment and record the bill after payment."
 order: 7
 author: "Product & Platform Team"
-lastUpdated: 1792540800000
+lastUpdated: 1793491200000
 coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
 tags: ["user-guide", "pos", "checkout", "terminals"]
 ---
@@ -74,6 +74,39 @@ Rules the till must follow:
 Try it with the demo data: the seeded Brew & Bean register key with `X-Terminal-Id:
 KL-REGISTER-01` redeems the seeded pending claim (QR token `seed_qr_token_kl_pending_alice_001`,
 backup code `ABCD2345`).
+
+### What the till gets back
+
+Validate and checkout answer with the reward's **offer**, so the till knows what to apply without a
+second call, plus its description and terms:
+
+| Reward type | Offer |
+| --- | --- |
+| Discount | `percentOff` |
+| Cashback | `amountMinor` and `currency` |
+| Bonus points | `points` |
+| Free item | `quantity` and `item: { name, sku }` |
+| Buy one, get one | `freeQuantity` and `item: { name, sku }` |
+
+## A phone as the till (mobile app)
+
+The phone app can act as a till for trying things out, or for a counter without a POS.
+
+1. **Drawer → Till → Pair this phone as a till** with a pairing code from **POS terminals**.
+2. **Redeem a reward:**
+   - **Scan with Google scanner** — Google's fast scanner (phones with Google Play services only; it
+     says why when it can't be used);
+   - **Scan with this app's camera** — the app's own scanner, with **Gallery** and **Light**
+     controls;
+   - **Scan from gallery** — read a QR from a photo or screenshot ("No QR code found in that photo"
+     when there is none);
+   - or type the 8-character backup code.
+3. The till shows what the reward gives (the item and SKU for a free item) and its terms. Enter the
+   bill and **Redeem**.
+4. **What the till sent** shows each call exactly: **Request headers** (the API key cut to its first
+   six characters), **Request body** and **Response body** — or the API's error in its own words — as
+   numbered, copyable code blocks. **What the till sent to redeem it** does the same for the
+   checkout.
 
 ## Afterwards
 

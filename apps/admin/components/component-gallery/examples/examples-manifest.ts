@@ -66,6 +66,8 @@ export const GALLERY_EXAMPLE_COUNTS: ReadonlyMap<string, number> = new Map<strin
 	["component-radio-group", 17],
 	["component-rating", 9],
 	["component-resizable", 10],
+	["component-rich-text-editor", 2],
+	["component-rich-text-view", 2],
 	["component-scroll-area", 5],
 	["component-scrollspy", 2],
 	["component-select", 33],

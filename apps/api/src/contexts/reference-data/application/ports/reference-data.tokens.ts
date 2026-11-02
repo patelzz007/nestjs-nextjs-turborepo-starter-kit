@@ -8,3 +8,4 @@ export const GEO_WRITE_OPERATION: SystemOperationName = "geo.reference_data.writ
 
 export const REFERENCE_DATA_UNIT_OF_WORK = Symbol("REFERENCE_DATA_UNIT_OF_WORK");
 export const GEOGRAPHY_READ = Symbol("GEOGRAPHY_READ");
+export const GEOGRAPHY_CACHE = Symbol("GEOGRAPHY_CACHE");

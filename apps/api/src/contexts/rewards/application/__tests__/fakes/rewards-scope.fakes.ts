@@ -8,6 +8,7 @@ import type { LegalAcceptanceRepository } from "../../../domain/repositories/leg
 import type { TenantStoresPort, RewardAuditEntry, RewardAuditPort, RewardImageFilesPort, RewardViewPort } from "../../ports/rewards-transactional.ports";
 import type { IdGenerator } from "../../ports/rewards.tokens";
 import type { RewardsScope } from "../../rewards-scope";
+import type { TenantCustomerLinksPort, TenantCustomerPage, TenantCustomerPageRequest, TenantCustomerSummary } from "../../../../tenancy/public-api";
 import { InMemoryRewardRepository } from "./in-memory-reward.repository";
 
 /** Files that are usable reward images; anything else is refused like the files adapter refuses it. */
@@ -61,7 +62,8 @@ export function fakeRewardResponse(id: string, tenantId: string, status: string,
 		title,
 		description: "",
 		rewardType: "FREE_ITEM",
-		rewardValue: 0,
+		rewardValue: 1,
+		freeItem: { name: "Coffee", sku: "BEV-COFFEE" },
 		termsConditions: null,
 		rewardKind: "CONSUMER",
 		category: "cafe",
@@ -81,6 +83,7 @@ export function fakeRewardResponse(id: string, tenantId: string, status: string,
 		rules: null,
 		locationScopeType: "ALL_LOCATIONS",
 		locationIds: [],
+		audienceType: "EVERYONE",
 		locationNames: undefined,
 		createdAt: epochMs(0),
 		updatedAt: epochMs(0),
@@ -117,11 +120,49 @@ export class SequentialIds implements IdGenerator {
 	}
 }
 
+/** The tenant's customers as tenancy keeps them: only reads are used by rewards. */
+export class FakeTenantCustomers implements TenantCustomerLinksPort {
+	public readonly customers: TenantCustomerSummary[] = [];
+
+	public constructor(private readonly tenantId: string | null = null) {}
+
+	public add(...summaries: TenantCustomerSummary[]): this {
+		this.customers.push(...summaries);
+		return this;
+	}
+
+	public recordClaim(): Promise<void> {
+		return Promise.reject(new Error("rewards never records a claim"));
+	}
+
+	public recordRedemption(): Promise<void> {
+		return Promise.reject(new Error("rewards never records a redemption"));
+	}
+
+	public customersAmong(tenantId: string, userIds: readonly string[]): Promise<readonly string[]> {
+		return Promise.resolve([...new Set(userIds)].filter((userId) => this.of(tenantId).some((customer) => customer.userId === userId)));
+	}
+
+	public summaries(tenantId: string, userIds: readonly string[]): Promise<readonly TenantCustomerSummary[]> {
+		return Promise.resolve(userIds.flatMap((userId) => this.of(tenantId).filter((customer) => customer.userId === userId)));
+	}
+
+	public page(tenantId: string, request: TenantCustomerPageRequest): Promise<TenantCustomerPage> {
+		const matching = this.of(tenantId).filter((customer) => request.search === null || customer.fullName.toLowerCase().includes(request.search.toLowerCase()));
+		return Promise.resolve({ items: matching.slice((request.page - 1) * request.limit, request.page * request.limit), total: matching.length });
+	}
+
+	private of(tenantId: string): readonly TenantCustomerSummary[] {
+		return this.tenantId === null || this.tenantId === tenantId ? this.customers : [];
+	}
+}
+
 /** A complete rewards scope of fakes. */
 export interface FakeRewardsScope extends RewardsScope {
 	readonly rewards: InMemoryRewardRepository;
 	readonly legalAcceptances: InMemoryLegalAcceptances;
 	readonly imageFiles: FakeRewardImageFiles;
+	readonly customers: FakeTenantCustomers;
 	readonly audit: RecordingRewardAudit;
 	readonly events: RecordingEventCollector;
 }
@@ -133,6 +174,7 @@ export function fakeRewardsScope(activeLocationIds: readonly string[] = []): Fak
 		legalAcceptances: new InMemoryLegalAcceptances(),
 		imageFiles: new FakeRewardImageFiles(),
 		stores: new FakeTenantStores(activeLocationIds),
+		customers: new FakeTenantCustomers(),
 		views: new FakeRewardViews(rewards),
 		audit: new RecordingRewardAudit(),
 		events: new RecordingEventCollector(),

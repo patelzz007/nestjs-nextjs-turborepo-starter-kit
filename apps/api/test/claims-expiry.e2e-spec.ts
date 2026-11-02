@@ -46,6 +46,8 @@ describe("Claim expiry (e2e)", () => {
 					title: "E2E expiry reward",
 					description: "Created by claims-expiry.e2e-spec.ts",
 					rewardType: "FREE_ITEM",
+					freeItemName: "Coffee (12 oz)",
+					freeItemSku: "E2E-COFFEE-12OZ",
 					category: "cafe",
 					images: { create: [{ fileId: rewardCoverImageSeedId("free-coffee"), position: 0 }] },
 					quantityTotal: 5,

@@ -11,6 +11,10 @@ export type RewardStatus = z.output<typeof RewardStatusSchema>;
 export const RewardKindSchema = z.enum(["CONSUMER", "REFERRER"]);
 export type RewardKind = z.output<typeof RewardKindSchema>;
 
+/** Who may see and claim a reward: everyone, or only the tenant's customers it was given to. */
+export const RewardAudienceTypeSchema = z.enum(["EVERYONE", "SELECTED_CUSTOMERS"]);
+export type RewardAudienceType = z.output<typeof RewardAudienceTypeSchema>;
+
 /** Stock placeholder image keys by category (Phase 1). */
 export const RewardCategorySchema = z.enum(["cafe", "restaurant", "retail", "wellness", "entertainment", "food", "beverage"]);
 export type RewardCategory = z.output<typeof RewardCategorySchema>;

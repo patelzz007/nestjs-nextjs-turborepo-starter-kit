@@ -1,3 +1,5 @@
+import { rewardTypeGivesFreeItem, type RewardType } from "@workspace/shared";
+
 import { DomainErrorCodeSchema } from "../../../../platform/domain/errors/error-codes";
 
 import { DomainError } from "../../../../platform/domain/errors/domain-error";
@@ -20,6 +22,9 @@ export const RewardsDomainErrorCodeSchema = DomainErrorCodeSchema.extract([
 	"REWARD_IMAGES_INVALID",
 	"REWARD_IMAGE_NOT_FOUND",
 	"REWARD_LOCATION_INVALID",
+	"REWARD_AUDIENCE_INVALID",
+	"REWARD_AUDIENCE_REFERRALS",
+	"REWARD_FREE_ITEM_INVALID",
 	"TENANT_LOCATION_FORBIDDEN",
 	"REWARD_EXPIRED",
 	"REWARD_OUT_OF_STOCK",
@@ -138,6 +143,36 @@ export class RewardLocationInvalidError extends DomainError {
 
 	public constructor() {
 		super("One or more selected stores are invalid for this tenant");
+	}
+}
+
+/** A reward was given to someone who is not one of the tenant's customers (or to no one). */
+export class RewardAudienceInvalidError extends DomainError {
+	public readonly code = "REWARD_AUDIENCE_INVALID";
+
+	public constructor() {
+		super("A reward can be given only to this business's customers — choose them from your customer list");
+	}
+}
+
+/** A reward for chosen customers cannot have referrals: referrals bring in new people. */
+export class RewardAudienceReferralsError extends DomainError {
+	public readonly code = "REWARD_AUDIENCE_REFERRALS";
+
+	public constructor() {
+		super("A reward for chosen customers cannot have referrals — give it to everyone, or turn referrals off");
+	}
+}
+
+/**
+ * The offer's free item does not fit its type (ADR 074): a free item or buy one, get one reward names
+ * the item it gives (name and SKU); no other type names one.
+ */
+export class RewardFreeItemInvalidError extends DomainError {
+	public readonly code = "REWARD_FREE_ITEM_INVALID";
+
+	public constructor(public readonly rewardType: RewardType) {
+		super(rewardTypeGivesFreeItem(rewardType) ? "Name the item this reward gives, with its SKU" : "Only a free item or buy one, get one reward names an item");
 	}
 }
 

@@ -82,6 +82,8 @@ describe("Reward referral links (e2e)", () => {
 						title: `E2E referral link reward (${referralsEnabled ? "shareable" : "not shareable"})`,
 						description: "Created by reward-referral-links.e2e-spec.ts",
 						rewardType: "FREE_ITEM",
+						freeItemName: "Coffee (12 oz)",
+						freeItemSku: "E2E-COFFEE-12OZ",
 						category: "cafe",
 						images: { create: [{ fileId: rewardCoverImageSeedId("free-coffee"), position: 0 }] },
 						quantityTotal: 5,

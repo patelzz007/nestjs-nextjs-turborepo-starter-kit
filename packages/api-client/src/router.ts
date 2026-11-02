@@ -106,6 +106,12 @@ export const KANBAN_QUERY_ROOT = "kanban";
 /** The cache root of every operations-console query (`["operations", …]`). */
 export const OPERATIONS_QUERY_ROOT = "operations";
 
+/** The cache root of the caller's own notification queries (`["notifications", …]`): the live stream invalidates it. */
+export const NOTIFICATIONS_QUERY_ROOT = "notifications";
+
+/** The cache root of platform staff's notification queries (`["notifications-admin", …]`). */
+export const NOTIFICATIONS_ADMIN_QUERY_ROOT = "notifications-admin";
+
 /** The fields a kanban board query's cache scope reads: which of the two boards. */
 export interface KanbanBoardScope extends ScopeFields {
 	readonly board: string;
@@ -720,9 +726,75 @@ export const apiRouter = {
 		/** Issues fresh QR + backup codes for a PENDING claim. A command (it rotates the stored code hashes), so it is never prefetched or cached. */
 		qr: defineMutation(apiContract.claims.qr),
 	},
-	rewardNotifications: {
-		list: defineQuery(apiContract.rewardNotifications.list, { scope: (): ApiQueryKey => ["reward-notifications", "list"] }),
-		read: defineMutation(apiContract.rewardNotifications.read),
+	/**
+	 * The caller's own inbox, preferences and push devices (ADR 070). The live stream invalidates
+	 * `inbox.scopeKey()`, which covers the list and the unread count.
+	 */
+	notifications: {
+		inbox: defineQuery(apiContract.notifications.inbox, { scope: (): ApiQueryKey => [NOTIFICATIONS_QUERY_ROOT, "inbox"] }),
+		/** Nested under the inbox scope: invalidating `inbox.scopeKey()` refreshes the badge too. */
+		unreadCount: defineQuery(apiContract.notifications.unreadCount, { scope: (): ApiQueryKey => [NOTIFICATIONS_QUERY_ROOT, "inbox", "unread-count"] }),
+		read: defineMutation(apiContract.notifications.read),
+		archive: defineMutation(apiContract.notifications.archive),
+		preferences: defineQuery(apiContract.notifications.preferences, { scope: (): ApiQueryKey => [NOTIFICATIONS_QUERY_ROOT, "preferences"] }),
+		updatePreferences: defineMutation(apiContract.notifications.updatePreferences),
+		updateSchedule: defineMutation(apiContract.notifications.updateSchedule),
+		setConsent: defineMutation(apiContract.notifications.setConsent),
+		leaveTenant: defineMutation(apiContract.notifications.leaveTenant),
+		pushDevices: defineQuery(apiContract.notifications.pushDevices, { scope: (): ApiQueryKey => [NOTIFICATIONS_QUERY_ROOT, "push-devices"] }),
+		registerPushDevice: defineMutation(apiContract.notifications.registerPushDevice),
+		removePushDevice: defineMutation(apiContract.notifications.removePushDevice),
+		pushOpened: defineMutation(apiContract.notifications.pushOpened),
+		unsubscribe: defineMutation(apiContract.notifications.unsubscribe),
+		reportBroadcast: defineMutation(apiContract.notifications.reportBroadcast),
+	},
+	/** Platform staff: delivery log, catalog, suppressions, providers, broadcasts and their reports (ADR 070, 073). */
+	notificationsAdmin: {
+		deliveries: defineQuery(apiContract.notificationsAdmin.deliveries, { scope: (): ApiQueryKey => [NOTIFICATIONS_ADMIN_QUERY_ROOT, "deliveries"] }),
+		retryDelivery: defineMutation(apiContract.notificationsAdmin.retryDelivery),
+		catalog: defineQuery(apiContract.notificationsAdmin.catalog, { scope: (): ApiQueryKey => [NOTIFICATIONS_ADMIN_QUERY_ROOT, "catalog"] }),
+		previewType: defineQuery(apiContract.notificationsAdmin.previewType, {
+			scope: ({ key }: { readonly key: string }): ApiQueryKey => [NOTIFICATIONS_ADMIN_QUERY_ROOT, "catalog", key, "preview"],
+		}),
+		sendTest: defineMutation(apiContract.notificationsAdmin.sendTest),
+		suppressions: defineQuery(apiContract.notificationsAdmin.suppressions, { scope: (): ApiQueryKey => [NOTIFICATIONS_ADMIN_QUERY_ROOT, "suppressions"] }),
+		liftSuppression: defineMutation(apiContract.notificationsAdmin.liftSuppression),
+		providers: defineQuery(apiContract.notificationsAdmin.providers, { scope: (): ApiQueryKey => [NOTIFICATIONS_ADMIN_QUERY_ROOT, "providers"] }),
+		broadcasts: defineQuery(apiContract.notificationsAdmin.broadcasts, { scope: (): ApiQueryKey => [NOTIFICATIONS_ADMIN_QUERY_ROOT, "broadcasts"] }),
+		broadcast: defineQuery(apiContract.notificationsAdmin.broadcast, {
+			scope: ({ broadcastId }: { readonly broadcastId: string }): ApiQueryKey => [NOTIFICATIONS_ADMIN_QUERY_ROOT, "broadcasts", broadcastId],
+		}),
+		createBroadcast: defineMutation(apiContract.notificationsAdmin.createBroadcast),
+		updateBroadcast: defineMutation(apiContract.notificationsAdmin.updateBroadcast),
+		scheduleBroadcast: defineMutation(apiContract.notificationsAdmin.scheduleBroadcast),
+		approveBroadcast: defineMutation(apiContract.notificationsAdmin.approveBroadcast),
+		cancelBroadcast: defineMutation(apiContract.notificationsAdmin.cancelBroadcast),
+		broadcastAudiencePreview: defineMutation(apiContract.notificationsAdmin.broadcastAudiencePreview),
+		broadcastReports: defineQuery(apiContract.notificationsAdmin.broadcastReports, { scope: (): ApiQueryKey => [NOTIFICATIONS_ADMIN_QUERY_ROOT, "broadcast-reports"] }),
+		reviewBroadcastReport: defineMutation(apiContract.notificationsAdmin.reviewBroadcastReport),
+	},
+	/** A tenant's own delivery log and broadcasts (ADR 070, 073); keyed under `["tenant", slug, "notifications"]`. */
+	tenantNotifications: {
+		deliveries: defineQuery(apiContract.tenantNotifications.deliveries, {
+			scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "notifications", "deliveries"],
+		}),
+		broadcasts: defineQuery(apiContract.tenantNotifications.broadcasts, {
+			scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "notifications", "broadcasts"],
+		}),
+		broadcast: defineQuery(apiContract.tenantNotifications.broadcast, {
+			scope: ({ tenantSlug, broadcastId }: TenantScope & { readonly broadcastId: string }): ApiQueryKey => ["tenant", tenantSlug, "notifications", "broadcasts", broadcastId],
+		}),
+		createBroadcast: defineMutation(apiContract.tenantNotifications.createBroadcast),
+		updateBroadcast: defineMutation(apiContract.tenantNotifications.updateBroadcast),
+		scheduleBroadcast: defineMutation(apiContract.tenantNotifications.scheduleBroadcast),
+		cancelBroadcast: defineMutation(apiContract.tenantNotifications.cancelBroadcast),
+		broadcastAudiencePreview: defineMutation(apiContract.tenantNotifications.broadcastAudiencePreview),
+		broadcastAllowance: defineQuery(apiContract.tenantNotifications.broadcastAllowance, {
+			scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "notifications", "broadcast-allowance"],
+		}),
+		broadcastCustomers: defineQuery(apiContract.tenantNotifications.broadcastCustomers, {
+			scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "notifications", "customers"],
+		}),
 	},
 	files: {
 		uploadUrl: defineMutation(apiContract.files.uploadUrl),
@@ -818,6 +890,14 @@ export const apiRouter = {
 			get: defineQuery(apiContract.tenants.rewards.get, { scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "rewards", "detail"] }),
 			summary: defineQuery(apiContract.tenants.rewards.summary, {
 				scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "rewards", "summary"],
+			}),
+			/** Who a reward is for: everyone, or its chosen customers (the editor's "Who can claim"). */
+			audience: defineQuery(apiContract.tenants.rewards.audience, {
+				scope: ({ tenantSlug, rewardId }: TenantScope & { readonly rewardId: string }): ApiQueryKey => ["tenant", tenantSlug, "rewards", "audience", rewardId],
+			}),
+			/** The tenant's customers to give a reward to (search by name or email; masked emails only). */
+			customers: defineQuery(apiContract.tenants.rewards.customers, {
+				scope: ({ tenantSlug }: TenantScope): ApiQueryKey => ["tenant", tenantSlug, "rewards", "customers"],
 			}),
 			create: defineMutation(apiContract.tenants.rewards.create),
 			update: defineMutation(apiContract.tenants.rewards.update),
@@ -989,6 +1069,15 @@ export const apiRouter = {
 		abortLoadTest: defineMutation(apiContract.operations.abortLoadTest),
 		loadTestCaps: defineMutation(apiContract.operations.loadTestCaps),
 		purgeLoadTestData: defineMutation(apiContract.operations.purgeLoadTestData),
+		/** Rate limiting (ADR 071): policies, refusals, tenant overrides and penalties. */
+		rateLimits: defineQuery(apiContract.operations.rateLimits, { scope: (): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "rate-limits"] }),
+		rateLimitOverrides: defineQuery(apiContract.operations.rateLimitOverrides, { scope: (): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "rate-limits", "overrides"] }),
+		setRateLimitOverride: defineMutation(apiContract.operations.setRateLimitOverride),
+		removeRateLimitOverride: defineMutation(apiContract.operations.removeRateLimitOverride),
+		liftRateLimitPenalty: defineMutation(apiContract.operations.liftRateLimitPenalty),
+		/** The distributed cache (ADR 072): per-cache stats, Redis memory, flushes. */
+		cache: defineQuery(apiContract.operations.cache, { scope: (): ApiQueryKey => [OPERATIONS_QUERY_ROOT, "cache"] }),
+		flushCache: defineMutation(apiContract.operations.flushCache),
 	},
 	product: {
 		list: defineQuery(apiContract.product.list, { scope: (): ApiQueryKey => ["product", "list"] }),

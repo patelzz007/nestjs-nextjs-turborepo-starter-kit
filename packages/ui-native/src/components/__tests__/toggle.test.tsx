@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
-import BoldIcon from "lucide-react-native/icons/bold";
+import BoldIcon from "lucide-react-native/icons/letter-b";
 import * as React from "react";
 import type { ViewInstance } from "react-native";
 
-import { Toggle } from "../toggle";
+import { Toggle, toggleContentColorOf } from "../toggle";
 
 const PRESSED = { checked: true };
 const NOT_PRESSED = { checked: false };
@@ -58,6 +58,18 @@ describe("Toggle", () => {
 		expect(toggle).toHaveProp("className", expect.stringContaining("border-input"));
 		expect(toggle).toHaveProp("className", expect.stringContaining("min-h-9"));
 		expect(toggle).toHaveProp("hitSlop", 4);
+	});
+
+	it("is a solid brand pill while pressed in the pill variant, its glyph in the brand's foreground", async () => {
+		await render(<Toggle label="Unread" pressed onChange={jest.fn()} variant="pill" />);
+
+		const className = String(screen.getByRole("togglebutton").props.className);
+		expect(className).toContain("rounded-full");
+		expect(className).toContain("bg-primary");
+		expect(className).not.toContain("bg-secondary");
+		expect(toggleContentColorOf(true, "pill")).toBe("accent-primary-foreground");
+		expect(toggleContentColorOf(true)).toBe("accent-secondary-foreground");
+		expect(toggleContentColorOf(false, "pill")).toBe("accent-foreground");
 	});
 
 	it("forwards its ref, merges the caller's className last and reports focus and blur", async () => {

@@ -9,3 +9,10 @@ export function playSelectionFeedback(): void {
 		// No haptics engine (simulator, web, haptics turned off): nothing to feel.
 	});
 }
+
+/** A firm confirmation that something worked (a code was read, a payment went through). */
+export function playSuccessFeedback(): void {
+	Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch((): void => {
+		// No haptics engine: the screen still shows it worked.
+	});
+}

@@ -256,9 +256,21 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 20
+      redis:
+        # Keep in step with compose.yml (local dev): the rate-limiter and cache scripts (ADR 071, 072) run
+        # against a real Redis, with the same no-eviction policy.
+        image: redis:8.10.1
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
     env:
       # Throwaway service-container database; nothing here is a real credential.
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_ci?schema=public
+      REDIS_URL: redis://localhost:6379
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

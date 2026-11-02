@@ -8,6 +8,7 @@ import { MultiDatePicker } from "@workspace/ui/components/multi-date-picker";
 import { RadioGroup, RadioGroupItem } from "@workspace/ui/components/radio-group";
 import { Slider } from "@workspace/ui/components/slider";
 import { Switch } from "@workspace/ui/components/switch";
+import { TreeBranch } from "@workspace/ui/components/tree-branch";
 import { formatDateInputString } from "@workspace/ui/lib/form/date-input";
 import { addMonths, isWeekend } from "date-fns";
 import * as React from "react";
@@ -51,7 +52,7 @@ function ChannelCheckbox({ option, isChecked, onToggle }: ChannelCheckboxProps):
 		[onToggle, option.value],
 	);
 	return (
-		<div className="flex items-center gap-2">
+		<div className="flex items-center gap-2 py-1">
 			<Checkbox id={id} checked={isChecked} onCheckedChange={handleCheckedChange} />
 			<Label htmlFor={id}>{option.label}</Label>
 		</div>
@@ -73,16 +74,20 @@ function CheckboxDemo(): React.JSX.Element {
 
 	return (
 		<DemoSurface>
-			<DemoRow label="Select all (indeterminate while mixed)" className="flex-col items-start">
+			<DemoRow label="Select all (indeterminate while mixed), children on a TreeBranch" className="flex-col items-start gap-1">
 				<div className="flex items-center gap-2">
 					<Checkbox id="gallery-checkbox-all" checked={isAllChecked} indeterminate={isMixed} onCheckedChange={handleAllChange} />
 					<Label htmlFor="gallery-checkbox-all">All channels</Label>
 				</div>
-				<div className="flex flex-col gap-2 ps-6">
+				<TreeBranch aria-label="All channels" className="ms-2">
+					<div className="flex items-center gap-2 py-1">
+						<Checkbox id="gallery-checkbox-in-app" checked locked />
+						<Label htmlFor="gallery-checkbox-in-app">In the app (always on)</Label>
+					</div>
 					{CHANNEL_OPTIONS.map((option) => (
 						<ChannelCheckbox key={option.value} option={option} isChecked={channels.includes(option.value)} onToggle={handleToggle} />
 					))}
-				</div>
+				</TreeBranch>
 			</DemoRow>
 			<DemoRow label="Sizes and states">
 				<Checkbox size="sm" defaultChecked aria-label="Small checkbox" />
@@ -90,6 +95,7 @@ function CheckboxDemo(): React.JSX.Element {
 				<Checkbox size="lg" defaultChecked aria-label="Large checkbox" />
 				<Checkbox disabled aria-label="Disabled checkbox" />
 				<Checkbox disabled defaultChecked aria-label="Disabled checked checkbox" />
+				<Checkbox checked locked aria-label="Locked checkbox" />
 				<Checkbox aria-invalid aria-label="Invalid checkbox" />
 			</DemoRow>
 		</DemoSurface>

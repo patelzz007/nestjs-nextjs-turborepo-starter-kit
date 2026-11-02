@@ -5,6 +5,7 @@ import { MERCHANT_CAPABILITY, type RewardResponse } from "@workspace/shared";
 import { CLOCK, type Clock } from "../../../../../platform/application/clock.port";
 import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
+import { decideRewardAudience } from "../../../domain/policies/reward-audience.policy";
 import { RewardRulesValue } from "../../../domain/value-objects/reward-rules.value-object";
 import { MERCHANT_ACCESS } from "../../../../tenancy/public-api";
 import { REWARDS_UNIT_OF_WORK } from "../../ports/rewards.tokens";
@@ -31,12 +32,18 @@ export class ReviseRewardHandler implements ICommandHandler<ReviseRewardCommand,
 
 		return this.uow.run(actor, async (scope: RewardsScope): Promise<RewardResponse> => {
 			const reward = await scope.rewards.getConsumerInTenant(input.tenantId, input.rewardId);
+			const customerIds = input.audienceCustomerIds ?? [];
+			const audience =
+				input.audienceType === undefined
+					? undefined
+					: decideRewardAudience({ audienceType: input.audienceType, customerIds }, await scope.customers.customersAmong(input.tenantId, customerIds));
 			reward.revise(
 				{
 					title: input.title,
 					description: input.description,
 					rewardType: input.rewardType,
 					rewardValue: input.rewardValue,
+					freeItem: input.freeItem,
 					termsConditions: input.termsConditions,
 					imageFileIds: input.imageFileIds,
 					quantityTotal: input.quantityTotal,
@@ -46,6 +53,7 @@ export class ReviseRewardHandler implements ICommandHandler<ReviseRewardCommand,
 					referralPoolTotal: input.referralPoolTotal,
 					referrerRewardTitle: input.referrerRewardTitle,
 					rules: input.rules === undefined ? undefined : RewardRulesValue.fromApi(input.rules),
+					audience,
 				},
 				rewardManager(actor, grant),
 				this.clock.now(),

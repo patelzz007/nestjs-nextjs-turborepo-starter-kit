@@ -7,7 +7,19 @@ import { SelectionDemos } from "../selection-demos";
 const TRACK_LAYOUT = { nativeEvent: { layout: { x: 0, y: 0, width: 300, height: 24 } } };
 const INCREMENT = { nativeEvent: { actionName: "increment" } };
 
-const DEMO_TITLES: readonly string[] = ["Checkbox", "RadioGroup", "SegmentedControl", "SelectField", "FilterChip", "Switch", "Toggle", "ToggleGroup", "Slider", "Combobox"];
+const DEMO_TITLES: readonly string[] = [
+	"Checkbox",
+	"TreeBranch",
+	"RadioGroup",
+	"SegmentedControl",
+	"SelectField",
+	"FilterChip",
+	"Switch",
+	"Toggle",
+	"ToggleGroup",
+	"Slider",
+	"Combobox",
+];
 
 describe("SelectionDemos", () => {
 	it("shows one demo block per component", async () => {
@@ -26,6 +38,22 @@ describe("SelectionDemos", () => {
 		expect(terms).toHaveProp("accessibilityHint", "Required to continue");
 		await fireEvent.press(terms);
 		expect(block.getByRole("checkbox", { name: "I accept the terms" })).toBeChecked();
+	});
+
+	it("checks every child from a part-checked parent, and leaves the locked one on", async () => {
+		await render(<SelectionDemos />);
+		const block = within(screen.getByTestId("demo-TreeBranch"));
+
+		const parent = block.getByRole("checkbox", { name: "Order updates" });
+		expect(parent).toBePartiallyChecked();
+		await fireEvent.press(parent);
+		expect(block.getByRole("checkbox", { name: "Order updates" })).toBeChecked();
+		expect(block.getByRole("checkbox", { name: "Phone" })).toBeChecked();
+		expect(block.getByRole("checkbox", { name: "In app" })).toBeDisabled();
+
+		await fireEvent.press(block.getByRole("checkbox", { name: "Order updates" }));
+		expect(block.getByRole("checkbox", { name: "Email" })).not.toBeChecked();
+		expect(block.getByRole("checkbox", { name: "In app" })).toBeChecked();
 	});
 
 	it("turns a switch off and on", async () => {

@@ -93,6 +93,11 @@
 							"title": "Log",
 							"url": "/emails/log",
 							"icon": "MailCheck"
+						},
+						{
+							"title": "Broadcasts",
+							"url": "/emails/broadcasts",
+							"icon": "Megaphone"
 						}
 					]
 				},
@@ -135,6 +140,16 @@
 							"title": "Load tests",
 							"url": "/operations/load-tests",
 							"icon": "Rocket"
+						},
+						{
+							"title": "Rate limits",
+							"url": "/operations/rate-limits",
+							"icon": "Gauge"
+						},
+						{
+							"title": "Cache",
+							"url": "/operations/cache",
+							"icon": "Database"
 						}
 					]
 				},

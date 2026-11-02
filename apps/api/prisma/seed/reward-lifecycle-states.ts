@@ -201,6 +201,8 @@ async function seedRewardStates(context: RewardLifecycleSeedContext): Promise<vo
 				title: "Free cake for every visit",
 				description: "Unlimited free cake with any purchase.",
 				rewardType: "FREE_ITEM",
+				freeItemName: "Slice of cake (any)",
+				freeItemSku: "BAK-CAKE-SLICE",
 				rewardValue: 1,
 				rewardKind: "CONSUMER",
 				category: "cafe",

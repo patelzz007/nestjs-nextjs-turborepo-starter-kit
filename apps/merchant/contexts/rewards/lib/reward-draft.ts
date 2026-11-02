@@ -11,7 +11,7 @@ import { formatEpochMs } from "@workspace/ui/lib/format/date-time";
 import { z } from "zod";
 
 /** The editor's sections, in page order — each is an anchor the preview's checklist links to. */
-export const RewardEditorSectionIdSchema = z.enum(["reward-offer", "reward-photos", "reward-schedule", "reward-stores", "reward-terms"]);
+export const RewardEditorSectionIdSchema = z.enum(["reward-offer", "reward-photos", "reward-schedule", "reward-stores", "reward-audience", "reward-terms"]);
 
 export type RewardEditorSectionId = z.output<typeof RewardEditorSectionIdSchema>;
 
@@ -33,6 +33,8 @@ interface FieldGapCopy {
 const FIELD_GAPS: Readonly<Record<RewardFormField, FieldGapCopy>> = {
 	rewardType: { label: "Choose what kind of reward it is", sectionId: "reward-offer" },
 	rewardValue: { label: "Set what the reward is worth", sectionId: "reward-offer" },
+	freeItemName: { label: "Name the free item", sectionId: "reward-offer" },
+	freeItemSku: { label: "Enter the free item's SKU", sectionId: "reward-offer" },
 	minPurchase: { label: "Fix the minimum spend", sectionId: "reward-offer" },
 	title: { label: "Give it a title", sectionId: "reward-offer" },
 	description: { label: "Describe what customers get", sectionId: "reward-offer" },
@@ -43,6 +45,8 @@ const FIELD_GAPS: Readonly<Record<RewardFormField, FieldGapCopy>> = {
 	maxClaimsPerUser: { label: "Set how often a customer can claim it", sectionId: "reward-schedule" },
 	locationScopeType: { label: "Choose where it can be redeemed", sectionId: "reward-stores" },
 	locationIds: { label: "Pick at least one store", sectionId: "reward-stores" },
+	audienceType: { label: "Choose who can claim it", sectionId: "reward-audience" },
+	audienceCustomerIds: { label: "Pick at least one customer", sectionId: "reward-audience" },
 	termsConditions: { label: "Shorten the terms", sectionId: "reward-terms" },
 };
 
@@ -50,6 +54,8 @@ const FIELD_GAPS: Readonly<Record<RewardFormField, FieldGapCopy>> = {
 const PAGE_ORDER: readonly RewardFormField[] = [
 	"rewardType",
 	"rewardValue",
+	"freeItemName",
+	"freeItemSku",
 	"minPurchase",
 	"title",
 	"description",
@@ -60,6 +66,8 @@ const PAGE_ORDER: readonly RewardFormField[] = [
 	"maxClaimsPerUser",
 	"locationScopeType",
 	"locationIds",
+	"audienceType",
+	"audienceCustomerIds",
 	"termsConditions",
 ];
 

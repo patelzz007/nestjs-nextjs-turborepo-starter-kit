@@ -33,4 +33,6 @@ export const OPERATIONS_MONITOR = Symbol("OPERATIONS_MONITOR");
 export const HISTORY_MAINTAINER = Symbol("HISTORY_MAINTAINER");
 export const LOAD_TEST_RECORDER = Symbol("LOAD_TEST_RECORDER");
 export const OPERATIONS_READ = Symbol("OPERATIONS_READ");
+/** The Rate limits and Cache pages (`OperationsTrafficService`). */
+export const OPERATIONS_TRAFFIC = Symbol("OPERATIONS_TRAFFIC");
 export const REQUEST_METRICS = Symbol("REQUEST_METRICS");

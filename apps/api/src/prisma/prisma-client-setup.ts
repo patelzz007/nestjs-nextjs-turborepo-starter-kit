@@ -1,5 +1,7 @@
 import type { Logger } from "@nestjs/common";
 
+import { DATABASE_CONNECT_TIMEOUT_MS } from "./database-pool.constants";
+
 /** One Prisma log subscription (`$on` events only: nothing is printed by Prisma itself). */
 export interface PrismaLogSubscription {
 	readonly emit: "event";
@@ -21,6 +23,19 @@ export function prismaLogSubscriptions(isDebugLogging: boolean): PrismaLogSubscr
 			]
 		: [{ emit: "event", level: "query" }];
 }
+
+/** What both API Prisma clients set on every interactive transaction (`$transaction(async (tx) => …)`). */
+export interface PrismaTransactionDefaults {
+	/** How long a transaction may wait to start, which is mostly the pool checkout. */
+	readonly maxWait: number;
+}
+
+/**
+ * A transaction waits to start as long as the pool's own checkout may ({@link DATABASE_CONNECT_TIMEOUT_MS}).
+ * Left unset, Prisma's `maxWait` is 2 s: it gave up before the pool's 5 s checkout bound, so a burst the
+ * pool would have served became a 500 ("Unable to start a transaction in the given time"). One bound, set once.
+ */
+export const PRISMA_TRANSACTION_DEFAULTS: PrismaTransactionDefaults = { maxWait: DATABASE_CONNECT_TIMEOUT_MS };
 
 /** How one API replica splits its `DB_POOL_MAX` connections between its two pools. */
 export interface DatabasePoolBudget {

@@ -14,6 +14,7 @@ import { SuperAdminGuard } from "../../../../platform/presentation/http/security
 import { RATE_LIMIT_POLICY, RATE_LIMIT_POLICY_KEY } from "../../../../platform/presentation/http/security/throttling/rate-limit.decorator";
 import { getResponseContract } from "../../../../platform/presentation/http/validation/decorators/zod-response.decorators";
 import { InMemoryGeographyRead } from "../../application/__tests__/fakes/in-memory-geography-read";
+import { RecordingGeographyCache } from "../../application/__tests__/fakes/recording-geography-cache";
 import { InMemoryGeographyRepository } from "../../application/__tests__/fakes/in-memory-geography.repository";
 import { RecordingRequestAudit } from "../../application/__tests__/fakes/recording-request-audit";
 import type { ReferenceDataScope } from "../../application/reference-data-scope";
@@ -140,7 +141,7 @@ describe("GeoController delegation", () => {
 			requestAudit: new RecordingRequestAudit(),
 			events: new TransactionalEventCollector(),
 		});
-		return { geo: new GeoController(new GeographyApplicationService(unitOfWork, reads, new FixedClock(epochMs(0)))), reads, unitOfWork };
+		return { geo: new GeoController(new GeographyApplicationService(unitOfWork, reads, new FixedClock(epochMs(0)), new RecordingGeographyCache())), reads, unitOfWork };
 	}
 
 	it("hands the current actor to the application service for a read", async () => {

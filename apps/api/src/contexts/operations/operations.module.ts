@@ -13,12 +13,21 @@ import { getApiConfig } from "../../config/api-config";
 import { TypedConfigService } from "../../config/typed-config.service";
 import { systemActor } from "../../platform/application/actor-context";
 import { CLOCK, type Clock } from "../../platform/application/clock.port";
+import { APP_CACHE, type AppCache } from "../../platform/application/ports/app-cache.port";
+import {
+	RATE_LIMIT_EXEMPTION_LIST,
+	RATE_LIMIT_REFUSALS,
+	type RateLimitExemptionListPort,
+	type RateLimitRefusalsPort,
+} from "../../platform/application/ports/rate-limit-insights.port";
+import { RATE_LIMITER, type RateLimiter } from "../../platform/application/ports/rate-limiter.port";
+import { TENANT_RATE_LIMIT_OVERRIDES, type TenantRateLimitOverridesPort } from "../../platform/application/ports/tenant-rate-limit-overrides.port";
+import { RateLimitPolicyRegistry } from "../../platform/application/rate-limiting/rate-limit-policy-registry";
 import type { UnitOfWork } from "../../platform/application/unit-of-work.port";
 import { HEALTH_PROBE_PATHS } from "../../platform/infrastructure/http/probe-routes";
 import { OBJECT_STORAGE, StorageModule, type ObjectStorage } from "../../platform/infrastructure/storage";
 import { SystemCommandModule } from "../../platform/infrastructure/system-command.module";
 import { LoadTestTrafficKeys } from "../../platform/infrastructure/throttling/load-test-traffic-keys";
-import { ThrottlerStorageModule } from "../../platform/infrastructure/throttling/throttler-storage.module";
 import type { AfterCommitPublisher } from "../../platform/infrastructure/unit-of-work/after-commit-publisher";
 import { USER_OWNED_DATA_SCOPE } from "../../platform/infrastructure/unit-of-work/actor-to-rls-context";
 import { PrismaReadExecutor } from "../../platform/infrastructure/unit-of-work/prisma-read-executor";
@@ -56,6 +65,7 @@ import {
 	LOAD_TEST_RECORD_OPERATION,
 	OPERATIONS_MONITOR,
 	OPERATIONS_READ,
+	OPERATIONS_TRAFFIC,
 	OPS_BACKUP_RUN_OPERATION,
 	OPS_HISTORY_MAINTAIN_OPERATION,
 	OPS_INSTANCE_RECORD_OPERATION,
@@ -87,6 +97,8 @@ import { OperationsAgentController } from "./presentation/http/operations-agent.
 import { OperationsBackupFileController, OperationsBackupsController } from "./presentation/http/operations-backups.controller";
 import { OperationsController } from "./presentation/http/operations.controller";
 import { OperationsLoadTestsController } from "./presentation/http/operations-load-tests.controller";
+import { OperationsTrafficController } from "./presentation/http/operations-traffic.controller";
+import { OperationsTrafficService } from "./application/services/operations-traffic";
 
 // Queue wiring is decided at load time from the validated config (like the files context): BullMQ
 // when Redis is configured (always in production), in this process otherwise.
@@ -176,8 +188,15 @@ function dependencyProbes(
  * RLS and reached through named `operations.*` / `load_test.*` system operations.
  */
 @Module({
-	imports: [PrismaModule, UnitOfWorkModule, SystemCommandModule, NotificationsModule, StorageModule, ThrottlerStorageModule, ...(hasRedis ? [OperationsQueueModule] : [])],
-	controllers: [OperationsController, OperationsBackupsController, OperationsBackupFileController, OperationsLoadTestsController, OperationsAgentController],
+	imports: [PrismaModule, UnitOfWorkModule, SystemCommandModule, NotificationsModule, StorageModule, ...(hasRedis ? [OperationsQueueModule] : [])],
+	controllers: [
+		OperationsController,
+		OperationsBackupsController,
+		OperationsBackupFileController,
+		OperationsLoadTestsController,
+		OperationsAgentController,
+		OperationsTrafficController,
+	],
 	providers: [
 		{
 			provide: OPS_LIVE_STORE,
@@ -291,6 +310,21 @@ function dependencyProbes(
 			inject: [OPS_UNIT_OF_WORK, OPS_LIVE_STORE, CLOCK],
 			useFactory: (uow: UnitOfWork<OperationsScope>, live: OpsLiveStore, clock: Clock): LoadTestRecorder =>
 				new LoadTestRecorder(uow, live, clock, systemActor(LOAD_TEST_RECORD_OPERATION, "consumer", null, "Record a load test's progress", null)),
+		},
+		{
+			provide: OPERATIONS_TRAFFIC,
+			inject: [CLOCK, RateLimitPolicyRegistry, RATE_LIMIT_REFUSALS, RATE_LIMIT_EXEMPTION_LIST, TENANT_RATE_LIMIT_OVERRIDES, RATE_LIMITER, APP_CACHE, TypedConfigService],
+			useFactory: (
+				clock: Clock,
+				policies: RateLimitPolicyRegistry,
+				refusals: RateLimitRefusalsPort,
+				exemptions: RateLimitExemptionListPort,
+				overrides: TenantRateLimitOverridesPort,
+				limiter: RateLimiter,
+				cache: AppCache,
+				config: TypedConfigService,
+			): OperationsTrafficService =>
+				new OperationsTrafficService({ clock, policies, refusals, exemptions, overrides, limiter, cache, cacheAlertPercent: config.caches.memoryAlertPercent }),
 		},
 		{
 			provide: OPERATIONS_READ,

@@ -164,3 +164,46 @@ export const TeamMemberInviteEmailPropsSchema = BaseEmailPropsSchema.extend({
 }).strict();
 
 export type TeamMemberInviteEmailProps = z.output<typeof TeamMemberInviteEmailPropsSchema>;
+
+// ── Notifications (ADR 070) and broadcasts (ADR 073) ─────────────────────
+
+/** One catalog notification rendered as an email (copy comes from the type's renderer). */
+export const NotificationEmailPropsSchema = BaseEmailPropsSchema.extend({
+	subject: z.string().min(1).max(200),
+	eyebrow: z.string().min(1).max(80),
+	heading: z.string().min(1).max(200),
+	paragraphs: z.array(z.string().min(1).max(4_000)).min(1).max(20),
+	actionLabel: z.string().min(1).max(60).optional(),
+	actionUrl: z.url().optional(),
+	/** The web unsubscribe page (the footer link); absent for mandatory (security) emails. */
+	unsubscribeUrl: z.url().optional(),
+	/** The RFC 8058 one-click endpoint (the `List-Unsubscribe` header); set together with `unsubscribeUrl`. */
+	oneClickUnsubscribeUrl: z.url().optional(),
+}).strict();
+export type NotificationEmailProps = z.output<typeof NotificationEmailPropsSchema>;
+
+/** The daily or weekly digest: parallel lists (job props hold only scalars and string lists). */
+export const NotificationDigestEmailPropsSchema = BaseEmailPropsSchema.extend({
+	period: z.enum(["DAILY", "WEEKLY"]),
+	itemTitles: z.array(z.string().min(1).max(200)).min(1).max(100),
+	itemBodies: z.array(z.string().max(4_000)).min(1).max(100),
+	itemLinks: z.array(z.string().max(500)).min(1).max(100),
+	unsubscribeUrl: z.url().optional(),
+	oneClickUnsubscribeUrl: z.url().optional(),
+})
+	.strict()
+	.refine((props): boolean => props.itemTitles.length === props.itemBodies.length && props.itemTitles.length === props.itemLinks.length, {
+		message: "Each digest item has a title, a body and a link",
+	});
+export type NotificationDigestEmailProps = z.output<typeof NotificationDigestEmailPropsSchema>;
+
+/** A broadcast email: its body is the server's own rendering of the validated rich text (never sender HTML). */
+export const BroadcastEmailPropsSchema = BaseEmailPropsSchema.extend({
+	senderName: z.string().min(1).max(200),
+	title: z.string().min(1).max(200),
+	bodyHtml: z.string().min(1).max(500_000),
+	bodyText: z.string().min(1).max(100_000),
+	unsubscribeUrl: z.url(),
+	oneClickUnsubscribeUrl: z.url(),
+}).strict();
+export type BroadcastEmailProps = z.output<typeof BroadcastEmailPropsSchema>;

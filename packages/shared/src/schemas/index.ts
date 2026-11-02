@@ -1282,19 +1282,20 @@ export {
 	RewardImageResponseSchema,
 	RewardImageSourceSchema,
 	MAX_REWARD_IMAGES,
+	REWARD_MAX_AUDIENCE_CUSTOMERS,
+	RewardAudienceResponseSchema,
+	RewardCustomerSchema,
+	rewardCustomerListQuery,
+	RewardCustomerListQuerySchema,
 } from "../contexts/rewards/schemas/reward";
 export {
 	CreateRewardClaimSchema,
-	MarkRewardNotificationsReadSchema,
 	RequestClaimOtpSchema,
 	RewardClaimCreatedResponseSchema,
 	RewardClaimListQuerySchema,
 	rewardClaimListQuery,
 	RewardClaimQrResponseSchema,
 	RewardClaimResponseSchema,
-	RewardNotificationListQuerySchema,
-	rewardNotificationListQuery,
-	RewardNotificationResponseSchema,
 } from "../contexts/claims/schemas/claim";
 export {
 	KybStatusSchema,
@@ -1356,12 +1357,14 @@ export {
 	RedemptionCheckoutSchema,
 	RedemptionCodeSchema,
 	RedemptionInvalidReasonSchema,
+	RedemptionOfferSchema,
 	RedemptionPreviewResponseSchema,
 	RedemptionValidateSchema,
 	SaleCurrencySchema,
 } from "../contexts/pos/schemas/redemption";
 export { RewardBackupCodeSchema, RewardClaimStatusSchema, RewardOtpPurposeSchema } from "../contexts/claims/schemas/claim-enums";
 export {
+	RewardAudienceTypeSchema,
 	RewardCategorySchema,
 	RewardKindSchema,
 	RewardRulesResponseSchema,
@@ -1369,6 +1372,16 @@ export {
 	RewardStatusSchema,
 	RewardTypeSchema,
 } from "../contexts/rewards/schemas/reward-enums";
+export {
+	REWARD_FREE_ITEM_NAME_MAX_LENGTH,
+	REWARD_FREE_ITEM_SKU_MAX_LENGTH,
+	REWARD_TYPES_WITH_FREE_ITEM,
+	refineRewardFreeItem,
+	rewardTypeGivesFreeItem,
+	RewardFreeItemResponseSchema,
+	RewardFreeItemSchema,
+} from "../contexts/rewards/schemas/reward-free-item";
+export type { RewardFreeItem, RewardFreeItemResponse, RewardFreeItemValue } from "../contexts/rewards/schemas/reward-free-item";
 export { RewardRedemptionMethodSchema, RewardTerminalIdHeaderSchema } from "../contexts/pos/schemas/pos-enums";
 export { RewardReferralStatusSchema } from "../contexts/referrals/schemas/referral-enums";
 export {
@@ -1445,6 +1458,7 @@ export {
 	addLocalDays,
 	IanaTimeZoneSchema,
 	inclusiveLocalDayCount,
+	instantOfWallClock,
 	localDateInTimeZone,
 	LocalDateSchema,
 	nextWeekStartInTimeZone,
@@ -1613,19 +1627,18 @@ export type {
 	RewardResponse,
 	RewardImageResponse,
 	RewardImageSource,
+	RewardAudienceResponse,
+	RewardCustomer,
+	RewardCustomerListQuery,
 } from "../contexts/rewards/schemas/reward";
 export type {
 	CreateRewardClaimInput,
-	MarkRewardNotificationsReadInput,
 	RequestClaimOtpInput,
 	RewardClaimCreatedResponse,
 	RewardClaimListQuery,
 	RewardClaimListSortField,
 	RewardClaimQrResponse,
 	RewardClaimResponse,
-	RewardNotificationListQuery,
-	RewardNotificationListSortField,
-	RewardNotificationResponse,
 } from "../contexts/claims/schemas/claim";
 export type {
 	KybStatus,
@@ -1669,12 +1682,13 @@ export type {
 	RedemptionCheckoutResponse,
 	RedemptionCode,
 	RedemptionInvalidReason,
+	RedemptionOffer,
 	RedemptionPreviewResponse,
 	SaleCurrency,
 	RedemptionValidateInput,
 } from "../contexts/pos/schemas/redemption";
 export type { RewardBackupCode, RewardClaimStatus, RewardOtpPurpose } from "../contexts/claims/schemas/claim-enums";
-export type { RewardCategory, RewardKind, RewardRules, RewardStatus, RewardType } from "../contexts/rewards/schemas/reward-enums";
+export type { RewardAudienceType, RewardCategory, RewardKind, RewardRules, RewardStatus, RewardType } from "../contexts/rewards/schemas/reward-enums";
 export type { RewardRedemptionMethod } from "../contexts/pos/schemas/pos-enums";
 export type { RewardReferralStatus } from "../contexts/referrals/schemas/referral-enums";
 export type {
@@ -2160,3 +2174,9 @@ export * from "../contexts/operations/schemas/operations";
 export * from "../contexts/operations/percentiles";
 export * from "../contexts/operations/load-test-plan";
 export * from "../contexts/operations/machine-usage";
+export * from "../contexts/notifications/schemas/notifications";
+export { BroadcastEmailPropsSchema, NotificationDigestEmailPropsSchema, NotificationEmailPropsSchema } from "../contexts/notifications/schemas/email-templates";
+export type { BroadcastEmailProps, NotificationDigestEmailProps, NotificationEmailProps } from "../contexts/notifications/schemas/email-templates";
+export * from "../contexts/notifications/schemas/broadcasts";
+export * from "../contexts/notifications/schemas/rich-text";
+export * from "../contexts/operations/schemas/traffic-and-cache";

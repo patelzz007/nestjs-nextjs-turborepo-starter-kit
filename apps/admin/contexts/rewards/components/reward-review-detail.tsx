@@ -53,6 +53,12 @@ function rewardFacts(reward: RewardResponse): readonly RewardFact[] {
 	return [
 		{ label: "Offer", value: formatRewardOffer(reward.rewardType, reward.rewardValue) },
 		{ label: "Type", value: rewardTypeLabel(reward.rewardType) },
+		...(reward.freeItem === null
+			? []
+			: [
+					{ label: "Free item", value: reward.freeItem.name },
+					{ label: "SKU", value: reward.freeItem.sku, isIdentifier: true },
+				]),
 		{ label: "Category", value: rewardCategoryLabel(reward.category) },
 		{ label: "Quantity", value: rewardQuantityLabel(reward.quantityRemaining, reward.quantityTotal) },
 		{ label: "Starts", value: reward.startDate === null ? "When approved" : formatDateTime(reward.startDate) },

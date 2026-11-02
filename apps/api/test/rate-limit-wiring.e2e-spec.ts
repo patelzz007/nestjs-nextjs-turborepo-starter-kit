@@ -2,14 +2,20 @@ import { randomUUID } from "node:crypto";
 
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { API_VERSION_PREFIX, apiPath } from "@workspace/shared";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi, type MockInstance } from "vitest";
 
 import { ThrottlerStorage } from "@nestjs/throttler";
 
 import { getApiConfig } from "../src/config/api-config";
-import { RedisThrottlerStorage } from "../src/platform/infrastructure/throttling/redis-throttler.storage";
+import { RATE_LIMITER, type RateLimiter, type RateLimitRequest } from "../src/platform/application/ports/rate-limiter.port";
+import { FailoverRateLimiter } from "../src/platform/infrastructure/rate-limiting/failover-rate-limiter";
+import { RateLimiterThrottlerStorage, throttlerPolicyName } from "../src/platform/infrastructure/throttling/rate-limiter-throttler.storage";
 import { LOGIN_ATTEMPT_LIMIT, PRE_AUTH_LIMIT_MULTIPLIER } from "../src/platform/presentation/http/security/throttling/rate-limit-policy";
 import { createE2eApp, mutationHeaders, uniqueClientIp, type InjectResponse } from "./e2e-helpers";
+
+/** The policies the `strict` and `webhook` throttlers count under (ADR 071 names). */
+const SECURITY_ROUTES = throttlerPolicyName("strict");
+const WEBHOOK = throttlerPolicyName("webhook");
 
 /**
  * The limits this file's app runs with. The floods below send the `default` limit's worth of requests
@@ -52,17 +58,28 @@ const PROTECTED_URL = `${API_VERSION_PREFIX}/auth/me`;
 const UNAUTHORIZED = 401;
 const TOO_MANY_REQUESTS = 429;
 
-/** The rate-limit header the guard sets for one named throttler (`default` has no suffix). */
-function limitHeader(throttlerName: "strict" | "webhook"): string {
-	return `x-ratelimit-limit-${throttlerName}`;
-}
-
 describe("Rate-limit wiring (e2e)", () => {
 	let app: NestFastifyApplication;
+	let consume: MockInstance<RateLimiter["consume"]>;
 
 	beforeAll(async () => {
 		app = await createE2eApp();
+		// Spy WITHOUT replacing: the real limiter (Redis scripts) still decides; the spy shows which policies counted.
+		consume = vi.spyOn(app.get<RateLimiter>(RATE_LIMITER, { strict: false }), "consume");
 	});
+
+	/** The policies that counted `request` (its calls only), with the limit each counted against. */
+	async function countedPolicies(request: () => Promise<InjectResponse>): Promise<{ readonly response: InjectResponse; readonly limits: ReadonlyMap<string, number> }> {
+		consume.mockClear();
+		const response = await request();
+		const limits = new Map<string, number>(
+			consume.mock.calls.map(([counted]: [RateLimitRequest]): [string, number] => [
+				counted.policyName,
+				counted.rule.algorithm === "sliding-window" ? counted.rule.limit : counted.rule.burst,
+			]),
+		);
+		return { response, limits };
+	}
 
 	afterAll(async () => {
 		await app.close();
@@ -88,19 +105,23 @@ describe("Rate-limit wiring (e2e)", () => {
 		expect(config.rateLimits.throttleDefaultLimit).toBeGreaterThan(Math.max(LOGIN_ATTEMPT_LIMIT, config.email.webhookRateLimitPerMinute));
 	});
 
-	it("counts every throttler in the one Redis-backed storage", () => {
-		expect(app.get(ThrottlerStorage, { strict: false })).toBeInstanceOf(RedisThrottlerStorage);
+	it("counts every throttler through the one shared RateLimiter (Redis scripts, local fallback)", () => {
+		expect(app.get(ThrottlerStorage, { strict: false })).toBeInstanceOf(RateLimiterThrottlerStorage);
+		expect(app.get(RATE_LIMITER, { strict: false })).toBeInstanceOf(FailoverRateLimiter);
 	});
 
 	it("answers 429 on the strict LOGIN policy at limit + 1, keyed by client IP", async () => {
 		const clientIp: string = uniqueClientIp();
 		for (let attempt = 1; attempt <= LOGIN_ATTEMPT_LIMIT; attempt += 1) {
-			const response: InjectResponse = await badLogin(clientIp);
+			const { response, limits } = await countedPolicies(() => badLogin(clientIp));
 			expect(response.statusCode).not.toBe(TOO_MANY_REQUESTS);
-			expect(response.headers[limitHeader("strict")]).toBe(String(LOGIN_ATTEMPT_LIMIT));
+			expect(limits.get(SECURITY_ROUTES)).toBe(LOGIN_ATTEMPT_LIMIT);
 		}
 		const throttled: InjectResponse = await badLogin(clientIp);
 		expect(throttled.statusCode).toBe(TOO_MANY_REQUESTS);
+		expect(Number(throttled.headers["retry-after"])).toBeGreaterThan(0);
+		// Before authentication no RateLimit headers say how many attempts are left (ADR 071).
+		expect(throttled.headers["ratelimit-policy"]).toBeUndefined();
 
 		// Another client address has its own strict bucket.
 		const otherClient: InjectResponse = await badLogin(uniqueClientIp());
@@ -113,10 +134,10 @@ describe("Rate-limit wiring (e2e)", () => {
 		const clientIp: string = uniqueClientIp();
 		const statuses: number[] = [];
 		for (let attempt = 1; attempt <= webhookLimit; attempt += 1) {
-			const response: InjectResponse = await unsignedEmailWebhook(clientIp);
+			const { response, limits } = await countedPolicies(() => unsignedEmailWebhook(clientIp));
 			statuses.push(response.statusCode);
-			expect(response.headers[limitHeader("webhook")]).toBe(String(webhookLimit));
-			expect(response.headers[limitHeader("strict")]).toBeUndefined();
+			expect(limits.get(WEBHOOK)).toBe(webhookLimit);
+			expect(limits.has(SECURITY_ROUTES)).toBe(false);
 		}
 		expect(statuses).not.toContain(TOO_MANY_REQUESTS);
 		const throttled: InjectResponse = await unsignedEmailWebhook(clientIp);
@@ -124,15 +145,17 @@ describe("Rate-limit wiring (e2e)", () => {
 	});
 
 	it("applies the same webhook throttler to the GitHub webhook route", async () => {
-		const response: InjectResponse = await app.inject({
-			method: "POST",
-			url: GITHUB_WEBHOOK_URL,
-			headers: { "x-forwarded-for": uniqueClientIp(), "content-type": "application/json" },
-			payload: "{}",
-		});
+		const { response, limits } = await countedPolicies(() =>
+			app.inject({
+				method: "POST",
+				url: GITHUB_WEBHOOK_URL,
+				headers: { "x-forwarded-for": uniqueClientIp(), "content-type": "application/json" },
+				payload: "{}",
+			}),
+		);
 		expect(response.statusCode).not.toBe(TOO_MANY_REQUESTS);
-		expect(response.headers[limitHeader("webhook")]).toBe(String(getApiConfig().email.webhookRateLimitPerMinute));
-		expect(response.headers[limitHeader("strict")]).toBeUndefined();
+		expect(limits.get(WEBHOOK)).toBe(getApiConfig().email.webhookRateLimitPerMinute);
+		expect(limits.has(SECURITY_ROUTES)).toBe(false);
 	});
 
 	it("throttles an unauthenticated flood of bad bearer tokens per IP before AuthGuard rejects it", async () => {

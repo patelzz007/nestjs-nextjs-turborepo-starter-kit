@@ -13,6 +13,10 @@ import {
 } from "../application/event-handlers/in-transaction/record-reward-notices.in-transaction-handlers";
 import type { ClaimCodesPort } from "../application/ports/claim-codes.port";
 import { CLAIM_CODES, CLAIM_ID_GENERATOR, type ClaimIdGenerator } from "../application/ports/claims.tokens";
+import {
+	RecordTenantCustomerOnClaimRedeemed,
+	RecordTenantCustomerOnRewardClaimed,
+} from "../application/event-handlers/in-transaction/record-tenant-customer.in-transaction-handlers";
 import { ClaimsIntegrationEventsMapper } from "./outbox/claims-integration-events.mapper";
 import { ClaimsScopeFactory } from "./persistence/claims-scope.factory";
 
@@ -37,6 +41,8 @@ export class ClaimsRegistrations implements OnModuleInit {
 		this.handlers.register(bindInTransactionHandler(new RecordOwnerNoticesOnRewardReview(this.tenants), scopes));
 		this.handlers.register(bindInTransactionHandler(new RecordNotificationOnReferrerCredited(), scopes));
 		this.handlers.register(bindInTransactionHandler(new IssueReferrerCreditClaimOnReferrerCredited(this.codes, this.ids), scopes));
+		this.handlers.register(bindInTransactionHandler(new RecordTenantCustomerOnRewardClaimed(), scopes));
+		this.handlers.register(bindInTransactionHandler(new RecordTenantCustomerOnClaimRedeemed(), scopes));
 		this.mappers.register(new ClaimsIntegrationEventsMapper());
 	}
 }

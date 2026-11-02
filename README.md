@@ -344,25 +344,9 @@ Shared packages keep every surface consistent:
 
 ## Architecture at a glance
 
-```mermaid
-flowchart LR
-    subgraph Clients
-      W[Web :3000]
-      A[Admin :3001]
-      M[Merchant :3003]
-      P[Mobile app]
-      T[POS till<br/>X-API-Key]
-    end
-    W & A & M -->|httpOnly cookies| API[NestJS API :8080<br/>Fastify]
-    P -->|Bearer tokens| API
-    T -->|API key| API
-    API --> PG[(PostgreSQL 18<br/>row-level security)]
-    API --> R[(Redis<br/>caches, rate limits, BullMQ)]
-    API -->|outbox| K[(Kafka)]
-    K --> C[analytics-consumer] --> PG
-    API -->|signed URLs| S[(Object storage)]
-    W & A & M -.direct upload.-> S
-```
+<p align="center">
+  <img src="./docs/assets/architecture.webp" alt="Architecture: the web (3000), admin (3001) and merchant (3003) apps call the NestJS API on 8080 with httpOnly cookies, the mobile app with Bearer tokens and POS tills with an X-API-Key; the API uses PostgreSQL 18 with row-level security through Prisma, Redis 8 for BullMQ queues, the cache and rate limits, Kafka through the transactional outbox, object storage through signed URLs, and the email, push and SMS providers; the analytics consumer projects Kafka events into PostgreSQL; the web apps upload files straight to object storage with presigned URLs." width="100%">
+</p>
 
 Every request goes through the same pipeline: request context and correlation id, authentication,
 authorization, Zod validation of params, query and body, a transaction with the caller's tenant and

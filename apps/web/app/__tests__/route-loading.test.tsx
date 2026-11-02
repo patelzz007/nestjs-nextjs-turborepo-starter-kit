@@ -9,6 +9,7 @@ import HelloLoading from "@/app/hello/loading";
 import DashboardAccountLoading from "@/app/dashboard/account/loading";
 import DashboardActivityLoading from "@/app/dashboard/activity/loading";
 import DashboardBrowseLoading from "@/app/dashboard/loading";
+import DashboardNotificationsLoading from "@/app/dashboard/notifications/loading";
 import DashboardReferralsLoading from "@/app/dashboard/referrals/loading";
 import DashboardRewardDetailLoading from "@/app/dashboard/rewards/[rewardId]/loading";
 import WalletClaimLoading from "@/app/dashboard/wallet/[claimId]/loading";
@@ -27,6 +28,7 @@ import {
 	WALLET_LOADING_LABELS,
 } from "@/components/loading/loading-labels";
 import { expectSingleLoadingStatus, SkeletonTestProviders } from "@/test-support/skeleton";
+import { NOTIFICATIONS_INBOX_LOADING_LABELS } from "@workspace/client/lib/features/notifications/notifications-inbox-skeleton";
 
 // The public chrome reads the session for its sign-in actions; it is not what these cases check.
 vi.mock("@/components/landing/landing-shell", () => ({
@@ -47,6 +49,7 @@ const ROUTE_LOADING_CASES: readonly RouteLoadingCase[] = [
 	{ route: "/dashboard", loadingView: DashboardBrowseLoading, announcement: REWARDS_CATALOG_LOADING_LABELS.loading },
 	{ route: "/dashboard/account", loadingView: DashboardAccountLoading, announcement: ACCOUNT_SETTINGS_LOADING_LABELS.loading },
 	{ route: "/dashboard/activity", loadingView: DashboardActivityLoading, announcement: ACTIVITY_LOADING_LABELS.loading },
+	{ route: "/dashboard/notifications", loadingView: DashboardNotificationsLoading, announcement: NOTIFICATIONS_INBOX_LOADING_LABELS.loading },
 	{ route: "/dashboard/referrals", loadingView: DashboardReferralsLoading, announcement: REFERRALS_LOADING_LABELS.loading },
 	{ route: "/dashboard/rewards/[rewardId]", loadingView: DashboardRewardDetailLoading, announcement: REWARD_DETAIL_LOADING_LABELS.loading },
 	{ route: "/dashboard/wallet", loadingView: DashboardWalletLoading, announcement: WALLET_LOADING_LABELS.loading },

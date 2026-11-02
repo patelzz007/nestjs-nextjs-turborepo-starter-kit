@@ -10,6 +10,7 @@ import type { SystemDatabaseContext } from "../../../../../prisma/tenant-context
 import { AccessTokenStateService, REVOKED_SESSION_LOOKBACK_MARGIN_MS } from "../access-token-state.service";
 import { TypedConfigService } from "../../../../../config/typed-config.service";
 import { createTestApiConfig, createTestTypedConfig } from "../../../../../../test/support/test-api-env";
+import { localAppCache } from "../../../../../../test/support/local-app-cache";
 
 const mocks = vi.hoisted(() => ({
 	userFindUnique: vi.fn(),
@@ -51,6 +52,7 @@ describe("AccessTokenStateService", () => {
 				withSystemOperation: <TResult>(_context: SystemDatabaseContext, work: (tx: Prisma.TransactionClient) => Promise<TResult>): Promise<TResult> => work(prisma),
 			},
 			new TypedConfigService(createTestApiConfig()),
+			localAppCache(),
 		);
 	});
 

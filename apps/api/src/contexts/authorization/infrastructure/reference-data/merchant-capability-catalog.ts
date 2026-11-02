@@ -78,6 +78,24 @@ const MERCHANT_CAPABILITY_CATALOG_DETAILS: Readonly<Record<MerchantCapability, M
 		groupName: "Tenant",
 		sortOrder: 43,
 	},
+	"merchant:view_notifications": {
+		label: "View notification deliveries",
+		description: "See what the business sent its customers, on which channel, and whether it arrived.",
+		groupName: "Customers",
+		sortOrder: 50,
+	},
+	"merchant:manage_broadcasts": {
+		label: "Manage broadcasts",
+		description: "Draft, edit, schedule and submit announcements to the business's customers.",
+		groupName: "Customers",
+		sortOrder: 51,
+	},
+	"merchant:publish_broadcasts": {
+		label: "Approve broadcasts",
+		description: "Approve another member's broadcast so it is sent.",
+		groupName: "Customers",
+		sortOrder: 52,
+	},
 };
 
 /** MERCHANT-scope catalog rows in the shared vocabulary's order. */

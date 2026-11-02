@@ -222,3 +222,76 @@ Keep PRs reviewable: aim for one concern per PR, and split a large change along 
 ## When a request conflicts with a rule
 
 Decision order: (1) does a compliant approach achieve the actual goal? do that and explain; (2) if not, does the goal itself need to change? raise it; (3) only with explicit, recorded approval from a maintainer is an exception allowed — and it is then commented at the site, listed in the PR, and tracked with a follow-up. "The deadline" is never by itself an approval.
+
+## Mandatory engineering loop — investigate before implementation
+
+The numbered feature process above remains the feature lifecycle. This section makes its decision points mandatory for every non-trivial task and for any task that changes behavior, contracts, persistence, security, or shared code.
+
+### Phase A — Orient and establish facts
+
+1. Read `AGENTS.md`, `00-non-negotiables.md`, and the task-specific routed documents. Read the current version from disk; do not rely on memory or a previous agent's summary.
+2. Inspect repository status before editing. Identify user changes, generated files, in-progress migrations, and unrelated modifications. Never overwrite or revert work you did not create.
+3. Locate the actual package manifests, lockfile, installed package versions, scripts, runtime configuration, and relevant source. Do not infer behavior from training data or from the latest online documentation when installed-version documentation is available.
+4. Search for the existing implementation, tests, contracts, consumers, and established patterns. Search by behavior and symbol, not just by the proposed filename.
+5. Separate verified facts from assumptions and unresolved decisions. Facts should be answered by repository inspection or authoritative sources. Product/architecture decisions belong to the human unless an existing ADR or explicit instruction already decides them.
+6. If the task is ambiguous in a way that changes architecture, security, data ownership, user-visible behavior, or migration risk, ask one focused question before committing to an implementation.
+
+### Phase B — Define the change before touching code
+
+Write a short plan for work that is more than a trivial, local correction. The plan must include:
+
+- User/business outcome and acceptance criteria.
+- Current behavior and desired behavior.
+- Owning bounded context, package, layer, and source of truth.
+- Public and internal contracts affected, including all known consumers.
+- Data lifecycle, authorization, tenant context, audit, concurrency, and idempotency implications.
+- Existing patterns to reuse and the evidence that they are appropriate.
+- Tests that will prove the behavior, including a regression case where applicable.
+- Operational/rollout implications, observability, and rollback or compatibility strategy where relevant.
+- Documentation and ADR changes required.
+
+Do not produce a plan that merely restates the requested implementation. Challenge the proposed solution against the actual problem and existing architecture. If the requested implementation is not the correct design, explain the mismatch and propose the compliant design.
+
+### Phase C — Design the smallest correct seam
+
+1. Assign ownership for validation, authorization, domain invariants, persistence, event publication, state, and rendering.
+2. Trace dependency direction before introducing or moving code.
+3. Identify what is shared and what is product/context-specific. Keep shared packages free of app-specific policy.
+4. Identify real variation boundaries. Add extension points only for evidenced variants, not imagined ones.
+5. Prefer a deep, cohesive module with a small interface over many shallow wrappers that force readers to trace behavior across files.
+6. Preserve existing ADR decisions. A change to an ADR-level decision requires an explicit decision record, not an incidental implementation drift.
+7. For cross-context work, define the contract and ownership before wiring implementations together.
+
+### Phase D — Implement in verifiable increments
+
+- Make one coherent change at a time. Avoid broad unrelated cleanup.
+- For behavior changes, establish a failing test or reproduction before the implementation whenever practical.
+- Implement at the layer that owns the behavior/invariant.
+- Keep validation at trust boundaries, authorization server-side, and tenant scoping explicit.
+- Keep provider-specific errors and data behind adapters; expose stable application-level contracts.
+- Do not add fallback behavior unless its semantics are specified and safe. A fallback that silently changes data or authorization semantics is a defect.
+- Keep generated code and hand-authored source clearly separated. Never hand-edit generated output unless the generation workflow explicitly requires it.
+- After each meaningful slice, run the narrowest relevant tests and inspect the diff.
+
+### Phase E — Verify the actual outcome
+
+1. Run the regression test and the relevant focused test suite.
+2. Run typecheck/build for affected workspaces where scripts exist and are relevant.
+3. Run the repository completion gate from the root exactly as described in `AGENTS.md`.
+4. Re-run all required checks after the final code or config edit. Earlier green results do not count after later edits.
+5. Inspect the final diff, including generated files, lockfile changes, migrations, snapshots, and accidental formatting churn.
+6. Confirm the implementation satisfies the acceptance criteria, not merely that tests pass.
+7. If an environment limitation prevents a check, report `NOT VERIFIED` and the precise reason. Never imply that an unrun check passed.
+
+### Phase F — Review and communicate
+
+Review the change twice, independently:
+
+- **Standards review:** architecture, security, types, validation, test quality, performance, observability, maintainability, genericity, extensibility, and repository rules.
+- **Specification review:** every acceptance criterion and requested behavior is implemented, and no unrequested behavior has slipped in.
+
+Then report the root cause (for bug work), design decisions, files changed, tests/checks and exact results, documentation updates, known limitations, and remaining risks. The report must distinguish completed work from proposals and unverified assumptions.
+
+## Feature and bug work share the same root-cause obligation
+
+Do not treat bug fixes as a special low-rigor category. A bug report is a description of an observed symptom, not necessarily an accurate diagnosis. Follow `rules/16-bug-fixing-and-debugging.md` before changing code for any defect, regression, flaky test, or unexplained operational failure.

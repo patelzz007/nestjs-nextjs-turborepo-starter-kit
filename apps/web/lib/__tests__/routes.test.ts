@@ -34,12 +34,14 @@ const DASHBOARD_PAGE_PATHS: readonly string[] = [
 	ROUTES.dashboard.activity,
 	ROUTES.dashboard.referrals,
 	ROUTES.dashboard.account,
+	ROUTES.dashboard.notifications,
+	ROUTES.dashboard.notificationSettings,
 ];
-const STATIC_PAGE_PATHS: readonly string[] = [ROUTES.home, ROUTES.hello, ...AUTH_PAGE_PATHS, ...DASHBOARD_PAGE_PATHS];
+const STATIC_PAGE_PATHS: readonly string[] = [ROUTES.home, ROUTES.hello, ROUTES.unsubscribe, ...AUTH_PAGE_PATHS, ...DASHBOARD_PAGE_PATHS];
 
 describe("ROUTES", () => {
 	it("is fully covered by the page-existence guard below", () => {
-		expect(Object.keys(ROUTES).sort()).toEqual(["auth", "dashboard", "hello", "home"]);
+		expect(Object.keys(ROUTES).sort()).toEqual(["auth", "dashboard", "hello", "home", "unsubscribe"]);
 		expect(Object.keys(ROUTES.auth)).toHaveLength(AUTH_PAGE_PATHS.length);
 		expect(Object.keys(ROUTES.dashboard)).toHaveLength(DASHBOARD_PAGE_PATHS.length);
 	});
@@ -59,6 +61,8 @@ describe("ROUTES", () => {
 			activity: "/dashboard/activity",
 			referrals: "/dashboard/referrals",
 			account: "/dashboard/account",
+			notifications: "/dashboard/notifications",
+			notificationSettings: "/dashboard/notifications/settings",
 		});
 	});
 
@@ -67,6 +71,7 @@ describe("ROUTES", () => {
 		expect(ROUTES.dashboard.browse).toBe(APP_LINKS.web.dashboard);
 		expect(ROUTES.dashboard.wallet).toBe(APP_LINKS.web.wallet);
 		expect(ROUTES.dashboard.account).toBe(APP_LINKS.web.account);
+		expect(ROUTES.unsubscribe).toBe(APP_LINKS.web.unsubscribe);
 		expect(ROUTES.auth.login).toBe(APP_LINKS.auth.login);
 		expect(ROUTES.auth.verifyEmail).toBe(APP_LINKS.auth.verifyEmail);
 		expect(ROUTES.auth.resetPassword).toBe(APP_LINKS.auth.resetPassword);

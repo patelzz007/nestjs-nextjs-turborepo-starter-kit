@@ -95,10 +95,10 @@ export class ClaimRewardHandler implements ICommandHandler<ClaimRewardCommand, R
 	}
 
 	private async claim(scope: ClaimsScope, userId: string, claimant: ClaimantProfile, input: CreateRewardClaimInput, now: EpochMs): Promise<RewardClaimCreatedResponse> {
-		const reward = await scope.rewards.assertClaimable(input.rewardId, now);
+		const reward = await scope.rewards.assertClaimable(input.rewardId, now, userId);
 		await assertCustomerMayClaim(scope, reward.tenantId, userId, input.rewardId);
 		assertWithinClaimLimit(await scope.claims.countHeld(userId, input.rewardId), reward.maxClaimsPerUser);
-		await scope.rewards.reserve(input.rewardId, now);
+		await scope.rewards.reserve(input.rewardId, now, userId);
 
 		const attributionToken = liveAttributionToken(claimant.pendingAttributionToken, claimant.pendingAttributionExpiresAt, now);
 		const referralId = attributionToken === null ? null : await scope.referralAttribution.attach(attributionToken, input.rewardId, userId);

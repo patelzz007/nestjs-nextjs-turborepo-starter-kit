@@ -61,6 +61,42 @@ describe("Checkbox", () => {
 		expect(renderedClassNames()).not.toContain("border-destructive");
 	});
 
+	it("shows a dash and reads as mixed while part-checked; pressing it checks", async () => {
+		const onChange = jest.fn();
+		await render(<Checkbox label="Account" checked={false} indeterminate onChange={onChange} />);
+
+		const checkbox = screen.getByRole("checkbox", { name: "Account" });
+		expect(checkbox).toBePartiallyChecked();
+		expect(screen.getByTestId("checkbox-dash", { includeHiddenElements: true })).toBeOnTheScreen();
+		expect(screen.queryByTestId("checkbox-tick", { includeHiddenElements: true })).toBeNull();
+		expect(renderedClassNames()).toContain("bg-primary");
+		await fireEvent.press(checkbox);
+		expect(onChange).toHaveBeenCalledWith(true);
+	});
+
+	it("shows a tick only while checked", async () => {
+		const { rerender } = await render(<Checkbox label="Email" checked onChange={jest.fn()} />);
+		expect(screen.getByTestId("checkbox-tick", { includeHiddenElements: true })).toBeOnTheScreen();
+
+		await rerender(<Checkbox label="Email" checked={false} onChange={jest.fn()} />);
+		expect(screen.queryByTestId("checkbox-tick", { includeHiddenElements: true })).toBeNull();
+		expect(screen.queryByTestId("checkbox-dash", { includeHiddenElements: true })).toBeNull();
+	});
+
+	it("shows a lock, takes no presses and is not faded while locked", async () => {
+		const onChange = jest.fn();
+		await render(<Checkbox label="In the app" checked locked onChange={onChange} />);
+
+		const checkbox = screen.getByRole("checkbox", { name: "In the app" });
+		expect(checkbox).toBeDisabled();
+		expect(checkbox).toBeChecked();
+		expect(screen.getByTestId("checkbox-lock", { includeHiddenElements: true })).toBeOnTheScreen();
+		expect(String(checkbox.props.className)).not.toContain("opacity-60");
+		expect(renderedClassNames()).toContain("bg-primary/20");
+		await fireEvent.press(checkbox);
+		expect(onChange).not.toHaveBeenCalled();
+	});
+
 	it("has a card variant and a compact size", async () => {
 		await render(<Checkbox label="Agree" checked onChange={jest.fn()} variant="card" size="sm" />);
 		const className = String(screen.getByRole("checkbox").props.className);

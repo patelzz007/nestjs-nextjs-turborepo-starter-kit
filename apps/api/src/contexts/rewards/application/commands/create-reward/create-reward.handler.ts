@@ -6,6 +6,7 @@ import { CLOCK, type Clock } from "../../../../../platform/application/clock.por
 import type { MerchantAccessPort } from "../../../../../platform/application/ports/authorization.port";
 import type { UnitOfWork } from "../../../../../platform/application/unit-of-work.port";
 import { Reward } from "../../../domain/aggregates/reward.aggregate";
+import { decideRewardAudience } from "../../../domain/policies/reward-audience.policy";
 import { decideRewardLocationScope } from "../../../domain/policies/reward-location-scope.policy";
 import { RewardRulesValue } from "../../../domain/value-objects/reward-rules.value-object";
 import { MERCHANT_ACCESS } from "../../../../tenancy/public-api";
@@ -15,7 +16,7 @@ import { managerLocationIds } from "../merchant-manager-scope";
 import { CreateRewardCommand } from "./create-reward.command";
 
 /**
- * Creates a consumer reward with its images, store scope and (with referrals) its referrer child in
+ * Creates a consumer reward with its images, store scope, audience and (with referrals) its referrer child in
  * ONE transaction (D02): a failure anywhere leaves no reward row.
  */
 @CommandHandler(CreateRewardCommand)
@@ -34,6 +35,7 @@ export class CreateRewardHandler implements ICommandHandler<CreateRewardCommand,
 		return this.uow.run(actor, async (scope: RewardsScope): Promise<RewardResponse> => {
 			const now = this.clock.now();
 			const stores = await scope.stores.factsFor(input.tenantId, input.locationIds);
+			const knownCustomers = await scope.customers.customersAmong(input.tenantId, input.audienceCustomerIds);
 			const reward = Reward.create(
 				{
 					id: this.ids.next(),
@@ -41,7 +43,13 @@ export class CreateRewardHandler implements ICommandHandler<CreateRewardCommand,
 					tenantId: input.tenantId,
 					title: input.title,
 					description: input.description,
-					offer: { rewardType: input.rewardType, rewardValue: input.rewardValue, termsConditions: input.termsConditions ?? null, category: input.category },
+					offer: {
+						rewardType: input.rewardType,
+						rewardValue: input.rewardValue,
+						freeItem: input.freeItem ?? null,
+						termsConditions: input.termsConditions ?? null,
+						category: input.category,
+					},
 					rules: input.rules === undefined ? RewardRulesValue.none() : RewardRulesValue.fromApi(input.rules),
 					quantityTotal: input.quantityTotal,
 					startDate: input.startDate ?? null,
@@ -51,6 +59,7 @@ export class CreateRewardHandler implements ICommandHandler<CreateRewardCommand,
 					referrerRewardTitle: input.referrerRewardTitle ?? null,
 					saveAsDraft: input.saveAsDraft,
 					locationScope: decideRewardLocationScope(managerLocationIds(grant), stores, { scopeType: input.locationScopeType, locationIds: input.locationIds }),
+					audience: decideRewardAudience({ audienceType: input.audienceType, customerIds: input.audienceCustomerIds }, knownCustomers),
 					imageFileIds: input.imageFileIds,
 				},
 				now,

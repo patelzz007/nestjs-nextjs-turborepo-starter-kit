@@ -4,6 +4,7 @@ import { TypedConfigService } from "../../../../../config/typed-config.service";
 
 import { AuthorizationCacheService, type CachedAuthorization } from "../authorization-cache.service";
 import { createTestApiConfig } from "../../../../../../test/support/test-api-env";
+import { localAppCache } from "../../../../../../test/support/local-app-cache";
 
 vi.mock("../../../../../config/typed-config.service", () => ({
 	TypedConfigService: class {
@@ -19,7 +20,7 @@ describe("AuthorizationCacheService", () => {
 	let service: AuthorizationCacheService;
 
 	beforeEach(() => {
-		service = new AuthorizationCacheService(createConfigMock());
+		service = new AuthorizationCacheService(createConfigMock(), localAppCache());
 		vi.useFakeTimers();
 	});
 

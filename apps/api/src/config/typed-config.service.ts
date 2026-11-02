@@ -2,6 +2,7 @@ import type {
 	ApiConfig,
 	AuthConfig,
 	CacheConfig,
+	NotificationsConfig,
 	ClientAppsConfig,
 	DatabaseConfig,
 	EmailConfig,
@@ -95,6 +96,10 @@ export class TypedConfigService {
 		return this.config.caches;
 	}
 
+	public get notifications(): NotificationsConfig {
+		return this.config.notifications;
+	}
+
 	public get messaging(): MessagingConfig {
 		return this.config.messaging;
 	}
@@ -153,12 +158,9 @@ export class TypedConfigService {
 		);
 	}
 
-	public get useRedisAuthorizationCache(): boolean {
-		return this.config.caches.authorizationBackend === "redis" && this.config.messaging.redisUrl !== undefined;
-	}
-
-	public get useRedisUserSessionCache(): boolean {
-		return this.config.caches.userSessionBackend === "redis" && this.config.messaging.redisUrl !== undefined;
+	/** With Redis configured, every instance hears every cache and authorization invalidation (ADR 072). */
+	public get broadcastsCacheInvalidations(): boolean {
+		return this.config.messaging.redisUrl !== undefined;
 	}
 
 	/** The namespace every raw Redis key and pub/sub channel is built with (`REDIS_NAMESPACE`). */

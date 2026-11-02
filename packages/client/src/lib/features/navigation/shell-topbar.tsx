@@ -21,13 +21,15 @@ export interface ShellTopbarProps {
 	readonly commandPalette: ComponentType<CommandPaletteProps>;
 	/** Extra header actions, placed before the notification bell. */
 	readonly actions?: ReactNode;
+	/** The app's full inbox page: the bell's "View all notifications" leads there. */
+	readonly notificationsHref: string;
 }
 
 /**
  * Every app shell's page header (the shared `AppShellHeader`): the breadcrumb trail, the notification bell
  * and search (⌘K). The command palette is mounted only while it is open, so its chunk is fetched on first use.
  */
-export function ShellTopbar({ breadcrumbStatus, commandPalette: CommandPalette, actions }: ShellTopbarProps): JSX.Element {
+export function ShellTopbar({ breadcrumbStatus, commandPalette: CommandPalette, actions, notificationsHref }: ShellTopbarProps): JSX.Element {
 	const [commandPaletteOpen, setCommandPaletteOpen] = useState<boolean>(false);
 
 	const openCommandPalette = useCallback((): void => {
@@ -45,7 +47,7 @@ export function ShellTopbar({ breadcrumbStatus, commandPalette: CommandPalette, 
 				actions={
 					<>
 						{actions}
-						<NotificationsDropdown />
+						<NotificationsDropdown viewAllHref={notificationsHref} />
 					</>
 				}
 			/>

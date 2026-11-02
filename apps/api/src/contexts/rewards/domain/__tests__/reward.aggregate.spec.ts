@@ -21,17 +21,18 @@ import { RewardLocationScope } from "../value-objects/reward-location-scope.valu
 import { RewardRulesValue } from "../value-objects/reward-rules.value-object";
 import { AUTO_PUBLISH_WINDOW_MS, REFERRER_REWARD_MAX_TTL_MS, REWARD_LIFECYCLE_STATUSES } from "../value-objects/reward-status.value-object";
 import {
+	CUSTOMER_ID,
 	LOADED_UPDATED_AT,
 	newReward,
 	NOW,
-	TENANT_ID,
-	referrerRow,
 	REFERRER_ID,
+	referrerRow,
 	REVIEWER_ID,
 	REWARD_ID,
 	rewardState,
 	STORE_A,
 	STORE_B,
+	TENANT_ID,
 	WEEK_MS,
 } from "./reward-state.fixture";
 import { CorruptAggregateStateError } from "../../../../platform/domain/errors/corrupt-aggregate-state.error";
@@ -342,7 +343,7 @@ describe("Reward.revise (D03)", () => {
 describe("Reward inventory", () => {
 	it("reports claimable facts for a published, unexpired, stocked consumer reward", () => {
 		const reward = Reward.rehydrate(rewardState("PUBLISHED", { rules: RewardRulesValue.fromApi({ maxUsePerUser: 1 }) }));
-		expect(reward.assertClaimable(NOW)).toEqual({
+		expect(reward.assertClaimable(NOW, CUSTOMER_ID)).toEqual({
 			rewardId: REWARD_ID,
 			tenantId: TENANT_ID,
 			title: "Free coffee",
@@ -352,11 +353,11 @@ describe("Reward inventory", () => {
 	});
 
 	it.each(["DRAFT", "PENDING_REVIEW"])("treats a %s reward as not found for claims", (status) => {
-		expect(() => Reward.rehydrate(rewardState(status)).assertClaimable(NOW)).toThrow(RewardNotFoundError);
+		expect(() => Reward.rehydrate(rewardState(status)).assertClaimable(NOW, CUSTOMER_ID)).toThrow(RewardNotFoundError);
 	});
 
 	it("treats a referrer row as not found for claims", () => {
-		expect(() => Reward.rehydrate(rewardState("PUBLISHED", { kind: "REFERRER" })).assertClaimable(NOW)).toThrow(RewardNotFoundError);
+		expect(() => Reward.rehydrate(rewardState("PUBLISHED", { kind: "REFERRER" })).assertClaimable(NOW, CUSTOMER_ID)).toThrow(RewardNotFoundError);
 	});
 
 	it.each([
@@ -365,9 +366,9 @@ describe("Reward inventory", () => {
 	])("claimability when %s", (_label, expiryDate, error) => {
 		const reward = Reward.rehydrate(rewardState("PUBLISHED", { expiryDate }));
 		if (error === null) {
-			expect(reward.assertClaimable(NOW).expiryDate).toBe(NOW);
+			expect(reward.assertClaimable(NOW, CUSTOMER_ID).expiryDate).toBe(NOW);
 		} else {
-			expect(() => reward.assertClaimable(NOW)).toThrow(error);
+			expect(() => reward.assertClaimable(NOW, CUSTOMER_ID)).toThrow(error);
 		}
 	});
 
@@ -375,17 +376,17 @@ describe("Reward inventory", () => {
 		const reward = Reward.rehydrate(
 			rewardState("PUBLISHED", { inventory: { quantityTotal: 1, quantityRemaining: 0, quantityReserved: 1, claimCount: 1, redemptionCount: 0 } }),
 		);
-		expect(() => reward.assertClaimable(NOW)).toThrow(RewardSoldOutError);
+		expect(() => reward.assertClaimable(NOW, CUSTOMER_ID)).toThrow(RewardSoldOutError);
 	});
 
 	it("reserves one unit: remaining −1, reserved +1, claims +1", () => {
 		const reward = Reward.rehydrate(
 			rewardState("PUBLISHED", { inventory: { quantityTotal: 1, quantityRemaining: 1, quantityReserved: 0, claimCount: 0, redemptionCount: 0 } }),
 		);
-		reward.reserve(NOW);
+		reward.reserve(NOW, CUSTOMER_ID);
 		expect(reward.snapshot().inventory).toEqual({ quantityTotal: 1, quantityRemaining: 0, quantityReserved: 1, claimCount: 1, redemptionCount: 0 });
 		expect(reward.inventoryDelta()).toEqual({ quantityTotal: 0, quantityRemaining: -1, quantityReserved: 1, claimCount: 1, redemptionCount: 0 });
-		expect(() => reward.reserve(NOW)).toThrow(RewardJustSoldOutError);
+		expect(() => reward.reserve(NOW, CUSTOMER_ID)).toThrow(RewardJustSoldOutError);
 	});
 
 	it.each([
@@ -394,7 +395,7 @@ describe("Reward inventory", () => {
 		["a reward offered only at closed stores", rewardState("PUBLISHED", { availableAtActiveStore: false })],
 		["a referrer reward", rewardState("PUBLISHED", { kind: "REFERRER" })],
 	])("refuses to reserve %s", (_label, state) => {
-		expect(() => Reward.rehydrate(state).reserve(NOW)).toThrow(RewardJustSoldOutError);
+		expect(() => Reward.rehydrate(state).reserve(NOW, CUSTOMER_ID)).toThrow(RewardJustSoldOutError);
 	});
 
 	it("releases and redeems reserved units", () => {

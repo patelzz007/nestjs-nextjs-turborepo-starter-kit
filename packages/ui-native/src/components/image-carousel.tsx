@@ -2,7 +2,9 @@
 // `Carousel` whose slides are `CoverImage`s in one shared aspect ratio, each
 // with a "2 / 5" position counter in its corner (`showCounter`), and previous /
 // next arrows on request (`showControls`). One picture renders as a plain
-// `CoverImage` — nothing to swipe, so no dots, arrows or counter.
+// `CoverImage` — nothing to swipe, so no dots, arrows or counter. Several go
+// round, both ways (`Carousel`'s `loop`): after the last picture the first slides
+// in from the right, and before the first the last from the left, as on the web.
 // Controlled like `Carousel`: the caller owns the shown picture (`index`) and
 // hears every change (`onChange`). Each picture's `alt` describes it to screen
 // readers; a missing or broken picture shows the cover's placeholder.
@@ -109,6 +111,7 @@ export const ImageCarousel = React.memo(
 				onChange={onChange}
 				slideLabel={slideLabel}
 				showControls={showControls}
+				loop
 				previousLabel={previousLabel}
 				nextLabel={nextLabel}
 				variant={variant === "card" ? "card" : "plain"}

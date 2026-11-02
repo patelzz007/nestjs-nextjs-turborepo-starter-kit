@@ -77,6 +77,11 @@ export const PermissionResourceSchema = z.enum([
 	"SHARE",
 	"CLAIM",
 	"TERMINAL",
+	"NOTIFICATION",
+	"BROADCAST",
+	"BROADCAST_REPORT",
+	"RATE_LIMIT",
+	"CACHE",
 ]);
 export type PermissionResource = z.output<typeof PermissionResourceSchema>;
 

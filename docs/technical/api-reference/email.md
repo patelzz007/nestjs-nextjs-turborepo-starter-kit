@@ -50,7 +50,7 @@ List sent emails
 | `data[].resendId` | string \| null | no |  |
 | `data[].status` | "pending" \| "sent" \| "delivered" \| "bounced" \| "complained" \| "failed" | yes |  |
 | `data[].subject` | string | yes | at least 1 characters |
-| `data[].templateKey` | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+5 more) | yes |  |
+| `data[].templateKey` | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+8 more) | yes |  |
 | `data[].to` | string | yes | at least 1 characters |
 | `data[].updatedAt` | integer | yes |  |
 | `meta.hasNext` | boolean | yes | Whether a next page exists |
@@ -158,7 +158,7 @@ List email template metadata
 | --- | --- | --- | --- |
 | `data.templates` | object[] | yes |  |
 | `data.templates[].description` | string | yes | at least 1 characters |
-| `data.templates[].key` | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+5 more) | yes |  |
+| `data.templates[].key` | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+8 more) | yes |  |
 | `data.templates[].label` | string | yes | at least 1 characters |
 | `data.templates[].sampleSubject` | string | yes | at least 1 characters |
 | `data.templates[].sampleTo` | string (email) | yes |  |
@@ -223,7 +223,7 @@ Render one email template preview
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `key` | path | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+5 more) | yes |  |
+| `key` | path | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+8 more) | yes |  |
 
 **Response 200 OK** (`application/json`) — Rendered preview for one template
 
@@ -231,7 +231,7 @@ Render one email template preview
 | --- | --- | --- | --- |
 | `data.description` | string | yes | at least 1 characters |
 | `data.html` | string | yes | at least 1 characters |
-| `data.key` | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+5 more) | yes |  |
+| `data.key` | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+8 more) | yes |  |
 | `data.label` | string | yes | at least 1 characters |
 | `data.previewText` | string | yes | at least 1 characters |
 | `data.props` | object | yes |  |
@@ -300,7 +300,7 @@ Send one email template (sample props)
 
 | Name | In | Type | Required | Notes |
 | --- | --- | --- | --- | --- |
-| `key` | path | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+5 more) | yes |  |
+| `key` | path | "verification" \| "password-reset" \| "password-changed" \| "account-locked" \| "welcome" \| "security-alert" \| "two-factor-enabled" \| "two-factor-disabled" \| "admin-alert" \| "api-key-created" \| … (+8 more) | yes |  |
 
 **Response 201 Created** (`application/json`) — Outcome of the send attempt
 

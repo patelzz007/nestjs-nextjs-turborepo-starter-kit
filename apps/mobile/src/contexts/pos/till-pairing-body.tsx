@@ -10,7 +10,7 @@ import { PosPairingCodeSchema, type PosPairingCode } from "@workspace/shared";
 import { Alert } from "@workspace/ui-native/components/alert";
 import { Button } from "@workspace/ui-native/components/button";
 import { Card } from "@workspace/ui-native/components/card";
-import { QrScanner } from "@workspace/ui-native/components/qr-scanner";
+import { QrScanFromGalleryButton, QrScanner } from "@workspace/ui-native/components/qr-scanner";
 import { TextField } from "@workspace/ui-native/components/text-field";
 import ScanQrCodeIcon from "lucide-react-native/icons/scan-qr-code";
 import * as React from "react";
@@ -92,6 +92,7 @@ export function TillPairingBody({ onPaired }: TillPairingProps): React.JSX.Eleme
 			<View className="gap-4">
 				{problem === null ? null : <Alert tone="error" message={problem} />}
 				<Button label={TILL_COPY.scanPairing} icon={ScanQrCodeIcon} onPress={openScanner} loading={pairing.isPending} />
+				<QrScanFromGalleryButton onScan={handleScan} testID="till-pairing-gallery" />
 				<TextField
 					label={TILL_COPY.pairingCodeLabel}
 					value={typedCode}

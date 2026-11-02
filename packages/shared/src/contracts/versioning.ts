@@ -76,7 +76,6 @@ export const VersionedRoutePrefixSchema = z.enum([
 	"/rewards",
 	"/legal",
 	"/claims",
-	"/reward-notifications",
 	"/integration/rewards",
 	"/integration/analytics",
 	"/integration/redemptions",
@@ -88,6 +87,8 @@ export const VersionedRoutePrefixSchema = z.enum([
 	"/tenants/:tenantSlug/kyb",
 	"/tenants/:tenantSlug/kyb/documents",
 	"/tenants/:tenantSlug/rewards",
+	"/tenants/:tenantSlug/notifications",
+	"/tenants/:tenantSlug/broadcasts",
 	"/tenants/:tenantSlug/api-keys",
 	"/tenants/:tenantSlug/terminals",
 	"/tenants/:tenantSlug/redemptions",
@@ -111,6 +112,12 @@ export const VersionedRoutePrefixSchema = z.enum([
 	"/product",
 	"/capabilities/catalog",
 	"/authorization/decisions",
+	"/notifications",
+	"/webhooks/twilio",
+	"/admin/notifications",
+	"/admin/broadcasts",
+	"/admin/broadcast-reports",
+	"/broadcasts",
 ]);
 
 export type VersionedRoutePrefix = z.output<typeof VersionedRoutePrefixSchema>;

@@ -1,10 +1,11 @@
 import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
-import { BoundedTtlCache } from "@workspace/shared";
 import type { Prisma } from "@prisma/client";
+import { z } from "zod";
 
 import { parseExpiryToMilliseconds } from "../../../../platform/infrastructure/utils/expiry";
 import { TypedConfigService } from "../../../../config/typed-config.service";
 import type { AccessTokenStatePort } from "../../../../platform/application/ports/access-token.port";
+import { APP_CACHE, defineCache, userScope, type AppCache, type CacheDefinition } from "../../../../platform/application/ports/app-cache.port";
 import type { SystemDatabaseContext } from "../../../../prisma/tenant-context";
 import { TenantTransactionService } from "../../../../prisma/tenant-transaction.service";
 import { PRINCIPAL_LOOKUP_OPERATION } from "../../../../platform/application/shared-system-operations";
@@ -29,6 +30,18 @@ export interface AccessTokenAccountState {
  */
 export const REVOKED_SESSION_LOOKBACK_MARGIN_MS = 60_000;
 
+/** Account state is never served stale: a revocation must take effect on the next request. */
+const NO_STALE_MS = 0;
+/** The one id each user's state is stored under. */
+const STATE_ENTRY_ID = "state";
+
+const AccessTokenAccountStateSchema = z.object({
+	tokenVersion: z.number().int(),
+	isActive: z.boolean(),
+	isDeleted: z.boolean(),
+	revokedSessionIds: z.set(z.string()),
+});
+
 /**
  * Short-lived cache of account revocation state for access-token validation.
  *
@@ -49,22 +62,30 @@ interface AccessTokenStateLookup {
 
 @Injectable()
 export class AccessTokenStateService implements AccessTokenStatePort {
-	private readonly store: BoundedTtlCache<string, AccessTokenAccountState>;
-	private readonly ttlMs: number;
+	/** Per process (`local`): read on every authenticated request; every instance drops it after a revocation. */
+	public readonly states: CacheDefinition<AccessTokenAccountState, "user">;
 	/** How far back a revoked session can still have an unexpired access token. */
 	private readonly revokedSessionLookbackMs: number;
 
 	public constructor(
 		@Inject(TenantTransactionService) private readonly transactions: AccessTokenStateLookup,
 		config: TypedConfigService,
+		@Inject(APP_CACHE) private readonly cache: AppCache,
 	) {
-		this.ttlMs = config.caches.accessTokenStateTtlMs;
 		this.revokedSessionLookbackMs = parseExpiryToMilliseconds(config.auth.jwtAccessExpiry) + REVOKED_SESSION_LOOKBACK_MARGIN_MS;
-		this.store = new BoundedTtlCache<string, AccessTokenAccountState>({
-			maxEntries: config.caches.accessTokenStateMaxEntries,
-			defaultTtlMs: this.ttlMs,
-			capacityPolicy: "evict-oldest",
+		this.states = defineCache<AccessTokenAccountState, "user">({
+			name: "identity.access-token-state",
+			version: 1,
+			schema: AccessTokenAccountStateSchema,
+			scope: "user",
+			tier: "local",
+			ttlMs: config.caches.accessTokenStateTtlMs,
+			staleMs: NO_STALE_MS,
+			containsPersonalData: false,
+			localMaxEntries: config.caches.accessTokenStateMaxEntries,
+			sharedMaxKeys: config.caches.accessTokenStateMaxEntries,
 		});
+		this.cache.register(this.states);
 	}
 
 	/**
@@ -105,16 +126,16 @@ export class AccessTokenStateService implements AccessTokenStatePort {
 		}
 	}
 
+	/** Drops this process's copy at once (synchronously, before the broadcast is even sent). */
 	public invalidate(userId: string): void {
-		this.store.delete(userId);
+		void this.cache.invalidate(this.states, userScope(userId), STATE_ENTRY_ID);
 	}
 
 	private async getAccountState(userId: string): Promise<AccessTokenAccountState> {
-		const cached = this.store.get(userId);
-		if (cached !== null) {
-			return cached;
-		}
+		return this.cache.getOrLoad(this.states, userScope(userId), STATE_ENTRY_ID, async (): Promise<AccessTokenAccountState> => this.loadAccountState(userId));
+	}
 
+	private async loadAccountState(userId: string): Promise<AccessTokenAccountState> {
 		const revokedSince: number = Date.now() - this.revokedSessionLookbackMs;
 		const user = await this.transactions.withSystemOperation(
 			{ operation: PRINCIPAL_LOOKUP_OPERATION, reason: "Read account revocation state for an access token", actorUserId: userId },
@@ -144,7 +165,6 @@ export class AccessTokenStateService implements AccessTokenStatePort {
 			revokedSessionIds: new Set<string>(user.refreshTokens.map((session): string => session.id)),
 		};
 
-		this.store.set(userId, value, this.ttlMs);
 		return value;
 	}
 }

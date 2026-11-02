@@ -30,6 +30,8 @@ export const APP_RUNTIME_WITHHELD_PRIVILEGES: Readonly<Record<string, readonly W
 	DataChangeLog: APPEND_ONLY,
 	ImpersonationAuditLog: APPEND_ONLY,
 	MfaRecoveryAuditLog: APPEND_ONLY,
+	// ── Proof of marketing consent (ADR 070): a withdrawal is a new row, never an edit ──
+	MarketingConsent: APPEND_ONLY,
 	// ── Never deleted: ended via `endedAt`, kept as forensic record ──
 	ImpersonationSession: NEVER_DELETED,
 	// ── Geo reference data: soft-deleted, never hard-deleted ──

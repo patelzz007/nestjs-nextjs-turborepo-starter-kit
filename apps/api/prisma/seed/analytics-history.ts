@@ -95,6 +95,9 @@ export interface HistoryReward {
 	readonly description: string;
 	readonly rewardType: RewardType;
 	readonly rewardValue: number;
+	/** FREE_ITEM / BOGO only: the item given, as the receipt names it, and its SKU (ADR 074). */
+	readonly freeItemName?: string;
+	readonly freeItemSku?: string;
 	readonly category: string;
 	/** The seeded photo set (reward-images.ts) the reward shows. */
 	readonly imageSet: RewardImageSetSlug;
@@ -147,6 +150,8 @@ export const HISTORY_REWARDS: readonly HistoryReward[] = [
 		title: "Morning brew club — free refill",
 		description: "A free refill with any hot drink before 11am.",
 		rewardType: "FREE_ITEM",
+		freeItemName: "Brewed coffee refill",
+		freeItemSku: "BEV-REFILL-BREW",
 		rewardValue: 1,
 		category: "cafe",
 		imageSet: "coffee-refill",
@@ -206,6 +211,8 @@ export const HISTORY_REWARDS: readonly HistoryReward[] = [
 		title: "குடும்ப இரவு உணவுடன் இலவச இனிப்பு",
 		description: "புக்கிட் கட்டில் கிளையில் குடும்ப இரவு உணவுடன் இலவச இனிப்புத் தட்டு.",
 		rewardType: "FREE_ITEM",
+		freeItemName: "Payasam (dessert)",
+		freeItemSku: "DST-PAYASAM",
 		rewardValue: 1,
 		category: "restaurant",
 		imageSet: "family-dessert",
@@ -221,6 +228,8 @@ export const HISTORY_REWARDS: readonly HistoryReward[] = [
 		title: "सप्ताहांत ब्रंच के साथ मुफ़्त पेय",
 		description: "बुकित बेरुआंग में सप्ताहांत ब्रंच के साथ एक मुफ़्त ठंडा पेय।",
 		rewardType: "FREE_ITEM",
+		freeItemName: "Masala chai",
+		freeItemSku: "BEV-MASALA-CHAI",
 		rewardValue: 1,
 		category: "beverage",
 		imageSet: "brunch-drink",
@@ -436,6 +445,8 @@ export async function seedAnalyticsHistory(input: AnalyticsHistoryPlanInput & { 
 				description: reward.description,
 				rewardType: reward.rewardType,
 				rewardValue: reward.rewardValue,
+				freeItemName: reward.freeItemName ?? null,
+				freeItemSku: reward.freeItemSku ?? null,
 				termsConditions: "One per bill. Not combinable with other rewards.",
 				rewardKind: "CONSUMER",
 				category: reward.category,

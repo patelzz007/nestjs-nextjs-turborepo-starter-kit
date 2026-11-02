@@ -107,6 +107,7 @@ monitors key on the HTTP status only, so they keep the standard envelope. Errors
 - **Pass-through by design:** `@Sse()` streams and `@SkipEnvelope()` routes that write their own
   reply — today `EmailLogController.stream`, `AuditTrailController.stream` (the audit log's live
   signal), `GithubLiveUpdatesController.stream` (a repository's live pull-request changes),
+  `NotificationsController.stream` (a person's inbox on one app changed — ADR 070),
   `GithubAssetsController.asset` (a repository picture behind a signed link, raw bytes) and the
   three local-storage transfer routes (the
   signed private download, a public asset, and a public image's rendition) — plus the

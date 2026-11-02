@@ -1,5 +1,6 @@
-import type { EpochMs, RewardType } from "@workspace/shared";
+import type { EpochMs, RewardFreeItem, RewardType } from "@workspace/shared";
 
+import type { RewardAudience } from "../value-objects/reward-audience.value-object";
 import type { RewardLocationScope } from "../value-objects/reward-location-scope.value-object";
 import type { RewardRulesValue } from "../value-objects/reward-rules.value-object";
 import type { RewardKindValue, RewardLifecycleStatus } from "../value-objects/reward-status.value-object";
@@ -8,6 +9,8 @@ import type { RewardKindValue, RewardLifecycleStatus } from "../value-objects/re
 export interface RewardOffer {
 	readonly rewardType: RewardType;
 	readonly rewardValue: number;
+	/** The item a `FREE_ITEM` / `BOGO` reward gives; null for every other type (ADR 074). */
+	readonly freeItem: RewardFreeItem | null;
 	readonly termsConditions: string | null;
 	readonly category: string;
 }
@@ -58,6 +61,7 @@ export interface RewardState extends RewardRowState {
 	readonly referralPoolTotal: number | null;
 	readonly referralPoolRemaining: number | null;
 	readonly locationScope: RewardLocationScope;
+	readonly audience: RewardAudience;
 	/** Live images in display order (position 0 is the cover). */
 	readonly imageFileIds: readonly string[];
 	/** Tenant-wide, or at least one of its stores is live and active — otherwise nothing can be claimed. */
@@ -96,6 +100,7 @@ export interface RewardSnapshot {
 	readonly referralPoolTotal: number | null;
 	readonly referralPoolRemaining: number | null;
 	readonly locationScope: RewardLocationScope;
+	readonly audience: RewardAudience;
 	readonly imageFileIds: readonly string[];
 	readonly updatedAt: EpochMs;
 	readonly referrer: ReferrerRewardSnapshot | null;
@@ -107,6 +112,8 @@ export interface RewardRevision {
 	readonly description?: string | undefined;
 	readonly rewardType?: RewardType | undefined;
 	readonly rewardValue?: number | undefined;
+	/** The item the offer gives; null clears it; absent keeps it while the type still gives an item. */
+	readonly freeItem?: RewardFreeItem | null | undefined;
 	readonly termsConditions?: string | null | undefined;
 	readonly imageFileIds?: readonly string[] | undefined;
 	readonly quantityTotal?: number | undefined;
@@ -116,6 +123,8 @@ export interface RewardRevision {
 	readonly referralPoolTotal?: number | undefined;
 	readonly referrerRewardTitle?: string | undefined;
 	readonly rules?: RewardRulesValue | undefined;
+	/** Who the reward is for from now on (decided by `decideRewardAudience`). */
+	readonly audience?: RewardAudience | undefined;
 }
 
 /** Everything a new consumer reward is created from. */
@@ -137,6 +146,7 @@ export interface NewRewardDefinition {
 	readonly referrerRewardTitle: string | null;
 	readonly saveAsDraft: boolean;
 	readonly locationScope: RewardLocationScope;
+	readonly audience: RewardAudience;
 	readonly imageFileIds: readonly string[];
 }
 

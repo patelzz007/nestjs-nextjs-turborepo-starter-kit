@@ -83,6 +83,18 @@ describe("ImageCarousel", () => {
 		expect(screen.getByRole("button", { name: "Previous slide" })).toBeEnabled();
 	});
 
+	it("goes round both ways: next on the last picture brings the first, previous on the first the last", async () => {
+		const onChange = jest.fn();
+		const { rerender } = await render(<ImageCarousel images={IMAGES} index={LAST_IMAGE} onChange={onChange} showControls nextLabel="Next photo" />);
+
+		await fireEvent.press(screen.getByRole("button", { name: "Next photo" }));
+		expect(onChange).toHaveBeenLastCalledWith(0);
+
+		await rerender(<ImageCarousel images={IMAGES} index={0} onChange={onChange} showControls previousLabel="Previous photo" />);
+		await fireEvent.press(screen.getByRole("button", { name: "Previous photo" }));
+		expect(onChange).toHaveBeenLastCalledWith(LAST_IMAGE);
+	});
+
 	it("forwards its ref", async () => {
 		const ref = React.createRef<ViewInstance>();
 		await render(<ImageCarousel ref={ref} images={IMAGES} index={0} onChange={jest.fn()} />);

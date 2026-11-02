@@ -23,26 +23,25 @@ import { ClaimRewardHandler } from "./application/commands/claim-reward/claim-re
 import { ExpireOverdueClaimsHandler } from "./application/commands/expire-overdue-claims/expire-overdue-claims.handler";
 import { ExpireOverdueReferrerClaimsHandler } from "./application/commands/expire-overdue-referrer-claims/expire-overdue-referrer-claims.handler";
 import { IssueClaimQrCodesHandler } from "./application/commands/issue-claim-qr-codes/issue-claim-qr-codes.handler";
-import { MarkRewardNotificationsReadHandler } from "./application/commands/mark-reward-notifications-read/mark-reward-notifications-read.handler";
+import { MigrateLegacyRewardNoticesHandler } from "./application/commands/migrate-legacy-reward-notices/migrate-legacy-reward-notices.handler";
 import { RequestClaimOtpHandler } from "./application/commands/request-claim-otp/request-claim-otp.handler";
 import { SweepReferrerCreditEmailsHandler } from "./application/commands/sweep-referrer-credit-emails/sweep-referrer-credit-emails.handler";
 import { SweepSignupSuccessNoticesHandler } from "./application/commands/sweep-signup-success-notices/sweep-signup-success-notices.handler";
 import { DeliverSignupSuccessNoticeOnSignupReferralSucceeded } from "./application/event-handlers/after-commit/deliver-signup-success-notice.event-handler";
 import { RequestReferrerCreditEmailOnReferrerCredited } from "./application/event-handlers/after-commit/request-referrer-credit-email.event-handler";
 import type { ClaimCodesPort } from "./application/ports/claim-codes.port";
-import type { ClaimReadPort, RewardNotificationReadPort } from "./application/ports/claims-read.port";
-import { CLAIM_CODES, CLAIM_ID_GENERATOR, CLAIM_READS, CLAIMS_UNIT_OF_WORK, REWARD_NOTIFICATION_READS } from "./application/ports/claims.tokens";
+import type { ClaimReadPort } from "./application/ports/claims-read.port";
+import { CLAIM_CODES, CLAIM_ID_GENERATOR, CLAIM_READS, CLAIMS_UNIT_OF_WORK } from "./application/ports/claims.tokens";
 import { GetMyClaimHandler } from "./application/queries/get-my-claim/get-my-claim.handler";
 import { ListMyClaimsHandler } from "./application/queries/list-my-claims/list-my-claims.handler";
-import { ListMyRewardNotificationsHandler } from "./application/queries/list-my-reward-notifications/list-my-reward-notifications.handler";
 import { ClaimCodesAdapter } from "./infrastructure/adapters/claim-codes.adapter";
 import { UuidClaimIdGenerator } from "./infrastructure/adapters/uuid-claim-id.generator";
 import { ClaimsRegistrations } from "./infrastructure/claims-registrations";
 import { ClaimsQueueModule } from "./infrastructure/queue/claims-queue.module";
 import { ClaimsScopeFactory } from "./infrastructure/persistence/claims-scope.factory";
-import { PrismaClaimReadRepository, PrismaRewardNotificationReadRepository } from "./infrastructure/persistence/prisma-claims.read-repository";
+import { PrismaClaimReadRepository } from "./infrastructure/persistence/prisma-claims.read-repository";
 import { ConsumerClaimsController } from "./presentation/http/consumer-claims.controller";
-import { RewardNotificationsController } from "./presentation/http/reward-notifications.controller";
+import { LegacyRewardNoticesCron } from "./presentation/jobs/legacy-reward-notices.cron";
 import { SignupSuccessNoticesCron } from "./presentation/jobs/signup-success-notices.cron";
 
 // Queue wiring is decided at load time from the validated config (parsed by main.ts first).
@@ -57,7 +56,7 @@ const claimsQueueImports = getApiConfig().messaging.redisUrl !== undefined ? [Cl
  */
 @Module({
 	imports: [PrismaModule, OutboxModule, UnitOfWorkModule, SystemCommandModule, NotificationsModule, TenantAccessModule, ...claimsQueueImports],
-	controllers: [ConsumerClaimsController, RewardNotificationsController],
+	controllers: [ConsumerClaimsController],
 	providers: [
 		{
 			provide: CLAIMS_UNIT_OF_WORK,
@@ -75,12 +74,6 @@ const claimsQueueImports = getApiConfig().messaging.redisUrl !== undefined ? [Cl
 			useFactory: (transactions: TenantTransactionService): ClaimReadPort =>
 				new PrismaClaimReadRepository(new PrismaReadExecutor<Prisma.TransactionClient>(transactions, USER_OWNED_DATA_SCOPE)),
 		},
-		{
-			provide: REWARD_NOTIFICATION_READS,
-			inject: [TenantTransactionService],
-			useFactory: (transactions: TenantTransactionService): RewardNotificationReadPort =>
-				new PrismaRewardNotificationReadRepository(new PrismaReadExecutor<Prisma.TransactionClient>(transactions, USER_OWNED_DATA_SCOPE)),
-		},
 		REWARD_CODE_HASHER_PROVIDER,
 		{ provide: CLAIM_CODES, inject: [RewardCodeHasher], useFactory: (hasher: RewardCodeHasher): ClaimCodesPort => new ClaimCodesAdapter(hasher) },
 		UuidClaimIdGenerator,
@@ -89,7 +82,7 @@ const claimsQueueImports = getApiConfig().messaging.redisUrl !== undefined ? [Cl
 		RequestClaimOtpHandler,
 		ClaimRewardHandler,
 		IssueClaimQrCodesHandler,
-		MarkRewardNotificationsReadHandler,
+		MigrateLegacyRewardNoticesHandler,
 		ExpireOverdueClaimsHandler,
 		ExpireOverdueReferrerClaimsHandler,
 		SweepReferrerCreditEmailsHandler,
@@ -97,9 +90,9 @@ const claimsQueueImports = getApiConfig().messaging.redisUrl !== undefined ? [Cl
 		SweepSignupSuccessNoticesHandler,
 		DeliverSignupSuccessNoticeOnSignupReferralSucceeded,
 		SignupSuccessNoticesCron,
+		LegacyRewardNoticesCron,
 		ListMyClaimsHandler,
 		GetMyClaimHandler,
-		ListMyRewardNotificationsHandler,
 	],
 })
 export class ClaimsModule {}

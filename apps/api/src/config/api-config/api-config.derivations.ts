@@ -3,7 +3,7 @@
 
 import { NodeEnvSchema, type NodeEnv } from "@workspace/shared";
 
-import type { CacheBackend, CacheBackendSetting, LogLevel, StorageProviderSetting } from "../api-env.fields";
+import type { LogLevel, StorageProviderSetting } from "../api-env.fields";
 import { DEFAULT_LOG_LEVEL_BY_NODE_ENV, LOCAL_CONTAINER_PREFIX } from "./api-config.defaults";
 import type { ApiDocsPolicy, MalwareScannerConfig, ObserveConfig } from "./api-config.types";
 import type { ApiEnv } from "./api-env.input";
@@ -51,13 +51,6 @@ export function resolveRedisNamespace(configured: string | undefined, appName: s
 /** The configured LOG_LEVEL, or the environment's default ({@link DEFAULT_LOG_LEVEL_BY_NODE_ENV}). */
 export function resolveLogLevel(configured: LogLevel | undefined, nodeEnv: NodeEnv): LogLevel {
 	return configured ?? DEFAULT_LOG_LEVEL_BY_NODE_ENV[nodeEnv];
-}
-
-export function resolveCacheBackend(setting: CacheBackendSetting, nodeEnv: NodeEnv, redisUrl: string | undefined): CacheBackend {
-	if (setting !== "auto") {
-		return setting;
-	}
-	return nodeEnv !== NodeEnvSchema.enum.development && redisUrl !== undefined ? "redis" : "memory";
 }
 
 /** First configured private container, in precedence order (neutral name first, legacy aliases after). */

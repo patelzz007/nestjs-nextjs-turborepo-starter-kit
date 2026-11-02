@@ -11,9 +11,3 @@ export const claimsRoutes = {
 	detail: "/claims/:claimId",
 	qr: "/claims/:claimId/qr",
 } satisfies Record<string, RouteTree>;
-
-/** Path templates composed into `apiRoutes.rewardNotifications`. */
-export const rewardNotificationsRoutes = {
-	list: "/reward-notifications",
-	read: "/reward-notifications/read",
-} satisfies Record<string, RouteTree>;

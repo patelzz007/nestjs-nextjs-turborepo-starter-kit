@@ -2,25 +2,33 @@
 // application/services/operations-monitor.ts — the minute's collection and the alert evaluation
 // ============================================
 // Once a minute, on ONE instance (a short Redis lock): check every dependency, record their minute,
-// evaluate the alert rules, and open / update / resolve alerts with their emails — all in one unit of
-// work, so an alert and its email commit together (ADR 060).
+// evaluate the alert rules, and open / update / resolve alerts with their notifications (ops-alert-notifier.ts)
+// — all in one unit of work, so an alert and the word of it commit together (ADR 060, 070).
 // Design patterns:
 //   - Strategy (the probes) + pure policies (`findBreaches`, `reconcileAlerts`) composed here;
 //     this class only orchestrates (Single Responsibility).
 
-import { epochMs, OPS_MINUTE_MS, type EpochMs, type OpsAlert, type OpsDependencyStatus, type OpsHealth } from "@workspace/shared";
+import { type EpochMs, type OpsAlert, type OpsDependencyStatus, type OpsHealth } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import type { Clock } from "../../../../platform/application/clock.port";
 import type { UnitOfWork } from "../../../../platform/application/unit-of-work.port";
-import { AdminAlertEmailTemplate } from "../../../notifications/public-api";
-import { findBreaches, reconcileAlerts, type EndpointReading, type InstanceReading, type Readings, type ServerReading } from "../../domain/policies/alert-rules.policy";
+import {
+	findBreaches,
+	reconcileAlerts,
+	replacedInstanceIds,
+	type EndpointReading,
+	type InstanceReading,
+	type Readings,
+	type ServerReading,
+} from "../../domain/policies/alert-rules.policy";
 import { percentOf } from "../../domain/policies/health.policy";
 import { bucketStartOf } from "../../domain/policies/history-window.policy";
 import type { OperationsScope } from "../operations-scope";
 import type { DependencyProbe, DependencyProbeResult } from "../ports/dependency-probe.port";
 import type { OpsLiveStore } from "../ports/ops-live-store.port";
 import { OPS_MONITOR_COLLECT_OPERATION } from "../ports/operations.tokens";
+import { alertAudienceOf, OpsAlertNotifier } from "./ops-alert-notifier";
 
 const HUNDRED = 100;
 /** The live-store lock name of the minute's collection. */
@@ -85,7 +93,11 @@ function figuresOf(status: OpsDependencyStatus): {
 }
 
 export class OperationsMonitor {
-	public constructor(private readonly deps: OperationsMonitorDeps) {}
+	private readonly notifier: OpsAlertNotifier;
+
+	public constructor(private readonly deps: OperationsMonitorDeps) {
+		this.notifier = new OpsAlertNotifier(deps.adminAppUrl);
+	}
 
 	/** The minute's collection, if this instance wins the minute's lock. Returns whether it ran. */
 	public async collectMinute(): Promise<boolean> {
@@ -97,6 +109,14 @@ export class OperationsMonitor {
 		const statuses: OpsDependencyStatus[] = await Promise.all(this.deps.probes.map(async (probe) => toStatus(probe, await probe.probe(), now)));
 		await this.deps.live.putDependencies(statuses);
 		const instances = await this.deps.live.instances();
+		const instanceReadings: InstanceReading[] = instances.map((instance) => ({
+			id: instance.instanceId,
+			name: `${instance.service} on ${instance.hostname} (pid ${String(instance.pid)})`,
+			service: instance.service,
+			hostname: instance.hostname,
+			startedAt: instance.startedAt,
+			lastSeenAt: instance.sampledAt,
+		}));
 		await this.deps.uow.runSystemOperation(OPS_MONITOR_COLLECT_OPERATION, this.deps.actor, async (scope): Promise<void> => {
 			for (const status of statuses.filter((entry) => entry.configured)) {
 				await scope.history.putDependencyPoint(status.dependency, "MINUTE", {
@@ -122,11 +142,6 @@ export class OperationsMonitor {
 					};
 				}),
 			);
-			const instanceReadings: InstanceReading[] = instances.map((instance) => ({
-				id: instance.instanceId,
-				name: `${instance.service} on ${instance.hostname} (pid ${String(instance.pid)})`,
-				lastSeenAt: instance.sampledAt,
-			}));
 			const endpointReadings: EndpointReading[] = statuses.flatMap((status) =>
 				status.stats?.dependency === "ENDPOINTS" ? status.stats.endpoints.map((endpoint) => ({ url: endpoint.url, up: endpoint.up, tlsDaysLeft: endpoint.tlsDaysLeft })) : [],
 			);
@@ -139,31 +154,24 @@ export class OperationsMonitor {
 				endpoints: endpointReadings,
 			};
 			const changes = reconcileAlerts(await scope.alerts.listOpen(), findBreaches(readings, settings.alerts, now));
-			const recipients: string[] = [...new Set([...(await scope.recipients.superAdminEmails()), ...settings.alerts.extraRecipients].map((email) => email.toLowerCase()))];
+			const audience = alertAudienceOf(await scope.recipients.alertRecipients(), settings.alerts.extraRecipients);
 			for (const breach of changes.open) {
 				const alert: OpsAlert = await scope.alerts.open(breach, now);
-				await this.notify(scope, alert, "open", recipients, now);
+				await this.notifier.notify(scope, alert, "open", audience, now);
 			}
 			for (const update of changes.update) {
 				await scope.alerts.update(update.id, update);
 			}
 			for (const alertId of changes.resolve) {
 				const alert: OpsAlert = await scope.alerts.resolve(alertId, now);
-				await this.notify(scope, alert, "resolve", recipients, now);
+				await this.notifier.notify(scope, alert, "resolve", audience, now);
 			}
 		});
-		return true;
-	}
-
-	/** One alert email per recipient, in the same transaction as the alert row. */
-	private async notify(scope: OperationsScope, alert: OpsAlert, kind: "open" | "resolve", recipients: readonly string[], now: EpochMs): Promise<void> {
-		const title: string = kind === "open" ? `Alert: ${alert.message}` : `Resolved: ${alert.message}`;
-		const openedFor: string =
-			kind === "resolve" && alert.resolvedAt !== null ? `\n\nIt lasted ${String(Math.max(1, Math.round((alert.resolvedAt - alert.openedAt) / OPS_MINUTE_MS)))} minutes.` : "";
-		const message = `${alert.message}.${openedFor}`;
-		for (const to of recipients) {
-			await scope.emails.request(new AdminAlertEmailTemplate({ to, title, message, action: { label: "Open the alerts", url: `${this.deps.adminAppUrl}/operations/alerts` } }));
+		// A process a newer one of its service replaced on its host was restarted, not lost: forget it now
+		// (after the alerts committed, so an alert it had open resolves next minute) instead of in 24 hours.
+		for (const instanceId of replacedInstanceIds(instanceReadings)) {
+			await this.deps.live.removeInstance(instanceId);
 		}
-		await scope.alerts.markNotified(alert.id, kind, epochMs(now));
+		return true;
 	}
 }

@@ -49,6 +49,7 @@ const reward: RewardResponse = {
 	description: "One free coffee",
 	rewardType: "FREE_ITEM",
 	rewardValue: REWARD_VALUE,
+	freeItem: { name: "Flat white", sku: "BEV-FLATWHITE-12OZ" },
 	termsConditions: null,
 	rewardKind: "CONSUMER",
 	category: "food",
@@ -68,6 +69,7 @@ const reward: RewardResponse = {
 	rules,
 	locationScopeType: "ALL_LOCATIONS",
 	locationIds: [],
+	audienceType: "EVERYONE",
 };
 
 const kybProfile: MerchantKybProfileResponse = {
@@ -115,6 +117,7 @@ describe("reward rules", () => {
 			description: "One free coffee",
 			rewardType: "FREE_ITEM",
 			rewardValue: REWARD_VALUE,
+			freeItem: { name: "Coffee", sku: "BEV-COFFEE" },
 			category: "food",
 			imageFileIds: [IMAGE_FILE_ID],
 			quantityTotal: QUANTITY_TOTAL,
@@ -123,6 +126,7 @@ describe("reward rules", () => {
 		expect(MerchantCreateRewardSchema.safeParse(request).success).toBe(true);
 		expect(MerchantCreateRewardSchema.safeParse({ ...request, unexpected: true }).success).toBe(false);
 		expect(MerchantCreateRewardSchema.safeParse({ ...request, rules: { ...rules, internalFlag: true } }).success).toBe(false);
+		expect(MerchantCreateRewardSchema.safeParse({ ...request, freeItem: { ...request.freeItem, price: 1 } }).success).toBe(false);
 	});
 });
 
@@ -179,6 +183,7 @@ describe("reward images on create", () => {
 		description: "One free coffee",
 		rewardType: "FREE_ITEM",
 		rewardValue: REWARD_VALUE,
+		freeItem: { name: "Coffee", sku: "BEV-COFFEE" },
 		category: "food",
 		quantityTotal: QUANTITY_TOTAL,
 		expiryDate: EXPIRY_MS,

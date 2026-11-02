@@ -211,3 +211,121 @@ _Avoid_: Session recording, screen recording, video
 **Client key** (observability):
 The public key a web page or mobile app reports with. It can only send telemetry, never read it.
 _Avoid_: DSN, public token, app key
+
+### Notifications
+
+Everything the platform tells a person, on any channel, and what that person agreed to receive.
+
+**Notification** (notifications):
+One message meant for one recipient, of one notification type. It may reach the recipient on several channels.
+_Avoid_: Alert, message, push
+
+**Notification type** (notifications):
+A named kind of notification the platform knows how to send, with its category, the channels it may use and the surfaces it shows on.
+_Avoid_: Template, event, notification kind
+
+**Recipient** (notifications):
+Whoever a notification is for: either a user or a contact point.
+_Avoid_: Target, addressee, subscriber
+
+**Contact point** (notifications):
+A bare email address or phone number of someone who may have no account, such as an invited person. It has no inbox and no preferences.
+_Avoid_: Contact, lead, guest, Customer
+
+**Channel** (notifications):
+A way a notification reaches a person: in-app, email, push or SMS.
+_Avoid_: Medium, transport, provider
+
+**Delivery** (notifications):
+One notification's journey through one channel, from queued to delivered, failed or suppressed.
+_Avoid_: Send, attempt, dispatch
+
+**Suppressed** (notifications):
+A delivery the platform chose not to make, for a recorded reason such as a preference, quiet hours or a missing device.
+_Avoid_: Skipped, dropped, blocked
+
+**Category** (notifications):
+The group a notification type belongs to (security, account, transactional, product, marketing). Preferences act on categories, not on single types.
+_Avoid_: Topic, group, channel
+
+**Mandatory channel** (notifications):
+A channel a category is always sent on, whatever the person's preferences say.
+_Avoid_: Forced, required notification
+
+**Preference** (notifications):
+A person's choice to receive or not receive one category on one channel, either everywhere or for one tenant.
+_Avoid_: Setting, subscription, opt-in
+
+**Consent** (notifications):
+A recorded, provable agreement to receive marketing, with when, where and to which wording it was given. A preference alone is not consent.
+_Avoid_: Opt-in, permission, preference
+
+**Surface** (notifications):
+The audience side of the product a notification belongs to: customer, merchant or admin. A notification shows only on its own surface.
+_Avoid_: App, portal, frontend
+
+**Broadcast** (notifications):
+A notification written by a person, not by the platform, and sent to an audience: platform staff to users, or a tenant to its own customers.
+_Avoid_: Campaign, blast, announcement, newsletter
+
+**Tenant customer** (notifications):
+A user who has claimed at least one of a tenant's rewards, whatever memberships they hold elsewhere. That tenant's own staff are never its tenant customers.
+_Avoid_: Follower, subscriber, member, Customer
+
+**Leaving a tenant** (notifications):
+A tenant customer's choice to stop hearing from one tenant until they claim from it again. It withdraws their consent for that tenant.
+_Avoid_: Unfollow, unsubscribe, block
+
+**Broadcast report** (notifications):
+A recipient's complaint that a tenant's broadcast is spam or offensive, reviewed by platform staff.
+_Avoid_: Flag, complaint, abuse ticket
+
+**Audience** (notifications):
+The set of recipients a broadcast is sent to, decided when it starts sending.
+_Avoid_: Segment, list, target group
+
+**Grouping** (notifications):
+Folding several notifications of one type for one person into a single one, such as "You earned 10 referral credits".
+_Avoid_: Batching, bundling, stacking
+
+**Digest** (notifications):
+One email that gathers a person's notifications from a day or a week, sent in place of one email each.
+_Avoid_: Summary, newsletter, roundup
+
+**Fallback** (notifications):
+A second channel a notification type uses when its first channel cannot deliver at all.
+_Avoid_: Escalation, retry, backup channel
+
+**Sensitive notification** (notifications):
+A notification that carries a secret, such as a one-time code. Its content is never kept and never shown on a lock screen.
+_Avoid_: Private, secret, confidential notification
+
+**Quiet hours** (notifications):
+A daily period in the person's own time zone during which non-urgent notifications wait.
+_Avoid_: Do not disturb, mute, snooze
+
+**Push device** (notifications):
+One installed copy of the mobile app that can receive push notifications for the person signed in to it.
+_Avoid_: Device token, handset, subscription
+
+### Rate limiting
+
+**Rate-limit policy** (platform):
+A named rule saying how much of something one subject may do in a period of time.
+_Avoid_: Throttle, quota, limit rule
+
+**Rate-limit subject** (platform):
+Who or what a rate-limit policy counts: an address, a signed-in principal, a tenant, an API key or a destination.
+_Avoid_: Key, bucket, client
+
+**Tenant override** (platform):
+A platform-staff decision that raises or lowers one rate-limit policy for one tenant, with a reason and an end date.
+_Avoid_: Plan, quota, exception
+
+**Exemption** (platform):
+A subject a rate-limit policy counts but never refuses, such as platform health checks or the Load Test tenant.
+_Avoid_: Whitelist, allowlist, bypass
+
+**Penalty** (platform):
+A longer refusal given to a subject that keeps hitting a security policy, growing with each repeat.
+_Avoid_: Ban, lockout, block

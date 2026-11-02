@@ -264,3 +264,23 @@ This entire rule set is written with real reasoning behind every rule — not as
 ### Risks / follow-ups
 <anything a reviewer or operator should watch>
 ```
+
+## Mandatory execution protocol
+
+The canonical detailed protocol is `rules/32-ai-agent-execution-protocol.md`. Read it for every non-trivial task, every bug fix, and every change to shared contracts, architecture, security, data, or runtime behavior. For a tiny documentation-only correction, the protocol's orientation, diff review, and truthful reporting requirements still apply.
+
+The protocol is deliberately tool- and vendor-neutral. Claude Code, Cursor, Codex, Copilot, and other agents must follow the same repository rules even if their available tools, subagents, skill systems, or command syntax differ. Do not invent a tool or claim to have invoked a skill that is not available in the current environment.
+
+## Skill routing and reusable workflows
+
+Use the repository-local skills under `skills/` when the task matches. A skill is a focused workflow, not a replacement for `AGENTS.md` or the rulebook. User-invoked workflows may orchestrate a task; model-invoked workflows may be selected when the task fits. Do not create a dependency on a particular agent vendor's proprietary skill invocation syntax.
+
+| Situation | Workflow |
+|---|---|
+| Bug, regression, flaky test, performance issue | `skills/diagnosing-bugs/SKILL.md` |
+| New feature or behavior change | `skills/tdd-vertical-slice/SKILL.md` |
+| Ambiguous requirements or architecture decisions | `skills/grill-and-spec/SKILL.md` |
+| Independent review of a completed diff | `skills/independent-code-review/SKILL.md` |
+| Shared module, package boundary, abstraction or extension design | `skills/codebase-design/SKILL.md` |
+
+A workflow can be combined with another when the task genuinely needs both. Avoid loading every skill for every task. `AGENTS.md` remains the router and `00-non-negotiables.md` remains authoritative.

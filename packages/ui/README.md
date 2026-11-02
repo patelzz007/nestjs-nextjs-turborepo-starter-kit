@@ -309,6 +309,14 @@ Two decisions, made with a maintainer:
 state, features) and map `tree.getItems()` to `TreeItem` + `TreeItemLabel`. Drag-and-drop and
 search states appear only when those features are loaded.
 
+`TreeBranch` is the plain, non-interactive half: the children of one node, indented and hung from a
+vertical guide line (an elbow to each child's middle; the guide stops after the last child). It lays
+out whatever nodes it is given — a checkbox per channel under a "select all" checkbox, for example —
+so use it when the nodes are your own controls, and `Tree` when the tree itself is the control
+(focus, selection, keyboard navigation). Place it with `ms-*` so its edge sits under the parent's
+control, and give it an `aria-label`. `Checkbox` takes `indeterminate` (a filled box with a dash) and
+`locked` (kept on by a policy: pale, with a lock, never faded).
+
 ## Entity avatar (`entity-avatar.tsx`)
 
 A square (or `shape="circle"`) brand mark for a named entity — a shop, tenant or team.

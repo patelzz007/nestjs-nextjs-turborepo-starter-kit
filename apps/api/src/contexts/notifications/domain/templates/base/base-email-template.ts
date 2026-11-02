@@ -146,6 +146,14 @@ const OTP_LETTER_SPACING_PX = 10;
 /** Horizontal padding inside the code tile, in px. */
 const OTP_TILE_PADDING_X_PX = 22;
 
+/** The two ways out of a marketing or digest email (ADR 070). */
+export interface EmailUnsubscribeLinks {
+	/** The web page a person opens from the footer link. */
+	readonly pageUrl: string;
+	/** The RFC 8058 endpoint a mail client POSTs `List-Unsubscribe=One-Click` to. */
+	readonly oneClickUrl: string;
+}
+
 export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
 	/** Validated-at-construction props; re-validated by the sender before send. */
 	public readonly props: TProps;
@@ -186,6 +194,15 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
 
 	/** Plain-text twin of `renderBodyHtml`. */
 	public abstract renderBodyText(context: EmailRenderContext): string;
+
+	/**
+	 * How to unsubscribe from this email, or null (the default: transactional and security email). The
+	 * footer links the web page (a person clicks it in a browser); the delivery puts the RFC 8058 one-click
+	 * endpoint in the `List-Unsubscribe` headers (the mail client POSTs to it).
+	 */
+	public unsubscribeLinks(): EmailUnsubscribeLinks | null {
+		return null;
+	}
 
 	/** Optional CTA button; default none. */
 	public getCta(_context: EmailRenderContext): CtaConfig | null {
@@ -440,6 +457,7 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
             <td class="email-footer" align="center" style="padding: 20px 16px 0 16px; color: ${theme.subtle}; font-size: 12px; line-height: 1.6; text-align: center;">
               <p style="margin: 0;">You're receiving this because you have an account with <a href="${this.escape(context.appUrl)}" style="color: ${theme.subtle}; text-decoration: underline;">${this.escape(context.appName)}</a>.</p>
               ${supportLine}
+              ${this.unsubscribeLine(theme.subtle)}
               <p style="margin: 4px 0 0 0;">&copy; ${String(year)} ${this.escape(context.appName)}. All rights reserved.</p>
             </td>
           </tr>
@@ -449,6 +467,13 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
   </table>
 </body>
 </html>`;
+	}
+
+	private unsubscribeLine(color: string): string {
+		const links = this.unsubscribeLinks();
+		return links === null
+			? ""
+			: `<p style="margin: 4px 0 0 0;"><a href="${this.escape(links.pageUrl)}" style="color: ${color}; text-decoration: underline;">Unsubscribe from these emails</a></p>`;
 	}
 
 	/** Plain-text twin of `renderHtml` — every email ships with both. */
@@ -461,6 +486,10 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
 		}
 		if (context.supportEmail) {
 			lines.push(`Questions? ${context.supportEmail}`, "");
+		}
+		const unsubscribe = this.unsubscribeLinks();
+		if (unsubscribe !== null) {
+			lines.push(`Unsubscribe: ${unsubscribe.pageUrl}`, "");
 		}
 		lines.push(`© ${String(year)} ${context.appName}. All rights reserved.`);
 		return lines.join("\n");

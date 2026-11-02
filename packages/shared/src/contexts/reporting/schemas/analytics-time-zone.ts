@@ -55,7 +55,7 @@ function wallClockAsUtcMs(epochMs: number, timeZone: string): number {
 }
 
 /** The instant whose wall-clock reading in `timeZone` is `wallClockMs` (encoded as UTC). */
-function instantOfWallClock(wallClockMs: number, timeZone: string): number {
+export function instantOfWallClock(wallClockMs: number, timeZone: string): number {
 	let instant = wallClockMs;
 	for (let round = 0; round < OFFSET_REFINEMENT_ROUNDS; round += 1) {
 		instant = wallClockMs - (wallClockAsUtcMs(instant, timeZone) - instant);

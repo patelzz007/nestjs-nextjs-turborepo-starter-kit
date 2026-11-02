@@ -6,7 +6,17 @@ import { z } from "zod";
 import { defineContract, defineFileContract } from "../../contracts/define-contract";
 import { fileResponse, singleResponse } from "../../contracts/response";
 import { DeleteSuccessDataSchema } from "../../schemas/api/api-response";
+import { OkResponseSchema } from "../../schemas/api/message";
 import { operationsRoutes } from "./routes";
+import {
+	CacheOverviewSchema,
+	FlushCacheSchema,
+	LiftRateLimitPenaltySchema,
+	RateLimitsOverviewSchema,
+	SetTenantRateLimitOverrideSchema,
+	TenantRateLimitOverrideListSchema,
+	TenantRateLimitOverrideSchema,
+} from "./schemas/traffic-and-cache";
 import {
 	LoadTestCapsInputSchema,
 	OpsAlertSettingsInputSchema,
@@ -129,4 +139,31 @@ export const operationsContract = {
 		response: singleResponse(OpsAgentReportAckSchema),
 		access: "public",
 	}),
+	rateLimits: defineContract({ method: "GET", path: operationsRoutes.rateLimits, input: z.undefined(), response: singleResponse(RateLimitsOverviewSchema) }),
+	rateLimitOverrides: defineContract({
+		method: "GET",
+		path: operationsRoutes.rateLimitOverrides,
+		input: z.undefined(),
+		response: singleResponse(TenantRateLimitOverrideListSchema),
+	}),
+	setRateLimitOverride: defineContract({
+		method: "PUT",
+		path: operationsRoutes.rateLimitOverrides,
+		input: SetTenantRateLimitOverrideSchema,
+		response: singleResponse(TenantRateLimitOverrideSchema),
+	}),
+	removeRateLimitOverride: defineContract({
+		method: "DELETE",
+		path: operationsRoutes.rateLimitOverride,
+		input: z.object({ overrideId: z.uuid() }).strict(),
+		response: singleResponse(OkResponseSchema),
+	}),
+	liftRateLimitPenalty: defineContract({
+		method: "POST",
+		path: operationsRoutes.liftRateLimitPenalty,
+		input: LiftRateLimitPenaltySchema,
+		response: singleResponse(OkResponseSchema),
+	}),
+	cache: defineContract({ method: "GET", path: operationsRoutes.cache, input: z.undefined(), response: singleResponse(CacheOverviewSchema) }),
+	flushCache: defineContract({ method: "POST", path: operationsRoutes.flushCache, input: FlushCacheSchema, response: singleResponse(OkResponseSchema) }),
 };

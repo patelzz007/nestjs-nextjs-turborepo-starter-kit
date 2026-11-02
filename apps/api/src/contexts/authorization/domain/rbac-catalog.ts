@@ -8,6 +8,12 @@ export const ADMIN_ROLE_NAME = "Admin";
 export const PLATFORM_DEVELOPER_ROLE_NAME = "Platform Developer";
 
 /**
+ * The platform roles that work in the admin panel: its inbox (the ADMIN notification surface) is theirs,
+ * and so are the operations alerts (ADR 068, 070). A user flagged `isSuperAdmin` counts too.
+ */
+export const ADMIN_PANEL_ROLE_NAMES: readonly string[] = [SUPER_ADMIN_ROLE_NAME, ADMIN_ROLE_NAME, PLATFORM_DEVELOPER_ROLE_NAME];
+
+/**
  * Location roles a membership's location scope can carry (`MembershipLocationScope.roleId`): their
  * LOCATION-scoped permissions apply only at the locations that scope reaches.
  */

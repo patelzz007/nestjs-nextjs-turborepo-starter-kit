@@ -15,6 +15,7 @@ import { ReviseRewardCommand } from "../src/contexts/rewards/application/command
 import { SubmitRewardForReviewCommand } from "../src/contexts/rewards/application/commands/submit-reward-for-review/submit-reward-for-review.command";
 import { ActorContextSchema, systemActor, type ActorContext } from "../src/platform/application/actor-context";
 import { createE2eApp, withTenantMember } from "./e2e-helpers";
+import { deleteNotificationsByPayload } from "./support/notification-rows";
 
 const DAY_MS = 86_400_000;
 const TENANT: string = TENANT_SEED_IDS.klTenant;
@@ -61,6 +62,8 @@ describe("Reward review races (e2e)", () => {
 					title: `E2E race ${id}`,
 					description: "Created by rewards-races.e2e-spec.ts",
 					rewardType: "FREE_ITEM",
+					freeItemName: "Coffee (12 oz)",
+					freeItemSku: "E2E-COFFEE-12OZ",
 					category: "cafe",
 					images: { create: [{ fileId: rewardCoverImageSeedId("free-coffee"), position: 0 }] },
 					quantityTotal: 5,
@@ -114,7 +117,7 @@ describe("Reward review races (e2e)", () => {
 	afterAll(async () => {
 		// Fixture teardown through the superuser pool: this spec's rewards and every record about them.
 		await pool.query(`DELETE FROM public."OutboxEvent" WHERE payload->'payload'->'metadata'->>'rewardId' = ANY($1)`, [rewardIds]);
-		await pool.query(`DELETE FROM public."RewardNotification" WHERE metadata->>'rewardId' = ANY($1)`, [rewardIds]);
+		await deleteNotificationsByPayload(pool, "rewardId", rewardIds);
 		await pool.query(`DELETE FROM public."RewardAuditLog" WHERE metadata->>'rewardId' = ANY($1)`, [rewardIds]);
 		await pool.query(`DELETE FROM public."RewardImage" WHERE "rewardId" = ANY($1)`, [rewardIds]);
 		await pool.query(`DELETE FROM public."Reward" WHERE id = ANY($1)`, [rewardIds]);

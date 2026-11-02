@@ -2,10 +2,8 @@ import { Pool, type PoolClient, type PoolConfig } from "pg";
 
 import { ThrownErrorSchema } from "@workspace/shared";
 
+import { DATABASE_CONNECT_TIMEOUT_MS } from "./database-pool.constants";
 import { DEFAULT_DATABASE_ROLE } from "./system-operation.registry";
-
-/** Fail checkout instead of hanging until Fastify's plugin timeout. */
-const DEFAULT_CONNECT_TIMEOUT_MS = 5_000;
 
 /** Pool settings the caller must decide explicitly (from the validated config). */
 export type RlsPoolConfig = PoolConfig & Required<Pick<PoolConfig, "connectionString" | "max" | "idleTimeoutMillis" | "allowExitOnIdle">>;
@@ -32,7 +30,7 @@ export class RlsPool extends Pool {
 	public constructor(config: RlsPoolConfig) {
 		super({
 			...config,
-			connectionTimeoutMillis: config.connectionTimeoutMillis ?? DEFAULT_CONNECT_TIMEOUT_MS,
+			connectionTimeoutMillis: config.connectionTimeoutMillis ?? DATABASE_CONNECT_TIMEOUT_MS,
 		});
 	}
 

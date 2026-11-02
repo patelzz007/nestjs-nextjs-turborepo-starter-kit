@@ -1,16 +1,21 @@
 import type { TransactionalEventCollector } from "../../../platform/application/events/transactional-event-collector";
-import type { EmailRequestTransactionalPort } from "../../notifications/public-api";
+import type { EmailRequestTransactionalPort, LegacyInboxImportPort, NotifyTransactionalPort } from "../../notifications/public-api";
 import type { ReferrerCreditNoticesPort, SignupSuccessNoticesPort } from "../../referrals/public-api";
 import type { LegalAcceptanceCheck, RewardAuditPort, RewardInventoryPort, RewardRedemptionFactsPort } from "../../rewards/public-api";
-import type { CustomerStandingPort } from "../../tenancy/public-api";
+import type { CustomerStandingPort, TenantCustomerLinksPort } from "../../tenancy/public-api";
 import type { OtpChallengeRepository, RewardClaimRepository } from "../domain/repositories/claims.repositories";
-import type { ClaimantPort, ClaimViewPort, ReferralAttributionPort, RewardNotificationInbox } from "./ports/claims-transactional.ports";
+import type { ClaimantPort, ClaimViewPort, LegacyRewardNoticeStore, ReferralAttributionPort } from "./ports/claims-transactional.ports";
 
 /** Everything one claims transaction can touch. Every member is bound to that transaction. */
 export interface ClaimsScope {
 	readonly claims: RewardClaimRepository;
 	readonly otpChallenges: OtpChallengeRepository;
-	readonly notifications: RewardNotificationInbox;
+	/** `notify()` (ADR 070): every notice claims sends, in this same transaction. */
+	readonly notify: NotifyTransactionalPort;
+	/** The earlier reward inbox, read only to move it (ADR 070). */
+	readonly legacyNotices: LegacyRewardNoticeStore;
+	/** Notifications' side of that move, in this same transaction. */
+	readonly legacyInbox: LegacyInboxImportPort;
 	readonly views: ClaimViewPort;
 	readonly claimants: ClaimantPort;
 	readonly referralAttribution: ReferralAttributionPort;
@@ -25,6 +30,8 @@ export interface ClaimsScope {
 	readonly rewardAudit: RewardAuditPort;
 	/** Tenants' answer to "may this customer take this merchant's rewards", in this same transaction. */
 	readonly customerStanding: CustomerStandingPort;
+	/** Tenants' tenant-customer links (ADR 073), in this same transaction. */
+	readonly tenantCustomers: TenantCustomerLinksPort;
 	readonly emails: EmailRequestTransactionalPort;
 	readonly events: TransactionalEventCollector;
 }

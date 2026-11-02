@@ -5,39 +5,20 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import { ThrottlerStorage } from "@nestjs/throttler";
 import { describe, expect, it } from "vitest";
 
+import { RecordingRateLimiter } from "../../../../../../../test/support/recording-rate-limiter";
 import { ConfigModule } from "../../../../../../config/config.module";
+import { RATE_LIMITER } from "../../../../../application/ports/rate-limiter.port";
+import { FailoverRateLimiter } from "../../../../../infrastructure/rate-limiting/failover-rate-limiter";
+import { RateLimitingModule } from "../../../../../infrastructure/rate-limiting/rate-limiting.module";
 import { REDIS_PUBLISHER } from "../../../../../infrastructure/redis/redis.tokens";
-import { RedisThrottlerStorage, type ThrottleCounterClient } from "../../../../../infrastructure/throttling/redis-throttler.storage";
+import { RateLimiterThrottlerStorage } from "../../../../../infrastructure/throttling/rate-limiter-throttler.storage";
 import { PreAuthThrottlerGuard, PrincipalThrottlerGuard } from "../scoped-throttler.guards";
 import { ThrottlingModule } from "../throttling.module";
 
-/** A real in-memory counter with Redis' INCR / PEXPIRE / PTTL semantics, recording every key it counted. */
-class RecordingCounterClient implements ThrottleCounterClient {
-	public readonly incrementedKeys: string[] = [];
-	private readonly counts: Map<string, number> = new Map<string, number>();
-	private readonly expiries: Map<string, number> = new Map<string, number>();
-
-	public incr(key: string): Promise<number> {
-		this.incrementedKeys.push(key);
-		const next: number = (this.counts.get(key) ?? 0) + 1;
-		this.counts.set(key, next);
-		return Promise.resolve(next);
-	}
-
-	public pexpire(key: string, milliseconds: number): Promise<number> {
-		this.expiries.set(key, milliseconds);
-		return Promise.resolve(1);
-	}
-
-	public pttl(key: string): Promise<number> {
-		return Promise.resolve(this.expiries.get(key) ?? -1);
-	}
-}
-
-/** Stands in for the global `RedisModule`: the shared publisher, or `null` when Redis is not configured. */
-class FakeRedisModule {
-	public static with(client: ThrottleCounterClient | null): DynamicModule {
-		return { module: FakeRedisModule, providers: [{ provide: REDIS_PUBLISHER, useValue: client }], exports: [REDIS_PUBLISHER] };
+/** Stands in for the global `RedisModule` when Redis is not configured. */
+class NoRedisModule {
+	public static create(): DynamicModule {
+		return { module: NoRedisModule, providers: [{ provide: REDIS_PUBLISHER, useValue: null }], exports: [REDIS_PUBLISHER] };
 	}
 }
 
@@ -48,8 +29,8 @@ class ProbeController {
 	}
 }
 
-Global()(FakeRedisModule);
-Module({})(FakeRedisModule);
+Global()(NoRedisModule);
+Module({})(NoRedisModule);
 Controller("probe")(ProbeController);
 const pingDescriptor = Object.getOwnPropertyDescriptor(ProbeController.prototype, "ping");
 if (pingDescriptor === undefined) {
@@ -57,47 +38,45 @@ if (pingDescriptor === undefined) {
 }
 Get()(ProbeController.prototype, "ping", pingDescriptor);
 
-async function bootWith(client: ThrottleCounterClient | null): Promise<{ readonly app: NestFastifyApplication; readonly moduleRef: TestingModule }> {
-	const moduleRef: TestingModule = await Test.createTestingModule({
-		imports: [ConfigModule, FakeRedisModule.with(client), ThrottlingModule],
+async function boot(limiter: RecordingRateLimiter | null): Promise<{ readonly app: NestFastifyApplication; readonly moduleRef: TestingModule }> {
+	const builder = Test.createTestingModule({
+		imports: [ConfigModule, NoRedisModule.create(), RateLimitingModule, ThrottlingModule],
 		controllers: [ProbeController],
 		providers: [
 			{ provide: APP_GUARD, useClass: PreAuthThrottlerGuard },
 			{ provide: APP_GUARD, useClass: PrincipalThrottlerGuard },
 		],
-	}).compile();
+	});
+	const moduleRef: TestingModule = await (limiter === null ? builder : builder.overrideProvider(RATE_LIMITER).useValue(limiter)).compile();
 	const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
 	await app.init();
 	return { app, moduleRef };
 }
 
 describe("ThrottlingModule wiring", () => {
-	it("hands ThrottlerGuard the Redis storage when Redis is configured, and counts in Redis", async () => {
-		const client = new RecordingCounterClient();
-		const { app, moduleRef } = await bootWith(client);
+	it("hands ThrottlerGuard the one storage, which counts every throttler through the shared RATE_LIMITER", async () => {
+		const limiter = new RecordingRateLimiter();
+		const { app, moduleRef } = await boot(limiter);
 		try {
 			const storage: ThrottlerStorage = moduleRef.get(ThrottlerStorage, { strict: false });
-			expect(storage).toBeInstanceOf(RedisThrottlerStorage);
+			expect(storage).toBeInstanceOf(RateLimiterThrottlerStorage);
 			// One instance: the options' `storage` IS the provider every custom guard injects.
-			expect(storage).toBe(moduleRef.get(RedisThrottlerStorage, { strict: false }));
+			expect(storage).toBe(moduleRef.get(RateLimiterThrottlerStorage, { strict: false }));
 
 			const response = await app.inject({ method: "GET", url: "/probe" });
 			expect(response.statusCode).toBe(200);
-			expect(client.incrementedKeys.some((key: string): boolean => key.includes("throttle:strict:"))).toBe(true);
-			expect(client.incrementedKeys.some((key: string): boolean => key.includes("throttle:default:"))).toBe(true);
-			expect(client.incrementedKeys.some((key: string): boolean => key.includes("throttle:preAuth:"))).toBe(true);
+			expect(limiter.policiesCounted()).toEqual(expect.arrayContaining(["PRE_AUTH", "SECURITY_ROUTES", "AUTHENTICATED_ROUTES"]));
 		} finally {
 			await app.close();
 		}
 	});
 
-	it("keeps the same storage (memory fallback) when Redis is not configured", async () => {
-		const { app, moduleRef } = await bootWith(null);
+	it("counts in the local fallback limiter when Redis is not configured", async () => {
+		const { app, moduleRef } = await boot(null);
 		try {
-			expect(moduleRef.get(ThrottlerStorage, { strict: false })).toBeInstanceOf(RedisThrottlerStorage);
+			expect(moduleRef.get(RATE_LIMITER, { strict: false })).toBeInstanceOf(FailoverRateLimiter);
 			const response = await app.inject({ method: "GET", url: "/probe" });
 			expect(response.statusCode).toBe(200);
-			expect(response.headers["x-ratelimit-remaining-strict"]).toBeDefined();
 		} finally {
 			await app.close();
 		}

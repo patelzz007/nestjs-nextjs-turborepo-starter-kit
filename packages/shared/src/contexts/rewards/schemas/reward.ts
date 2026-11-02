@@ -9,6 +9,8 @@ import { LocationFilterSchema } from "../../tenancy/schemas/location-filter";
 import { type LocationScopeType, LocationScopeTypeSchema } from "../../tenancy/schemas/tenant";
 import { PilotCitySchema } from "../../tenancy/schemas/tenant-enums";
 import {
+	type RewardAudienceType,
+	RewardAudienceTypeSchema,
 	type RewardCategory,
 	RewardCategorySchema,
 	RewardKindSchema,
@@ -18,6 +20,7 @@ import {
 	RewardStatusSchema,
 	RewardTypeSchema,
 } from "./reward-enums";
+import { refineRewardFreeItem, rewardTypeGivesFreeItem, RewardFreeItemResponseSchema, RewardFreeItemSchema } from "./reward-free-item";
 
 // ── Rewards: the Reward aggregate's requests and responses (merchant CRUD, admin review, marketplace) ──
 
@@ -76,6 +79,40 @@ function refineLocationScope(value: RewardLocationScopeValue, ctx: z.RefinementC
 	}
 }
 
+/** How many customers one reward can be given to (more is a broadcast-sized audience: give it to everyone). */
+export const REWARD_MAX_AUDIENCE_CUSTOMERS = 500;
+
+/** The customers a reward is given to: the tenant's own customers, each once. */
+const RewardAudienceCustomerIdsSchema = z
+	.array(z.uuid())
+	.max(REWARD_MAX_AUDIENCE_CUSTOMERS, { error: `Give a reward to up to ${String(REWARD_MAX_AUDIENCE_CUSTOMERS)} customers, or to everyone` })
+	.refine((userIds: readonly string[]): boolean => new Set(userIds).size === userIds.length, { error: "Each customer can be added once" });
+
+/** The audience fields a reward payload and the reward form carry. */
+interface RewardAudienceValue {
+	readonly audienceType?: RewardAudienceType | undefined;
+	readonly audienceCustomerIds?: readonly string[] | undefined;
+	readonly referralsEnabled?: boolean | undefined;
+}
+
+/**
+ * Refinement shared by the payloads and the form: a reward given to chosen customers names at least one,
+ * names customers only when it is for chosen customers, and has no referrals (referrals bring in new
+ * people, which a private reward is not for).
+ */
+function refineRewardAudience(value: RewardAudienceValue, ctx: z.RefinementCtx): void {
+	const customerCount = value.audienceCustomerIds?.length ?? 0;
+	if (value.audienceType === "SELECTED_CUSTOMERS" && customerCount === 0) {
+		ctx.addIssue({ code: "custom", message: "Choose at least one customer, or give the reward to everyone", path: ["audienceCustomerIds"] });
+	}
+	if (value.audienceType !== "SELECTED_CUSTOMERS" && customerCount > 0) {
+		ctx.addIssue({ code: "custom", message: "Customers are chosen only for a reward given to chosen customers", path: ["audienceCustomerIds"] });
+	}
+	if (value.audienceType === "SELECTED_CUSTOMERS" && value.referralsEnabled === true) {
+		ctx.addIssue({ code: "custom", message: "A reward for chosen customers cannot have referrals", path: ["referralsEnabled"] });
+	}
+}
+
 // Field rules shared by the create payload, the update payload and the reward form.
 const RewardTitleSchema = z.string().min(1).max(200);
 
@@ -109,6 +146,8 @@ export const MerchantCreateRewardSchema = z
 		description: RewardDescriptionSchema,
 		rewardType: RewardTypeSchema,
 		rewardValue: RewardValueSchema,
+		/** Required for `FREE_ITEM` and `BOGO` (the item given), absent for every other type. */
+		freeItem: RewardFreeItemSchema.optional(),
 		termsConditions: RewardTermsSchema.optional(),
 		category: RewardCategorySchema,
 		imageFileIds: RewardImageFileIdsSchema,
@@ -122,6 +161,9 @@ export const MerchantCreateRewardSchema = z
 		saveAsDraft: z.boolean().optional().default(true),
 		locationScopeType: LocationScopeTypeSchema.optional().default("ALL_LOCATIONS"),
 		locationIds: z.array(z.uuid()).optional().default([]),
+		/** Nothing chosen: the reward is for everyone. */
+		audienceType: RewardAudienceTypeSchema.optional().default("EVERYONE"),
+		audienceCustomerIds: RewardAudienceCustomerIdsSchema.optional().default([]),
 	})
 	.strict()
 	.superRefine((value, ctx) => {
@@ -133,6 +175,8 @@ export const MerchantCreateRewardSchema = z
 			});
 		}
 		refineLocationScope(value, ctx);
+		refineRewardAudience(value, ctx);
+		refineRewardFreeItem(value, ctx);
 	});
 
 export type MerchantCreateRewardInput = z.output<typeof MerchantCreateRewardSchema>;
@@ -146,6 +190,8 @@ export const MerchantRewardFormFieldsSchema = z
 		description: RewardDescriptionSchema,
 		imageFileIds: RewardImageFileIdsSchema,
 		rewardValue: RewardValueSchema,
+		/** Carried only while the type gives an item (the editor drops it for any other type). */
+		freeItem: RewardFreeItemSchema.optional(),
 		minPurchase: z.number().nonnegative().optional(),
 		termsConditions: RewardTermsSchema.optional(),
 		startDate: z.string().regex(DATE_INPUT_PATTERN),
@@ -154,9 +200,13 @@ export const MerchantRewardFormFieldsSchema = z
 		maxClaimsPerUser: z.number().int().min(1).max(10),
 		locationScopeType: LocationScopeTypeSchema.optional(),
 		locationIds: z.array(z.uuid()).optional(),
+		audienceType: RewardAudienceTypeSchema.optional(),
+		audienceCustomerIds: RewardAudienceCustomerIdsSchema.optional(),
 	})
 	.strict()
 	.superRefine((value, ctx) => {
+		refineRewardAudience(value, ctx);
+		refineRewardFreeItem(value, ctx);
 		if (value.expiryDate < value.startDate) {
 			ctx.addIssue({
 				code: "custom",
@@ -211,12 +261,14 @@ function mapRewardFormFieldsToRules(form: MerchantRewardFormValues): RewardRules
 export function mapMerchantCreateRewardFormToInput(form: MerchantCreateRewardFormValues, category: RewardCategory): MerchantCreateRewardInput {
 	const locationScopeType = form.locationScopeType ?? "ALL_LOCATIONS";
 	const locationIds = form.locationIds ?? [];
+	const audience = rewardAudienceOfForm(form);
 
 	return {
 		title: form.title,
 		description: form.description,
 		rewardType: form.rewardType,
 		rewardValue: form.rewardValue,
+		...(rewardTypeGivesFreeItem(form.rewardType) && form.freeItem !== undefined ? { freeItem: form.freeItem } : {}),
 		termsConditions: form.termsConditions,
 		category,
 		imageFileIds: form.imageFileIds,
@@ -228,7 +280,17 @@ export function mapMerchantCreateRewardFormToInput(form: MerchantCreateRewardFor
 		saveAsDraft: form.saveAsDraft,
 		locationScopeType,
 		locationIds: locationScopeType === "SELECTED" ? locationIds : [],
+		audienceType: audience.audienceType,
+		audienceCustomerIds: audience.audienceCustomerIds,
 	};
+}
+
+/** The form's audience as the API takes it: nothing chosen means everyone. */
+function rewardAudienceOfForm(form: MerchantRewardFormValues): { readonly audienceType: RewardAudienceType; readonly audienceCustomerIds: string[] } {
+	const audienceCustomerIds = form.audienceCustomerIds ?? [];
+	return form.audienceType === "SELECTED_CUSTOMERS" && audienceCustomerIds.length > 0
+		? { audienceType: "SELECTED_CUSTOMERS", audienceCustomerIds: [...audienceCustomerIds] }
+		: { audienceType: "EVERYONE", audienceCustomerIds: [] };
 }
 
 export function mapMerchantUpdateRewardFormToInput(form: MerchantRewardFormValues): MerchantUpdateRewardInput {
@@ -237,16 +299,19 @@ export function mapMerchantUpdateRewardFormToInput(form: MerchantRewardFormValue
 		description: form.description,
 		rewardType: form.rewardType,
 		rewardValue: form.rewardValue,
+		freeItem: rewardTypeGivesFreeItem(form.rewardType) ? (form.freeItem ?? null) : null,
 		termsConditions: form.termsConditions ?? null,
 		imageFileIds: form.imageFileIds,
 		quantityTotal: form.quantityTotal,
 		startDate: parseRewardDateInputToEpochMs(form.startDate),
 		expiryDate: parseRewardDateInputToEpochMs(form.expiryDate),
 		rules: mapRewardFormFieldsToRules(form),
+		...rewardAudienceOfForm(form),
 	};
 }
 
-export function mapRewardResponseToFormValues(reward: RewardResponse): MerchantRewardFormValues {
+/** The reward as the editor loads it; `audienceCustomerIds` come from the reward's audience (`GET …/rewards/:rewardId/audience`). */
+export function mapRewardResponseToFormValues(reward: RewardResponse, audienceCustomerIds: readonly string[] = []): MerchantRewardFormValues {
 	const todayFallback = epochMsToDateInput(EpochMsSchema.parse(Date.now()), "1970-01-01");
 	const rules = reward.rules;
 
@@ -256,12 +321,15 @@ export function mapRewardResponseToFormValues(reward: RewardResponse): MerchantR
 		description: reward.description,
 		imageFileIds: reward.images.map((image) => image.fileId),
 		rewardValue: reward.rewardValue,
+		...(reward.freeItem === null ? {} : { freeItem: { name: reward.freeItem.name, sku: reward.freeItem.sku } }),
 		minPurchase: rules?.minSpendMyr,
 		termsConditions: reward.termsConditions ?? undefined,
 		startDate: epochMsToDateInput(reward.startDate, todayFallback),
 		expiryDate: epochMsToDateInput(reward.expiryDate, todayFallback),
 		quantityTotal: reward.quantityTotal,
 		maxClaimsPerUser: rules?.maxUsePerUser ?? 1,
+		audienceType: reward.audienceType,
+		audienceCustomerIds: reward.audienceType === "SELECTED_CUSTOMERS" ? [...audienceCustomerIds] : [],
 	};
 }
 
@@ -271,6 +339,8 @@ export const MerchantUpdateRewardSchema = z
 		description: RewardDescriptionSchema.optional(),
 		rewardType: RewardTypeSchema.optional(),
 		rewardValue: RewardValueSchema.optional(),
+		/** The item a `FREE_ITEM` / `BOGO` reward gives; null for any other type. Absent: unchanged (a type change away from an item type drops it). */
+		freeItem: RewardFreeItemSchema.nullable().optional(),
 		termsConditions: RewardTermsSchema.nullable().optional(),
 		imageFileIds: RewardImageFileIdsSchema.optional(),
 		quantityTotal: RewardQuantitySchema.optional(),
@@ -280,14 +350,22 @@ export const MerchantUpdateRewardSchema = z
 		referralPoolTotal: RewardReferralPoolSchema.optional(),
 		referrerRewardTitle: RewardTitleSchema.optional(),
 		rules: RewardRulesSchema.optional(),
+		/** Sent together: who the reward is for from now on (customers removed keep the claims they made). */
+		audienceType: RewardAudienceTypeSchema.optional(),
+		audienceCustomerIds: RewardAudienceCustomerIdsSchema.optional(),
 	})
-	.strict();
+	.strict()
+	.superRefine((value, ctx) => {
+		if (value.audienceCustomerIds !== undefined && value.audienceType === undefined) {
+			ctx.addIssue({ code: "custom", message: "Send audienceType with audienceCustomerIds", path: ["audienceType"] });
+		}
+		refineRewardAudience(value, ctx);
+		refineRewardFreeItem(value, ctx);
+	});
 
 export type MerchantUpdateRewardInput = z.output<typeof MerchantUpdateRewardSchema>;
 
-export const MerchantUpdateRewardPathInputSchema = MerchantUpdateRewardSchema.extend({
-	rewardId: z.uuid(),
-}).strict();
+export const MerchantUpdateRewardPathInputSchema = z.intersection(z.object({ rewardId: z.uuid() }).strict(), MerchantUpdateRewardSchema);
 
 export type MerchantUpdateRewardPathInput = z.output<typeof MerchantUpdateRewardPathInputSchema>;
 
@@ -427,6 +505,8 @@ export const RewardResponseSchema = BaseResponseSchema.extend({
 	description: z.string(),
 	rewardType: RewardTypeSchema,
 	rewardValue: z.number().int().nonnegative(),
+	/** The item a `FREE_ITEM` / `BOGO` reward gives (its name and the merchant's SKU); null for any other type. */
+	freeItem: RewardFreeItemResponseSchema.nullable(),
 	termsConditions: z.string().nullable(),
 	rewardKind: RewardKindSchema,
 	category: z.string(),
@@ -453,9 +533,39 @@ export const RewardResponseSchema = BaseResponseSchema.extend({
 	locationScopeType: LocationScopeTypeSchema,
 	locationIds: z.array(z.uuid()),
 	locationNames: z.array(z.string()).optional(),
+	/** `SELECTED_CUSTOMERS`: only the customers it was given to see and claim it (the list: `GET …/rewards/:rewardId/audience`, tenant only). */
+	audienceType: RewardAudienceTypeSchema,
 });
 
 export type RewardResponse = z.output<typeof RewardResponseSchema>;
+
+/** One of the tenant's customers as a merchant sees them: a name and a masked email, never the full address. */
+export const RewardCustomerSchema = z.object({
+	userId: z.uuid(),
+	fullName: z.string(),
+	maskedEmail: z.string().nullable(),
+	lastClaimedAt: EpochMsSchema,
+	claimCount: z.number().int().nonnegative(),
+});
+export type RewardCustomer = z.output<typeof RewardCustomerSchema>;
+
+/** Who a reward is for (tenant only): everyone, or the customers it was given to. */
+export const RewardAudienceResponseSchema = z.object({
+	audienceType: RewardAudienceTypeSchema,
+	customers: z.array(RewardCustomerSchema).max(REWARD_MAX_AUDIENCE_CUSTOMERS),
+});
+export type RewardAudienceResponse = z.output<typeof RewardAudienceResponseSchema>;
+
+/** `GET /tenants/:tenantSlug/rewards/customers`: the tenant's customers, to give a reward to (search by name or email). */
+export const rewardCustomerListQuery = defineListQuery({
+	sortable: ["lastClaimedAt", "claimCount"],
+	defaultSort: [{ field: "lastClaimedAt", direction: "desc" }],
+	filter: { lastClaimedAt: listFilter.epochMs({ gte: true, lte: true }) },
+	params: { search: ListSearchSchema },
+	defaultLimit: 20,
+});
+export const RewardCustomerListQuerySchema = rewardCustomerListQuery.schema;
+export type RewardCustomerListQuery = z.output<typeof RewardCustomerListQuerySchema>;
 
 export const RewardPlatformEventSchema = z
 	.object({

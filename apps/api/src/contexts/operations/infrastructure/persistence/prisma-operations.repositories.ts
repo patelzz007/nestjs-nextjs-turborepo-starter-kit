@@ -33,12 +33,14 @@ import {
 	type LoadTestCaps,
 } from "@workspace/shared";
 
+import { ADMIN_PANEL_ROLE_NAMES } from "../../../authorization/public-api";
 import type { Breach } from "../../domain/policies/alert-rules.policy";
 import type {
 	InstanceIdentity,
 	LoadTestRepository,
 	LoadTestRunRecord,
 	NewLoadTestRun,
+	OpsAlertRecipient,
 	OpsAlertRecipientsReader,
 	OpsAlertRepository,
 	OpsBackupRecord,
@@ -602,17 +604,26 @@ export class PrismaOpsSettingsRepository implements OpsSettingsRepository {
 	}
 }
 
-/** The SuperAdmins: the `isSuperAdmin` flag, active and not deleted, never a load-test user. */
+/**
+ * Who the operations alerts go to: active, not deleted, never a load-test user, and either flagged
+ * `isSuperAdmin` or holding a platform role of the admin panel (SuperAdmin, Admin, Platform Developer —
+ * a platform role is a role with no tenant, still live).
+ */
 export class PrismaOpsAlertRecipientsReader implements OpsAlertRecipientsReader {
 	public constructor(private readonly db: Db) {}
 
-	public async superAdminEmails(): Promise<readonly string[]> {
+	public async alertRecipients(): Promise<readonly OpsAlertRecipient[]> {
 		const rows = await this.db.user.findMany({
-			where: { isSuperAdmin: true, isActive: true, isLoadTestUser: false, ...LIVE },
-			select: { email: true },
+			where: {
+				isActive: true,
+				isLoadTestUser: false,
+				...LIVE,
+				OR: [{ isSuperAdmin: true }, { userRoles: { some: { ...LIVE, role: { name: { in: [...ADMIN_PANEL_ROLE_NAMES] }, tenantId: null, ...LIVE } } } }],
+			},
+			select: { id: true, email: true },
 			orderBy: { email: "asc" },
 		});
-		return rows.map((row) => row.email);
+		return rows.map((row): OpsAlertRecipient => ({ userId: row.id, email: row.email }));
 	}
 }
 

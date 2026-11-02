@@ -9,16 +9,13 @@ import { OkResponseSchema } from "../../schemas/api/message";
 import { UuidParamSchema } from "../../schemas/domain/platform/param-schemas";
 import {
 	CreateRewardClaimSchema,
-	MarkRewardNotificationsReadSchema,
 	RequestClaimOtpSchema,
 	RewardClaimCreatedResponseSchema,
 	RewardClaimListQuerySchema,
 	RewardClaimQrResponseSchema,
 	RewardClaimResponseSchema,
-	RewardNotificationListQuerySchema,
-	RewardNotificationResponseSchema,
 } from "./schemas/claim";
-import { claimsRoutes, rewardNotificationsRoutes } from "./routes";
+import { claimsRoutes } from "./routes";
 
 /** Contract leaves composed into `apiContract.claims`. */
 export const claimsContract = {
@@ -39,15 +36,4 @@ export const claimsContract = {
 		input: z.object({ claimId: UuidParamSchema }).strict(),
 		response: singleResponse(RewardClaimQrResponseSchema),
 	}),
-};
-
-/** Contract leaves composed into `apiContract.rewardNotifications`. */
-export const rewardNotificationsContract = {
-	list: defineContract({
-		method: "GET",
-		path: rewardNotificationsRoutes.list,
-		input: RewardNotificationListQuerySchema,
-		response: paginatedResponse(RewardNotificationResponseSchema),
-	}),
-	read: defineContract({ method: "POST", path: rewardNotificationsRoutes.read, input: MarkRewardNotificationsReadSchema, response: singleResponse(OkResponseSchema) }),
 };

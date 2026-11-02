@@ -2,6 +2,7 @@
 
 import { useWebBreadcrumb } from "@/components/breadcrumb-provider";
 import CommandPaletteClientOnly from "@/components/layout/command-palette.client-only";
+import { ROUTES } from "@/lib/routes";
 import { ShellTopbar } from "@workspace/client/lib/features/navigation/shell-topbar";
 import type * as React from "react";
 
@@ -11,5 +12,5 @@ import type * as React from "react";
  */
 export function WebTopbar(): React.JSX.Element {
 	const { status } = useWebBreadcrumb();
-	return <ShellTopbar breadcrumbStatus={status} commandPalette={CommandPaletteClientOnly} />;
+	return <ShellTopbar breadcrumbStatus={status} commandPalette={CommandPaletteClientOnly} notificationsHref={ROUTES.dashboard.notifications} />;
 }

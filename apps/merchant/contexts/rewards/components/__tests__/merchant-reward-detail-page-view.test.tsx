@@ -15,8 +15,9 @@ import { epochMs, type RewardResponse } from "@workspace/shared";
 
 const REWARD_ID = "0b6e2c1a-3d4f-4a5b-8c9d-1e2f3a4b5c6d";
 
-const { rewardQuery, publishMutation, publish } = vi.hoisted(() => ({
+const { rewardQuery, audienceQuery, publishMutation, publish } = vi.hoisted(() => ({
 	rewardQuery: vi.fn(),
+	audienceQuery: vi.fn(),
 	publishMutation: vi.fn(),
 	publish: vi.fn(),
 }));
@@ -25,7 +26,7 @@ vi.mock("@workspace/client/lib/contexts/identity", () => ({
 	useAuth: (): object => ({
 		api: {
 			tenants: {
-				rewards: { get: { useQuery: rewardQuery }, publish: { useMutation: publishMutation } },
+				rewards: { get: { useQuery: rewardQuery }, audience: { useQuery: audienceQuery }, publish: { useMutation: publishMutation } },
 				context: { useQuery: (): object => contextQueryState(TWO_STORE_CONTEXT) },
 				listMembers: { useQuery: (): object => ({ data: { data: [] }, isLoading: false }) },
 			},
@@ -58,6 +59,7 @@ const DRAFT: RewardResponse = rewardFixture({
 	description: "One free latte with any breakfast set.",
 	rewardType: "DISCOUNT",
 	rewardValue: 20,
+	freeItem: null,
 	termsConditions: "Dine-in only.",
 	startDate: epochMs(1_793_491_200_000),
 	quantityTotal: 100,
@@ -81,6 +83,7 @@ beforeEach((): void => {
 	vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 	rewardReturns({ data: { data: DRAFT }, isSuccess: true });
 	publishMutation.mockReturnValue({ mutate: publish, isPending: false });
+	audienceQuery.mockReturnValue({ data: undefined });
 });
 
 afterEach((): void => {
@@ -117,6 +120,45 @@ describe("MerchantRewardDetailPageView", () => {
 		expect(details.getByText(/^RM\s?30\.00$/u)).toBeTruthy();
 		expect(details.getByText("Bukit Katil").getAttribute("title")).toBe("Jonker Street Kitchen — Bukit Katil");
 		expect(within(screen.getByRole("region", { name: "Terms and conditions" })).getByText("Dine-in only.")).toBeTruthy();
+	});
+
+	it("names a free item reward's item and its SKU, and no item for a discount", () => {
+		renderPage();
+		expect(within(screen.getByRole("region", { name: "Details" })).queryByText("Free item")).toBeNull();
+		cleanup();
+
+		rewardReturns({ data: { data: { ...DRAFT, rewardType: "FREE_ITEM", rewardValue: 1, freeItem: { name: "Latte (12 oz)", sku: "BEV-LATTE-12OZ" } } }, isSuccess: true });
+		renderPage();
+		const row = within(screen.getByRole("region", { name: "Details" })).getByText("Free item").nextElementSibling;
+		expect(row?.textContent).toBe("Latte (12 oz) · SKU BEV-LATTE-12OZ");
+	});
+
+	it("says who can claim: everyone, without reading an audience", () => {
+		renderPage();
+		const details = within(screen.getByRole("region", { name: "Details" }));
+
+		expect(details.getByText("Who can claim").nextElementSibling?.textContent).toBe("Everyone");
+		expect(audienceQuery).toHaveBeenCalledWith({ tenantSlug: TEST_ORG_SLUG, rewardId: REWARD_ID }, { enabled: false });
+	});
+
+	it("names the chosen customers of a private reward", () => {
+		rewardReturns({ data: { data: rewardFixture({ ...DRAFT, audienceType: "SELECTED_CUSTOMERS" }) }, isSuccess: true });
+		audienceQuery.mockReturnValue({
+			data: {
+				data: {
+					audienceType: "SELECTED_CUSTOMERS",
+					customers: [
+						{ userId: "a", fullName: "Alice", maskedEmail: null, lastClaimedAt: 0, claimCount: 1 },
+						{ userId: "b", fullName: "Bob", maskedEmail: null, lastClaimedAt: 0, claimCount: 1 },
+					],
+				},
+			},
+		});
+		renderPage();
+		const details = within(screen.getByRole("region", { name: "Details" }));
+
+		expect(details.getByText("2 chosen customers")).toBeTruthy();
+		expect(details.getByText("Alice, Bob")).toBeTruthy();
 	});
 
 	it("submits a draft for review from the page", () => {

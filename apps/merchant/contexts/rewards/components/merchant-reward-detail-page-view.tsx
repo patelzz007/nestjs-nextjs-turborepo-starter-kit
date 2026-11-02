@@ -6,6 +6,7 @@ import { MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-statu
 import { RewardPageBackLink } from "@/contexts/rewards/components/merchant-reward-editor-layout";
 import { MerchantRewardUnavailable } from "@/contexts/rewards/components/merchant-reward-unavailable";
 import { RewardStockMeter } from "@/contexts/rewards/components/reward-stock-meter";
+import { describeRewardAudience } from "@/contexts/rewards/lib/reward-audience";
 import { describeRewardStores, isRewardEnded } from "@/contexts/rewards/lib/presentation";
 import { applyMerchantRewardChange } from "@/contexts/rewards/lib/query-cache";
 import { describeRewardStatusNote, formatRewardClaimLimit, formatRewardMinimumSpend, formatRewardRunDates } from "@/contexts/rewards/lib/reward-detail";
@@ -90,6 +91,29 @@ function Stat({ label, value }: StatProps): React.JSX.Element {
 			<dt className="order-last text-sm text-muted-foreground">{label}</dt>
 			<dd className="text-2xl font-semibold tracking-tight text-foreground tabular-nums">{formatCount(value, PLATFORM_DISPLAY_REGION.locale)}</dd>
 		</div>
+	);
+}
+
+/** Shown in place of names that are still loading. */
+const AUDIENCE_LOADING_LABEL = "Chosen customers";
+
+/** Who can claim: "Everyone", or the chosen customers by name (read only for a private reward). */
+function RewardAudienceSummary({ tenantSlug, reward }: MerchantRewardDetailProps): React.JSX.Element {
+	const { api } = useAuth();
+	const isTargeted = reward.audienceType === "SELECTED_CUSTOMERS";
+	const audienceQuery = api.tenants.rewards.audience.useQuery({ tenantSlug, rewardId: reward.id }, { enabled: isTargeted });
+	if (!isTargeted) {
+		return <>{describeRewardAudience("EVERYONE", 0)}</>;
+	}
+	const customers = audienceQuery.data?.data.customers;
+	if (customers === undefined) {
+		return <>{AUDIENCE_LOADING_LABEL}</>;
+	}
+	return (
+		<span className="flex flex-col gap-1">
+			<span>{describeRewardAudience("SELECTED_CUSTOMERS", customers.length)}</span>
+			<span className="text-muted-foreground">{customers.map((customer) => customer.fullName).join(", ")}</span>
+		</span>
 	);
 }
 
@@ -211,8 +235,16 @@ function MerchantRewardDetail({ tenantSlug, reward }: MerchantRewardDetailProps)
 							<DetailRow term="Runs">{formatRewardRunDates(reward)}</DetailRow>
 							<DetailRow term="Each customer">{formatRewardClaimLimit(reward.rules)}</DetailRow>
 							<DetailRow term="Minimum spend">{formatRewardMinimumSpend(reward.rules)}</DetailRow>
+							{reward.freeItem === null ? null : (
+								<DetailRow term="Free item">
+									{reward.freeItem.name} <span className="font-mono text-muted-foreground">· SKU {reward.freeItem.sku}</span>
+								</DetailRow>
+							)}
 							<DetailRow term="Stores">
 								<span title={stores.fullLabel}>{stores.label}</span>
+							</DetailRow>
+							<DetailRow term="Who can claim">
+								<RewardAudienceSummary tenantSlug={tenantSlug} reward={reward} />
 							</DetailRow>
 							<DetailRow term="Category">
 								<span className="capitalize">{reward.category}</span>

@@ -10,6 +10,7 @@ import { TENANT_SEED_IDS } from "../prisma/seed/tenants";
 import { rewardCoverImageSeedId } from "../prisma/seed/reward-images";
 import { Reward } from "../src/contexts/rewards/domain/aggregates/reward.aggregate";
 import type { ReferrerRewardSnapshot, RewardSnapshot } from "../src/contexts/rewards/domain/aggregates/reward.state";
+import { RewardAudience } from "../src/contexts/rewards/domain/value-objects/reward-audience.value-object";
 import { RewardLocationScope } from "../src/contexts/rewards/domain/value-objects/reward-location-scope.value-object";
 import { RewardRulesValue } from "../src/contexts/rewards/domain/value-objects/reward-rules.value-object";
 import { PrismaRewardRepository } from "../src/contexts/rewards/infrastructure/persistence/prisma-reward.repository";
@@ -53,7 +54,7 @@ describe("Reward creation atomicity (e2e)", () => {
 				tenantId: TENANT_SEED_IDS.klTenant,
 				title: "E2E atomic reward",
 				description: "Created by reward-create-atomicity.e2e-spec.ts",
-				offer: { rewardType: "FREE_ITEM", rewardValue: 0, termsConditions: null, category: "cafe" },
+				offer: { rewardType: "FREE_ITEM", rewardValue: 1, freeItem: { name: "Latte", sku: "E2E-LATTE" }, termsConditions: null, category: "cafe" },
 				rules: RewardRulesValue.none(),
 				quantityTotal: 5,
 				startDate: null,
@@ -63,6 +64,7 @@ describe("Reward creation atomicity (e2e)", () => {
 				referrerRewardTitle: null,
 				saveAsDraft: true,
 				locationScope: RewardLocationScope.allLocations(),
+				audience: RewardAudience.everyone(),
 				imageFileIds: [rewardCoverImageSeedId("free-coffee")],
 			},
 			epochMs(Date.now()),

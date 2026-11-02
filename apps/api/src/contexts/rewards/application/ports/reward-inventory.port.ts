@@ -11,11 +11,14 @@ export type { ClaimableRewardFacts, ReferrerCreditFacts };
  * stock method, and saves it.
  */
 export interface RewardInventoryPort {
-	/** Whether a consumer may start a claim; throws `RewardNotFoundError` / `RewardExpiredError` / `RewardSoldOutError`. */
-	assertClaimable(rewardId: string, now: EpochMs): Promise<ClaimableRewardFacts>;
+	/**
+	 * Whether `customerUserId` may start a claim; throws `RewardNotFoundError` (also for a reward given
+	 * to other customers) / `RewardExpiredError` / `RewardSoldOutError`.
+	 */
+	assertClaimable(rewardId: string, now: EpochMs, customerUserId: string): Promise<ClaimableRewardFacts>;
 
-	/** Takes one unit for a new claim; throws `RewardJustSoldOutError` when it cannot. */
-	reserve(rewardId: string, now: EpochMs): Promise<ClaimableRewardFacts>;
+	/** Takes one unit for `customerUserId`'s new claim; throws `RewardJustSoldOutError` when it cannot. */
+	reserve(rewardId: string, now: EpochMs, customerUserId: string): Promise<ClaimableRewardFacts>;
 
 	/** Gives an expired claim's unit back. */
 	release(rewardId: string, now: EpochMs): Promise<void>;

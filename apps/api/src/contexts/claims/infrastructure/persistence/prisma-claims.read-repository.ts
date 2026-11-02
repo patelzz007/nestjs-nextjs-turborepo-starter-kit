@@ -1,19 +1,12 @@
-import type { Prisma, RewardNotification } from "@prisma/client";
-import type { PaginatedServiceResult, RewardClaimListQuery, RewardClaimResponse, RewardNotificationListQuery, RewardNotificationResponse } from "@workspace/shared";
+import type { Prisma } from "@prisma/client";
+import type { PaginatedServiceResult, RewardClaimListQuery, RewardClaimResponse } from "@workspace/shared";
 
 import type { ActorContext } from "../../../../platform/application/actor-context";
 import { fetchListPage, mapListResult, toPaginatedServiceResult } from "../../../../platform/infrastructure/persistence/list-page";
 import type { PrismaReadExecutor } from "../../../../platform/infrastructure/unit-of-work/prisma-read-executor";
-import type { ClaimReadPort, RewardNotificationReadPort } from "../../application/ports/claims-read.port";
-import {
-	buildRewardClaimListOrder,
-	buildRewardClaimListWhere,
-	buildRewardNotificationListOrder,
-	buildRewardNotificationListWhere,
-	REWARD_CLAIM_LIST_KEYSET,
-	REWARD_NOTIFICATION_LIST_KEYSET,
-} from "./claim-list-queries";
-import { toRewardClaimResponse, toRewardNotificationResponse } from "./claim-row.mappers";
+import type { ClaimReadPort } from "../../application/ports/claims-read.port";
+import { buildRewardClaimListOrder, buildRewardClaimListWhere, REWARD_CLAIM_LIST_KEYSET } from "./claim-list-queries";
+import { toRewardClaimResponse } from "./claim-row.mappers";
 
 const CLAIM_WITH_REWARD_TITLE = { reward: { select: { title: true } } } satisfies Prisma.RewardClaimInclude;
 
@@ -49,20 +42,3 @@ export class PrismaClaimReadRepository implements ClaimReadPort {
 }
 
 /** The customer's reward inbox, one page at a time (the unread badge is the same list filtered to `readAt` null). */
-export class PrismaRewardNotificationReadRepository implements RewardNotificationReadPort {
-	public constructor(private readonly reads: PrismaReadExecutor<Prisma.TransactionClient>) {}
-
-	public async listForUser(actor: ActorContext, userId: string, query: RewardNotificationListQuery): Promise<PaginatedServiceResult<RewardNotificationResponse>> {
-		return this.reads.read(actor, async (db: Prisma.TransactionClient): Promise<PaginatedServiceResult<RewardNotificationResponse>> => {
-			const page = await fetchListPage(query, {
-				where: buildRewardNotificationListWhere(userId, query),
-				order: buildRewardNotificationListOrder(query),
-				keyset: REWARD_NOTIFICATION_LIST_KEYSET,
-				and: (left: Prisma.RewardNotificationWhereInput, right: Prisma.RewardNotificationWhereInput): Prisma.RewardNotificationWhereInput => ({ AND: [left, right] }),
-				count: (where: Prisma.RewardNotificationWhereInput): Promise<number> => db.rewardNotification.count({ where }),
-				findMany: (args): Promise<RewardNotification[]> => db.rewardNotification.findMany(args),
-			});
-			return toPaginatedServiceResult(mapListResult(page, toRewardNotificationResponse), query);
-		});
-	}
-}

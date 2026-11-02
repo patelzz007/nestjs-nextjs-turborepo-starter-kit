@@ -41,6 +41,8 @@ const ALL_LOCATIONS_DEFAULTS: RewardEditorInput = {
 	description: "",
 	imageFileIds: [],
 	rewardValue: "0",
+	freeItemName: "",
+	freeItemSku: "",
 	minPurchase: "",
 	termsConditions: "",
 	startDate: "2026-11-01",
@@ -49,6 +51,8 @@ const ALL_LOCATIONS_DEFAULTS: RewardEditorInput = {
 	maxClaimsPerUser: 1,
 	locationScopeType: "ALL_LOCATIONS",
 	locationIds: [],
+	audienceType: "EVERYONE",
+	audienceCustomerIds: [],
 };
 
 /** This section never saves. */

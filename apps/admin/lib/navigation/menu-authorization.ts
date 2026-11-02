@@ -46,6 +46,11 @@ export const ADMIN_MENU_AUTHORIZATION: ReadonlyMap<string, SidebarAuthorization>
 	[ROUTES.operations.servers, { permissions: [PERMISSION.SERVER_METRIC.LIST] }],
 	[ROUTES.operations.alerts, { permissions: [PERMISSION.SERVER_METRIC.LIST] }],
 	[ROUTES.operations.loadTests, { permissions: [PERMISSION.LOAD_TEST.LIST] }],
+	// GET /admin/operations/rate-limits (LIST RATE_LIMIT) · GET /admin/operations/cache (READ CACHE)
+	[ROUTES.operations.rateLimits, { permissions: [PERMISSION.RATE_LIMIT.LIST] }],
+	[ROUTES.operations.cache, { permissions: [PERMISSION.CACHE.READ] }],
+	// GET /admin/broadcasts (LIST BROADCAST)
+	[ROUTES.emails.broadcasts, { permissions: [PERMISSION.BROADCAST.LIST] }],
 	// GET /github/account (READ GITHUB_PULL_REQUEST) · PUT + DELETE /github/account (UPDATE GITHUB_PULL_REQUEST)
 	[ROUTES.account.github, { permissions: [PERMISSION.GITHUB_PULL_REQUEST.READ, PERMISSION.GITHUB_PULL_REQUEST.UPDATE], mode: "all" }],
 ]);

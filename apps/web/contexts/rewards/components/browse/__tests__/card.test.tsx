@@ -93,3 +93,17 @@ describe("RewardCard action", () => {
 		expect(action.querySelector("svg")).toBeNull();
 	});
 });
+
+describe("RewardCard audience", () => {
+	it("marks a reward the merchant gave the viewer as just for them", () => {
+		render(<RewardCard reward={buildRewardResponse({ audienceType: "SELECTED_CUSTOMERS" })} />);
+
+		expect(screen.getByText("Just for you")).toBeDefined();
+	});
+
+	it("carries no such mark on a reward for everyone", () => {
+		render(<RewardCard reward={buildRewardResponse({ audienceType: "EVERYONE" })} />);
+
+		expect(screen.queryByText("Just for you")).toBeNull();
+	});
+});

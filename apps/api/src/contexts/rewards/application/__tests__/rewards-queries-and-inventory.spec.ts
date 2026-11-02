@@ -21,12 +21,18 @@ import { AuthenticationError, ConflictError } from "../../../../platform/applica
 import type { MerchantAccessGrant } from "../../../../platform/application/ports/authorization.port";
 import { AuthorizationDeniedError } from "../../../../platform/domain/errors/authorization-denied.error";
 import { RewardImageNotFoundError, RewardJustSoldOutError, RewardNotFoundError, RewardReservationMissingError } from "../../domain/errors/reward.errors";
-import { NOW, TENANT_ID, REFERRER_ID, referrerRow, REWARD_ID, rewardState, STORE_A } from "../../domain/__tests__/reward-state.fixture";
+import { CUSTOMER_ID, NOW, REFERRER_ID, referrerRow, REWARD_ID, rewardState, STORE_A, TENANT_ID } from "../../domain/__tests__/reward-state.fixture";
 import { AcceptLegalTermsCommand } from "../commands/accept-legal-terms/accept-legal-terms.command";
 import { AcceptLegalTermsHandler } from "../commands/accept-legal-terms/accept-legal-terms.handler";
 import type { DueForAutoPublish, LegalAcceptanceReadPort, RewardImageDeliveryPort, RewardImagesArchive, RewardReadPort } from "../ports/reward-read.port";
 import { GetLegalAcceptanceStatusQuery } from "../queries/get-legal-acceptance-status/get-legal-acceptance-status.query";
 import { GetLegalAcceptanceStatusHandler } from "../queries/get-legal-acceptance-status/get-legal-acceptance-status.handler";
+import { GetRewardAudienceHandler } from "../queries/get-reward-audience/get-reward-audience.handler";
+import { GetRewardAudienceQuery } from "../queries/get-reward-audience/get-reward-audience.query";
+import { ListRewardCustomersHandler } from "../queries/list-reward-customers/list-reward-customers.handler";
+import { ListRewardCustomersQuery } from "../queries/list-reward-customers/list-reward-customers.query";
+import { RewardAudience } from "../../domain/value-objects/reward-audience.value-object";
+import { REWARD_CUSTOMERS_READ_OPERATION } from "../ports/rewards.tokens";
 import { GetTenantRewardQuery } from "../queries/get-tenant-reward/get-tenant-reward.query";
 import { GetTenantRewardHandler } from "../queries/get-tenant-reward/get-tenant-reward.handler";
 import { GetPublishedRewardQuery } from "../queries/get-published-reward/get-published-reward.query";
@@ -236,11 +242,11 @@ describe("RewardInventoryApplicationService", () => {
 		const scope = fakeRewardsScope();
 		scope.rewards.seed(rewardState("PUBLISHED", { inventory: { quantityTotal: 1, quantityRemaining: 1, quantityReserved: 0, claimCount: 0, redemptionCount: 0 } }));
 		const inventory = new RewardInventoryApplicationService(scope.rewards);
-		const facts = await inventory.reserve(REWARD_ID, NOW);
+		const facts = await inventory.reserve(REWARD_ID, NOW, CUSTOMER_ID);
 		expect(facts.rewardId).toBe(REWARD_ID);
 		expect(scope.rewards.lockedForInventory).toEqual([REWARD_ID]);
 		expect(scope.rewards.rows.get(REWARD_ID)?.inventory).toMatchObject({ quantityRemaining: 0, quantityReserved: 1, claimCount: 1 });
-		await expect(inventory.reserve(REWARD_ID, NOW)).rejects.toThrow(RewardJustSoldOutError);
+		await expect(inventory.reserve(REWARD_ID, NOW, CUSTOMER_ID)).rejects.toThrow(RewardJustSoldOutError);
 	});
 
 	it("releases and records redemptions, refusing either without a reserved unit", async () => {
@@ -257,10 +263,10 @@ describe("RewardInventoryApplicationService", () => {
 		const scope = fakeRewardsScope();
 		scope.rewards.seed(rewardState("PUBLISHED"));
 		const inventory = new RewardInventoryApplicationService(scope.rewards);
-		await expect(inventory.assertClaimable(REWARD_ID, NOW)).resolves.toMatchObject({ rewardId: REWARD_ID, maxClaimsPerUser: null });
+		await expect(inventory.assertClaimable(REWARD_ID, NOW, CUSTOMER_ID)).resolves.toMatchObject({ rewardId: REWARD_ID, maxClaimsPerUser: null });
 		expect(scope.rewards.lockedForInventory).toEqual([]);
 		scope.rewards.forceConflictOnNextSave();
-		await expect(inventory.reserve(REWARD_ID, NOW)).rejects.toThrow(ConflictError);
+		await expect(inventory.reserve(REWARD_ID, NOW, CUSTOMER_ID)).rejects.toThrow(ConflictError);
 	});
 	it("locks a checkout's live rewards and their referrer children in one id-ordered pass, skipping unknown ids", async () => {
 		const scope = fakeRewardsScope();
@@ -296,5 +302,43 @@ describe("RewardInventoryApplicationService", () => {
 		await expect(inventory.creditReferral(REWARD_ID, NOW)).resolves.toBeNull();
 
 		expect(scope.rewards.saved).toEqual([]);
+	});
+});
+
+describe("the customers a reward is given to", () => {
+	const BOB = "0199a1b2-0000-7000-8000-0000000000b2";
+	const customer = (userId: string, fullName: string): { userId: string; fullName: string; maskedEmail: string; lastClaimedAt: number; claimCount: number } => ({
+		userId,
+		fullName,
+		maskedEmail: `${fullName.slice(0, 1).toLowerCase()}•••@example.com`,
+		lastClaimedAt: NOW,
+		claimCount: 1,
+	});
+
+	it("lists the tenant's customers by name and masked email, under the customer-read operation", async () => {
+		const scope = fakeRewardsScope();
+		scope.customers.add(customer(CUSTOMER_ID, "Alice"), customer(BOB, "Bob"));
+		const uow = new InMemoryUnitOfWork<RewardsScope>(scope);
+		const access = new FakeMerchantAccessPort();
+		const page = await new ListRewardCustomersHandler(access, uow).execute(
+			new ListRewardCustomersQuery(userActor(), { tenantId: TENANT_ID, search: "bo", page: 1, limit: 20, sort: undefined, filter: undefined }),
+		);
+
+		expect(page.items).toEqual([{ userId: BOB, fullName: "Bob", maskedEmail: "b•••@example.com", lastClaimedAt: epochMs(NOW), claimCount: 1 }]);
+		expect(access.requests.at(0)?.request).toEqual({ tenantId: TENANT_ID, capability: "merchant:manage_rewards" });
+		expect(uow.committed.map((entry) => entry.operation)).toEqual([REWARD_CUSTOMERS_READ_OPERATION]);
+	});
+
+	it("answers who a reward was given to, and 404 for a reward the caller may not see", async () => {
+		const scope = fakeRewardsScope();
+		scope.customers.add(customer(CUSTOMER_ID, "Alice"), customer(BOB, "Bob"));
+		scope.rewards.seed(rewardState("DRAFT", { audience: RewardAudience.selected([BOB]) }));
+		const handler = new GetRewardAudienceHandler(new FakeMerchantAccessPort(), new FixedRewardReads([VISIBLE]), new InMemoryUnitOfWork<RewardsScope>(scope));
+
+		await expect(handler.execute(new GetRewardAudienceQuery(userActor(), { tenantId: TENANT_ID, rewardId: REWARD_ID }))).resolves.toEqual({
+			audienceType: "SELECTED_CUSTOMERS",
+			customers: [{ userId: BOB, fullName: "Bob", maskedEmail: "b•••@example.com", lastClaimedAt: epochMs(NOW), claimCount: 1 }],
+		});
+		await expect(handler.execute(new GetRewardAudienceQuery(userActor(), { tenantId: TENANT_ID, rewardId: OTHER_REWARD_ID }))).rejects.toThrow(RewardNotFoundError);
 	});
 });

@@ -3,9 +3,11 @@
 // shows the language and a caption, and a copy button when the caller passes
 // `onCopy`. The kit never touches the clipboard: the caller copies (expo-clipboard
 // in the app) and says so through `copied`, which swaps the glyph and the name.
+// `showLineNumbers` adds a gutter that stays put while the code scrolls; the
+// numbers are never selected or copied with the code, nor read out.
 //
 //   ┌ TYPESCRIPT · auth.ts ───────── ⧉ ┐   header: language, caption, copy
-//   │ const token = await signIn(…);  →│   code: scrolls sideways
+//   │ 1 │ const token = await signIn(…→│   gutter (optional) · code: scrolls sideways
 //   └──────────────────────────────────┘
 
 import { cva, type VariantProps } from "class-variance-authority";
@@ -38,6 +40,25 @@ export const codeBlockTextVariants = cva("font-mono text-foreground", {
 	defaultVariants: { size: "md" },
 });
 
+/** The gutter beside the code: the same type and padding, so each number sits on its line. */
+export const codeBlockGutterVariants = cva("border-r border-border text-right font-mono text-muted-foreground", {
+	variants: {
+		size: {
+			sm: "py-2 pr-2 pl-3 text-xs",
+			md: "py-3 pr-3 pl-4 text-sm",
+		},
+	},
+	defaultVariants: { size: "md" },
+});
+
+/** The gutter's text: one number per line of `code`, counting from 1 ("1\n2\n3" for three lines). */
+export function codeLineNumbers(code: string): string {
+	return code
+		.split("\n")
+		.map((_line, index): string => String(index + 1))
+		.join("\n");
+}
+
 type CodeBlockVariantProps = VariantProps<typeof codeBlockVariants>;
 export type CodeBlockVariant = NonNullable<CodeBlockVariantProps["variant"]>;
 export type CodeBlockSize = NonNullable<VariantProps<typeof codeBlockTextVariants>["size"]>;
@@ -63,6 +84,8 @@ export interface CodeBlockProps {
 	/** The caller copied the code: the button shows a check and its `copied` name. */
 	readonly copied?: boolean | undefined;
 	readonly labels?: CodeBlockLabels | undefined;
+	/** Numbers each line in a gutter beside the code (the web kit's `showLineNumbers`). */
+	readonly showLineNumbers?: boolean | undefined;
 	readonly variant?: CodeBlockVariant | undefined;
 	readonly size?: CodeBlockSize | undefined;
 	/** Extra classes for the container, merged last (layout: `mt-2`). */
@@ -72,7 +95,7 @@ export interface CodeBlockProps {
 
 export const CodeBlock = React.memo(
 	React.forwardRef<ViewInstance, CodeBlockProps>(function CodeBlock(
-		{ code, language, caption, onCopy, copied = false, labels = DEFAULT_CODE_BLOCK_LABELS, variant = "muted", size = "md", className, testID },
+		{ code, language, caption, onCopy, copied = false, labels = DEFAULT_CODE_BLOCK_LABELS, showLineNumbers = false, variant = "muted", size = "md", className, testID },
 		ref,
 	): React.JSX.Element {
 		const hasHeader = language !== undefined || caption !== undefined || onCopy !== undefined;
@@ -91,11 +114,22 @@ export const CodeBlock = React.memo(
 						{onCopy === undefined ? null : <CodeBlockCopyButton copied={copied} labels={labels} onCopy={onCopy} />}
 					</View>
 				) : null}
-				<ScrollView horizontal showsHorizontalScrollIndicator={false} testID={testID === undefined ? undefined : `${testID}-scroll`}>
-					<Text selectable className={codeBlockTextVariants({ size })}>
-						{code}
-					</Text>
-				</ScrollView>
+				<View className="flex-row">
+					{showLineNumbers ? (
+						<Text
+							className={codeBlockGutterVariants({ size })}
+							accessibilityElementsHidden
+							importantForAccessibility="no-hide-descendants"
+							testID={testID === undefined ? undefined : `${testID}-line-numbers`}>
+							{codeLineNumbers(code)}
+						</Text>
+					) : null}
+					<ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-1" testID={testID === undefined ? undefined : `${testID}-scroll`}>
+						<Text selectable className={codeBlockTextVariants({ size })}>
+							{code}
+						</Text>
+					</ScrollView>
+				</View>
 			</View>
 		);
 	}),

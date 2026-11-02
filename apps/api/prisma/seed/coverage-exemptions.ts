@@ -79,6 +79,24 @@ export const SEED_COVERAGE_EXEMPTIONS: readonly SeedCoverageExemption[] = [
 	),
 	neverSoftDeleted("TenantAccessRequest", "An access request ends through its status and reviewedAt, and is kept as the decision record; nothing soft-deletes one."),
 	neverSoftDeleted("TenantSuspensionAppeal", "An appeal ends through its status and reviewedAt, and is kept as the decision record; nothing soft-deletes one."),
+	neverSoftDeleted("MarketingConsent", APPEND_ONLY_RECORD),
+	neverSoftDeleted("TenantBroadcastStrike", APPEND_ONLY_RECORD),
+	neverSoftDeleted(
+		"NotificationPreference",
+		"A person's channel choice is one row per tenant, category and channel, switched on and off in place through enabled; nothing soft-deletes one.",
+	),
+	neverSoftDeleted("NotificationSchedule", "The one quiet-hours and digest row per person is created on first save and updated in place; nothing soft-deletes it."),
+	neverSoftDeleted("NotificationSuppression", "A suppression ends through liftedAt and is kept as the delivery history; nothing soft-deletes one."),
+	neverSoftDeleted("PushDevice", "A device ends through revokedAt (sign-out, ended session, provider rejection) and is kept for the delivery log; nothing soft-deletes one."),
+	neverSoftDeleted(
+		"Broadcast",
+		"A broadcast ends through its status (sent, cancelled, failed) and is kept as the sender's record; there is no delete, so nothing soft-deletes one.",
+	),
+	neverSoftDeleted("BroadcastReport", "A report ends through its status and reviewedAt and is kept as the moderation record; nothing soft-deletes one."),
+	neverSoftDeleted(
+		"TenantCustomer",
+		"A customer link ends through leftAt and returns with the next claim; it is kept as the tenant's customer history, and nothing soft-deletes one.",
+	),
 	neverSoftDeleted("TenantCustomerBan", "A ban ends through liftedAt and is kept as the merchant's history; nothing soft-deletes one."),
 	neverSoftDeleted(
 		"TenantInvitation",

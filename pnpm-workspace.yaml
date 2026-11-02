@@ -82,10 +82,11 @@ overrides:
   # concurrently's install. Remove once a concurrently release depends on shell-quote >=1.11.0.
   "concurrently>shell-quote": "1.12.0" # GHSA-pqg4-j6r4-53mv: shell-quote >=1.8.4 <1.11.0
   # @expo/cli@58 (apps/mobile dev CLI) depends on zod ^3.25.76; GHSA-mrhx-c7xc-m3w5 (memory exhaustion on
-  # oversized arrays) affects every zod <4.6.6 and the 3.x line has no fix. @expo/cli uses zod in two
-  # schema modules (DevTools plugin manifests and their output) with builders and `safeParse` /
-  # `error.issues` that zod 4 keeps as they were; dependency-overrides.test.mjs runs those schemas
-  # through the overridden copy. Remove once an @expo/cli release depends on zod >=4.6.6.
+  # oversized arrays) affects every zod <4.6.6 and the 3.x line has no fix. Since 58.1.18 none of
+  # @expo/cli's own code loads it (DevTools schemas are plain JSON schemas; MCP takes zod from
+  # expo-mcp), so the override only keeps the vulnerable copy out of the install;
+  # dependency-overrides.test.mjs fails if a release loads its own zod again. Remove once an
+  # @expo/cli release depends on zod >=4.6.6 or drops the dependency.
   "@expo/cli>zod": "4.6.7" # GHSA-mrhx-c7xc-m3w5: zod <4.6.6
 
 # ── Majors held back (re-checked 2026-10-06; re-check on every dependency sweep) ──
@@ -132,3 +133,7 @@ auditConfig:
     # developer's machine — never untrusted input, and node-forge is not part of the app bundle.
     # review-by: 2026-11-09
     - GHSA-86w9-cpqp-85rv
+
+permissions:
+  '@tanstack/react-table':
+    skills: false

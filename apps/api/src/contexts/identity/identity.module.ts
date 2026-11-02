@@ -1,7 +1,6 @@
-import { Global, Logger, Module, type OnModuleInit } from "@nestjs/common";
+import { Global, Module, type OnModuleInit } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
 import type { Prisma } from "@prisma/client";
-import type Redis from "ioredis";
 
 import { PublicUrlResolver } from "../../config/public-url.resolver";
 import { TypedConfigService } from "../../config/typed-config.service";
@@ -12,7 +11,6 @@ import { IDENTITY_SESSIONS, type IdentitySessionsPort, type IdentitySessionsPort
 import type { UnitOfWork } from "../../platform/application/unit-of-work.port";
 import { AuditTrailService } from "../../platform/infrastructure/audit/audit-trail.service";
 import { OutboxModule } from "../../platform/infrastructure/outbox/outbox.module";
-import { REDIS_PUBLISHER } from "../../platform/infrastructure/redis/redis.tokens";
 import { SystemCommandModule } from "../../platform/infrastructure/system-command.module";
 import type { AfterCommitPublisher } from "../../platform/infrastructure/unit-of-work/after-commit-publisher";
 import { PrismaUnitOfWork } from "../../platform/infrastructure/unit-of-work/prisma-unit-of-work";
@@ -106,8 +104,7 @@ import { LoginVerificationStore } from "./infrastructure/adapters/login-verifica
 import { NodeOperatorIdentity } from "./infrastructure/adapters/operator-identity.adapter";
 import { OutboxIdentityTelemetry } from "./infrastructure/adapters/outbox-identity-telemetry";
 import { UuidIdGenerator } from "./infrastructure/adapters/uuid-id-generator";
-import { RedisUserSessionCacheService } from "./infrastructure/cache/redis-user-session-cache.service";
-import { UserSessionCacheService } from "./infrastructure/cache/user-session-cache.service";
+import { AppCacheUserSessionCache } from "./infrastructure/cache/app-cache-user-session-cache";
 import { IdentityIntegrationEventsMapper } from "./infrastructure/outbox/identity-integration-events.mapper";
 import { IdentityFileRegistrations } from "./infrastructure/persistence/identity-file-registrations";
 import { IdentityScopeFactory } from "./infrastructure/persistence/identity-scope.factory";
@@ -181,10 +178,6 @@ const HANDLERS = [
 	InvalidateMeCacheOnAuthorizationChanged,
 	InvalidateMeCacheOnProfileChangedHandler,
 ];
-
-/** The in-memory session cache, always built; the Redis one replaces it when configured. */
-const IN_MEMORY_USER_SESSION_CACHE = Symbol("IN_MEMORY_USER_SESSION_CACHE");
-const REDIS_USER_SESSION_CACHE = Symbol("REDIS_USER_SESSION_CACHE");
 
 /**
  * The identity context's composition root (§6.1): accounts, credentials, MFA, device sessions,
@@ -280,27 +273,8 @@ const REDIS_USER_SESSION_CACHE = Symbol("REDIS_USER_SESSION_CACHE");
 		LoginVerificationStore,
 		{ provide: LOGIN_VERIFICATION_STORE, useExisting: LoginVerificationStore },
 		{ provide: SESSION_LOCATION_LOOKUP, useExisting: SessionLocationLookupService },
-		UserSessionCacheService,
-		{ provide: IN_MEMORY_USER_SESSION_CACHE, useExisting: UserSessionCacheService },
-		{
-			// Uses the SHARED publisher client: its connection and shutdown belong to the messaging RedisInfrastructureModule, never to this cache.
-			provide: REDIS_USER_SESSION_CACHE,
-			inject: [TypedConfigService, REDIS_PUBLISHER],
-			useFactory: (config: TypedConfigService, publisher: Redis | null): RedisUserSessionCacheService | null => {
-				if (!config.useRedisUserSessionCache) {
-					if (config.caches.userSessionBackend === "redis" && config.messaging.redisUrl === undefined) {
-						Logger.warn("USER_SESSION_CACHE_BACKEND=redis but REDIS_URL is unset — using in-memory user session cache", IdentityModule.name);
-					}
-					return null;
-				}
-				return publisher === null ? null : new RedisUserSessionCacheService(config, publisher);
-			},
-		},
-		{
-			provide: USER_SESSION_CACHE,
-			inject: [IN_MEMORY_USER_SESSION_CACHE, REDIS_USER_SESSION_CACHE],
-			useFactory: (memory: UserSessionCacheService, redis: RedisUserSessionCacheService | null): UserSessionCacheService => redis ?? memory,
-		},
+		AppCacheUserSessionCache,
+		{ provide: USER_SESSION_CACHE, useExisting: AppCacheUserSessionCache },
 		AccessTokenInvalidationAdapter,
 		{ provide: ACCESS_TOKEN_INVALIDATION, useExisting: AccessTokenInvalidationAdapter },
 		// ── Telemetry ───────────────────────────────────────────────────
