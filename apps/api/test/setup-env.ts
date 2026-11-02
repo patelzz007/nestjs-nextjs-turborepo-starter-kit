@@ -8,7 +8,7 @@
 //   pnpm --filter @workspace/api test:e2e
 //
 // Precedence (see test/support/test-api-env.ts for the TEST-ONLY fixtures):
-//   1. apps/api/.env               — database, Redis, tenant master key, …
+//   1. apps/api/.env (or DOTENV_PATH) — database, Redis, tenant master key, …
 //   2. infrastructure fixtures     — only fill variables .env left unset
 //   3. secrets + switches          — always forced (test-only signing keys,
 //                                    no OTP step, fixed CORS, EMAIL_MODE=noop,
@@ -20,12 +20,14 @@ import { BooleanFlagEnvSchema } from "@workspace/shared";
 import { config as loadEnv } from "dotenv";
 import { inject } from "vitest";
 
+import { apiEnvFilePath } from "../scripts/lib/env-file";
+
 import { e2eRedisNamespaceFor, e2eWorkerBullMqPrefix } from "./support/e2e-bullmq-prefix";
 import { workerDatabaseUrl } from "./support/e2e-worker-databases";
 import { TEST_API_INFRASTRUCTURE, TEST_API_SECRETS, TEST_API_SWITCHES, TEST_E2E_PROXY, TEST_E2E_STORAGE } from "./support/test-api-env";
 
 const apiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-loadEnv({ path: path.join(apiRoot, ".env"), quiet: true });
+loadEnv({ path: apiEnvFilePath(apiRoot), quiet: true });
 
 for (const [name, value] of Object.entries(TEST_API_INFRASTRUCTURE)) {
 	process.env[name] ??= value;

@@ -18,6 +18,7 @@ import { Pool } from "pg";
 import type { TestProject } from "vitest/node";
 import { z } from "zod";
 
+import { apiEnvFilePath } from "../scripts/lib/env-file";
 import { purgeBullMqPrefix, resolveE2eBullMqPrefix } from "./support/e2e-bullmq-prefix";
 import { createWorkerDatabases, databaseNameOf, dropWorkerDatabases, newRunTag, withDatabaseName, workerDatabaseName } from "./support/e2e-worker-databases";
 import { TEST_API_INFRASTRUCTURE } from "./support/test-api-env";
@@ -44,8 +45,8 @@ async function withServer(url: string, work: (server: Pool) => Promise<void>): P
 }
 
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
-	// The same precedence as test/setup-env.ts: the runner's environment, then apps/api/.env, then the fixture.
-	loadEnv({ path: path.join(apiRoot, ".env"), quiet: true });
+	// The same precedence as test/setup-env.ts: the runner's environment, then apps/api/.env (or DOTENV_PATH), then the fixture.
+	loadEnv({ path: apiEnvFilePath(apiRoot), quiet: true });
 	const prefix = resolveE2eBullMqPrefix(process.env.E2E_BULLMQ_PREFIX);
 	const sourceUrl = z
 		.string()

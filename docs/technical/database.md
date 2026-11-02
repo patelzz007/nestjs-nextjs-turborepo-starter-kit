@@ -162,7 +162,10 @@ Enterprise accounts (in addition to the development platform accounts):
 > seed does not write (the analytics consumer fills `AnalyticsEvent`, the API boot fills capability
 > links, …), so a pass there proves nothing about CI, which seeds an empty database. Check it the way CI
 > does: `pnpm ci:local --e2e-only` (throwaway databases: migrate → RLS → `db:seed` → coverage → e2e, then
-> dropped), or `pnpm db:reset` first. `AnalyticsEvent` and `InboxProcessedEvent` are seeded by replaying the
+> dropped, with CI's own generated API env rather than your `apps/api/.env`), or `pnpm db:reset` first.
+> The seed's coverage also depends on configuration: rows sealed with an encryption key (GitHub links,
+> push devices) are seeded only when that key ring is set, so a key ring the seed needs belongs in CI's
+> env generator (`packages/tooling/scripts/lib/api-ci-env.mjs`) too. `AnalyticsEvent` and `InboxProcessedEvent` are seeded by replaying the
 > PUBLISHED outbox events through the analytics consumer's own handler and SQL
 > (`packages/messaging/src/inbox`, `prisma/seed/analytics-ingest.ts`), so they match what the consumer writes.
 

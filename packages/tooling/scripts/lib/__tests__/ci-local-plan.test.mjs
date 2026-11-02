@@ -4,19 +4,16 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+	API_CI_TENANCY,
 	BROWSER_ADMIN_FEATURE_ENV,
-	BROWSER_API_ENV,
 	BROWSER_READINESS_URLS,
 	LOCAL_APP_PORTS,
 	BROWSER_SUITE_ENV,
 	browserJob,
 	CI_BUILD_ENV,
 	databaseSteps,
-	MULTI_TENANT_E2E_ENV,
 	NON_INTERACTIVE_ENV,
 	selectSteps,
-	SINGLE_TENANT_E2E_ENV,
-	BROWSER_TENANCY_ENV,
 	staticSteps,
 	THROWAWAY_DATABASE_SUFFIX,
 	throwawayDatabaseUrl,
@@ -26,6 +23,12 @@ import {
 
 const WORKFLOW = readFileSync(path.resolve(import.meta.dirname, "../../../../../.github/workflows/ci.yml"), "utf8");
 const API_CI_ENV_ACTION = readFileSync(path.resolve(import.meta.dirname, "../../../../../.github/actions/write-api-ci-env/action.yml"), "utf8");
+/** The generated CI env files ci:local points the API at (paths are illustrative). */
+const API_ENV_FILES = { e2e: "/repo/.ci-logs/api-ci-e2e.env", single: "/repo/.ci-logs/api-ci-single.env" };
+const BROWSER_API_ENV_FILE = "/repo/.ci-logs/api-ci-browser.env";
+const REDIS_URL = "redis://localhost:6379";
+/** The steps that run the analytics consumer, which keeps its own .env. */
+const CONSUMER_STEP_IDS = ["e2e:analytics-consumer"];
 
 describe("throwawayDatabaseUrl", () => {
 	it("derives a sibling database on the same server, keeping credentials and query", () => {
@@ -60,7 +63,14 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 	it("runs every command the workflow runs", () => {
 		const commands = [
 			...staticSteps({ base: "origin/main", noCache: false }),
-			...databaseSteps({ databaseUrl: "postgresql://u:p@h/db_ci_local", shadowDatabaseUrl: "x", consumerLoginUrl: "y", runId: "1" }),
+			...databaseSteps({
+				databaseUrl: "postgresql://u:p@h/db_ci_local",
+				shadowDatabaseUrl: "x",
+				consumerLoginUrl: "y",
+				runId: "1",
+				apiEnvFiles: API_ENV_FILES,
+				redisUrl: REDIS_URL,
+			}),
 		]
 			.map((step) => `${step.command} ${step.args.join(" ")}`)
 			.map((command) => command.replace(" --working-tree", "").replace(/--base \S+/, "--base"));
@@ -112,6 +122,8 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 			shadowDatabaseUrl: "postgresql://u:p@h/db_ci_local_shadow",
 			consumerLoginUrl: "postgresql://c:s@h/db_ci_local",
 			runId: "1791005000000",
+			apiEnvFiles: API_ENV_FILES,
+			redisUrl: REDIS_URL,
 		});
 		for (const step of steps.filter((candidate) => candidate.env !== undefined)) {
 			expect(step.env?.DATABASE_URL).toBe("postgresql://u:p@h/db_ci_local?schema=public");
@@ -124,41 +136,91 @@ describe("plan mirrors .github/workflows/ci.yml", () => {
 	});
 
 	it("isolates the API e2e step's BullMQ keys under a per-run ci-local prefix", () => {
-		const steps = databaseSteps({ databaseUrl: "postgresql://u:p@h/d", shadowDatabaseUrl: "s", consumerLoginUrl: undefined, runId: "1791005000000" });
+		const steps = databaseSteps({
+			databaseUrl: "postgresql://u:p@h/d",
+			shadowDatabaseUrl: "s",
+			consumerLoginUrl: undefined,
+			runId: "1791005000000",
+			apiEnvFiles: API_ENV_FILES,
+			redisUrl: REDIS_URL,
+		});
 		expect(steps.find((step) => step.id === "e2e:api")?.env?.E2E_BULLMQ_PREFIX).toBe("ci-local:1791005000000");
 	});
 
 	it("audits seed coverage right after the development seed, before the e2e suite writes anything", () => {
-		const ids = databaseSteps({ databaseUrl: "postgresql://u:p@h/d", shadowDatabaseUrl: "s", consumerLoginUrl: undefined, runId: "1" }).map((step) => step.id);
+		const ids = databaseSteps({
+			databaseUrl: "postgresql://u:p@h/d",
+			shadowDatabaseUrl: "s",
+			consumerLoginUrl: undefined,
+			runId: "1",
+			apiEnvFiles: API_ENV_FILES,
+			redisUrl: REDIS_URL,
+		}).map((step) => step.id);
 		expect(ids.indexOf("e2e:seed-coverage")).toBe(ids.indexOf("e2e:seed") + 1);
 		expect(ids.indexOf("e2e:seed-coverage")).toBeLessThan(ids.indexOf("e2e:api"));
 		expect(WORKFLOW.indexOf("db:check-seed-coverage")).toBeGreaterThan(WORKFLOW.indexOf("pnpm db:seed -- --scenario development"));
 		expect(WORKFLOW.indexOf("db:check-seed-coverage")).toBeLessThan(WORKFLOW.indexOf("pnpm --filter @workspace/api test:e2e"));
 	});
 
-	it("runs the full suite multi-tenant and the single-tenant suite on the fixture's Tenant A, as the workflow does (MT-70)", () => {
-		const steps = databaseSteps({ databaseUrl: "postgresql://u:p@h/d", shadowDatabaseUrl: "s", consumerLoginUrl: undefined, runId: "1" });
+	it("points every API step at CI's generated env, never the developer's apps/api/.env", () => {
+		const steps = databaseSteps({
+			databaseUrl: "postgresql://u:p@h/d",
+			shadowDatabaseUrl: "s",
+			consumerLoginUrl: "c",
+			runId: "1",
+			apiEnvFiles: API_ENV_FILES,
+			redisUrl: REDIS_URL,
+		});
 		const envOf = (id) => steps.find((step) => step.id === id)?.env ?? {};
-		for (const id of ["e2e:api", "e2e:tenancy", "e2e:rls"]) {
-			expect(envOf(id)).toMatchObject(MULTI_TENANT_E2E_ENV);
-			expect(envOf(id).DEFAULT_TENANT_ID).toBeUndefined();
+		for (const step of steps.filter((candidate) => candidate.env !== undefined && !CONSUMER_STEP_IDS.includes(candidate.id))) {
+			expect([API_ENV_FILES.e2e, API_ENV_FILES.single]).toContain(step.env?.DOTENV_PATH);
 		}
+		for (const id of ["e2e:deploy", "e2e:seed", "e2e:seed-coverage", "e2e:api", "e2e:tenancy", "e2e:rls"]) {
+			expect(envOf(id)).toMatchObject({ DOTENV_PATH: API_ENV_FILES.e2e, REDIS_URL });
+		}
+		// ci.yml's single-tenant job sets no REDIS_URL.
 		for (const id of ["e2e:single-tenancy", "e2e:single-rls"]) {
-			expect(envOf(id)).toMatchObject(SINGLE_TENANT_E2E_ENV);
+			expect(envOf(id).DOTENV_PATH).toBe(API_ENV_FILES.single);
+			expect(envOf(id).REDIS_URL).toBeUndefined();
 		}
+	});
+
+	it("leaves the analytics consumer on its own .env (Kafka), with only its database settings", () => {
+		const steps = databaseSteps({
+			databaseUrl: "postgresql://u:p@h/d",
+			shadowDatabaseUrl: "s",
+			consumerLoginUrl: "c",
+			runId: "1",
+			apiEnvFiles: API_ENV_FILES,
+			redisUrl: REDIS_URL,
+		});
+		expect(steps.find((step) => step.id === "e2e:analytics-consumer")?.env?.DOTENV_PATH).toBeUndefined();
+	});
+
+	it("writes each job's tenancy as the workflow does: multi for e2e, the fixture's Tenant A and the seed tenant in single mode (MT-70)", () => {
+		expect(API_CI_TENANCY.e2e).toEqual({ tenancyMode: "multi" });
 		expect(WORKFLOW).toContain("tenancy-mode: multi");
-		expect(WORKFLOW).toContain(`default-tenant-id: ${SINGLE_TENANT_E2E_ENV.DEFAULT_TENANT_ID}`);
-		expect(WORKFLOW).toContain(`default-tenant-id: ${BROWSER_TENANCY_ENV.DEFAULT_TENANT_ID}`);
+		for (const job of [API_CI_TENANCY.single, API_CI_TENANCY.browser]) {
+			expect(job.tenancyMode).toBe("single");
+			expect(WORKFLOW).toContain(`default-tenant-id: ${job.defaultTenantId}`);
+		}
 	});
 
 	it("omits the consumer suite when no consumer login is configured", () => {
-		const steps = databaseSteps({ databaseUrl: "postgresql://u:p@h/d", shadowDatabaseUrl: "s", consumerLoginUrl: undefined, runId: "1" });
+		const steps = databaseSteps({
+			databaseUrl: "postgresql://u:p@h/d",
+			shadowDatabaseUrl: "s",
+			consumerLoginUrl: undefined,
+			runId: "1",
+			apiEnvFiles: API_ENV_FILES,
+			redisUrl: REDIS_URL,
+		});
 		expect(steps.map((step) => step.id)).not.toContain("e2e:analytics-consumer");
 	});
 });
 
 describe("browser job mirrors .github/workflows/ci.yml → browser-e2e", () => {
-	const job = browserJob({ databaseUrl: "postgresql://u:p@h/db_ci_local_browser?schema=public" });
+	const job = browserJob({ databaseUrl: "postgresql://u:p@h/db_ci_local_browser?schema=public", apiEnvFile: BROWSER_API_ENV_FILE });
 	const all = [...job.setup, ...job.servers, ...job.suites];
 	const commandOf = (id) => {
 		const step = all.find((candidate) => candidate.id === id);
@@ -191,13 +253,11 @@ describe("browser job mirrors .github/workflows/ci.yml → browser-e2e", () => {
 		}
 	});
 
-	it("serves the API with the workflow's API env, not the developer's login verification", () => {
-		const apiServer = job.servers.find((server) => server.id === "browser:api");
-		for (const [name, value] of Object.entries(BROWSER_API_ENV)) {
-			expect(API_CI_ENV_ACTION).toContain(`${name}=${value}`);
-			expect(apiServer?.env?.[name]).toBe(value);
+	it("serves and seeds the API from CI's generated browser env, never the developer's apps/api/.env", () => {
+		for (const id of ["browser:deploy", "browser:seed", "browser:api"]) {
+			expect(all.find((step) => step.id === id)?.env?.DOTENV_PATH).toBe(BROWSER_API_ENV_FILE);
 		}
-		expect(BROWSER_API_ENV.LOGIN_VERIFICATION_MODE).toBe("disabled");
+		expect(API_CI_ENV_ACTION).toContain("node packages/tooling/scripts/write-api-ci-env.mjs");
 	});
 
 	it("binds every server to the port its readiness URL polls, for the port preflight", () => {

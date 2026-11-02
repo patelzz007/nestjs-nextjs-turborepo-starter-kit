@@ -3,10 +3,12 @@ import { resolve } from "node:path";
 import { defineConfig } from "@prisma/config";
 import { config as loadEnv } from "dotenv";
 
+import { apiEnvFilePath } from "./scripts/lib/env-file";
+
 // Prisma 7 reads the URL from this file, not `schema.prisma`. Bare
-// `npx prisma …` does not load `.env`, so we do it here (path is relative
-// to this config, not cwd).
-loadEnv({ path: resolve(import.meta.dirname, ".env") });
+// `npx prisma …` does not load `.env`, so we do it here: apps/api/.env, or
+// `DOTENV_PATH` when ci:local points the API at CI's generated env.
+loadEnv({ path: apiEnvFilePath(import.meta.dirname) });
 
 const databaseUrl: string | undefined = process.env.DATABASE_URL;
 if (databaseUrl === undefined || databaseUrl.length === 0) {

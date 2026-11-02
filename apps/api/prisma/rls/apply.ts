@@ -15,6 +15,7 @@ import {
 } from "./data-change-capture.js";
 import { buildRowAuditSql, planRowAudit, ROW_AUDIT_TRIGGER, type RowAuditPlan } from "./row-audit.js";
 import { APP_RUNTIME_ROLE, buildWithheldPrivilegeRevocationSql, listWithheldPrivileges, type WithheldPrivilegeEntry } from "./withheld-privileges.js";
+import { apiEnvFilePath } from "../../scripts/lib/env-file.js";
 import { buildRlsApplyPlan } from "./apply-plan.js";
 
 const apiDir = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -25,7 +26,7 @@ export type RlsApplyLog = (line: string) => void;
 function writeLine(line: string): void {
 	process.stdout.write(`${line}\n`);
 }
-const envFile = resolve(apiDir, ".env");
+const envFile = apiEnvFilePath(apiDir);
 
 function getDatabaseUrl(): string {
 	const fromEnv = process.env.DATABASE_URL?.trim();

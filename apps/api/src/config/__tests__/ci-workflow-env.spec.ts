@@ -1,91 +1,72 @@
-// Keeps the CI e2e job honest: the `.env` it writes for the API (in
-// .github/actions/write-api-ci-env/action.yml, used by every database-backed CI job) must pass the same schema the API validates at
-// boot, or the job would fail on startup instead of running the suite.
+// Keeps every database-backed CI job honest: the env they boot the API with is written by ONE generator
+// (packages/tooling/scripts/write-api-ci-env.mjs, called by .github/actions/write-api-ci-env and by
+// `pnpm ci:local`). Its output must pass the same schema the API validates at boot, and must turn on
+// everything the seed needs, or the seed coverage check fails in CI only.
 
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { parse } from "dotenv";
+import { afterAll, describe, expect, it } from "vitest";
 
 import { parseApiConfig } from "../api-config";
 
-const WORKFLOW_PATH: string = fileURLToPath(new URL("../../../../../.github/actions/write-api-ci-env/action.yml", import.meta.url));
-
-/** The heredoc the e2e job writes: `cat > apps/api/.env <<EOF … EOF`. */
-const ENV_HEREDOC_PATTERN = /cat > apps\/api\/\.env <<EOF\n(?<body>[\s\S]*?)\n\s*EOF/;
-/** Shell expansions such as `${jwt_access}` inside the heredoc. */
-const SHELL_VARIABLE_PATTERN = /\$\{(?<name>\w+)\}/g;
-/** Length of each generated secret, in bytes (the job uses `openssl rand`). */
-const SECRET_BYTES = 32;
-
-/**
- * Stand-ins for the values the job generates at runtime: each distinct and of
- * the same shape (`openssl rand -hex 32` / `-base64 32`).
- */
-const SHELL_VARIABLES: Readonly<Record<string, string>> = {
-	DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/app_ci",
-	jwt_access: "a".repeat(SECRET_BYTES * 2),
-	jwt_refresh: "b".repeat(SECRET_BYTES * 2),
-	email_verification: "c".repeat(SECRET_BYTES * 2),
-	two_factor: "d".repeat(SECRET_BYTES * 2),
-	mfa_key: Buffer.alloc(SECRET_BYTES, 1).toString("base64"),
-	reward_code_key: Buffer.alloc(SECRET_BYTES, 3).toString("base64"),
-	tenant_master_key: Buffer.alloc(SECRET_BYTES, 2).toString("base64"),
-	github_credential_key: Buffer.alloc(SECRET_BYTES, 4).toString("base64"),
-};
-
-/** The tenancy lines the action appends after the heredoc, per `tenancy-mode` (multi-tenancy plan MT-70). */
-const MULTI_TENANCY_APPEND = 'echo "TENANCY_ENABLED=true" >> apps/api/.env';
-const SINGLE_TENANCY_APPEND = "printf 'TENANCY_ENABLED=false\\nDEFAULT_TENANT_ID=%s\\n' \"$DEFAULT_TENANT_ID_INPUT\" >> apps/api/.env";
+const REPO_ROOT: string = fileURLToPath(new URL("../../../../../", import.meta.url));
+const GENERATOR = join(REPO_ROOT, "packages/tooling/scripts/write-api-ci-env.mjs");
+const ACTION_PATH = join(REPO_ROOT, ".github/actions/write-api-ci-env/action.yml");
+const DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/app_ci";
 /** The tenant `pnpm db:seed` creates, which the browser job serves in single mode. */
 const SEED_DEFAULT_TENANT_ID = "019b76da-a800-7a94-a198-23ad1b4cfdd9";
 
-type TenancyMode = "multi" | "single";
+const workDir = mkdtempSync(join(tmpdir(), "api-ci-env-"));
 
-function tenancyLines(mode: TenancyMode): Record<string, string> {
-	return mode === "multi" ? { TENANCY_ENABLED: "true" } : { TENANCY_ENABLED: "false", DEFAULT_TENANT_ID: SEED_DEFAULT_TENANT_ID };
+afterAll((): void => {
+	rmSync(workDir, { recursive: true, force: true });
+});
+
+interface GeneratorRun {
+	readonly status: number | null;
+	readonly env: Record<string, string>;
 }
 
-function workflowEnv(mode: TenancyMode = "multi"): Record<string, string> {
-	const heredoc = ENV_HEREDOC_PATTERN.exec(readFileSync(WORKFLOW_PATH, "utf8"))?.groups?.body;
-	if (heredoc === undefined) {
-		throw new Error("The write-api-ci-env action no longer writes apps/api/.env with a heredoc — update this test.");
-	}
-	const env: Record<string, string> = {};
-	for (const rawLine of heredoc.split("\n")) {
-		const line = rawLine.trim();
-		const separator = line.indexOf("=");
-		if (separator <= 0) {
-			continue;
-		}
-		env[line.slice(0, separator)] = line.slice(separator + 1).replace(SHELL_VARIABLE_PATTERN, (_match: string, name: string): string => SHELL_VARIABLES[name] ?? "");
-	}
-	return { ...env, ...tenancyLines(mode) };
+function runGenerator(name: string, args: readonly string[]): GeneratorRun {
+	const out = join(workDir, `${name}.env`);
+	const result = spawnSync(process.execPath, [GENERATOR, "--out", out, "--database-url", DATABASE_URL, ...args], { encoding: "utf8" });
+	return { status: result.status, env: result.status === 0 ? parse(readFileSync(out, "utf8")) : {} };
 }
 
-describe(".github/actions/write-api-ci-env — CI API env", () => {
+describe("the CI API env (packages/tooling/scripts/write-api-ci-env.mjs)", () => {
+	const multi = runGenerator("multi", ["--tenancy-mode", "multi"]);
+	const single = runGenerator("single", ["--tenancy-mode", "single", "--default-tenant-id", SEED_DEFAULT_TENANT_ID]);
+
 	it("passes the API config schema in both tenancy modes", () => {
-		expect(parseApiConfig(workflowEnv("multi")).tenancy.mode).toBe("multi");
-		expect(parseApiConfig(workflowEnv("single")).tenancy.mode).toBe("single");
-		expect(parseApiConfig(workflowEnv()).runtime.nodeEnv).toBe("test");
+		expect(multi.status).toBe(0);
+		expect(single.status).toBe(0);
+		expect(parseApiConfig(multi.env).tenancy.mode).toBe("multi");
+		expect(parseApiConfig(single.env).tenancy.mode).toBe("single");
+		expect(parseApiConfig(multi.env).runtime.nodeEnv).toBe("test");
 	});
 
-	it("appends exactly the tenancy lines this test models, and never a default tenant in multi mode", () => {
-		const action = readFileSync(WORKFLOW_PATH, "utf8");
-		expect(action).toContain(MULTI_TENANCY_APPEND);
-		expect(action).toContain(SINGLE_TENANCY_APPEND);
-		expect(ENV_HEREDOC_PATTERN.exec(action)?.groups?.body).not.toMatch(/TENANCY_ENABLED|DEFAULT_TENANT_ID/);
+	it("never sets a default tenant in multi mode, and refuses single mode without one", () => {
+		expect(multi.env).not.toHaveProperty("DEFAULT_TENANT_ID");
+		expect(single.env).toHaveProperty("DEFAULT_TENANT_ID", SEED_DEFAULT_TENANT_ID);
+		expect(runGenerator("single-without-tenant", ["--tenancy-mode", "single"]).status).not.toBe(0);
 	});
 
-	it("turns GitHub pull requests on, so the seed fills github_account_links for the seed coverage check", () => {
-		expect(parseApiConfig(workflowEnv()).github.credentialEncryptionKeys).not.toBeNull();
+	it("turns on every key ring the seed seals data with, so the seed coverage check sees those tables filled", () => {
+		const config = parseApiConfig(multi.env);
+		expect(config.github.credentialEncryptionKeys).not.toBeNull();
+		// Push devices: without this key the seed writes no PushDevice row (and no delivery points at one).
+		expect(config.notifications.encryptionKeys).not.toBeNull();
 	});
 
-	it("only references shell variables the job defines", () => {
-		const heredoc = ENV_HEREDOC_PATTERN.exec(readFileSync(WORKFLOW_PATH, "utf8"))?.groups?.body ?? "";
-		const unknown = [...heredoc.matchAll(SHELL_VARIABLE_PATTERN)]
-			.map((match: RegExpExecArray): string => match.groups?.name ?? "")
-			.filter((name: string): boolean => !(name in SHELL_VARIABLES));
-		expect(unknown).toEqual([]);
+	it("is what the GitHub action writes: the action runs the generator instead of keeping its own copy", () => {
+		const action = readFileSync(ACTION_PATH, "utf8");
+		expect(action).toContain("node packages/tooling/scripts/write-api-ci-env.mjs");
+		expect(action).toContain("--mask-secrets");
+		expect(action).not.toMatch(/<<EOF|cat > apps\/api\/\.env/u);
 	});
 });

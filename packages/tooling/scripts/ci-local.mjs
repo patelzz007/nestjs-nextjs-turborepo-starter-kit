@@ -19,13 +19,15 @@
  *   pnpm ci:local --base origin/main ref for the migration-history check (default origin/main)
  */
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, openSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseEnv } from "node:util";
 
 import pg from "pg";
 
+import { apiCiEnv, renderEnvFile } from "./lib/api-ci-env.mjs";
 import {
+	API_CI_TENANCY,
 	browserJob,
 	databaseSteps,
 	NON_INTERACTIVE_ENV,
@@ -45,6 +47,10 @@ const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");
 const API_ENV_FILE = path.join(REPO_ROOT, "apps/api/.env");
 const CONSUMER_ENV_FILE = path.join(REPO_ROOT, "apps/analytics-consumer/.env");
 const DEFAULT_BASE = "origin/main";
+/** Where ci:local writes CI's generated API env files (gitignored with the server logs). */
+const CI_ENV_DIR = path.join(REPO_ROOT, ".ci-logs");
+/** Owner read/write only: the files hold signing secrets. */
+const ENV_FILE_MODE = 0o600;
 
 function readEnvFile(filePath) {
 	return existsSync(filePath) ? parseEnv(readFileSync(filePath, "utf8")) : {};
@@ -61,6 +67,20 @@ function parseArgs(argv) {
 		noCache: argv.includes("--no-cache"),
 		errorsOnly: argv.includes("--errors-only"),
 	};
+}
+
+/**
+ * Writes CI's API env for one job (scripts/lib/api-ci-env.mjs, the generator ci.yml uses) pointed at a
+ * throwaway database, and returns its path. The developer's apps/api/.env is never read by an API step.
+ *
+ * @param {"e2e" | "single" | "browser"} job
+ * @param {string} databaseUrl
+ */
+function writeApiCiEnv(job, databaseUrl) {
+	mkdirSync(CI_ENV_DIR, { recursive: true });
+	const file = path.join(CI_ENV_DIR, `api-ci-${job}.env`);
+	writeFileSync(file, renderEnvFile(apiCiEnv({ databaseUrl, ...API_CI_TENANCY[job] }).entries), { mode: ENV_FILE_MODE });
+	return file;
 }
 
 /** Runs one step; `{ ok, ms }` — whether it passed and how long it took. */
@@ -111,7 +131,10 @@ async function runDatabaseJobs(results) {
 	const recreate = [main.database, shadow.database].flatMap((name) => [`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`, `CREATE DATABASE "${name}"`]);
 	await onMaintenanceDatabase(developerUrl, recreate);
 	try {
-		for (const step of databaseSteps({ databaseUrl: main.url, shadowDatabaseUrl: shadow.url, consumerLoginUrl, runId: String(Date.now()) })) {
+		const apiEnvFiles = { e2e: writeApiCiEnv("e2e", main.url), single: writeApiCiEnv("single", main.url) };
+		// Infrastructure locations come from this machine (as ci.yml's job sets REDIS_URL); settings and secrets from CI's file.
+		const redisUrl = readEnvFile(API_ENV_FILE).REDIS_URL;
+		for (const step of databaseSteps({ databaseUrl: main.url, shadowDatabaseUrl: shadow.url, consumerLoginUrl, runId: String(Date.now()), apiEnvFiles, redisUrl })) {
 			const { ok, ms } = runStep(step);
 			results.push({ job: step.job, id: step.id, ok, ms });
 			if (!ok) {
@@ -168,7 +191,7 @@ async function runBrowserJob(results) {
 		return;
 	}
 	const database = throwawayDatabaseUrl(developerUrl, THROWAWAY_BROWSER_SUFFIX);
-	const job = browserJob({ databaseUrl: database.url });
+	const job = browserJob({ databaseUrl: database.url, apiEnvFile: writeApiCiEnv("browser", database.url) });
 	// Before the (slow) build: a server that cannot bind its port would leave the suites running against whatever holds it.
 	const occupied = await findOccupiedPorts(job.servers);
 	if (occupied.length > 0) {

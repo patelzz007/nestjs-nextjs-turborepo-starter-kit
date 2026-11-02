@@ -42,16 +42,6 @@ export const BROWSER_SUITE_ENV = {
 	ADMIN_E2E_PASSWORD: "SuperAdmin@123",
 };
 
-/**
- * API runtime config the browser job's API server needs from CI's API env
- * (.github/actions/write-api-ci-env). Without it the API falls back to the
- * developer's apps/api/.env, whose login verification emails a code the
- * admin suite's seed login cannot read.
- */
-export const BROWSER_API_ENV = {
-	LOGIN_VERIFICATION_MODE: "disabled",
-};
-
 /** Readiness URLs the browser job waits on (API readiness probe, web, admin login). */
 export const BROWSER_READINESS_URLS = [localUrl(LOCAL_APP_PORTS.api, "/health/ready"), localUrl(LOCAL_APP_PORTS.web, "/"), localUrl(LOCAL_APP_PORTS.admin, "/auth/login")];
 /** Budget for the three servers to become ready. */
@@ -163,27 +153,51 @@ export function selectSteps(steps, ids) {
 	return steps.filter((step) => ids.includes(step.id));
 }
 
-/** ci.yml → jobs.e2e: RewardHub's multi-tenant mode, no default tenant (multi-tenancy plan MT-70). */
-export const MULTI_TENANT_E2E_ENV = { TENANCY_ENABLED: "true" };
+/**
+ * The tenancy each CI job writes into its API env (`write-api-ci-env` inputs in ci.yml), so ci:local
+ * generates the same three files (scripts/lib/api-ci-env.mjs) and points each job's API steps at its own:
+ * - `e2e`: RewardHub's multi-tenant mode, no default tenant (multi-tenancy plan MT-70);
+ * - `single`: ci.yml → jobs.e2e-single-tenant, serving the two-tenant fixture's Tenant A;
+ * - `browser`: ci.yml → jobs.browser-e2e, serving the tenant `pnpm db:seed` creates.
+ */
+export const API_CI_TENANCY = {
+	e2e: { tenancyMode: "multi" },
+	single: { tenancyMode: "single", defaultTenantId: "019b76da-a810-7000-8000-0000000000a1" },
+	browser: { tenancyMode: "single", defaultTenantId: "019b76da-a800-7a94-a198-23ad1b4cfdd9" },
+};
 
-/** ci.yml → jobs.e2e-single-tenant: single mode serving the two-tenant fixture's Tenant A. */
-export const SINGLE_TENANT_E2E_ENV = { TENANCY_ENABLED: "false", DEFAULT_TENANT_ID: "019b76da-a810-7000-8000-0000000000a1" };
-
-/** ci.yml → jobs.browser-e2e: single mode serving the tenant `pnpm db:seed` creates. */
-export const BROWSER_TENANCY_ENV = { TENANCY_ENABLED: "false", DEFAULT_TENANT_ID: "019b76da-a800-7a94-a198-23ad1b4cfdd9" };
+/**
+ * What an API step runs with: CI's generated env file (`DOTENV_PATH`, honoured by `dotenv run`,
+ * `dotenv/config` and every loader in apps/api) instead of the developer's apps/api/.env, plus the
+ * job's infrastructure locations, as ci.yml sets them at job level.
+ *
+ * @param {string} envFile
+ * @param {string} databaseUrl
+ * @param {string | undefined} [redisUrl]
+ */
+function apiStepEnv(envFile, databaseUrl, redisUrl) {
+	return { DOTENV_PATH: envFile, DATABASE_URL: databaseUrl, ...(redisUrl === undefined ? {} : { REDIS_URL: redisUrl }) };
+}
 
 /**
  * The database steps of the `e2e` and `analytics-consumer-e2e` jobs, run
  * against throwaway databases (never the developer's DATABASE_URL).
  *
+ * Every API step reads CI's generated env (`apiEnvFiles`), never the
+ * developer's apps/api/.env: a setting only the developer has (an encryption
+ * key, a login mode) can't make a step pass locally and fail in CI. The `e2e`
+ * job's steps also get the developer's Redis, as ci.yml's job sets REDIS_URL;
+ * the single-tenant job has none, as in ci.yml.
+ *
  * The API e2e step gets its own BullMQ key prefix (`E2E_BULLMQ_PREFIX`,
  * `ci-local:<runId>`): a dev API running on the same Redis can never steal its jobs.
  *
- * @param {{ databaseUrl: string, shadowDatabaseUrl: string, consumerLoginUrl: string | undefined, runId: string }} urls
+ * @param {{ databaseUrl: string, shadowDatabaseUrl: string, consumerLoginUrl: string | undefined, runId: string, apiEnvFiles: { e2e: string, single: string }, redisUrl?: string | undefined }} urls
  * @returns {Step[]}
  */
-export function databaseSteps({ databaseUrl, shadowDatabaseUrl, consumerLoginUrl, runId }) {
-	const api = { DATABASE_URL: databaseUrl };
+export function databaseSteps({ databaseUrl, shadowDatabaseUrl, consumerLoginUrl, runId, apiEnvFiles, redisUrl }) {
+	const api = apiStepEnv(apiEnvFiles.e2e, databaseUrl, redisUrl);
+	const single = apiStepEnv(apiEnvFiles.single, databaseUrl);
 	const steps = [
 		{ id: "e2e:build", job: "Database + API e2e", command: "pnpm", args: ["turbo", "run", "build", "--filter=@workspace/api^..."] },
 		{ id: "e2e:deploy", job: "Database + API e2e", command: "pnpm", args: ["tools", "db:deploy"], env: api },
@@ -202,18 +216,18 @@ export function databaseSteps({ databaseUrl, shadowDatabaseUrl, consumerLoginUrl
 			job: "Database + API e2e",
 			command: "pnpm",
 			args: ["--filter", "@workspace/api", "test:e2e"],
-			env: { ...api, ...MULTI_TENANT_E2E_ENV, E2E_BULLMQ_PREFIX: `ci-local:${runId}` },
+			env: { ...api, E2E_BULLMQ_PREFIX: `ci-local:${runId}` },
 		},
-		{ id: "e2e:tenancy", job: "Database + API e2e", command: "pnpm", args: ["--filter", "@workspace/api", "test:e2e:tenancy"], env: { ...api, ...MULTI_TENANT_E2E_ENV } },
-		{ id: "e2e:rls", job: "Database + API e2e", command: "pnpm", args: ["--filter", "@workspace/api", "test:e2e:rls"], env: { ...api, ...MULTI_TENANT_E2E_ENV } },
+		{ id: "e2e:tenancy", job: "Database + API e2e", command: "pnpm", args: ["--filter", "@workspace/api", "test:e2e:tenancy"], env: api },
+		{ id: "e2e:rls", job: "Database + API e2e", command: "pnpm", args: ["--filter", "@workspace/api", "test:e2e:rls"], env: api },
 		{
 			id: "e2e:single-tenancy",
 			job: "Single-tenant e2e + RLS",
 			command: "pnpm",
 			args: ["--filter", "@workspace/api", "test:e2e:tenancy:single"],
-			env: { ...api, ...SINGLE_TENANT_E2E_ENV },
+			env: single,
 		},
-		{ id: "e2e:single-rls", job: "Single-tenant e2e + RLS", command: "pnpm", args: ["--filter", "@workspace/api", "test:e2e:rls"], env: { ...api, ...SINGLE_TENANT_E2E_ENV } },
+		{ id: "e2e:single-rls", job: "Single-tenant e2e + RLS", command: "pnpm", args: ["--filter", "@workspace/api", "test:e2e:rls"], env: single },
 		{ id: "e2e:seed-enterprise", job: "Database + API e2e", command: "pnpm", args: ["db:seed", "--", "--scenario", "enterprise", "--seed", "1"], env: api },
 	];
 	if (consumerLoginUrl !== undefined) {
@@ -222,7 +236,8 @@ export function databaseSteps({ databaseUrl, shadowDatabaseUrl, consumerLoginUrl
 			job: "Analytics consumer e2e",
 			command: "pnpm",
 			args: ["--filter", "@workspace/analytics-consumer", "test:e2e"],
-			env: { ...api, ANALYTICS_CONSUMER_DB_ADMIN_URL: withoutQuery(databaseUrl), ANALYTICS_CONSUMER_DATABASE_URL: consumerLoginUrl },
+			// Its own apps/analytics-consumer/.env (Kafka) stays in charge: no API DOTENV_PATH here.
+			env: { DATABASE_URL: databaseUrl, ANALYTICS_CONSUMER_DB_ADMIN_URL: withoutQuery(databaseUrl), ANALYTICS_CONSUMER_DATABASE_URL: consumerLoginUrl },
 		});
 	}
 	return steps;
@@ -240,12 +255,15 @@ export const BROWSER_ADMIN_FEATURE_ENV = { ADMIN_COMPONENT_GALLERY: "true" };
  * both Playwright suites (`suites`). `setup` runs before the servers start.
  * Each server carries the `port` it binds, for the port preflight.
  *
- * @param {{ databaseUrl: string }} urls
+ * The API steps and server read CI's generated browser env (`apiEnvFile`),
+ * never the developer's apps/api/.env.
+ *
+ * @param {{ databaseUrl: string, apiEnvFile: string }} urls
  * @returns {{ setup: Step[], servers: (Step & { port: number })[], suites: Step[] }}
  */
-export function browserJob({ databaseUrl }) {
+export function browserJob({ databaseUrl, apiEnvFile }) {
 	const job = "Browser e2e";
-	const api = { DATABASE_URL: databaseUrl };
+	const api = apiStepEnv(apiEnvFile, databaseUrl);
 	return {
 		setup: [
 			{
@@ -265,7 +283,7 @@ export function browserJob({ databaseUrl }) {
 				job,
 				command: "pnpm",
 				args: ["--filter", "@workspace/api", "start"],
-				env: { ...api, ...BROWSER_API_ENV, ...BROWSER_TENANCY_ENV, PORT: String(LOCAL_APP_PORTS.api) },
+				env: { ...api, PORT: String(LOCAL_APP_PORTS.api) },
 				port: LOCAL_APP_PORTS.api,
 			},
 			{
